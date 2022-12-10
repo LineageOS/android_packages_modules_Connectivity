@@ -126,7 +126,7 @@ public class BpfCoordinator {
     private static final String DUMPSYS_RAWMAP_ARG_STATS = "--stats";
     private static final String DUMPSYS_RAWMAP_ARG_UPSTREAM4 = "--upstream4";
 
-    /** The names of all the BPF counters defined in bpf_tethering.h. */
+    /** The names of all the BPF counters defined in offload.h. */
     public static final String[] sBpfCounterNames = getBpfCounterNames();
 
     private static String makeMapPath(String which) {
