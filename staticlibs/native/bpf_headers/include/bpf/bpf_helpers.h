@@ -182,21 +182,21 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
 //   accessing the ring buffer should set a program level min_kver >= 5.8.
 // * The definition below sets a map min_kver of 5.8 which requires targeting
 //   a BPFLOADER_MIN_VER >= BPFLOADER_S_VERSION.
-#define DEFINE_BPF_RINGBUF(the_map, ValueType, size_bytes, usr, grp, md, \
-                           selinux, pindir, share)                       \
-  DEFINE_BPF_MAP_BASE(the_map, RINGBUF, 0, 0, size_bytes, usr, grp, md,  \
-                      selinux, pindir, share, KVER(5, 8, 0), KVER_INF);  \
-  static inline __always_inline __unused int bpf_##the_map##_output(    \
-      const ValueType* v) {                                              \
-    return bpf_ringbuf_output_unsafe(&the_map, v, sizeof(*v), 0);        \
-  }                                                                      \
-  static inline __always_inline __unused                                 \
-      ValueType* bpf_##the_map##_reserve() {                             \
-    return bpf_ringbuf_reserve_unsafe(&the_map, sizeof(ValueType), 0);   \
-  }                                                                      \
-  static inline __always_inline __unused void bpf_##the_map##_submit(    \
-      const ValueType* v) {                                              \
-    bpf_ringbuf_submit_unsafe(v, 0);                                     \
+#define DEFINE_BPF_RINGBUF_EXT(the_map, ValueType, size_bytes, usr, grp, md, \
+                               selinux, pindir, share)                       \
+  DEFINE_BPF_MAP_BASE(the_map, RINGBUF, 0, 0, size_bytes, usr, grp, md,      \
+                      selinux, pindir, share, KVER(5, 8, 0), KVER_INF);      \
+  static inline __always_inline __unused int bpf_##the_map##_output(         \
+      const ValueType* v) {                                                  \
+    return bpf_ringbuf_output_unsafe(&the_map, v, sizeof(*v), 0);            \
+  }                                                                          \
+  static inline __always_inline __unused                                     \
+      ValueType* bpf_##the_map##_reserve() {                                 \
+    return bpf_ringbuf_reserve_unsafe(&the_map, sizeof(ValueType), 0);       \
+  }                                                                          \
+  static inline __always_inline __unused void bpf_##the_map##_submit(        \
+      const ValueType* v) {                                                  \
+    bpf_ringbuf_submit_unsafe(v, 0);                                         \
   }
 
 /* There exist buggy kernels with pre-T OS, that due to
