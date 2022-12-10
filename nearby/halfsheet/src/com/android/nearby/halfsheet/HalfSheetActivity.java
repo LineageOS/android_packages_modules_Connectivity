@@ -16,6 +16,8 @@
 
 package com.android.nearby.halfsheet;
 
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+
 import static com.android.nearby.halfsheet.constants.Constant.ACTION_FAST_PAIR_HALF_SHEET_BAN_STATE_RESET;
 import static com.android.nearby.halfsheet.constants.Constant.ACTION_FAST_PAIR_HALF_SHEET_CANCEL;
 import static com.android.nearby.halfsheet.constants.Constant.ACTION_HALF_SHEET_FOREGROUND_STATE;
@@ -230,7 +232,8 @@ public class HalfSheetActivity extends FragmentActivity {
                                 EXTRA_HALF_SHEET_IS_RETROACTIVE,
                                 getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_RETROACTIVE,
                                         false))
-                        .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()));
+                        .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()),
+                ACCESS_FINE_LOCATION);
     }
 
     @Override

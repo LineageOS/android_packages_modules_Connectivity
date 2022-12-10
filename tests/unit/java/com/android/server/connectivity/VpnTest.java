@@ -1268,6 +1268,23 @@ public class VpnTest extends VpnTestBase {
                     intent.getIntExtra(VpnManager.EXTRA_ERROR_CLASS, -1 /* defaultValue */));
             assertEquals(errorCode,
                     intent.getIntExtra(VpnManager.EXTRA_ERROR_CODE, -1 /* defaultValue */));
+            // CATEGORY_EVENT_DEACTIVATED_BY_USER & CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED won't
+            // send NetworkCapabilities & LinkProperties to VPN app.
+            // For ERROR_CODE_NETWORK_LOST, the NetworkCapabilities & LinkProperties of underlying
+            // network will be cleared. So the VPN app will receive null for those 2 extra values.
+            if (category.equals(VpnManager.CATEGORY_EVENT_DEACTIVATED_BY_USER)
+                    || category.equals(VpnManager.CATEGORY_EVENT_ALWAYS_ON_STATE_CHANGED)
+                    || errorCode == VpnManager.ERROR_CODE_NETWORK_LOST) {
+                assertNull(intent.getParcelableExtra(
+                        VpnManager.EXTRA_UNDERLYING_NETWORK_CAPABILITIES));
+                assertNull(intent.getParcelableExtra(VpnManager.EXTRA_UNDERLYING_LINK_PROPERTIES));
+            } else {
+                assertNotNull(intent.getParcelableExtra(
+                        VpnManager.EXTRA_UNDERLYING_NETWORK_CAPABILITIES));
+                assertNotNull(intent.getParcelableExtra(
+                        VpnManager.EXTRA_UNDERLYING_LINK_PROPERTIES));
+            }
+
             if (profileState != null) {
                 assertEquals(profileState[i], intent.getParcelableExtra(
                         VpnManager.EXTRA_VPN_PROFILE_STATE, VpnProfileState.class));
@@ -1470,6 +1487,12 @@ public class VpnTest extends VpnTestBase {
         when(mNetd.interfaceGetCfg(anyString())).thenReturn(config);
         final NetworkCallback cb = networkCallbackCaptor.getValue();
         cb.onAvailable(TEST_NETWORK);
+        // Trigger onCapabilitiesChanged() and onLinkPropertiesChanged() so the test can verify that
+        // if NetworkCapabilities and LinkProperties of underlying network will be sent/cleared or
+        // not.
+        // See verifyVpnManagerEvent().
+        cb.onCapabilitiesChanged(TEST_NETWORK, new NetworkCapabilities());
+        cb.onLinkPropertiesChanged(TEST_NETWORK, new LinkProperties());
         return cb;
     }
 
@@ -1488,6 +1511,11 @@ public class VpnTest extends VpnTestBase {
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
 
+        doReturn(new NetworkCapabilities()).when(mConnectivityManager)
+                .getRedactedNetworkCapabilitiesForPackage(any(), anyInt(), anyString());
+        doReturn(new LinkProperties()).when(mConnectivityManager)
+                .getRedactedLinkPropertiesForPackage(any(), anyInt(), anyString());
+
         final String sessionKey = vpn.startVpnProfile(TEST_VPN_PKG);
         final NetworkCallback cb = triggerOnAvailableAndGetCallback();
 
@@ -1498,8 +1526,18 @@ public class VpnTest extends VpnTestBase {
         verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS))
                 .createIkeSession(any(), any(), any(), any(), captor.capture(), any());
         reset(mIkev2SessionCreator);
-        final IkeSessionCallback ikeCb = captor.getValue();
-        ikeCb.onClosedWithException(exception);
+        // For network lost case, the process should be triggered by calling onLost(), which is the
+        // same process with the real case.
+        if (errorCode == VpnManager.ERROR_CODE_NETWORK_LOST) {
+            cb.onLost(TEST_NETWORK);
+            final ArgumentCaptor<Runnable> runnableCaptor =
+                    ArgumentCaptor.forClass(Runnable.class);
+            verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
+            runnableCaptor.getValue().run();
+        } else {
+            final IkeSessionCallback ikeCb = captor.getValue();
+            ikeCb.onClosedWithException(exception);
+        }
 
         verifyPowerSaveTempWhitelistApp(TEST_VPN_PKG);
         reset(mDeviceIdleInternal);
@@ -1508,7 +1546,9 @@ public class VpnTest extends VpnTestBase {
         if (errorType == VpnManager.ERROR_CLASS_NOT_RECOVERABLE) {
             verify(mConnectivityManager, timeout(TEST_TIMEOUT_MS))
                     .unregisterNetworkCallback(eq(cb));
-        } else if (errorType == VpnManager.ERROR_CLASS_RECOVERABLE) {
+        } else if (errorType == VpnManager.ERROR_CLASS_RECOVERABLE
+                // Vpn won't retry when there is no usable underlying network.
+                && errorCode != VpnManager.ERROR_CODE_NETWORK_LOST) {
             int retryIndex = 0;
             final IkeSessionCallback ikeCb2 = verifyRetryAndGetNewIkeCb(retryIndex++);
 
