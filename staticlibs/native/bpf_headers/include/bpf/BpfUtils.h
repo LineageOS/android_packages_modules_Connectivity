@@ -25,20 +25,11 @@
 #include <sys/socket.h>
 #include <sys/utsname.h>
 
-#include <string>
-
 #include <android-base/unique_fd.h>
 #include <log/log.h>
 
-#include "BpfSyscallWrappers.h"
-
-// The buffer size for the buffer that records program loading logs, needs to be large enough for
-// the largest kernel program.
-
 namespace android {
 namespace bpf {
-
-constexpr const int OVERFLOW_COUNTERSET = 2;
 
 constexpr const uint64_t NONEXISTENT_COOKIE = 0;
 

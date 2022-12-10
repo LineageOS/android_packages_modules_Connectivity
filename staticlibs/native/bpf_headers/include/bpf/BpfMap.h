@@ -22,6 +22,8 @@
 #include <android-base/stringprintf.h>
 #include <android-base/unique_fd.h>
 #include <utils/Log.h>
+
+#include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
 
 namespace android {
