@@ -2180,7 +2180,7 @@ public class BpfCoordinatorTest {
                 new TetherDevValue(UPSTREAM_IFINDEX));
 
         // dumpCounters
-        // The error code is defined in packages/modules/Connectivity/bpf_progs/bpf_tethering.h.
+        // The error code is defined in packages/modules/Connectivity/bpf_progs/offload.h.
         mBpfErrorMap.insertEntry(
                 new S32(0 /* INVALID_IPV4_VERSION */),
                 new S32(1000 /* count */));
