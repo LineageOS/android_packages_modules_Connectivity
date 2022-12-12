@@ -9849,7 +9849,10 @@ java_library {
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
     libs: [
+        "android-support-multidex",
         "androidx.annotation_annotation",
+        "androidx.collection_collection",
+        "androidx.core_core",
         "jsr305",
     ],
     aidl: {
