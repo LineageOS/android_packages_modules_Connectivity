@@ -1336,8 +1336,11 @@ def create_java_module(blueprint, gn):
   module = Module('java_library', bp_module_name, '//gn:java')
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
   module.libs = {
-      "androidx.annotation_annotation",
-      "jsr305",
+    "androidx.annotation_annotation",
+    "jsr305",
+    "androidx.core_core",
+    "androidx.collection_collection",
+    "android-support-multidex",
   }
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
   module.aidl["local_include_dirs"] = {"base/android/java/src/"}
