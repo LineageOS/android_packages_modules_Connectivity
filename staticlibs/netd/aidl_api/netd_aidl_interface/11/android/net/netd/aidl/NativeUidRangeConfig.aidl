@@ -31,10 +31,11 @@
 // with such a backward incompatible change, it has a high risk of breaking
 // later when a module using the interface is updated, e.g., Mainline modules.
 
-package android.net;
-@Backing(type="int")
-enum NativeNetworkType {
-  PHYSICAL = 0,
-  VIRTUAL = 1,
-  PHYSICAL_LOCAL = 2,
+package android.net.netd.aidl;
+/* @hide */
+@JavaDerive(equals=true, toString=true) @JavaOnlyImmutable
+parcelable NativeUidRangeConfig {
+  int netId;
+  android.net.UidRangeParcel[] uidRanges;
+  int subPriority;
 }
