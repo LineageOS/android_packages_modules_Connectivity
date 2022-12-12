@@ -9848,6 +9848,10 @@ java_library {
         "net/android/java/src/org/chromium/net/X509Util.java",
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
+    libs: [
+        "androidx.annotation_annotation",
+        "jsr305",
+    ],
     aidl: {
         include_dirs: [
             "frameworks/base/core/java/",
