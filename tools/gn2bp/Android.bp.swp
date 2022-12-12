@@ -9869,10 +9869,21 @@ java_library {
 java_plugin {
     name: "cronet_aml_java_jni_annotation_preprocessor",
     srcs: [
+        ":cronet_aml_build_android_build_config_gen",
+        "base/android/java/src/org/chromium/base/JniException.java",
+        "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+        "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+        "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
         "base/android/jni_generator/java/src/org/chromium/jni_generator/JniProcessor.java",
         "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
         "build/android/java/src/org/chromium/build/annotations/MainDex.java",
     ],
+    static_libs: [
+        "auto_service_annotations",
+        "guava",
+        "javapoet",
+    ],
+    processor_class: "org.chromium.jni_generator.JniProcessor",
 }
 
 // GN: //net/android:net_android_java_enums_srcjar
