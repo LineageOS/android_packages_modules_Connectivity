@@ -1187,7 +1187,8 @@ public class ConnectivityManagerTest {
             final String extraBoolKey = "extra_bool";
             firstIntent = PendingIntent.getBroadcast(mContext,
                     0 /* requestCode */,
-                    new Intent(broadcastAction).putExtra(extraBoolKey, false),
+                    new Intent(broadcastAction).putExtra(extraBoolKey, false)
+                            .setPackage(mContext.getPackageName()),
                     PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
 
             if (useListen) {
@@ -1200,7 +1201,8 @@ public class ConnectivityManagerTest {
             // intent will be updated with the new extras
             secondIntent = PendingIntent.getBroadcast(mContext,
                     0 /* requestCode */,
-                    new Intent(broadcastAction).putExtra(extraBoolKey, true),
+                    new Intent(broadcastAction).putExtra(extraBoolKey, true)
+                            .setPackage(mContext.getPackageName()),
                     PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
 
             // Because secondIntent.intentFilterEquals the first, the request should be replaced
