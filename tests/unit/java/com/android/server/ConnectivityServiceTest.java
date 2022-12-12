@@ -228,6 +228,7 @@ import android.content.pm.ServiceInfo;
 import android.content.pm.UserInfo;
 import android.content.res.Resources;
 import android.location.LocationManager;
+import android.net.CaptivePortal;
 import android.net.CaptivePortalData;
 import android.net.ConnectionInfo;
 import android.net.ConnectivityDiagnosticsManager.DataStallReport;
@@ -4440,6 +4441,27 @@ public class ConnectivityServiceTest {
         validatedCallback.expect(CallbackEntry.LOST, mWiFiNetworkAgent);
     }
 
+    private Intent startCaptivePortalApp(TestNetworkAgentWrapper networkAgent) throws Exception {
+        Network network = networkAgent.getNetwork();
+        // Check that startCaptivePortalApp sends the expected command to NetworkMonitor.
+        mCm.startCaptivePortalApp(network);
+        waitForIdle();
+        verify(networkAgent.mNetworkMonitor).launchCaptivePortalApp();
+
+        // NetworkMonitor uses startCaptivePortal(Network, Bundle) (startCaptivePortalAppInternal)
+        final Bundle testBundle = new Bundle();
+        final String testKey = "testkey";
+        final String testValue = "testvalue";
+        testBundle.putString(testKey, testValue);
+        mServiceContext.setPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+                PERMISSION_GRANTED);
+        mCm.startCaptivePortalApp(network, testBundle);
+        final Intent signInIntent = mServiceContext.expectStartActivityIntent(TIMEOUT_MS);
+        assertEquals(ACTION_CAPTIVE_PORTAL_SIGN_IN, signInIntent.getAction());
+        assertEquals(testValue, signInIntent.getStringExtra(testKey));
+        return signInIntent;
+    }
+
     @Test
     public void testCaptivePortalApp() throws Exception {
         final TestNetworkCallback captivePortalCallback = new TestNetworkCallback();
@@ -4476,22 +4498,7 @@ public class ConnectivityServiceTest {
         captivePortalCallback.expect(CallbackEntry.NETWORK_CAPS_UPDATED,
                 mWiFiNetworkAgent);
 
-        // Check that startCaptivePortalApp sends the expected command to NetworkMonitor.
-        mCm.startCaptivePortalApp(wifiNetwork);
-        waitForIdle();
-        verify(mWiFiNetworkAgent.mNetworkMonitor).launchCaptivePortalApp();
-
-        // NetworkMonitor uses startCaptivePortal(Network, Bundle) (startCaptivePortalAppInternal)
-        final Bundle testBundle = new Bundle();
-        final String testKey = "testkey";
-        final String testValue = "testvalue";
-        testBundle.putString(testKey, testValue);
-        mServiceContext.setPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
-                PERMISSION_GRANTED);
-        mCm.startCaptivePortalApp(wifiNetwork, testBundle);
-        final Intent signInIntent = mServiceContext.expectStartActivityIntent(TIMEOUT_MS);
-        assertEquals(ACTION_CAPTIVE_PORTAL_SIGN_IN, signInIntent.getAction());
-        assertEquals(testValue, signInIntent.getStringExtra(testKey));
+        startCaptivePortalApp(mWiFiNetworkAgent);
 
         // Report that the captive portal is dismissed, and check that callbacks are fired
         mWiFiNetworkAgent.setNetworkValid(false /* isStrictMode */);
@@ -4500,6 +4507,37 @@ public class ConnectivityServiceTest {
         captivePortalCallback.expect(CallbackEntry.LOST, mWiFiNetworkAgent);
 
         mCm.unregisterNetworkCallback(validatedCallback);
+        mCm.unregisterNetworkCallback(captivePortalCallback);
+    }
+
+    @Test
+    public void testCaptivePortalApp_IgnoreNetwork() throws Exception {
+        final TestNetworkCallback captivePortalCallback = new TestNetworkCallback();
+        final NetworkRequest captivePortalRequest = new NetworkRequest.Builder()
+                .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL).build();
+        mCm.registerNetworkCallback(captivePortalRequest, captivePortalCallback);
+
+        mWiFiNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+        mWiFiNetworkAgent.connectWithCaptivePortal(TEST_REDIRECT_URL, false);
+        captivePortalCallback.expectAvailableCallbacksUnvalidated(mWiFiNetworkAgent);
+
+        final Intent signInIntent = startCaptivePortalApp(mWiFiNetworkAgent);
+        final CaptivePortal captivePortal = signInIntent
+                .getParcelableExtra(ConnectivityManager.EXTRA_CAPTIVE_PORTAL);
+
+        captivePortal.ignoreNetwork();
+        waitForIdle();
+
+        // Since network will disconnect, ensure no notification of response to NetworkMonitor
+        verify(mWiFiNetworkAgent.mNetworkMonitor, never())
+                .notifyCaptivePortalAppFinished(CaptivePortal.APP_RETURN_UNWANTED);
+
+        // Report that the network is disconnected
+        mWiFiNetworkAgent.expectDisconnected();
+        mWiFiNetworkAgent.expectPreventReconnectReceived();
+        verify(mWiFiNetworkAgent.mNetworkMonitor).notifyNetworkDisconnected();
+        captivePortalCallback.expect(CallbackEntry.LOST, mWiFiNetworkAgent);
+
         mCm.unregisterNetworkCallback(captivePortalCallback);
     }
 
