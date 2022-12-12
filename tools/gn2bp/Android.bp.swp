@@ -9855,8 +9855,9 @@ java_library {
     libs: [
         "android-support-multidex",
         "androidx.annotation_annotation",
+        "androidx.annotation_annotation-experimental-nodeps",
         "androidx.collection_collection",
-        "androidx.core_core",
+        "androidx.core_core-nodeps",
         "framework-connectivity-t.stubs.module_lib",
         "framework-connectivity.stubs.module_lib",
         "framework-mediaprovider.stubs.module_lib",
