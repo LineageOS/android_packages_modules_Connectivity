@@ -17,6 +17,8 @@
 package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
@@ -38,9 +40,9 @@ public class MdnsSocket {
     private static final MdnsLogger LOGGER = new MdnsLogger("MdnsSocket");
 
     static final int INTERFACE_INDEX_UNSPECIFIED = -1;
-    private static final InetSocketAddress MULTICAST_IPV4_ADDRESS =
+    protected static final InetSocketAddress MULTICAST_IPV4_ADDRESS =
             new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
-    private static final InetSocketAddress MULTICAST_IPV6_ADDRESS =
+    protected static final InetSocketAddress MULTICAST_IPV6_ADDRESS =
             new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT);
     private final MulticastNetworkInterfaceProvider multicastNetworkInterfaceProvider;
     private final MulticastSocket multicastSocket;
@@ -123,6 +125,14 @@ public class MdnsSocket {
             LOGGER.e("Failed to retrieve interface index for socket.", e);
             return -1;
         }
+    }
+
+    /**
+     * Returns the available network that this socket is used to, or null if the network is unknown.
+     */
+    @Nullable
+    public Network getNetwork() {
+        return multicastNetworkInterfaceProvider.getAvailableNetwork();
     }
 
     public boolean isOnIPv6OnlyNetwork() {
