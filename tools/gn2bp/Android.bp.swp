@@ -9853,6 +9853,11 @@ java_library {
         "androidx.annotation_annotation",
         "androidx.collection_collection",
         "androidx.core_core",
+        "framework-connectivity-t.stubs.module_lib",
+        "framework-connectivity.stubs.module_lib",
+        "framework-mediaprovider.stubs.module_lib",
+        "framework-tethering.stubs.module_lib",
+        "framework-wifi.stubs.module_lib",
         "jsr305",
     ],
     aidl: {
@@ -9866,6 +9871,7 @@ java_library {
     plugins: [
         "cronet_aml_java_jni_annotation_preprocessor",
     ],
+    sdk_version: "module_current",
 }
 
 // GN: //base/android/jni_generator:jni_processor
