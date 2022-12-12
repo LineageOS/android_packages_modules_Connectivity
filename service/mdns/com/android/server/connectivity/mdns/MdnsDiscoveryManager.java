@@ -21,6 +21,7 @@ import android.annotation.NonNull;
 import android.annotation.RequiresPermission;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
@@ -34,7 +35,8 @@ import java.util.Map;
  * notify them when a mDNS service instance is found, updated, or removed?
  */
 public class MdnsDiscoveryManager implements MdnsSocketClient.Callback {
-
+    private static final String TAG = MdnsDiscoveryManager.class.getSimpleName();
+    public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     private static final MdnsLogger LOGGER = new MdnsLogger("MdnsDiscoveryManager");
 
     private final ExecutorProvider executorProvider;
