@@ -1352,6 +1352,9 @@ def create_java_module(blueprint, gn):
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
   module.aidl["local_include_dirs"] = {"base/android/java/src/"}
   module.sdk_version = "module_current"
+  module.apex_available.add(tethering_apex)
+  # TODO: remove following workaround required to make this module visible to make (b/203203405)
+  module.apex_available.add("//apex_available:platform")
   for dep in gn.java_actions:
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
