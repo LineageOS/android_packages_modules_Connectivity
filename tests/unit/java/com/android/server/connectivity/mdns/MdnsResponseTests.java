@@ -21,8 +21,12 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+
+import android.net.Network;
 
 import com.android.net.module.util.HexDump;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -92,6 +96,9 @@ public class MdnsResponseTests {
             + "3839300878797A3D"
             + "21402324");
 
+    private static final int INTERFACE_INDEX = 999;
+    private final Network mNetwork = mock(Network.class);
+
     // The following helper classes act as wrappers so that IPv4 and IPv6 address records can
     // be explicitly created by type using same constructor signature as all other records.
     static class MdnsInet4AddressRecord extends MdnsInetAddressRecord {
@@ -127,7 +134,7 @@ public class MdnsResponseTests {
     // Construct an MdnsResponse with the specified data packets applied.
     private MdnsResponse makeMdnsResponse(long time, List<PacketAndRecordClass> responseList)
             throws IOException {
-        MdnsResponse response = new MdnsResponse(time);
+        MdnsResponse response = new MdnsResponse(time, INTERFACE_INDEX, mNetwork);
         for (PacketAndRecordClass responseData : responseList) {
             DatagramPacket packet =
                     new DatagramPacket(responseData.packetData, responseData.packetData.length);
@@ -159,7 +166,7 @@ public class MdnsResponseTests {
         String[] name = reader.readLabels();
         reader.skip(2); // skip record type indication.
         MdnsInetAddressRecord record = new MdnsInetAddressRecord(name, MdnsRecord.TYPE_A, reader);
-        MdnsResponse response = new MdnsResponse(0);
+        MdnsResponse response = new MdnsResponse(0, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasInet4AddressRecord());
         assertTrue(response.setInet4AddressRecord(record));
         assertEquals(response.getInet4AddressRecord(), record);
@@ -173,7 +180,7 @@ public class MdnsResponseTests {
         reader.skip(2); // skip record type indication.
         MdnsInetAddressRecord record =
                 new MdnsInetAddressRecord(name, MdnsRecord.TYPE_AAAA, reader);
-        MdnsResponse response = new MdnsResponse(0);
+        MdnsResponse response = new MdnsResponse(0, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasInet6AddressRecord());
         assertTrue(response.setInet6AddressRecord(record));
         assertEquals(response.getInet6AddressRecord(), record);
@@ -186,7 +193,7 @@ public class MdnsResponseTests {
         String[] name = reader.readLabels();
         reader.skip(2); // skip record type indication.
         MdnsPointerRecord record = new MdnsPointerRecord(name, reader);
-        MdnsResponse response = new MdnsResponse(0);
+        MdnsResponse response = new MdnsResponse(0, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasPointerRecords());
         assertTrue(response.addPointerRecord(record));
         List<MdnsPointerRecord> recordList = response.getPointerRecords();
@@ -202,7 +209,7 @@ public class MdnsResponseTests {
         String[] name = reader.readLabels();
         reader.skip(2); // skip record type indication.
         MdnsServiceRecord record = new MdnsServiceRecord(name, reader);
-        MdnsResponse response = new MdnsResponse(0);
+        MdnsResponse response = new MdnsResponse(0, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasServiceRecord());
         assertTrue(response.setServiceRecord(record));
         assertEquals(response.getServiceRecord(), record);
@@ -215,23 +222,31 @@ public class MdnsResponseTests {
         String[] name = reader.readLabels();
         reader.skip(2); // skip record type indication.
         MdnsTextRecord record = new MdnsTextRecord(name, reader);
-        MdnsResponse response = new MdnsResponse(0);
+        MdnsResponse response = new MdnsResponse(0, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasTextRecord());
         assertTrue(response.setTextRecord(record));
         assertEquals(response.getTextRecord(), record);
     }
 
     @Test
-    public void getInterfaceIndex_returnsDefaultValue() {
-        MdnsResponse response = new MdnsResponse(/* now= */ 0);
-        assertEquals(response.getInterfaceIndex(), -1);
+    public void getInterfaceIndex() {
+        final MdnsResponse response1 = new MdnsResponse(/* now= */ 0, INTERFACE_INDEX, mNetwork);
+        assertEquals(INTERFACE_INDEX, response1.getInterfaceIndex());
+
+        final MdnsResponse response2 =
+                new MdnsResponse(/* now= */ 0, 1234 /* interfaceIndex */, mNetwork);
+        assertEquals(1234, response2.getInterfaceIndex());
     }
 
     @Test
-    public void getInterfaceIndex_afterSet_returnsValue() {
-        MdnsResponse response = new MdnsResponse(/* now= */ 0);
-        response.setInterfaceIndex(5);
-        assertEquals(response.getInterfaceIndex(), 5);
+    public void testGetNetwork() {
+        final MdnsResponse response1 =
+                new MdnsResponse(/* now= */ 0, INTERFACE_INDEX, null /* network */);
+        assertNull(response1.getNetwork());
+
+        final MdnsResponse response2 =
+                new MdnsResponse(/* now= */ 0, 1234 /* interfaceIndex */, mNetwork);
+        assertEquals(mNetwork, response2.getNetwork());
     }
 
     @Test
