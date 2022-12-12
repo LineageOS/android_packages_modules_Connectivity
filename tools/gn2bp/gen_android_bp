@@ -320,6 +320,7 @@ class Module(object):
     self.aidl = dict()
     self.plugins = set()
     self.processor_class = None
+    self.sdk_version = None
 
   def to_string(self, output):
     if self.comment:
@@ -372,6 +373,7 @@ class Module(object):
     self._output_field(output, 'aidl')
     self._output_field(output, 'plugins')
     self._output_field(output, 'processor_class')
+    self._output_field(output, 'sdk_version')
     if self.rtti:
       self._output_field(output, 'rtti')
 
