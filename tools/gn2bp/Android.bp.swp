@@ -5698,7 +5698,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //build/android:build_config_gen
@@ -7899,7 +7899,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //components/cronet/android:integrated_mode_state
@@ -7965,7 +7965,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //components/cronet/android:load_states_list
@@ -9958,7 +9958,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //net/android:net_errors_java
