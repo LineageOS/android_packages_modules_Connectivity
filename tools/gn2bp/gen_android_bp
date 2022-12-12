@@ -316,6 +316,7 @@ class Module(object):
     # Name of the output. Used for setting .so file name for libcronet
     self.stem = None
     self.compile_multilib = None
+    self.aidl = dict()
 
   def to_string(self, output):
     if self.comment:
@@ -364,6 +365,7 @@ class Module(object):
     self._output_field(output, 'cppflags')
     self._output_field(output, 'stem')
     self._output_field(output, 'compile_multilib')
+    self._output_field(output, 'aidl')
     if self.rtti:
       self._output_field(output, 'rtti')
 
@@ -1302,6 +1304,8 @@ def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+  module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
+  module.aidl["local_include_dirs"] = {"base/android/java/src/"}
   for dep in gn.java_actions:
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':

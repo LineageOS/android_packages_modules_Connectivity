@@ -9848,6 +9848,14 @@ java_library {
         "net/android/java/src/org/chromium/net/X509Util.java",
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
+    aidl: {
+        include_dirs: [
+            "frameworks/base/core/java/",
+        ],
+        local_include_dirs: [
+            "base/android/java/src/",
+        ],
+    },
 }
 
 // GN: //net/android:net_android_java_enums_srcjar
