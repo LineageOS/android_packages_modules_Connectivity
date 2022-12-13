@@ -154,9 +154,9 @@ public class BpfCoordinatorTest {
 
     private static final int INVALID_IFINDEX = 0;
     private static final int UPSTREAM_IFINDEX = 1001;
-    private static final int UPSTREAM_IFINDEX2 = 1002;
-    private static final int DOWNSTREAM_IFINDEX = 1003;
-    private static final int DOWNSTREAM_IFINDEX2 = 1004;
+    private static final int UPSTREAM_IFINDEX2 = 1003;
+    private static final int DOWNSTREAM_IFINDEX = 2001;
+    private static final int DOWNSTREAM_IFINDEX2 = 2002;
 
     private static final String UPSTREAM_IFACE = "rmnet0";
     private static final String UPSTREAM_IFACE2 = "wlan0";
@@ -2108,7 +2108,7 @@ public class BpfCoordinatorTest {
     @Test
     public void testIpv6ForwardingRuleToString() throws Exception {
         final Ipv6ForwardingRule rule = buildTestForwardingRule(UPSTREAM_IFINDEX, NEIGH_A, MAC_A);
-        assertEquals("upstreamIfindex: 1001, downstreamIfindex: 1003, address: 2001:db8::1, "
+        assertEquals("upstreamIfindex: 1001, downstreamIfindex: 2001, address: 2001:db8::1, "
                 + "srcMac: 12:34:56:78:90:ab, dstMac: 00:00:00:00:00:0a", rule.toString());
     }
 
