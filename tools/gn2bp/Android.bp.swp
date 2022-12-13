@@ -5698,7 +5698,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //build/android:build_config_gen
@@ -7899,7 +7899,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //components/cronet/android:integrated_mode_state
@@ -7965,7 +7965,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //components/cronet/android:load_states_list
@@ -9848,6 +9848,56 @@ java_library {
         "net/android/java/src/org/chromium/net/X509Util.java",
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.tethering",
+    ],
+    libs: [
+        "android-support-multidex",
+        "androidx.annotation_annotation",
+        "androidx.annotation_annotation-experimental-nodeps",
+        "androidx.collection_collection",
+        "androidx.core_core-nodeps",
+        "framework-connectivity-t.stubs.module_lib",
+        "framework-connectivity.stubs.module_lib",
+        "framework-mediaprovider.stubs.module_lib",
+        "framework-tethering.stubs.module_lib",
+        "framework-wifi.stubs.module_lib",
+        "jsr305",
+    ],
+    aidl: {
+        include_dirs: [
+            "frameworks/base/core/java/",
+        ],
+        local_include_dirs: [
+            "base/android/java/src/",
+        ],
+    },
+    plugins: [
+        "cronet_aml_java_jni_annotation_preprocessor",
+    ],
+    sdk_version: "module_current",
+}
+
+// GN: //base/android/jni_generator:jni_processor
+java_plugin {
+    name: "cronet_aml_java_jni_annotation_preprocessor",
+    srcs: [
+        ":cronet_aml_build_android_build_config_gen",
+        "base/android/java/src/org/chromium/base/JniException.java",
+        "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+        "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+        "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+        "base/android/jni_generator/java/src/org/chromium/jni_generator/JniProcessor.java",
+        "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+        "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+    ],
+    static_libs: [
+        "auto_service_annotations",
+        "guava",
+        "javapoet",
+    ],
+    processor_class: "org.chromium.jni_generator.JniProcessor",
 }
 
 // GN: //net/android:net_android_java_enums_srcjar
@@ -9908,7 +9958,7 @@ cc_object {
         "-E",
         "-P",
     ],
-    compile_multilib: "32",
+    compile_multilib: "first",
 }
 
 // GN: //net/android:net_errors_java

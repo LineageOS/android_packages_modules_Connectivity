@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.net.Network;
+
 /** Interface for monitoring connectivity changes. */
 public interface ConnectivityMonitor {
     /**
@@ -28,6 +30,9 @@ public interface ConnectivityMonitor {
     void stopWatchingConnectivityChanges();
 
     void notifyConnectivityChange();
+
+    /** Get available network which is received from connectivity change. */
+    Network getAvailableNetwork();
 
     /** Listener interface for receiving connectivity changes. */
     interface Listener {
