@@ -143,6 +143,8 @@ additional_args = {
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
+    '//buildtools/third_party/libunwind:libunwind':
+        lambda x: None, # disable libunwind
     '//net/tools/root_store_tool:root_store_tool':
         lambda x: None,
 }

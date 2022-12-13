@@ -5193,64 +5193,6 @@ cc_object {
     },
 }
 
-// GN: //buildtools/third_party/libunwind:libunwind
-cc_object {
-    name: "cronet_aml_buildtools_third_party_libunwind_libunwind",
-    srcs: [
-        "buildtools/third_party/libunwind/trunk/src/Unwind-EHABI.cpp",
-        "buildtools/third_party/libunwind/trunk/src/Unwind-sjlj.c",
-        "buildtools/third_party/libunwind/trunk/src/UnwindLevel1-gcc-ext.c",
-        "buildtools/third_party/libunwind/trunk/src/UnwindLevel1.c",
-        "buildtools/third_party/libunwind/trunk/src/UnwindRegistersRestore.S",
-        "buildtools/third_party/libunwind/trunk/src/UnwindRegistersSave.S",
-        "buildtools/third_party/libunwind/trunk/src/libunwind.cpp",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DANDROID",
-        "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DHAVE_SYS_UIO_H",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBUNWIND_IS_NATIVE_ONLY",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "buildtools/third_party/libunwind/trunk/include/",
-    ],
-    cpp_std: "c++20",
-    cppflags: [
-        "-fexceptions",
-    ],
-    rtti: true,
-    target: {
-        android_x86: {
-            cflags: [
-                "-msse3",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-msse3",
-            ],
-        },
-    },
-}
-
 // GN: //components/cronet/android:buildflags__android_arm
 cc_genrule {
     name: "cronet_aml_components_cronet_android_buildflags__android_arm",
@@ -5349,7 +5291,6 @@ cc_library_shared {
     srcs: [
         ":cronet_aml_buildtools_third_party_libc___libc__",
         ":cronet_aml_buildtools_third_party_libc__abi_libc__abi",
-        ":cronet_aml_buildtools_third_party_libunwind_libunwind",
         ":cronet_aml_components_cronet_android_cronet_static",
         ":cronet_aml_components_cronet_cronet_common",
         ":cronet_aml_components_cronet_metrics_util",
