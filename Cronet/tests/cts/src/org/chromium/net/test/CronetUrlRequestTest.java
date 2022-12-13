@@ -29,7 +29,6 @@ import androidx.test.runner.AndroidJUnit4;
 import org.chromium.net.CronetEngine;
 import org.chromium.net.UrlRequest;
 import org.chromium.net.UrlResponseInfo;
-import org.chromium.net.test.util.CronetCtsTestServer;
 import org.chromium.net.test.util.TestUrlRequestCallback;
 import org.chromium.net.test.util.TestUrlRequestCallback.ResponseStep;
 import org.junit.Before;
@@ -46,7 +45,6 @@ public class CronetUrlRequestTest {
     private final String[] mTestDomains = {"www.google.com", "www.android.com"};
     @NonNull private CronetEngine mCronetEngine;
     @NonNull private ConnectivityManager mCm;
-    @NonNull private CronetCtsTestServer mTestServer;
 
     @Before
     public void setUp() throws Exception {
@@ -58,7 +56,6 @@ public class CronetUrlRequestTest {
                 // .enableBrotli(true)
                 .enableQuic(true);
         mCronetEngine = builder.build();
-        mTestServer = new CronetCtsTestServer(context);
     }
 
     private static void assertGreaterThan(String msg, int first, int second) {
@@ -77,7 +74,7 @@ public class CronetUrlRequestTest {
     @Test
     public void testUrlRequestGet_CompletesSuccessfully() throws Exception {
         assertHasTestableNetworks();
-        String url = mTestServer.getSuccessUrl();
+        String url = HTTPS_PREFIX + getRandomDomain();
         TestUrlRequestCallback callback = new TestUrlRequestCallback();
         UrlRequest.Builder builder = mCronetEngine.newUrlRequestBuilder(url, callback,
                 callback.getExecutor());
