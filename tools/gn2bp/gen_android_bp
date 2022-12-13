@@ -1478,7 +1478,7 @@ def main():
     log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
   targets = args.targets or default_targets
-  gn = gn_utils.GnParser()
+  gn = gn_utils.GnParser(builtin_deps)
   for desc_file in args.desc:
     with open(desc_file) as f:
       desc = json.load(f)

@@ -234,7 +234,8 @@ class GnParser(object):
         self.arch[arch].source_set_deps -= self.source_set_deps
 
 
-  def __init__(self):
+  def __init__(self, builtin_deps):
+    self.builtin_deps = builtin_deps
     self.all_targets = {}
     self.linker_units = {}  # Executables, shared or static libraries.
     self.source_sets = {}
@@ -320,6 +321,11 @@ class GnParser(object):
     else:
       return target  # Target already processed.
 
+    if target.name in self.builtin_deps:
+      # return early, no need to dive into the modules deps as the module is a
+      # builtin.
+      return None
+
     target.testonly = desc.get('testonly', False)
 
     proto_target_type, proto_desc = self.get_proto_target_type(gn_desc, gn_target_name)
@@ -383,7 +389,9 @@ class GnParser(object):
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
       dep = self.parse_gn_desc(gn_desc, gn_dep_name, is_java_target)
-      if dep.type == 'proto_library':
+      if dep is None:
+        continue
+      elif dep.type == 'proto_library':
         target.proto_deps.add(dep.name)
         target.transitive_proto_deps.add(dep.name)
         target.proto_paths.update(dep.proto_paths)
