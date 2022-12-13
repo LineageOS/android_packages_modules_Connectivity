@@ -50,8 +50,6 @@ ODR_VIOLATION_IGNORE_TARGETS = {
     '//:perfetto_integrationtests',
 }
 ARCH_REGEX = r'(android_x86_64|android_x86|android_arm|android_arm64|host)'
-DEX_REGEX = '.*__dex__%s$' % ARCH_REGEX
-COMPILE_JAVA_REGEX = '.*__compile_java__%s$' % ARCH_REGEX
 RESPONSE_FILE = '{{response_file_name}}'
 
 def repo_root():
@@ -289,7 +287,7 @@ class GnParser(object):
 
     return self.all_targets[label_without_toolchain(gn_target_name)]
 
-  def parse_gn_desc(self, gn_desc, gn_target_name):
+  def parse_gn_desc(self, gn_desc, gn_target_name, is_java_target = False):
     """Parses a gn desc tree and resolves all target dependencies.
 
         It bubbles up variables from source_set dependencies as described in the
@@ -302,12 +300,13 @@ class GnParser(object):
     type_ = desc['type']
     arch = self._get_arch(desc['toolchain'])
 
+    is_java_target = is_java_target or self._is_java_group(type_, target_name)
+
     # Action modules can differ depending on the target architecture, yet
     # genrule's do not allow to overload cmd per target OS / arch.  Create a
     # separate action for every architecture.
     # Cover both action and action_foreach
-    if type_.startswith('action') and \
-        not is_java_action(desc.get("script", ""), desc.get("outputs", [])):
+    if type_.startswith('action') and not is_java_target:
       # Don't meddle with the java actions name
       target_name += '__' + arch
 
@@ -383,7 +382,7 @@ class GnParser(object):
 
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
-      dep = self.parse_gn_desc(gn_desc, gn_dep_name)
+      dep = self.parse_gn_desc(gn_desc, gn_dep_name, is_java_target)
       if dep.type == 'proto_library':
         target.proto_deps.add(dep.name)
         target.transitive_proto_deps.add(dep.name)
@@ -424,8 +423,8 @@ class GnParser(object):
       # dependency of the __dex target)
       # Note: this skips prebuilt java dependencies. These will have to be
       # added manually when building the jar.
-      if re.match(DEX_REGEX, target.name):
-        if re.match(COMPILE_JAVA_REGEX, dep.name):
+      if target.name.endswith('__dex'):
+        if dep.name.endswith('__compile_java'):
           log.debug('Adding java sources for %s', dep.name)
           java_srcs = [src for src in dep.inputs if _is_java_source(src)]
           self.java_sources.update(java_srcs)
