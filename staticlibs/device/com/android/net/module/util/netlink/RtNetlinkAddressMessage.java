@@ -17,7 +17,6 @@
 package com.android.net.module.util.netlink;
 
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_ACK;
-import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REPLACE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
 import android.system.OsConstants;
@@ -32,6 +31,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * A NetlinkMessage subclass for rtnetlink address messages.
@@ -154,21 +154,26 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
     /**
      * A convenience method to create an RTM_NEWADDR message.
      */
-    public static byte[] newRtmNewAddressMessage(int seqNo, final InetAddress ip, short prefixlen,
-            byte flags, byte scope, int ifIndex, long preferred, long valid) {
+    public static byte[] newRtmNewAddressMessage(int seqNo, @NonNull final InetAddress ip,
+            short prefixlen, int flags, byte scope, int ifIndex, long preferred, long valid) {
+        Objects.requireNonNull(ip, "IP address to be set via netlink message cannot be null");
+
         final StructNlMsgHdr nlmsghdr = new StructNlMsgHdr();
         nlmsghdr.nlmsg_type = NetlinkConstants.RTM_NEWADDR;
-        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_REPLACE;
+        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
         nlmsghdr.nlmsg_seq = seqNo;
 
         final RtNetlinkAddressMessage msg = new RtNetlinkAddressMessage(nlmsghdr);
         final byte family =
                 (byte) ((ip instanceof Inet6Address) ? OsConstants.AF_INET6 : OsConstants.AF_INET);
-        msg.mIfaddrmsg = new StructIfaddrMsg(family, prefixlen, flags, scope, ifIndex);
+        // IFA_FLAGS attribute is always present within this method, just set flags from
+        // ifaddrmsg to 0. kernel will prefer the flags from IFA_FLAGS attribute.
+        msg.mIfaddrmsg =
+                new StructIfaddrMsg(family, prefixlen, (short) 0 /* flags */, scope, ifIndex);
         msg.mIpAddress = ip;
         msg.mIfacacheInfo = new StructIfacacheInfo(preferred, valid, 0 /* cstamp */,
                 0 /* tstamp */);
-        msg.mFlags = (int) (flags & 0xFF);
+        msg.mFlags = flags;
 
         final byte[] bytes = new byte[msg.getRequiredSpace()];
         nlmsghdr.nlmsg_len = bytes.length;
@@ -180,15 +185,14 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
 
     private int getRequiredSpace() {
         int spaceRequired = StructNlMsgHdr.STRUCT_SIZE + StructIfaddrMsg.STRUCT_SIZE;
-        if (mIpAddress != null) {
-            spaceRequired += NetlinkConstants.alignedLengthOf(
-                    StructNlAttr.NLA_HEADERLEN + mIpAddress.getAddress().length);
-        }
-        if (mIfacacheInfo != null) {
-            spaceRequired += NetlinkConstants.alignedLengthOf(
-                    StructNlAttr.NLA_HEADERLEN + StructIfacacheInfo.STRUCT_SIZE);
-        }
-        spaceRequired += StructNlAttr.NLA_HEADERLEN + 4; // IFA_FLAGS "u32" attr
+        // IFA_ADDRESS attr
+        spaceRequired += NetlinkConstants.alignedLengthOf(
+                StructNlAttr.NLA_HEADERLEN + mIpAddress.getAddress().length);
+        // IFA_CACHEINFO attr
+        spaceRequired += NetlinkConstants.alignedLengthOf(
+                StructNlAttr.NLA_HEADERLEN + StructIfacacheInfo.STRUCT_SIZE);
+        // IFA_FLAGS "u32" attr
+        spaceRequired += StructNlAttr.NLA_HEADERLEN + 4;
         return spaceRequired;
     }
 
