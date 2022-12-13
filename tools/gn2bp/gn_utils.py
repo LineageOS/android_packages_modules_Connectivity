@@ -263,7 +263,7 @@ class GnParser(object):
     # Per https://chromium.googlesource.com/chromium/src/build/+/HEAD/android/docs/java_toolchain.md
     # java target names must end in "_java".
     # TODO: There are some other possible variations we might need to support.
-    return type_ == 'group' and re.match('.*_java$', target_name)
+    return type_ == 'group' and target_name.endswith('_java')
 
   def _get_arch(self, toolchain):
     if toolchain == '//build/toolchain/android:android_clang_x86':
@@ -301,7 +301,7 @@ class GnParser(object):
     type_ = desc['type']
     arch = self._get_arch(desc['toolchain'])
 
-    is_java_target = is_java_target or self._is_java_group(type_, target_name)
+    is_java_target |= self._is_java_group(type_, target_name)
 
     # Action modules can differ depending on the target architecture, yet
     # genrule's do not allow to overload cmd per target OS / arch.  Create a
