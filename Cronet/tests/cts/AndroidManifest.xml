@@ -18,18 +18,18 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="org.chromium.net.test">
+        package="org.chromium.net.test">
 
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <application android:networkSecurityConfig="@xml/network_security_config">
-        <uses-library android:name="android.test.runner"/>
-        <uses-library android:name="framework-cronet"/>
+    <application>
+        <uses-library android:name="android.test.runner" />
+        <uses-library android:name="framework-cronet" />
     </application>
 
     <instrumentation
         android:name="androidx.test.runner.AndroidJUnitRunner"
         android:targetPackage="org.chromium.net.test"
-        android:label="Cronet API Networking Tests"/>
+        android:label="Cronet API Networking Tests" />
 </manifest>

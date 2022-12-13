@@ -20,14 +20,10 @@ package {
 
 java_library {
     name: "CronetApiCommonTests",
-    srcs: [
-        "src/**/*.java",
-        "src/**/*.kt"
-    ],
+    srcs: ["src/**/*.java"],
     static_libs: [
         "androidx.test.rules",
         "androidx.core_core",
-        "ctstestserver",
         "junit",
     ],
     libs: [
@@ -36,7 +32,6 @@ java_library {
         "android.test.mock",
         "androidx.annotation_annotation",
         "framework-cronet",
-        "org.apache.http.legacy",
     ],
 }
 
