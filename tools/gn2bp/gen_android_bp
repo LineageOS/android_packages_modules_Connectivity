@@ -1071,15 +1071,6 @@ def set_module_flags(module, cflags, defines):
     if '-fexceptions' in flag:
       module.cppflags.add('-fexceptions')
 
-def add_genrule_per_arch(module, dep_module, type):
-  module.generated_headers.update(dep_module.genrule_headers)
-  # If the module is a static library, export all the generated headers.
-  if type == 'cc_library_static':
-    module.export_generated_headers.update(dep_module.genrule_headers)
-  module.srcs.update(dep_module.genrule_srcs)
-  module.shared_libs.update(dep_module.genrule_shared_libs)
-  module.header_libs.update(dep_module.genrule_header_libs)
-
 def set_module_include_dirs(module, cflags, include_dirs):
   for flag in cflags:
     if '-isystem' in flag:
