@@ -53,7 +53,7 @@ public class VpnTransportInfoTest {
         assertParcelingIsLossless(v);
 
         final VpnTransportInfo v2 =
-                new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true);
+                new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true, true);
         assertParcelingIsLossless(v2);
     }
 
@@ -66,8 +66,10 @@ public class VpnTransportInfoTest {
         final VpnTransportInfo v13 = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, session1);
         final VpnTransportInfo v14 = new VpnTransportInfo(VpnManager.TYPE_VPN_LEGACY, session1);
         final VpnTransportInfo v15 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1);
-        final VpnTransportInfo v16 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1, true);
-        final VpnTransportInfo v17 = new VpnTransportInfo(VpnManager.TYPE_VPN_OEM, session1, true);
+        final VpnTransportInfo v16 = new VpnTransportInfo(
+                VpnManager.TYPE_VPN_OEM, session1, true, true);
+        final VpnTransportInfo v17 = new VpnTransportInfo(
+                VpnManager.TYPE_VPN_OEM, session1, true, true);
         final VpnTransportInfo v21 = new VpnTransportInfo(VpnManager.TYPE_VPN_LEGACY, session2);
 
         final VpnTransportInfo v31 = v11.makeCopy(REDACT_FOR_NETWORK_SETTINGS);
@@ -104,7 +106,18 @@ public class VpnTransportInfoTest {
         assertFalse(v.getBypassable());
 
         final VpnTransportInfo v2 =
-                new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true);
+                new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true, false);
         assertTrue(v2.getBypassable());
+    }
+
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    @Test
+    public void testShouldLongLivedTcpExcluded() {
+        final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
+        assertFalse(v.areLongLivedTcpConnectionsExpensive());
+
+        final VpnTransportInfo v2 = new VpnTransportInfo(
+                VpnManager.TYPE_VPN_PLATFORM, "12345", true, true);
+        assertTrue(v2.areLongLivedTcpConnectionsExpensive());
     }
 }
