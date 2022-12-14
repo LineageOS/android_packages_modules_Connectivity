@@ -21,6 +21,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.content.Context;
+import android.net.Network;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.SystemClock;
 import android.text.format.DateUtils;
@@ -397,7 +398,8 @@ public class MdnsSocketClient {
                             responseType,
                             /* interfaceIndex= */ (socket == null || !propagateInterfaceIndex)
                                     ? MdnsSocket.INTERFACE_INDEX_UNSPECIFIED
-                                    : socket.getInterfaceIndex());
+                                    : socket.getInterfaceIndex(),
+                            /* network= */ socket.getNetwork());
                 }
             } catch (IOException e) {
                 if (!shouldStopSocketLoop) {
@@ -408,12 +410,12 @@ public class MdnsSocketClient {
         LOGGER.log("Receive thread stopped.");
     }
 
-    private int processResponsePacket(
-            @NonNull DatagramPacket packet, String responseType, int interfaceIndex) {
+    private int processResponsePacket(@NonNull DatagramPacket packet, String responseType,
+            int interfaceIndex, @Nullable Network network) {
         int packetNumber = ++receivedPacketNumber;
 
         List<MdnsResponse> responses = new LinkedList<>();
-        int errorCode = responseDecoder.decode(packet, responses, interfaceIndex);
+        int errorCode = responseDecoder.decode(packet, responses, interfaceIndex, network);
         if (errorCode == MdnsResponseDecoder.SUCCESS) {
             if (responseType.equals(MULTICAST_TYPE)) {
                 receivedMulticastResponse = true;

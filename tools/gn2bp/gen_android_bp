@@ -314,8 +314,13 @@ class Module(object):
     self.cppflags = set()
     self.rtti = False
     # Name of the output. Used for setting .so file name for libcronet
+    self.libs = set()
     self.stem = None
     self.compile_multilib = None
+    self.aidl = dict()
+    self.plugins = set()
+    self.processor_class = None
+    self.sdk_version = None
 
   def to_string(self, output):
     if self.comment:
@@ -362,8 +367,13 @@ class Module(object):
     self._output_field(output, 'proto')
     self._output_field(output, 'linker_scripts')
     self._output_field(output, 'cppflags')
+    self._output_field(output, 'libs')
     self._output_field(output, 'stem')
     self._output_field(output, 'compile_multilib')
+    self._output_field(output, 'aidl')
+    self._output_field(output, 'plugins')
+    self._output_field(output, 'processor_class')
+    self._output_field(output, 'sdk_version')
     if self.rtti:
       self._output_field(output, 'rtti')
 
@@ -653,7 +663,7 @@ def create_gcc_preprocess_modules(blueprint, target):
   # It seems this is because cc object is a module with per-architecture variants and genrule is a
   # module with default variant. For 64bit target, cc_object is built multiple times for 32/64bit
   # modes and genrule doesn't know which one to depend on.
-  preprocess_module.compile_multilib = 32
+  preprocess_module.compile_multilib = 'first'
   blueprint.add_module(preprocess_module)
 
   # Generates srcjar using soong_zip
@@ -1298,16 +1308,62 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
                     (dep_module.name, target.name, dep_module.type))
   return module
 
+def create_java_jni_preprocessor(blueprint):
+  bp_module_name = module_prefix + 'java_jni_annotation_preprocessor'
+  module = Module('java_plugin', bp_module_name, '//base/android/jni_generator:jni_processor')
+  module.srcs.update(
+  [
+    "base/android/jni_generator/java/src/org/chromium/jni_generator/JniProcessor.java",
+    # Avoids a circular dependency with base:base_java. This is okay because
+    # no target should ever expect to package an annotation processor.
+    "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+    "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+    "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+    "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+    "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+    "base/android/java/src/org/chromium/base/JniException.java",
+    ":cronet_aml_build_android_build_config_gen",
+  ])
+  module.static_libs.update({
+      "javapoet",
+      "guava",
+      "auto_service_annotations",
+  })
+  module.processor_class = "org.chromium.jni_generator.JniProcessor"
+  blueprint.add_module(module)
+  return module
+
 def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
   module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+  module.libs = {
+    "androidx.annotation_annotation",
+    "jsr305",
+    "androidx.core_core-nodeps",
+    "androidx.collection_collection",
+    "androidx.annotation_annotation-experimental-nodeps",
+    "android-support-multidex",
+    "framework-connectivity.stubs.module_lib",
+    "framework-connectivity-t.stubs.module_lib",
+    "framework-tethering.stubs.module_lib",
+    "framework-wifi.stubs.module_lib",
+    "framework-mediaprovider.stubs.module_lib",
+  }
+  module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
+  module.aidl["local_include_dirs"] = {"base/android/java/src/"}
+  module.sdk_version = "module_current"
+  module.apex_available.add(tethering_apex)
+  # TODO: remove following workaround required to make this module visible to make (b/203203405)
+  module.apex_available.add("//apex_available:platform")
   for dep in gn.java_actions:
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
       module.srcs.add(':' + create_gcc_preprocess_modules(blueprint, target).name)
     else:
       module.srcs.add(':' + create_action_module(blueprint, target, 'java_genrule').name)
+  preprocessor_module = create_java_jni_preprocessor(blueprint)
+  module.plugins.add(preprocessor_module.name)
   blueprint.add_module(module)
 
 def update_jni_registration_module(module, gn):
