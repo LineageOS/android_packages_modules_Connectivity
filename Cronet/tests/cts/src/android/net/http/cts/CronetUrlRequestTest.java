@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.chromium.net.test;
+
+package android.net.http.cts;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -21,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.http.cts.util.TestUrlRequestCallback;
+import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 
 import androidx.annotation.NonNull;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -29,8 +32,6 @@ import androidx.test.runner.AndroidJUnit4;
 import org.chromium.net.CronetEngine;
 import org.chromium.net.UrlRequest;
 import org.chromium.net.UrlResponseInfo;
-import org.chromium.net.test.util.TestUrlRequestCallback;
-import org.chromium.net.test.util.TestUrlRequestCallback.ResponseStep;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
