@@ -22,6 +22,10 @@ java_sdk_library {
     defaults: ["framework-module-defaults"],
     impl_library_visibility: [
         "//packages/modules/Connectivity/Tethering:__subpackages__",
+        "//packages/modules/Connectivity/framework",
+        "//packages/modules/Connectivity/framework-t",
+        "//packages/modules/Connectivity/service",
+        "//packages/modules/Connectivity/service-t",
 
         // Using for test only
         "//cts/tests/netlegacy22.api",
@@ -64,19 +68,8 @@ java_sdk_library {
 filegroup {
     name: "framework-tethering-srcs",
     srcs: [
-        "src/android/net/TetheredClient.aidl",
-        "src/android/net/TetheredClient.java",
-        "src/android/net/TetheringManager.java",
-        "src/android/net/TetheringConstants.java",
-        "src/android/net/IIntResultListener.aidl",
-        "src/android/net/ITetheringEventCallback.aidl",
-        "src/android/net/ITetheringConnector.aidl",
-        "src/android/net/TetheringCallbackStartedParcel.aidl",
-        "src/android/net/TetheringConfigurationParcel.aidl",
-        "src/android/net/TetheringRequestParcel.aidl",
-        "src/android/net/TetherStatesParcel.aidl",
-        "src/android/net/TetheringInterface.aidl",
-        "src/android/net/TetheringInterface.java",
+        "src/**/*.aidl",
+        "src/**/*.java",
     ],
     path: "src"
 }

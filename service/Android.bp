@@ -157,7 +157,9 @@ java_library {
         // against the implementation because the two libraries are in the same
         // APEX.
         "framework-connectivity-t.stubs.module_lib",
-        "framework-tethering",
+        // TODO: figure out why just using "framework-tethering" uses the stubs, even though both
+        // service-connectivity and framework-tethering are in the same APEX.
+        "framework-tethering.impl",
         "framework-wifi",
         "unsupportedappusage",
         "ServiceConnectivityResources",
@@ -166,6 +168,7 @@ java_library {
     static_libs: [
         // Do not add libs here if they are already included
         // in framework-connectivity
+        "androidx.annotation_annotation",
         "connectivity-net-module-utils-bpf",
         "connectivity_native_aidl_interface-lateststable-java",
         "dnsresolver_aidl_interface-V9-java",
@@ -258,7 +261,7 @@ java_defaults {
         "framework-annotations-lib",
         "framework-connectivity.impl",
         "framework-connectivity-t.impl",
-        "framework-tethering",
+        "framework-tethering.impl",
         "framework-wifi",
         "libprotobuf-java-nano",
     ],
