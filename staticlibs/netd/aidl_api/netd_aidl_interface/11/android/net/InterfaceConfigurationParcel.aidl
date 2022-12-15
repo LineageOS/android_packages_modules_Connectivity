@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,9 +32,11 @@
 // later when a module using the interface is updated, e.g., Mainline modules.
 
 package android.net;
-@Backing(type="int")
-enum NativeNetworkType {
-  PHYSICAL = 0,
-  VIRTUAL = 1,
-  PHYSICAL_LOCAL = 2,
+/* @hide */
+parcelable InterfaceConfigurationParcel {
+  @utf8InCpp String ifName;
+  @utf8InCpp String hwAddr;
+  @utf8InCpp String ipv4Addr;
+  int prefixLength;
+  @utf8InCpp String[] flags;
 }

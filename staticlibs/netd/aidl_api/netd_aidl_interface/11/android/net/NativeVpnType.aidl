@@ -33,8 +33,9 @@
 
 package android.net;
 @Backing(type="int")
-enum NativeNetworkType {
-  PHYSICAL = 0,
-  VIRTUAL = 1,
-  PHYSICAL_LOCAL = 2,
+enum NativeVpnType {
+  SERVICE = 1,
+  PLATFORM = 2,
+  LEGACY = 3,
+  OEM = 4,
 }

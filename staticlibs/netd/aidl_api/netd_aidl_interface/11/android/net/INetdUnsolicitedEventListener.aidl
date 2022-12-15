@@ -1,11 +1,11 @@
-/*
- * Copyright (C) 2021 The Android Open Source Project
+/**
+ * Copyright (c) 2018, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,9 +32,17 @@
 // later when a module using the interface is updated, e.g., Mainline modules.
 
 package android.net;
-@Backing(type="int")
-enum NativeNetworkType {
-  PHYSICAL = 0,
-  VIRTUAL = 1,
-  PHYSICAL_LOCAL = 2,
+/* @hide */
+interface INetdUnsolicitedEventListener {
+  oneway void onInterfaceClassActivityChanged(boolean isActive, int timerLabel, long timestampNs, int uid);
+  oneway void onQuotaLimitReached(@utf8InCpp String alertName, @utf8InCpp String ifName);
+  oneway void onInterfaceDnsServerInfo(@utf8InCpp String ifName, long lifetimeS, in @utf8InCpp String[] servers);
+  oneway void onInterfaceAddressUpdated(@utf8InCpp String addr, @utf8InCpp String ifName, int flags, int scope);
+  oneway void onInterfaceAddressRemoved(@utf8InCpp String addr, @utf8InCpp String ifName, int flags, int scope);
+  oneway void onInterfaceAdded(@utf8InCpp String ifName);
+  oneway void onInterfaceRemoved(@utf8InCpp String ifName);
+  oneway void onInterfaceChanged(@utf8InCpp String ifName, boolean up);
+  oneway void onInterfaceLinkStateChanged(@utf8InCpp String ifName, boolean up);
+  oneway void onRouteChanged(boolean updated, @utf8InCpp String route, @utf8InCpp String gateway, @utf8InCpp String ifName);
+  oneway void onStrictCleartextDetected(int uid, @utf8InCpp String hex);
 }
