@@ -94,20 +94,20 @@ public class VpnTransportInfoTest {
 
     @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
     @Test
-    public void testGetBypassable_beforeU() {
+    public void testIsBypassable_beforeU() {
         final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
-        assertThrows(UnsupportedOperationException.class, () -> v.getBypassable());
+        assertThrows(UnsupportedOperationException.class, () -> v.isBypassable());
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
     @Test
-    public void testGetBypassable_afterU() {
+    public void testIsBypassable_afterU() {
         final VpnTransportInfo v = new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345");
-        assertFalse(v.getBypassable());
+        assertFalse(v.isBypassable());
 
         final VpnTransportInfo v2 =
                 new VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, "12345", true, false);
-        assertTrue(v2.getBypassable());
+        assertTrue(v2.isBypassable());
     }
 
     @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
