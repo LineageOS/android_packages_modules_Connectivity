@@ -403,6 +403,9 @@ class GnParser(object):
       elif dep.type == 'source_set':
         target.arch[arch].source_set_deps.add(dep.name)
         target.arch[arch].source_set_deps.update(dep.arch[arch].source_set_deps)
+        # flatten source_set deps
+        if target.is_linker_unit_type():
+          target.arch[arch].deps.update(target.arch[arch].source_set_deps)
       elif dep.type == 'group':
         target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
