@@ -182,6 +182,9 @@ class GnParser(object):
     def device_supported(self):
       return any([name.startswith('android') for name in self.arch.keys()])
 
+    def is_linker_unit_type(self):
+      return self.type in LINKER_UNIT_TYPES
+
     def __lt__(self, other):
       if isinstance(other, self.__class__):
         return self.name < other.name
@@ -344,7 +347,7 @@ class GnParser(object):
     elif target.type == 'source_set':
       self.source_sets[gn_target_name] = target
       target.arch[arch].sources.update(desc.get('sources', []))
-    elif target.type in LINKER_UNIT_TYPES:
+    elif target.is_linker_unit_type():
       self.linker_units[gn_target_name] = target
       target.arch[arch].sources.update(desc.get('sources', []))
     elif (desc.get("script", "") in JAVA_BANNED_SCRIPTS
@@ -400,12 +403,15 @@ class GnParser(object):
       elif dep.type == 'source_set':
         target.arch[arch].source_set_deps.add(dep.name)
         target.arch[arch].source_set_deps.update(dep.arch[arch].source_set_deps)
+        # flatten source_set deps
+        if target.is_linker_unit_type():
+          target.arch[arch].deps.update(target.arch[arch].source_set_deps)
       elif dep.type == 'group':
         target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
         if proto_target_type is None:
           target.arch[arch].deps.add(dep.name)
-      elif dep.type in LINKER_UNIT_TYPES:
+      elif dep.is_linker_unit_type():
         target.arch[arch].deps.add(dep.name)
       elif dep.type == 'java_group':
         # Explicitly break dependency chain when a java_group is added.
