@@ -192,22 +192,31 @@ public class MdnsPacketWriter {
             }
         }
 
+        final int[] offsets;
         if (suffixLength > 0) {
-            for (int i = 0; i < (labels.length - suffixLength); ++i) {
-                writeString(labels[i]);
-            }
+            offsets = writePartialLabelsNoCompression(labels, labels.length - suffixLength);
             writePointer(suffixPointer);
         } else {
-            int[] offsets = writeLabelsNoCompression(labels);
-
-            // Add entries to the label dictionary for each suffix of the label list, including
-            // the whole list itself.
-            for (int i = 0, len = labels.length; i < labels.length; ++i, --len) {
-                String[] value = new String[len];
-                System.arraycopy(labels, i, value, 0, len);
-                labelDictionary.put(offsets[i], value);
-            }
+            offsets = writeLabelsNoCompression(labels);
         }
+
+        // Add entries to the label dictionary for each suffix of the label list, including
+        // the whole list itself.
+        // Do not replace the last suffixLength suffixes that already have dictionary entries.
+        for (int i = 0, len = labels.length; i < labels.length - suffixLength; ++i, --len) {
+            String[] value = new String[len];
+            System.arraycopy(labels, i, value, 0, len);
+            labelDictionary.put(offsets[i], value);
+        }
+    }
+
+    private int[] writePartialLabelsNoCompression(String[] labels, int count) throws IOException {
+        int[] offsets = new int[count];
+        for (int i = 0; i < count; ++i) {
+            offsets[i] = getWritePosition();
+            writeString(labels[i]);
+        }
+        return offsets;
     }
 
     /**
@@ -216,11 +225,7 @@ public class MdnsPacketWriter {
      * @return The offsets where each label was written to.
      */
     public int[] writeLabelsNoCompression(String[] labels) throws IOException {
-        int[] offsets = new int[labels.length];
-        for (int i = 0; i < labels.length; ++i) {
-            offsets[i] = getWritePosition();
-            writeString(labels[i]);
-        }
+        final int[] offsets = writePartialLabelsNoCompression(labels, labels.length);
         writeUInt8(0); // NUL terminator
         return offsets;
     }
