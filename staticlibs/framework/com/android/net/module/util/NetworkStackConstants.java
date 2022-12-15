@@ -210,6 +210,17 @@ public final class NetworkStackConstants {
     public static final int DHCP4_CLIENT_PORT = 68;
 
     /**
+     * DHCPv6 constants.
+     *
+     * See also:
+     *     - https://datatracker.ietf.org/doc/html/rfc8415
+     */
+    public static final int DHCP6_CLIENT_PORT = 546;
+    public static final int DHCP6_SERVER_PORT = 547;
+    public static final Inet6Address ALL_DHCP_RELAY_AGENTS_AND_SERVERS =
+            (Inet6Address) InetAddresses.parseNumericAddress("ff02::1:2");
+
+    /**
      * IEEE802.11 standard constants.
      *
      * See also:
