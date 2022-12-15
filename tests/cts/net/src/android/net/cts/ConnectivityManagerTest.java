@@ -2408,6 +2408,15 @@ public class ConnectivityManagerTest {
     }
 
     private void doTestBlockedStatusCallback() throws Exception {
+        // The test will need a stable active network that is persistent during the test.
+        // Try to connect to a wifi network and wait for it becomes the default network before
+        // starting the test to prevent from sudden active network change caused by previous
+        // executed tests.
+        if (mPackageManager.hasSystemFeature(FEATURE_WIFI)) {
+            final Network expectedDefaultNetwork = mCtsNetUtils.ensureWifiConnected();
+            mCtsNetUtils.expectNetworkIsSystemDefault(expectedDefaultNetwork);
+        }
+
         final DetailedBlockedStatusCallback myUidCallback = new DetailedBlockedStatusCallback();
         final DetailedBlockedStatusCallback otherUidCallback = new DetailedBlockedStatusCallback();
 
