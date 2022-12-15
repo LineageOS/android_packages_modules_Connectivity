@@ -97,6 +97,7 @@ local_include_dirs_denylist = [
 ]
 
 android_include_dirs_denylist = [
+    'third_party/brotli/include/',
     'third_party/zlib/',
 ]
 
@@ -144,6 +145,14 @@ additional_args = {
     ],
 }
 
+def enable_brotli(module, arch):
+  # Requires crrev/c/4111690
+  if arch is None:
+    module.static_libs.add('libbrotli')
+  else:
+    module.arch[arch].static_libs.add('libbrotli')
+
+
 def enable_zlib(module, arch):
   # Requires crrev/c/4109079
   if arch is None:
@@ -161,6 +170,10 @@ builtin_deps = {
 }
 
 android_deps = {
+    '//third_party/brotli:common':
+        enable_brotli,
+    '//third_party/brotli:dec':
+        enable_brotli,
     '//third_party/zlib:zlib':
         enable_zlib,
 }
