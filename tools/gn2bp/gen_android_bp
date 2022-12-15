@@ -96,6 +96,10 @@ static_library_allowlist = [
 local_include_dirs_denylist = [
 ]
 
+android_include_dirs_denylist = [
+    'third_party/zlib/',
+]
+
 # Name of the module which settings such as compiler flags for all other
 # modules.
 defaults_module = module_prefix + 'defaults'
@@ -140,6 +144,13 @@ additional_args = {
     ],
 }
 
+def enable_zlib(module, arch):
+  # Requires crrev/c/4109079
+  if arch is None:
+    module.shared_libs.add('libz')
+  else:
+    module.arch[arch].shared_libs.add('libz')
+
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
@@ -148,6 +159,16 @@ builtin_deps = {
     '//net/tools/root_store_tool:root_store_tool':
         lambda m, a: None,
 }
+
+android_deps = {
+    '//third_party/zlib:zlib':
+        enable_zlib,
+}
+
+# Uncomment the following lines to use Android deps rather than their Chromium
+# equivalent:
+#builtin_deps.update(android_deps)
+#local_include_dirs_denylist.extend(android_include_dirs_denylist)
 
 # Name of tethering apex module
 tethering_apex = "com.android.tethering"
