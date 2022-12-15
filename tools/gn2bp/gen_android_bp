@@ -143,6 +143,8 @@ additional_args = {
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
+    '//buildtools/third_party/libunwind:libunwind':
+        lambda x: None, # disable libunwind
     '//net/tools/root_store_tool:root_store_tool':
         lambda x: None,
 }
@@ -1478,7 +1480,7 @@ def main():
     log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
   targets = args.targets or default_targets
-  gn = gn_utils.GnParser()
+  gn = gn_utils.GnParser(builtin_deps)
   for desc_file in args.desc:
     with open(desc_file) as f:
       desc = json.load(f)

@@ -170,7 +170,7 @@ public final class CtsNetUtils {
         }
     }
 
-    private Network expectNetworkIsSystemDefault(Network network)
+    public Network expectNetworkIsSystemDefault(Network network)
             throws Exception {
         final CompletableFuture<Network> future = new CompletableFuture();
         final NetworkCallback cb = new NetworkCallback() {
