@@ -86,7 +86,7 @@ public final class VpnTransportInfo implements TransportInfo, Parcelable {
         // When the module runs on older SDKs, |bypassable| will always be false since the old Vpn
         // code will call this constructor. For Settings VPNs, this is always correct as they are
         // never bypassable. For VpnManager and VpnService types, this may be wrong since both of
-        // them have a choice. However, on these SDKs VpnTransportInfo#getBypassable is not
+        // them have a choice. However, on these SDKs VpnTransportInfo#isBypassable is not
         // available anyway, so this should be harmless. False is a better choice than true here
         // regardless because it is the default value for both VpnManager and VpnService if the app
         // does not do anything about it.
@@ -111,7 +111,7 @@ public final class VpnTransportInfo implements TransportInfo, Parcelable {
      * {@code UnsupportedOperationException} if called.
      */
     @RequiresApi(UPSIDE_DOWN_CAKE)
-    public boolean getBypassable() {
+    public boolean isBypassable() {
         if (!SdkLevel.isAtLeastU()) {
             throw new UnsupportedOperationException("Not supported before U");
         }
@@ -134,7 +134,7 @@ public final class VpnTransportInfo implements TransportInfo, Parcelable {
      * VPNs can be bypassable or not. When the VPN is not bypassable, the user has
      * expressed explicit intent to have no connection outside of the VPN, so even
      * privileged apps with permission to bypass non-bypassable VPNs should not do
-     * so. See {@link #getBypassable()}.
+     * so. See {@link #isBypassable()}.
      * For bypassable VPNs however, the user expects apps choose reasonable tradeoffs
      * about whether they use the VPN.
      *
