@@ -160,14 +160,11 @@ class MdnsProberTest {
                 scapy.DNSRR(type='TXT', ttl=120, rrname='testservice._nmt._tcp.local.',
                     rdata='testKey=testValue'))
         )).hex().upper()
-        // NOTE: due to a bug the second "myhostname" is not getting DNS compressed in the current
-        // actual probe, so data below is slightly different. Fix compression so it gets compressed.
          */
         val expected = "0000000000020000000300000B7465737473657276696365045F6E6D74045F746370056C6" +
                 "F63616C0000FF00010C746573747365727669636532C01800FF0001C00C002100010000007800130" +
-                "000000094020A6D79686F73746E616D65C0220C746573747365727669636532C0180021000100000" +
-                "07800130000000094030A6D79686F73746E616D65C022C00C0010000100000078001211746573744" +
-                "B65793D7465737456616C7565"
+                "000000094020A6D79686F73746E616D65C022C02D00210001000000780008000000009403C052C00" +
+                "C0010000100000078001211746573744B65793D7465737456616C7565"
         assertProbesSent(probeInfo, expected)
     }
 
