@@ -18,6 +18,7 @@ package android.net;
 
 import android.net.INetdUnsolicitedEventListener;
 import android.net.InterfaceConfigurationParcel;
+import android.net.IpSecMigrateInfoParcel;
 import android.net.MarkMaskParcel;
 import android.net.NativeNetworkConfig;
 import android.net.RouteInfoParcel;
@@ -265,7 +266,7 @@ interface INetd {
             int spi);
 
    /**
-    * Create an IpSec Security Association describing how ip(v6) traffic will be encrypted
+    * Update an IPsec SA (xfrm_state) describing how ip(v6) traffic will be encrypted
     * or decrypted.
     *
     * @param transformId a unique identifier for allocated resources
@@ -1396,4 +1397,27 @@ interface INetd {
      *         unix errno.
      */
     void networkRemoveUidRangesParcel(in NativeUidRangeConfig uidRangesConfig);
+
+    /**
+     * Migrate an existing IPsec tunnel mode SA to different addresses.
+     *
+     * If the underlying network also changes, caller must update it by
+     * calling ipSecAddSecurityAssociation.
+     *
+     * @param migrateInfo parcelable with migration info.
+     *
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *         cause of the failure.
+     */
+     void ipSecMigrate(in android.net.IpSecMigrateInfoParcel migrateInfo);
+
+     /**
+      * IPSEC_DIRECTION_IN is used for IPsec SAs or policies that direct traffic towards the host.
+      */
+     const int IPSEC_DIRECTION_IN = 0;
+
+     /**
+      * IPSEC_DIRECTION_OUT is used for IPsec SAs or policies that direct traffic away from the host.
+      */
+     const int IPSEC_DIRECTION_OUT = 1;
 }
