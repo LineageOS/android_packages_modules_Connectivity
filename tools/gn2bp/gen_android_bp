@@ -727,9 +727,18 @@ def create_gcc_preprocess_modules(blueprint, target):
 
 
 class BaseActionSanitizer():
-  def __init__(self, target):
+  def __init__(self, target, arch):
     # Just to be on the safe side, create a deep-copy.
     self.target = copy.deepcopy(target)
+    if arch:
+      # Merge arch specific attributes
+      self.target.sources |= arch.sources
+      self.target.inputs |= arch.inputs
+      self.target.outputs |= arch.outputs
+      self.target.script = self.target.script or arch.script
+      self.target.args = self.target.args or arch.args
+      self.target.response_file_contents = \
+        self.target.response_file_contents or arch.response_file_contents
     self.target.args = self._normalize_args()
 
   def get_name(self):
@@ -1025,33 +1034,33 @@ class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
     self._set_value_arg('--output', '$(out)')
     super()._sanitize_args()
 
-def get_action_sanitizer(target, type):
+def get_action_sanitizer(target, type, arch):
   if target.script == "//build/write_buildflag_header.py":
-    return WriteBuildFlagHeaderSanitizer(target)
+    return WriteBuildFlagHeaderSanitizer(target, arch)
   elif target.script == "//build/write_build_date_header.py":
-    return WriteBuildDateHeaderSanitizer(target)
+    return WriteBuildDateHeaderSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_generator.py':
-    return JniGeneratorSanitizer(target)
+    return JniGeneratorSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
     if type == 'java_genrule':
-      return JavaJniRegistrationGeneratorSanitizer(target)
+      return JavaJniRegistrationGeneratorSanitizer(target, arch)
     else:
-      return JniRegistrationGeneratorSanitizer(target)
+      return JniRegistrationGeneratorSanitizer(target, arch)
   elif target.script == "//build/util/version.py":
-    return VersionSanitizer(target)
+    return VersionSanitizer(target, arch)
   elif target.script == "//build/android/gyp/java_cpp_enum.py":
-    return JavaCppEnumSanitizer(target)
+    return JavaCppEnumSanitizer(target, arch)
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
-    return MakeDafsaSanitizer(target)
+    return MakeDafsaSanitizer(target, arch)
   elif target.script == '//build/android/gyp/java_cpp_features.py':
-    return JavaCppFeatureSanitizer(target)
+    return JavaCppFeatureSanitizer(target, arch)
   elif target.script == '//build/android/gyp/java_cpp_strings.py':
-    return JavaCppStringSanitizer(target)
+    return JavaCppStringSanitizer(target, arch)
   elif target.script == '//build/android/gyp/write_native_libraries_java.py':
-    return WriteNativeLibrariesJavaSanitizer(target)
+    return WriteNativeLibrariesJavaSanitizer(target, arch)
   else:
     # TODO: throw exception here once all script hacks have been converted.
-    return BaseActionSanitizer(target)
+    return BaseActionSanitizer(target, arch)
 
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
@@ -1086,8 +1095,8 @@ def create_action_foreach_modules(blueprint, target):
   target.args = new_args
   return create_action_module(blueprint, target, 'cc_genrule')
 
-def create_action_module(blueprint, target, type):
-  sanitizer = get_action_sanitizer(target, type)
+def create_action_module(blueprint, target, type, arch=None):
+  sanitizer = get_action_sanitizer(target, type, arch)
   sanitizer.sanitize()
 
   module = Module(type, sanitizer.get_name(), target.name)
