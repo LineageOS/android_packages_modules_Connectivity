@@ -119,6 +119,12 @@ class GnParser(object):
         self.transitive_static_libs_deps = set()
         self.source_set_deps = set()
 
+        # These are valid only for type == 'action'
+        self.inputs = set()
+        self.outputs = set()
+        self.args = []
+        self.script = ''
+        self.response_file_contents = ''
 
     def __init__(self, name, type):
       self.name = name  # e.g. //src/ipc:ipc
@@ -242,7 +248,8 @@ class GnParser(object):
       if len(self.arch) == 0:
         return
 
-      for key in ('sources', 'cflags', 'defines', 'include_dirs', 'deps', 'source_set_deps'):
+      for key in ('sources', 'cflags', 'defines', 'include_dirs', 'deps', 'source_set_deps',
+                  'inputs', 'outputs', 'args', 'script', 'response_file_contents'):
         self._finalize_attribute(key)
 
 
