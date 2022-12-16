@@ -1095,7 +1095,7 @@ def create_action_foreach_modules(blueprint, target):
   target.args = new_args
   return create_action_module(blueprint, target, 'cc_genrule')
 
-def create_action_module(blueprint, target, type, arch=None):
+def create_action_module_internal(target, type, arch=None):
   sanitizer = get_action_sanitizer(target, type, arch)
   sanitizer.sanitize()
 
@@ -1107,7 +1107,6 @@ def create_action_module(blueprint, target, type, arch=None):
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
 
-  blueprint.add_module(module)
   return module
 
 def get_cmd_condition(arch):
@@ -1165,6 +1164,22 @@ def merge_modules(modules, genrule_type):
 
   merged_module.cmd = merge_cmd(modules, genrule_type)
   return merged_module
+
+def create_action_module(blueprint, target, genrule_type):
+  '''
+  Create module for action target and add to the blueprint. If target has arch specific attributes
+  this function merge them and create a single module.
+  :param blueprint:
+  :param target: target which is converted to the module.
+  :param genrule_type: cc_genrule or java_genrule
+  :return: created module
+  '''
+  modules = {arch_name: create_action_module_internal(target, genrule_type, arch)
+             for arch_name, arch in target.arch.items()}
+  module = merge_modules(modules, genrule_type)
+  blueprint.add_module(module)
+  return module
+
 
 def _get_cflags(cflags, defines):
   cflags = {flag for flag in cflags if flag in cflag_allowlist}
