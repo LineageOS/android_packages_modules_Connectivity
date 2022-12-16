@@ -203,6 +203,22 @@ class GnParser(object):
         self.arch[arch].__dict__[key_in_arch].update(
           other.arch[arch].__dict__.get(key_in_arch, []))
 
+    def _finalize_set_attribute(self, key):
+      # Target contains the intersection of arch-dependent properties
+      getattr(self, key)\
+        .update(set.intersection(*[getattr(arch, key) for arch in self.arch.values()]))
+
+      # Deduplicate arch-dependent properties
+      for arch in self.arch.values():
+        getattr(arch, key).difference_update(getattr(self, key))
+
+    def _finalize_attribute(self, key):
+      val = getattr(self, key)
+      if isinstance(val, set):
+        self._finalize_set_attribute(key)
+      else:
+        raise TypeError(f'Unsupported type: {type(val)}')
+
     def finalize(self):
       """Move common properties out of arch-dependent subobjects to Target object.
 
@@ -212,22 +228,8 @@ class GnParser(object):
         return
       self.is_finalized = True
 
-      # Target contains the intersection of arch-dependent properties
-      self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
-      self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])
-      self.defines = set.intersection(*[arch.defines for arch in self.arch.values()])
-      self.include_dirs = set.intersection(*[arch.include_dirs for arch in self.arch.values()])
-      self.deps.update(set.intersection(*[arch.deps for arch in self.arch.values()]))
-      self.source_set_deps.update(set.intersection(*[arch.source_set_deps for arch in self.arch.values()]))
-
-      # Deduplicate arch-dependent properties
-      for arch in self.arch.keys():
-        self.arch[arch].sources -= self.sources
-        self.arch[arch].cflags -= self.cflags
-        self.arch[arch].defines -= self.defines
-        self.arch[arch].include_dirs -= self.include_dirs
-        self.arch[arch].deps -= self.deps
-        self.arch[arch].source_set_deps -= self.source_set_deps
+      for key in ('sources', 'cflags', 'defines', 'include_dirs', 'deps', 'source_set_deps'):
+        self._finalize_attribute(key)
 
 
   def __init__(self, builtin_deps):
