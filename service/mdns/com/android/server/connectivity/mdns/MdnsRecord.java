@@ -201,6 +201,17 @@ public abstract class MdnsRecord {
     protected abstract void readData(MdnsPacketReader reader) throws IOException;
 
     /**
+     * Write the first fields of the record, which are common fields for questions and answers.
+     *
+     * @param writer The writer to use.
+     */
+    public final void writeHeaderFields(MdnsPacketWriter writer) throws IOException {
+        writer.writeLabels(name);
+        writer.writeUInt16(type);
+        writer.writeUInt16(cls);
+    }
+
+    /**
      * Writes the record to a packet.
      *
      * @param writer The writer to use.
@@ -208,9 +219,7 @@ public abstract class MdnsRecord {
      */
     @VisibleForTesting
     public final void write(MdnsPacketWriter writer, long now) throws IOException {
-        writer.writeLabels(name);
-        writer.writeUInt16(type);
-        writer.writeUInt16(cls);
+        writeHeaderFields(writer);
 
         writer.writeUInt32(MILLISECONDS.toSeconds(getRemainingTTL(now)));
 
