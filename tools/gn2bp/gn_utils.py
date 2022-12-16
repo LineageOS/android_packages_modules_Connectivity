@@ -369,13 +369,13 @@ class GnParser(object):
       target.type = 'java_group'
     elif target.type in ['action', 'action_foreach']:
       self.actions[gn_target_name] = target
-      target.inputs.update(desc.get('inputs', []))
+      target.arch[arch].inputs.update(desc.get('inputs', []))
       target.arch[arch].sources.update(desc.get('sources', []))
       outs = [re.sub('^//out/.+?/gen/', '', x) for x in desc['outputs']]
-      target.outputs.update(outs)
-      target.script = desc['script']
-      target.args = desc['args']
-      target.response_file_contents = self._get_response_file_contents(desc)
+      target.arch[arch].outputs.update(outs)
+      target.arch[arch].script = desc['script']
+      target.arch[arch].args = desc['args']
+      target.arch[arch].response_file_contents = self._get_response_file_contents(desc)
     elif target.type == 'copy':
       # TODO: copy rules are not currently implemented.
       self.actions[gn_target_name] = target

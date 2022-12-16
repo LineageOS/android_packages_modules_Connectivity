@@ -1392,7 +1392,9 @@ cc_genrule {
 // GN: //base:debugging_buildflags
 cc_genrule {
     name: "cronet_aml_base_debugging_buildflags",
-    cmd: "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+    cmd: "if [[ ( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1400,7 +1402,44 @@ cc_genrule {
          "--gen-dir " +
          ". " +
          "--definitions " +
-         "/dev/stdin",
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'x86' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:debugging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'arm' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"true\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:debugging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:debugging_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi;",
     out: [
         "base/debug/debugging_buildflags.h",
     ],
@@ -1672,7 +1711,9 @@ cc_genrule {
 // GN: //base:profiler_buildflags
 cc_genrule {
     name: "cronet_aml_base_profiler_buildflags",
-    cmd: "echo '--flags ENABLE_ARM_CFI_TABLE=\"false\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
+    cmd: "if [[ ( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags ENABLE_ARM_CFI_TABLE=\"false\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1680,7 +1721,44 @@ cc_genrule {
          "--gen-dir " +
          ". " +
          "--definitions " +
-         "/dev/stdin",
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'x86' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags ENABLE_ARM_CFI_TABLE=\"false\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:profiler_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'arm' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags ENABLE_ARM_CFI_TABLE=\"true\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:profiler_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags ENABLE_ARM_CFI_TABLE=\"false\" IOS_STACK_PROFILER_ENABLED=\"true\" USE_ANDROID_UNWINDER_V2=\"true\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//base:profiler_buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi;",
     out: [
         "base/profiler/profiler_buildflags.h",
     ],
@@ -4893,7 +4971,9 @@ cc_genrule {
 // GN: //net:buildflags
 cc_genrule {
     name: "cronet_aml_net_buildflags",
-    cmd: "echo '--flags POSIX_BYPASS_MMAP=\"true\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
+    cmd: "if [[ ( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags POSIX_BYPASS_MMAP=\"true\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -4901,7 +4981,44 @@ cc_genrule {
          "--gen-dir " +
          ". " +
          "--definitions " +
-         "/dev/stdin",
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'x86' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags POSIX_BYPASS_MMAP=\"false\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//net:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'arm' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags POSIX_BYPASS_MMAP=\"true\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//net:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi; " +
+         "if [[ ( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' ) ]]; " +
+         "then " +
+         "echo '--flags POSIX_BYPASS_MMAP=\"true\" DISABLE_FILE_SUPPORT=\"true\" ENABLE_MDNS=\"false\" ENABLE_REPORTING=\"true\" ENABLE_WEBSOCKETS=\"false\" INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=\"false\" USE_KERBEROS=\"true\" USE_EXTERNAL_GSSAPI=\"false\" TRIAL_COMPARISON_CERT_VERIFIER_SUPPORTED=\"false\" CHROME_ROOT_STORE_SUPPORTED=\"false\"' | " +
+         "$(location build/write_buildflag_header.py) --output " +
+         "$(out) " +
+         "--rulename " +
+         "//net:buildflags " +
+         "--gen-dir " +
+         ". " +
+         "--definitions " +
+         "/dev/stdin; " +
+         "fi;",
     out: [
         "net/net_buildflags.h",
     ],

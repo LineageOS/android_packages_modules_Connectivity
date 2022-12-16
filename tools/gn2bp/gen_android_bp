@@ -1174,6 +1174,13 @@ def create_action_module(blueprint, target, genrule_type):
   :param genrule_type: cc_genrule or java_genrule
   :return: created module
   '''
+  # TODO: Handle this target correctly, this target generates java_genrule but this target has
+  # different value for cpu-family arg between archs
+  if target.name == '//build/android:native_libraries_gen':
+    module = create_action_module_internal(target, genrule_type, target.arch['android_arm'])
+    blueprint.add_module(module)
+    return module
+
   modules = {arch_name: create_action_module_internal(target, genrule_type, arch)
              for arch_name, arch in target.arch.items()}
   module = merge_modules(modules, genrule_type)
