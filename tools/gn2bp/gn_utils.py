@@ -144,9 +144,9 @@ class GnParser(object):
       # These are valid only for type == 'action'
       self.inputs = set()
       self.outputs = set()
-      self.script = None
+      self.script = ''
       self.args = []
-      self.response_file_contents = None
+      self.response_file_contents = ''
 
       # These variables are propagated up when encountering a dependency
       # on a source_set target.
