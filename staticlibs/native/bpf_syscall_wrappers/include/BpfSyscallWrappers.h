@@ -38,7 +38,7 @@ namespace bpf {
  * all unused portions are zero.  It will fail with E2BIG if we don't fully zero bpf_attr.
  */
 
-inline int bpf(int cmd, const bpf_attr& attr) {
+inline int bpf(enum bpf_cmd cmd, const bpf_attr& attr) {
     return syscall(__NR_bpf, cmd, &attr, sizeof(attr));
 }
 
