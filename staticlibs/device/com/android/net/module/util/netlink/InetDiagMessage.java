@@ -19,11 +19,12 @@ package com.android.net.module.util.netlink;
 import static android.os.Process.INVALID_UID;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
+import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 import static android.system.OsConstants.NETLINK_INET_DIAG;
 
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DIAG_BY_FAMILY;
-import static com.android.net.module.util.netlink.NetlinkSocket.DEFAULT_RECV_BUFSIZE;
+import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
@@ -132,8 +133,8 @@ public class InetDiagMessage extends NetlinkMessage {
                                          FileDescriptor fd)
             throws ErrnoException, InterruptedIOException {
         byte[] msg = inetDiagReqV2(protocol, local, remote, family, flags);
-        NetlinkSocket.sendMessage(fd, msg, 0, msg.length, TIMEOUT_MS);
-        ByteBuffer response = NetlinkSocket.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TIMEOUT_MS);
+        NetlinkUtils.sendMessage(fd, msg, 0, msg.length, TIMEOUT_MS);
+        ByteBuffer response = NetlinkUtils.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TIMEOUT_MS);
 
         final NetlinkMessage nlMsg = NetlinkMessage.parse(response, NETLINK_INET_DIAG);
         if (nlMsg == null) {
@@ -210,8 +211,8 @@ public class InetDiagMessage extends NetlinkMessage {
         int uid = INVALID_UID;
         FileDescriptor fd = null;
         try {
-            fd = NetlinkSocket.forProto(NETLINK_INET_DIAG);
-            NetlinkSocket.connectToKernel(fd);
+            fd = NetlinkUtils.netlinkSocketForProto(NETLINK_INET_DIAG);
+            NetlinkUtils.connectSocketToNetlink(fd);
             uid = lookupUid(protocol, local, remote, fd);
         } catch (ErrnoException | SocketException | IllegalArgumentException
                 | InterruptedIOException e) {
@@ -226,6 +227,20 @@ public class InetDiagMessage extends NetlinkMessage {
             }
         }
         return uid;
+    }
+
+    /**
+     * Construct an inet_diag_req_v2 message for querying alive TCP sockets from kernel.
+     */
+    public static byte[] buildInetDiagReqForAliveTcpSockets(int family) {
+        return inetDiagReqV2(IPPROTO_TCP,
+                null /* local addr */,
+                null /* remote addr */,
+                family,
+                (short) (StructNlMsgHdr.NLM_F_REQUEST | StructNlMsgHdr.NLM_F_DUMP) /* flag */,
+                0 /* pad */,
+                1 << NetlinkConstants.INET_DIAG_MEMINFO /* idiagExt */,
+                NetlinkUtils.TCP_MONITOR_STATE_FILTER);
     }
 
     @Override

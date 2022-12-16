@@ -16,13 +16,40 @@
 
 package com.android.net.module.util.netlink;
 
-import static android.system.OsConstants.IPPROTO_TCP;
+import static android.net.util.SocketUtils.makeNetlinkSocketAddress;
+import static android.system.OsConstants.AF_NETLINK;
+import static android.system.OsConstants.EIO;
+import static android.system.OsConstants.EPROTO;
+import static android.system.OsConstants.ETIMEDOUT;
+import static android.system.OsConstants.NETLINK_INET_DIAG;
+import static android.system.OsConstants.SOCK_CLOEXEC;
+import static android.system.OsConstants.SOCK_DGRAM;
+import static android.system.OsConstants.SOL_SOCKET;
+import static android.system.OsConstants.SO_RCVBUF;
+import static android.system.OsConstants.SO_RCVTIMEO;
+import static android.system.OsConstants.SO_SNDTIMEO;
+
+import android.net.util.SocketUtils;
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.StructTimeval;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import java.io.FileDescriptor;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
- * Utilities for netlink related class.
+ * Utilities for netlink related class that may not be able to fit into a specific class.
  * @hide
  */
 public class NetlinkUtils {
+    private static final String TAG = "NetlinkUtils";
     /** Corresponds to enum from bionic/libc/include/netinet/tcp.h. */
     private static final int TCP_ESTABLISHED = 1;
     private static final int TCP_SYN_SENT = 2;
@@ -31,17 +58,155 @@ public class NetlinkUtils {
     public static final int TCP_MONITOR_STATE_FILTER =
             (1 << TCP_ESTABLISHED) | (1 << TCP_SYN_SENT) | (1 << TCP_SYN_RECV);
 
+    public static final int UNKNOWN_MARK = 0xffffffff;
+    public static final int NULL_MASK = 0;
+
+    // Initial mark value corresponds to the initValue in system/netd/include/Fwmark.h.
+    public static final int INIT_MARK_VALUE = 0;
+    // Corresponds to enum definition in bionic/libc/kernel/uapi/linux/inet_diag.h
+    public static final int INET_DIAG_INFO = 2;
+    public static final int INET_DIAG_MARK = 15;
+
+    public static final long IO_TIMEOUT_MS = 300L;
+
+    public static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
+    public static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
+
     /**
-     * Construct an inet_diag_req_v2 message for querying alive TCP sockets from kernel.
+     * Return whether the input ByteBuffer contains enough remaining bytes for
+     * {@code StructNlMsgHdr}.
      */
-    public static byte[] buildInetDiagReqForAliveTcpSockets(int family) {
-        return InetDiagMessage.inetDiagReqV2(IPPROTO_TCP,
-                null /* local addr */,
-                null /* remote addr */,
-                family,
-                (short) (StructNlMsgHdr.NLM_F_REQUEST | StructNlMsgHdr.NLM_F_DUMP) /* flag */,
-                0 /* pad */,
-                1 << NetlinkConstants.INET_DIAG_MEMINFO /* idiagExt */,
-                TCP_MONITOR_STATE_FILTER);
+    public static boolean enoughBytesRemainForValidNlMsg(@NonNull final ByteBuffer bytes) {
+        return bytes.remaining() >= StructNlMsgHdr.STRUCT_SIZE;
     }
+
+    /**
+     * Send one netlink message to kernel via netlink socket.
+     *
+     * @param nlProto netlink protocol type.
+     * @param msg the raw bytes of netlink message to be sent.
+     */
+    public static void sendOneShotKernelMessage(int nlProto, byte[] msg) throws ErrnoException {
+        final String errPrefix = "Error in NetlinkSocket.sendOneShotKernelMessage";
+        final FileDescriptor fd = netlinkSocketForProto(nlProto);
+
+        try {
+            connectSocketToNetlink(fd);
+            sendMessage(fd, msg, 0, msg.length, IO_TIMEOUT_MS);
+            final ByteBuffer bytes = recvMessage(fd, DEFAULT_RECV_BUFSIZE, IO_TIMEOUT_MS);
+            // recvMessage() guaranteed to not return null if it did not throw.
+            final NetlinkMessage response = NetlinkMessage.parse(bytes, nlProto);
+            if (response != null && response instanceof NetlinkErrorMessage
+                    && (((NetlinkErrorMessage) response).getNlMsgError() != null)) {
+                final int errno = ((NetlinkErrorMessage) response).getNlMsgError().error;
+                if (errno != 0) {
+                    // TODO: consider ignoring EINVAL (-22), which appears to be
+                    // normal when probing a neighbor for which the kernel does
+                    // not already have / no longer has a link layer address.
+                    Log.e(TAG, errPrefix + ", errmsg=" + response.toString());
+                    // Note: convert kernel errnos (negative) into userspace errnos (positive).
+                    throw new ErrnoException(response.toString(), Math.abs(errno));
+                }
+            } else {
+                final String errmsg;
+                if (response == null) {
+                    bytes.position(0);
+                    errmsg = "raw bytes: " + NetlinkConstants.hexify(bytes);
+                } else {
+                    errmsg = response.toString();
+                }
+                Log.e(TAG, errPrefix + ", errmsg=" + errmsg);
+                throw new ErrnoException(errmsg, EPROTO);
+            }
+        } catch (InterruptedIOException e) {
+            Log.e(TAG, errPrefix, e);
+            throw new ErrnoException(errPrefix, ETIMEDOUT, e);
+        } catch (SocketException e) {
+            Log.e(TAG, errPrefix, e);
+            throw new ErrnoException(errPrefix, EIO, e);
+        } finally {
+            try {
+                SocketUtils.closeSocket(fd);
+            } catch (IOException e) {
+                // Nothing we can do here
+            }
+        }
+    }
+
+    /**
+     * Create netlink socket with the given netlink protocol type.
+     *
+     * @return fd the fileDescriptor of the socket.
+     * @throws ErrnoException if the FileDescriptor not connect to be created successfully
+     */
+    public static FileDescriptor netlinkSocketForProto(int nlProto) throws ErrnoException {
+        final FileDescriptor fd = Os.socket(AF_NETLINK, SOCK_DGRAM, nlProto);
+        Os.setsockoptInt(fd, SOL_SOCKET, SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+        return fd;
+    }
+
+    /**
+     * Construct a netlink inet_diag socket.
+     */
+    public static FileDescriptor createNetLinkInetDiagSocket() throws ErrnoException {
+        return Os.socket(AF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC, NETLINK_INET_DIAG);
+    }
+
+    /**
+     * Connect the given file descriptor to the Netlink interface to the kernel.
+     *
+     * The fd must be a SOCK_DGRAM socket : create it with {@link #netlinkSocketForProto}
+     *
+     * @throws ErrnoException if the {@code fd} could not connect to kernel successfully
+     * @throws SocketException if there is an error accessing a socket.
+     */
+    public static void connectSocketToNetlink(FileDescriptor fd)
+            throws ErrnoException, SocketException {
+        Os.connect(fd, makeNetlinkSocketAddress(0, 0));
+    }
+
+    private static void checkTimeout(long timeoutMs) {
+        if (timeoutMs < 0) {
+            throw new IllegalArgumentException("Negative timeouts not permitted");
+        }
+    }
+
+    /**
+     * Wait up to |timeoutMs| (or until underlying socket error) for a
+     * netlink message of at most |bufsize| size.
+     *
+     * Multi-threaded calls with different timeouts will cause unexpected results.
+     */
+    public static ByteBuffer recvMessage(FileDescriptor fd, int bufsize, long timeoutMs)
+            throws ErrnoException, IllegalArgumentException, InterruptedIOException {
+        checkTimeout(timeoutMs);
+
+        Os.setsockoptTimeval(fd, SOL_SOCKET, SO_RCVTIMEO, StructTimeval.fromMillis(timeoutMs));
+
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(bufsize);
+        final int length = Os.read(fd, byteBuffer);
+        if (length == bufsize) {
+            Log.w(TAG, "maximum read");
+        }
+        byteBuffer.position(0);
+        byteBuffer.limit(length);
+        byteBuffer.order(ByteOrder.nativeOrder());
+        return byteBuffer;
+    }
+
+    /**
+     * Send a message to a peer to which this socket has previously connected.
+     *
+     * This waits at most |timeoutMs| milliseconds for the send to complete, will get the exception
+     * if it times out.
+     */
+    public static int sendMessage(
+            FileDescriptor fd, byte[] bytes, int offset, int count, long timeoutMs)
+            throws ErrnoException, IllegalArgumentException, InterruptedIOException {
+        checkTimeout(timeoutMs);
+        Os.setsockoptTimeval(fd, SOL_SOCKET, SO_SNDTIMEO, StructTimeval.fromMillis(timeoutMs));
+        return Os.write(fd, bytes, offset, count);
+    }
+
+    private NetlinkUtils() {}
 }
