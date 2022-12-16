@@ -26,7 +26,6 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import java.net.DatagramPacket
 import java.net.InetSocketAddress
-import java.net.MulticastSocket
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -57,7 +56,7 @@ private val TEST_SERVICE_NAME_2 = arrayOf("testservice2", "_nmt", "_tcp", "local
 @IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class MdnsProberTest {
     private val thread = HandlerThread(MdnsProberTest::class.simpleName)
-    private val socket = mock(MulticastSocket::class.java)
+    private val socket = mock(MdnsInterfaceSocket::class.java)
     @Suppress("UNCHECKED_CAST")
     private val cb = mock(MdnsPacketRepeater.PacketRepeaterCallback::class.java)
         as MdnsPacketRepeater.PacketRepeaterCallback<ProbingInfo>
