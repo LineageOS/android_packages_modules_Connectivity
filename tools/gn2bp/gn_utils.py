@@ -322,14 +322,6 @@ class GnParser(object):
 
     is_java_target |= self._is_java_group(type_, target_name)
 
-    # Action modules can differ depending on the target architecture, yet
-    # genrule's do not allow to overload cmd per target OS / arch.  Create a
-    # separate action for every architecture.
-    # Cover both action and action_foreach
-    if type_.startswith('action') and not is_java_target:
-      # Don't meddle with the java actions name
-      target_name += '__' + arch
-
     target = self.all_targets.get(target_name)
     if target is None:
       target = GnParser.Target(target_name, type_)
