@@ -152,6 +152,16 @@ def enable_brotli(module, arch):
   else:
     module.arch[arch].static_libs.add('libbrotli')
 
+def enable_modp_b64(module, arch):
+  # Requires crrev/c/4112845
+  # Requires aosp/2359455
+  # Requires aosp/2359456
+  if not module.is_compiled():
+    return
+  if arch is None:
+    module.static_libs.add('libmodpb64')
+  else:
+    module.arch[arch].static_libs.add('libmodpb64')
 
 def enable_zlib(module, arch):
   # Requires crrev/c/4109079
@@ -174,6 +184,8 @@ android_deps = {
         enable_brotli,
     '//third_party/brotli:dec':
         enable_brotli,
+    '//third_party/modp_b64:modp_b64':
+        enable_modp_b64,
     '//third_party/zlib:zlib':
         enable_zlib,
 }
