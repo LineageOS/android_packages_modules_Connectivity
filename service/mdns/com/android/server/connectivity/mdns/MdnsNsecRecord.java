@@ -96,8 +96,9 @@ public class MdnsNsecRecord extends MdnsRecord {
 
     @Override
     protected void writeData(MdnsPacketWriter writer) throws IOException {
-        // No compression as per RFC3845 2.1.1
-        writer.writeLabelsNoCompression(mNextDomain);
+        // Standard NSEC records should use no compression for the Next Domain Name field as per
+        // RFC3845 2.1.1, but for mDNS RFC6762 18.14 specifies that compression should be used.
+        writer.writeLabels(mNextDomain);
 
         // type bitmaps: RFC3845 2.1.2
         int typesBlockStart = 0;

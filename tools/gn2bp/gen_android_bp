@@ -96,6 +96,10 @@ static_library_allowlist = [
 local_include_dirs_denylist = [
 ]
 
+android_include_dirs_denylist = [
+    'third_party/zlib/',
+]
+
 # Name of the module which settings such as compiler flags for all other
 # modules.
 defaults_module = module_prefix + 'defaults'
@@ -140,14 +144,31 @@ additional_args = {
     ],
 }
 
+def enable_zlib(module, arch):
+  # Requires crrev/c/4109079
+  if arch is None:
+    module.shared_libs.add('libz')
+  else:
+    module.arch[arch].shared_libs.add('libz')
+
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
     '//buildtools/third_party/libunwind:libunwind':
-        lambda x: None, # disable libunwind
+        lambda m, a: None, # disable libunwind
     '//net/tools/root_store_tool:root_store_tool':
-        lambda x: None,
+        lambda m, a: None,
 }
+
+android_deps = {
+    '//third_party/zlib:zlib':
+        enable_zlib,
+}
+
+# Uncomment the following lines to use Android deps rather than their Chromium
+# equivalent:
+#builtin_deps.update(android_deps)
+#local_include_dirs_denylist.extend(android_include_dirs_denylist)
 
 # Name of tethering apex module
 tethering_apex = "com.android.tethering"
@@ -1086,6 +1107,10 @@ def set_module_include_dirs(module, cflags, include_dirs):
   module.local_include_dirs.update([gn_utils.label_to_path(d)
                                  for d in include_dirs
                                  if not re.match('^//out/.*', d)])
+  # Remove prohibited include directories
+  module.local_include_dirs = [d for d in module.local_include_dirs
+                               if d not in local_include_dirs_denylist]
+
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
   """Generate module(s) for a given GN target.
@@ -1192,10 +1217,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       if lib in static_library_allowlist:
         module.add_android_static_lib(android_lib)
 
-    # Remove prohibited include directories
-    module.local_include_dirs = [d for d in module.local_include_dirs
-                                 if d not in local_include_dirs_denylist]
-
   # If the module is a static library, export all the generated headers.
   if module.type == 'cc_library_static':
     module.export_generated_headers = module.generated_headers
@@ -1216,7 +1237,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # |builtin_deps| override GN deps with Android-specific ones. See the
     # config in the top of this file.
     if dep_name in builtin_deps:
-      builtin_deps[dep_name](module)
+      builtin_deps[dep_name](module, None)
       continue
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
@@ -1269,6 +1290,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   for arch_name, arch in target.arch.items():
     for dep_name in arch.deps:
+      # |builtin_deps| override GN deps with Android-specific ones. See the
+      # config in the top of this file.
+      if dep_name in builtin_deps:
+        builtin_deps[dep_name](module, arch_name)
+        continue
       dep_module = create_modules_from_target(blueprint, gn, dep_name)
       # Arch-specific dependencies currently only include cc_library_static.
       # Revisit this approach once we need to support more target types.
@@ -1283,19 +1309,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
           if module.type not in ["cc_object"]:
             module.target[arch_name].export_generated_headers.update(
               dep_module.genrule_headers)
-      else:
-        raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
-                    (dep_module.name, target.name, dep_module.type))
-    for dep_name in arch.source_set_deps:
-      dep_module = create_modules_from_target(blueprint, gn, dep_name)
-      if dep_module.type == 'cc_object':
-        if module.type != 'cc_object':
-          # We only want to bubble up cc_objects for modules that are not cc_objects
-          # otherwise they'd be recompiled and that would cause multiple symbol redefinitions.
-          if dep_module.has_input_files():
-            # Only add it as part of srcs if the dep_module has input files otherwise
-            # this would throw an error.
-            module.target[arch_name].srcs.add(":" + dep_module.name)
+      elif dep_module.type == 'cc_object':
+        if dep_module.has_input_files():
+          # Only add it as part of srcs if the dep_module has input files otherwise
+          # this would throw an error.
+          module.target[arch_name].srcs.add(":" + dep_module.name)
       else:
         raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
                     (dep_module.name, target.name, dep_module.type))
