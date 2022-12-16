@@ -199,6 +199,7 @@ bootclasspath_fragment {
             "android.net.connectivity",
             "android.net.netstats.provider",
             "android.net.nsd",
+            "android.net.wear",
         ],
     },
 }
