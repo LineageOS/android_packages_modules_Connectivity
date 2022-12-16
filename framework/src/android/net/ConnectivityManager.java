@@ -5992,4 +5992,13 @@ public class ConnectivityManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /** @hide */
+    public IBinder getCompanionDeviceManagerProxyService() {
+        try {
+            return mService.getCompanionDeviceManagerProxyService();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }

@@ -80,7 +80,9 @@ java_defaults {
         "framework-connectivity-t.stubs.module_lib",
     ],
     impl_only_libs: [
-        "framework-tethering.stubs.module_lib",
+        // TODO: figure out why just using "framework-tethering" uses the stubs, even though both
+        // framework-connectivity and framework-tethering are in the same APEX.
+        "framework-tethering.impl",
         "framework-wifi.stubs.module_lib",
         "net-utils-device-common",
     ],
@@ -109,9 +111,9 @@ java_library {
     libs: [
         // This cannot be in the defaults clause above because if it were, it would be used
         // to generate the connectivity stubs. That would create a circular dependency
-        // because the tethering stubs depend on the connectivity stubs (e.g.,
+        // because the tethering impl depend on the connectivity stubs (e.g.,
         // TetheringRequest depends on LinkAddress).
-        "framework-tethering.stubs.module_lib",
+        "framework-tethering.impl",
         "framework-wifi.stubs.module_lib",
     ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"]
@@ -241,5 +243,26 @@ java_genrule {
         "//packages/modules/Connectivity/framework:__subpackages__",
         "//packages/modules/Connectivity/framework-t:__subpackages__",
         "//packages/modules/Connectivity/service",
+    ],
+}
+
+// Library providing limited APIs within the connectivity module, so that R+ components like
+// Tethering have a controlled way to depend on newer components like framework-connectivity that
+// are not loaded on R.
+java_library {
+    name: "connectivity-internal-api-util",
+    sdk_version: "module_current",
+    libs: [
+        "androidx.annotation_annotation",
+        "framework-connectivity.impl",
+    ],
+    jarjar_rules: ":framework-connectivity-jarjar-rules",
+    srcs: [
+        // Files listed here MUST all be annotated with @RequiresApi(Build.VERSION_CODES.TIRAMISU),
+        // so that API checks are enforced for R+ users of this library
+        "src/android/net/connectivity/TiramisuConnectivityInternalApiUtil.java",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity/Tethering:__subpackages__",
     ],
 }
