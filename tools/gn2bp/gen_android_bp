@@ -1128,6 +1128,27 @@ def get_cmd_condition(arch):
   else:
     raise Error(f'Unknown architecture type {arch}')
 
+def merge_cmd(modules, genrule_type):
+  '''
+  :param modules: dictionary whose key is arch name and value is module
+  :param genrule_type: cc_genrule or java_genrule
+  :return: merged command or common command if all the archs have the same command.
+  '''
+  commands = list({module.cmd for module in modules.values()})
+  if len(commands) == 1:
+    # If all the archs have the same command, return the command
+    return commands[0]
+
+  if genrule_type != 'cc_genrule':
+    raise Error(f'{genrule_type} can not have different cmd between archs')
+
+  merged_cmd = []
+  for arch, module in modules.items():
+    merged_cmd.append(f'if [[ {get_cmd_condition(arch)} ]];')
+    merged_cmd.append('then')
+    merged_cmd.append(module.cmd + ';')
+    merged_cmd.append('fi;')
+  return NEWLINE.join(merged_cmd)
 
 def _get_cflags(cflags, defines):
   cflags = {flag for flag in cflags if flag in cflag_allowlist}
