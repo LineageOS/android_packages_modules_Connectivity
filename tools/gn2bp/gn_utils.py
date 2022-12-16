@@ -15,6 +15,7 @@
 # A collection of utilities for extracting build rule information from GN
 # projects.
 
+import copy
 import json
 import logging as log
 import os
@@ -212,10 +213,20 @@ class GnParser(object):
       for arch in self.arch.values():
         getattr(arch, key).difference_update(getattr(self, key))
 
+    def _finalize_non_set_attribute(self, key):
+      # Only when all the arch has the same non empty value, move the value to the target common
+      val = getattr(list(self.arch.values())[0], key)
+      if val and all([val == getattr(arch, key) for arch in self.arch.values()]):
+        setattr(self, key, copy.deepcopy(val))
+        for arch in self.arch.values():
+          getattr(arch, key, None)
+
     def _finalize_attribute(self, key):
       val = getattr(self, key)
       if isinstance(val, set):
         self._finalize_set_attribute(key)
+      elif isinstance(val, (list, str)):
+        self._finalize_non_set_attribute(key)
       else:
         raise TypeError(f'Unsupported type: {type(val)}')
 
@@ -227,6 +238,9 @@ class GnParser(object):
       if self.is_finalized:
         return
       self.is_finalized = True
+
+      if len(self.arch) == 0:
+        return
 
       for key in ('sources', 'cflags', 'defines', 'include_dirs', 'deps', 'source_set_deps'):
         self._finalize_attribute(key)
