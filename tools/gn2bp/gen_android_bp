@@ -1110,6 +1110,23 @@ def create_action_module(blueprint, target, type, arch=None):
   blueprint.add_module(module)
   return module
 
+def get_cmd_condition(arch):
+  '''
+  :param arch: archtecture name e.g. android_x86_64, android_arm64
+  :return: condition that can be used in cc_genrule cmd to switch the behavior based on arch
+  '''
+  if arch == "android_x86_64":
+    return "( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' )"
+  elif arch == "android_x86":
+    return "( $$CC_ARCH == 'x86' && $$CC_OS == 'android' )"
+  elif arch == "android_arm":
+    return "( $$CC_ARCH == 'arm' && $$CC_OS == 'android' )"
+  elif arch == "android_arm64":
+    return "( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' )"
+  elif arch == "host":
+    return "$$CC_OS != 'android'"
+  else:
+    raise Error(f'Unknown architecture type {arch}')
 
 
 def _get_cflags(cflags, defines):
