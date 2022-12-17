@@ -286,6 +286,7 @@ import com.android.server.connectivity.ProfileNetworkPreferenceInfo;
 import com.android.server.connectivity.ProxyTracker;
 import com.android.server.connectivity.QosCallbackTracker;
 import com.android.server.connectivity.UidRangeUtils;
+import com.android.server.connectivity.wear.CompanionDeviceManagerProxyService;
 
 import libcore.io.IoUtils;
 
@@ -435,6 +436,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      */
     @GuardedBy("mTNSLock")
     private TestNetworkService mTNS;
+    private final CompanionDeviceManagerProxyService mCdmps;
 
     private final Object mTNSLock = new Object();
 
@@ -1586,6 +1588,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
                 mContext);
+
+        if (SdkLevel.isAtLeastT()) {
+            mCdmps = new CompanionDeviceManagerProxyService(context);
+        } else {
+            mCdmps = null;
+        }
     }
 
     /**
@@ -11490,5 +11498,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         enforceNetworkStackOrSettingsPermission();
 
         mBpfNetMaps.replaceUidChain(chain, uids);
+    }
+
+    @Override
+    public IBinder getCompanionDeviceManagerProxyService() {
+        enforceNetworkStackPermission(mContext);
+        return mCdmps;
     }
 }
