@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.wear;
 
+import android.annotation.SuppressLint;
 import android.companion.AssociationInfo;
 import android.companion.CompanionDeviceManager;
 import android.content.Context;
@@ -40,6 +41,10 @@ public class CompanionDeviceManagerProxyService extends ICompanionDeviceManagerP
         mContext = context;
     }
 
+    // TODO(b/193460475): Android Lint handles change from SystemApi to public incorrectly.
+    // CompanionDeviceManager#getAllAssociations() is made public in U,
+    // but existed in T as an identical SystemApi.
+    @SuppressLint("NewApi")
     @Override
     public List<AssociationInfo> getAllAssociations() {
         PermissionUtils.enforceNetworkStackPermission(mContext);
