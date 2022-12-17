@@ -325,9 +325,8 @@ class GnParser(object):
       return target  # Target already processed.
 
     if target.name in self.builtin_deps:
-      # return early, no need to dive into the modules deps as the module is a
-      # builtin.
-      return None
+      # return early, no need to parse any further as the module is a builtin.
+      return target
 
     target.testonly = desc.get('testonly', False)
 
@@ -393,9 +392,7 @@ class GnParser(object):
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
       dep = self.parse_gn_desc(gn_desc, gn_dep_name, is_java_target)
-      if dep is None:
-        continue
-      elif dep.type == 'proto_library':
+      if dep.type == 'proto_library':
         target.proto_deps.add(dep.name)
         target.transitive_proto_deps.add(dep.name)
         target.proto_paths.update(dep.proto_paths)
