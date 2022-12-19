@@ -37,7 +37,7 @@
 
 #include "bpf/BpfMap.h"
 #include "bpf/BpfUtils.h"
-#include "bpf_shared.h"
+#include "netd.h"
 
 using android::base::Result;
 
@@ -59,26 +59,6 @@ TEST_F(BpfBasicTest, TestCgroupMounted) {
     ASSERT_EQ(true, CgroupGetControllerPath(CGROUPV2_CONTROLLER_NAME, &cg2_path));
     ASSERT_EQ(0, access(cg2_path.c_str(), R_OK));
     ASSERT_EQ(0, access((cg2_path + "/cgroup.controllers").c_str(), R_OK));
-}
-
-TEST_F(BpfBasicTest, TestTrafficControllerSetUp) {
-    ASSERT_EQ(0, access(BPF_EGRESS_PROG_PATH, R_OK));
-    ASSERT_EQ(0, access(BPF_INGRESS_PROG_PATH, R_OK));
-    ASSERT_EQ(0, access(XT_BPF_INGRESS_PROG_PATH, R_OK));
-    ASSERT_EQ(0, access(XT_BPF_EGRESS_PROG_PATH, R_OK));
-    ASSERT_EQ(0, access(COOKIE_TAG_MAP_PATH, R_OK));
-    ASSERT_EQ(0, access(UID_COUNTERSET_MAP_PATH, R_OK));
-    ASSERT_EQ(0, access(STATS_MAP_A_PATH, R_OK));
-    ASSERT_EQ(0, access(STATS_MAP_B_PATH, R_OK));
-    ASSERT_EQ(0, access(IFACE_INDEX_NAME_MAP_PATH, R_OK));
-    ASSERT_EQ(0, access(IFACE_STATS_MAP_PATH, R_OK));
-    ASSERT_EQ(0, access(CONFIGURATION_MAP_PATH, R_OK));
-    ASSERT_EQ(0, access(UID_OWNER_MAP_PATH, R_OK));
-}
-
-TEST_F(BpfBasicTest, TestSocketFilterSetUp) {
-    ASSERT_EQ(0, access(CGROUP_SOCKET_PROG_PATH, R_OK));
-    ASSERT_EQ(0, access(UID_PERMISSION_MAP_PATH, R_OK));
 }
 
 TEST_F(BpfBasicTest, TestTagSocket) {
