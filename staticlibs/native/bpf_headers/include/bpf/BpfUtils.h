@@ -115,11 +115,5 @@ static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsign
     return kernelVersion() >= KVER(major, minor, sub);
 }
 
-#define SKIP_IF_BPF_NOT_SUPPORTED                           \
-    do {                                                    \
-        if (!android::bpf::isAtLeastKernelVersion(4, 9, 0)) \
-            GTEST_SKIP() << "Skip: bpf is not supported.";  \
-    } while (0)
-
 }  // namespace bpf
 }  // namespace android
