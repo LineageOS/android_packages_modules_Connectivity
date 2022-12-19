@@ -108,8 +108,13 @@ class TestDnsServer(network: Network, addr: InetSocketAddress) {
             if (status != Status.STARTED) {
                 throw IllegalStateException("unexpected status: $status")
             }
-            socket.close()
+            // The thread needs to be interrupted before closing the socket to prevent a data
+            // race where the thread tries to read from the socket while it's being closed.
+            // DatagramSocket is not thread-safe and running both concurrently can end up in
+            // getPort() returning -1 after it's been checked not to, resulting in a crash by
+            // IllegalArgumentException inside the DatagramSocket implementation.
             thread.interrupt()
+            socket.close()
             thread.join()
             status = Status.STOPPED
         }
@@ -119,7 +124,6 @@ class TestDnsServer(network: Network, addr: InetSocketAddress) {
 
     inner class ReceivingThread : Thread() {
         override fun run() {
-            Log.i(TAG, "starting addr={${socket.localSocketAddress}}")
             while (!interrupted() && !socket.isClosed) {
                 try {
                     processPacket()
