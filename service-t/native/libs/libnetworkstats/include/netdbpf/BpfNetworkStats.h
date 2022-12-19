@@ -18,7 +18,7 @@
 #define _BPF_NETWORKSTATS_H
 
 #include <bpf/BpfMap.h>
-#include "bpf_shared.h"
+#include "netd.h"
 
 namespace android {
 namespace bpf {

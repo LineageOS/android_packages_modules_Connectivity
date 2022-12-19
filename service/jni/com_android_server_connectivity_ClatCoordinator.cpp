@@ -30,7 +30,6 @@
 
 #include <bpf/BpfMap.h>
 #include <bpf/BpfUtils.h>
-#include <bpf_shared.h>
 #include <netjniutils/netjniutils.h>
 #include <private/android_filesystem_config.h>
 
