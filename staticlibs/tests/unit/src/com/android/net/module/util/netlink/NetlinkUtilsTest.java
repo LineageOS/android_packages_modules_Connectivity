@@ -22,7 +22,7 @@ import static android.system.OsConstants.AF_UNSPEC;
 import static android.system.OsConstants.EACCES;
 import static android.system.OsConstants.NETLINK_ROUTE;
 
-import static com.android.net.module.util.netlink.NetlinkSocket.DEFAULT_RECV_BUFSIZE;
+import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
@@ -42,8 +42,6 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.Field;
-import com.android.net.module.util.Struct.Type;
 
 import libcore.io.IoUtils;
 
@@ -56,17 +54,17 @@ import java.nio.ByteOrder;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-public class NetlinkSocketTest {
-    private static final String TAG = "NetlinkSocketTest";
+public class NetlinkUtilsTest {
+    private static final String TAG = "NetlinkUitlsTest";
     private static final int TEST_SEQNO = 5;
     private static final int TEST_TIMEOUT_MS = 500;
 
     @Test
     public void testGetNeighborsQuery() throws Exception {
-        final FileDescriptor fd = NetlinkSocket.forProto(NETLINK_ROUTE);
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
         assertNotNull(fd);
 
-        NetlinkSocket.connectToKernel(fd);
+        NetlinkUtils.connectSocketToNetlink(fd);
 
         final NetlinkSocketAddress localAddr = (NetlinkSocketAddress) Os.getsockname(fd);
         assertNotNull(localAddr);
@@ -85,7 +83,7 @@ public class NetlinkSocketTest {
         // Apps targeting an SDK version > S are not allowed to send RTM_GETNEIGH{TBL} messages
         if (SdkLevel.isAtLeastT() && targetSdk > 31) {
             try {
-                NetlinkSocket.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS);
+                NetlinkUtils.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS);
                 fail("RTM_GETNEIGH is not allowed for apps targeting SDK > 31 on T+ platforms,"
                         + " target SDK version: " + targetSdk);
             } catch (ErrnoException e) {
@@ -97,14 +95,14 @@ public class NetlinkSocketTest {
 
         // Check that apps targeting lower API levels / running on older platforms succeed
         assertEquals(req.length,
-                NetlinkSocket.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS));
+                NetlinkUtils.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS));
 
         int neighMessageCount = 0;
         int doneMessageCount = 0;
 
         while (doneMessageCount == 0) {
             ByteBuffer response =
-                    NetlinkSocket.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TEST_TIMEOUT_MS);
+                    NetlinkUtils.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TEST_TIMEOUT_MS);
             assertNotNull(response);
             assertTrue(StructNlMsgHdr.STRUCT_SIZE <= response.limit());
             assertEquals(0, response.position());
@@ -141,10 +139,10 @@ public class NetlinkSocketTest {
 
     @Test
     public void testBasicWorkingGetAddrQuery() throws Exception {
-        final FileDescriptor fd = NetlinkSocket.forProto(NETLINK_ROUTE);
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
         assertNotNull(fd);
 
-        NetlinkSocket.connectToKernel(fd);
+        NetlinkUtils.connectSocketToNetlink(fd);
 
         final NetlinkSocketAddress localAddr = (NetlinkSocketAddress) Os.getsockname(fd);
         assertNotNull(localAddr);
@@ -156,12 +154,12 @@ public class NetlinkSocketTest {
         assertNotNull(req);
 
         final long timeout = 500;
-        assertEquals(req.length, NetlinkSocket.sendMessage(fd, req, 0, req.length, timeout));
+        assertEquals(req.length, NetlinkUtils.sendMessage(fd, req, 0, req.length, timeout));
 
         int addrMessageCount = 0;
 
         while (true) {
-            ByteBuffer response = NetlinkSocket.recvMessage(fd, DEFAULT_RECV_BUFSIZE, timeout);
+            ByteBuffer response = NetlinkUtils.recvMessage(fd, DEFAULT_RECV_BUFSIZE, timeout);
             assertNotNull(response);
             assertTrue(StructNlMsgHdr.STRUCT_SIZE <= response.limit());
             assertEquals(0, response.position());
