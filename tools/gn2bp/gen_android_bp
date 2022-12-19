@@ -26,7 +26,6 @@
 # libraries are also mapped to their Android equivalents -- see |builtin_deps|.
 
 import argparse
-import collections
 import json
 import logging as log
 import operator
