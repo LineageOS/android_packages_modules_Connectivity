@@ -15,17 +15,10 @@
 # A collection of utilities for extracting build rule information from GN
 # projects.
 
-from __future__ import print_function
-import collections
-import errno
-import filecmp
 import json
 import logging as log
 import os
 import re
-import shutil
-import subprocess
-import sys
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
