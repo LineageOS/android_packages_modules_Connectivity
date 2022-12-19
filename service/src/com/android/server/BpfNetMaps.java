@@ -139,7 +139,7 @@ public class BpfNetMaps {
     @VisibleForTesting public static final long OEM_DENY_1_MATCH = (1 << 9);
     @VisibleForTesting public static final long OEM_DENY_2_MATCH = (1 << 10);
     @VisibleForTesting public static final long OEM_DENY_3_MATCH = (1 << 11);
-    // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/bpf_shared.h)
+    // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/netd.h)
 
     private static final List<Pair<Integer, String>> PERMISSION_LIST = Arrays.asList(
             Pair.create(PERMISSION_INTERNET, "PERMISSION_INTERNET"),

@@ -18,7 +18,7 @@
 
 #include <netdutils/Status.h>
 #include "bpf/BpfMap.h"
-#include "bpf_shared.h"
+#include "netd.h"
 
 using android::bpf::BpfMap;
 using android::bpf::BpfMapRO;
