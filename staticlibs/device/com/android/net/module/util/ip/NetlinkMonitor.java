@@ -38,7 +38,7 @@ import com.android.net.module.util.PacketReader;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.netlink.NetlinkErrorMessage;
 import com.android.net.module.util.netlink.NetlinkMessage;
-import com.android.net.module.util.netlink.NetlinkSocket;
+import com.android.net.module.util.netlink.NetlinkUtils;
 
 import java.io.FileDescriptor;
 import java.net.SocketAddress;
@@ -82,7 +82,7 @@ public class NetlinkMonitor extends PacketReader {
      */
     public NetlinkMonitor(@NonNull Handler h, @NonNull SharedLog log, @NonNull String tag,
             int family, int bindGroups, int sockRcvbufSize) {
-        super(h, NetlinkSocket.DEFAULT_RECV_BUFSIZE);
+        super(h, NetlinkUtils.DEFAULT_RECV_BUFSIZE);
         mLog = log.forSubComponent(tag);
         mTag = tag;
         mFamily = family;
@@ -109,7 +109,7 @@ public class NetlinkMonitor extends PacketReader {
                 }
             }
             Os.bind(fd, makeNetlinkSocketAddress(0, mBindGroups));
-            NetlinkSocket.connectToKernel(fd);
+            NetlinkUtils.connectSocketToNetlink(fd);
 
             if (DBG) {
                 final SocketAddress nlAddr = Os.getsockname(fd);

@@ -31,7 +31,7 @@ import android.util.Log;
 
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.netlink.NetlinkMessage;
-import com.android.net.module.util.netlink.NetlinkSocket;
+import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.RtNetlinkNeighborMessage;
 import com.android.net.module.util.netlink.StructNdMsg;
 
@@ -68,7 +68,7 @@ public class IpNeighborMonitor extends NetlinkMonitor {
                 1, ip, StructNdMsg.NUD_PROBE, ifIndex, null);
 
         try {
-            NetlinkSocket.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
+            NetlinkUtils.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
         } catch (ErrnoException e) {
             Log.e(TAG, "Error " + msgSnippet + ": " + e);
             return -e.errno;
