@@ -16,7 +16,6 @@
 
 package com.android.net.module.util.ip;
 
-import static android.net.util.SocketUtils.makeNetlinkSocketAddress;
 import static android.system.OsConstants.AF_NETLINK;
 import static android.system.OsConstants.ENOBUFS;
 import static android.system.OsConstants.SOCK_DGRAM;
@@ -24,10 +23,11 @@ import static android.system.OsConstants.SOCK_NONBLOCK;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_RCVBUF;
 
+import static com.android.net.module.util.SocketUtils.closeSocketQuietly;
+import static com.android.net.module.util.SocketUtils.makeNetlinkSocketAddress;
 import static com.android.net.module.util.netlink.NetlinkConstants.hexify;
 
 import android.annotation.NonNull;
-import android.net.util.SocketUtils;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.system.ErrnoException;
@@ -41,7 +41,6 @@ import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.NetlinkSocket;
 
 import java.io.FileDescriptor;
-import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -177,14 +176,6 @@ public class NetlinkMonitor extends PacketReader {
             return false;
         }
         return true;
-    }
-
-    // TODO: move NetworkStackUtils to frameworks/libs/net for NetworkStackUtils#closeSocketQuietly.
-    private void closeSocketQuietly(FileDescriptor fd) {
-        try {
-            SocketUtils.closeSocket(fd);
-        } catch (IOException ignored) {
-        }
     }
 
     /**
