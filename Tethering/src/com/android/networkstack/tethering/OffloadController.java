@@ -55,7 +55,7 @@ import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.netlink.ConntrackMessage;
 import com.android.net.module.util.netlink.NetlinkConstants;
-import com.android.net.module.util.netlink.NetlinkSocket;
+import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.networkstack.tethering.OffloadHardwareInterface.ForwardedStats;
 
 import java.net.Inet4Address;
@@ -825,7 +825,7 @@ public class OffloadController {
                 proto, src, srcPort, dst, dstPort, timeoutSec);
 
         try {
-            NetlinkSocket.sendOneShotKernelMessage(OsConstants.NETLINK_NETFILTER, msg);
+            NetlinkUtils.sendOneShotKernelMessage(OsConstants.NETLINK_NETFILTER, msg);
         } catch (ErrnoException e) {
             mNatUpdateNetlinkErrors++;
             mLog.e("Error updating NAT conntrack entry >" + natDescription + "<: " + e
