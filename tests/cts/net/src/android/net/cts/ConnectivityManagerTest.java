@@ -2379,7 +2379,7 @@ public class ConnectivityManagerTest {
     }
 
     private class DetailedBlockedStatusCallback extends TestableNetworkCallback {
-        public void expectAvailableCallbacks(Network network) {
+        public void expectAvailableCallbacksWithBlockedReasonNone(Network network) {
             super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
                     BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
         }
@@ -2432,7 +2432,7 @@ public class ConnectivityManagerTest {
         final List<DetailedBlockedStatusCallback> allCallbacks =
                 List.of(myUidCallback, otherUidCallback);
         for (DetailedBlockedStatusCallback callback : allCallbacks) {
-            callback.expectAvailableCallbacks(defaultNetwork);
+            callback.expectAvailableCallbacksWithBlockedReasonNone(defaultNetwork);
         }
 
         final Range<Integer> myUidRange = new Range<>(myUid, myUid);
