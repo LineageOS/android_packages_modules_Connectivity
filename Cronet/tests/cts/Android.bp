@@ -18,12 +18,16 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-java_library {
-    name: "CronetApiCommonTests",
+android_test {
+    name: "CtsCronetTestCases",
+    compile_multilib: "both", // Include both the 32 and 64 bit versions
+    defaults: ["cts_defaults"],
+    sdk_version: "test_current",
     srcs: ["src/**/*.java"],
     static_libs: [
         "androidx.test.rules",
         "androidx.core_core",
+        "ctstestrunner-axt",
         "junit",
     ],
     libs: [
@@ -33,14 +37,11 @@ java_library {
         "androidx.annotation_annotation",
         "framework-cronet",
     ],
-}
 
-android_test {
-    name: "CronetApiTest",
-    sdk_version: "test_current",
-    test_suites: ["device-tests"],
-    certificate: "platform",
-    static_libs: [
-        "CronetApiCommonTests",
+    // Tag this as a cts test artifact
+    test_suites: [
+        "cts",
+        "general-tests",
+        "mts-tethering"
     ],
 }
