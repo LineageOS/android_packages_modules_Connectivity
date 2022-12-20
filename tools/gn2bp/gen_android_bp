@@ -26,7 +26,6 @@
 # libraries are also mapped to their Android equivalents -- see |builtin_deps|.
 
 import argparse
-import collections
 import json
 import logging as log
 import operator
@@ -728,9 +727,18 @@ def create_gcc_preprocess_modules(blueprint, target):
 
 
 class BaseActionSanitizer():
-  def __init__(self, target):
+  def __init__(self, target, arch):
     # Just to be on the safe side, create a deep-copy.
     self.target = copy.deepcopy(target)
+    if arch:
+      # Merge arch specific attributes
+      self.target.sources |= arch.sources
+      self.target.inputs |= arch.inputs
+      self.target.outputs |= arch.outputs
+      self.target.script = self.target.script or arch.script
+      self.target.args = self.target.args or arch.args
+      self.target.response_file_contents = \
+        self.target.response_file_contents or arch.response_file_contents
     self.target.args = self._normalize_args()
 
   def get_name(self):
@@ -1026,33 +1034,33 @@ class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
     self._set_value_arg('--output', '$(out)')
     super()._sanitize_args()
 
-def get_action_sanitizer(target, type):
+def get_action_sanitizer(target, type, arch):
   if target.script == "//build/write_buildflag_header.py":
-    return WriteBuildFlagHeaderSanitizer(target)
+    return WriteBuildFlagHeaderSanitizer(target, arch)
   elif target.script == "//build/write_build_date_header.py":
-    return WriteBuildDateHeaderSanitizer(target)
+    return WriteBuildDateHeaderSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_generator.py':
-    return JniGeneratorSanitizer(target)
+    return JniGeneratorSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
     if type == 'java_genrule':
-      return JavaJniRegistrationGeneratorSanitizer(target)
+      return JavaJniRegistrationGeneratorSanitizer(target, arch)
     else:
-      return JniRegistrationGeneratorSanitizer(target)
+      return JniRegistrationGeneratorSanitizer(target, arch)
   elif target.script == "//build/util/version.py":
-    return VersionSanitizer(target)
+    return VersionSanitizer(target, arch)
   elif target.script == "//build/android/gyp/java_cpp_enum.py":
-    return JavaCppEnumSanitizer(target)
+    return JavaCppEnumSanitizer(target, arch)
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
-    return MakeDafsaSanitizer(target)
+    return MakeDafsaSanitizer(target, arch)
   elif target.script == '//build/android/gyp/java_cpp_features.py':
-    return JavaCppFeatureSanitizer(target)
+    return JavaCppFeatureSanitizer(target, arch)
   elif target.script == '//build/android/gyp/java_cpp_strings.py':
-    return JavaCppStringSanitizer(target)
+    return JavaCppStringSanitizer(target, arch)
   elif target.script == '//build/android/gyp/write_native_libraries_java.py':
-    return WriteNativeLibrariesJavaSanitizer(target)
+    return WriteNativeLibrariesJavaSanitizer(target, arch)
   else:
     # TODO: throw exception here once all script hacks have been converted.
-    return BaseActionSanitizer(target)
+    return BaseActionSanitizer(target, arch)
 
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
@@ -1087,8 +1095,8 @@ def create_action_foreach_modules(blueprint, target):
   target.args = new_args
   return create_action_module(blueprint, target, 'cc_genrule')
 
-def create_action_module(blueprint, target, type):
-  sanitizer = get_action_sanitizer(target, type)
+def create_action_module_internal(target, type, arch=None):
+  sanitizer = get_action_sanitizer(target, type, arch)
   sanitizer.sanitize()
 
   module = Module(type, sanitizer.get_name(), target.name)
@@ -1099,9 +1107,85 @@ def create_action_module(blueprint, target, type):
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
 
-  blueprint.add_module(module)
   return module
 
+def get_cmd_condition(arch):
+  '''
+  :param arch: archtecture name e.g. android_x86_64, android_arm64
+  :return: condition that can be used in cc_genrule cmd to switch the behavior based on arch
+  '''
+  if arch == "android_x86_64":
+    return "( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' )"
+  elif arch == "android_x86":
+    return "( $$CC_ARCH == 'x86' && $$CC_OS == 'android' )"
+  elif arch == "android_arm":
+    return "( $$CC_ARCH == 'arm' && $$CC_OS == 'android' )"
+  elif arch == "android_arm64":
+    return "( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' )"
+  elif arch == "host":
+    return "$$CC_OS != 'android'"
+  else:
+    raise Error(f'Unknown architecture type {arch}')
+
+def merge_cmd(modules, genrule_type):
+  '''
+  :param modules: dictionary whose key is arch name and value is module
+  :param genrule_type: cc_genrule or java_genrule
+  :return: merged command or common command if all the archs have the same command.
+  '''
+  commands = list({module.cmd for module in modules.values()})
+  if len(commands) == 1:
+    # If all the archs have the same command, return the command
+    return commands[0]
+
+  if genrule_type != 'cc_genrule':
+    raise Error(f'{genrule_type} can not have different cmd between archs')
+
+  merged_cmd = []
+  for arch, module in modules.items():
+    merged_cmd.append(f'if [[ {get_cmd_condition(arch)} ]];')
+    merged_cmd.append('then')
+    merged_cmd.append(module.cmd + ';')
+    merged_cmd.append('fi;')
+  return NEWLINE.join(merged_cmd)
+
+def merge_modules(modules, genrule_type):
+  '''
+  :param modules: dictionary whose key is arch name and value is module
+  :param genrule_type: cc_genrule or java_genrule
+  :return: merged module of input modules
+  '''
+  merged_module = list(modules.values())[0]
+
+  # Following attributes must be the same between archs
+  for key in ('out', 'genrule_headers', 'srcs', 'tool_files'):
+    if any([getattr(merged_module, key) != getattr(module, key) for module in modules.values()]):
+      raise Error(f'{merged_module.name} has different values for {key} between archs')
+
+  merged_module.cmd = merge_cmd(modules, genrule_type)
+  return merged_module
+
+def create_action_module(blueprint, target, genrule_type):
+  '''
+  Create module for action target and add to the blueprint. If target has arch specific attributes
+  this function merge them and create a single module.
+  :param blueprint:
+  :param target: target which is converted to the module.
+  :param genrule_type: cc_genrule or java_genrule
+  :return: created module
+  '''
+  # TODO: Handle this target correctly, this target generates java_genrule but this target has
+  # different value for cpu-family arg between archs
+  if target.name == '//build/android:native_libraries_gen':
+    module = create_action_module_internal(target, genrule_type, target.arch['android_arm'])
+    blueprint.add_module(module)
+    return module
+
+  modules = {arch_name: create_action_module_internal(target, genrule_type, arch)
+             for arch_name, arch in target.arch.items()}
+  module = merge_modules(modules, genrule_type)
+  blueprint.add_module(module)
+  return module
 
 
 def _get_cflags(cflags, defines):

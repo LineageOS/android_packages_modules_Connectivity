@@ -15,17 +15,11 @@
 # A collection of utilities for extracting build rule information from GN
 # projects.
 
-from __future__ import print_function
-import collections
-import errno
-import filecmp
+import copy
 import json
 import logging as log
 import os
 import re
-import shutil
-import subprocess
-import sys
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
@@ -125,6 +119,12 @@ class GnParser(object):
         self.transitive_static_libs_deps = set()
         self.source_set_deps = set()
 
+        # These are valid only for type == 'action'
+        self.inputs = set()
+        self.outputs = set()
+        self.args = []
+        self.script = ''
+        self.response_file_contents = ''
 
     def __init__(self, name, type):
       self.name = name  # e.g. //src/ipc:ipc
@@ -151,9 +151,9 @@ class GnParser(object):
       # These are valid only for type == 'action'
       self.inputs = set()
       self.outputs = set()
-      self.script = None
+      self.script = ''
       self.args = []
-      self.response_file_contents = None
+      self.response_file_contents = ''
 
       # These variables are propagated up when encountering a dependency
       # on a source_set target.
@@ -210,6 +210,32 @@ class GnParser(object):
         self.arch[arch].__dict__[key_in_arch].update(
           other.arch[arch].__dict__.get(key_in_arch, []))
 
+    def _finalize_set_attribute(self, key):
+      # Target contains the intersection of arch-dependent properties
+      getattr(self, key)\
+        .update(set.intersection(*[getattr(arch, key) for arch in self.arch.values()]))
+
+      # Deduplicate arch-dependent properties
+      for arch in self.arch.values():
+        getattr(arch, key).difference_update(getattr(self, key))
+
+    def _finalize_non_set_attribute(self, key):
+      # Only when all the arch has the same non empty value, move the value to the target common
+      val = getattr(list(self.arch.values())[0], key)
+      if val and all([val == getattr(arch, key) for arch in self.arch.values()]):
+        setattr(self, key, copy.deepcopy(val))
+        for arch in self.arch.values():
+          getattr(arch, key, None)
+
+    def _finalize_attribute(self, key):
+      val = getattr(self, key)
+      if isinstance(val, set):
+        self._finalize_set_attribute(key)
+      elif isinstance(val, (list, str)):
+        self._finalize_non_set_attribute(key)
+      else:
+        raise TypeError(f'Unsupported type: {type(val)}')
+
     def finalize(self):
       """Move common properties out of arch-dependent subobjects to Target object.
 
@@ -219,22 +245,12 @@ class GnParser(object):
         return
       self.is_finalized = True
 
-      # Target contains the intersection of arch-dependent properties
-      self.sources = set.intersection(*[arch.sources for arch in self.arch.values()])
-      self.cflags = set.intersection(*[arch.cflags for arch in self.arch.values()])
-      self.defines = set.intersection(*[arch.defines for arch in self.arch.values()])
-      self.include_dirs = set.intersection(*[arch.include_dirs for arch in self.arch.values()])
-      self.deps.update(set.intersection(*[arch.deps for arch in self.arch.values()]))
-      self.source_set_deps.update(set.intersection(*[arch.source_set_deps for arch in self.arch.values()]))
+      if len(self.arch) == 0:
+        return
 
-      # Deduplicate arch-dependent properties
-      for arch in self.arch.keys():
-        self.arch[arch].sources -= self.sources
-        self.arch[arch].cflags -= self.cflags
-        self.arch[arch].defines -= self.defines
-        self.arch[arch].include_dirs -= self.include_dirs
-        self.arch[arch].deps -= self.deps
-        self.arch[arch].source_set_deps -= self.source_set_deps
+      for key in ('sources', 'cflags', 'defines', 'include_dirs', 'deps', 'source_set_deps',
+                  'inputs', 'outputs', 'args', 'script', 'response_file_contents'):
+        self._finalize_attribute(key)
 
 
   def __init__(self, builtin_deps):
@@ -306,14 +322,6 @@ class GnParser(object):
 
     is_java_target |= self._is_java_group(type_, target_name)
 
-    # Action modules can differ depending on the target architecture, yet
-    # genrule's do not allow to overload cmd per target OS / arch.  Create a
-    # separate action for every architecture.
-    # Cover both action and action_foreach
-    if type_.startswith('action') and not is_java_target:
-      # Don't meddle with the java actions name
-      target_name += '__' + arch
-
     target = self.all_targets.get(target_name)
     if target is None:
       target = GnParser.Target(target_name, type_)
@@ -361,13 +369,13 @@ class GnParser(object):
       target.type = 'java_group'
     elif target.type in ['action', 'action_foreach']:
       self.actions[gn_target_name] = target
-      target.inputs.update(desc.get('inputs', []))
+      target.arch[arch].inputs.update(desc.get('inputs', []))
       target.arch[arch].sources.update(desc.get('sources', []))
       outs = [re.sub('^//out/.+?/gen/', '', x) for x in desc['outputs']]
-      target.outputs.update(outs)
-      target.script = desc['script']
-      target.args = desc['args']
-      target.response_file_contents = self._get_response_file_contents(desc)
+      target.arch[arch].outputs.update(outs)
+      target.arch[arch].script = desc['script']
+      target.arch[arch].args = desc['args']
+      target.arch[arch].response_file_contents = self._get_response_file_contents(desc)
     elif target.type == 'copy':
       # TODO: copy rules are not currently implemented.
       self.actions[gn_target_name] = target
