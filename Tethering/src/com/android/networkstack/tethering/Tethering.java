@@ -146,6 +146,7 @@ import com.android.networkstack.tethering.util.InterfaceSet;
 import com.android.networkstack.tethering.util.PrefixUtils;
 import com.android.networkstack.tethering.util.TetheringUtils;
 import com.android.networkstack.tethering.util.VersionedBroadcastListener;
+import com.android.networkstack.tethering.wear.WearableConnectionManager;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -257,6 +258,7 @@ public class Tethering {
     private final BpfCoordinator mBpfCoordinator;
     private final PrivateAddressCoordinator mPrivateAddressCoordinator;
     private final TetheringMetrics mTetheringMetrics;
+    private final WearableConnectionManager mWearableConnectionManager;
     private int mActiveDataSubId = INVALID_SUBSCRIPTION_ID;
 
     private volatile TetheringConfiguration mConfig;
@@ -392,6 +394,12 @@ public class Tethering {
                         return mConfig;
                     }
                 });
+
+        if (SdkLevel.isAtLeastT() && mConfig.isWearTetheringEnabled()) {
+            mWearableConnectionManager = mDeps.getWearableConnectionManager(mContext);
+        } else {
+            mWearableConnectionManager = null;
+        }
 
         startStateMachineUpdaters();
     }
@@ -2637,6 +2645,13 @@ public class Tethering {
         pw.increaseIndent();
         mPrivateAddressCoordinator.dump(pw);
         pw.decreaseIndent();
+
+        if (mWearableConnectionManager != null) {
+            pw.println("WearableConnectionManager:");
+            pw.increaseIndent();
+            mWearableConnectionManager.dump(pw);
+            pw.decreaseIndent();
+        }
 
         pw.println("Log:");
         pw.increaseIndent();
