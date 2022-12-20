@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
 
 namespace android {
