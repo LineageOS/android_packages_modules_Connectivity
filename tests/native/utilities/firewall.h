@@ -19,7 +19,7 @@
 
 #include <android-base/thread_annotations.h>
 #include <bpf/BpfMap.h>
-#include <bpf_shared.h>
+#include "netd.h"
 
 using android::base::Result;
 using android::bpf::BpfMap;
