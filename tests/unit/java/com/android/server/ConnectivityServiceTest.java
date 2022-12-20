@@ -17155,7 +17155,6 @@ public class ConnectivityServiceTest {
         mWiFiNetworkAgent.sendLinkProperties(new LinkProperties(lp2));
 
         waitForIdle();
-        // TODO(b/246398088): the MTU should be set on the new interface.
-        verify(mMockNetd, never()).interfaceSetMtu(eq(ifaceName2), eq(mtu));
+        verify(mMockNetd).interfaceSetMtu(eq(ifaceName2), eq(mtu));
     }
 }

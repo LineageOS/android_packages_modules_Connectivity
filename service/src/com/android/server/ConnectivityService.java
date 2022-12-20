@@ -3125,22 +3125,23 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void updateMtu(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp) {
         final String iface = newLp.getInterfaceName();
         final int mtu = newLp.getMtu();
-        if (oldLp == null && mtu == 0) {
+        if (mtu == 0) {
             // Silently ignore unset MTU value.
             return;
         }
-        if (oldLp != null && newLp.isIdenticalMtu(oldLp)) {
-            if (VDBG) log("identical MTU - not setting");
+        if (oldLp != null && newLp.isIdenticalMtu(oldLp)
+                && TextUtils.equals(oldLp.getInterfaceName(), iface)) {
+            if (VDBG) log("identical MTU and iface - not setting");
             return;
         }
-        if (!LinkProperties.isValidMtu(mtu, newLp.hasGlobalIpv6Address())) {
-            if (mtu != 0) loge("Unexpected mtu value: " + mtu + ", " + iface);
+        // Cannot set MTU without interface name
+        if (TextUtils.isEmpty(iface)) {
+            if (VDBG) log("Setting MTU size with null iface.");
             return;
         }
 
-        // Cannot set MTU without interface name
-        if (TextUtils.isEmpty(iface)) {
-            loge("Setting MTU size with null iface.");
+        if (!LinkProperties.isValidMtu(mtu, newLp.hasGlobalIpv6Address())) {
+            loge("Unexpected mtu value: " + mtu + ", " + iface);
             return;
         }
 
