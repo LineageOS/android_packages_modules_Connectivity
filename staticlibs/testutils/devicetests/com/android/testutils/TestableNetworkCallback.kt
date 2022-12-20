@@ -46,7 +46,7 @@ open class RecorderCallback private constructor(
     private val backingRecord: ArrayTrackRecord<CallbackEntry>
 ) : NetworkCallback() {
     public constructor() : this(ArrayTrackRecord())
-    protected constructor(src: RecorderCallback?): this(src?.backingRecord ?: ArrayTrackRecord())
+    protected constructor(src: RecorderCallback?) : this(src?.backingRecord ?: ArrayTrackRecord())
 
     private val TAG = this::class.simpleName
 
@@ -177,7 +177,7 @@ open class TestableNetworkCallback private constructor(
     constructor(
         timeoutMs: Long = DEFAULT_TIMEOUT,
         noCallbackTimeoutMs: Long = DEFAULT_NO_CALLBACK_TIMEOUT
-    ): this(null, timeoutMs, noCallbackTimeoutMs)
+    ) : this(null, timeoutMs, noCallbackTimeoutMs)
 
     fun createLinkedCopy() = TestableNetworkCallback(
             this, defaultTimeoutMs, defaultNoCallbackTimeoutMs)
@@ -373,6 +373,7 @@ open class TestableNetworkCallback private constructor(
         assertNotNull(it, "Callback ${T::class} not received within ${timeoutMs}ms")
     } as T
 
+    @JvmOverloads
     fun <T : CallbackEntry> eventuallyExpect(
         type: KClass<T>,
         timeoutMs: Long = defaultTimeoutMs,
@@ -422,6 +423,7 @@ open class TestableNetworkCallback private constructor(
     // @param validated the expected value of the VALIDATED capability in the
     //        onCapabilitiesChanged callback.
     // @param tmt how long to wait for the callbacks.
+    @JvmOverloads
     fun expectAvailableCallbacks(
         net: Network,
         suspended: Boolean = false,
