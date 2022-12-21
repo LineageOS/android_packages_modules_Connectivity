@@ -17,7 +17,7 @@
  */
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.android.cronet"
+  package="com.android.net.http"
   android:versionCode="11"
   android:versionName="R-initial">
 </manifest>
