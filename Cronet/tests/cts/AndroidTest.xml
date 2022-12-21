@@ -25,7 +25,7 @@
         <option name="test-file-name" value="CtsCronetTestCases.apk" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
-        <option name="package" value="android.cronet.cts" />
+        <option name="package" value="android.net.http.cts" />
         <option name="runtime-hint" value="10s" />
     </test>
 
