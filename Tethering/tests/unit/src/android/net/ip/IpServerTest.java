@@ -214,8 +214,8 @@ public class IpServerTest {
 
     @Captor private ArgumentCaptor<DhcpServingParamsParcel> mDhcpParamsCaptor;
 
-    private final TestLooper mLooper = new TestLooper();
-    private final Handler mHandler = new Handler(mLooper.getLooper());
+    private TestLooper mLooper;
+    private Handler mHandler;
     private final ArgumentCaptor<LinkProperties> mLinkPropertiesCaptor =
             ArgumentCaptor.forClass(LinkProperties.class);
     private IpServer mIpServer;
@@ -252,12 +252,7 @@ public class IpServerTest {
         when(mTetherConfig.isBpfOffloadEnabled()).thenReturn(usingBpfOffload);
         when(mTetherConfig.useLegacyDhcpServer()).thenReturn(usingLegacyDhcp);
         when(mTetherConfig.getP2pLeasesSubnetPrefixLength()).thenReturn(P2P_SUBNET_PREFIX_LENGTH);
-        // Recreate mBpfCoordinator again here because mTetherConfig has changed
-        mBpfCoordinator = spy(new BpfCoordinator(mBpfDeps));
-        mIpServer = new IpServer(
-                IFACE_NAME, mHandler, interfaceType, mSharedLog, mNetd, mBpfCoordinator,
-                mRoutingCoordinatorManager, mCallback, mTetherConfig, mAddressCoordinator,
-                mTetheringMetrics, mDependencies);
+        mIpServer = createIpServer(interfaceType);
         mIpServer.start();
         mNeighborEventConsumer = neighborCaptor.getValue();
 
@@ -322,6 +317,13 @@ public class IpServerTest {
         when(mTetherConfig.isBpfOffloadEnabled()).thenReturn(DEFAULT_USING_BPF_OFFLOAD);
         when(mTetherConfig.useLegacyDhcpServer()).thenReturn(false /* default value */);
 
+        setUpDhcpServer();
+    }
+
+    // In order to interact with syncSM from the test, IpServer must be created in test thread.
+    private IpServer createIpServer(final int interfaceType) {
+        mLooper = new TestLooper();
+        mHandler = new Handler(mLooper.getLooper());
         mBpfDeps = new BpfCoordinator.Dependencies() {
                     @NonNull
                     public Handler getHandler() {
@@ -394,18 +396,19 @@ public class IpServerTest {
                         return mBpfErrorMap;
                     }
                 };
-        mBpfCoordinator = spy(new BpfCoordinator(mBpfDeps));
 
-        setUpDhcpServer();
+        mBpfCoordinator = spy(new BpfCoordinator(mBpfDeps));
+        return new IpServer(IFACE_NAME, mHandler, interfaceType, mSharedLog, mNetd, mBpfCoordinator,
+                mRoutingCoordinatorManager, mCallback, mTetherConfig, mAddressCoordinator,
+                mTetheringMetrics, mDependencies);
+
     }
 
     @Test
-    public void startsOutAvailable() {
+    public void startsOutAvailable() throws Exception {
         when(mDependencies.getIpNeighborMonitor(any(), any(), any()))
                 .thenReturn(mIpNeighborMonitor);
-        mIpServer = new IpServer(IFACE_NAME, mHandler, TETHERING_BLUETOOTH, mSharedLog,
-                mNetd, mBpfCoordinator, mRoutingCoordinatorManager, mCallback, mTetherConfig,
-                mAddressCoordinator, mTetheringMetrics, mDependencies);
+        mIpServer = createIpServer(TETHERING_BLUETOOTH);
         mIpServer.start();
         mLooper.dispatchAll();
         verify(mCallback).updateInterfaceState(
