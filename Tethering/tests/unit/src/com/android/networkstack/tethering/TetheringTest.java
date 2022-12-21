@@ -1425,8 +1425,7 @@ public class TetheringTest {
         verifyDisableTryCellWhenTetheringStop(inOrder);
     }
 
-    private void chooseDunUpstreamTestCommon(final boolean automatic, InOrder inOrder,
-            TestNetworkAgent mobile, TestNetworkAgent wifi, TestNetworkAgent dun) throws Exception {
+    private NetworkCallback setupDunUpstreamTest(final boolean automatic, InOrder inOrder) {
         when(mResources.getBoolean(R.bool.config_tether_upstream_automatic)).thenReturn(automatic);
         when(mTelephonyManager.isTetheringApnRequired()).thenReturn(true);
         sendConfigurationChanged();
@@ -1439,8 +1438,14 @@ public class TetheringTest {
         inOrder.verify(mUpstreamNetworkMonitor).setTryCell(true);
         ArgumentCaptor<NetworkCallback> captor = ArgumentCaptor.forClass(NetworkCallback.class);
         inOrder.verify(mCm).requestNetwork(any(), eq(0), eq(TYPE_MOBILE_DUN), any(),
-                captor.capture());
-        final NetworkCallback dunNetworkCallback1 = captor.getValue();
+                captor.capture() /* DUN network callback */);
+
+        return captor.getValue();
+    }
+
+    private void chooseDunUpstreamTestCommon(final boolean automatic, InOrder inOrder,
+            TestNetworkAgent mobile, TestNetworkAgent wifi, TestNetworkAgent dun) throws Exception {
+        final NetworkCallback dunNetworkCallback1 = setupDunUpstreamTest(automatic, inOrder);
 
         // Pretend cellular connected and expect the upstream to be set.
         mobile.fakeConnect();
