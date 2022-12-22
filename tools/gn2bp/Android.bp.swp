@@ -2412,6 +2412,7 @@ cc_library_shared {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -2433,7 +2434,6 @@ cc_library_shared {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -3200,6 +3200,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -3221,7 +3222,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -3274,7 +3274,6 @@ cc_object {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -3575,6 +3574,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -3596,7 +3596,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -3874,6 +3873,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -3895,7 +3895,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -3967,6 +3966,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -3987,7 +3987,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     defaults: [
@@ -5163,6 +5162,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5182,7 +5182,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5235,7 +5234,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -5258,6 +5256,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5277,7 +5276,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5330,7 +5328,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -5353,6 +5350,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5372,7 +5370,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5425,7 +5422,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -5448,6 +5444,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5467,7 +5464,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5520,7 +5516,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -5543,6 +5538,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5562,7 +5558,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5615,7 +5610,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -5648,6 +5642,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5667,7 +5662,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5720,7 +5714,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -5765,6 +5758,7 @@ cc_object {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -5784,7 +5778,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -5838,7 +5831,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -6415,6 +6407,7 @@ cc_library_static {
     shared_libs: [
         "libandroid",
         "liblog",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -6434,7 +6427,6 @@ cc_library_static {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -6507,7 +6499,6 @@ cc_library_static {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -6550,6 +6541,7 @@ cc_object {
         "libandroid",
         "liblog",
         "libprotobuf-cpp-lite",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -6566,7 +6558,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
     ],
     generated_headers: [
         "cronet_aml_base_debugging_buildflags",
@@ -6612,7 +6603,6 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -6829,6 +6819,7 @@ cc_object {
         "libandroid",
         "liblog",
         "libprotobuf-cpp-lite",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -6845,7 +6836,6 @@ cc_object {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -7396,6 +7386,7 @@ cc_library_static {
         "libandroid",
         "liblog",
         "libprotobuf-cpp-lite",
+        "libz",
     ],
     static_libs: [
         "cronet_aml_base_allocator_partition_allocator_partition_alloc",
@@ -7410,7 +7401,6 @@ cc_library_static {
         "cronet_aml_third_party_libevent_libevent",
         "cronet_aml_third_party_modp_b64_modp_b64",
         "cronet_aml_third_party_protobuf_protobuf_lite",
-        "cronet_aml_third_party_zlib_zlib",
         "cronet_aml_url_url",
     ],
     generated_headers: [
@@ -7457,7 +7447,6 @@ cc_library_static {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
     target: {
@@ -14386,8 +14375,8 @@ cc_library_static {
         "third_party/protobuf/src/google/protobuf/wire_format_lite.cc",
         "third_party/protobuf/src/google/protobuf/wrappers.pb.cc",
     ],
-    static_libs: [
-        "cronet_aml_third_party_zlib_zlib",
+    shared_libs: [
+        "libz",
     ],
     host_supported: true,
     device_supported: false,
@@ -14425,7 +14414,6 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/protobuf/src/",
-        "third_party/zlib/",
     ],
     cpp_std: "c++20",
 }
@@ -14522,10 +14510,12 @@ cc_binary {
         ":cronet_aml_buildtools_third_party_libc__abi_libc__abi",
         "third_party/protobuf/src/google/protobuf/compiler/main.cc",
     ],
+    shared_libs: [
+        "libz",
+    ],
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_full",
         "cronet_aml_third_party_protobuf_protoc_lib",
-        "cronet_aml_third_party_zlib_zlib",
     ],
     host_supported: true,
     device_supported: false,
@@ -14656,9 +14646,11 @@ cc_library_static {
         "third_party/protobuf/src/google/protobuf/compiler/subprocess.cc",
         "third_party/protobuf/src/google/protobuf/compiler/zip_writer.cc",
     ],
+    shared_libs: [
+        "libz",
+    ],
     static_libs: [
         "cronet_aml_third_party_protobuf_protobuf_full",
-        "cronet_aml_third_party_zlib_zlib",
     ],
     host_supported: true,
     device_supported: false,
@@ -14697,598 +14689,6 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++20",
-}
-
-// GN: //third_party/zlib:zlib
-cc_library_static {
-    name: "cronet_aml_third_party_zlib_zlib",
-    srcs: [
-        ":cronet_aml_third_party_zlib_zlib_adler32_simd",
-        ":cronet_aml_third_party_zlib_zlib_inflate_chunk_simd",
-        "third_party/zlib/adler32.c",
-        "third_party/zlib/compress.c",
-        "third_party/zlib/cpu_features.c",
-        "third_party/zlib/crc32.c",
-        "third_party/zlib/deflate.c",
-        "third_party/zlib/gzclose.c",
-        "third_party/zlib/gzlib.c",
-        "third_party/zlib/gzread.c",
-        "third_party/zlib/gzwrite.c",
-        "third_party/zlib/infback.c",
-        "third_party/zlib/inffast.c",
-        "third_party/zlib/inftrees.c",
-        "third_party/zlib/trees.c",
-        "third_party/zlib/uncompr.c",
-        "third_party/zlib/zutil.c",
-    ],
-    host_supported: true,
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DZLIB_DEBUG",
-        "-DZLIB_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/zlib/",
-    ],
-    cpp_std: "c++20",
-    target: {
-        android_arm: {
-            srcs: [
-                ":cronet_aml_third_party_android_ndk_cpu_features",
-                ":cronet_aml_third_party_zlib_zlib_arm_crc32",
-            ],
-            cflags: [
-                "-DADLER32_SIMD_NEON",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DARMV8_OS_ANDROID",
-                "-DCRC32_ARMV8_CRC32",
-                "-DDEFLATE_SLIDE_HASH_NEON",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_SIMD_NEON",
-            ],
-            local_include_dirs: [
-                "third_party/android_ndk/sources/android/cpufeatures/",
-            ],
-        },
-        android_arm64: {
-            srcs: [
-                ":cronet_aml_third_party_android_ndk_cpu_features",
-                ":cronet_aml_third_party_zlib_zlib_arm_crc32",
-            ],
-            cflags: [
-                "-DADLER32_SIMD_NEON",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DARMV8_OS_ANDROID",
-                "-DCRC32_ARMV8_CRC32",
-                "-DDEFLATE_SLIDE_HASH_NEON",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_READ_64LE",
-                "-DINFLATE_CHUNK_SIMD_NEON",
-            ],
-            local_include_dirs: [
-                "third_party/android_ndk/sources/android/cpufeatures/",
-            ],
-        },
-        android_x86: {
-            srcs: [
-                ":cronet_aml_third_party_android_ndk_cpu_features",
-                ":cronet_aml_third_party_zlib_zlib_crc32_simd",
-            ],
-            cflags: [
-                "-DADLER32_SIMD_SSSE3",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DCRC32_SIMD_SSE42_PCLMUL",
-                "-DDEFLATE_SLIDE_HASH_SSE2",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_SIMD_SSE2",
-                "-DX86_NOT_WINDOWS",
-                "-msse3",
-            ],
-            local_include_dirs: [
-                "third_party/android_ndk/sources/android/cpufeatures/",
-            ],
-        },
-        android_x86_64: {
-            srcs: [
-                ":cronet_aml_third_party_android_ndk_cpu_features",
-                ":cronet_aml_third_party_zlib_zlib_crc32_simd",
-            ],
-            cflags: [
-                "-DADLER32_SIMD_SSSE3",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DCRC32_SIMD_SSE42_PCLMUL",
-                "-DDEFLATE_SLIDE_HASH_SSE2",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_READ_64LE",
-                "-DINFLATE_CHUNK_SIMD_SSE2",
-                "-DX86_NOT_WINDOWS",
-                "-msse3",
-            ],
-            local_include_dirs: [
-                "third_party/android_ndk/sources/android/cpufeatures/",
-            ],
-        },
-        host: {
-            srcs: [
-                ":cronet_aml_third_party_zlib_zlib_crc32_simd",
-            ],
-            cflags: [
-                "-DADLER32_SIMD_SSSE3",
-                "-DCRC32_SIMD_SSE42_PCLMUL",
-                "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-                "-DDEFLATE_SLIDE_HASH_SSE2",
-                "-DINFLATE_CHUNK_READ_64LE",
-                "-DINFLATE_CHUNK_SIMD_SSE2",
-                "-DUSE_AURA=1",
-                "-DUSE_OZONE=1",
-                "-DUSE_UDEV",
-                "-DX86_NOT_WINDOWS",
-                "-D_FILE_OFFSET_BITS=64",
-                "-D_LARGEFILE64_SOURCE",
-                "-D_LARGEFILE_SOURCE",
-                "-msse3",
-            ],
-        },
-    },
-}
-
-// GN: //third_party/zlib:zlib_adler32_simd
-cc_object {
-    name: "cronet_aml_third_party_zlib_zlib_adler32_simd",
-    srcs: [
-        "third_party/zlib/adler32_simd.c",
-    ],
-    host_supported: true,
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DZLIB_DEBUG",
-        "-DZLIB_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-    ],
-    cpp_std: "c++20",
-    target: {
-        android_arm: {
-            cflags: [
-                "-DADLER32_SIMD_NEON",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_arm64: {
-            cflags: [
-                "-DADLER32_SIMD_NEON",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_x86: {
-            cflags: [
-                "-DADLER32_SIMD_SSSE3",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-DX86_NOT_WINDOWS",
-                "-msse3",
-                "-mssse3",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-DADLER32_SIMD_SSSE3",
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-DX86_NOT_WINDOWS",
-                "-msse3",
-                "-mssse3",
-            ],
-        },
-        host: {
-            cflags: [
-                "-DADLER32_SIMD_SSSE3",
-                "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-                "-DUSE_AURA=1",
-                "-DUSE_OZONE=1",
-                "-DUSE_UDEV",
-                "-DX86_NOT_WINDOWS",
-                "-D_FILE_OFFSET_BITS=64",
-                "-D_LARGEFILE64_SOURCE",
-                "-D_LARGEFILE_SOURCE",
-                "-msse3",
-                "-mssse3",
-            ],
-        },
-    },
-}
-
-// GN: //third_party/zlib:zlib_arm_crc32
-cc_object {
-    name: "cronet_aml_third_party_zlib_zlib_arm_crc32",
-    srcs: [
-        "third_party/zlib/crc32_simd.c",
-    ],
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DANDROID",
-        "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DARMV8_OS_ANDROID",
-        "-DCRC32_ARMV8_CRC32",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DHAVE_SYS_UIO_H",
-        "-DZLIB_DEBUG",
-        "-DZLIB_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/zlib/",
-    ],
-    cpp_std: "c++20",
-}
-
-// GN: //third_party/zlib:zlib_common_headers
-cc_object {
-    name: "cronet_aml_third_party_zlib_zlib_common_headers",
-    host_supported: true,
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-    ],
-    cpp_std: "c++20",
-    target: {
-        android_arm: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_arm64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_x86: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-msse3",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-msse3",
-            ],
-        },
-        host: {
-            cflags: [
-                "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-                "-DUSE_AURA=1",
-                "-DUSE_OZONE=1",
-                "-DUSE_UDEV",
-                "-D_FILE_OFFSET_BITS=64",
-                "-D_LARGEFILE64_SOURCE",
-                "-D_LARGEFILE_SOURCE",
-                "-msse3",
-            ],
-        },
-    },
-}
-
-// GN: //third_party/zlib:zlib_crc32_simd
-cc_object {
-    name: "cronet_aml_third_party_zlib_zlib_crc32_simd",
-    srcs: [
-        "third_party/zlib/crc32_simd.c",
-        "third_party/zlib/crc_folding.c",
-    ],
-    host_supported: true,
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCRC32_SIMD_SSE42_PCLMUL",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DZLIB_DEBUG",
-        "-DZLIB_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-        "-mpclmul",
-        "-msse3",
-        "-msse4.2",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-    ],
-    cpp_std: "c++20",
-    target: {
-        android_x86: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        host: {
-            cflags: [
-                "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-                "-DUSE_AURA=1",
-                "-DUSE_OZONE=1",
-                "-DUSE_UDEV",
-                "-D_FILE_OFFSET_BITS=64",
-                "-D_LARGEFILE64_SOURCE",
-                "-D_LARGEFILE_SOURCE",
-            ],
-        },
-    },
-}
-
-// GN: //third_party/zlib:zlib_inflate_chunk_simd
-cc_object {
-    name: "cronet_aml_third_party_zlib_zlib_inflate_chunk_simd",
-    srcs: [
-        "third_party/zlib/contrib/optimizations/inffast_chunk.c",
-        "third_party/zlib/contrib/optimizations/inflate.c",
-    ],
-    host_supported: true,
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DZLIB_DEBUG",
-        "-DZLIB_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-        "third_party/zlib/",
-    ],
-    cpp_std: "c++20",
-    target: {
-        android_arm: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_SIMD_NEON",
-            ],
-        },
-        android_arm64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_READ_64LE",
-                "-DINFLATE_CHUNK_SIMD_NEON",
-            ],
-        },
-        android_x86: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_SIMD_SSE2",
-                "-msse3",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DHAVE_SYS_UIO_H",
-                "-DINFLATE_CHUNK_READ_64LE",
-                "-DINFLATE_CHUNK_SIMD_SSE2",
-                "-msse3",
-            ],
-        },
-        host: {
-            cflags: [
-                "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-                "-DINFLATE_CHUNK_READ_64LE",
-                "-DINFLATE_CHUNK_SIMD_SSE2",
-                "-DUSE_AURA=1",
-                "-DUSE_OZONE=1",
-                "-DUSE_UDEV",
-                "-D_FILE_OFFSET_BITS=64",
-                "-D_LARGEFILE64_SOURCE",
-                "-D_LARGEFILE_SOURCE",
-                "-msse3",
-            ],
-        },
-    },
-}
-
-// GN: //third_party/zlib:zlib_slide_hash_simd
-cc_object {
-    name: "cronet_aml_third_party_zlib_zlib_slide_hash_simd",
-    host_supported: true,
-    defaults: [
-        "cronet_aml_defaults",
-    ],
-    cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
-        "-DDCHECK_ALWAYS_ON=1",
-        "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
-        "-DZLIB_DEBUG",
-        "-DZLIB_IMPLEMENTATION",
-        "-D_DEBUG",
-        "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
-        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
-        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D__STDC_CONSTANT_MACROS",
-        "-D__STDC_FORMAT_MACROS",
-    ],
-    local_include_dirs: [
-        "./",
-        "buildtools/third_party/libc++/",
-        "buildtools/third_party/libc++/trunk/include",
-        "buildtools/third_party/libc++abi/trunk/include",
-    ],
-    cpp_std: "c++20",
-    target: {
-        android_arm: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DDEFLATE_SLIDE_HASH_NEON",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_arm64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DDEFLATE_SLIDE_HASH_NEON",
-                "-DHAVE_SYS_UIO_H",
-            ],
-        },
-        android_x86: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DDEFLATE_SLIDE_HASH_SSE2",
-                "-DHAVE_SYS_UIO_H",
-                "-msse3",
-            ],
-        },
-        android_x86_64: {
-            cflags: [
-                "-DANDROID",
-                "-DANDROID_NDK_VERSION_ROLL=r23_1",
-                "-DDEFLATE_SLIDE_HASH_SSE2",
-                "-DHAVE_SYS_UIO_H",
-                "-msse3",
-            ],
-        },
-        host: {
-            cflags: [
-                "-DCR_SYSROOT_KEY=20220331T153654Z-0",
-                "-DDEFLATE_SLIDE_HASH_SSE2",
-                "-DUSE_AURA=1",
-                "-DUSE_OZONE=1",
-                "-DUSE_UDEV",
-                "-D_FILE_OFFSET_BITS=64",
-                "-D_LARGEFILE64_SOURCE",
-                "-D_LARGEFILE_SOURCE",
-                "-msse3",
-            ],
-        },
-    },
 }
 
 // GN: //url:buildflags
