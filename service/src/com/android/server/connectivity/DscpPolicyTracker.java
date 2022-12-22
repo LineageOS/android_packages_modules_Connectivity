@@ -66,8 +66,8 @@ public class DscpPolicyTracker {
 
     private Set<String> mAttachedIfaces;
 
-    private final BpfMap<Struct.U32, DscpPolicyValue> mBpfDscpIpv4Policies;
-    private final BpfMap<Struct.U32, DscpPolicyValue> mBpfDscpIpv6Policies;
+    private final BpfMap<Struct.S32, DscpPolicyValue> mBpfDscpIpv4Policies;
+    private final BpfMap<Struct.S32, DscpPolicyValue> mBpfDscpIpv6Policies;
 
     // The actual policy rules used by the BPF code to process packets
     // are in mBpfDscpIpv4Policies and mBpfDscpIpv4Policies. Both of
@@ -85,10 +85,10 @@ public class DscpPolicyTracker {
     public DscpPolicyTracker() throws ErrnoException {
         mAttachedIfaces = new HashSet<String>();
         mIfaceIndexToPolicyIdBpfMapIndex = new HashMap<Integer, SparseIntArray>();
-        mBpfDscpIpv4Policies = new BpfMap<Struct.U32, DscpPolicyValue>(IPV4_POLICY_MAP_PATH,
-                BpfMap.BPF_F_RDWR, Struct.U32.class, DscpPolicyValue.class);
-        mBpfDscpIpv6Policies = new BpfMap<Struct.U32, DscpPolicyValue>(IPV6_POLICY_MAP_PATH,
-                BpfMap.BPF_F_RDWR, Struct.U32.class, DscpPolicyValue.class);
+        mBpfDscpIpv4Policies = new BpfMap<Struct.S32, DscpPolicyValue>(IPV4_POLICY_MAP_PATH,
+                BpfMap.BPF_F_RDWR, Struct.S32.class, DscpPolicyValue.class);
+        mBpfDscpIpv6Policies = new BpfMap<Struct.S32, DscpPolicyValue>(IPV6_POLICY_MAP_PATH,
+                BpfMap.BPF_F_RDWR, Struct.S32.class, DscpPolicyValue.class);
     }
 
     private boolean isUnusedIndex(int index) {
@@ -181,7 +181,7 @@ public class DscpPolicyTracker {
             // are both null or if they are both instances of Inet4Address.
             if (matchesIpv4(policy)) {
                 mBpfDscpIpv4Policies.insertOrReplaceEntry(
-                        new Struct.U32(addIndex),
+                        new Struct.S32(addIndex),
                         new DscpPolicyValue(policy.getSourceAddress(),
                             policy.getDestinationAddress(), ifIndex,
                             policy.getSourcePort(), policy.getDestinationPortRange(),
@@ -192,7 +192,7 @@ public class DscpPolicyTracker {
             // are both null or if they are both instances of Inet6Address.
             if (matchesIpv6(policy)) {
                 mBpfDscpIpv6Policies.insertOrReplaceEntry(
-                        new Struct.U32(addIndex),
+                        new Struct.S32(addIndex),
                         new DscpPolicyValue(policy.getSourceAddress(),
                                 policy.getDestinationAddress(), ifIndex,
                                 policy.getSourcePort(), policy.getDestinationPortRange(),
@@ -258,8 +258,8 @@ public class DscpPolicyTracker {
             boolean sendCallback) {
         int status = DSCP_POLICY_STATUS_POLICY_NOT_FOUND;
         try {
-            mBpfDscpIpv4Policies.replaceEntry(new Struct.U32(index), DscpPolicyValue.NONE);
-            mBpfDscpIpv6Policies.replaceEntry(new Struct.U32(index), DscpPolicyValue.NONE);
+            mBpfDscpIpv4Policies.replaceEntry(new Struct.S32(index), DscpPolicyValue.NONE);
+            mBpfDscpIpv6Policies.replaceEntry(new Struct.S32(index), DscpPolicyValue.NONE);
             status = DSCP_POLICY_STATUS_DELETED;
         } catch (ErrnoException e) {
             Log.e(TAG, "Failed to delete policy from map: ", e);
