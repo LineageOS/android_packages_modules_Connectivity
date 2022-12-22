@@ -105,7 +105,7 @@ experimental_include_dirs_denylist = [
 defaults_module = module_prefix + 'defaults'
 
 # Location of the project in the Android source tree.
-tree_path = 'external/chromium_org'
+tree_path = 'external/cronet'
 
 # Path for the protobuf sources in the standalone build.
 buildtools_protobuf_src = '//buildtools/protobuf/src'
