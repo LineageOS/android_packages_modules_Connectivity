@@ -142,6 +142,22 @@ additional_args = {
             'cronet_aml_crypto_crypto',
         }),
     ],
+    # TODO: fix upstream. Both //base:base and
+    # //base/allocator/partition_allocator:partition_alloc do not create a
+    # dependency on gtest despite using gtest_prod.h.
+    'cronet_aml_base_base': [
+        ('header_libs', {
+            'libgtest_prod_headers',
+        }),
+        ('export_header_lib_headers', {
+            'libgtest_prod_headers',
+        }),
+    ],
+    'cronet_aml_base_allocator_partition_allocator_partition_alloc': [
+        ('header_libs', {
+            'libgtest_prod_headers',
+        }),
+    ],
 }
 
 def enable_brotli(module, arch):
@@ -323,6 +339,7 @@ class Module(object):
     self.generated_headers = set()
     self.export_generated_headers = set()
     self.export_static_lib_headers = set()
+    self.export_header_lib_headers = set()
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
@@ -393,6 +410,7 @@ class Module(object):
     self._output_field(output, 'generated_headers')
     self._output_field(output, 'export_generated_headers')
     self._output_field(output, 'export_static_lib_headers')
+    self._output_field(output, 'export_header_lib_headers')
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
