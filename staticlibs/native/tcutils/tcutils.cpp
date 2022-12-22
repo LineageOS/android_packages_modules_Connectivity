@@ -19,7 +19,7 @@
 #include "tcutils/tcutils.h"
 
 #include "logging.h"
-#include "kernelversion.h"
+#include "bpf/KernelVersion.h"
 #include "scopeguard.h"
 
 #include <arpa/inet.h>
@@ -504,7 +504,7 @@ int isEthernet(const char *iface, bool &isEthernet) {
     // shipped with Android S, so (for safety) let's limit ourselves to
     // >5.10, ie. 5.11+ as a guarantee we're on Android T+ and thus no
     // longer need this non-upstream compatibility logic
-    static bool is_pre_5_11_kernel = !isAtLeastKernelVersion(5, 11, 0);
+    static bool is_pre_5_11_kernel = !bpf::isAtLeastKernelVersion(5, 11, 0);
     if (is_pre_5_11_kernel)
       return false;
   }
