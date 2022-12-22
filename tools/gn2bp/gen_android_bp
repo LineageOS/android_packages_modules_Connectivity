@@ -924,8 +924,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     return arg
 
   def _sanitize_args(self):
-    self._update_value_arg('--jar_file', self._sanitize_filepath, False)
-    self._update_value_arg('--jar_file', self._add_location_tag, False)
+    self._set_value_arg('--jar_file', '$(location :current_android_jar)', False)
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
     self._update_value_arg('--output_dir', self._sanitize_filepath)
@@ -945,6 +944,10 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
     tool_files.add("base/android/jni_generator/android_jar.classes")
+
+    # Filter android.jar and add :current_android_jar
+    tool_files = {file if not file.endswith('android.jar') else ':current_android_jar'
+                  for file in tool_files }
     return tool_files
 
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):

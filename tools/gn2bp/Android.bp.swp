@@ -318,7 +318,7 @@ cc_genrule {
          "--includes " +
          "base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
-         "$(location third_party/android_sdk/public/platforms/android-33/android.jar) " +
+         "$(location :current_android_jar) " +
          "--output_name " +
          "Runnable_jni.h " +
          "--output_name " +
@@ -334,12 +334,12 @@ cc_genrule {
         "base/android_runtime_jni_headers/Runtime_jni.h",
     ],
     tool_files: [
+        ":current_android_jar",
         "base/android/jni_generator/android_jar.classes",
         "base/android/jni_generator/jni_generator.py",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
-        "third_party/android_sdk/public/platforms/android-33/android.jar",
     ],
     apex_available: [
         "com.android.tethering",
