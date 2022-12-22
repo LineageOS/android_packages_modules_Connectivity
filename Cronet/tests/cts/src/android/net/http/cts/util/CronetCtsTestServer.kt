@@ -1,7 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
--->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.android.net.http"
-  android:versionCode="11"
-  android:versionName="R-initial">
-</manifest>
+
+package android.net.http.cts.util
+
+import android.content.Context
+import android.webkit.cts.CtsTestServer
+
+/** Extends CtsTestServer to handle POST requests and other cronet specific test requests */
+class CronetCtsTestServer(context: Context) : CtsTestServer(context) {
+
+    val successUrl: String = getAssetUrl("html/hello_world.html")
+}
