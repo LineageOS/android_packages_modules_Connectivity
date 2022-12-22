@@ -18,20 +18,20 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="android.cronet.cts">
+          package="android.net.http.cts">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
-    <application android:usesCleartextTraffic="true">
+    <application android:networkSecurityConfig="@xml/network_security_config">
         <uses-library android:name="android.test.runner"/>
         <uses-library android:name="framework-cronet"/>
     </application>
 
     <instrumentation
         android:name="androidx.test.runner.AndroidJUnitRunner"
-        android:targetPackage="android.cronet.cts"
-        android:label="CTS tests of android.cronet">
+        android:targetPackage="android.net.http.cts"
+        android:label="CTS tests of android.net.http">
         <meta-data android:name="listener"
                    android:value="com.android.cts.runner.CtsTestRunListener"/>
     </instrumentation>
