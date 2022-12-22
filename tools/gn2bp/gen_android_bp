@@ -385,6 +385,7 @@ class Module(object):
     self.plugins = set()
     self.processor_class = None
     self.sdk_version = None
+    self.javacflags = set()
 
   def to_string(self, output):
     if self.comment:
@@ -439,6 +440,7 @@ class Module(object):
     self._output_field(output, 'plugins')
     self._output_field(output, 'processor_class')
     self._output_field(output, 'sdk_version')
+    self._output_field(output, 'javacflags')
     if self.rtti:
       self._output_field(output, 'rtti')
 
@@ -1495,6 +1497,12 @@ def create_java_module(blueprint, gn):
   module.aidl["local_include_dirs"] = {"base/android/java/src/"}
   module.sdk_version = "module_current"
   module.apex_available.add(tethering_apex)
+  # TODO: support for this flag is removed upstream in crrev/c/4062652.
+  # Consider reverting this change upstream, or worst-case downstream.  As an
+  # alternative hack, we could rename the generated file to not conflict. This
+  # would be less likely to conflict with upstream changes if the revert is not
+  # accepted.
+  module.javacflags.add("-Aorg.chromium.chrome.skipGenJni")
   # TODO: remove following workaround required to make this module visible to make (b/203203405)
   module.apex_available.add("//apex_available:platform")
   for dep in gn.java_actions:

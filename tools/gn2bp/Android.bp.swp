@@ -4760,6 +4760,9 @@ java_library {
         "cronet_aml_java_jni_annotation_preprocessor",
     ],
     sdk_version: "module_current",
+    javacflags: [
+        "-Aorg.chromium.chrome.skipGenJni",
+    ],
 }
 
 // GN: //base/android/jni_generator:jni_processor
