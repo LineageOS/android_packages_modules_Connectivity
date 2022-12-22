@@ -17,7 +17,7 @@
 // GN: //base/allocator:buildflags
 cc_genrule {
     name: "cronet_aml_base_allocator_buildflags",
-    cmd: "echo '--flags USE_PARTITION_ALLOC=\"false\" USE_ALLOCATOR_SHIM=\"true\" USE_PARTITION_ALLOC_AS_MALLOC=\"false\" USE_BACKUP_REF_PTR=\"false\" USE_ASAN_BACKUP_REF_PTR=\"false\" USE_PARTITION_ALLOC_AS_GWP_ASAN_STORE=\"false\" USE_MTE_CHECKED_PTR=\"false\" FORCE_ENABLE_RAW_PTR_EXCLUSION=\"false\"' | " +
+    cmd: "echo '--flags USE_ALLOCATOR_SHIM=\"true\" USE_PARTITION_ALLOC=\"false\" USE_PARTITION_ALLOC_AS_MALLOC=\"false\" USE_BACKUP_REF_PTR=\"false\" USE_ASAN_BACKUP_REF_PTR=\"false\" USE_PARTITION_ALLOC_AS_GWP_ASAN_STORE=\"false\" USE_MTE_CHECKED_PTR=\"false\" FORCE_ENABLE_RAW_PTR_EXCLUSION=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -156,7 +156,6 @@ cc_library_static {
         "base/allocator/partition_allocator/partition_alloc_base/memory/ref_counted.cc",
         "base/allocator/partition_allocator/partition_alloc_base/native_library.cc",
         "base/allocator/partition_allocator/partition_alloc_base/native_library_posix.cc",
-        "base/allocator/partition_allocator/partition_alloc_base/pkey.cc",
         "base/allocator/partition_allocator/partition_alloc_base/posix/safe_strerror.cc",
         "base/allocator/partition_allocator/partition_alloc_base/rand_util.cc",
         "base/allocator/partition_allocator/partition_alloc_base/rand_util_posix.cc",
@@ -208,8 +207,8 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
@@ -217,9 +216,7 @@ cc_library_static {
         "-DPA_PCSCAN_STACK_SUPPORTED",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -231,7 +228,7 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_arm: {
             srcs: [
@@ -268,7 +265,7 @@ cc_library_static {
 // GN: //base/allocator/partition_allocator:partition_alloc_buildflags
 cc_genrule {
     name: "cronet_aml_base_allocator_partition_allocator_partition_alloc_buildflags",
-    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" GLUE_CORE_POOLS=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"false\"' | " +
+    cmd: "echo '--flags ENABLE_PARTITION_ALLOC_AS_MALLOC_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SUPPORT=\"true\" ENABLE_BACKUP_REF_PTR_SLOW_CHECKS=\"false\" ENABLE_DANGLING_RAW_PTR_CHECKS=\"false\" PUT_REF_COUNT_IN_PREVIOUS_SLOT=\"true\" ENABLE_GWP_ASAN_SUPPORT=\"true\" ENABLE_MTE_CHECKED_PTR_SUPPORT=\"false\" RECORD_ALLOC_INFO=\"false\" USE_FREESLOT_BITMAP=\"false\" ENABLE_SHADOW_METADATA_FOR_64_BITS_POINTERS=\"false\" STARSCAN=\"true\" PA_USE_BASE_TRACING=\"true\" ENABLE_PKEYS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -908,8 +905,8 @@ cc_library_static {
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DBASE_IMPLEMENTATION",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
@@ -922,9 +919,7 @@ cc_library_static {
         "-DU_USING_ICU_NAMESPACE=0",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -940,7 +935,7 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_arm: {
             srcs: [
@@ -1292,16 +1287,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -1312,7 +1305,7 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -1331,7 +1324,7 @@ cc_library_static {
 cc_genrule {
     name: "cronet_aml_base_build_date",
     cmd: "$(location build/write_build_date_header.py) $(out) " +
-         "1664686800",
+         "1670130000",
     out: [
         "base/generated_build_date.h",
     ],
@@ -1346,7 +1339,7 @@ cc_genrule {
 // GN: //base:cfi_buildflags
 cc_genrule {
     name: "cronet_aml_base_cfi_buildflags",
-    cmd: "echo '--flags CFI_CAST_CHECK=\"false && false\" CFI_DIAG=\"false && false\" CFI_ICALL_CHECK=\"false && false\" CFI_ENFORCEMENT_TRAP=\"false && !false\" CFI_ENFORCEMENT_DIAGNOSTIC=\"false && false && !false\"' | " +
+    cmd: "echo '--flags CFI_CAST_CHECK=\"false && false\" CFI_ICALL_CHECK=\"false && false\" CFI_ENFORCEMENT_TRAP=\"false && !false\" CFI_ENFORCEMENT_DIAGNOSTIC=\"false && false && !false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1394,7 +1387,7 @@ cc_genrule {
     name: "cronet_aml_base_debugging_buildflags",
     cmd: "if [[ ( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' ) ]]; " +
          "then " +
-         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" FROM_HERE_USES_LOCATION_BUILTINS=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1406,7 +1399,7 @@ cc_genrule {
          "fi; " +
          "if [[ ( $$CC_ARCH == 'x86' && $$CC_OS == 'android' ) ]]; " +
          "then " +
-         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" FROM_HERE_USES_LOCATION_BUILTINS=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1418,7 +1411,7 @@ cc_genrule {
          "fi; " +
          "if [[ ( $$CC_ARCH == 'arm' && $$CC_OS == 'android' ) ]]; " +
          "then " +
-         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"true\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" FROM_HERE_USES_LOCATION_BUILTINS=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"false\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"true\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1430,7 +1423,7 @@ cc_genrule {
          "fi; " +
          "if [[ ( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' ) ]]; " +
          "then " +
-         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
+         "echo '--flags DCHECK_IS_CONFIGURABLE=\"false\" ENABLE_LOCATION_SOURCE=\"true\" FROM_HERE_USES_LOCATION_BUILTINS=\"true\" ENABLE_PROFILING=\"false\" CAN_UNWIND_WITH_FRAME_POINTERS=\"true\" UNSAFE_DEVELOPER_BUILD=\"true\" CAN_UNWIND_WITH_CFI_TABLE=\"false\" EXCLUDE_UNWIND_TABLES=\"false\" ENABLE_GDBINIT_WARNING=\"true\" ENABLE_LLDBINIT_WARNING=\"false\" EXPENSIVE_DCHECKS_ARE_ON=\"true\" ENABLE_STACK_TRACE_LINE_NUMBERS=\"false\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -1604,16 +1597,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -1624,7 +1615,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -1835,16 +1826,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -1855,7 +1844,7 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -1882,16 +1871,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -1900,7 +1887,7 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -2031,16 +2018,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -2051,7 +2036,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -2187,17 +2172,15 @@ cc_object {
         "cronet_aml_defaults",
     ],
     cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DLIBCXX_BUILDING_LIBCXXABI",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_BUILDING_LIBRARY",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
@@ -2285,18 +2268,16 @@ cc_object {
         "cronet_aml_defaults",
     ],
     cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DLIBCXXABI_SILENT_TERMINATE",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_BUILDING_LIBRARY",
         "-D_LIBCPP_CONSTINIT=constinit",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -2466,8 +2447,8 @@ cc_library_shared {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -2477,9 +2458,7 @@ cc_library_shared {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -2496,11 +2475,11 @@ cc_library_shared {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     linker_scripts: [
         "base/android/library_loader/anchor_functions.lds",
     ],
-    stem: "libcronet.109.0.5386.0",
+    stem: "libcronet.108.0.5359.128",
     target: {
         android_x86: {
             cflags: [
@@ -2771,13 +2750,6 @@ cc_genrule {
         "components/cronet/android/api/src/org/chromium/net/apihelpers/StringCronetCallback.java",
         "components/cronet/android/api/src/org/chromium/net/apihelpers/UploadDataProviders.java",
         "components/cronet/android/api/src/org/chromium/net/apihelpers/UrlRequestCallbacks.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetController.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetEngine.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetProvider.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlRequest.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlResponse.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/ResponseMatcher.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/UrlResponseMatcher.java",
         "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamBuilderImpl.java",
         "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamNetworkException.java",
         "components/cronet/android/java/src/org/chromium/net/impl/CallbackExceptionImpl.java",
@@ -3080,13 +3052,6 @@ java_genrule {
         "components/cronet/android/api/src/org/chromium/net/apihelpers/StringCronetCallback.java",
         "components/cronet/android/api/src/org/chromium/net/apihelpers/UploadDataProviders.java",
         "components/cronet/android/api/src/org/chromium/net/apihelpers/UrlRequestCallbacks.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetController.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetEngine.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetProvider.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlRequest.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlResponse.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/ResponseMatcher.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/UrlResponseMatcher.java",
         "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamBuilderImpl.java",
         "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamNetworkException.java",
         "components/cronet/android/java/src/org/chromium/net/impl/CallbackExceptionImpl.java",
@@ -3242,8 +3207,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -3253,9 +3218,7 @@ cc_object {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -3275,7 +3238,7 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -3317,7 +3280,7 @@ java_genrule {
          "-f " +
          "$(location build/util/LASTCHANGE) " +
          "-e " +
-         "'API_LEVEL=20' " +
+         "'API_LEVEL=19' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/android/java/src/org/chromium/net/impl/ImplVersion.template)",
@@ -3383,7 +3346,7 @@ java_genrule {
          "-f " +
          "$(location build/util/LASTCHANGE) " +
          "-e " +
-         "'API_LEVEL=20' " +
+         "'API_LEVEL=19' " +
          "-o " +
          "$(out) " +
          "$(location components/cronet/android/api/src/org/chromium/net/ApiVersion.template)",
@@ -3609,8 +3572,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -3620,9 +3583,7 @@ cc_object {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -3639,7 +3600,7 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -3666,16 +3627,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -3686,7 +3645,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -3754,16 +3713,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -3776,7 +3733,7 @@ cc_object {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -3816,16 +3773,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -3841,7 +3796,7 @@ cc_object {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -3908,8 +3863,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -3919,9 +3874,7 @@ cc_object {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -3941,7 +3894,7 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -3995,8 +3948,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -4006,9 +3959,7 @@ cc_object {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -4025,7 +3976,7 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -4049,16 +4000,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -4069,7 +4018,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -4119,8 +4068,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -4130,9 +4079,7 @@ cc_object {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -4146,7 +4093,7 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -4254,16 +4201,14 @@ cc_library_static {
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCOMPONENTS_PREFS_IMPLEMENTATION",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -4276,7 +4221,7 @@ cc_library_static {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -4367,16 +4312,14 @@ cc_library_static {
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
         "-DCRYPTO_IMPLEMENTATION",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -4389,7 +4332,7 @@ cc_library_static {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -4453,16 +4396,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -4473,7 +4414,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -4713,13 +4654,6 @@ java_library {
         "components/cronet/android/api/src/org/chromium/net/apihelpers/StringCronetCallback.java",
         "components/cronet/android/api/src/org/chromium/net/apihelpers/UploadDataProviders.java",
         "components/cronet/android/api/src/org/chromium/net/apihelpers/UrlRequestCallbacks.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetController.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetEngine.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeCronetProvider.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlRequest.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/FakeUrlResponse.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/ResponseMatcher.java",
-        "components/cronet/android/fake/java/org/chromium/net/test/UrlResponseMatcher.java",
         "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamBuilderImpl.java",
         "components/cronet/android/java/src/org/chromium/net/impl/BidirectionalStreamNetworkException.java",
         "components/cronet/android/java/src/org/chromium/net/impl/CallbackExceptionImpl.java",
@@ -5054,16 +4988,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5076,7 +5008,7 @@ cc_object {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5202,8 +5134,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5215,9 +5147,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5235,7 +5165,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5296,8 +5226,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5309,9 +5239,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5329,7 +5257,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5390,8 +5318,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5403,9 +5331,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5423,7 +5349,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5484,8 +5410,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5497,9 +5423,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5517,7 +5441,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5578,8 +5502,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5591,9 +5515,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5611,7 +5533,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5682,8 +5604,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5695,9 +5617,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5715,7 +5635,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -5799,8 +5719,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -5812,9 +5732,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -5832,7 +5750,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -6467,8 +6385,8 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -6480,9 +6398,7 @@ cc_library_static {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -6500,7 +6416,7 @@ cc_library_static {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_arm: {
             srcs: [
@@ -6574,8 +6490,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DENABLE_BUILT_IN_DNS",
@@ -6587,9 +6503,7 @@ cc_object {
         "-DNET_IMPLEMENTATION",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -6604,7 +6518,7 @@ cc_object {
         "third_party/brotli/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -6628,16 +6542,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -6648,7 +6560,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -6850,8 +6762,8 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -6861,9 +6773,7 @@ cc_object {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -6880,7 +6790,7 @@ cc_object {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -6923,16 +6833,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -6945,7 +6853,7 @@ cc_library_static {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7328,6 +7236,7 @@ cc_library_static {
         "net/third_party/quiche/src/quiche/quic/core/quic_flow_controller.cc",
         "net/third_party/quiche/src/quiche/quic/core/quic_framer.cc",
         "net/third_party/quiche/src/quiche/quic/core/quic_idle_network_detector.cc",
+        "net/third_party/quiche/src/quiche/quic/core/quic_legacy_version_encapsulator.cc",
         "net/third_party/quiche/src/quiche/quic/core/quic_mtu_discovery.cc",
         "net/third_party/quiche/src/quiche/quic/core/quic_network_blackhole_detector.cc",
         "net/third_party/quiche/src/quiche/quic/core/quic_packet_creator.cc",
@@ -7417,8 +7326,8 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -7429,9 +7338,7 @@ cc_library_static {
         "-DIS_QUICHE_IMPL",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -7448,7 +7355,7 @@ cc_library_static {
         "third_party/boringssl/src/include/",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7494,16 +7401,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -7516,7 +7421,7 @@ cc_object {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7559,17 +7464,15 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-DIS_URI_TEMPLATE_IMPL",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -7582,7 +7485,7 @@ cc_library_static {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7609,16 +7512,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -7630,7 +7531,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7655,16 +7556,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7674,7 +7573,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7699,16 +7598,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7718,7 +7615,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7743,16 +7640,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7762,7 +7657,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7794,16 +7689,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7813,7 +7706,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7838,16 +7731,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7857,7 +7748,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7882,16 +7773,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7901,7 +7790,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7926,16 +7815,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7945,7 +7832,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -7970,16 +7857,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -7989,7 +7874,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8014,16 +7899,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8033,7 +7916,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8058,16 +7941,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8077,7 +7958,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8102,16 +7983,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8121,7 +8000,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8146,16 +8025,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8165,7 +8042,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8193,16 +8070,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8212,7 +8087,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8240,16 +8115,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8259,7 +8132,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8284,16 +8157,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8303,7 +8174,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8331,16 +8202,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8350,7 +8219,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8378,16 +8247,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8397,7 +8264,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8425,16 +8292,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8444,7 +8309,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8472,16 +8337,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8491,7 +8354,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8516,16 +8379,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8535,7 +8396,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8560,16 +8421,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8579,7 +8438,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8604,16 +8463,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8623,7 +8480,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8648,16 +8505,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8667,7 +8522,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8692,16 +8547,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8711,7 +8564,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8736,16 +8589,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8755,7 +8606,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8780,16 +8631,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8799,7 +8648,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8824,16 +8673,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8843,7 +8690,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8868,16 +8715,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8887,7 +8732,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8912,16 +8757,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8931,7 +8774,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -8956,16 +8799,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -8975,7 +8816,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9000,16 +8841,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9019,7 +8858,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9044,16 +8883,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9063,7 +8900,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9092,16 +8929,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9111,7 +8946,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9136,16 +8971,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9155,7 +8988,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9180,16 +9013,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9199,7 +9030,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9224,16 +9055,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9243,7 +9072,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9268,16 +9097,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9287,7 +9114,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9312,16 +9139,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9331,7 +9156,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9356,16 +9181,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9375,7 +9198,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9400,16 +9223,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9419,7 +9240,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9447,16 +9268,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9466,7 +9285,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9496,16 +9315,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9515,7 +9332,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9543,16 +9360,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9562,7 +9377,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9590,16 +9405,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9609,7 +9422,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9637,16 +9450,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9656,7 +9467,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9684,16 +9495,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9703,7 +9512,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9731,16 +9540,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9750,7 +9557,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9775,16 +9582,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9794,7 +9599,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9819,16 +9624,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9838,7 +9641,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9863,16 +9666,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9882,7 +9683,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9910,16 +9711,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9929,7 +9728,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -9957,16 +9756,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -9976,7 +9773,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10004,16 +9801,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10023,7 +9818,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10048,16 +9843,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10067,7 +9860,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10092,16 +9885,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10111,7 +9902,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10136,16 +9927,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10155,7 +9944,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10183,16 +9972,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10202,7 +9989,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10227,16 +10014,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10246,7 +10031,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10274,16 +10059,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10293,7 +10076,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10318,16 +10101,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10337,7 +10118,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10366,16 +10147,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10385,7 +10164,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10410,16 +10189,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10429,7 +10206,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10454,16 +10231,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10473,7 +10248,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10498,16 +10273,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10517,7 +10290,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10542,16 +10315,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10561,7 +10332,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10586,16 +10357,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10605,7 +10374,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10633,16 +10402,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10652,7 +10419,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10677,16 +10444,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10696,7 +10461,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10727,16 +10492,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10746,7 +10509,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10777,16 +10540,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10796,7 +10557,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10827,16 +10588,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10846,7 +10605,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10874,16 +10633,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10893,7 +10650,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10924,16 +10681,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10943,7 +10698,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -10974,16 +10729,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -10993,7 +10746,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11024,16 +10777,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11043,7 +10794,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11068,16 +10819,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11087,7 +10836,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11115,16 +10864,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11134,7 +10881,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11159,16 +10906,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11178,7 +10923,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11203,16 +10948,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11222,7 +10965,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11247,16 +10990,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11266,7 +11007,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11294,16 +11035,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11313,7 +11052,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11341,16 +11080,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11360,7 +11097,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11391,16 +11128,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11410,7 +11145,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11439,16 +11174,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11458,7 +11191,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11486,16 +11219,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11505,7 +11236,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11535,16 +11266,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11554,7 +11283,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11588,16 +11317,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11607,7 +11334,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11635,16 +11362,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11654,7 +11379,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11682,16 +11407,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11701,7 +11424,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11729,16 +11452,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11748,7 +11469,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11773,16 +11494,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11792,7 +11511,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11817,16 +11536,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11836,7 +11553,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11861,16 +11578,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11880,7 +11595,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11910,16 +11625,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11929,7 +11642,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -11954,16 +11667,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -11973,7 +11684,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12006,16 +11717,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12025,7 +11734,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12049,7 +11758,6 @@ cc_object {
         "third_party/abseil-cpp/absl/strings/escaping.cc",
         "third_party/abseil-cpp/absl/strings/internal/charconv_bigint.cc",
         "third_party/abseil-cpp/absl/strings/internal/charconv_parse.cc",
-        "third_party/abseil-cpp/absl/strings/internal/damerau_levenshtein_distance.cc",
         "third_party/abseil-cpp/absl/strings/internal/memutil.cc",
         "third_party/abseil-cpp/absl/strings/match.cc",
         "third_party/abseil-cpp/absl/strings/numbers.cc",
@@ -12066,16 +11774,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12085,7 +11791,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12113,16 +11819,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12132,7 +11836,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12157,16 +11861,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12176,7 +11878,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12210,16 +11912,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12229,7 +11929,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12257,16 +11957,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12276,7 +11974,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12312,16 +12010,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12331,7 +12027,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12363,16 +12059,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12382,7 +12076,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12410,16 +12104,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12429,7 +12121,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12457,16 +12149,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12476,7 +12166,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12501,16 +12191,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12520,7 +12208,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12545,16 +12233,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12564,7 +12250,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12589,16 +12275,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12608,7 +12292,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12633,16 +12317,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12652,7 +12334,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12677,16 +12359,14 @@ cc_object {
         "-DABSL_ALLOCATOR_NOTHROW=1",
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12696,7 +12376,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12723,16 +12403,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -12742,7 +12420,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -12769,16 +12447,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -12789,7 +12465,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -13085,17 +12761,15 @@ cc_library_static {
         "-DBORINGSSL_ALLOW_CXX_RUNTIME",
         "-DBORINGSSL_IMPLEMENTATION",
         "-DBORINGSSL_NO_STATIC_INITIALIZER",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-DOPENSSL_SMALL",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -13105,7 +12779,7 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -13129,16 +12803,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -13150,7 +12822,7 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_arm: {
             srcs: [
@@ -13245,16 +12917,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -13265,7 +12935,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -13297,16 +12967,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -13318,7 +12986,7 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/brotli/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -13351,16 +13019,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -13370,7 +13036,7 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/brotli/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -13394,16 +13060,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -13414,7 +13078,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -13683,8 +13347,8 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_DLOPEN=0",
@@ -13702,9 +13366,7 @@ cc_library_static {
         "-DU_USING_ICU_NAMESPACE=0",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -13715,7 +13377,7 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     rtti: true,
     target: {
         android_x86: {
@@ -13941,8 +13603,8 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_DLOPEN=0",
@@ -13961,9 +13623,7 @@ cc_library_static {
         "-DU_USING_ICU_NAMESPACE=0",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -13974,7 +13634,7 @@ cc_library_static {
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     rtti: true,
     target: {
         android_x86: {
@@ -13999,16 +13659,14 @@ cc_object {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -14019,7 +13677,7 @@ cc_object {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -14059,17 +13717,15 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_CONFIG_H",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -14079,7 +13735,7 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/libevent/android/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -14251,16 +13907,14 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -14271,7 +13925,7 @@ cc_library_static {
         "buildtools/third_party/libc++/trunk/include",
         "buildtools/third_party/libc++abi/trunk/include",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -14384,8 +14038,8 @@ cc_library_static {
         "cronet_aml_defaults",
     ],
     cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
@@ -14402,9 +14056,7 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LARGEFILE64_SOURCE",
         "-D_LARGEFILE_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-msse3",
     ],
@@ -14464,8 +14116,8 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
@@ -14475,9 +14127,7 @@ cc_library_static {
         "-DHAVE_SYS_UIO_H",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     ],
     local_include_dirs: [
@@ -14487,7 +14137,7 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/protobuf/src/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
@@ -14523,8 +14173,8 @@ cc_binary {
         "cronet_aml_defaults",
     ],
     cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
@@ -14540,9 +14190,7 @@ cc_binary {
         "-D_GNU_SOURCE",
         "-D_LARGEFILE64_SOURCE",
         "-D_LARGEFILE_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-msse3",
     ],
@@ -14658,8 +14306,8 @@ cc_library_static {
         "cronet_aml_defaults",
     ],
     cflags: [
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DCR_SYSROOT_KEY=20220331T153654Z-0",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
@@ -14675,9 +14323,7 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LARGEFILE64_SOURCE",
         "-D_LARGEFILE_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-msse3",
     ],
@@ -14777,17 +14423,15 @@ cc_library_static {
     cflags: [
         "-DANDROID",
         "-DANDROID_NDK_VERSION_ROLL=r23_1",
-        "-DCR_CLANG_REVISION=\"llvmorg-16-init-8697-g60809cd2-1\"",
-        "-DCR_LIBCXX_REVISION=47b31179d10646029c260702650a25d24f555acc",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
         "-DDCHECK_ALWAYS_ON=1",
         "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
         "-DHAVE_SYS_UIO_H",
         "-DIS_URL_IMPL",
         "-D_DEBUG",
         "-D_GNU_SOURCE",
-        "-D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED=1",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-        "-D_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=1",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
@@ -14800,7 +14444,7 @@ cc_library_static {
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
     ],
-    cpp_std: "c++20",
+    cpp_std: "c++17",
     target: {
         android_x86: {
             cflags: [
