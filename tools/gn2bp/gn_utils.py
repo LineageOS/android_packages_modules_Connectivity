@@ -307,7 +307,7 @@ class GnParser(object):
 
     return self.all_targets[label_without_toolchain(gn_target_name)]
 
-  def parse_gn_desc(self, gn_desc, gn_target_name, is_java_target = False):
+  def parse_gn_desc(self, gn_desc, gn_target_name, java_group_name=None):
     """Parses a gn desc tree and resolves all target dependencies.
 
         It bubbles up variables from source_set dependencies as described in the
@@ -320,7 +320,8 @@ class GnParser(object):
     type_ = desc['type']
     arch = self._get_arch(desc['toolchain'])
 
-    is_java_target |= self._is_java_group(type_, target_name)
+    if self._is_java_group(type_, target_name):
+      java_group_name = target_name
 
     target = self.all_targets.get(target_name)
     if target is None:
@@ -399,7 +400,7 @@ class GnParser(object):
 
     # Recurse in dependencies.
     for gn_dep_name in desc.get('deps', []):
-      dep = self.parse_gn_desc(gn_desc, gn_dep_name, is_java_target)
+      dep = self.parse_gn_desc(gn_desc, gn_dep_name, java_group_name)
       if dep.type == 'proto_library':
         target.proto_deps.add(dep.name)
         target.transitive_proto_deps.add(dep.name)
