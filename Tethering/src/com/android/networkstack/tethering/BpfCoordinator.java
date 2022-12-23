@@ -2243,5 +2243,13 @@ public class BpfCoordinator {
         return mTetherClients;
     }
 
+    // Return map of upstream interface IPv4 address to interface index.
+    // This is used for testing only.
+    @NonNull
+    @VisibleForTesting
+    final HashMap<Inet4Address, Integer> getIpv4UpstreamIndicesForTesting() {
+        return mIpv4UpstreamIndices;
+    }
+
     private static native String[] getBpfCounterNames();
 }
