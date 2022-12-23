@@ -213,6 +213,9 @@ experimental_android_deps = {
 # Name of tethering apex module
 tethering_apex = "com.android.tethering"
 
+# Name of cronet api target
+java_api_target_name = "//components/cronet/android:cronet_api_java"
+
 # ----------------------------------------------------------------------------
 # End of configuration.
 # ----------------------------------------------------------------------------
@@ -1476,22 +1479,30 @@ def create_java_jni_preprocessor(blueprint):
   blueprint.add_module(module)
   return module
 
-def get_java_sources(gn):
+def get_java_sources(gn, predicate):
   java_sources = set()
-  for sources in gn.java_sources.values():
-    java_sources.update(sources)
+  for target_name, sources in gn.java_sources.items():
+    if predicate(target_name):
+      java_sources.update(sources)
   return java_sources
 
-def get_java_actions(gn):
+def get_java_actions(gn, predicate):
   java_actions = set()
-  for actions in gn.java_actions.values():
-    java_actions.update(actions)
+  for target_name, actions in gn.java_actions.items():
+    if predicate(target_name):
+      java_actions.update(actions)
   return java_actions
+
+def get_non_api_java_sources(gn):
+  return get_java_sources(gn, lambda name: name != java_api_target_name)
+
+def get_non_api_java_actions(gn):
+  return get_java_actions(gn, lambda name: name != java_api_target_name)
 
 def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
-  module.srcs.update([gn_utils.label_to_path(source) for source in get_java_sources(gn)])
+  module.srcs.update([gn_utils.label_to_path(source) for source in get_non_api_java_sources(gn)])
   module.libs = {
     "androidx.annotation_annotation",
     "jsr305",
@@ -1517,7 +1528,7 @@ def create_java_module(blueprint, gn):
   module.javacflags.add("-Aorg.chromium.chrome.skipGenJni")
   # TODO: remove following workaround required to make this module visible to make (b/203203405)
   module.apex_available.add("//apex_available:platform")
-  for dep in get_java_actions(gn):
+  for dep in get_non_api_java_actions(gn):
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
       module.srcs.add(':' + create_gcc_preprocess_modules(blueprint, target).name)
@@ -1530,7 +1541,7 @@ def create_java_module(blueprint, gn):
 def update_jni_registration_module(module, gn):
   # TODO: java_sources might not contain all the required java files
   module.srcs.update([gn_utils.label_to_path(source)
-                      for source in get_java_sources(gn)
+                      for source in get_non_api_java_sources(gn)
                       if source.endswith('.java')])
 
 def create_blueprint_for_targets(gn, targets):
