@@ -228,6 +228,9 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/android_ndk/sources/android/cpufeatures/",
     ],
+    header_libs: [
+        "libgtest_prod_headers",
+    ],
     cpp_std: "c++17",
     target: {
         android_arm: {
@@ -318,7 +321,7 @@ cc_genrule {
          "--includes " +
          "base/android/jni_generator/jni_generator_helper.h " +
          "--jar_file " +
-         "$(location third_party/android_sdk/public/platforms/android-33/android.jar) " +
+         "$(location :current_android_jar) " +
          "--output_name " +
          "Runnable_jni.h " +
          "--output_name " +
@@ -334,12 +337,12 @@ cc_genrule {
         "base/android_runtime_jni_headers/Runtime_jni.h",
     ],
     tool_files: [
+        ":current_android_jar",
         "base/android/jni_generator/android_jar.classes",
         "base/android/jni_generator/jni_generator.py",
         "build/android/gyp/util/__init__.py",
         "build/android/gyp/util/build_utils.py",
         "build/gn_helpers.py",
-        "third_party/android_sdk/public/platforms/android-33/android.jar",
     ],
     apex_available: [
         "com.android.tethering",
@@ -898,6 +901,9 @@ cc_library_static {
         "cronet_aml_build_chromeos_buildflags",
         "cronet_aml_build_config_compiler_compiler_buildflags",
     ],
+    export_header_lib_headers: [
+        "libgtest_prod_headers",
+    ],
     defaults: [
         "cronet_aml_defaults",
     ],
@@ -934,6 +940,9 @@ cc_library_static {
         "third_party/boringssl/src/include/",
         "third_party/icu/source/common/",
         "third_party/icu/source/i18n/",
+    ],
+    header_libs: [
+        "libgtest_prod_headers",
     ],
     cpp_std: "c++17",
     target: {
@@ -2606,6 +2615,7 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/RadioUtils.java",
         "base/android/java/src/org/chromium/base/StreamUtil.java",
         "base/android/java/src/org/chromium/base/StrictModeContext.java",
+        "base/android/java/src/org/chromium/base/SysUtils.java",
         "base/android/java/src/org/chromium/base/ThreadUtils.java",
         "base/android/java/src/org/chromium/base/TimeUtils.java",
         "base/android/java/src/org/chromium/base/TimezoneUtils.java",
@@ -2648,6 +2658,8 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/jank_tracker/JankTracker.java",
         "base/android/java/src/org/chromium/base/jank_tracker/JankTrackerImpl.java",
         "base/android/java/src/org/chromium/base/library_loader/LegacyLinker.java",
+        "base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java",
+        "base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java",
         "base/android/java/src/org/chromium/base/library_loader/Linker.java",
         "base/android/java/src/org/chromium/base/library_loader/LinkerJni.java",
         "base/android/java/src/org/chromium/base/library_loader/LoaderErrors.java",
@@ -2678,6 +2690,7 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessConnection.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessConstants.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessLauncher.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessServiceDelegate.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnection.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionDelegate.java",
@@ -2908,6 +2921,7 @@ java_genrule {
         "base/android/java/src/org/chromium/base/RadioUtils.java",
         "base/android/java/src/org/chromium/base/StreamUtil.java",
         "base/android/java/src/org/chromium/base/StrictModeContext.java",
+        "base/android/java/src/org/chromium/base/SysUtils.java",
         "base/android/java/src/org/chromium/base/ThreadUtils.java",
         "base/android/java/src/org/chromium/base/TimeUtils.java",
         "base/android/java/src/org/chromium/base/TimezoneUtils.java",
@@ -2950,6 +2964,8 @@ java_genrule {
         "base/android/java/src/org/chromium/base/jank_tracker/JankTracker.java",
         "base/android/java/src/org/chromium/base/jank_tracker/JankTrackerImpl.java",
         "base/android/java/src/org/chromium/base/library_loader/LegacyLinker.java",
+        "base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java",
+        "base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java",
         "base/android/java/src/org/chromium/base/library_loader/Linker.java",
         "base/android/java/src/org/chromium/base/library_loader/LinkerJni.java",
         "base/android/java/src/org/chromium/base/library_loader/LoaderErrors.java",
@@ -2980,6 +2996,7 @@ java_genrule {
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessConnection.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessConstants.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessLauncher.java",
+        "base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildProcessServiceDelegate.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnection.java",
         "base/android/java/src/org/chromium/base/process_launcher/ChildServiceConnectionDelegate.java",
@@ -4751,6 +4768,9 @@ java_library {
         "cronet_aml_java_jni_annotation_preprocessor",
     ],
     sdk_version: "module_current",
+    javacflags: [
+        "-Aorg.chromium.chrome.skipGenJni",
+    ],
 }
 
 // GN: //base/android/jni_generator:jni_processor
