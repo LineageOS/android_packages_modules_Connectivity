@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.net.http.cts.util;
+package org.chromium.net.test.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

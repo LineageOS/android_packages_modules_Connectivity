@@ -233,7 +233,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -2379,7 +2378,7 @@ public class ConnectivityManagerTest {
     }
 
     private class DetailedBlockedStatusCallback extends TestableNetworkCallback {
-        public void expectAvailableCallbacksWithBlockedReasonNone(Network network) {
+        public void expectAvailableCallbacks(Network network) {
             super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
                     BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
         }
@@ -2432,7 +2431,7 @@ public class ConnectivityManagerTest {
         final List<DetailedBlockedStatusCallback> allCallbacks =
                 List.of(myUidCallback, otherUidCallback);
         for (DetailedBlockedStatusCallback callback : allCallbacks) {
-            callback.expectAvailableCallbacksWithBlockedReasonNone(defaultNetwork);
+            callback.expectAvailableCallbacks(defaultNetwork);
         }
 
         final Range<Integer> myUidRange = new Range<>(myUid, myUid);
@@ -2468,17 +2467,6 @@ public class ConnectivityManagerTest {
         // shims, and @IgnoreUpTo does not check that.
         assumeTrue(TestUtils.shouldTestSApis());
         runWithShellPermissionIdentity(() -> doTestBlockedStatusCallback(), NETWORK_SETTINGS);
-    }
-
-    @Test
-    public void testSetVpnDefaultForUids() {
-        assumeTrue(TestUtils.shouldTestUApis());
-        final String session = UUID.randomUUID().toString();
-        assertThrows(NullPointerException.class, () -> mCm.setVpnDefaultForUids(session, null));
-        assertThrows(SecurityException.class,
-                () -> mCm.setVpnDefaultForUids(session, new ArraySet<>()));
-        // For testing the complete behavior of setVpnDefaultForUids(), please refer to
-        // HostsideVpnTests.
     }
 
     private void doTestLegacyLockdownEnabled() throws Exception {

@@ -120,8 +120,4 @@ public class HostsideVpnTests extends HostsideNetworkTestCase {
     public void testBlockIncomingPackets() throws Exception {
         runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testBlockIncomingPackets");
     }
-
-    public void testSetVpnDefaultForUids() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testSetVpnDefaultForUids");
-    }
 }

@@ -249,6 +249,4 @@ interface IConnectivityManager
     void replaceFirewallChain(int chain, in int[] uids);
 
     IBinder getCompanionDeviceManagerProxyService();
-
-    void setVpnNetworkPreference(String session, in UidRange[] ranges);
 }

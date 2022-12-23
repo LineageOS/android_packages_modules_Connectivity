@@ -23,15 +23,11 @@ android_test {
     compile_multilib: "both", // Include both the 32 and 64 bit versions
     defaults: ["cts_defaults"],
     sdk_version: "test_current",
-    srcs: [
-        "src/**/*.java",
-        "src/**/*.kt",
-    ],
+    srcs: ["src/**/*.java"],
     static_libs: [
         "androidx.test.rules",
         "androidx.core_core",
         "ctstestrunner-axt",
-        "ctstestserver",
         "junit",
     ],
     libs: [
@@ -40,7 +36,6 @@ android_test {
         "android.test.mock",
         "androidx.annotation_annotation",
         "framework-cronet",
-        "org.apache.http.legacy",
     ],
 
     // Tag this as a cts test artifact
