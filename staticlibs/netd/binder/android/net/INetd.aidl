@@ -1420,4 +1420,19 @@ interface INetd {
       * IPSEC_DIRECTION_OUT is used for IPsec SAs or policies that direct traffic away from the host.
       */
      const int IPSEC_DIRECTION_OUT = 1;
+
+    /**
+    * Set the list of allowed UIDs for all networks with restrictions.
+    *
+    * This list is the entire list of restrictions for all networks known by
+    * netd. Calling this function always defines the entire list of restrictions,
+    * and networks not in the passed list are always reset to having no
+    * restrictions.
+    *
+    * @param NativeUidRangeConfig[] An array of allowlists, one per network. For each allowlist:
+    *                               - netId: the netId on which to set the allowlist
+    *                               - uidRanges: the UIDs allowed to use this network
+    *                               - subPriority: unused
+    */
+    void setNetworkAllowlist(in NativeUidRangeConfig[] allowedNetworks);
 }
