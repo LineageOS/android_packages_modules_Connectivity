@@ -286,6 +286,7 @@ import com.android.server.connectivity.ProfileNetworkPreferenceInfo;
 import com.android.server.connectivity.ProxyTracker;
 import com.android.server.connectivity.QosCallbackTracker;
 import com.android.server.connectivity.UidRangeUtils;
+import com.android.server.connectivity.VpnNetworkPreferenceInfo;
 import com.android.server.connectivity.wear.CompanionDeviceManagerProxyService;
 
 import libcore.io.IoUtils;
@@ -745,6 +746,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * obj = Network
      */
     private static final int EVENT_USER_DOES_NOT_WANT = 58;
+
+    /**
+     * Event to set VPN as preferred network for specific apps.
+     * obj = VpnNetworkPreferenceInfo
+     */
+    private static final int EVENT_SET_VPN_NETWORK_PREFERENCE = 59;
 
     /**
      * Argument for {@link #EVENT_PROVISIONING_NOTIFICATION} to indicate that the notification
@@ -1623,6 +1630,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private NetworkRequest createDefaultRequest() {
         return createDefaultInternetRequestForTransport(
                 TYPE_NONE, NetworkRequest.Type.REQUEST);
+    }
+
+    private NetworkRequest createVpnRequest() {
+        final NetworkCapabilities netCap = new NetworkCapabilities.Builder()
+                .withoutDefaultCapabilities()
+                .addTransportType(TRANSPORT_VPN)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .addCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .build();
+        netCap.setRequestorUidAndPackageName(Process.myUid(), mContext.getPackageName());
+        return createNetworkRequest(NetworkRequest.Type.REQUEST, netCap);
     }
 
     private NetworkRequest createDefaultInternetRequestForTransport(
@@ -5532,6 +5550,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     nai.onPreventAutomaticReconnect();
                     nai.disconnect();
                     break;
+                case EVENT_SET_VPN_NETWORK_PREFERENCE:
+                    handleSetVpnNetworkPreference((VpnNetworkPreferenceInfo) msg.obj);
+                    break;
             }
         }
     }
@@ -7122,6 +7143,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @NonNull
     private NetworkPreferenceList<UserHandle, ProfileNetworkPreferenceInfo>
             mProfileNetworkPreferences = new NetworkPreferenceList<>();
+
+    // Current VPN network preferences. This object follows the same threading rules as the OEM
+    // network preferences above.
+    @NonNull
+    private NetworkPreferenceList<String, VpnNetworkPreferenceInfo>
+            mVpnNetworkPreferences = new NetworkPreferenceList<>();
 
     // A set of UIDs that should use mobile data preferentially if available. This object follows
     // the same threading rules as the OEM network preferences above.
@@ -11110,6 +11137,60 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_OEM_NETWORK_PREFERENCE,
                 new Pair<>(preference, listener)));
+    }
+
+    /**
+     * Sets the specified UIDs to get/receive the VPN as the only default network.
+     *
+     * Calling this will overwrite the existing network preference for this session, and the
+     * specified UIDs won't get any default network when no VPN is connected.
+     *
+     * @param session The VPN session which manages the passed UIDs.
+     * @param ranges The uid ranges which will treat VPN as the only preferred network. Clear the
+     *               setting for this session if the array is empty. Null is not allowed, the
+     *               method will use {@link Objects#requireNonNull(Object)} to check this variable.
+     * @hide
+     */
+    @Override
+    public void setVpnNetworkPreference(String session, UidRange[] ranges) {
+        Objects.requireNonNull(ranges);
+        enforceNetworkStackOrSettingsPermission();
+        final UidRange[] sortedRanges = UidRangeUtils.sortRangesByStartUid(ranges);
+        if (UidRangeUtils.sortedRangesContainOverlap(sortedRanges)) {
+            throw new IllegalArgumentException(
+                    "setVpnNetworkPreference: Passed UID ranges overlap");
+        }
+
+        mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_VPN_NETWORK_PREFERENCE,
+                new VpnNetworkPreferenceInfo(session,
+                        new ArraySet<UidRange>(Arrays.asList(ranges)))));
+    }
+
+    private void handleSetVpnNetworkPreference(VpnNetworkPreferenceInfo preferenceInfo) {
+        Log.d(TAG, "handleSetVpnNetworkPreference: preferenceInfo = " + preferenceInfo);
+
+        mVpnNetworkPreferences = mVpnNetworkPreferences.minus(preferenceInfo.getKey());
+        mVpnNetworkPreferences = mVpnNetworkPreferences.plus(preferenceInfo);
+
+        removeDefaultNetworkRequestsForPreference(PREFERENCE_ORDER_VPN);
+        addPerAppDefaultNetworkRequests(createNrisForVpnNetworkPreference(mVpnNetworkPreferences));
+        // Finally, rematch.
+        rematchAllNetworksAndRequests();
+    }
+
+    private ArraySet<NetworkRequestInfo> createNrisForVpnNetworkPreference(
+            @NonNull NetworkPreferenceList<String, VpnNetworkPreferenceInfo> preferenceList) {
+        final ArraySet<NetworkRequestInfo> nris = new ArraySet<>();
+        for (VpnNetworkPreferenceInfo preferenceInfo : preferenceList) {
+            final List<NetworkRequest> requests = new ArrayList<>();
+            // Request VPN only, so other networks won't be the fallback options when VPN is not
+            // connected temporarily.
+            requests.add(createVpnRequest());
+            final Set<UidRange> uidRanges = new ArraySet(preferenceInfo.getUidRangesNoCopy());
+            setNetworkRequestUids(requests, uidRanges);
+            nris.add(new NetworkRequestInfo(Process.myUid(), requests, PREFERENCE_ORDER_VPN));
+        }
+        return nris;
     }
 
     /**
