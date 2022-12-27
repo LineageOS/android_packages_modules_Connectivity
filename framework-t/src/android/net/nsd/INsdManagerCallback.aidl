@@ -38,4 +38,8 @@ oneway interface INsdManagerCallback {
     void onResolveServiceSucceeded(int listenerKey, in NsdServiceInfo info);
     void onStopResolutionFailed(int listenerKey, int error);
     void onStopResolutionSucceeded(int listenerKey);
+    void onServiceInfoCallbackRegistrationFailed(int listenerKey, int error);
+    void onServiceUpdated(int listenerKey, in NsdServiceInfo info);
+    void onServiceUpdatedLost(int listenerKey);
+    void onServiceInfoCallbackUnregistered(int listenerKey);
 }
