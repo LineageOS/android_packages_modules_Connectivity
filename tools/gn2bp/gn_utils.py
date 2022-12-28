@@ -20,6 +20,7 @@ import json
 import logging as log
 import os
 import re
+import collections
 
 BUILDFLAGS_TARGET = '//gn:gen_buildflags'
 GEN_VERSION_TARGET = '//src/base:version_gen_h'
@@ -260,8 +261,8 @@ class GnParser(object):
     self.source_sets = {}
     self.actions = {}
     self.proto_libs = {}
-    self.java_sources = set()
-    self.java_actions = set()
+    self.java_sources = collections.defaultdict(set)
+    self.java_actions = collections.defaultdict(set)
 
   def _get_response_file_contents(self, action_desc):
     # response_file_contents are formatted as:
@@ -448,15 +449,15 @@ class GnParser(object):
         if dep.name.endswith('__compile_java'):
           log.debug('Adding java sources for %s', dep.name)
           java_srcs = [src for src in dep.inputs if _is_java_source(src)]
-          self.java_sources.update(java_srcs)
+          self.java_sources[java_group_name].update(java_srcs)
       if dep.type in ["action"] and target.type == "java_group":
         # //base:base_java_aidl generates srcjar from .aidl files. But java_library in soong can
         # directly have .aidl files in srcs. So adding .aidl files to the java_sources.
         # TODO: Find a better way/place to do this.
         if dep.name == '//base:base_java_aidl':
-          self.java_sources.update(dep.arch[arch].sources)
+          self.java_sources[java_group_name].update(dep.arch[arch].sources)
         else:
-          self.java_actions.add(dep.name)
+          self.java_actions[java_group_name].add(dep.name)
     return target
 
   def get_proto_exports(self, proto_desc):
