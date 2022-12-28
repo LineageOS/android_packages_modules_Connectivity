@@ -4379,9 +4379,11 @@ cc_defaults {
     min_sdk_version: "29",
     target: {
         android: {
+            shared_libs: [
+                "libmediandk",
+            ],
             header_libs: [
                 "jni_headers",
-                "media_ndk_headers",
             ],
         },
         host: {
