@@ -1543,6 +1543,7 @@ def create_java_module(blueprint, gn):
   preprocessor_module = create_java_jni_preprocessor(blueprint)
   module.plugins.add(preprocessor_module.name)
   blueprint.add_module(module)
+  return module
 
 def create_java_api_module(blueprint, gn):
   source_module = Module('filegroup', module_prefix + 'api_sources', java_api_target_name)
@@ -1552,6 +1553,15 @@ def create_java_api_module(blueprint, gn):
     ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule').name
     for dep in get_api_java_actions(gn)])
   blueprint.add_module(source_module)
+
+  java_module = Module('java_library', module_prefix + 'api_java', java_api_target_name)
+  java_module.srcs.add(":" + source_module.name)
+  java_module.sdk_version = "module_current"
+  java_module.libs = {
+      "androidx.annotation_annotation",
+    }
+  blueprint.add_module(java_module)
+  return java_module
 
 def update_jni_registration_module(module, gn):
   # TODO: java_sources might not contain all the required java files
@@ -1604,8 +1614,9 @@ def create_blueprint_for_targets(gn, targets):
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
 
-  create_java_api_module(blueprint, gn)
-  create_java_module(blueprint, gn)
+  java_api_module = create_java_api_module(blueprint, gn)
+  java_module = create_java_module(blueprint, gn)
+  java_module.libs.add(java_api_module.name)
   for module in blueprint.modules.values():
     if 'cronet_jni_registration' in module.name:
       update_jni_registration_module(module, gn)
