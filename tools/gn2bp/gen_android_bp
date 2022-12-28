@@ -1595,8 +1595,10 @@ def create_blueprint_for_targets(gn, targets):
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
   defaults.target['android'].header_libs = [
-      'media_ndk_headers',
       'jni_headers',
+  ]
+  defaults.target['android'].shared_libs = [
+      'libmediandk'
   ]
   defaults.target['host'].cflags = [
       # -DANDROID is added by default but target.defines contain -DANDROID if
