@@ -1499,6 +1499,12 @@ def get_non_api_java_sources(gn):
 def get_non_api_java_actions(gn):
   return get_java_actions(gn, lambda name: name != java_api_target_name)
 
+def get_api_java_sources(gn):
+  return get_java_sources(gn, lambda name: name == java_api_target_name)
+
+def get_api_java_actions(gn):
+  return get_java_actions(gn, lambda name: name == java_api_target_name)
+
 def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
@@ -1537,6 +1543,15 @@ def create_java_module(blueprint, gn):
   preprocessor_module = create_java_jni_preprocessor(blueprint)
   module.plugins.add(preprocessor_module.name)
   blueprint.add_module(module)
+
+def create_java_api_module(blueprint, gn):
+  source_module = Module('filegroup', module_prefix + 'api_sources', java_api_target_name)
+  source_module.srcs.update([gn_utils.label_to_path(source)
+                             for source in get_api_java_sources(gn)])
+  source_module.srcs.update([
+    ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule').name
+    for dep in get_api_java_actions(gn)])
+  blueprint.add_module(source_module)
 
 def update_jni_registration_module(module, gn):
   # TODO: java_sources might not contain all the required java files
@@ -1589,6 +1604,7 @@ def create_blueprint_for_targets(gn, targets):
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
 
+  create_java_api_module(blueprint, gn)
   create_java_module(blueprint, gn)
   for module in blueprint.modules.values():
     if 'cronet_jni_registration' in module.name:
