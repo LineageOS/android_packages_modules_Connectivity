@@ -21,8 +21,13 @@ package com.android.testutils
 import android.os.ConditionVariable
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
+import com.android.testutils.FunctionalUtils.ThrowingRunnable
+import java.lang.Exception
 import java.util.concurrent.Executor
 import kotlin.test.fail
+
+private const val TAG = "HandlerUtils"
 
 /**
  * Block until the specified Handler or HandlerThread becomes idle, or until timeoutMs has passed.
@@ -47,4 +52,29 @@ fun waitForIdleSerialExecutor(executor: Executor, timeoutMs: Long) {
     if (!cv.block(timeoutMs)) {
         fail("Executor did not become idle after ${timeoutMs}ms")
     }
+}
+
+/**
+ * Executes a block of code, making its side effects visible on the caller and the handler thread
+ *
+ * After this function returns, the side effects of the passed block of code are guaranteed to be
+ * observed both on the thread running the handler and on the thread running this method.
+ * To achieve this, this method runs the passed block on the handler and blocks this thread
+ * until it's executed, so keep in mind this method will block, (including, if the handler isn't
+ * running, blocking forever).
+ */
+fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable) {
+    val cv = ConditionVariable()
+    handler.post {
+        try {
+            r.run()
+        } catch (exception: Exception) {
+            Log.e(TAG, "visibleOnHandlerThread caught exception", exception)
+        }
+        cv.open()
+    }
+    // After block() returns, the handler thread has seen the change (since it ran it)
+    // and this thread also has seen the change (since cv.open() happens-before cv.block()
+    // returns).
+    cv.block()
 }
