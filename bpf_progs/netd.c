@@ -288,7 +288,7 @@ static __always_inline inline void update_stats_with_config(struct __sk_buff* sk
                                                             StatsKey* key, uint32_t selectedMap) {
     if (selectedMap == SELECT_MAP_A) {
         update_stats_map_A(skb, egress, key);
-    } else if (selectedMap == SELECT_MAP_B) {
+    } else {
         update_stats_map_B(skb, egress, key);
     }
 }
