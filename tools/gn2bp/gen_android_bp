@@ -213,6 +213,9 @@ experimental_android_deps = {
 # Name of tethering apex module
 tethering_apex = "com.android.tethering"
 
+# Name of cronet api target
+java_api_target_name = "//components/cronet/android:cronet_api_java"
+
 # ----------------------------------------------------------------------------
 # End of configuration.
 # ----------------------------------------------------------------------------
@@ -1476,10 +1479,36 @@ def create_java_jni_preprocessor(blueprint):
   blueprint.add_module(module)
   return module
 
+def get_java_sources(gn, predicate):
+  java_sources = set()
+  for target_name, sources in gn.java_sources.items():
+    if predicate(target_name):
+      java_sources.update(sources)
+  return java_sources
+
+def get_java_actions(gn, predicate):
+  java_actions = set()
+  for target_name, actions in gn.java_actions.items():
+    if predicate(target_name):
+      java_actions.update(actions)
+  return java_actions
+
+def get_non_api_java_sources(gn):
+  return get_java_sources(gn, lambda name: name != java_api_target_name)
+
+def get_non_api_java_actions(gn):
+  return get_java_actions(gn, lambda name: name != java_api_target_name)
+
+def get_api_java_sources(gn):
+  return get_java_sources(gn, lambda name: name == java_api_target_name)
+
+def get_api_java_actions(gn):
+  return get_java_actions(gn, lambda name: name == java_api_target_name)
+
 def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
-  module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
+  module.srcs.update([gn_utils.label_to_path(source) for source in get_non_api_java_sources(gn)])
   module.libs = {
     "androidx.annotation_annotation",
     "jsr305",
@@ -1505,7 +1534,7 @@ def create_java_module(blueprint, gn):
   module.javacflags.add("-Aorg.chromium.chrome.skipGenJni")
   # TODO: remove following workaround required to make this module visible to make (b/203203405)
   module.apex_available.add("//apex_available:platform")
-  for dep in gn.java_actions:
+  for dep in get_non_api_java_actions(gn):
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
       module.srcs.add(':' + create_gcc_preprocess_modules(blueprint, target).name)
@@ -1514,11 +1543,30 @@ def create_java_module(blueprint, gn):
   preprocessor_module = create_java_jni_preprocessor(blueprint)
   module.plugins.add(preprocessor_module.name)
   blueprint.add_module(module)
+  return module
+
+def create_java_api_module(blueprint, gn):
+  source_module = Module('filegroup', module_prefix + 'api_sources', java_api_target_name)
+  source_module.srcs.update([gn_utils.label_to_path(source)
+                             for source in get_api_java_sources(gn)])
+  source_module.srcs.update([
+    ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule').name
+    for dep in get_api_java_actions(gn)])
+  blueprint.add_module(source_module)
+
+  java_module = Module('java_library', module_prefix + 'api_java', java_api_target_name)
+  java_module.srcs.add(":" + source_module.name)
+  java_module.sdk_version = "module_current"
+  java_module.libs = {
+      "androidx.annotation_annotation",
+    }
+  blueprint.add_module(java_module)
+  return java_module
 
 def update_jni_registration_module(module, gn):
   # TODO: java_sources might not contain all the required java files
   module.srcs.update([gn_utils.label_to_path(source)
-                      for source in gn.java_sources
+                      for source in get_non_api_java_sources(gn)
                       if source.endswith('.java')])
 
 def create_blueprint_for_targets(gn, targets):
@@ -1547,8 +1595,10 @@ def create_blueprint_for_targets(gn, targets):
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
   defaults.target['android'].header_libs = [
-      'media_ndk_headers',
       'jni_headers',
+  ]
+  defaults.target['android'].shared_libs = [
+      'libmediandk'
   ]
   defaults.target['host'].cflags = [
       # -DANDROID is added by default but target.defines contain -DANDROID if
@@ -1566,7 +1616,9 @@ def create_blueprint_for_targets(gn, targets):
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
 
-  create_java_module(blueprint, gn)
+  java_api_module = create_java_api_module(blueprint, gn)
+  java_module = create_java_module(blueprint, gn)
+  java_module.libs.add(java_api_module.name)
   for module in blueprint.modules.values():
     if 'cronet_jni_registration' in module.name:
       update_jni_registration_module(module, gn)
