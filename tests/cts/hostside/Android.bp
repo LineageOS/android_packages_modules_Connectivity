@@ -37,7 +37,6 @@ java_test_host {
     data: [
         ":CtsHostsideNetworkTestsApp",
         ":CtsHostsideNetworkTestsApp2",
-        ":CtsHostsideNetworkTestsAppNext",
     ],
     per_testcase_directory: true,
 }
