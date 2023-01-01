@@ -194,19 +194,38 @@ DEFINE_UPDATE_STATS(stats_map_A, StatsKey)
 DEFINE_UPDATE_STATS(stats_map_B, StatsKey)
 
 // both of these return 0 on success or -EFAULT on failure (and zero out the buffer)
-static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff* skb, int off,
-                                                         void* to, int len, bool is_4_19) {
-    return is_4_19
-        ? bpf_skb_load_bytes_relative(skb, off, to, len, BPF_HDR_START_NET)
-        : bpf_skb_load_bytes(skb, off, to, len);
+static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff* const skb,
+                                                         const int L3_off,
+                                                         void* const to,
+                                                         const int len,
+                                                         const unsigned kver) {
+    // 'kver' (here and throughout) is the compile time guaranteed minimum kernel version,
+    // ie. we're building (a version of) the bpf program for kver (or newer!) kernels.
+    //
+    // 4.19+ kernels support the 'bpf_skb_load_bytes_relative()' bpf helper function,
+    // so we can use it.  On pre-4.19 kernels we cannot use the relative load helper,
+    // and thus will simply get things wrong if there's any L2 (ethernet) header in the skb.
+    //
+    // Luckily, for cellular traffic, there likely isn't any, as cell is usually 'rawip'.
+    //
+    // However, this does mean that wifi (and ethernet) on 4.14 is basically a lost cause:
+    // we'll be making decisions based on the *wrong* bytes (fetched from the wrong offset),
+    // because the 'L3_off' passed to bpf_skb_load_bytes() should be increased by l2_header_size,
+    // which for ethernet is 14 and not 0 like it is for rawip.
+    //
+    // For similar reasons this will fail with non-offloaded VLAN tags on < 4.19 kernels,
+    // since those extend the ethernet header from 14 to 18 bytes.
+    return kver >= KVER(4, 19, 0)
+        ? bpf_skb_load_bytes_relative(skb, L3_off, to, len, BPF_HDR_START_NET)
+        : bpf_skb_load_bytes(skb, L3_off, to, len);
 }
 
-static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool is_4_19) {
+static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, const unsigned kver) {
     uint32_t flag = 0;
     if (skb->protocol == htons(ETH_P_IP)) {
         uint8_t proto;
         // no need to check for success, proto will be zeroed if bpf_skb_load_bytes_net() fails
-        (void)bpf_skb_load_bytes_net(skb, IP_PROTO_OFF, &proto, sizeof(proto), is_4_19);
+        (void)bpf_skb_load_bytes_net(skb, IP_PROTO_OFF, &proto, sizeof(proto), kver);
         if (proto == IPPROTO_ESP) return true;
         if (proto != IPPROTO_TCP) return false;  // handles read failure above
         uint8_t ihl;
@@ -215,19 +234,19 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool 
         // (a little bit deeper in the packet in spite of ihl being zeroed) of the tcp flags
         // field will also fail, and that failure we already handle correctly
         // (we also don't check that ihl in [0x45,0x4F] nor that ipv4 header checksum is correct)
-        (void)bpf_skb_load_bytes_net(skb, IPPROTO_IHL_OFF, &ihl, sizeof(ihl), is_4_19);
+        (void)bpf_skb_load_bytes_net(skb, IPPROTO_IHL_OFF, &ihl, sizeof(ihl), kver);
         // if the read below fails, we'll just assume no TCP flags are set, which is fine.
         (void)bpf_skb_load_bytes_net(skb, (ihl & 0xF) * 4 + TCP_FLAG32_OFF,
-                                     &flag, sizeof(flag), is_4_19);
+                                     &flag, sizeof(flag), kver);
     } else if (skb->protocol == htons(ETH_P_IPV6)) {
         uint8_t proto;
         // no need to check for success, proto will be zeroed if bpf_skb_load_bytes_net() fails
-        (void)bpf_skb_load_bytes_net(skb, IPV6_PROTO_OFF, &proto, sizeof(proto), is_4_19);
+        (void)bpf_skb_load_bytes_net(skb, IPV6_PROTO_OFF, &proto, sizeof(proto), kver);
         if (proto == IPPROTO_ESP) return true;
         if (proto != IPPROTO_TCP) return false;  // handles read failure above
         // if the read below fails, we'll just assume no TCP flags are set, which is fine.
         (void)bpf_skb_load_bytes_net(skb, sizeof(struct ipv6hdr) + TCP_FLAG32_OFF,
-                                     &flag, sizeof(flag), is_4_19);
+                                     &flag, sizeof(flag), kver);
     } else {
         return false;
     }
@@ -250,8 +269,8 @@ static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
 #define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH | LOW_POWER_STANDBY_MATCH)
 
 static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid,
-                                                  bool egress, bool is_4_19) {
-    if (skip_owner_match(skb, is_4_19)) return PASS;
+                                                  bool egress, const unsigned kver) {
+    if (skip_owner_match(skb, kver)) return PASS;
 
     if (is_system_uid(uid)) return PASS;
 
@@ -288,13 +307,13 @@ static __always_inline inline void update_stats_with_config(struct __sk_buff* sk
                                                             StatsKey* key, uint32_t selectedMap) {
     if (selectedMap == SELECT_MAP_A) {
         update_stats_map_A(skb, egress, key);
-    } else if (selectedMap == SELECT_MAP_B) {
+    } else {
         update_stats_map_B(skb, egress, key);
     }
 }
 
 static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, bool egress,
-                                                      bool is_4_19) {
+                                                      const unsigned kver) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     uint64_t cookie = bpf_get_socket_cookie(skb);
     UidTagValue* utag = bpf_cookie_tag_map_lookup_elem(&cookie);
@@ -314,7 +333,7 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
         return PASS;
     }
 
-    int match = bpf_owner_match(skb, sock_uid, egress, is_4_19);
+    int match = bpf_owner_match(skb, sock_uid, egress, kver);
     if (egress && (match == DROP)) {
         // If an outbound packet is going to be dropped, we do not count that
         // traffic.
@@ -362,25 +381,25 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/ingress/stats$4_19", AID_ROOT, AID_SYSTEM,
                                 bpf_cgroup_ingress_4_19, KVER(4, 19, 0), KVER_INF)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, INGRESS, /* is_4_19 */ true);
+    return bpf_traffic_account(skb, INGRESS, KVER(4, 19, 0));
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/ingress/stats$4_14", AID_ROOT, AID_SYSTEM,
                                 bpf_cgroup_ingress_4_14, KVER_NONE, KVER(4, 19, 0))
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, INGRESS, /* is_4_19 */ false);
+    return bpf_traffic_account(skb, INGRESS, KVER_NONE);
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/egress/stats$4_19", AID_ROOT, AID_SYSTEM,
                                 bpf_cgroup_egress_4_19, KVER(4, 19, 0), KVER_INF)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, EGRESS, /* is_4_19 */ true);
+    return bpf_traffic_account(skb, EGRESS, KVER(4, 19, 0));
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/egress/stats$4_14", AID_ROOT, AID_SYSTEM,
                                 bpf_cgroup_egress_4_14, KVER_NONE, KVER(4, 19, 0))
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, EGRESS, /* is_4_19 */ false);
+    return bpf_traffic_account(skb, EGRESS, KVER_NONE);
 }
 
 // WARNING: Android T's non-updatable netd depends on the name of this program.
