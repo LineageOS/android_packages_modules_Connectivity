@@ -412,6 +412,8 @@ class GnParser(object):
         target.arch[arch].source_set_deps.update(dep.arch[arch].source_set_deps)
         # flatten source_set deps
         if target.is_linker_unit_type():
+          # This ensure that all transitive source set dependencies are
+          # propagated upward to the linker units.
           target.arch[arch].deps.update(target.arch[arch].source_set_deps)
       elif dep.type == 'group':
         target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
