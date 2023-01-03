@@ -16,8 +16,7 @@
 
 #pragma once
 
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>
 #include <sys/utsname.h>
 
 namespace android {
