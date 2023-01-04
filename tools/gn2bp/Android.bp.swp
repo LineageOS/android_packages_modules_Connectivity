@@ -4666,32 +4666,6 @@ cc_genrule {
     ],
 }
 
-// GN: //net/data/ssl/chrome_root_store:gen_root_store_inc
-cc_genrule {
-    name: "cronet_aml_net_data_ssl_chrome_root_store_gen_root_store_inc",
-    cmd: "$(location build/gn_run_binary.py) clang_x64/root_store_tool " +
-         "--root-store " +
-         "../../net/data/ssl/chrome_root_store/root_store.textproto " +
-         "--certs " +
-         "../../net/data/ssl/chrome_root_store/root_store.certs " +
-         "--write-cpp-root-store " +
-         "gen/net/data/ssl/chrome_root_store/chrome-root-store-inc.cc " +
-         "--write-cpp-ev-roots " +
-         "gen/net/data/ssl/chrome_root_store/chrome-ev-roots-inc.cc",
-    out: [
-        "net/data/ssl/chrome_root_store/chrome-ev-roots-inc.cc",
-        "net/data/ssl/chrome_root_store/chrome-root-store-inc.cc",
-    ],
-    tool_files: [
-        "build/gn_run_binary.py",
-        "net/data/ssl/chrome_root_store/root_store.certs",
-        "net/data/ssl/chrome_root_store/root_store.textproto",
-    ],
-    apex_available: [
-        "com.android.tethering",
-    ],
-}
-
 // GN: //net/dns:dns
 cc_object {
     name: "cronet_aml_net_dns_dns",
