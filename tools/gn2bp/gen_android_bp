@@ -190,6 +190,8 @@ def enable_zlib(module, arch):
 builtin_deps = {
     '//buildtools/third_party/libunwind:libunwind':
         lambda m, a: None, # disable libunwind
+    '//net/data/ssl/chrome_root_store:gen_root_store_inc':
+        lambda m, a: None,
     '//net/tools/root_store_tool:root_store_tool':
         lambda m, a: None,
     '//third_party/zlib:zlib':
