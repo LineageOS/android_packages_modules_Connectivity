@@ -531,7 +531,12 @@ class Blueprint(object):
 
   def to_string(self, output):
     for m in sorted(self.modules.values(), key=lambda m: m.name):
-      m.to_string(output)
+      if m.type != "cc_object" or m.has_input_files():
+        # Don't print cc_object with empty srcs. These attributes are already
+        # propagated up the tree. Printing them messes the presubmits because
+        # every module is compiled while those targets are not reachable in
+        # a normal compilation path.
+        m.to_string(output)
 
 
 def label_to_module_name(label):
