@@ -304,6 +304,30 @@ java_library {
     lint: { strict_updatability_linting: true },
 }
 
+java_library {
+    name: "net-utils-device-common-async",
+    srcs: [
+        "device/com/android/net/module/util/async/*.java",
+    ],
+    sdk_version: "module_current",
+    min_sdk_version: "29",
+    visibility: [
+        "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/libs/net/common/testutils:__subpackages__",
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
+    libs: [
+        "framework-annotations-lib",
+    ],
+    static_libs: [
+    ],
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
+    ],
+    lint: { strict_updatability_linting: true },
+}
+
 // Use a filegroup and not a library for telephony sources, as framework-annotations cannot be
 // included either (some annotations would be duplicated on the bootclasspath).
 filegroup {
