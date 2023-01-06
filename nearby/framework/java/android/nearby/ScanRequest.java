@@ -62,6 +62,12 @@ public final class ScanRequest implements Parcelable {
      */
     public static final int SCAN_MODE_NO_POWER = -1;
     /**
+     * A special scan mode to indicate that client only wants to use CHRE to scan.
+     *
+     * @hide
+     */
+    public static final int SCAN_MODE_CHRE_ONLY = 3;
+    /**
      * Used to read a ScanRequest from a Parcel.
      */
     @NonNull
