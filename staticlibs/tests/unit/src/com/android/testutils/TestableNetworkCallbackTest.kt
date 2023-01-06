@@ -22,29 +22,29 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import com.android.testutils.RecorderCallback.CallbackEntry
+import com.android.testutils.RecorderCallback.CallbackEntry.Available
+import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
+import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.AVAILABLE
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.BLOCKED_STATUS
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.LINK_PROPERTIES_CHANGED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.LOSING
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.NETWORK_CAPS_UPDATED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.LOST
+import com.android.testutils.RecorderCallback.CallbackEntry.Companion.NETWORK_CAPS_UPDATED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.RESUMED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.SUSPENDED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.UNAVAILABLE
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
-import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
-import org.junit.Assume.assumeTrue
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import org.junit.Assume.assumeTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.JUnit4
 
 const val SHORT_TIMEOUT_MS = 20L
 const val DEFAULT_LINGER_DELAY_MS = 30000
@@ -121,20 +121,16 @@ class TestableNetworkCallbackTest {
         mCallback.assertNoCallback(SHORT_TIMEOUT_MS)
         mCallback.onAvailable(Network(100))
         assertFails { mCallback.assertNoCallback(SHORT_TIMEOUT_MS) }
-    }
-
-    @Test
-    fun testAssertNoCallbackThat() {
         val net = Network(101)
-        mCallback.assertNoCallbackThat { it is Available }
+        mCallback.assertNoCallback { it is Available }
         mCallback.onAvailable(net)
         // Expect no blocked status change. Receive other callback does not fail the test.
-        mCallback.assertNoCallbackThat { it is BlockedStatus }
+        mCallback.assertNoCallback { it is BlockedStatus }
         mCallback.onBlockedStatusChanged(net, true)
-        assertFails { mCallback.assertNoCallbackThat { it is BlockedStatus } }
+        assertFails { mCallback.assertNoCallback { it is BlockedStatus } }
         mCallback.onBlockedStatusChanged(net, false)
         mCallback.onCapabilitiesChanged(net, NetworkCapabilities())
-        assertFails { mCallback.assertNoCallbackThat { it is CapabilitiesChanged } }
+        assertFails { mCallback.assertNoCallback { it is CapabilitiesChanged } }
     }
 
     @Test
