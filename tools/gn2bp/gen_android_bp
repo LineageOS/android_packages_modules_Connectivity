@@ -1247,8 +1247,7 @@ def set_module_include_dirs(module, cflags, include_dirs):
   # aosp / soong builds and b) the include directory should already be
   # configured via library dependency.
   module.local_include_dirs.update([gn_utils.label_to_path(d)
-                                 for d in include_dirs
-                                 if not re.match('^//out/.*', d)])
+                                 for d in include_dirs if not d.startswith('//out')])
   # Remove prohibited include directories
   module.local_include_dirs = [d for d in module.local_include_dirs
                                if d not in local_include_dirs_denylist]
