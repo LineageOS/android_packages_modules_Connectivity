@@ -173,12 +173,12 @@ public class FastPairAdvHandler {
             return;
         }
 
-        byte[] saltWithData = concat(FastPairDecoder.getBloomFilterSalt(data),
-                generateBatteryData(data));
-        if (ArrayUtils.isEmpty(saltWithData)) {
+        byte[] salt = FastPairDecoder.getBloomFilterSalt(data);
+        if (ArrayUtils.isEmpty(salt)) {
             Log.d(TAG, "subsequentPair: no valid salt");
             return;
         }
+        byte[] saltWithData = concat(salt, generateBatteryData(data));
 
         List<Account> accountList = mPairDataProvider.loadFastPairEligibleAccounts();
         for (Account account : accountList) {
