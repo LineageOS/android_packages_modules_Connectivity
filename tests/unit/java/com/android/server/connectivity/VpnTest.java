@@ -76,7 +76,9 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
@@ -191,6 +193,7 @@ import org.junit.runner.RunWith;
 import org.mockito.AdditionalAnswers;
 import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -207,6 +210,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -316,6 +320,8 @@ public class VpnTest extends VpnTestBase {
     private final TestExecutor mExecutor;
     @Mock DeviceIdleInternal mDeviceIdleInternal;
     private final VpnProfile mVpnProfile;
+
+    @Captor private ArgumentCaptor<Collection<Range<Integer>>> mUidRangesCaptor;
 
     private IpSecManager mIpSecManager;
     private TestDeps mTestDeps;
@@ -1096,37 +1102,53 @@ public class VpnTest extends VpnTestBase {
         }
     }
 
-    private Vpn prepareVpnForVerifyAppExclusionList() throws Exception {
-        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+    private String startVpnForVerifyAppExclusionList(Vpn vpn) throws Exception {
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
         when(mVpnProfileStore.get(PRIMARY_USER_APP_EXCLUDE_KEY))
                 .thenReturn(HexDump.hexStringToByteArray(PKGS_BYTES));
-
-        vpn.startVpnProfile(TEST_VPN_PKG);
+        final String sessionKey = vpn.startVpnProfile(TEST_VPN_PKG);
+        final Set<Range<Integer>> uidRanges = vpn.createUserAndRestrictedProfilesRanges(
+                PRIMARY_USER.id, null /* allowedApplications */, Arrays.asList(PKGS));
+        verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey), eq(uidRanges));
+        clearInvocations(mConnectivityManager);
         verify(mVpnProfileStore).get(eq(vpn.getProfileNameForPackage(TEST_VPN_PKG)));
         vpn.mNetworkAgent = mMockNetworkAgent;
+
+        return sessionKey;
+    }
+
+    private Vpn prepareVpnForVerifyAppExclusionList() throws Exception {
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        startVpnForVerifyAppExclusionList(vpn);
+
         return vpn;
     }
 
     @Test
     public void testSetAndGetAppExclusionList() throws Exception {
-        final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final String sessionKey = startVpnForVerifyAppExclusionList(vpn);
         verify(mVpnProfileStore, never()).put(eq(PRIMARY_USER_APP_EXCLUDE_KEY), any());
         vpn.setAppExclusionList(TEST_VPN_PKG, Arrays.asList(PKGS));
         verify(mVpnProfileStore)
                 .put(eq(PRIMARY_USER_APP_EXCLUDE_KEY),
                      eq(HexDump.hexStringToByteArray(PKGS_BYTES)));
-        assertEquals(vpn.createUserAndRestrictedProfilesRanges(
-                PRIMARY_USER.id, null, Arrays.asList(PKGS)),
-                vpn.mNetworkCapabilities.getUids());
+        final Set<Range<Integer>> uidRanges = vpn.createUserAndRestrictedProfilesRanges(
+                PRIMARY_USER.id, null /* allowedApplications */, Arrays.asList(PKGS));
+        verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey), eq(uidRanges));
+        assertEquals(uidRanges, vpn.mNetworkCapabilities.getUids());
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
     }
 
     @Test
     public void testRefreshPlatformVpnAppExclusionList_updatesExcludedUids() throws Exception {
-        final Vpn vpn = prepareVpnForVerifyAppExclusionList();
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final String sessionKey = startVpnForVerifyAppExclusionList(vpn);
         vpn.setAppExclusionList(TEST_VPN_PKG, Arrays.asList(PKGS));
+        final Set<Range<Integer>> uidRanges = vpn.createUserAndRestrictedProfilesRanges(
+                PRIMARY_USER.id, null /* allowedApplications */, Arrays.asList(PKGS));
+        verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey), eq(uidRanges));
         verify(mMockNetworkAgent).doSendNetworkCapabilities(any());
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
 
@@ -1135,33 +1157,36 @@ public class VpnTest extends VpnTestBase {
         // Remove one of the package
         List<Integer> newExcludedUids = toList(PKG_UIDS);
         newExcludedUids.remove((Integer) PKG_UIDS[0]);
+        Set<Range<Integer>> newUidRanges = makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids);
         sPackages.remove(PKGS[0]);
         vpn.refreshPlatformVpnAppExclusionList();
 
         // List in keystore is not changed, but UID for the removed packages is no longer exempted.
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
-        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
-                vpn.mNetworkCapabilities.getUids());
+        assertEquals(newUidRanges, vpn.mNetworkCapabilities.getUids());
         ArgumentCaptor<NetworkCapabilities> ncCaptor =
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
         verify(mMockNetworkAgent).doSendNetworkCapabilities(ncCaptor.capture());
-        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
-                ncCaptor.getValue().getUids());
+        assertEquals(newUidRanges, ncCaptor.getValue().getUids());
+        verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey), eq(newUidRanges));
 
         reset(mMockNetworkAgent);
 
         // Add the package back
         newExcludedUids.add(PKG_UIDS[0]);
+        newUidRanges = makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids);
         sPackages.put(PKGS[0], PKG_UIDS[0]);
         vpn.refreshPlatformVpnAppExclusionList();
 
         // List in keystore is not changed and the uid list should be updated in the net cap.
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
-        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
-                vpn.mNetworkCapabilities.getUids());
+        assertEquals(newUidRanges, vpn.mNetworkCapabilities.getUids());
         verify(mMockNetworkAgent).doSendNetworkCapabilities(ncCaptor.capture());
-        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
-                ncCaptor.getValue().getUids());
+        assertEquals(newUidRanges, ncCaptor.getValue().getUids());
+
+        // The uidRange is the same as the original setAppExclusionList so this is the second call
+        verify(mConnectivityManager, times(2))
+                .setVpnDefaultForUids(eq(sessionKey), eq(newUidRanges));
     }
 
     private List<Range<Integer>> makeVpnUidRange(int userId, List<Integer> excludedAppIdList) {
@@ -1787,6 +1812,9 @@ public class VpnTest extends VpnTestBase {
                 .getRedactedLinkPropertiesForPackage(any(), anyInt(), anyString());
 
         final String sessionKey = vpn.startVpnProfile(TEST_VPN_PKG);
+        final Set<Range<Integer>> uidRanges = rangeSet(PRIMARY_USER_RANGE);
+        // This is triggered by Ikev2VpnRunner constructor.
+        verify(mConnectivityManager, times(1)).setVpnDefaultForUids(eq(sessionKey), eq(uidRanges));
         final NetworkCallback cb = triggerOnAvailableAndGetCallback();
 
         verifyInterfaceSetCfgWithFlags(IF_STATE_UP);
@@ -1795,6 +1823,8 @@ public class VpnTest extends VpnTestBase {
         // state
         verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS))
                 .createIkeSession(any(), any(), any(), any(), captor.capture(), any());
+        // This is triggered by Vpn#startOrMigrateIkeSession().
+        verify(mConnectivityManager, times(2)).setVpnDefaultForUids(eq(sessionKey), eq(uidRanges));
         reset(mIkev2SessionCreator);
         // For network lost case, the process should be triggered by calling onLost(), which is the
         // same process with the real case.
@@ -1814,16 +1844,43 @@ public class VpnTest extends VpnTestBase {
                 new String[] {TEST_VPN_PKG}, new VpnProfileState(VpnProfileState.STATE_CONNECTING,
                         sessionKey, false /* alwaysOn */, false /* lockdown */));
         if (errorType == VpnManager.ERROR_CLASS_NOT_RECOVERABLE) {
+            verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey),
+                    eq(Collections.EMPTY_LIST));
             verify(mConnectivityManager, timeout(TEST_TIMEOUT_MS))
                     .unregisterNetworkCallback(eq(cb));
         } else if (errorType == VpnManager.ERROR_CLASS_RECOVERABLE
                 // Vpn won't retry when there is no usable underlying network.
                 && errorCode != VpnManager.ERROR_CODE_NETWORK_LOST) {
             int retryIndex = 0;
-            final IkeSessionCallback ikeCb2 = verifyRetryAndGetNewIkeCb(retryIndex++);
+            // First failure occurred above.
+            final IkeSessionCallback retryCb = verifyRetryAndGetNewIkeCb(retryIndex++);
+            // Trigger 2 more failures to let the retry delay increase to 5s.
+            mExecutor.execute(() -> retryCb.onClosedWithException(exception));
+            final IkeSessionCallback retryCb2 = verifyRetryAndGetNewIkeCb(retryIndex++);
+            mExecutor.execute(() -> retryCb2.onClosedWithException(exception));
+            final IkeSessionCallback retryCb3 = verifyRetryAndGetNewIkeCb(retryIndex++);
 
-            mExecutor.execute(() -> ikeCb2.onClosedWithException(exception));
+            // setVpnDefaultForUids may be called again but the uidRanges should not change.
+            verify(mConnectivityManager, atLeast(2)).setVpnDefaultForUids(eq(sessionKey),
+                    mUidRangesCaptor.capture());
+            final List<Collection<Range<Integer>>> capturedUidRanges =
+                    mUidRangesCaptor.getAllValues();
+            for (int i = 2; i < capturedUidRanges.size(); i++) {
+                // Assert equals no order.
+                assertTrue(
+                        "uid ranges should not be modified. Expected: " + uidRanges
+                                + ", actual: " + capturedUidRanges.get(i),
+                        capturedUidRanges.get(i).containsAll(uidRanges)
+                                && capturedUidRanges.get(i).size() == uidRanges.size());
+            }
+
+            // A fourth failure will cause the retry delay to be greater than 5s.
+            mExecutor.execute(() -> retryCb3.onClosedWithException(exception));
             verifyRetryAndGetNewIkeCb(retryIndex++);
+
+            // The VPN network preference will be cleared when the retry delay is greater than 5s.
+            verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey),
+                    eq(Collections.EMPTY_LIST));
         }
     }
 
@@ -2122,7 +2179,9 @@ public class VpnTest extends VpnTestBase {
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(vpnProfile.encode());
 
-        vpn.startVpnProfile(TEST_VPN_PKG);
+        final String sessionKey = vpn.startVpnProfile(TEST_VPN_PKG);
+        final Set<Range<Integer>> uidRanges = Collections.singleton(PRIMARY_USER_RANGE);
+        verify(mConnectivityManager).setVpnDefaultForUids(eq(sessionKey), eq(uidRanges));
         final NetworkCallback nwCb = triggerOnAvailableAndGetCallback(underlyingNetworkCaps);
         // There are 4 interactions with the executor.
         // - Network available
@@ -2215,6 +2274,7 @@ public class VpnTest extends VpnTestBase {
         final PlatformVpnSnapshot vpnSnapShot = verifySetupPlatformVpn(
                 createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */));
         vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
+        verify(mConnectivityManager).setVpnDefaultForUids(anyString(), eq(Collections.EMPTY_LIST));
     }
 
     @Test
@@ -3391,12 +3451,6 @@ public class VpnTest extends VpnTestBase {
         @Override
         public DeviceIdleInternal getDeviceIdleInternal() {
             return mDeviceIdleInternal;
-        }
-
-        @Override
-        public long getNextRetryDelayMs(int retryCount) {
-            // Simply return retryCount as the delay seconds for retrying.
-            return retryCount * 1000;
         }
 
         @Override
