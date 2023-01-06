@@ -69,6 +69,8 @@ public class ChreCommunication extends ContextHubClientCallback {
     private final Executor mExecutor;
 
     private boolean mStarted = false;
+    // null when CHRE availability result has not been returned
+    @Nullable private Boolean mChreSupport = null;
     @Nullable private ContextHubCommsCallback mCallback;
     @Nullable private ContextHubClient mContextHubClient;
 
@@ -78,8 +80,13 @@ public class ChreCommunication extends ContextHubClientCallback {
         mExecutor = executor;
     }
 
-    public boolean available() {
-        return mContextHubClient != null;
+    /**
+     * @return {@code true} if NanoApp is available and {@code null} when CHRE availability result
+     * has not been returned
+     */
+    @Nullable
+    public Boolean available() {
+        return mChreSupport;
     }
 
     /**
@@ -138,6 +145,7 @@ public class ChreCommunication extends ContextHubClientCallback {
         if (mContextHubClient != null) {
             mContextHubClient.close();
             mContextHubClient = null;
+            mChreSupport = null;
         }
     }
 
@@ -245,6 +253,7 @@ public class ChreCommunication extends ContextHubClientCallback {
                                         "Found valid contexthub: %s", mQueriedContextHub.getId()));
                         mContextHubClient = mManager.createClient(mContext, mQueriedContextHub,
                                 mExecutor, ChreCommunication.this);
+                        mChreSupport = true;
                         mCallback.started(true);
                         return;
                     }
@@ -267,6 +276,7 @@ public class ChreCommunication extends ContextHubClientCallback {
             // there isn't a valid context available on this device.
             if (mContextHubs.isEmpty()) {
                 mCallback.started(false);
+                mChreSupport = false;
             }
         }
     }

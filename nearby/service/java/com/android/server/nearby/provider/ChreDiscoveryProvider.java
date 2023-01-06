@@ -24,6 +24,7 @@ import static service.proto.Blefilter.DataElement.ElementType.DE_BATTERY_STATUS;
 import static service.proto.Blefilter.DataElement.ElementType.DE_CONNECTION_STATUS;
 import static service.proto.Blefilter.DataElement.ElementType.DE_FAST_PAIR_ACCOUNT_KEY;
 
+import android.annotation.Nullable;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -59,7 +60,6 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
     /** @hide */
     @VisibleForTesting public static final int NANOAPP_MESSAGE_TYPE_CONFIG = 5;
 
-    private static final int PRESENCE_UUID = 0xFCF1;
     private static final int FP_ACCOUNT_KEY_LENGTH = 16;
 
     private final ChreCommunication mChreCommunication;
@@ -114,7 +114,12 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
         onStart();
     }
 
-    public boolean available() {
+    /**
+     * @return {@code true} if CHRE is available and {@code null} when CHRE availability result
+     * has not been returned
+     */
+    @Nullable
+    public Boolean available() {
         return mChreCommunication.available();
     }
 
