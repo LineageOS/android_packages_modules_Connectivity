@@ -204,8 +204,8 @@ struct bpf_prog_def {
 
     bool optional;  // program section (ie. function) may fail to load, continue onto next func.
 
-    // The following 3 ignore_on_* fields were added in version 0.32 (U). These are ignored in
-    // older bpfloader versions, and zero in programs compiled before 0.32.
+    // The following 3 ignore_on_* fields were added in version 0.33 (U). These are ignored in
+    // older bpfloader versions, and zero in programs compiled before 0.33.
     bool ignore_on_eng:1;
     bool ignore_on_user:1;
     bool ignore_on_userdebug:1;
