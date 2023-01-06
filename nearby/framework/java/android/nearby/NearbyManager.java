@@ -62,7 +62,7 @@ public class NearbyManager {
             ScanStatus.ERROR,
     })
     public @interface ScanStatus {
-        // Default, invalid state.
+        // The undetermined status, some modules may be initializing. Retry is suggested.
         int UNKNOWN = 0;
         // The successful state.
         int SUCCESS = 1;
