@@ -17,6 +17,7 @@
 #include "connectivity_native.h"
 
 #include <android/binder_manager.h>
+#include <android-modules-utils/sdk_level.h>
 #include <aidl/android/net/connectivity/aidl/ConnectivityNative.h>
 
 using aidl::android::net::connectivity::aidl::IConnectivityNative;
@@ -44,21 +45,25 @@ static int getErrno(const ::ndk::ScopedAStatus& status) {
 }
 
 int AConnectivityNative_blockPortForBind(in_port_t port) {
+    if (!android::modules::sdklevel::IsAtLeastU()) return ENOSYS;
     std::shared_ptr<IConnectivityNative> c = getBinder();
     return getErrno(c->blockPortForBind(port));
 }
 
 int AConnectivityNative_unblockPortForBind(in_port_t port) {
+    if (!android::modules::sdklevel::IsAtLeastU()) return ENOSYS;
     std::shared_ptr<IConnectivityNative> c = getBinder();
     return getErrno(c->unblockPortForBind(port));
 }
 
 int AConnectivityNative_unblockAllPortsForBind() {
+    if (!android::modules::sdklevel::IsAtLeastU()) return ENOSYS;
     std::shared_ptr<IConnectivityNative> c = getBinder();
     return getErrno(c->unblockAllPortsForBind());
 }
 
 int AConnectivityNative_getPortsBlockedForBind(in_port_t *ports, size_t *count) {
+    if (!android::modules::sdklevel::IsAtLeastU()) return ENOSYS;
     std::shared_ptr<IConnectivityNative> c = getBinder();
     std::vector<int32_t> actualBlockedPorts;
     int err = getErrno(c->getPortsBlockedForBind(&actualBlockedPorts));
