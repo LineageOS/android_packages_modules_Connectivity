@@ -54,11 +54,14 @@ public final class DataElement implements Parcelable {
             DataType.EDDYSTONE_EPHEMERAL_IDENTIFIER,
             DataType.ACCOUNT_KEY_DATA,
             DataType.CONNECTION_STATUS,
-            DataType.BATTERY
+            DataType.BATTERY,
+            DataType.SCAN_MODE
     })
     public @interface DataType {
         int BLE_SERVICE_DATA = 100;
         int BLE_ADDRESS = 101;
+        // This is to indicate if the scan is offload only
+        int SCAN_MODE = 102;
         int SALT = 0;
         int PRIVATE_IDENTITY = 1;
         int TRUSTED_IDENTITY = 2;
@@ -80,6 +83,7 @@ public final class DataElement implements Parcelable {
         return type == DataType.BLE_SERVICE_DATA
                 || type == DataType.ACCOUNT_KEY_DATA
                 || type == DataType.BLE_ADDRESS
+                || type == DataType.SCAN_MODE
                 || type == DataType.SALT
                 || type == DataType.PRIVATE_IDENTITY
                 || type == DataType.TRUSTED_IDENTITY
