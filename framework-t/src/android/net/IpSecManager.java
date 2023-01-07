@@ -273,7 +273,7 @@ public class IpSecManager {
             } catch (RemoteException e) {
                 throw e.rethrowFromSystemServer();
             }
-            mCloseGuard.open("open");
+            mCloseGuard.open("close");
         }
 
         /** @hide */
