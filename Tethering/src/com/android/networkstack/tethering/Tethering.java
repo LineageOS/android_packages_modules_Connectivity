@@ -2407,6 +2407,9 @@ public class Tethering {
 
     /** Unregister tethering event callback */
     void unregisterTetheringEventCallback(ITetheringEventCallback callback) {
+        if (callback == null) {
+            throw new NullPointerException();
+        }
         mHandler.post(() -> {
             mTetheringEventCallbacks.unregister(callback);
         });
