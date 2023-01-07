@@ -78,7 +78,7 @@ def label_to_target_name_with_path(label):
   return name
 
 def _is_java_source(src):
-  return os.path.splitext(src)[1] == '.java' and not src.startswith("//out/test/gen/")
+  return os.path.splitext(src)[1] == '.java' and not src.startswith("//out/")
 
 def is_java_action(script, outputs):
   return (script != "" and script not in JAVA_BANNED_SCRIPTS) and any(
