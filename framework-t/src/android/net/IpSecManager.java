@@ -610,7 +610,7 @@ public class IpSecManager {
             } catch (RemoteException e) {
                 throw e.rethrowFromSystemServer();
             }
-            mCloseGuard.open("constructor");
+            mCloseGuard.open("close");
         }
 
         /** Get the encapsulation socket's file descriptor. */
@@ -890,7 +890,7 @@ public class IpSecManager {
             } catch (RemoteException e) {
                 throw e.rethrowFromSystemServer();
             }
-            mCloseGuard.open("constructor");
+            mCloseGuard.open("close");
         }
 
         /**
