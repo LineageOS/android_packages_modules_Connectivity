@@ -17,6 +17,18 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// TODO: This is currently not used, but is being merged early, so Cronet can be disabled in
+// tm-mainline-prod.
+// Both cronet_java_defaults and cronet_java_prejarjar_defaults can be used to
+// specify a java_defaults target that either enables or disables Cronet. This
+// is used to disable Cronet on tm-mainline-prod.
+// Note: they must either both be enabled or disabled.
+cronet_java_defaults = "CronetJavaDefaultsEnabled"
+cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsEnabled"
+// This is a placeholder comment to avoid merge conflicts
+// as cronet_defaults may have different values
+// depending on the branch
+
 java_sdk_library {
     name: "framework-tethering",
     defaults: ["framework-module-defaults"],
