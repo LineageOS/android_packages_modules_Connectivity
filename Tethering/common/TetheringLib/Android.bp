@@ -23,8 +23,8 @@ package {
 // specify a java_defaults target that either enables or disables Cronet. This
 // is used to disable Cronet on tm-mainline-prod.
 // Note: they must either both be enabled or disabled.
-cronet_java_defaults = "CronetJavaDefaultsDisabled"
-cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsDisabled"
+cronet_java_defaults = "CronetJavaDefaultsEnabled"
+cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsEnabled"
 // This is a placeholder comment to avoid merge conflicts
 // as cronet_defaults may have different values
 // depending on the branch
