@@ -1524,6 +1524,9 @@ def create_java_module(blueprint, gn):
     "framework-wifi.stubs.module_lib",
     "framework-mediaprovider.stubs.module_lib",
   }
+  module.static_libs = {
+    "modules-utils-build_system",
+  }
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
   module.aidl["local_include_dirs"] = {"base/android/java/src/"}
   module.sdk_version = "module_current"
