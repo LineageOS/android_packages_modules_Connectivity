@@ -45,7 +45,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class DiscoveryProviderManagerTest {
@@ -76,6 +75,7 @@ public class DiscoveryProviderManagerTest {
         when(mInjector.getAppOpsManager()).thenReturn(mAppOpsManager);
         when(mBleDiscoveryProvider.getController()).thenReturn(mBluetoothController);
         when(mChreDiscoveryProvider.getController()).thenReturn(mChreController);
+
         mScanTypeScanListenerRecordMap = new HashMap<>();
         mDiscoveryProviderManager =
                 new DiscoveryProviderManager(mContext, mInjector, mBleDiscoveryProvider,
@@ -108,10 +108,9 @@ public class DiscoveryProviderManagerTest {
                         mCallerIdentity, mScanListenerDeathRecipient);
         mScanTypeScanListenerRecordMap.put(mIBinder, record);
 
-
-        boolean startProviders = mDiscoveryProviderManager.startProviders(scanRequest);
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
         verify(mBluetoothController, never()).start();
-        assertThat(startProviders).isTrue();
+        assertThat(start).isTrue();
     }
 
     @Test
@@ -127,9 +126,9 @@ public class DiscoveryProviderManagerTest {
                         mCallerIdentity, mScanListenerDeathRecipient);
         mScanTypeScanListenerRecordMap.put(mIBinder, record);
 
-        boolean startProviders = mDiscoveryProviderManager.startProviders(scanRequest);
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
         verify(mBluetoothController, never()).start();
-        assertThat(startProviders).isTrue();
+        assertThat(start).isTrue();
     }
 
     @Test
@@ -144,9 +143,9 @@ public class DiscoveryProviderManagerTest {
                         mCallerIdentity, mScanListenerDeathRecipient);
         mScanTypeScanListenerRecordMap.put(mIBinder, record);
 
-        boolean startProviders = mDiscoveryProviderManager.startProviders(scanRequest);
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
         verify(mBluetoothController, never()).start();
-        assertThat(startProviders).isFalse();
+        assertThat(start).isFalse();
     }
 
     @Test
@@ -161,9 +160,9 @@ public class DiscoveryProviderManagerTest {
                         mCallerIdentity, mScanListenerDeathRecipient);
         mScanTypeScanListenerRecordMap.put(mIBinder, record);
 
-        boolean startProviders = mDiscoveryProviderManager.startProviders(scanRequest);
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
         verify(mBluetoothController, never()).start();
-        assertThat(startProviders).isTrue();
+        assertThat(start).isTrue();
     }
 
     @Test
@@ -178,14 +177,43 @@ public class DiscoveryProviderManagerTest {
                         mCallerIdentity, mScanListenerDeathRecipient);
         mScanTypeScanListenerRecordMap.put(mIBinder, record);
 
-        boolean startProviders = mDiscoveryProviderManager.startProviders(scanRequest);
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
         verify(mBluetoothController, atLeastOnce()).start();
-        assertThat(startProviders).isTrue();
+        assertThat(start).isTrue();
     }
 
     @Test
-    public void testStartChreProvider() {
-        mDiscoveryProviderManager.startChreProvider(List.of(getPresenceScanFilter()));
+    public void testStartProviders_chreOnlyChreUndetermined_bleProviderNotStarted() {
+        when(mChreDiscoveryProvider.available()).thenReturn(null);
+
+        ScanRequest scanRequest = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .addScanFilter(getChreOnlyPresenceScanFilter()).build();
+        DiscoveryProviderManager.ScanListenerRecord record =
+                new DiscoveryProviderManager.ScanListenerRecord(scanRequest, mScanListener,
+                        mCallerIdentity, mScanListenerDeathRecipient);
+        mScanTypeScanListenerRecordMap.put(mIBinder, record);
+
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
+        verify(mBluetoothController, never()).start();
+        assertThat(start).isNull();
+    }
+
+    @Test
+    public void testStartProviders_notChreOnlyChreUndetermined_bleProviderStarted() {
+        when(mChreDiscoveryProvider.available()).thenReturn(null);
+
+        ScanRequest scanRequest = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .addScanFilter(getPresenceScanFilter()).build();
+        DiscoveryProviderManager.ScanListenerRecord record =
+                new DiscoveryProviderManager.ScanListenerRecord(scanRequest, mScanListener,
+                        mCallerIdentity, mScanListenerDeathRecipient);
+        mScanTypeScanListenerRecordMap.put(mIBinder, record);
+
+        Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
+        verify(mBluetoothController, atLeastOnce()).start();
+        assertThat(start).isTrue();
     }
 
     private static PresenceScanFilter getPresenceScanFilter() {

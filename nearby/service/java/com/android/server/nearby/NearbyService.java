@@ -108,10 +108,7 @@ public class NearbyService extends INearbyManager.Stub {
         CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag);
         DiscoveryPermissions.enforceDiscoveryPermission(mContext, identity);
 
-        if (mProviderManager.registerScanListener(scanRequest, listener, identity)) {
-            return NearbyManager.ScanStatus.SUCCESS;
-        }
-        return NearbyManager.ScanStatus.ERROR;
+        return mProviderManager.registerScanListener(scanRequest, listener, identity);
     }
 
     @Override
