@@ -17,6 +17,7 @@
 package com.android.server.connectivity;
 
 import static android.net.INetd.IF_STATE_UP;
+import static android.net.INetd.PERMISSION_NETWORK;
 import static android.net.INetd.PERMISSION_SYSTEM;
 import static android.system.OsConstants.ETH_P_IP;
 import static android.system.OsConstants.ETH_P_IPV6;
@@ -353,9 +354,9 @@ public class ClatCoordinator {
     static int getFwmark(int netId) {
         // See union Fwmark in system/netd/include/Fwmark.h
         return (netId & 0xffff)
-                | 0x1 << 16  // protectedFromVpn: true
-                | 0x1 << 17  // explicitlySelected: true
-                | (PERMISSION_SYSTEM & 0x3) << 18;
+                | 0x1 << 16  // explicitlySelected: true
+                | 0x1 << 17  // protectedFromVpn: true
+                | ((PERMISSION_NETWORK | PERMISSION_SYSTEM) & 0x3) << 18;  // 2 permission bits = 3
     }
 
     @VisibleForTesting
