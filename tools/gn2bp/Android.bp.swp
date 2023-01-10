@@ -4403,7 +4403,6 @@ java_library {
         "modules-utils-build_system",
     ],
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
     libs: [
