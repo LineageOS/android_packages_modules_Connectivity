@@ -4400,7 +4400,6 @@ java_library {
         "url/android/java/src/org/chromium/url/IDNStringUtil.java",
     ],
     apex_available: [
-        "//apex_available:platform",
         "com.android.tethering",
     ],
     libs: [
