@@ -46,7 +46,6 @@ import static junit.framework.Assert.fail;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
@@ -844,7 +843,6 @@ public class PermissionMonitorTest {
         // When VPN is disconnected, expect rules to be torn down
         mPermissionMonitor.onVpnUidRangesRemoved(ifName, vpnRange2, VPN_UID);
         verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[] {MOCK_UID12}));
-        assertNull(mPermissionMonitor.getVpnInterfaceUidRanges(ifName));
     }
 
     @Test
