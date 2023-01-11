@@ -25,7 +25,6 @@ import com.android.server.connectivity.mdns.MdnsProber.ProbingInfo
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import java.net.DatagramPacket
-import java.net.InetSocketAddress
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -37,14 +36,12 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.any
 import org.mockito.Mockito.atLeast
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-
-private val destinationsSupplier = {
-    listOf(InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT)) }
 
 private const val TEST_TIMEOUT_MS = 10_000L
 private const val SHORT_TIMEOUT_MS = 200L
@@ -64,6 +61,7 @@ class MdnsProberTest {
 
     @Before
     fun setUp() {
+        doReturn(true).`when`(socket).hasJoinedIpv6()
         thread.start()
     }
 
@@ -73,7 +71,7 @@ class MdnsProberTest {
     }
 
     private class TestProbeInfo(probeRecords: List<MdnsRecord>, private val delayMs: Long = 1L) :
-            ProbingInfo(1 /* serviceId */, probeRecords, destinationsSupplier) {
+            ProbingInfo(1 /* serviceId */, probeRecords) {
         // Just send the packets quickly. Timing-related tests for MdnsPacketRepeater are already
         // done in MdnsAnnouncerTest.
         override fun getDelayMs(nextIndex: Int) = delayMs
