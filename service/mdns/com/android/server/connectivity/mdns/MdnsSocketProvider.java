@@ -244,7 +244,7 @@ public class MdnsSocketProvider {
             // Try to join the group again.
             socketInfo.mSocket.joinGroup(addresses);
 
-            notifyAddressesChanged(network, lp);
+            notifyAddressesChanged(network, socketInfo.mSocket, lp);
         }
     }
 
@@ -355,12 +355,13 @@ public class MdnsSocketProvider {
         }
     }
 
-    private void notifyAddressesChanged(Network network, LinkProperties lp) {
+    private void notifyAddressesChanged(Network network, MdnsInterfaceSocket socket,
+            LinkProperties lp) {
         for (int i = 0; i < mCallbacksToRequestedNetworks.size(); i++) {
             final Network requestedNetwork = mCallbacksToRequestedNetworks.valueAt(i);
             if (isNetworkMatched(requestedNetwork, network)) {
                 mCallbacksToRequestedNetworks.keyAt(i)
-                        .onAddressesChanged(network, lp.getLinkAddresses());
+                        .onAddressesChanged(network, socket, lp.getLinkAddresses());
             }
         }
     }
@@ -455,6 +456,6 @@ public class MdnsSocketProvider {
                 @NonNull MdnsInterfaceSocket socket) {}
         /*** Notify the addresses is changed on the network */
         default void onAddressesChanged(@NonNull Network network,
-                @NonNull List<LinkAddress> addresses) {}
+                @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> addresses) {}
     }
 }

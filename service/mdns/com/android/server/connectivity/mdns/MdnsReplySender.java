@@ -32,14 +32,14 @@ import java.net.SocketAddress;
  */
 public class MdnsReplySender {
     @NonNull
-    private final MulticastSocket mSocket;
+    private final MdnsInterfaceSocket mSocket;
     @NonNull
     private final Looper mLooper;
     @NonNull
     private final byte[] mPacketCreationBuffer;
 
     public MdnsReplySender(@NonNull Looper looper,
-            @NonNull MulticastSocket socket, @NonNull byte[] packetCreationBuffer) {
+            @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer) {
         mLooper = looper;
         mSocket = socket;
         mPacketCreationBuffer = packetCreationBuffer;
