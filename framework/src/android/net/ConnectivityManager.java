@@ -1232,16 +1232,19 @@ public class ConnectivityManager {
     }
 
     /**
-     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
      * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
-     * Specify that the traffic for this user should by follow the default rules.
+     * Specify that the traffic for this user should by follow the default rules:
+     * applications in the profile designated by the UserHandle behave like any
+     * other application and use the system default network as their default
+     * network. Compare other PROFILE_NETWORK_PREFERENCE_* settings.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0;
 
     /**
-     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
      * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
      * Specify that the traffic for this user should by default go on a network with
      * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE}, and on the system default network
@@ -1252,15 +1255,37 @@ public class ConnectivityManager {
     public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1;
 
     /**
-     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
      * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
      * Specify that the traffic for this user should by default go on a network with
      * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE} and if no such network is available
-     * should not go on the system default network
+     * should not have a default network at all (that is, network accesses that
+     * do not specify a network explicitly terminate with an error), even if there
+     * is a system default network available to apps outside this preference.
+     * The apps can still use a non-enterprise network if they request it explicitly
+     * provided that specific network doesn't require any specific permission they
+     * do not hold.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK = 2;
+
+    /**
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
+     * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
+     * Specify that the traffic for this user should by default go on a network with
+     * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE}.
+     * If there is no such network, the apps will have no default
+     * network at all, even if there are available non-enterprise networks on the
+     * device (that is, network accesses that do not specify a network explicitly
+     * terminate with an error). Additionally, the designated apps should be
+     * blocked from using any non-enterprise network even if they specify it
+     * explicitly, unless they hold specific privilege overriding this (see
+     * {@link android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS}).
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_BLOCKING = 3;
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
