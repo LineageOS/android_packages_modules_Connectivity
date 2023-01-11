@@ -154,13 +154,12 @@ public class MdnsInterfaceSocket {
     }
 
     /**
-     * Returns the index of the network interface that this socket is bound to. If the interface
-     * cannot be determined, returns -1.
+     * Returns the network interface that this socket is bound to.
      *
      * <p>This method could be used on any thread.
      */
-    public int getInterfaceIndex() {
-        return mNetworkInterface.getIndex();
+    public NetworkInterface getInterface() {
+        return mNetworkInterface;
     }
 
     /*** Returns whether this socket has joined IPv4 group */
