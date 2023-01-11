@@ -1524,6 +1524,9 @@ def create_java_module(blueprint, gn):
     "framework-wifi.stubs.module_lib",
     "framework-mediaprovider.stubs.module_lib",
   }
+  module.static_libs = {
+    "modules-utils-build_system",
+  }
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
   module.aidl["local_include_dirs"] = {"base/android/java/src/"}
   module.sdk_version = "module_current"
@@ -1534,8 +1537,6 @@ def create_java_module(blueprint, gn):
   # would be less likely to conflict with upstream changes if the revert is not
   # accepted.
   module.javacflags.add("-Aorg.chromium.chrome.skipGenJni")
-  # TODO: remove following workaround required to make this module visible to make (b/203203405)
-  module.apex_available.add("//apex_available:platform")
   for dep in get_non_api_java_actions(gn):
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
