@@ -32,13 +32,15 @@ public class ProfileNetworkPreferenceInfo
     @Nullable
     public final NetworkCapabilities capabilities;
     public final boolean allowFallback;
+    public final boolean blockingNonEnterprise;
 
     public ProfileNetworkPreferenceInfo(@NonNull final UserHandle user,
             @Nullable final NetworkCapabilities capabilities,
-            final boolean allowFallback) {
+            final boolean allowFallback, final boolean blockingNonEnterprise) {
         this.user = user;
         this.capabilities = null == capabilities ? null : new NetworkCapabilities(capabilities);
         this.allowFallback = allowFallback;
+        this.blockingNonEnterprise = blockingNonEnterprise;
     }
 
     @Override
@@ -57,6 +59,7 @@ public class ProfileNetworkPreferenceInfo
         return "[ProfileNetworkPreference user=" + user
                 + " caps=" + capabilities
                 + " allowFallback=" + allowFallback
+                + " blockingNonEnterprise=" + blockingNonEnterprise
                 + "]";
     }
 }
