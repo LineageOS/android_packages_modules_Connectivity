@@ -4366,6 +4366,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mNetworkForNetId.remove(nai.network.getNetId());
         }
         propagateUnderlyingNetworkCapabilities(nai.network);
+        // Update allowed network lists in netd. This should be called after removing nai
+        // from mNetworkAgentInfos.
+        updateProfileAllowedNetworks();
         // Remove all previously satisfied requests.
         for (int i = 0; i < nai.numNetworkRequests(); i++) {
             final NetworkRequest request = nai.requestAt(i);
@@ -4800,6 +4803,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
             }
         }
+
         nri.mPerUidCounter.decrementCount(nri.mUid);
         mNetworkRequestInfoLogs.log("RELEASE " + nri);
         checkNrisConsistency(nri);
@@ -6166,12 +6170,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (mOemNetworkPreferences.getNetworkPreferences().size() > 0) {
             handleSetOemNetworkPreference(mOemNetworkPreferences, null);
         }
+        if (!mProfileNetworkPreferences.isEmpty()) {
+            updateProfileAllowedNetworks();
+        }
     }
 
     private void onUserRemoved(@NonNull final UserHandle user) {
         // If there was a network preference for this user, remove it.
         handleSetProfileNetworkPreference(
-                List.of(new ProfileNetworkPreferenceInfo(user, null, true)),
+                List.of(new ProfileNetworkPreferenceInfo(user, null, true,
+                        false /* blockingNonEnterprise */)),
                 null /* listener */);
         if (mOemNetworkPreferences.getNetworkPreferences().size() > 0) {
             handleSetOemNetworkPreference(mOemNetworkPreferences, null);
@@ -8688,6 +8696,73 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    /**
+     * Collect restricted uid ranges for the given network and UserHandle, these uids
+     * are not restricted for matched enterprise networks but being restricted for non-matched
+     * enterprise networks and non-enterprise networks.
+     */
+    @NonNull
+    private ArraySet<UidRange> getRestrictedUidRangesForEnterpriseBlocking(
+            @NonNull NetworkAgentInfo nai, @NonNull UserHandle user) {
+        final ArraySet<UidRange> restrictedUidRanges = new ArraySet<>();
+        for (final ProfileNetworkPreferenceInfo pref : mProfileNetworkPreferences) {
+            if (!pref.user.equals(user) || !pref.blockingNonEnterprise) continue;
+
+            if (nai.networkCapabilities.hasCapability(NET_CAPABILITY_ENTERPRISE)) {
+                // The NC is built from a `ProfileNetworkPreference` which has only one
+                // enterprise ID, so it's guaranteed to have exactly one.
+                final int prefId = pref.capabilities.getEnterpriseIds()[0];
+                if (nai.networkCapabilities.hasEnterpriseId(prefId)) {
+                    continue;
+                }
+            }
+
+            if (UidRangeUtils.doesRangeSetOverlap(restrictedUidRanges,
+                    pref.capabilities.getUidRanges())) {
+                throw new IllegalArgumentException(
+                        "Overlapping uid range in preference: " + pref);
+            }
+            restrictedUidRanges.addAll(pref.capabilities.getUidRanges());
+        }
+        return restrictedUidRanges;
+    }
+
+    private void updateProfileAllowedNetworks() {
+        ensureRunningOnConnectivityServiceThread();
+        final ArrayList<NativeUidRangeConfig> configs = new ArrayList<>();
+        final List<UserHandle> users = mContext.getSystemService(UserManager.class)
+                        .getUserHandles(true /* excludeDying */);
+        if (users.isEmpty()) {
+            throw new IllegalStateException("No user is available");
+        }
+
+        for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
+            ArraySet<UidRange> allowedUidRanges = new ArraySet<>();
+            for (final UserHandle user : users) {
+                final ArraySet<UidRange> restrictedUidRanges =
+                        getRestrictedUidRangesForEnterpriseBlocking(nai, user);
+                allowedUidRanges.addAll(UidRangeUtils.removeRangeSetFromUidRange(
+                        UidRange.createForUser(user), restrictedUidRanges));
+            }
+
+            final UidRangeParcel[] rangesParcel = toUidRangeStableParcels(allowedUidRanges);
+            configs.add(new NativeUidRangeConfig(
+                    nai.network.netId, rangesParcel, 0 /* subPriority */));
+        }
+
+        // The netd API replaces the previous configs with the current configs.
+        // Thus, for network disconnection or preference removal, no need to
+        // unset previous config. Instead, collecting all currently needed
+        // configs and issue to netd.
+        try {
+            mNetd.setNetworkAllowlist(configs.toArray(new NativeUidRangeConfig[0]));
+        } catch (ServiceSpecificException e) {
+            // Has the interface disappeared since the network was built?
+        } catch (RemoteException e) {
+            // Netd died. This usually causes a runtime restart anyway.
+        }
+    }
+
     private void makeDefaultNetwork(@Nullable final NetworkAgentInfo newDefaultNetwork) {
         try {
             if (null != newDefaultNetwork) {
@@ -9320,6 +9395,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             networkAgent.setCreated();
             networkAgent.onNetworkCreated();
             updateAllowedUids(networkAgent, null, networkAgent.networkCapabilities);
+            updateProfileAllowedNetworks();
         }
 
         if (!networkAgent.everConnected() && state == NetworkInfo.State.CONNECTED) {
@@ -10856,6 +10932,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         for (final ProfileNetworkPreference preference : preferences) {
             final NetworkCapabilities nc;
             boolean allowFallback = true;
+            boolean blockingNonEnterprise = false;
             switch (preference.getPreference()) {
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT:
                     nc = null;
@@ -10865,6 +10942,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                                 "Invalid enterprise identifier in setProfileNetworkPreferences");
                     }
                     break;
+                case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_BLOCKING:
+                    blockingNonEnterprise = true;
+                    // continue to process the enterprise preference.
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK:
                     allowFallback = false;
                     // continue to process the enterprise preference.
@@ -10898,7 +10978,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     throw new IllegalArgumentException(
                             "Invalid preference in setProfileNetworkPreferences");
             }
-            preferenceList.add(new ProfileNetworkPreferenceInfo(profile, nc, allowFallback));
+            preferenceList.add(new ProfileNetworkPreferenceInfo(
+                    profile, nc, allowFallback, blockingNonEnterprise));
             if (hasDefaultPreference && preferenceList.size() > 1) {
                 throw new IllegalArgumentException(
                         "Default profile preference should not be set along with other preference");
@@ -11011,6 +11092,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         removeDefaultNetworkRequestsForPreference(PREFERENCE_ORDER_PROFILE);
         addPerAppDefaultNetworkRequests(
                 createNrisFromProfileNetworkPreferences(mProfileNetworkPreferences));
+        updateProfileAllowedNetworks();
 
         // Finally, rematch.
         rematchAllNetworksAndRequests();
