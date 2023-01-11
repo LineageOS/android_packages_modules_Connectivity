@@ -379,8 +379,11 @@ package android.nearby {
 
   public interface ScanCallback {
     method public void onDiscovered(@NonNull android.nearby.NearbyDevice);
+    method public default void onError(int);
     method public void onLost(@NonNull android.nearby.NearbyDevice);
     method public void onUpdated(@NonNull android.nearby.NearbyDevice);
+    field public static final int ERROR_UNKNOWN = 0; // 0x0
+    field public static final int ERROR_UNSUPPORTED = 1; // 0x1
   }
 
   public abstract class ScanFilter {

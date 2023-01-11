@@ -94,6 +94,10 @@ public class NearbyManagerTest {
         @Override
         public void onLost(@NonNull NearbyDevice device) {
         }
+
+        @Override
+        public void onError(int errorCode) {
+        }
     };
     private static final Executor EXECUTOR = Executors.newSingleThreadExecutor();
 

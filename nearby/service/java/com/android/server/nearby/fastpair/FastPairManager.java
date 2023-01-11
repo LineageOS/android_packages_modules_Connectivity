@@ -181,6 +181,11 @@ public class FastPairManager {
             byte[] modelArray = FastPairDecoder.getModelId(fastPairDevice.getData());
             Log.d(TAG, "lost model id" + Hex.bytesToStringLowercase(modelArray));
         }
+
+        @Override
+        public void onError(int errorCode) {
+            Log.w(TAG, "[FastPairManager] Scan error is " + errorCode);
+        }
     };
 
     /**
