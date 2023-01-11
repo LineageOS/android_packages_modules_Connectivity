@@ -382,7 +382,9 @@ cc_genrule {
          "--input_file " +
          "java/lang/Runtime.class " +
          "--javap " +
-         "$$(find out/.path -name javap)",
+         "$$(find out/.path -name javap) " +
+         "--package_prefix " +
+         "android.net.http.internal",
     out: [
         "base/android_runtime_jni_headers/Runnable_jni.h",
         "base/android_runtime_jni_headers/Runtime_jni.h",
@@ -1274,7 +1276,9 @@ cc_genrule {
          "--input_file " +
          "$(location base/android/java/src/org/chromium/base/task/PostTask.java) " +
          "--input_file " +
-         "$(location base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java)",
+         "$(location base/android/java/src/org/chromium/base/task/TaskRunnerImpl.java) " +
+         "--package_prefix " +
+         "android.net.http.internal",
     out: [
         "base/base_jni_headers/ApkAssets_jni.h",
         "base/base_jni_headers/ApplicationStatus_jni.h",
@@ -2506,7 +2510,9 @@ cc_genrule {
          "--input_file " +
          "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequest.java) " +
          "--input_file " +
-         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequestContext.java)",
+         "$(location components/cronet/android/java/src/org/chromium/net/impl/CronetUrlRequestContext.java) " +
+         "--package_prefix " +
+         "android.net.http.internal",
     out: [
         "components/cronet/android/cronet_jni_headers/CronetBidirectionalStream_jni.h",
         "components/cronet/android/cronet_jni_headers/CronetLibraryLoader_jni.h",
@@ -2775,6 +2781,8 @@ cc_genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
+         "--package_prefix " +
+         "android.net.http.internal " +
          ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
@@ -3042,6 +3050,8 @@ java_genrule {
          "--header-path " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h " +
          "--manual_jni_registration " +
+         "--package_prefix " +
+         "android.net.http.internal " +
          ";sed -i -e 's/OUT_SOONG_.TEMP_SBOX_.*_OUT/GEN/g'  " +
          "$(genDir)/components/cronet/android/cronet_jni_registration.h",
     out: [
@@ -3880,7 +3890,9 @@ cc_genrule {
          "--output_name " +
          "PrefService_jni.h " +
          "--input_file " +
-         "$(location components/prefs/android/java/src/org/chromium/components/prefs/PrefService.java)",
+         "$(location components/prefs/android/java/src/org/chromium/components/prefs/PrefService.java) " +
+         "--package_prefix " +
+         "android.net.http.internal",
     out: [
         "components/prefs/android/jni_headers/PrefService_jni.h",
     ],
@@ -4433,6 +4445,7 @@ java_library {
     sdk_version: "module_current",
     javacflags: [
         "-Aorg.chromium.chrome.skipGenJni",
+        "-Apackage_prefix=android.net.http.internal",
     ],
 }
 
@@ -5838,7 +5851,9 @@ cc_genrule {
          "--input_file " +
          "$(location net/android/java/src/org/chromium/net/ProxyChangeListener.java) " +
          "--input_file " +
-         "$(location net/android/java/src/org/chromium/net/X509Util.java)",
+         "$(location net/android/java/src/org/chromium/net/X509Util.java) " +
+         "--package_prefix " +
+         "android.net.http.internal",
     out: [
         "net/net_jni_headers/AndroidCertVerifyResult_jni.h",
         "net/net_jni_headers/AndroidKeyStore_jni.h",
@@ -10840,7 +10855,9 @@ cc_genrule {
          "--input_file " +
          "$(location url/android/java/src/org/chromium/url/IDNStringUtil.java) " +
          "--input_file " +
-         "$(location url/android/java/src/org/chromium/url/Origin.java)",
+         "$(location url/android/java/src/org/chromium/url/Origin.java) " +
+         "--package_prefix " +
+         "android.net.http.internal",
     out: [
         "url/url_jni_headers/IDNStringUtil_jni.h",
         "url/url_jni_headers/Origin_jni.h",
