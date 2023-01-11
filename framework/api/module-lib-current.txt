@@ -63,6 +63,7 @@ package android.net {
     field public static final int FIREWALL_RULE_DENY = 2; // 0x2
     field public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0; // 0x0
     field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1; // 0x1
+    field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_BLOCKING = 3; // 0x3
     field public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK = 2; // 0x2
   }
 
