@@ -28,7 +28,6 @@ import java.net.DatagramPacket
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.MulticastSocket
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.After
@@ -55,7 +54,7 @@ private val destinationsSupplier = {
 class MdnsAnnouncerTest {
 
     private val thread = HandlerThread(MdnsAnnouncerTest::class.simpleName)
-    private val socket = mock(MulticastSocket::class.java)
+    private val socket = mock(MdnsInterfaceSocket::class.java)
     private val buffer = ByteArray(1500)
 
     @Before
@@ -71,8 +70,7 @@ class MdnsAnnouncerTest {
     private class TestAnnouncementInfo(
         announcedRecords: List<MdnsRecord>,
         additionalRecords: List<MdnsRecord>
-    )
-        : AnnouncementInfo(announcedRecords, additionalRecords, destinationsSupplier) {
+    ) : AnnouncementInfo(announcedRecords, additionalRecords, destinationsSupplier) {
         override fun getDelayMs(nextIndex: Int) =
                 if (nextIndex < FIRST_ANNOUNCES_COUNT) {
                     FIRST_ANNOUNCES_DELAY

@@ -962,6 +962,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._delete_value_arg('--prev_output_dir', False)
     self._update_list_arg('--input_file', self._sanitize_filepath)
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
+    self._append_arg('--package_prefix', 'android.net.http.internal')
     super()._sanitize_args()
 
   def _sanitize_outputs(self):
@@ -992,6 +993,7 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     # update_jni_registration_module removes them from the srcs of the module
     # It might be better to remove sources by '--sources-exclusions'
     self._delete_value_arg('--sources-exclusions')
+    self._append_arg('--package_prefix', 'android.net.http.internal')
     super()._sanitize_args()
 
   def get_cmd(self):
@@ -1537,6 +1539,7 @@ def create_java_module(blueprint, gn):
   # would be less likely to conflict with upstream changes if the revert is not
   # accepted.
   module.javacflags.add("-Aorg.chromium.chrome.skipGenJni")
+  module.javacflags.add("-Apackage_prefix=android.net.http.internal")
   for dep in get_non_api_java_actions(gn):
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
