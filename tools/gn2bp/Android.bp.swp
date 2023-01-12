@@ -1533,7 +1533,7 @@ cc_genrule {
 // GN: //base:ios_cronet_buildflags
 cc_genrule {
     name: "cronet_aml_base_ios_cronet_buildflags",
-    cmd: "echo '--flags CRONET_BUILD=\"false\"' | " +
+    cmd: "echo '--flags CRONET_BUILD=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
@@ -2560,7 +2560,6 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/Function.java",
         "base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
         "base/android/java/src/org/chromium/base/IntStringCallback.java",
-        "base/android/java/src/org/chromium/base/IntentUtils.java",
         "base/android/java/src/org/chromium/base/JNIUtils.java",
         "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
         "base/android/java/src/org/chromium/base/JavaHandlerThread.java",
@@ -2814,7 +2813,6 @@ java_genrule {
         "base/android/java/src/org/chromium/base/Function.java",
         "base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
         "base/android/java/src/org/chromium/base/IntStringCallback.java",
-        "base/android/java/src/org/chromium/base/IntentUtils.java",
         "base/android/java/src/org/chromium/base/JNIUtils.java",
         "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
         "base/android/java/src/org/chromium/base/JavaHandlerThread.java",
@@ -3991,7 +3989,6 @@ java_library {
         "base/android/java/src/org/chromium/base/Function.java",
         "base/android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
         "base/android/java/src/org/chromium/base/IntStringCallback.java",
-        "base/android/java/src/org/chromium/base/IntentUtils.java",
         "base/android/java/src/org/chromium/base/JNIUtils.java",
         "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
         "base/android/java/src/org/chromium/base/JavaHandlerThread.java",
@@ -4774,7 +4771,7 @@ cc_object {
 // GN: //net:ios_cronet_buildflags
 cc_genrule {
     name: "cronet_aml_net_ios_cronet_buildflags",
-    cmd: "echo '--flags CRONET_BUILD=\"false\"' | " +
+    cmd: "echo '--flags CRONET_BUILD=\"true\"' | " +
          "$(location build/write_buildflag_header.py) --output " +
          "$(out) " +
          "--rulename " +
