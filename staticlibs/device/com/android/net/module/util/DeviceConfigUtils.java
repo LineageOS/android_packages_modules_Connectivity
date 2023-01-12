@@ -194,7 +194,7 @@ public final class DeviceConfigUtils {
             return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
         } catch (PackageManager.NameNotFoundException e) {
             Log.e(TAG, "Could not find the module name", e);
-            return false;
+            return defaultEnabled;
         }
     }
 
