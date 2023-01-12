@@ -1516,8 +1516,6 @@ def create_java_module(blueprint, gn):
   module.libs = {
     "androidx.annotation_annotation",
     "jsr305",
-    "androidx.core_core-nodeps",
-    "androidx.collection_collection",
     "androidx.annotation_annotation-experimental-nodeps",
     "framework-connectivity.stubs.module_lib",
     "framework-connectivity-t.stubs.module_lib",
