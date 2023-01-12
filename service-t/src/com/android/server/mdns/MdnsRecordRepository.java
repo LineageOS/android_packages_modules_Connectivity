@@ -23,6 +23,7 @@ import android.net.LinkAddress;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.ArraySet;
 import android.util.SparseArray;
 
@@ -136,6 +137,12 @@ public class MdnsRecordRepository {
          * Whether probing is still in progress for the record.
          */
         public boolean isProbing;
+
+        /**
+         * Last time (as per SystemClock.elapsedRealtime) when sent via unicast or multicast,
+         * 0 if never
+         */
+        public long lastSentTimeMs;
 
         RecordInfo(NsdServiceInfo serviceInfo, T record, boolean sharedName,
                  boolean probing) {
@@ -333,20 +340,31 @@ public class MdnsRecordRepository {
      * @return The exit announcement to indicate the service was removed, or null if not necessary.
      */
     @Nullable
-    public MdnsAnnouncer.AnnouncementInfo exitService(int id) {
+    public MdnsAnnouncer.ExitAnnouncementInfo exitService(int id) {
         final ServiceRegistration registration = mServices.get(id);
         if (registration == null) return null;
         if (registration.exiting) return null;
 
-        registration.exiting = true;
+        // Send exit (TTL 0) for the PTR record, if the record was sent (in particular don't send
+        // if still probing)
+        if (registration.ptrRecord.lastSentTimeMs == 0L) {
+            return null;
+        }
 
-        // TODO: implement
-        return null;
+        registration.exiting = true;
+        final MdnsPointerRecord expiredRecord = new MdnsPointerRecord(
+                registration.ptrRecord.record.getName(),
+                0L /* receiptTimeMillis */,
+                true /* cacheFlush */,
+                0L /* ttlMillis */,
+                registration.ptrRecord.record.getPointer());
+
+        // Exit should be skipped if the record is still advertised by another service, but that
+        // would be a conflict (2 service registrations with the same service name), so it would
+        // not have been allowed by the repository.
+        return new MdnsAnnouncer.ExitAnnouncementInfo(id, Collections.singletonList(expiredRecord));
     }
 
-    /**
-     * Remove a service from the repository
-     */
     public void removeService(int id) {
         mServices.remove(id);
     }
@@ -475,7 +493,8 @@ public class MdnsRecordRepository {
         addNsecRecordsForUniqueNames(additionalAnswers,
                 mGeneralRecords.iterator(), registration.allRecords.iterator());
 
-        return new MdnsAnnouncer.AnnouncementInfo(answers, additionalAnswers);
+        return new MdnsAnnouncer.AnnouncementInfo(probeSuccessInfo.getServiceId(),
+                answers, additionalAnswers);
     }
 
     /**
@@ -502,8 +521,31 @@ public class MdnsRecordRepository {
     }
 
     /**
+     * Return whether the repository has an active (non-exiting) service for the given ID.
+     */
+    public boolean hasActiveService(int serviceId) {
+        final ServiceRegistration registration = mServices.get(serviceId);
+        if (registration == null) return false;
+
+        return !registration.exiting;
+    }
+
+    /**
+     * Called when {@link MdnsAdvertiser} sent an advertisement for the given service.
+     */
+    public void onAdvertisementSent(int serviceId) {
+        final ServiceRegistration registration = mServices.get(serviceId);
+        if (registration == null) return;
+
+        final long now = SystemClock.elapsedRealtime();
+        for (RecordInfo<?> record : registration.allRecords) {
+            record.lastSentTimeMs = now;
+        }
+    }
+
+    /**
      * Compute:
-     * 2001:db8::1 --> 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.B.D.1.0.0.2.ip6.arpa
+     * 2001:db8::1 --> 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.B.D.0.1.0.0.2.ip6.arpa
      *
      * Or:
      * 192.0.2.123 --> 123.2.0.192.in-addr.arpa
