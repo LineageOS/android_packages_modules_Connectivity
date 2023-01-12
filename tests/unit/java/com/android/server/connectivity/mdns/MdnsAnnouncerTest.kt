@@ -22,11 +22,10 @@ import android.os.HandlerThread
 import android.os.SystemClock
 import com.android.internal.util.HexDump
 import com.android.server.connectivity.mdns.MdnsAnnouncer.AnnouncementInfo
+import com.android.server.connectivity.mdns.MdnsRecordRepository.getReverseDnsAddress
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import java.net.DatagramPacket
-import java.net.Inet6Address
-import java.net.InetAddress
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.After
@@ -150,8 +149,8 @@ class MdnsAnnouncerTest {
         val v6Addr1 = parseNumericAddress("2001:DB8::123")
         val v6Addr2 = parseNumericAddress("2001:DB8::456")
         val v4AddrRev = arrayOf("123", "0", "2", "192", "in-addr", "arpa")
-        val v6Addr1Rev = getReverseV6AddressName(v6Addr1)
-        val v6Addr2Rev = getReverseV6AddressName(v6Addr2)
+        val v6Addr1Rev = getReverseDnsAddress(v6Addr1)
+        val v6Addr2Rev = getReverseDnsAddress(v6Addr2)
 
         val announcedRecords = listOf(
                 // Reverse address records
@@ -266,14 +265,4 @@ class MdnsAnnouncerTest {
             assertEquals(expected, HexDump.toHexString(it.data))
         }
     }
-}
-
-/**
- * Compute 2001:db8::1 --> 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.B.D.1.0.0.2.ip6.arpa
- */
-private fun getReverseV6AddressName(addr: InetAddress): Array<String> {
-    assertTrue(addr is Inet6Address)
-    return addr.address.flatMapTo(mutableListOf("arpa", "ip6")) {
-        HexDump.toHexString(it).toCharArray().map(Char::toString)
-    }.reversed().toTypedArray()
 }

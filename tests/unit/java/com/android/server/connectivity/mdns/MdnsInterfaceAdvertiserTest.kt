@@ -121,6 +121,8 @@ class MdnsInterfaceAdvertiserTest {
         doReturn(testExitInfo).`when`(repository).exitService(TEST_SERVICE_ID_1)
         advertiser.removeService(TEST_SERVICE_ID_1)
 
+        verify(prober).stop(TEST_SERVICE_ID_1)
+        verify(announcer).stop(TEST_SERVICE_ID_1)
         verify(announcer).startSending(TEST_SERVICE_ID_1, testExitInfo, EXIT_ANNOUNCEMENT_DELAY_MS)
 
         // TODO: after exit announcements are implemented, verify that announceCb.onFinished causes
