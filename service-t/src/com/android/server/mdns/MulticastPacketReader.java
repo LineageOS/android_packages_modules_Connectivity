@@ -107,5 +107,14 @@ public class MulticastPacketReader extends FdEventsReader<MulticastPacketReader.
         ensureRunningOnHandlerThread(mHandler);
         mPacketHandlers.add(handler);
     }
+
+    /**
+     * Remove a packet handler added via {@link #addPacketHandler}. If the handler was not set,
+     * this is a no-op.
+     */
+    public void removePacketHandler(@NonNull PacketHandler handler) {
+        ensureRunningOnHandlerThread(mHandler);
+        mPacketHandlers.remove(handler);
+    }
 }
 

@@ -162,6 +162,14 @@ public class MdnsInterfaceSocket {
     }
 
     /**
+     * Remove a handler added via {@link #addPacketHandler}. If the handler is not present, this is
+     * a no-op.
+     */
+    public void removePacketHandler(@NonNull MulticastPacketReader.PacketHandler handler) {
+        mPacketReader.removePacketHandler(handler);
+    }
+
+    /**
      * Returns the network interface that this socket is bound to.
      *
      * <p>This method could be used on any thread.
