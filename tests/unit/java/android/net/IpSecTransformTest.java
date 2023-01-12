@@ -143,8 +143,9 @@ public class IpSecTransformTest {
 
     @Test
     @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
-    public void testStartMigration() throws Exception {
-        mIpSecManager.startMigration(buildTestTransform(), SRC_ADDRESS_V6, DST_ADDRESS_V6);
+    public void testStartTransformMigration() throws Exception {
+        mIpSecManager.startTunnelModeTransformMigration(
+                buildTestTransform(), SRC_ADDRESS_V6, DST_ADDRESS_V6);
         verify(mMockIpSecService)
                 .migrateTransform(
                         anyInt(),
@@ -155,9 +156,10 @@ public class IpSecTransformTest {
 
     @Test
     @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
-    public void testStartMigrationOnSdkBeforeU() throws Exception {
+    public void testStartTransformMigrationOnSdkBeforeU() throws Exception {
         try {
-            mIpSecManager.startMigration(buildTestTransform(), SRC_ADDRESS_V6, DST_ADDRESS_V6);
+            mIpSecManager.startTunnelModeTransformMigration(
+                    buildTestTransform(), SRC_ADDRESS_V6, DST_ADDRESS_V6);
             fail("Expect to fail since migration is not supported before U");
         } catch (UnsupportedOperationException expected) {
         }

@@ -159,7 +159,8 @@ public class MdnsSocketProviderTest {
         }
 
         @Override
-        public void onAddressesChanged(Network network, List<LinkAddress> addresses) {
+        public void onAddressesChanged(Network network, MdnsInterfaceSocket socket,
+                List<LinkAddress> addresses) {
             mHistory.add(new AddressesChangedEvent(network, addresses));
         }
 
