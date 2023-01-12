@@ -32,6 +32,7 @@ import static android.system.OsConstants.NETLINK_NETFILTER;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.staticMockMarker;
+import static com.android.net.module.util.NetworkStackConstants.IPV4_MIN_MTU;
 import static com.android.net.module.util.ip.ConntrackMonitor.ConntrackEvent;
 import static com.android.net.module.util.netlink.ConntrackMessage.DYING_MASK;
 import static com.android.net.module.util.netlink.ConntrackMessage.ESTABLISHED_MASK;
@@ -41,6 +42,7 @@ import static com.android.net.module.util.netlink.ConntrackMessage.TupleProto;
 import static com.android.net.module.util.netlink.NetlinkConstants.IPCTNL_MSG_CT_DELETE;
 import static com.android.net.module.util.netlink.NetlinkConstants.IPCTNL_MSG_CT_NEW;
 import static com.android.networkstack.tethering.BpfCoordinator.CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS;
+import static com.android.networkstack.tethering.BpfCoordinator.INVALID_MTU;
 import static com.android.networkstack.tethering.BpfCoordinator.NF_CONNTRACK_TCP_TIMEOUT_ESTABLISHED;
 import static com.android.networkstack.tethering.BpfCoordinator.NF_CONNTRACK_UDP_TIMEOUT_STREAM;
 import static com.android.networkstack.tethering.BpfCoordinator.NON_OFFLOADED_UPSTREAM_IPV4_TCP_PORTS;
@@ -109,7 +111,7 @@ import com.android.net.module.util.ip.ConntrackMonitor;
 import com.android.net.module.util.ip.ConntrackMonitor.ConntrackEventConsumer;
 import com.android.net.module.util.netlink.ConntrackMessage;
 import com.android.net.module.util.netlink.NetlinkConstants;
-import com.android.net.module.util.netlink.NetlinkSocket;
+import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.networkstack.tethering.BpfCoordinator.BpfConntrackEventConsumer;
 import com.android.networkstack.tethering.BpfCoordinator.ClientInfo;
 import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
@@ -154,9 +156,9 @@ public class BpfCoordinatorTest {
 
     private static final int INVALID_IFINDEX = 0;
     private static final int UPSTREAM_IFINDEX = 1001;
-    private static final int UPSTREAM_IFINDEX2 = 1002;
-    private static final int DOWNSTREAM_IFINDEX = 1003;
-    private static final int DOWNSTREAM_IFINDEX2 = 1004;
+    private static final int UPSTREAM_IFINDEX2 = 1003;
+    private static final int DOWNSTREAM_IFINDEX = 2001;
+    private static final int DOWNSTREAM_IFINDEX2 = 2002;
 
     private static final String UPSTREAM_IFACE = "rmnet0";
     private static final String UPSTREAM_IFACE2 = "wlan0";
@@ -283,6 +285,11 @@ public class BpfCoordinatorTest {
             private int mDstPort = REMOTE_PORT;
             private long mLastUsed = 0;
 
+            public Builder setPmtu(short pmtu) {
+                mPmtu = pmtu;
+                return this;
+            }
+
             public Tether4Value build() {
                 return new Tether4Value(mOif, mEthDstMac, mEthSrcMac, mEthProto, mPmtu,
                         mSrc46, mDst46, mSrcPort, mDstPort, mLastUsed);
@@ -302,6 +309,11 @@ public class BpfCoordinatorTest {
             private int mSrcPort = REMOTE_PORT;
             private int mDstPort = PRIVATE_PORT;
             private long mLastUsed = 0;
+
+            public Builder setPmtu(short pmtu) {
+                mPmtu = pmtu;
+                return this;
+            }
 
             public Tether4Value build() {
                 return new Tether4Value(mOif, mEthDstMac, mEthSrcMac, mEthProto, mPmtu,
@@ -375,6 +387,7 @@ public class BpfCoordinatorTest {
     private HashMap<IpServer, HashMap<Inet4Address, ClientInfo>> mTetherClients;
 
     private long mElapsedRealtimeNanos = 0;
+    private int mMtu = NetworkStackConstants.ETHER_MTU;
     private final ArgumentCaptor<ArrayList> mStringArrayCaptor =
             ArgumentCaptor.forClass(ArrayList.class);
     private final TestLooper mTestLooper = new TestLooper();
@@ -428,6 +441,10 @@ public class BpfCoordinatorTest {
 
                     public long elapsedRealtimeNanos() {
                         return mElapsedRealtimeNanos;
+                    }
+
+                    public int getNetworkInterfaceMtu(@NonNull String iface) {
+                        return mMtu;
                     }
 
                     @Nullable
@@ -1518,6 +1535,7 @@ public class BpfCoordinatorTest {
         final LinkProperties lp = new LinkProperties();
         lp.setInterfaceName(upstreamInfo.interfaceParams.name);
         lp.addLinkAddress(new LinkAddress(upstreamInfo.address, 32 /* prefix length */));
+        lp.setMtu(mMtu);
         final NetworkCapabilities capabilities = new NetworkCapabilities()
                 .addTransportType(upstreamInfo.transportType);
         coordinator.updateUpstreamNetworkState(new UpstreamNetworkState(lp, capabilities,
@@ -1697,9 +1715,9 @@ public class BpfCoordinatorTest {
         final long validTime = (CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS - 1) * 1_000_000L;
         final long expiredTime = (CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS + 1) * 1_000_000L;
 
-        // Static mocking for NetlinkSocket.
+        // Static mocking for NetlinkUtils.
         MockitoSession mockSession = ExtendedMockito.mockitoSession()
-                .mockStatic(NetlinkSocket.class)
+                .mockStatic(NetlinkUtils.class)
                 .startMocking();
         try {
             final BpfCoordinator coordinator = makeBpfCoordinator();
@@ -1711,8 +1729,8 @@ public class BpfCoordinatorTest {
             setElapsedRealtimeNanos(expiredTime);
             mTestLooper.moveTimeForward(CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS);
             waitForIdle();
-            ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkSocket.class));
-            ExtendedMockito.clearInvocations(staticMockMarker(NetlinkSocket.class));
+            ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkUtils.class));
+            ExtendedMockito.clearInvocations(staticMockMarker(NetlinkUtils.class));
 
             // [2] Refresh conntrack timeout.
             setElapsedRealtimeNanos(validTime);
@@ -1724,19 +1742,19 @@ public class BpfCoordinatorTest {
             final byte[] expectedNetlinkUdp = ConntrackMessage.newIPv4TimeoutUpdateRequest(
                     IPPROTO_UDP, PRIVATE_ADDR, (int) PRIVATE_PORT, REMOTE_ADDR,
                     (int) REMOTE_PORT, NF_CONNTRACK_UDP_TIMEOUT_STREAM);
-            ExtendedMockito.verify(() -> NetlinkSocket.sendOneShotKernelMessage(
+            ExtendedMockito.verify(() -> NetlinkUtils.sendOneShotKernelMessage(
                     eq(NETLINK_NETFILTER), eq(expectedNetlinkTcp)));
-            ExtendedMockito.verify(() -> NetlinkSocket.sendOneShotKernelMessage(
+            ExtendedMockito.verify(() -> NetlinkUtils.sendOneShotKernelMessage(
                     eq(NETLINK_NETFILTER), eq(expectedNetlinkUdp)));
-            ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkSocket.class));
-            ExtendedMockito.clearInvocations(staticMockMarker(NetlinkSocket.class));
+            ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkUtils.class));
+            ExtendedMockito.clearInvocations(staticMockMarker(NetlinkUtils.class));
 
             // [3] Don't refresh conntrack timeout if polling stopped.
             coordinator.stopPolling();
             mTestLooper.moveTimeForward(CONNTRACK_TIMEOUT_UPDATE_INTERVAL_MS);
             waitForIdle();
-            ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkSocket.class));
-            ExtendedMockito.clearInvocations(staticMockMarker(NetlinkSocket.class));
+            ExtendedMockito.verifyNoMoreInteractions(staticMockMarker(NetlinkUtils.class));
+            ExtendedMockito.clearInvocations(staticMockMarker(NetlinkUtils.class));
         } finally {
             mockSession.finishMocking();
         }
@@ -2108,7 +2126,7 @@ public class BpfCoordinatorTest {
     @Test
     public void testIpv6ForwardingRuleToString() throws Exception {
         final Ipv6ForwardingRule rule = buildTestForwardingRule(UPSTREAM_IFINDEX, NEIGH_A, MAC_A);
-        assertEquals("upstreamIfindex: 1001, downstreamIfindex: 1003, address: 2001:db8::1, "
+        assertEquals("upstreamIfindex: 1001, downstreamIfindex: 2001, address: 2001:db8::1, "
                 + "srcMac: 12:34:56:78:90:ab, dstMac: 00:00:00:00:00:0a", rule.toString());
     }
 
@@ -2180,7 +2198,7 @@ public class BpfCoordinatorTest {
                 new TetherDevValue(UPSTREAM_IFINDEX));
 
         // dumpCounters
-        // The error code is defined in packages/modules/Connectivity/bpf_progs/bpf_tethering.h.
+        // The error code is defined in packages/modules/Connectivity/bpf_progs/offload.h.
         mBpfErrorMap.insertEntry(
                 new S32(0 /* INVALID_IPV4_VERSION */),
                 new S32(1000 /* count */));
@@ -2194,5 +2212,73 @@ public class BpfCoordinatorTest {
         ipv6ForwardingRules.put(mIpServer, addressRuleMap);
 
         verifyDump(coordinator);
+    }
+
+    private void verifyAddTetherOffloadRule4Mtu(final int ifaceMtu, final boolean isKernelMtu,
+            final int expectedMtu) throws Exception {
+        // BpfCoordinator#updateUpstreamNetworkState geta mtu from LinkProperties. If not found,
+        // try to get from kernel.
+        if (isKernelMtu) {
+            // LinkProperties mtu is invalid and kernel mtu is valid.
+            mMtu = INVALID_MTU;
+            doReturn(ifaceMtu).when(mDeps).getNetworkInterfaceMtu(any());
+        } else {
+            // LinkProperties mtu is valid and kernel mtu is invalid.
+            mMtu = ifaceMtu;
+            doReturn(INVALID_MTU).when(mDeps).getNetworkInterfaceMtu(any());
+        }
+
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+        initBpfCoordinatorForRule4(coordinator);
+
+        final Tether4Key expectedUpstream4KeyTcp = new TestUpstream4Key.Builder()
+                .setProto(IPPROTO_TCP)
+                .build();
+        final Tether4Key expectedDownstream4KeyTcp = new TestDownstream4Key.Builder()
+                .setProto(IPPROTO_TCP)
+                .build();
+        final Tether4Value expectedUpstream4ValueTcp = new TestUpstream4Value.Builder()
+                .setPmtu((short) expectedMtu)
+                .build();
+        final Tether4Value expectedDownstream4ValueTcp = new TestDownstream4Value.Builder()
+                .setPmtu((short) expectedMtu)
+                .build();
+
+        mConsumer.accept(new TestConntrackEvent.Builder()
+                .setMsgType(IPCTNL_MSG_CT_NEW)
+                .setProto(IPPROTO_TCP)
+                .build());
+        verify(mBpfUpstream4Map)
+                .insertEntry(eq(expectedUpstream4KeyTcp), eq(expectedUpstream4ValueTcp));
+        verify(mBpfDownstream4Map)
+                .insertEntry(eq(expectedDownstream4KeyTcp), eq(expectedDownstream4ValueTcp));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testAddTetherOffloadRule4LowMtuFromLinkProperties() throws Exception {
+        verifyAddTetherOffloadRule4Mtu(
+                IPV4_MIN_MTU, false /* isKernelMtu */, IPV4_MIN_MTU /* expectedMtu */);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testAddTetherOffloadRule4LowMtuFromKernel() throws Exception {
+        verifyAddTetherOffloadRule4Mtu(
+                IPV4_MIN_MTU, true /* isKernelMtu */, IPV4_MIN_MTU /* expectedMtu */);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testAddTetherOffloadRule4LessThanIpv4MinMtu() throws Exception {
+        verifyAddTetherOffloadRule4Mtu(
+                IPV4_MIN_MTU - 1, false /* isKernelMtu */, IPV4_MIN_MTU /* expectedMtu */);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testAddTetherOffloadRule4InvalidMtu() throws Exception {
+        verifyAddTetherOffloadRule4Mtu(INVALID_MTU, false /* isKernelMtu */,
+                NetworkStackConstants.ETHER_MTU /* expectedMtu */);
     }
 }

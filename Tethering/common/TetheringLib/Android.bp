@@ -17,11 +17,27 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// TODO: This is currently not used, but is being merged early, so Cronet can be disabled in
+// tm-mainline-prod.
+// Both cronet_java_defaults and cronet_java_prejarjar_defaults can be used to
+// specify a java_defaults target that either enables or disables Cronet. This
+// is used to disable Cronet on tm-mainline-prod.
+// Note: they must either both be enabled or disabled.
+cronet_java_defaults = "CronetJavaDefaultsEnabled"
+cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsEnabled"
+// This is a placeholder comment to avoid merge conflicts
+// as cronet_defaults may have different values
+// depending on the branch
+
 java_sdk_library {
     name: "framework-tethering",
     defaults: ["framework-module-defaults"],
     impl_library_visibility: [
         "//packages/modules/Connectivity/Tethering:__subpackages__",
+        "//packages/modules/Connectivity/framework",
+        "//packages/modules/Connectivity/framework-t",
+        "//packages/modules/Connectivity/service",
+        "//packages/modules/Connectivity/service-t",
 
         // Using for test only
         "//cts/tests/netlegacy22.api",
@@ -64,19 +80,8 @@ java_sdk_library {
 filegroup {
     name: "framework-tethering-srcs",
     srcs: [
-        "src/android/net/TetheredClient.aidl",
-        "src/android/net/TetheredClient.java",
-        "src/android/net/TetheringManager.java",
-        "src/android/net/TetheringConstants.java",
-        "src/android/net/IIntResultListener.aidl",
-        "src/android/net/ITetheringEventCallback.aidl",
-        "src/android/net/ITetheringConnector.aidl",
-        "src/android/net/TetheringCallbackStartedParcel.aidl",
-        "src/android/net/TetheringConfigurationParcel.aidl",
-        "src/android/net/TetheringRequestParcel.aidl",
-        "src/android/net/TetherStatesParcel.aidl",
-        "src/android/net/TetheringInterface.aidl",
-        "src/android/net/TetheringInterface.java",
+        "src/**/*.aidl",
+        "src/**/*.java",
     ],
     path: "src"
 }

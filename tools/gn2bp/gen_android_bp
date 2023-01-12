@@ -26,7 +26,6 @@
 # libraries are also mapped to their Android equivalents -- see |builtin_deps|.
 
 import argparse
-import collections
 import json
 import logging as log
 import operator
@@ -43,7 +42,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Default targets to translate to the blueprint file.
 default_targets = [
     '//components/cronet/android:cronet',
-    '//components/cronet:cronet_package',
+    '//components/cronet/android:cronet_android_mainline',
 ]
 
 # Defines a custom init_rc argument to be applied to the corresponding output
@@ -94,6 +93,11 @@ static_library_allowlist = [
 
 # Include directories that will be removed from all targets.
 local_include_dirs_denylist = [
+    'third_party/zlib/',
+]
+
+experimental_include_dirs_denylist = [
+    'third_party/brotli/include/',
 ]
 
 # Name of the module which settings such as compiler flags for all other
@@ -101,7 +105,7 @@ local_include_dirs_denylist = [
 defaults_module = module_prefix + 'defaults'
 
 # Location of the project in the Android source tree.
-tree_path = 'external/chromium_org'
+tree_path = 'external/cronet'
 
 # Path for the protobuf sources in the standalone build.
 buildtools_protobuf_src = '//buildtools/protobuf/src'
@@ -138,17 +142,81 @@ additional_args = {
             'cronet_aml_crypto_crypto',
         }),
     ],
+    # TODO: fix upstream. Both //base:base and
+    # //base/allocator/partition_allocator:partition_alloc do not create a
+    # dependency on gtest despite using gtest_prod.h.
+    'cronet_aml_base_base': [
+        ('header_libs', {
+            'libgtest_prod_headers',
+        }),
+        ('export_header_lib_headers', {
+            'libgtest_prod_headers',
+        }),
+    ],
+    'cronet_aml_base_allocator_partition_allocator_partition_alloc': [
+        ('header_libs', {
+            'libgtest_prod_headers',
+        }),
+    ],
 }
+
+def enable_brotli(module, arch):
+  # Requires crrev/c/4111690
+  if arch is None:
+    module.static_libs.add('libbrotli')
+  else:
+    module.arch[arch].static_libs.add('libbrotli')
+
+def enable_modp_b64(module, arch):
+  # Requires crrev/c/4112845
+  # Requires aosp/2359455
+  # Requires aosp/2359456
+  if not module.is_compiled():
+    return
+  if arch is None:
+    module.static_libs.add('libmodpb64')
+  else:
+    module.arch[arch].static_libs.add('libmodpb64')
+
+def enable_zlib(module, arch):
+  # Requires crrev/c/4109079
+  if arch is None:
+    module.shared_libs.add('libz')
+  else:
+    module.arch[arch].shared_libs.add('libz')
 
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
+    '//buildtools/third_party/libunwind:libunwind':
+        lambda m, a: None, # disable libunwind
+    '//net/data/ssl/chrome_root_store:gen_root_store_inc':
+        lambda m, a: None,
     '//net/tools/root_store_tool:root_store_tool':
-        lambda x: None,
+        lambda m, a: None,
+    '//third_party/zlib:zlib':
+        enable_zlib,
 }
+
+experimental_android_deps = {
+    '//third_party/brotli:common':
+        enable_brotli,
+    '//third_party/brotli:dec':
+        enable_brotli,
+    '//third_party/modp_b64:modp_b64':
+        enable_modp_b64,
+}
+
+# Uncomment the following lines to use Android deps rather than their Chromium
+# equivalent:
+#builtin_deps.update(experimental_android_deps)
+#local_include_dirs_denylist.extend(experimental_include_dirs_denylist)
 
 # Name of tethering apex module
 tethering_apex = "com.android.tethering"
+
+# Name of cronet api target
+java_api_target_name = "//components/cronet/android:cronet_api_java"
 
 # ----------------------------------------------------------------------------
 # End of configuration.
@@ -276,6 +344,7 @@ class Module(object):
     self.generated_headers = set()
     self.export_generated_headers = set()
     self.export_static_lib_headers = set()
+    self.export_header_lib_headers = set()
     self.defaults = set()
     self.cflags = set()
     self.include_dirs = set()
@@ -314,8 +383,14 @@ class Module(object):
     self.cppflags = set()
     self.rtti = False
     # Name of the output. Used for setting .so file name for libcronet
+    self.libs = set()
     self.stem = None
     self.compile_multilib = None
+    self.aidl = dict()
+    self.plugins = set()
+    self.processor_class = None
+    self.sdk_version = None
+    self.javacflags = set()
 
   def to_string(self, output):
     if self.comment:
@@ -341,6 +416,7 @@ class Module(object):
     self._output_field(output, 'generated_headers')
     self._output_field(output, 'export_generated_headers')
     self._output_field(output, 'export_static_lib_headers')
+    self._output_field(output, 'export_header_lib_headers')
     self._output_field(output, 'defaults')
     self._output_field(output, 'cflags')
     self._output_field(output, 'include_dirs')
@@ -362,8 +438,14 @@ class Module(object):
     self._output_field(output, 'proto')
     self._output_field(output, 'linker_scripts')
     self._output_field(output, 'cppflags')
+    self._output_field(output, 'libs')
     self._output_field(output, 'stem')
     self._output_field(output, 'compile_multilib')
+    self._output_field(output, 'aidl')
+    self._output_field(output, 'plugins')
+    self._output_field(output, 'processor_class')
+    self._output_field(output, 'sdk_version')
+    self._output_field(output, 'javacflags')
     if self.rtti:
       self._output_field(output, 'rtti')
 
@@ -451,7 +533,12 @@ class Blueprint(object):
 
   def to_string(self, output):
     for m in sorted(self.modules.values(), key=lambda m: m.name):
-      m.to_string(output)
+      if m.type != "cc_object" or m.has_input_files():
+        # Don't print cc_object with empty srcs. These attributes are already
+        # propagated up the tree. Printing them messes the presubmits because
+        # every module is compiled while those targets are not reachable in
+        # a normal compilation path.
+        m.to_string(output)
 
 
 def label_to_module_name(label):
@@ -653,7 +740,7 @@ def create_gcc_preprocess_modules(blueprint, target):
   # It seems this is because cc object is a module with per-architecture variants and genrule is a
   # module with default variant. For 64bit target, cc_object is built multiple times for 32/64bit
   # modes and genrule doesn't know which one to depend on.
-  preprocess_module.compile_multilib = 32
+  preprocess_module.compile_multilib = 'first'
   blueprint.add_module(preprocess_module)
 
   # Generates srcjar using soong_zip
@@ -670,9 +757,18 @@ def create_gcc_preprocess_modules(blueprint, target):
 
 
 class BaseActionSanitizer():
-  def __init__(self, target):
+  def __init__(self, target, arch):
     # Just to be on the safe side, create a deep-copy.
     self.target = copy.deepcopy(target)
+    if arch:
+      # Merge arch specific attributes
+      self.target.sources |= arch.sources
+      self.target.inputs |= arch.inputs
+      self.target.outputs |= arch.outputs
+      self.target.script = self.target.script or arch.script
+      self.target.args = self.target.args or arch.args
+      self.target.response_file_contents = \
+        self.target.response_file_contents or arch.response_file_contents
     self.target.args = self._normalize_args()
 
   def get_name(self):
@@ -858,8 +954,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     return arg
 
   def _sanitize_args(self):
-    self._update_value_arg('--jar_file', self._sanitize_filepath, False)
-    self._update_value_arg('--jar_file', self._add_location_tag, False)
+    self._set_value_arg('--jar_file', '$(location :current_android_jar)', False)
     if self._has_arg('--jar_file'):
       self._append_arg('--javap', '$$(find out/.path -name javap)')
     self._update_value_arg('--output_dir', self._sanitize_filepath)
@@ -867,6 +962,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._delete_value_arg('--prev_output_dir', False)
     self._update_list_arg('--input_file', self._sanitize_filepath)
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
+    self._append_arg('--package_prefix', 'android.net.http.internal')
     super()._sanitize_args()
 
   def _sanitize_outputs(self):
@@ -879,6 +975,10 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     # android_jar.classes should be part of the tools as it list implicit classes
     # for the script to generate JNI headers.
     tool_files.add("base/android/jni_generator/android_jar.classes")
+
+    # Filter android.jar and add :current_android_jar
+    tool_files = {file if not file.endswith('android.jar') else ':current_android_jar'
+                  for file in tool_files }
     return tool_files
 
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
@@ -893,6 +993,7 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     # update_jni_registration_module removes them from the srcs of the module
     # It might be better to remove sources by '--sources-exclusions'
     self._delete_value_arg('--sources-exclusions')
+    self._append_arg('--package_prefix', 'android.net.http.internal')
     super()._sanitize_args()
 
   def get_cmd(self):
@@ -968,33 +1069,33 @@ class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
     self._set_value_arg('--output', '$(out)')
     super()._sanitize_args()
 
-def get_action_sanitizer(target, type):
+def get_action_sanitizer(target, type, arch):
   if target.script == "//build/write_buildflag_header.py":
-    return WriteBuildFlagHeaderSanitizer(target)
+    return WriteBuildFlagHeaderSanitizer(target, arch)
   elif target.script == "//build/write_build_date_header.py":
-    return WriteBuildDateHeaderSanitizer(target)
+    return WriteBuildDateHeaderSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_generator.py':
-    return JniGeneratorSanitizer(target)
+    return JniGeneratorSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
     if type == 'java_genrule':
-      return JavaJniRegistrationGeneratorSanitizer(target)
+      return JavaJniRegistrationGeneratorSanitizer(target, arch)
     else:
-      return JniRegistrationGeneratorSanitizer(target)
+      return JniRegistrationGeneratorSanitizer(target, arch)
   elif target.script == "//build/util/version.py":
-    return VersionSanitizer(target)
+    return VersionSanitizer(target, arch)
   elif target.script == "//build/android/gyp/java_cpp_enum.py":
-    return JavaCppEnumSanitizer(target)
+    return JavaCppEnumSanitizer(target, arch)
   elif target.script == "//net/tools/dafsa/make_dafsa.py":
-    return MakeDafsaSanitizer(target)
+    return MakeDafsaSanitizer(target, arch)
   elif target.script == '//build/android/gyp/java_cpp_features.py':
-    return JavaCppFeatureSanitizer(target)
+    return JavaCppFeatureSanitizer(target, arch)
   elif target.script == '//build/android/gyp/java_cpp_strings.py':
-    return JavaCppStringSanitizer(target)
+    return JavaCppStringSanitizer(target, arch)
   elif target.script == '//build/android/gyp/write_native_libraries_java.py':
-    return WriteNativeLibrariesJavaSanitizer(target)
+    return WriteNativeLibrariesJavaSanitizer(target, arch)
   else:
     # TODO: throw exception here once all script hacks have been converted.
-    return BaseActionSanitizer(target)
+    return BaseActionSanitizer(target, arch)
 
 def create_action_foreach_modules(blueprint, target):
   """ The following assumes that rebase_path exists in the args.
@@ -1029,8 +1130,8 @@ def create_action_foreach_modules(blueprint, target):
   target.args = new_args
   return create_action_module(blueprint, target, 'cc_genrule')
 
-def create_action_module(blueprint, target, type):
-  sanitizer = get_action_sanitizer(target, type)
+def create_action_module_internal(target, type, arch=None):
+  sanitizer = get_action_sanitizer(target, type, arch)
   sanitizer.sanitize()
 
   module = Module(type, sanitizer.get_name(), target.name)
@@ -1041,9 +1142,85 @@ def create_action_module(blueprint, target, type):
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
 
-  blueprint.add_module(module)
   return module
 
+def get_cmd_condition(arch):
+  '''
+  :param arch: archtecture name e.g. android_x86_64, android_arm64
+  :return: condition that can be used in cc_genrule cmd to switch the behavior based on arch
+  '''
+  if arch == "android_x86_64":
+    return "( $$CC_ARCH == 'x86_64' && $$CC_OS == 'android' )"
+  elif arch == "android_x86":
+    return "( $$CC_ARCH == 'x86' && $$CC_OS == 'android' )"
+  elif arch == "android_arm":
+    return "( $$CC_ARCH == 'arm' && $$CC_OS == 'android' )"
+  elif arch == "android_arm64":
+    return "( $$CC_ARCH == 'arm64' && $$CC_OS == 'android' )"
+  elif arch == "host":
+    return "$$CC_OS != 'android'"
+  else:
+    raise Error(f'Unknown architecture type {arch}')
+
+def merge_cmd(modules, genrule_type):
+  '''
+  :param modules: dictionary whose key is arch name and value is module
+  :param genrule_type: cc_genrule or java_genrule
+  :return: merged command or common command if all the archs have the same command.
+  '''
+  commands = list({module.cmd for module in modules.values()})
+  if len(commands) == 1:
+    # If all the archs have the same command, return the command
+    return commands[0]
+
+  if genrule_type != 'cc_genrule':
+    raise Error(f'{genrule_type} can not have different cmd between archs')
+
+  merged_cmd = []
+  for arch, module in modules.items():
+    merged_cmd.append(f'if [[ {get_cmd_condition(arch)} ]];')
+    merged_cmd.append('then')
+    merged_cmd.append(module.cmd + ';')
+    merged_cmd.append('fi;')
+  return NEWLINE.join(merged_cmd)
+
+def merge_modules(modules, genrule_type):
+  '''
+  :param modules: dictionary whose key is arch name and value is module
+  :param genrule_type: cc_genrule or java_genrule
+  :return: merged module of input modules
+  '''
+  merged_module = list(modules.values())[0]
+
+  # Following attributes must be the same between archs
+  for key in ('out', 'genrule_headers', 'srcs', 'tool_files'):
+    if any([getattr(merged_module, key) != getattr(module, key) for module in modules.values()]):
+      raise Error(f'{merged_module.name} has different values for {key} between archs')
+
+  merged_module.cmd = merge_cmd(modules, genrule_type)
+  return merged_module
+
+def create_action_module(blueprint, target, genrule_type):
+  '''
+  Create module for action target and add to the blueprint. If target has arch specific attributes
+  this function merge them and create a single module.
+  :param blueprint:
+  :param target: target which is converted to the module.
+  :param genrule_type: cc_genrule or java_genrule
+  :return: created module
+  '''
+  # TODO: Handle this target correctly, this target generates java_genrule but this target has
+  # different value for cpu-family arg between archs
+  if target.name == '//build/android:native_libraries_gen':
+    module = create_action_module_internal(target, genrule_type, target.arch['android_arm'])
+    blueprint.add_module(module)
+    return module
+
+  modules = {arch_name: create_action_module_internal(target, genrule_type, arch)
+             for arch_name, arch in target.arch.items()}
+  module = merge_modules(modules, genrule_type)
+  blueprint.add_module(module)
+  return module
 
 
 def _get_cflags(cflags, defines):
@@ -1061,15 +1238,6 @@ def set_module_flags(module, cflags, defines):
     if '-fexceptions' in flag:
       module.cppflags.add('-fexceptions')
 
-def add_genrule_per_arch(module, dep_module, type):
-  module.generated_headers.update(dep_module.genrule_headers)
-  # If the module is a static library, export all the generated headers.
-  if type == 'cc_library_static':
-    module.export_generated_headers.update(dep_module.genrule_headers)
-  module.srcs.update(dep_module.genrule_srcs)
-  module.shared_libs.update(dep_module.genrule_shared_libs)
-  module.header_libs.update(dep_module.genrule_header_libs)
-
 def set_module_include_dirs(module, cflags, include_dirs):
   for flag in cflags:
     if '-isystem' in flag:
@@ -1081,8 +1249,11 @@ def set_module_include_dirs(module, cflags, include_dirs):
   # aosp / soong builds and b) the include directory should already be
   # configured via library dependency.
   module.local_include_dirs.update([gn_utils.label_to_path(d)
-                                 for d in include_dirs
-                                 if not re.match('^//out/.*', d)])
+                                 for d in include_dirs if not d.startswith('//out')])
+  # Remove prohibited include directories
+  module.local_include_dirs = [d for d in module.local_include_dirs
+                               if d not in local_include_dirs_denylist]
+
 
 def create_modules_from_target(blueprint, gn, gn_target_name):
   """Generate module(s) for a given GN target.
@@ -1140,17 +1311,13 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   blueprint.add_module(module)
   module.init_rc = target_initrc.get(target.name, [])
-  module.srcs.update(
-      gn_utils.label_to_path(src)
-      for src in target.sources
-      if is_supported_source_file(src) and not src.startswith("//out/test"))
+  module.srcs.update(gn_utils.label_to_path(src)
+                     for src in target.sources if is_supported_source_file(src))
 
   # Add arch-specific properties
   for arch_name, arch in target.arch.items():
-    module.target[arch_name].srcs.update(
-      gn_utils.label_to_path(src)
-      for src in arch.sources
-      if is_supported_source_file(src) and not src.startswith("//out/test"))
+    module.target[arch_name].srcs.update(gn_utils.label_to_path(src)
+                                         for src in arch.sources if is_supported_source_file(src))
 
   module.rtti = target.rtti
 
@@ -1189,10 +1356,6 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       if lib in static_library_allowlist:
         module.add_android_static_lib(android_lib)
 
-    # Remove prohibited include directories
-    module.local_include_dirs = [d for d in module.local_include_dirs
-                                 if d not in local_include_dirs_denylist]
-
   # If the module is a static library, export all the generated headers.
   if module.type == 'cc_library_static':
     module.export_generated_headers = module.generated_headers
@@ -1213,7 +1376,7 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
     # |builtin_deps| override GN deps with Android-specific ones. See the
     # config in the top of this file.
     if dep_name in builtin_deps:
-      builtin_deps[dep_name](module)
+      builtin_deps[dep_name](module, None)
       continue
 
     dep_module = create_modules_from_target(blueprint, gn, dep_name)
@@ -1266,6 +1429,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
 
   for arch_name, arch in target.arch.items():
     for dep_name in arch.deps:
+      # |builtin_deps| override GN deps with Android-specific ones. See the
+      # config in the top of this file.
+      if dep_name in builtin_deps:
+        builtin_deps[dep_name](module, arch_name)
+        continue
       dep_module = create_modules_from_target(blueprint, gn, dep_name)
       # Arch-specific dependencies currently only include cc_library_static.
       # Revisit this approach once we need to support more target types.
@@ -1280,48 +1448,129 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
           if module.type not in ["cc_object"]:
             module.target[arch_name].export_generated_headers.update(
               dep_module.genrule_headers)
-      else:
-        raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
-                    (dep_module.name, target.name, dep_module.type))
-    for dep_name in arch.source_set_deps:
-      dep_module = create_modules_from_target(blueprint, gn, dep_name)
-      if dep_module.type == 'cc_object':
-        if module.type != 'cc_object':
-          # We only want to bubble up cc_objects for modules that are not cc_objects
-          # otherwise they'd be recompiled and that would cause multiple symbol redefinitions.
-          if dep_module.has_input_files():
-            # Only add it as part of srcs if the dep_module has input files otherwise
-            # this would throw an error.
-            module.target[arch_name].srcs.add(":" + dep_module.name)
+      elif dep_module.type == 'cc_object':
+        if dep_module.has_input_files():
+          # Only add it as part of srcs if the dep_module has input files otherwise
+          # this would throw an error.
+          module.target[arch_name].srcs.add(":" + dep_module.name)
       else:
         raise Error('Unsupported arch-specific dependency %s of target %s with type %s' %
                     (dep_module.name, target.name, dep_module.type))
   return module
 
+def create_java_jni_preprocessor(blueprint):
+  bp_module_name = module_prefix + 'java_jni_annotation_preprocessor'
+  module = Module('java_plugin', bp_module_name, '//base/android/jni_generator:jni_processor')
+  module.srcs.update(
+  [
+    "base/android/jni_generator/java/src/org/chromium/jni_generator/JniProcessor.java",
+    # Avoids a circular dependency with base:base_java. This is okay because
+    # no target should ever expect to package an annotation processor.
+    "build/android/java/src/org/chromium/build/annotations/CheckDiscard.java",
+    "build/android/java/src/org/chromium/build/annotations/MainDex.java",
+    "base/android/java/src/org/chromium/base/JniStaticTestMocker.java",
+    "base/android/java/src/org/chromium/base/NativeLibraryLoadedStatus.java",
+    "base/android/java/src/org/chromium/base/annotations/NativeMethods.java",
+    "base/android/java/src/org/chromium/base/JniException.java",
+    ":cronet_aml_build_android_build_config_gen",
+  ])
+  module.static_libs.update({
+      "javapoet",
+      "guava",
+      "auto_service_annotations",
+  })
+  module.processor_class = "org.chromium.jni_generator.JniProcessor"
+  blueprint.add_module(module)
+  return module
+
+def get_java_sources(gn, predicate):
+  java_sources = set()
+  for target_name, sources in gn.java_sources.items():
+    if predicate(target_name):
+      java_sources.update(sources)
+  return java_sources
+
+def get_java_actions(gn, predicate):
+  java_actions = set()
+  for target_name, actions in gn.java_actions.items():
+    if predicate(target_name):
+      java_actions.update(actions)
+  return java_actions
+
+def get_non_api_java_sources(gn):
+  return get_java_sources(gn, lambda name: name != java_api_target_name)
+
+def get_non_api_java_actions(gn):
+  return get_java_actions(gn, lambda name: name != java_api_target_name)
+
+def get_api_java_sources(gn):
+  return get_java_sources(gn, lambda name: name == java_api_target_name)
+
+def get_api_java_actions(gn):
+  return get_java_actions(gn, lambda name: name == java_api_target_name)
+
 def create_java_module(blueprint, gn):
   bp_module_name = module_prefix + 'java'
   module = Module('java_library', bp_module_name, '//gn:java')
-  module.srcs.update([gn_utils.label_to_path(source) for source in gn.java_sources])
-  for dep in gn.java_actions:
+  module.srcs.update([gn_utils.label_to_path(source) for source in get_non_api_java_sources(gn)])
+  module.libs = {
+    "androidx.annotation_annotation",
+    "jsr305",
+    "androidx.annotation_annotation-experimental-nodeps",
+    "framework-connectivity.stubs.module_lib",
+    "framework-connectivity-t.stubs.module_lib",
+    "framework-tethering.stubs.module_lib",
+    "framework-wifi.stubs.module_lib",
+    "framework-mediaprovider.stubs.module_lib",
+  }
+  module.static_libs = {
+    "modules-utils-build_system",
+  }
+  module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
+  module.aidl["local_include_dirs"] = {"base/android/java/src/"}
+  module.sdk_version = "module_current"
+  module.apex_available.add(tethering_apex)
+  # TODO: support for this flag is removed upstream in crrev/c/4062652.
+  # Consider reverting this change upstream, or worst-case downstream.  As an
+  # alternative hack, we could rename the generated file to not conflict. This
+  # would be less likely to conflict with upstream changes if the revert is not
+  # accepted.
+  module.javacflags.add("-Aorg.chromium.chrome.skipGenJni")
+  module.javacflags.add("-Apackage_prefix=android.net.http.internal")
+  for dep in get_non_api_java_actions(gn):
     target = gn.get_target(dep)
     if target.script == '//build/android/gyp/gcc_preprocess.py':
       module.srcs.add(':' + create_gcc_preprocess_modules(blueprint, target).name)
     else:
       module.srcs.add(':' + create_action_module(blueprint, target, 'java_genrule').name)
+  preprocessor_module = create_java_jni_preprocessor(blueprint)
+  module.plugins.add(preprocessor_module.name)
   blueprint.add_module(module)
+  return module
+
+def create_java_api_module(blueprint, gn):
+  source_module = Module('filegroup', module_prefix + 'api_sources', java_api_target_name)
+  source_module.srcs.update([gn_utils.label_to_path(source)
+                             for source in get_api_java_sources(gn)])
+  source_module.srcs.update([
+    ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule').name
+    for dep in get_api_java_actions(gn)])
+  blueprint.add_module(source_module)
+
+  java_module = Module('java_library', module_prefix + 'api_java', java_api_target_name)
+  java_module.srcs.add(":" + source_module.name)
+  java_module.sdk_version = "module_current"
+  java_module.libs = {
+      "androidx.annotation_annotation",
+    }
+  blueprint.add_module(java_module)
+  return java_module
 
 def update_jni_registration_module(module, gn):
-  # TODO: deny list is in the arg of jni_registration_generator.py. Should not be hardcoded
-  deny_list = [
-    '//base/android/java/src/org/chromium/base/library_loader/LibraryLoader.java',
-    '//base/android/java/src/org/chromium/base/library_loader/LibraryPrefetcher.java',
-    '//base/android/java/src/org/chromium/base/process_launcher/ChildProcessService.java',
-    '//base/android/java/src/org/chromium/base/SysUtils.java']
-
   # TODO: java_sources might not contain all the required java files
   module.srcs.update([gn_utils.label_to_path(source)
-                      for source in gn.java_sources
-                      if source.endswith('.java') and source not in deny_list])
+                      for source in get_non_api_java_sources(gn)
+                      if source.endswith('.java')])
 
 def create_blueprint_for_targets(gn, targets):
   """Generate a blueprint for a list of GN targets."""
@@ -1349,8 +1598,10 @@ def create_blueprint_for_targets(gn, targets):
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
   defaults.target['android'].header_libs = [
-      'media_ndk_headers',
       'jni_headers',
+  ]
+  defaults.target['android'].shared_libs = [
+      'libmediandk'
   ]
   defaults.target['host'].cflags = [
       # -DANDROID is added by default but target.defines contain -DANDROID if
@@ -1368,7 +1619,9 @@ def create_blueprint_for_targets(gn, targets):
   for target in targets:
     create_modules_from_target(blueprint, gn, target)
 
-  create_java_module(blueprint, gn)
+  java_api_module = create_java_api_module(blueprint, gn)
+  java_module = create_java_module(blueprint, gn)
+  java_module.libs.add(java_api_module.name)
   for module in blueprint.modules.values():
     if 'cronet_jni_registration' in module.name:
       update_jni_registration_module(module, gn)
@@ -1431,7 +1684,7 @@ def main():
     log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
   targets = args.targets or default_targets
-  gn = gn_utils.GnParser()
+  gn = gn_utils.GnParser(builtin_deps)
   for desc_file in args.desc:
     with open(desc_file) as f:
       desc = json.load(f)

@@ -1232,16 +1232,19 @@ public class ConnectivityManager {
     }
 
     /**
-     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
      * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
-     * Specify that the traffic for this user should by follow the default rules.
+     * Specify that the traffic for this user should by follow the default rules:
+     * applications in the profile designated by the UserHandle behave like any
+     * other application and use the system default network as their default
+     * network. Compare other PROFILE_NETWORK_PREFERENCE_* settings.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int PROFILE_NETWORK_PREFERENCE_DEFAULT = 0;
 
     /**
-     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
      * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
      * Specify that the traffic for this user should by default go on a network with
      * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE}, and on the system default network
@@ -1252,15 +1255,37 @@ public class ConnectivityManager {
     public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE = 1;
 
     /**
-     * Preference for {@link ProfileNetworkPreference#setPreference(int)}.
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
      * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
      * Specify that the traffic for this user should by default go on a network with
      * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE} and if no such network is available
-     * should not go on the system default network
+     * should not have a default network at all (that is, network accesses that
+     * do not specify a network explicitly terminate with an error), even if there
+     * is a system default network available to apps outside this preference.
+     * The apps can still use a non-enterprise network if they request it explicitly
+     * provided that specific network doesn't require any specific permission they
+     * do not hold.
      * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK = 2;
+
+    /**
+     * Preference for {@link ProfileNetworkPreference.Builder#setPreference(int)}.
+     * See {@link #setProfileNetworkPreferences(UserHandle, List, Executor, Runnable)}
+     * Specify that the traffic for this user should by default go on a network with
+     * {@link NetworkCapabilities#NET_CAPABILITY_ENTERPRISE}.
+     * If there is no such network, the apps will have no default
+     * network at all, even if there are available non-enterprise networks on the
+     * device (that is, network accesses that do not specify a network explicitly
+     * terminate with an error). Additionally, the designated apps should be
+     * blocked from using any non-enterprise network even if they specify it
+     * explicitly, unless they hold specific privilege overriding this (see
+     * {@link android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS}).
+     * @hide
+     */
+    @SystemApi(client = MODULE_LIBRARIES)
+    public static final int PROFILE_NETWORK_PREFERENCE_ENTERPRISE_BLOCKING = 3;
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -1378,6 +1403,17 @@ public class ConnectivityManager {
         }
     }
 
+    private static UidRange[] getUidRangeArray(@NonNull Collection<Range<Integer>> ranges) {
+        Objects.requireNonNull(ranges);
+        final UidRange[] rangesArray = new UidRange[ranges.size()];
+        int index = 0;
+        for (Range<Integer> range : ranges) {
+            rangesArray[index++] = new UidRange(range.getLower(), range.getUpper());
+        }
+
+        return rangesArray;
+    }
+
     /**
      * Adds or removes a requirement for given UID ranges to use the VPN.
      *
@@ -1396,6 +1432,12 @@ public class ConnectivityManager {
      * returns. Apps will be notified about any changes that apply to them via
      * {@link NetworkCallback#onBlockedStatusChanged} callbacks called after the changes take
      * effect.
+     * <p>
+     * This method will block the specified UIDs from accessing non-VPN networks, but does not
+     * affect what the UIDs get as their default network.
+     * Compare {@link #setVpnDefaultForUids(String, Collection)}, which declares that the UIDs
+     * should only have a VPN as their default network, but does not block them from accessing other
+     * networks if they request them explicitly with the {@link Network} API.
      * <p>
      * This method should be called only by the VPN code.
      *
@@ -1416,13 +1458,44 @@ public class ConnectivityManager {
         // This method is not necessarily expected to be used outside the system server, so
         // parceling may not be necessary, but it could be used out-of-process, e.g., by the network
         // stack process, or by tests.
-        UidRange[] rangesArray = new UidRange[ranges.size()];
-        int index = 0;
-        for (Range<Integer> range : ranges) {
-            rangesArray[index++] = new UidRange(range.getLower(), range.getUpper());
-        }
+        final UidRange[] rangesArray = getUidRangeArray(ranges);
         try {
             mService.setRequireVpnForUids(requireVpn, rangesArray);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Inform the system that this VPN session should manage the passed UIDs.
+     *
+     * A VPN with the specified session ID may call this method to inform the system that the UIDs
+     * in the specified range are subject to a VPN.
+     * When this is called, the system will only choose a VPN for the default network of the UIDs in
+     * the specified ranges.
+     *
+     * This method declares that the UIDs in the range will only have a VPN for their default
+     * network, but does not block the UIDs from accessing other networks (permissions allowing) by
+     * explicitly requesting it with the {@link Network} API.
+     * Compare {@link #setRequireVpnForUids(boolean, Collection)}, which does not affect what
+     * network the UIDs get as default, but will block them from accessing non-VPN networks.
+     *
+     * @param session The VPN session which manages the passed UIDs.
+     * @param ranges The uid ranges which will treat VPN as their only default network.
+     *
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    @SystemApi(client = MODULE_LIBRARIES)
+    public void setVpnDefaultForUids(@NonNull String session,
+            @NonNull Collection<Range<Integer>> ranges) {
+        Objects.requireNonNull(ranges);
+        final UidRange[] rangesArray = getUidRangeArray(ranges);
+        try {
+            mService.setVpnNetworkPreference(session, rangesArray);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -5988,6 +6061,15 @@ public class ConnectivityManager {
         Objects.requireNonNull(uids);
         try {
             mService.replaceFirewallChain(chain, uids);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /** @hide */
+    public IBinder getCompanionDeviceManagerProxyService() {
+        try {
+            return mService.getCompanionDeviceManagerProxyService();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

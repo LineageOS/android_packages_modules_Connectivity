@@ -139,7 +139,7 @@ public class BpfNetMaps {
     @VisibleForTesting public static final long OEM_DENY_1_MATCH = (1 << 9);
     @VisibleForTesting public static final long OEM_DENY_2_MATCH = (1 << 10);
     @VisibleForTesting public static final long OEM_DENY_3_MATCH = (1 << 11);
-    // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/bpf_shared.h)
+    // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/netd.h)
 
     private static final List<Pair<Integer, String>> PERMISSION_LIST = Arrays.asList(
             Pair.create(PERMISSION_INTERNET, "PERMISSION_INTERNET"),
@@ -279,9 +279,10 @@ public class BpfNetMaps {
     private static synchronized void ensureInitialized(final Context context) {
         if (sInitialized) return;
         if (sEnableJavaBpfMap == null) {
-            sEnableJavaBpfMap = DeviceConfigUtils.isFeatureEnabled(context,
+            sEnableJavaBpfMap = SdkLevel.isAtLeastU() ||
+                    DeviceConfigUtils.isFeatureEnabled(context,
                     DeviceConfig.NAMESPACE_TETHERING, BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP,
-                    false /* defaultValue */) || SdkLevel.isAtLeastU();
+                    false /* defaultValue */);
         }
         Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
 

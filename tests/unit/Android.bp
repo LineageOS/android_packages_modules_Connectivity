@@ -74,6 +74,7 @@ filegroup {
         "java/com/android/server/connectivity/VpnTest.java",
         "java/com/android/server/net/ipmemorystore/*.java",
         "java/com/android/server/connectivity/mdns/**/*.java",
+        "java/com/android/server/connectivity/mdns/**/*.kt",
     ]
 }
 

@@ -35,7 +35,7 @@
 
 #include "bpf_helpers.h"
 #include "bpf_net_helpers.h"
-#include "bpf_shared.h"
+#include "clatd.h"
 #include "clat_mark.h"
 
 // IP flags. (from kernel's include/net/ip.h)

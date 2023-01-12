@@ -242,6 +242,8 @@ import android.util.Pair;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
+import androidx.annotation.RequiresApi;
+
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -262,6 +264,10 @@ import com.android.net.module.util.PerUidCounter;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.TcUtils;
 import com.android.net.module.util.netlink.InetDiagMessage;
+import com.android.networkstack.apishim.BroadcastOptionsShimImpl;
+import com.android.networkstack.apishim.ConstantsShim;
+import com.android.networkstack.apishim.common.BroadcastOptionsShim;
+import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.connectivity.AutodestructReference;
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
@@ -279,12 +285,15 @@ import com.android.server.connectivity.NetworkDiagnostics;
 import com.android.server.connectivity.NetworkNotificationManager;
 import com.android.server.connectivity.NetworkNotificationManager.NotificationType;
 import com.android.server.connectivity.NetworkOffer;
+import com.android.server.connectivity.NetworkPreferenceList;
 import com.android.server.connectivity.NetworkRanker;
 import com.android.server.connectivity.PermissionMonitor;
-import com.android.server.connectivity.ProfileNetworkPreferenceList;
+import com.android.server.connectivity.ProfileNetworkPreferenceInfo;
 import com.android.server.connectivity.ProxyTracker;
 import com.android.server.connectivity.QosCallbackTracker;
 import com.android.server.connectivity.UidRangeUtils;
+import com.android.server.connectivity.VpnNetworkPreferenceInfo;
+import com.android.server.connectivity.wear.CompanionDeviceManagerProxyService;
 
 import libcore.io.IoUtils;
 
@@ -369,6 +378,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int DEFAULT_LINGER_DELAY_MS = 30_000;
     private static final int DEFAULT_NASCENT_DELAY_MS = 5_000;
 
+    // Delimiter used when creating the broadcast delivery group for sending
+    // CONNECTIVITY_ACTION broadcast.
+    private static final char DELIVERY_GROUP_KEY_DELIMITER = ';';
+
     // The maximum value for the blocking validation result, in milliseconds.
     public static final int MAX_VALIDATION_IGNORE_AFTER_ROAM_TIME_MS = 10000;
 
@@ -434,6 +447,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      */
     @GuardedBy("mTNSLock")
     private TestNetworkService mTNS;
+    private final CompanionDeviceManagerProxyService mCdmps;
 
     private final Object mTNSLock = new Object();
 
@@ -736,6 +750,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * then the stack will now consider it to have been determined bad.
      */
     private static final int EVENT_INITIAL_EVALUATION_TIMEOUT = 57;
+
+    /**
+     * Used internally when the user does not want the network from captive portal app.
+     * obj = Network
+     */
+    private static final int EVENT_USER_DOES_NOT_WANT = 58;
+
+    /**
+     * Event to set VPN as preferred network for specific apps.
+     * obj = VpnNetworkPreferenceInfo
+     */
+    private static final int EVENT_SET_VPN_NETWORK_PREFERENCE = 59;
 
     /**
      * Argument for {@link #EVENT_PROVISIONING_NOTIFICATION} to indicate that the notification
@@ -1395,6 +1421,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         + ", ingress=true, PRIO_POLICE, ETH_P_ALL) failure: ", e);
             }
         }
+
+        /**
+         * Wraps {@link BroadcastOptionsShimImpl#newInstance(BroadcastOptions)}
+         */
+        // TODO: when available in all active branches:
+        //  @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        @RequiresApi(Build.VERSION_CODES.CUR_DEVELOPMENT)
+        public BroadcastOptionsShim makeBroadcastOptionsShim(BroadcastOptions options) {
+            return BroadcastOptionsShimImpl.newInstance(options);
+        }
     }
 
     public ConnectivityService(Context context) {
@@ -1579,6 +1615,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
                 mContext);
+
+        if (SdkLevel.isAtLeastT()) {
+            mCdmps = new CompanionDeviceManagerProxyService(context);
+        } else {
+            mCdmps = null;
+        }
     }
 
     /**
@@ -1608,6 +1650,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private NetworkRequest createDefaultRequest() {
         return createDefaultInternetRequestForTransport(
                 TYPE_NONE, NetworkRequest.Type.REQUEST);
+    }
+
+    private NetworkRequest createVpnRequest() {
+        final NetworkCapabilities netCap = new NetworkCapabilities.Builder()
+                .withoutDefaultCapabilities()
+                .addTransportType(TRANSPORT_VPN)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .addCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .build();
+        netCap.setRequestorUidAndPackageName(Process.myUid(), mContext.getPackageName());
+        return createNetworkRequest(NetworkRequest.Type.REQUEST, netCap);
     }
 
     private NetworkRequest createDefaultInternetRequestForTransport(
@@ -3004,6 +3057,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         ConnectivityManager.EXTRA_NETWORK_INFO);
                 final BroadcastOptions opts = BroadcastOptions.makeBasic();
                 opts.setMaxManifestReceiverApiLevel(Build.VERSION_CODES.M);
+                applyMostRecentPolicyForConnectivityAction(opts, ni);
                 options = opts.toBundle();
                 intent.addFlags(Intent.FLAG_RECEIVER_VISIBLE_TO_INSTANT_APPS);
             }
@@ -3013,6 +3067,32 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 Binder.restoreCallingIdentity(ident);
             }
         }
+    }
+
+    private void applyMostRecentPolicyForConnectivityAction(BroadcastOptions options,
+            NetworkInfo info) {
+        // Delivery group policy APIs are only available on U+.
+        if (!SdkLevel.isAtLeastU()) return;
+
+        final BroadcastOptionsShim optsShim = mDeps.makeBroadcastOptionsShim(options);
+        try {
+            // This allows us to discard older broadcasts still waiting to be delivered
+            // which have the same namespace and key.
+            optsShim.setDeliveryGroupPolicy(ConstantsShim.DELIVERY_GROUP_POLICY_MOST_RECENT);
+            optsShim.setDeliveryGroupMatchingKey(ConnectivityManager.CONNECTIVITY_ACTION,
+                    createDeliveryGroupKeyForConnectivityAction(info));
+        } catch (UnsupportedApiLevelException e) {
+            Log.wtf(TAG, "Using unsupported API" + e);
+        }
+    }
+
+    @VisibleForTesting
+    static String createDeliveryGroupKeyForConnectivityAction(NetworkInfo info) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(info.getType()).append(DELIVERY_GROUP_KEY_DELIMITER);
+        sb.append(info.getSubtype()).append(DELIVERY_GROUP_KEY_DELIMITER);
+        sb.append(info.getExtraInfo());
+        return sb.toString();
     }
 
     /**
@@ -3110,22 +3190,23 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void updateMtu(@NonNull LinkProperties newLp, @Nullable LinkProperties oldLp) {
         final String iface = newLp.getInterfaceName();
         final int mtu = newLp.getMtu();
-        if (oldLp == null && mtu == 0) {
+        if (mtu == 0) {
             // Silently ignore unset MTU value.
             return;
         }
-        if (oldLp != null && newLp.isIdenticalMtu(oldLp)) {
-            if (VDBG) log("identical MTU - not setting");
+        if (oldLp != null && newLp.isIdenticalMtu(oldLp)
+                && TextUtils.equals(oldLp.getInterfaceName(), iface)) {
+            if (VDBG) log("identical MTU and iface - not setting");
             return;
         }
-        if (!LinkProperties.isValidMtu(mtu, newLp.hasGlobalIpv6Address())) {
-            if (mtu != 0) loge("Unexpected mtu value: " + mtu + ", " + iface);
+        // Cannot set MTU without interface name
+        if (TextUtils.isEmpty(iface)) {
+            if (VDBG) log("Setting MTU size with null iface.");
             return;
         }
 
-        // Cannot set MTU without interface name
-        if (TextUtils.isEmpty(iface)) {
-            loge("Setting MTU size with null iface.");
+        if (!LinkProperties.isValidMtu(mtu, newLp.hasGlobalIpv6Address())) {
+            loge("Unexpected mtu value: " + mtu + ", " + iface);
             return;
         }
 
@@ -3407,7 +3488,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (!mProfileNetworkPreferences.isEmpty()) {
             pw.println("Profile preferences:");
             pw.increaseIndent();
-            pw.println(mProfileNetworkPreferences.preferences);
+            pw.println(mProfileNetworkPreferences);
             pw.decreaseIndent();
         }
         if (!mOemNetworkPreferences.isEmpty()) {
@@ -4332,6 +4413,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mNetworkForNetId.remove(nai.network.getNetId());
         }
         propagateUnderlyingNetworkCapabilities(nai.network);
+        // Update allowed network lists in netd. This should be called after removing nai
+        // from mNetworkAgentInfos.
+        updateProfileAllowedNetworks();
         // Remove all previously satisfied requests.
         for (int i = 0; i < nai.numNetworkRequests(); i++) {
             final NetworkRequest request = nai.requestAt(i);
@@ -4766,6 +4850,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
             }
         }
+
         nri.mPerUidCounter.decrementCount(nri.mUid);
         mNetworkRequestInfoLogs.log("RELEASE " + nri);
         checkNrisConsistency(nri);
@@ -5065,6 +5150,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public void appResponse(final int response) {
             if (response == CaptivePortal.APP_RETURN_WANTED_AS_IS) {
                 enforceSettingsPermission();
+            } else if (response == CaptivePortal.APP_RETURN_UNWANTED) {
+                mHandler.sendMessage(mHandler.obtainMessage(EVENT_USER_DOES_NOT_WANT, mNetwork));
+                // Since the network will be disconnected, skip notifying NetworkMonitor
+                return;
             }
 
             final NetworkMonitorManager nm = getNetworkMonitorManager(mNetwork);
@@ -5488,10 +5577,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 }
                 case EVENT_SET_PROFILE_NETWORK_PREFERENCE: {
-                    final Pair<List<ProfileNetworkPreferenceList.Preference>,
-                            IOnCompleteListener> arg =
-                            (Pair<List<ProfileNetworkPreferenceList.Preference>,
-                                    IOnCompleteListener>) msg.obj;
+                    final Pair<List<ProfileNetworkPreferenceInfo>, IOnCompleteListener> arg =
+                            (Pair<List<ProfileNetworkPreferenceInfo>, IOnCompleteListener>) msg.obj;
                     handleSetProfileNetworkPreference(arg.first, arg.second);
                     break;
                 }
@@ -5507,6 +5594,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 case EVENT_INGRESS_RATE_LIMIT_CHANGED:
                     handleIngressRateLimitChanged();
+                    break;
+                case EVENT_USER_DOES_NOT_WANT:
+                    final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork((Network) msg.obj);
+                    if (nai == null) break;
+                    nai.onPreventAutomaticReconnect();
+                    nai.disconnect();
+                    break;
+                case EVENT_SET_VPN_NETWORK_PREFERENCE:
+                    handleSetVpnNetworkPreference((VpnNetworkPreferenceInfo) msg.obj);
                     break;
             }
         }
@@ -6121,12 +6217,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (mOemNetworkPreferences.getNetworkPreferences().size() > 0) {
             handleSetOemNetworkPreference(mOemNetworkPreferences, null);
         }
+        if (!mProfileNetworkPreferences.isEmpty()) {
+            updateProfileAllowedNetworks();
+        }
     }
 
     private void onUserRemoved(@NonNull final UserHandle user) {
         // If there was a network preference for this user, remove it.
         handleSetProfileNetworkPreference(
-                List.of(new ProfileNetworkPreferenceList.Preference(user, null, true)),
+                List.of(new ProfileNetworkPreferenceInfo(user, null, true,
+                        false /* blockingNonEnterprise */)),
                 null /* listener */);
         if (mOemNetworkPreferences.getNetworkPreferences().size() > 0) {
             handleSetOemNetworkPreference(mOemNetworkPreferences, null);
@@ -7096,8 +7196,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // Current per-profile network preferences. This object follows the same threading rules as
     // the OEM network preferences above.
     @NonNull
-    private ProfileNetworkPreferenceList mProfileNetworkPreferences =
-            new ProfileNetworkPreferenceList();
+    private NetworkPreferenceList<UserHandle, ProfileNetworkPreferenceInfo>
+            mProfileNetworkPreferences = new NetworkPreferenceList<>();
+
+    // Current VPN network preferences. This object follows the same threading rules as the OEM
+    // network preferences above.
+    @NonNull
+    private NetworkPreferenceList<String, VpnNetworkPreferenceInfo>
+            mVpnNetworkPreferences = new NetworkPreferenceList<>();
 
     // A set of UIDs that should use mobile data preferentially if available. This object follows
     // the same threading rules as the OEM network preferences above.
@@ -8637,6 +8743,73 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    /**
+     * Collect restricted uid ranges for the given network and UserHandle, these uids
+     * are not restricted for matched enterprise networks but being restricted for non-matched
+     * enterprise networks and non-enterprise networks.
+     */
+    @NonNull
+    private ArraySet<UidRange> getRestrictedUidRangesForEnterpriseBlocking(
+            @NonNull NetworkAgentInfo nai, @NonNull UserHandle user) {
+        final ArraySet<UidRange> restrictedUidRanges = new ArraySet<>();
+        for (final ProfileNetworkPreferenceInfo pref : mProfileNetworkPreferences) {
+            if (!pref.user.equals(user) || !pref.blockingNonEnterprise) continue;
+
+            if (nai.networkCapabilities.hasCapability(NET_CAPABILITY_ENTERPRISE)) {
+                // The NC is built from a `ProfileNetworkPreference` which has only one
+                // enterprise ID, so it's guaranteed to have exactly one.
+                final int prefId = pref.capabilities.getEnterpriseIds()[0];
+                if (nai.networkCapabilities.hasEnterpriseId(prefId)) {
+                    continue;
+                }
+            }
+
+            if (UidRangeUtils.doesRangeSetOverlap(restrictedUidRanges,
+                    pref.capabilities.getUidRanges())) {
+                throw new IllegalArgumentException(
+                        "Overlapping uid range in preference: " + pref);
+            }
+            restrictedUidRanges.addAll(pref.capabilities.getUidRanges());
+        }
+        return restrictedUidRanges;
+    }
+
+    private void updateProfileAllowedNetworks() {
+        ensureRunningOnConnectivityServiceThread();
+        final ArrayList<NativeUidRangeConfig> configs = new ArrayList<>();
+        final List<UserHandle> users = mContext.getSystemService(UserManager.class)
+                        .getUserHandles(true /* excludeDying */);
+        if (users.isEmpty()) {
+            throw new IllegalStateException("No user is available");
+        }
+
+        for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
+            ArraySet<UidRange> allowedUidRanges = new ArraySet<>();
+            for (final UserHandle user : users) {
+                final ArraySet<UidRange> restrictedUidRanges =
+                        getRestrictedUidRangesForEnterpriseBlocking(nai, user);
+                allowedUidRanges.addAll(UidRangeUtils.removeRangeSetFromUidRange(
+                        UidRange.createForUser(user), restrictedUidRanges));
+            }
+
+            final UidRangeParcel[] rangesParcel = toUidRangeStableParcels(allowedUidRanges);
+            configs.add(new NativeUidRangeConfig(
+                    nai.network.netId, rangesParcel, 0 /* subPriority */));
+        }
+
+        // The netd API replaces the previous configs with the current configs.
+        // Thus, for network disconnection or preference removal, no need to
+        // unset previous config. Instead, collecting all currently needed
+        // configs and issue to netd.
+        try {
+            mNetd.setNetworkAllowlist(configs.toArray(new NativeUidRangeConfig[0]));
+        } catch (ServiceSpecificException e) {
+            // Has the interface disappeared since the network was built?
+        } catch (RemoteException e) {
+            // Netd died. This usually causes a runtime restart anyway.
+        }
+    }
+
     private void makeDefaultNetwork(@Nullable final NetworkAgentInfo newDefaultNetwork) {
         try {
             if (null != newDefaultNetwork) {
@@ -9269,6 +9442,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             networkAgent.setCreated();
             networkAgent.onNetworkCreated();
             updateAllowedUids(networkAgent, null, networkAgent.networkCapabilities);
+            updateProfileAllowedNetworks();
         }
 
         if (!networkAgent.everConnected() && state == NetworkInfo.State.CONNECTED) {
@@ -10800,11 +10974,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + "or the device owner must be set. ");
         }
 
-        final List<ProfileNetworkPreferenceList.Preference> preferenceList = new ArrayList<>();
+        final List<ProfileNetworkPreferenceInfo> preferenceList = new ArrayList<>();
         boolean hasDefaultPreference = false;
         for (final ProfileNetworkPreference preference : preferences) {
             final NetworkCapabilities nc;
             boolean allowFallback = true;
+            boolean blockingNonEnterprise = false;
             switch (preference.getPreference()) {
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_DEFAULT:
                     nc = null;
@@ -10814,6 +10989,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                                 "Invalid enterprise identifier in setProfileNetworkPreferences");
                     }
                     break;
+                case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_BLOCKING:
+                    blockingNonEnterprise = true;
+                    // continue to process the enterprise preference.
                 case ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK:
                     allowFallback = false;
                     // continue to process the enterprise preference.
@@ -10847,8 +11025,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     throw new IllegalArgumentException(
                             "Invalid preference in setProfileNetworkPreferences");
             }
-            preferenceList.add(new ProfileNetworkPreferenceList.Preference(
-                    profile, nc, allowFallback));
+            preferenceList.add(new ProfileNetworkPreferenceInfo(
+                    profile, nc, allowFallback, blockingNonEnterprise));
             if (hasDefaultPreference && preferenceList.size() > 1) {
                 throw new IllegalArgumentException(
                         "Default profile preference should not be set along with other preference");
@@ -10897,9 +11075,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private ArraySet<NetworkRequestInfo> createNrisFromProfileNetworkPreferences(
-            @NonNull final ProfileNetworkPreferenceList prefs) {
+            @NonNull final NetworkPreferenceList<UserHandle, ProfileNetworkPreferenceInfo> prefs) {
         final ArraySet<NetworkRequestInfo> result = new ArraySet<>();
-        for (final ProfileNetworkPreferenceList.Preference pref : prefs.preferences) {
+        for (final ProfileNetworkPreferenceInfo pref : prefs) {
             // The NRI for a user should contain the request for capabilities.
             // If fallback to default network is needed then NRI should include
             // the request for the default network. Create an image of it to
@@ -10929,12 +11107,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
      *
      */
     private boolean isRangeAlreadyInPreferenceList(
-            @NonNull List<ProfileNetworkPreferenceList.Preference> preferenceList,
+            @NonNull List<ProfileNetworkPreferenceInfo> preferenceList,
             @NonNull Set<UidRange> uidRangeSet) {
         if (uidRangeSet.size() == 0 || preferenceList.size() == 0) {
             return false;
         }
-        for (ProfileNetworkPreferenceList.Preference pref : preferenceList) {
+        for (ProfileNetworkPreferenceInfo pref : preferenceList) {
             if (UidRangeUtils.doesRangeSetOverlap(
                     UidRange.fromIntRanges(pref.capabilities.getUids()), uidRangeSet)) {
                 return true;
@@ -10944,7 +11122,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void handleSetProfileNetworkPreference(
-            @NonNull final List<ProfileNetworkPreferenceList.Preference> preferenceList,
+            @NonNull final List<ProfileNetworkPreferenceInfo> preferenceList,
             @Nullable final IOnCompleteListener listener) {
         /*
          * handleSetProfileNetworkPreference is always called for single user.
@@ -10953,15 +11131,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * Clear all the existing preferences for the user before applying new preferences.
          *
          */
-        mProfileNetworkPreferences = mProfileNetworkPreferences.withoutUser(
-                preferenceList.get(0).user);
-        for (final ProfileNetworkPreferenceList.Preference preference : preferenceList) {
+        mProfileNetworkPreferences = mProfileNetworkPreferences.minus(preferenceList.get(0).user);
+        for (final ProfileNetworkPreferenceInfo preference : preferenceList) {
             mProfileNetworkPreferences = mProfileNetworkPreferences.plus(preference);
         }
 
         removeDefaultNetworkRequestsForPreference(PREFERENCE_ORDER_PROFILE);
         addPerAppDefaultNetworkRequests(
                 createNrisFromProfileNetworkPreferences(mProfileNetworkPreferences));
+        updateProfileAllowedNetworks();
 
         // Finally, rematch.
         rematchAllNetworksAndRequests();
@@ -11088,6 +11266,60 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_OEM_NETWORK_PREFERENCE,
                 new Pair<>(preference, listener)));
+    }
+
+    /**
+     * Sets the specified UIDs to get/receive the VPN as the only default network.
+     *
+     * Calling this will overwrite the existing network preference for this session, and the
+     * specified UIDs won't get any default network when no VPN is connected.
+     *
+     * @param session The VPN session which manages the passed UIDs.
+     * @param ranges The uid ranges which will treat VPN as the only preferred network. Clear the
+     *               setting for this session if the array is empty. Null is not allowed, the
+     *               method will use {@link Objects#requireNonNull(Object)} to check this variable.
+     * @hide
+     */
+    @Override
+    public void setVpnNetworkPreference(String session, UidRange[] ranges) {
+        Objects.requireNonNull(ranges);
+        enforceNetworkStackOrSettingsPermission();
+        final UidRange[] sortedRanges = UidRangeUtils.sortRangesByStartUid(ranges);
+        if (UidRangeUtils.sortedRangesContainOverlap(sortedRanges)) {
+            throw new IllegalArgumentException(
+                    "setVpnNetworkPreference: Passed UID ranges overlap");
+        }
+
+        mHandler.sendMessage(mHandler.obtainMessage(EVENT_SET_VPN_NETWORK_PREFERENCE,
+                new VpnNetworkPreferenceInfo(session,
+                        new ArraySet<UidRange>(Arrays.asList(ranges)))));
+    }
+
+    private void handleSetVpnNetworkPreference(VpnNetworkPreferenceInfo preferenceInfo) {
+        Log.d(TAG, "handleSetVpnNetworkPreference: preferenceInfo = " + preferenceInfo);
+
+        mVpnNetworkPreferences = mVpnNetworkPreferences.minus(preferenceInfo.getKey());
+        mVpnNetworkPreferences = mVpnNetworkPreferences.plus(preferenceInfo);
+
+        removeDefaultNetworkRequestsForPreference(PREFERENCE_ORDER_VPN);
+        addPerAppDefaultNetworkRequests(createNrisForVpnNetworkPreference(mVpnNetworkPreferences));
+        // Finally, rematch.
+        rematchAllNetworksAndRequests();
+    }
+
+    private ArraySet<NetworkRequestInfo> createNrisForVpnNetworkPreference(
+            @NonNull NetworkPreferenceList<String, VpnNetworkPreferenceInfo> preferenceList) {
+        final ArraySet<NetworkRequestInfo> nris = new ArraySet<>();
+        for (VpnNetworkPreferenceInfo preferenceInfo : preferenceList) {
+            final List<NetworkRequest> requests = new ArrayList<>();
+            // Request VPN only, so other networks won't be the fallback options when VPN is not
+            // connected temporarily.
+            requests.add(createVpnRequest());
+            final Set<UidRange> uidRanges = new ArraySet(preferenceInfo.getUidRangesNoCopy());
+            setNetworkRequestUids(requests, uidRanges);
+            nris.add(new NetworkRequestInfo(Process.myUid(), requests, PREFERENCE_ORDER_VPN));
+        }
+        return nris;
     }
 
     /**
@@ -11477,5 +11709,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         enforceNetworkStackOrSettingsPermission();
 
         mBpfNetMaps.replaceUidChain(chain, uids);
+    }
+
+    @Override
+    public IBinder getCompanionDeviceManagerProxyService() {
+        enforceNetworkStackPermission(mContext);
+        return mCdmps;
     }
 }

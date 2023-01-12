@@ -50,7 +50,8 @@ java_library {
         "framework-configinfrastructure",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
-        "framework-tethering",
+        // TODO: use framework-tethering-pre-jarjar when it is separated from framework-tethering
+        "framework-tethering.impl",
         "service-connectivity-pre-jarjar",
         "service-nearby-pre-jarjar",
         "ServiceConnectivityResources",

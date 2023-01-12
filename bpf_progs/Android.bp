@@ -54,7 +54,6 @@ cc_library_headers {
         "//packages/modules/Connectivity/tests/native/utilities",
         "//packages/modules/Connectivity/service-t/native/libs/libnetworkstats",
         "//packages/modules/Connectivity/tests/unit/jni",
-        "//system/netd/tests",
     ],
 }
 

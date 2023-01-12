@@ -32,14 +32,14 @@ import java.net.SocketAddress;
  */
 public class MdnsReplySender {
     @NonNull
-    private final MulticastSocket mSocket;
+    private final MdnsInterfaceSocket mSocket;
     @NonNull
     private final Looper mLooper;
     @NonNull
     private final byte[] mPacketCreationBuffer;
 
     public MdnsReplySender(@NonNull Looper looper,
-            @NonNull MulticastSocket socket, @NonNull byte[] packetCreationBuffer) {
+            @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer) {
         mLooper = looper;
         mSocket = socket;
         mPacketCreationBuffer = packetCreationBuffer;
@@ -67,7 +67,8 @@ public class MdnsReplySender {
         writer.writeUInt16(packet.additionalRecords.size()); // additional records count
 
         for (MdnsRecord record : packet.questions) {
-            record.write(writer, 0L);
+            // Questions do not have TTL or data
+            record.writeHeaderFields(writer);
         }
         for (MdnsRecord record : packet.answers) {
             record.write(writer, 0L);

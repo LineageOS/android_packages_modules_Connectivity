@@ -123,6 +123,13 @@ public class TetheringConfiguration {
      */
     public static final String TETHER_FORCE_USB_FUNCTIONS =
             "tether_force_usb_functions";
+
+    /**
+     * Experiment flag to enable TETHERING_WEAR.
+     */
+    public static final String TETHER_ENABLE_WEAR_TETHERING =
+            "tether_enable_wear_tethering";
+
     /**
      * Default value that used to periodic polls tether offload stats from tethering offload HAL
      * to make the data warnings work.
@@ -157,6 +164,8 @@ public class TetheringConfiguration {
     private final boolean mEnableBpfOffload;
     private final boolean mEnableWifiP2pDedicatedIp;
     private final int mP2pLeasesSubnetPrefixLength;
+
+    private final boolean mEnableWearTethering;
 
     private final int mUsbTetheringFunction;
     protected final ContentResolver mContentResolver;
@@ -233,6 +242,8 @@ public class TetheringConfiguration {
                 false /* defaultValue */);
 
         mP2pLeasesSubnetPrefixLength = getP2pLeasesSubnetPrefixLengthFromRes(res, configLog);
+
+        mEnableWearTethering = shouldEnableWearTethering(ctx);
 
         configLog.log(toString());
     }
@@ -317,6 +328,11 @@ public class TetheringConfiguration {
         return mP2pLeasesSubnetPrefixLength;
     }
 
+    /** Returns true if wearable device tethering is enabled. */
+    public boolean isWearTetheringEnabled() {
+        return mEnableWearTethering;
+    }
+
     /** Does the dumping.*/
     public void dump(PrintWriter pw) {
         pw.print("activeDataSubId: ");
@@ -362,6 +378,9 @@ public class TetheringConfiguration {
         pw.print("p2pLeasesSubnetPrefixLength: ");
         pw.println(mP2pLeasesSubnetPrefixLength);
 
+        pw.print("enableWearTethering: ");
+        pw.println(mEnableWearTethering);
+
         pw.print("mUsbTetheringFunction: ");
         pw.println(isUsingNcm() ? "NCM" : "RNDIS");
     }
@@ -387,6 +406,7 @@ public class TetheringConfiguration {
                 isCarrierConfigAffirmsEntitlementCheckRequired));
         sj.add(String.format("enableBpfOffload:%s", mEnableBpfOffload));
         sj.add(String.format("enableLegacyDhcpServer:%s", mEnableLegacyDhcpServer));
+        sj.add(String.format("enableWearTethering:%s", mEnableWearTethering));
         return String.format("TetheringConfiguration{%s}", sj.toString());
     }
 
@@ -555,6 +575,11 @@ public class TetheringConfiguration {
                 res, R.bool.config_tether_enable_legacy_dhcp_server, false /** defaultValue */)
                 || getDeviceConfigBoolean(
                 TETHER_ENABLE_LEGACY_DHCP_SERVER, false /** defaultValue */);
+    }
+
+    private boolean shouldEnableWearTethering(Context context) {
+        return SdkLevel.isAtLeastT()
+            && isTetheringFeatureEnabled(context, TETHER_ENABLE_WEAR_TETHERING);
     }
 
     private boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {

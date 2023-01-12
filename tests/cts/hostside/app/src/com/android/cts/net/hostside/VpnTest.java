@@ -97,6 +97,7 @@ import android.system.StructPollfd;
 import android.telephony.TelephonyManager;
 import android.test.MoreAsserts;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.Range;
 
@@ -108,6 +109,7 @@ import com.android.net.module.util.PacketBuilder;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.RecorderCallback;
+import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestableNetworkCallback;
 
 import org.junit.After;
@@ -136,6 +138,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -839,8 +842,13 @@ public class VpnTest {
         callback.eventuallyExpect(RecorderCallback.CallbackEntry.NETWORK_CAPS_UPDATED,
                 NETWORK_CALLBACK_TIMEOUT_MS,
                 entry -> (Objects.equals(expectUnderlyingNetworks,
-                        ((RecorderCallback.CallbackEntry.CapabilitiesChanged) entry)
-                                .getCaps().getUnderlyingNetworks())));
+                        entry.getCaps().getUnderlyingNetworks())));
+    }
+
+    private void expectVpnNetwork(TestableNetworkCallback callback) {
+        callback.eventuallyExpect(RecorderCallback.CallbackEntry.NETWORK_CAPS_UPDATED,
+                NETWORK_CALLBACK_TIMEOUT_MS,
+                entry -> entry.getCaps().hasTransport(TRANSPORT_VPN));
     }
 
     @Test @IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
@@ -1622,7 +1630,7 @@ public class VpnTest {
                 mCM.registerDefaultNetworkCallbackForUid(remoteUid, remoteUidCallback,
                         new Handler(Looper.getMainLooper()));
             }, NETWORK_SETTINGS);
-            remoteUidCallback.expectAvailableCallbacks(network);
+            remoteUidCallback.expectAvailableCallbacksWithBlockedReasonNone(network);
 
             // The remote UDP socket can receive packets coming from the TUN interface
             checkBlockIncomingPacket(tunFd, remoteUdpFd, EXPECT_PASS);
@@ -1663,6 +1671,56 @@ public class VpnTest {
                 runWithShellPermissionIdentity(() -> {
                     mCM.setRequireVpnForUids(false /* requireVpn */, lockdownRange);
                 }, NETWORK_SETTINGS);
+            });
+    }
+
+    @Test
+    public void testSetVpnDefaultForUids() throws Exception {
+        assumeTrue(supportedHardware());
+        assumeTrue(SdkLevel.isAtLeastU());
+
+        final Network defaultNetwork = mCM.getActiveNetwork();
+        assertNotNull("There must be a default network", defaultNetwork);
+
+        final TestableNetworkCallback defaultNetworkCallback = new TestableNetworkCallback();
+        final String session = UUID.randomUUID().toString();
+        final int myUid = Process.myUid();
+
+        testAndCleanup(() -> {
+            mCM.registerDefaultNetworkCallback(defaultNetworkCallback);
+            defaultNetworkCallback.expectAvailableCallbacks(defaultNetwork);
+
+            final Range<Integer> myUidRange = new Range<>(myUid, myUid);
+            runWithShellPermissionIdentity(() -> {
+                mCM.setVpnDefaultForUids(session, List.of(myUidRange));
+            }, NETWORK_SETTINGS);
+
+            // The VPN will be the only default network for the app, so it's expected to receive
+            // onLost() callback.
+            defaultNetworkCallback.eventuallyExpect(CallbackEntry.LOST);
+
+            final ArrayList<Network> underlyingNetworks = new ArrayList<>();
+            underlyingNetworks.add(defaultNetwork);
+            startVpn(new String[] {"192.0.2.2/32", "2001:db8:1:2::ffe/128"} /* addresses */,
+                    new String[] {"0.0.0.0/0", "::/0"} /* routes */,
+                    "" /* allowedApplications */, "" /* disallowedApplications */,
+                    null /* proxyInfo */, underlyingNetworks, false /* isAlwaysMetered */);
+
+            expectVpnNetwork(defaultNetworkCallback);
+        }, /* cleanup */ () -> {
+                stopVpn();
+                defaultNetworkCallback.eventuallyExpect(CallbackEntry.LOST);
+            }, /* cleanup */ () -> {
+                runWithShellPermissionIdentity(() -> {
+                    mCM.setVpnDefaultForUids(session, new ArraySet<>());
+                }, NETWORK_SETTINGS);
+                // The default network of the app will be changed back to wifi when the VPN network
+                // preference feature is disabled.
+                defaultNetworkCallback.eventuallyExpect(CallbackEntry.AVAILABLE,
+                        NETWORK_CALLBACK_TIMEOUT_MS,
+                        entry -> defaultNetwork.equals(entry.getNetwork()));
+            }, /* cleanup */ () -> {
+                mCM.unregisterNetworkCallback(defaultNetworkCallback);
             });
     }
 
@@ -1756,7 +1814,7 @@ public class VpnTest {
     }
 
     private class DetailedBlockedStatusCallback extends TestableNetworkCallback {
-        public void expectAvailableCallbacks(Network network) {
+        public void expectAvailableCallbacksWithBlockedReasonNone(Network network) {
             super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
                     BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
         }

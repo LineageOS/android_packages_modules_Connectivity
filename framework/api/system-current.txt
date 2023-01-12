@@ -512,10 +512,11 @@ package android.net {
   }
 
   public final class VpnTransportInfo implements android.os.Parcelable android.net.TransportInfo {
-    ctor public VpnTransportInfo(int, @Nullable String, boolean);
+    ctor public VpnTransportInfo(int, @Nullable String, boolean, boolean);
+    method public boolean areLongLivedTcpConnectionsExpensive();
     method public int describeContents();
-    method public boolean getBypassable();
     method public int getType();
+    method public boolean isBypassable();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.VpnTransportInfo> CREATOR;
   }

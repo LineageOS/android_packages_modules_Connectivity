@@ -40,7 +40,7 @@ import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.SharedLog;
-import com.android.net.module.util.netlink.NetlinkSocket;
+import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.StructNfGenMsg;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
 
@@ -234,7 +234,7 @@ public class OffloadHardwareInterface {
         public NativeHandle createConntrackSocket(final int groups) {
             final FileDescriptor fd;
             try {
-                fd = NetlinkSocket.forProto(OsConstants.NETLINK_NETFILTER);
+                fd = NetlinkUtils.netlinkSocketForProto(OsConstants.NETLINK_NETFILTER);
             } catch (ErrnoException e) {
                 mLog.e("Unable to create conntrack socket " + e);
                 return null;
@@ -342,7 +342,7 @@ public class OffloadHardwareInterface {
         nfh.pack(byteBuffer);
 
         try {
-            NetlinkSocket.sendMessage(handle.getFileDescriptor(), msg, 0 /* offset */, length,
+            NetlinkUtils.sendMessage(handle.getFileDescriptor(), msg, 0 /* offset */, length,
                                       NETLINK_MESSAGE_TIMEOUT_MS);
         } catch (ErrnoException | InterruptedIOException e) {
             mLog.e("Unable to send netfilter message, error: " + e);

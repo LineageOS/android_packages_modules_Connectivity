@@ -2,6 +2,5 @@
 set noparent
 file:platform/packages/modules/Connectivity:master:/OWNERS_core_networking_xts
 
-# Only temporary ownership to improve ethernet code quality (b/236280707)
-# TODO: remove by 12/31/2022
-per-file net/src/android/net/cts/EthernetManagerTest.kt = prohr@google.com #{LAST_RESORT_SUGGESTION}
+# IPsec
+per-file **IpSec* = benedictwong@google.com, nharold@google.com

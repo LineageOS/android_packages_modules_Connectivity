@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import android.net.InetAddresses;
+import android.net.Network;
 
 import com.android.net.module.util.HexDump;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -165,7 +166,8 @@ public class MdnsResponseDecoderTests {
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT));
         responses.clear();
-        int errorCode = decoder.decode(packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED);
+        int errorCode = decoder.decode(
+                packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
         assertEquals(1, responses.size());
     }
@@ -178,7 +180,8 @@ public class MdnsResponseDecoderTests {
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT));
         responses.clear();
-        int errorCode = decoder.decode(packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED);
+        int errorCode = decoder.decode(
+                packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
         assertEquals(2, responses.size());
     }
@@ -237,7 +240,8 @@ public class MdnsResponseDecoderTests {
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
         responses.clear();
-        int errorCode = decoder.decode(packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED);
+        int errorCode = decoder.decode(
+                packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
 
         MdnsResponse response = responses.get(0);
@@ -287,10 +291,13 @@ public class MdnsResponseDecoderTests {
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
         responses.clear();
-        int errorCode = decoder.decode(packet, responses, /* interfaceIndex= */ 10);
+        final Network network = mock(Network.class);
+        int errorCode = decoder.decode(
+                packet, responses, /* interfaceIndex= */ 10, network);
         assertEquals(errorCode, MdnsResponseDecoder.SUCCESS);
         assertEquals(responses.size(), 1);
         assertEquals(responses.get(0).getInterfaceIndex(), 10);
+        assertEquals(network, responses.get(0).getNetwork());
     }
 
     @Test
@@ -306,7 +313,8 @@ public class MdnsResponseDecoderTests {
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
         responses.clear();
-        int errorCode = decoder.decode(packet, responses, /* interfaceIndex= */ 0);
+        int errorCode = decoder.decode(
+                packet, responses, /* interfaceIndex= */ 0, mock(Network.class));
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
 
         // This should emit two records:
@@ -340,7 +348,8 @@ public class MdnsResponseDecoderTests {
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
         responses.clear();
-        int errorCode = decoder.decode(packet, responses, /* interfaceIndex= */ 0);
+        int errorCode = decoder.decode(
+                packet, responses, /* interfaceIndex= */ 0, mock(Network.class));
         assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
 
         // This should emit only two records:

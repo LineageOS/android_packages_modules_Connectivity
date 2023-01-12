@@ -69,6 +69,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.TargetApi;
 import android.app.AlarmManager;
+import android.app.BroadcastOptions;
 import android.app.PendingIntent;
 import android.app.usage.NetworkStatsManager;
 import android.content.ApexEnvironment;
@@ -114,6 +115,7 @@ import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.net.netstats.provider.NetworkStatsProvider;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.DropBoxManager;
 import android.os.Environment;
 import android.os.Handler;
@@ -149,6 +151,7 @@ import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.FileRotator;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.BestClock;
 import com.android.net.module.util.BinderUtils;
@@ -166,6 +169,9 @@ import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
+import com.android.networkstack.apishim.BroadcastOptionsShimImpl;
+import com.android.networkstack.apishim.ConstantsShim;
+import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.BpfNetMaps;
 
 import java.io.File;
@@ -526,8 +532,22 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 case MSG_BROADCAST_NETWORK_STATS_UPDATED: {
                     final Intent updatedIntent = new Intent(ACTION_NETWORK_STATS_UPDATED);
                     updatedIntent.setFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
+                    Bundle opts = null;
+                    if (SdkLevel.isAtLeastU()) {
+                        try {
+                            // This allows us to discard older broadcasts still waiting to
+                            // be delivered.
+                            opts = BroadcastOptionsShimImpl.newInstance(
+                                    BroadcastOptions.makeBasic())
+                                    .setDeliveryGroupPolicy(
+                                            ConstantsShim.DELIVERY_GROUP_POLICY_MOST_RECENT)
+                                    .toBundle();
+                        } catch (UnsupportedApiLevelException e) {
+                            Log.wtf(TAG, "Using unsupported API" + e);
+                        }
+                    }
                     mContext.sendBroadcastAsUser(updatedIntent, UserHandle.ALL,
-                            READ_NETWORK_USAGE_HISTORY);
+                            READ_NETWORK_USAGE_HISTORY, opts);
                     break;
                 }
             }
@@ -2797,7 +2817,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             return;
         }
         if (map.isEmpty()) {
-            pw.println("No entries");
+            pw.println("");
             return;
         }
         // If there is a concurrent entry deletion, value could be null. http://b/220084230.

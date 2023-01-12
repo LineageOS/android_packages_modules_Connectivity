@@ -16,8 +16,11 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsSocket.INTERFACE_INDEX_UNSPECIFIED;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.net.Network;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.text.TextUtils;
@@ -58,7 +61,8 @@ public class MdnsServiceInfo implements Parcelable {
                             source.readString(),
                             source.createStringArrayList(),
                             source.createTypedArrayList(TextEntry.CREATOR),
-                            source.readInt());
+                            source.readInt(),
+                            source.readParcelable(null));
                 }
 
                 @Override
@@ -82,6 +86,8 @@ public class MdnsServiceInfo implements Parcelable {
     private final int interfaceIndex;
 
     private final Map<String, byte[]> attributes;
+    @Nullable
+    private final Network network;
 
     /** Constructs a {@link MdnsServiceInfo} object with default values. */
     public MdnsServiceInfo(
@@ -103,7 +109,8 @@ public class MdnsServiceInfo implements Parcelable {
                 ipv6Address,
                 textStrings,
                 /* textEntries= */ null,
-                /* interfaceIndex= */ -1);
+                /* interfaceIndex= */ INTERFACE_INDEX_UNSPECIFIED,
+                /* network= */ null);
     }
 
     /** Constructs a {@link MdnsServiceInfo} object with default values. */
@@ -127,7 +134,8 @@ public class MdnsServiceInfo implements Parcelable {
                 ipv6Address,
                 textStrings,
                 textEntries,
-                /* interfaceIndex= */ -1);
+                /* interfaceIndex= */ INTERFACE_INDEX_UNSPECIFIED,
+                /* network= */ null);
     }
 
     /**
@@ -146,6 +154,37 @@ public class MdnsServiceInfo implements Parcelable {
             @Nullable List<String> textStrings,
             @Nullable List<TextEntry> textEntries,
             int interfaceIndex) {
+        this(
+                serviceInstanceName,
+                serviceType,
+                subtypes,
+                hostName,
+                port,
+                ipv4Address,
+                ipv6Address,
+                textStrings,
+                textEntries,
+                interfaceIndex,
+                /* network= */ null);
+    }
+
+    /**
+     * Constructs a {@link MdnsServiceInfo} object with default values.
+     *
+     * @hide
+     */
+    public MdnsServiceInfo(
+            String serviceInstanceName,
+            String[] serviceType,
+            @Nullable List<String> subtypes,
+            String[] hostName,
+            int port,
+            @Nullable String ipv4Address,
+            @Nullable String ipv6Address,
+            @Nullable List<String> textStrings,
+            @Nullable List<TextEntry> textEntries,
+            int interfaceIndex,
+            @Nullable Network network) {
         this.serviceInstanceName = serviceInstanceName;
         this.serviceType = serviceType;
         this.subtypes = new ArrayList<>();
@@ -180,6 +219,7 @@ public class MdnsServiceInfo implements Parcelable {
         }
         this.attributes = Collections.unmodifiableMap(attributes);
         this.interfaceIndex = interfaceIndex;
+        this.network = network;
     }
 
     private static List<TextEntry> parseTextStrings(List<String> textStrings) {
@@ -244,6 +284,14 @@ public class MdnsServiceInfo implements Parcelable {
     }
 
     /**
+     * Returns the network at which this response was received, or null if the network is unknown.
+     */
+    @Nullable
+    public Network getNetwork() {
+        return network;
+    }
+
+    /**
      * Returns attribute value for {@code key} as a UTF-8 string. It's the caller who must make sure
      * that the value of {@code key} is indeed a UTF-8 string. {@code null} will be returned if no
      * attribute value exists for {@code key}.
@@ -293,6 +341,7 @@ public class MdnsServiceInfo implements Parcelable {
         out.writeStringList(textStrings);
         out.writeTypedList(textEntries);
         out.writeInt(interfaceIndex);
+        out.writeParcelable(network, 0);
     }
 
     @Override

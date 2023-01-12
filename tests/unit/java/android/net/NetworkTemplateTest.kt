@@ -49,7 +49,6 @@ import android.net.NetworkTemplate.normalize
 import android.net.wifi.WifiInfo
 import android.os.Build
 import android.telephony.TelephonyManager
-import com.android.net.module.util.NetworkStatsUtils.SUBSCRIBER_ID_MATCH_RULE_EXACT
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.assertParcelSane
@@ -448,19 +447,18 @@ class NetworkTemplateTest {
 
     @Test
     fun testParcelUnparcel() {
-        val templateMobile = NetworkTemplate(MATCH_MOBILE, TEST_IMSI1, emptyArray<String>(),
+        val templateMobile = NetworkTemplate(MATCH_MOBILE, TEST_IMSI1, arrayOf(TEST_IMSI1),
                 emptyArray<String>(), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL,
-                TelephonyManager.NETWORK_TYPE_LTE, OEM_MANAGED_ALL,
-                SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                TelephonyManager.NETWORK_TYPE_LTE, OEM_MANAGED_ALL)
         val templateWifi = NetworkTemplate(MATCH_WIFI, null, emptyArray<String>(),
                 arrayOf(TEST_WIFI_KEY1), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, 0,
-                OEM_MANAGED_ALL, SUBSCRIBER_ID_MATCH_RULE_EXACT)
-        val templateOem = NetworkTemplate(MATCH_MOBILE, null, emptyArray<String>(),
+                OEM_MANAGED_ALL)
+        val templateOem = NetworkTemplate(MATCH_MOBILE_WILDCARD, null, emptyArray<String>(),
                 emptyArray<String>(), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, 0,
-                OEM_MANAGED_YES, SUBSCRIBER_ID_MATCH_RULE_EXACT)
-        assertParcelSane(templateMobile, 10)
-        assertParcelSane(templateWifi, 10)
-        assertParcelSane(templateOem, 10)
+                OEM_MANAGED_YES)
+        assertParcelSane(templateMobile, 9)
+        assertParcelSane(templateWifi, 9)
+        assertParcelSane(templateOem, 9)
     }
 
     // Verify NETWORK_TYPE_* constants in NetworkTemplate do not conflict with
@@ -514,12 +512,10 @@ class NetworkTemplateTest {
 
         val templateOemYes = NetworkTemplate(matchType, subscriberId, matchSubscriberIds,
                 matchWifiNetworkKeys, METERED_ALL, ROAMING_ALL,
-                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_YES,
-                SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_YES)
         val templateOemAll = NetworkTemplate(matchType, subscriberId, matchSubscriberIds,
                 matchWifiNetworkKeys, METERED_ALL, ROAMING_ALL,
-                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL,
-                SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL)
 
         for (identityOemManagedState in oemManagedStates) {
             val ident = buildNetworkIdentity(mockContext, buildNetworkState(networkType,
@@ -530,8 +526,7 @@ class NetworkTemplateTest {
             for (templateOemManagedState in oemManagedStates) {
                 val template = NetworkTemplate(matchType, subscriberId, matchSubscriberIds,
                         matchWifiNetworkKeys, METERED_ALL, ROAMING_ALL,
-                        DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, templateOemManagedState,
-                        SUBSCRIBER_ID_MATCH_RULE_EXACT)
+                        DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, templateOemManagedState)
                 if (identityOemManagedState == templateOemManagedState) {
                     template.assertMatches(ident)
                 } else {

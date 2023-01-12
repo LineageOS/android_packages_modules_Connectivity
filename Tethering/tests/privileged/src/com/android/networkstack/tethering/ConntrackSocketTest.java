@@ -20,7 +20,7 @@ import static android.system.OsConstants.EAGAIN;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.NETLINK_NETFILTER;
 
-import static com.android.net.module.util.netlink.NetlinkSocket.DEFAULT_RECV_BUFSIZE;
+import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.IPCTNL_MSG_CT_NEW;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.NFNL_SUBSYS_CTNETLINK;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.NF_NETLINK_CONNTRACK_DESTROY;
@@ -41,7 +41,7 @@ import androidx.test.runner.AndroidJUnit4;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.netlink.ConntrackMessage;
 import com.android.net.module.util.netlink.NetlinkMessage;
-import com.android.net.module.util.netlink.NetlinkSocket;
+import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
 
 import org.junit.Before;
@@ -90,7 +90,7 @@ public class ConntrackSocketTest {
 
         // Loop until the socket is found (and return) or recvMessage throws an exception.
         while (true) {
-            final ByteBuffer buffer = NetlinkSocket.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TIMEOUT);
+            final ByteBuffer buffer = NetlinkUtils.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TIMEOUT);
 
             // Parse all the netlink messages in the dump.
             // NetlinkMessage#parse returns null if the message is truncated or invalid.

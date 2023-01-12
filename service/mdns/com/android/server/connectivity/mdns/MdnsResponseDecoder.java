@@ -18,6 +18,7 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.net.Network;
 import android.os.SystemClock;
 
 import com.android.server.connectivity.mdns.util.MdnsLogger;
@@ -95,10 +96,11 @@ public class MdnsResponseDecoder {
      * @param packet The packet to read from.
      * @param interfaceIndex the network interface index (or {@link
      *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
+     * @param network the network at which the packet was received, or null if it is unknown.
      * @return A list of mDNS responses, or null if the packet contained no appropriate responses.
      */
     public int decode(@NonNull DatagramPacket packet, @NonNull List<MdnsResponse> responses,
-            int interfaceIndex) {
+            int interfaceIndex, @Nullable Network network) {
         MdnsPacketReader reader = new MdnsPacketReader(packet);
 
         List<MdnsRecord> records;
@@ -253,12 +255,11 @@ public class MdnsResponseDecoder {
                     MdnsResponse response = findResponseWithPointer(responses,
                             pointerRecord.getPointer());
                     if (response == null) {
-                        response = new MdnsResponse(now);
+                        response = new MdnsResponse(now, interfaceIndex, network);
                         responses.add(response);
                     }
                     // Set interface index earlier because some responses have PTR record only.
                     // Need to know every response is getting from which interface.
-                    response.setInterfaceIndex(interfaceIndex);
                     response.addPointerRecord((MdnsPointerRecord) record);
                 }
             }

@@ -63,6 +63,7 @@ cc_test {
     ],
     srcs: [
         "BpfHandlerTest.cpp",
+        "BpfBaseTest.cpp"
     ],
     static_libs: [
         "libnetd_updatable",
@@ -72,6 +73,7 @@ cc_test {
         "libcutils",
         "liblog",
         "libnetdutils",
+        "libprocessgroup",
     ],
     compile_multilib: "both",
     multilib: {

@@ -281,9 +281,9 @@ public class MdnsRecordTests {
                         // TTL 0x0000003c (60 secs)
                         + "0000003C"
                         // Data length
-                        + "003C"
-                        // nextdomain.android.com
-                        + "0A6E657874646F6D61696E07616E64726F696403636F6D00"
+                        + "0031"
+                        // nextdomain.android.com, with compression for android.com
+                        + "0A6E657874646F6D61696EC007"
                         // Type bitmaps: window block 0x00, bitmap length 0x05,
                         // bits 16 (TXT) and 33 (SRV) set: 0x0000800040
                         + "00050000800040"

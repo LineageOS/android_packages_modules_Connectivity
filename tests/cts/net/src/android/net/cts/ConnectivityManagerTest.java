@@ -233,6 +233,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -2378,7 +2379,7 @@ public class ConnectivityManagerTest {
     }
 
     private class DetailedBlockedStatusCallback extends TestableNetworkCallback {
-        public void expectAvailableCallbacks(Network network) {
+        public void expectAvailableCallbacksWithBlockedReasonNone(Network network) {
             super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
                     BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
         }
@@ -2408,6 +2409,15 @@ public class ConnectivityManagerTest {
     }
 
     private void doTestBlockedStatusCallback() throws Exception {
+        // The test will need a stable active network that is persistent during the test.
+        // Try to connect to a wifi network and wait for it becomes the default network before
+        // starting the test to prevent from sudden active network change caused by previous
+        // executed tests.
+        if (mPackageManager.hasSystemFeature(FEATURE_WIFI)) {
+            final Network expectedDefaultNetwork = mCtsNetUtils.ensureWifiConnected();
+            mCtsNetUtils.expectNetworkIsSystemDefault(expectedDefaultNetwork);
+        }
+
         final DetailedBlockedStatusCallback myUidCallback = new DetailedBlockedStatusCallback();
         final DetailedBlockedStatusCallback otherUidCallback = new DetailedBlockedStatusCallback();
 
@@ -2422,7 +2432,7 @@ public class ConnectivityManagerTest {
         final List<DetailedBlockedStatusCallback> allCallbacks =
                 List.of(myUidCallback, otherUidCallback);
         for (DetailedBlockedStatusCallback callback : allCallbacks) {
-            callback.expectAvailableCallbacks(defaultNetwork);
+            callback.expectAvailableCallbacksWithBlockedReasonNone(defaultNetwork);
         }
 
         final Range<Integer> myUidRange = new Range<>(myUid, myUid);
@@ -2458,6 +2468,17 @@ public class ConnectivityManagerTest {
         // shims, and @IgnoreUpTo does not check that.
         assumeTrue(TestUtils.shouldTestSApis());
         runWithShellPermissionIdentity(() -> doTestBlockedStatusCallback(), NETWORK_SETTINGS);
+    }
+
+    @Test
+    public void testSetVpnDefaultForUids() {
+        assumeTrue(TestUtils.shouldTestUApis());
+        final String session = UUID.randomUUID().toString();
+        assertThrows(NullPointerException.class, () -> mCm.setVpnDefaultForUids(session, null));
+        assertThrows(SecurityException.class,
+                () -> mCm.setVpnDefaultForUids(session, new ArraySet<>()));
+        // For testing the complete behavior of setVpnDefaultForUids(), please refer to
+        // HostsideVpnTests.
     }
 
     private void doTestLegacyLockdownEnabled() throws Exception {

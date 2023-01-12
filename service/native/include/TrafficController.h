@@ -21,7 +21,7 @@
 
 #include "android-base/thread_annotations.h"
 #include "bpf/BpfMap.h"
-#include "bpf_shared.h"
+#include "netd.h"
 #include "netdutils/DumpWriter.h"
 #include "netdutils/NetlinkListener.h"
 #include "netdutils/StatusOr.h"

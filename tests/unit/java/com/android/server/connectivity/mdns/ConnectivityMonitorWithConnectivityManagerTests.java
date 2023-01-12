@@ -21,6 +21,7 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -111,7 +112,7 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
                 any(NetworkRequest.class), callbackCaptor.capture());
 
         final NetworkCallback callback = callbackCaptor.getValue();
-        final Network testNetwork = new Network(1 /* netId */);
+        final Network testNetwork = mock(Network.class);
 
         // Simulate network available.
         callback.onAvailable(testNetwork);
