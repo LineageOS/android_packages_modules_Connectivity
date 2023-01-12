@@ -4418,11 +4418,8 @@ java_library {
         "com.android.tethering",
     ],
     libs: [
-        "android-support-multidex",
         "androidx.annotation_annotation",
         "androidx.annotation_annotation-experimental-nodeps",
-        "androidx.collection_collection",
-        "androidx.core_core-nodeps",
         "cronet_aml_api_java",
         "framework-connectivity-t.stubs.module_lib",
         "framework-connectivity.stubs.module_lib",
