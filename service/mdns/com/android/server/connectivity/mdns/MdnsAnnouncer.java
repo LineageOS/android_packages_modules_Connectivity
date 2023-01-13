@@ -38,7 +38,8 @@ public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.Announcement
     @NonNull
     private final String mLogTag;
 
-    static class AnnouncementInfo implements MdnsPacketRepeater.Request {
+    /** Announcement request to send with {@link MdnsAnnouncer}. */
+    public static class AnnouncementInfo implements MdnsPacketRepeater.Request {
         @NonNull
         private final MdnsPacket mPacket;
 

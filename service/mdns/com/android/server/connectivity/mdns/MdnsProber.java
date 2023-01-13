@@ -44,7 +44,8 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
         mLogTag = MdnsProber.class.getSimpleName() + "/" + interfaceTag;
     }
 
-    static class ProbingInfo implements Request {
+    /** Probing request to send with {@link MdnsProber}. */
+    public static class ProbingInfo implements Request {
 
         private final int mServiceId;
         @NonNull
