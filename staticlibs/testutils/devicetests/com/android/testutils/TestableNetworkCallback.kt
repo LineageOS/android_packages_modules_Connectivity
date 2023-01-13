@@ -441,7 +441,7 @@ open class TestableNetworkCallback private constructor(
         tmt: Long = defaultTimeoutMs
     ) {
         expectAvailableCallbacksCommon(net, suspended, validated, tmt)
-        expectBlockedStatusCallback(blocked, net, tmt)
+        expect<BlockedStatus>(net, tmt) { it.blocked == blocked }
     }
 
     fun expectAvailableCallbacks(
@@ -452,7 +452,7 @@ open class TestableNetworkCallback private constructor(
         tmt: Long
     ) {
         expectAvailableCallbacksCommon(net, suspended, validated, tmt)
-        expectBlockedStatusCallback(blockedStatus, net)
+        expect<BlockedStatusInt>(net) { it.blocked == blockedStatus }
     }
 
     private fun expectAvailableCallbacksCommon(
@@ -478,16 +478,6 @@ open class TestableNetworkCallback private constructor(
         validated: Boolean,
         tmt: Long = defaultTimeoutMs
     ) = expectAvailableCallbacks(net, suspended = true, validated = validated, tmt = tmt)
-
-    fun expectBlockedStatusCallback(blocked: Boolean, net: Network, tmt: Long = defaultTimeoutMs) =
-            expect<BlockedStatus>(net, tmt, "Unexpected blocked status") {
-                it.blocked == blocked
-            }
-
-    fun expectBlockedStatusCallback(blocked: Int, net: Network, tmt: Long = defaultTimeoutMs) =
-            expect<BlockedStatusInt>(net, tmt, "Unexpected blocked status") {
-                it.blocked == blocked
-            }
 
     // Expects the available callbacks (where the onCapabilitiesChanged must contain the
     // VALIDATED capability), plus another onCapabilitiesChanged which is identical to the
@@ -591,8 +581,4 @@ open class TestableNetworkCallback private constructor(
         tmt: Long,
         valid: (NetworkCapabilities) -> Boolean
     ) = expect<CapabilitiesChanged>(ANY_NETWORK, tmt) { valid(it.caps) }.caps
-
-    fun expectBlockedStatusCallback(expectBlocked: Boolean, n: HasNetwork) {
-        expectBlockedStatusCallback(expectBlocked, n.network, defaultTimeoutMs)
-    }
 }
