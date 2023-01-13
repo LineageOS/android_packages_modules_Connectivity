@@ -592,20 +592,6 @@ open class TestableNetworkCallback private constructor(
         valid: (NetworkCapabilities) -> Boolean
     ) = expect<CapabilitiesChanged>(ANY_NETWORK, tmt) { valid(it.caps) }.caps
 
-    @JvmOverloads
-    fun expectCapabilitiesWith(
-        capability: Int,
-        n: HasNetwork,
-        timeoutMs: Long = defaultTimeoutMs
-    ) = expectCaps(n, timeoutMs) { it.hasCapability(capability) }
-
-    @JvmOverloads
-    fun expectCapabilitiesWithout(
-        capability: Int,
-        n: HasNetwork,
-        timeoutMs: Long = defaultTimeoutMs
-    ) = expectCaps(n, timeoutMs) { !it.hasCapability(capability) }
-
     fun expectBlockedStatusCallback(expectBlocked: Boolean, n: HasNetwork) {
         expectBlockedStatusCallback(expectBlocked, n.network, defaultTimeoutMs)
     }
