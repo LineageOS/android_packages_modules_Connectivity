@@ -1203,6 +1203,9 @@ public class Tethering {
         }
 
         private void handleConnectivityAction(Intent intent) {
+            // CONNECTIVITY_ACTION is not handled since U+ device.
+            if (SdkLevel.isAtLeastU()) return;
+
             final NetworkInfo networkInfo =
                     (NetworkInfo) intent.getParcelableExtra(EXTRA_NETWORK_INFO);
             if (networkInfo == null
@@ -2034,6 +2037,11 @@ public class Tethering {
                     // broadcasts that result in being passed a
                     // TetherMainSM.CMD_UPSTREAM_CHANGED.
                     handleNewUpstreamNetworkState(null);
+
+                    if (SdkLevel.isAtLeastU()) {
+                        // Need to try DUN immediately if Wi-Fi goes down.
+                        chooseUpstreamType(true);
+                    }
                     break;
                 default:
                     mLog.e("Unknown arg1 value: " + arg1);
