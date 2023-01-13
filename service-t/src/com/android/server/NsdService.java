@@ -17,6 +17,7 @@
 package com.android.server;
 
 import static android.net.ConnectivityManager.NETID_UNSET;
+import static android.net.nsd.NsdManager.MDNS_DISCOVERY_MANAGER_EVENT;
 import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
@@ -182,12 +183,32 @@ public class NsdService extends INsdManager.Stub {
 
         @Override
         public void onServiceNameDiscovered(@NonNull MdnsServiceInfo serviceInfo) {
-            // TODO: implement service name discovered callback.
+            mNsdStateMachine.sendMessage(MDNS_DISCOVERY_MANAGER_EVENT, mTransactionId,
+                    NsdManager.SERVICE_FOUND,
+                    new MdnsEvent(mClientId, mReqServiceInfo.getServiceType(), serviceInfo));
         }
 
         @Override
         public void onServiceNameRemoved(@NonNull MdnsServiceInfo serviceInfo) {
             // TODO: implement service name removed callback.
+        }
+    }
+
+    /**
+     * Data class of mdns service callback information.
+     */
+    private static class MdnsEvent {
+        final int mClientId;
+        @NonNull
+        final String mRequestedServiceType;
+        @NonNull
+        final MdnsServiceInfo mMdnsServiceInfo;
+
+        MdnsEvent(int clientId, @NonNull String requestedServiceType,
+                @NonNull MdnsServiceInfo mdnsServiceInfo) {
+            mClientId = clientId;
+            mRequestedServiceType = requestedServiceType;
+            mMdnsServiceInfo = mdnsServiceInfo;
         }
     }
 
@@ -636,6 +657,11 @@ public class NsdService extends INsdManager.Stub {
                             return NOT_HANDLED;
                         }
                         break;
+                    case MDNS_DISCOVERY_MANAGER_EVENT:
+                        if (!handleMdnsDiscoveryManagerEvent(msg.arg1, msg.arg2, msg.obj)) {
+                            return NOT_HANDLED;
+                        }
+                        break;
                     default:
                         return NOT_HANDLED;
                 }
@@ -793,6 +819,45 @@ public class NsdService extends INsdManager.Stub {
                         clientInfo.mResolvedService = null;
                         break;
                     }
+                    default:
+                        return false;
+                }
+                return true;
+            }
+
+            private NsdServiceInfo buildNsdServiceInfoFromMdnsEvent(final MdnsEvent event) {
+                final MdnsServiceInfo serviceInfo = event.mMdnsServiceInfo;
+                final String serviceType = event.mRequestedServiceType;
+                final String serviceName = serviceInfo.getServiceInstanceName();
+                final NsdServiceInfo servInfo = new NsdServiceInfo(serviceName, serviceType);
+                final Network network = serviceInfo.getNetwork();
+                setServiceNetworkForCallback(
+                        servInfo,
+                        network == null ? NETID_UNSET : network.netId,
+                        serviceInfo.getInterfaceIndex());
+                return servInfo;
+            }
+
+            private boolean handleMdnsDiscoveryManagerEvent(
+                    int transactionId, int code, Object obj) {
+                final ClientInfo clientInfo = mIdToClientInfoMap.get(transactionId);
+                if (clientInfo == null) {
+                    Log.e(TAG, String.format(
+                            "id %d for %d has no client mapping", transactionId, code));
+                    return false;
+                }
+
+                final MdnsEvent event = (MdnsEvent) obj;
+                final int clientId = event.mClientId;
+                if (DBG) {
+                    Log.d(TAG, String.format("MdnsDiscoveryManager event code=%s transactionId=%d",
+                            NsdManager.nameOf(code), transactionId));
+                }
+                switch (code) {
+                    case NsdManager.SERVICE_FOUND:
+                        clientInfo.onServiceFound(
+                                clientId, buildNsdServiceInfoFromMdnsEvent(event));
+                        break;
                     default:
                         return false;
                 }
