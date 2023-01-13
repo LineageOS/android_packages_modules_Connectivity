@@ -2385,7 +2385,7 @@ public class ConnectivityManagerTest {
         }
         public void eventuallyExpectBlockedStatusCallback(Network network, int blockedStatus) {
             super.eventuallyExpect(CallbackEntry.BLOCKED_STATUS_INT, NETWORK_CALLBACK_TIMEOUT_MS,
-                    (it) -> it.getNetwork().equals(network) && it.getBlocked() == blockedStatus);
+                    (it) -> it.getNetwork().equals(network) && it.getReason() == blockedStatus);
         }
         public void onBlockedStatusChanged(Network network, int blockedReasons) {
             getHistory().add(new CallbackEntry.BlockedStatusInt(network, blockedReasons));
