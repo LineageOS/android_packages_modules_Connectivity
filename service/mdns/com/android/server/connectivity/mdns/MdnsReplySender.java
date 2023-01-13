@@ -21,8 +21,10 @@ import android.os.Looper;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
-import java.net.SocketAddress;
 
 /**
  * A class that handles sending mDNS replies to a {@link MulticastSocket}, possibly queueing them
@@ -50,10 +52,15 @@ public class MdnsReplySender {
      *
      * Must be called on the looper thread used by the {@link MdnsReplySender}.
      */
-    public void sendNow(@NonNull MdnsPacket packet, @NonNull SocketAddress destination)
+    public void sendNow(@NonNull MdnsPacket packet, @NonNull InetSocketAddress destination)
             throws IOException {
         if (Thread.currentThread() != mLooper.getThread()) {
             throw new IllegalStateException("sendNow must be called in the handler thread");
+        }
+        if (!((destination.getAddress() instanceof Inet6Address && mSocket.hasJoinedIpv6())
+                || (destination.getAddress() instanceof Inet4Address && mSocket.hasJoinedIpv4()))) {
+            // Skip sending if the socket has not joined the v4/v6 group (there was no address)
+            return;
         }
 
         // TODO: support packets over size (send in multiple packets with TC bit set)

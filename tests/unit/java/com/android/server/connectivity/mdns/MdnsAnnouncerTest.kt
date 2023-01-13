@@ -27,7 +27,6 @@ import com.android.testutils.DevSdkIgnoreRunner
 import java.net.DatagramPacket
 import java.net.Inet6Address
 import java.net.InetAddress
-import java.net.InetSocketAddress
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.After
@@ -37,6 +36,7 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.any
 import org.mockito.Mockito.atLeast
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
@@ -45,9 +45,6 @@ private const val FIRST_ANNOUNCES_DELAY = 100L
 private const val FIRST_ANNOUNCES_COUNT = 2
 private const val NEXT_ANNOUNCES_DELAY = 1L
 private const val TEST_TIMEOUT_MS = 1000L
-
-private val destinationsSupplier = {
-    listOf(InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT)) }
 
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.S_V2)
@@ -59,6 +56,7 @@ class MdnsAnnouncerTest {
 
     @Before
     fun setUp() {
+        doReturn(true).`when`(socket).hasJoinedIpv6()
         thread.start()
     }
 
@@ -70,7 +68,7 @@ class MdnsAnnouncerTest {
     private class TestAnnouncementInfo(
         announcedRecords: List<MdnsRecord>,
         additionalRecords: List<MdnsRecord>
-    ) : AnnouncementInfo(announcedRecords, additionalRecords, destinationsSupplier) {
+    ) : AnnouncementInfo(announcedRecords, additionalRecords) {
         override fun getDelayMs(nextIndex: Int) =
                 if (nextIndex < FIRST_ANNOUNCES_COUNT) {
                     FIRST_ANNOUNCES_DELAY

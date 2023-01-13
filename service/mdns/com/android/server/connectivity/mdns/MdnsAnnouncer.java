@@ -22,10 +22,8 @@ import android.os.Looper;
 
 import com.android.internal.annotations.VisibleForTesting;
 
-import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * Sends mDns announcements when a service registration changes and at regular intervals.
@@ -43,11 +41,8 @@ public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.Announcement
     static class AnnouncementInfo implements MdnsPacketRepeater.Request {
         @NonNull
         private final MdnsPacket mPacket;
-        @NonNull
-        private final Supplier<Iterable<SocketAddress>> mDestinationsSupplier;
 
-        AnnouncementInfo(List<MdnsRecord> announcedRecords, List<MdnsRecord> additionalRecords,
-                Supplier<Iterable<SocketAddress>> destinationsSupplier) {
+        AnnouncementInfo(List<MdnsRecord> announcedRecords, List<MdnsRecord> additionalRecords) {
             // Records to announce (as answers)
             // Records to place in the "Additional records", with NSEC negative responses
             // to mark records that have been verified unique
@@ -57,17 +52,11 @@ public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.Announcement
                     announcedRecords,
                     Collections.emptyList() /* authorityRecords */,
                     additionalRecords);
-            mDestinationsSupplier = destinationsSupplier;
         }
 
         @Override
         public MdnsPacket getPacket(int index) {
             return mPacket;
-        }
-
-        @Override
-        public Iterable<SocketAddress> getDestinations(int index) {
-            return mDestinationsSupplier.get();
         }
 
         @Override
