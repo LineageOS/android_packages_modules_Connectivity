@@ -395,6 +395,7 @@ public class MdnsAdvertiser {
      */
     public void removeService(int id) {
         checkThread();
+        if (!mRegistrations.contains(id)) return;
         if (DBG) {
             Log.i(TAG, "Removing service with ID " + id);
         }
