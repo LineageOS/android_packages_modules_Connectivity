@@ -195,27 +195,6 @@ java_library {
     ],
 }
 
-// TODO: Remove this temporary library and put code into module when test coverage is enough.
-java_library {
-    name: "service-mdns",
-    sdk_version: "system_server_current",
-    min_sdk_version: "30",
-    srcs: [
-        "mdns/**/*.java",
-    ],
-    libs: [
-        "framework-annotations-lib",
-        "framework-connectivity-pre-jarjar",
-        "framework-connectivity-t-pre-jarjar",
-        "framework-tethering",
-        "framework-wifi",
-        "service-connectivity-pre-jarjar",
-    ],
-    visibility: [
-        "//packages/modules/Connectivity/tests:__subpackages__",
-    ],
-}
-
 java_library {
     name: "service-connectivity-protos",
     sdk_version: "system_current",
