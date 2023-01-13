@@ -2391,7 +2391,7 @@ public class ConnectivityManagerTest {
             getHistory().add(new CallbackEntry.BlockedStatusInt(network, blockedReasons));
         }
         private void assertNoBlockedStatusCallback() {
-            super.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS,
+            super.assertNoCallback(NO_CALLBACK_TIMEOUT_MS,
                     c -> c instanceof CallbackEntry.BlockedStatus);
         }
     }
@@ -2979,7 +2979,7 @@ public class ConnectivityManagerTest {
             defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
                     entry -> cellNetwork.equals(entry.getNetwork()));
             // The network should not validate again.
-            wifiCb.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS, c -> isValidatedCaps(c));
+            wifiCb.assertNoCallback(NO_CALLBACK_TIMEOUT_MS, c -> isValidatedCaps(c));
         } finally {
             resetAvoidBadWifi(previousAvoidBadWifi);
             mHttpServer.stop();
@@ -3151,7 +3151,7 @@ public class ConnectivityManagerTest {
      */
     private void assertNoCallbackExceptCapOrLpChange(
             @NonNull final TestableNetworkCallback cb) {
-        cb.assertNoCallbackThat(NO_CALLBACK_TIMEOUT_MS,
+        cb.assertNoCallback(NO_CALLBACK_TIMEOUT_MS,
                 c -> !(c instanceof CallbackEntry.CapabilitiesChanged
                         || c instanceof CallbackEntry.LinkPropertiesChanged));
     }
