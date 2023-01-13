@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -89,7 +90,15 @@ public class MdnsSocketProviderTest {
     public void setUp() throws IOException {
         MockitoAnnotations.initMocks(this);
         mockService(mContext, ConnectivityManager.class, Context.CONNECTIVITY_SERVICE, mCm);
+        if (mContext.getSystemService(ConnectivityManager.class) == null) {
+            // Test is using mockito-extended
+            doCallRealMethod().when(mContext).getSystemService(ConnectivityManager.class);
+        }
         mockService(mContext, TetheringManager.class, Context.TETHERING_SERVICE, mTm);
+        if (mContext.getSystemService(TetheringManager.class) == null) {
+            // Test is using mockito-extended
+            doCallRealMethod().when(mContext).getSystemService(TetheringManager.class);
+        }
         doReturn(true).when(mDeps).canScanOnInterface(any());
         doReturn(mTestNetworkIfaceWrapper).when(mDeps).getNetworkInterfaceByName(TEST_IFACE_NAME);
         doReturn(mLocalOnlyIfaceWrapper).when(mDeps)
