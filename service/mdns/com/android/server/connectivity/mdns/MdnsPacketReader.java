@@ -38,8 +38,13 @@ public class MdnsPacketReader {
 
     /** Constructs a reader for the given packet. */
     public MdnsPacketReader(DatagramPacket packet) {
-        buf = packet.getData();
-        count = packet.getLength();
+        this(packet.getData(), packet.getLength());
+    }
+
+    /** Constructs a reader for the given packet. */
+    public MdnsPacketReader(byte[] buffer, int length) {
+        buf = buffer;
+        count = length;
         pos = 0;
         limit = -1;
         labelDictionary = new SparseArray<>(16);
