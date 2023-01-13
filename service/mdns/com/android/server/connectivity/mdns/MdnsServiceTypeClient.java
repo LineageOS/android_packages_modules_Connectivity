@@ -20,6 +20,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.net.Network;
 import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.ArraySet;
@@ -52,7 +53,7 @@ public class MdnsServiceTypeClient {
 
     private final String serviceType;
     private final String[] serviceTypeLabels;
-    private final MdnsSocketClient socketClient;
+    private final MdnsSocketClientBase socketClient;
     private final ScheduledExecutorService executor;
     private final Object lock = new Object();
     private final Set<MdnsServiceBrowserListener> listeners = new ArraySet<>();
@@ -77,11 +78,11 @@ public class MdnsServiceTypeClient {
      * Constructor of {@link MdnsServiceTypeClient}.
      *
      * @param socketClient Sends and receives mDNS packet.
-     * @param executor     A {@link ScheduledExecutorService} used to schedule query tasks.
+     * @param executor         A {@link ScheduledExecutorService} used to schedule query tasks.
      */
     public MdnsServiceTypeClient(
             @NonNull String serviceType,
-            @NonNull MdnsSocketClient socketClient,
+            @NonNull MdnsSocketClientBase socketClient,
             @NonNull ScheduledExecutorService executor) {
         this.serviceType = serviceType;
         this.socketClient = socketClient;
@@ -169,7 +170,8 @@ public class MdnsServiceTypeClient {
                                     new QueryTaskConfig(
                                             searchOptions.getSubtypes(),
                                             searchOptions.isPassiveMode(),
-                                            ++currentSessionId)));
+                                            ++currentSessionId,
+                                            searchOptions.getNetwork())));
         }
     }
 
@@ -322,9 +324,10 @@ public class MdnsServiceTypeClient {
         private int burstCounter;
         private int timeToRunNextTaskInMs;
         private boolean isFirstBurst;
+        @Nullable private final Network network;
 
         QueryTaskConfig(@NonNull Collection<String> subtypes, boolean usePassiveMode,
-                long sessionId) {
+                long sessionId, @Nullable Network network) {
             this.usePassiveMode = usePassiveMode;
             this.subtypes = new ArrayList<>(subtypes);
             this.queriesPerBurst = QUERIES_PER_BURST;
@@ -346,6 +349,7 @@ public class MdnsServiceTypeClient {
                 // doubles until it maxes out at TIME_BETWEEN_BURSTS_MS.
                 this.timeBetweenBurstsInMs = INITIAL_TIME_BETWEEN_BURSTS_MS;
             }
+            this.network = network;
         }
 
         QueryTaskConfig getConfigForNextRun() {
@@ -405,7 +409,8 @@ public class MdnsServiceTypeClient {
                                 serviceType,
                                 config.subtypes,
                                 config.expectUnicastResponse,
-                                config.transactionId)
+                                config.transactionId,
+                                config.network)
                                 .call();
             } catch (RuntimeException e) {
                 LOGGER.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
