@@ -2125,7 +2125,7 @@ public class TetheringTest {
                     new ArrayList<Network>(Arrays.asList(networks));
             for (Network upstream : expectedUpstreams) {
                 // throws OOB if no expectations
-                assertEquals(mActualUpstreams.remove(0), upstream);
+                assertEquals(upstream, mActualUpstreams.remove(0));
             }
             assertNoUpstreamChangeCallback();
         }
@@ -2140,14 +2140,14 @@ public class TetheringTest {
             for (TetheringConfigurationParcel config : expectedTetherConfig) {
                 // throws OOB if no expectations
                 final TetheringConfigurationParcel actualConfig = mTetheringConfigs.remove(0);
-                assertTetherConfigParcelEqual(actualConfig, config);
+                assertTetherConfigParcelEqual(config, actualConfig);
             }
             assertNoConfigChangeCallback();
         }
 
         public void expectOffloadStatusChanged(final int expectedStatus) {
             assertOffloadStatusChangedCallback();
-            assertEquals(mOffloadStatus.remove(0), new Integer(expectedStatus));
+            assertEquals(Integer.valueOf(expectedStatus), mOffloadStatus.remove(0));
         }
 
         public TetherStatesParcel pollTetherStatesChanged() {
@@ -2238,12 +2238,12 @@ public class TetheringTest {
 
         private void assertTetherConfigParcelEqual(@NonNull TetheringConfigurationParcel actual,
                 @NonNull TetheringConfigurationParcel expect) {
-            assertArrayEquals(actual.tetherableUsbRegexs, expect.tetherableUsbRegexs);
-            assertArrayEquals(actual.tetherableWifiRegexs, expect.tetherableWifiRegexs);
-            assertArrayEquals(actual.tetherableBluetoothRegexs, expect.tetherableBluetoothRegexs);
-            assertArrayEquals(actual.legacyDhcpRanges, expect.legacyDhcpRanges);
-            assertArrayEquals(actual.provisioningApp, expect.provisioningApp);
-            assertEquals(actual.provisioningAppNoUi, expect.provisioningAppNoUi);
+            assertArrayEquals(expect.tetherableUsbRegexs, actual.tetherableUsbRegexs);
+            assertArrayEquals(expect.tetherableWifiRegexs, actual.tetherableWifiRegexs);
+            assertArrayEquals(expect.tetherableBluetoothRegexs, actual.tetherableBluetoothRegexs);
+            assertArrayEquals(expect.legacyDhcpRanges, actual.legacyDhcpRanges);
+            assertArrayEquals(expect.provisioningApp, actual.provisioningApp);
+            assertEquals(expect.provisioningAppNoUi, actual.provisioningAppNoUi);
         }
     }
 
