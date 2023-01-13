@@ -2817,7 +2817,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             return;
         }
         if (map.isEmpty()) {
-            pw.println("No entries");
+            pw.println("");
             return;
         }
         // If there is a concurrent entry deletion, value could be null. http://b/220084230.
