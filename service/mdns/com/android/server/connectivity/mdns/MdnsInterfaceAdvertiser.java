@@ -17,11 +17,15 @@
 package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.LinkAddress;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+
+import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.connectivity.mdns.MdnsPacketRepeater.PacketRepeaterCallback;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,7 +35,8 @@ import java.util.List;
  */
 public class MdnsInterfaceAdvertiser {
     private static final boolean DBG = MdnsAdvertiser.DBG;
-    private static final long EXIT_ANNOUNCEMENT_DELAY_MS = 100L;
+    @VisibleForTesting
+    public static final long EXIT_ANNOUNCEMENT_DELAY_MS = 100L;
     @NonNull
     private final String mTag;
     @NonNull
@@ -84,7 +89,7 @@ public class MdnsInterfaceAdvertiser {
      * Callbacks from {@link MdnsProber}.
      */
     private class ProbingCallback implements
-            MdnsPacketRepeater.PacketRepeaterCallback<MdnsProber.ProbingInfo> {
+            PacketRepeaterCallback<MdnsProber.ProbingInfo> {
         @Override
         public void onFinished(MdnsProber.ProbingInfo info) {
             final MdnsAnnouncer.AnnouncementInfo announcementInfo;
@@ -109,23 +114,64 @@ public class MdnsInterfaceAdvertiser {
      * Callbacks from {@link MdnsAnnouncer}.
      */
     private class AnnouncingCallback
-            implements MdnsPacketRepeater.PacketRepeaterCallback<MdnsAnnouncer.AnnouncementInfo> {
+            implements PacketRepeaterCallback<MdnsAnnouncer.AnnouncementInfo> {
         // TODO: implement
+    }
+
+    /**
+     * Dependencies for {@link MdnsInterfaceAdvertiser}, useful for testing.
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        /** @see MdnsRecordRepository */
+        @NonNull
+        public MdnsRecordRepository makeRecordRepository(@NonNull Looper looper) {
+            return new MdnsRecordRepository(looper);
+        }
+
+        /** @see MdnsReplySender */
+        @NonNull
+        public MdnsReplySender makeReplySender(@NonNull Looper looper,
+                @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer) {
+            return new MdnsReplySender(looper, socket, packetCreationBuffer);
+        }
+
+        /** @see MdnsAnnouncer */
+        public MdnsAnnouncer makeMdnsAnnouncer(@NonNull String interfaceTag, @NonNull Looper looper,
+                @NonNull MdnsReplySender replySender,
+                @Nullable PacketRepeaterCallback<MdnsAnnouncer.AnnouncementInfo> cb) {
+            return new MdnsAnnouncer(interfaceTag, looper, replySender, cb);
+        }
+
+        /** @see MdnsProber */
+        public MdnsProber makeMdnsProber(@NonNull String interfaceTag, @NonNull Looper looper,
+                @NonNull MdnsReplySender replySender,
+                @NonNull PacketRepeaterCallback<MdnsProber.ProbingInfo> cb) {
+            return new MdnsProber(interfaceTag, looper, replySender, cb);
+        }
     }
 
     public MdnsInterfaceAdvertiser(@NonNull String logTag,
             @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
             @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb) {
+        this(logTag, socket, initialAddresses, looper, packetCreationBuffer, cb,
+                new Dependencies());
+    }
+
+    public MdnsInterfaceAdvertiser(@NonNull String logTag,
+            @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
+            @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb,
+            @NonNull Dependencies deps) {
         mTag = MdnsInterfaceAdvertiser.class.getSimpleName() + "/" + logTag;
-        mRecordRepository = new MdnsRecordRepository(looper);
+        mRecordRepository = deps.makeRecordRepository(looper);
         mRecordRepository.updateAddresses(initialAddresses);
         mSocket = socket;
         mCb = cb;
         mCbHandler = new Handler(looper);
-        mReplySender = new MdnsReplySender(looper, socket, packetCreationBuffer);
-        mAnnouncer = new MdnsAnnouncer(logTag, looper, mReplySender,
+        mReplySender = deps.makeReplySender(looper, socket, packetCreationBuffer);
+        mAnnouncer = deps.makeMdnsAnnouncer(logTag, looper, mReplySender,
                 mAnnouncingCallback);
-        mProber = new MdnsProber(logTag, looper, mReplySender, mProbingCallback);
+        mProber = deps.makeMdnsProber(logTag, looper, mReplySender, mProbingCallback);
     }
 
     /**
