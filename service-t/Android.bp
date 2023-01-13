@@ -52,6 +52,7 @@ java_library {
         "framework-connectivity-t-pre-jarjar",
         // TODO: use framework-tethering-pre-jarjar when it is separated from framework-tethering
         "framework-tethering.impl",
+        "framework-wifi",
         "service-connectivity-pre-jarjar",
         "service-nearby-pre-jarjar",
         "ServiceConnectivityResources",
