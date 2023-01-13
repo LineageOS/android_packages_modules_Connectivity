@@ -19,8 +19,11 @@ package com.android.server.connectivity.mdns;
 import android.annotation.NonNull;
 import android.net.LinkAddress;
 import android.net.nsd.NsdServiceInfo;
+import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -28,6 +31,7 @@ import java.util.List;
  */
 public class MdnsInterfaceAdvertiser {
     private static final boolean DBG = MdnsAdvertiser.DBG;
+    private static final long EXIT_ANNOUNCEMENT_DELAY_MS = 100L;
     @NonNull
     private final String mTag;
     @NonNull
@@ -35,7 +39,12 @@ public class MdnsInterfaceAdvertiser {
     @NonNull
     private final AnnouncingCallback mAnnouncingCallback = new AnnouncingCallback();
     @NonNull
+    private final MdnsRecordRepository mRecordRepository;
+    @NonNull
     private final Callback mCb;
+    // Callbacks are on the same looper thread, but posted to the next handler loop
+    @NonNull
+    private final Handler mCbHandler;
     @NonNull
     private final MdnsInterfaceSocket mSocket;
     @NonNull
@@ -78,7 +87,21 @@ public class MdnsInterfaceAdvertiser {
             MdnsPacketRepeater.PacketRepeaterCallback<MdnsProber.ProbingInfo> {
         @Override
         public void onFinished(MdnsProber.ProbingInfo info) {
-            // TODO: probing finished, start announcements
+            final MdnsAnnouncer.AnnouncementInfo announcementInfo;
+            if (DBG) {
+                Log.v(mTag, "Probing finished for service " + info.getServiceId());
+            }
+            mCbHandler.post(() -> mCb.onRegisterServiceSucceeded(
+                    MdnsInterfaceAdvertiser.this, info.getServiceId()));
+            try {
+                announcementInfo = mRecordRepository.onProbingSucceeded(info);
+            } catch (IOException e) {
+                Log.e(mTag, "Error building announcements", e);
+                return;
+            }
+
+            mAnnouncer.startSending(info.getServiceId(), announcementInfo,
+                    0L /* initialDelayMs */);
         }
     }
 
@@ -94,8 +117,11 @@ public class MdnsInterfaceAdvertiser {
             @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
             @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb) {
         mTag = MdnsInterfaceAdvertiser.class.getSimpleName() + "/" + logTag;
+        mRecordRepository = new MdnsRecordRepository(looper);
+        mRecordRepository.updateAddresses(initialAddresses);
         mSocket = socket;
         mCb = cb;
+        mCbHandler = new Handler(looper);
         mReplySender = new MdnsReplySender(looper, socket, packetCreationBuffer);
         mAnnouncer = new MdnsAnnouncer(logTag, looper, mReplySender,
                 mAnnouncingCallback);
@@ -110,7 +136,7 @@ public class MdnsInterfaceAdvertiser {
      * {@link #destroyNow()}.
      */
     public void start() {
-        // TODO: implement
+        // TODO: start receiving packets
     }
 
     /**
@@ -119,7 +145,17 @@ public class MdnsInterfaceAdvertiser {
      * @throws NameConflictException There is already a service being advertised with that name.
      */
     public void addService(int id, NsdServiceInfo service) throws NameConflictException {
-        // TODO: implement
+        final int replacedExitingService = mRecordRepository.addService(id, service);
+        // Cancel announcements for the existing service. This only happens for exiting services
+        // (so cancelling exiting announcements), as per RecordRepository.addService.
+        if (replacedExitingService >= 0) {
+            if (DBG) {
+                Log.d(mTag, "Service " + replacedExitingService
+                        + " getting re-added, cancelling exit announcements");
+            }
+            mAnnouncer.stop(replacedExitingService);
+        }
+        mProber.startProbing(mRecordRepository.setServiceProbing(id));
     }
 
     /**
@@ -128,7 +164,25 @@ public class MdnsInterfaceAdvertiser {
      * This will trigger exit announcements for the service.
      */
     public void removeService(int id) {
-        // TODO: implement
+        mProber.stop(id);
+        mAnnouncer.stop(id);
+        final MdnsAnnouncer.AnnouncementInfo exitInfo = mRecordRepository.exitService(id);
+        if (exitInfo != null) {
+            // This effectively schedules destroyNow(), as it is to be called when the exit
+            // announcement finishes if there is no service left.
+            // A non-zero exit announcement delay follows legacy mdnsresponder behavior, and is
+            // also useful to ensure that when a host receives the exit announcement, the service
+            // has been unregistered on all interfaces; so an announcement sent from interface A
+            // that was already in-flight while unregistering won't be received after the exit on
+            // interface B.
+            mAnnouncer.startSending(id, exitInfo, EXIT_ANNOUNCEMENT_DELAY_MS);
+        } else {
+            // No exit announcement necessary: remove the service immediately.
+            mRecordRepository.removeService(id);
+            if (mRecordRepository.getServicesCount() == 0) {
+                destroyNow();
+            }
+        }
     }
 
     /**
@@ -137,7 +191,9 @@ public class MdnsInterfaceAdvertiser {
      * This causes new address records to be announced.
      */
     public void updateAddresses(@NonNull List<LinkAddress> newAddresses) {
-        // TODO: implement
+        mRecordRepository.updateAddresses(newAddresses);
+        // TODO: restart advertising, but figure out what exit messages need to be sent for the
+        // previous addresses
     }
 
     /**
@@ -146,7 +202,13 @@ public class MdnsInterfaceAdvertiser {
      * <p>Useful when the underlying network went away. This will trigger an onDestroyed callback.
      */
     public void destroyNow() {
-        // TODO: implement
+        for (int serviceId : mRecordRepository.clearServices()) {
+            mProber.stop(serviceId);
+            mAnnouncer.stop(serviceId);
+        }
+
+        // TODO: stop receiving packets
+        mCbHandler.post(() -> mCb.onDestroyed(mSocket));
     }
 
     /**
@@ -169,7 +231,6 @@ public class MdnsInterfaceAdvertiser {
      * Also returns false if the specified service is not registered.
      */
     public boolean isProbing(int serviceId) {
-        // TODO: implement
-        return true;
+        return mRecordRepository.isProbing(serviceId);
     }
 }
