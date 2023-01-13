@@ -16,8 +16,12 @@
 
 package android.nearby;
 
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * Reports newly discovered devices.
@@ -31,6 +35,21 @@ import android.annotation.SystemApi;
  */
 @SystemApi
 public interface ScanCallback {
+
+    /** General error code for scan. */
+    int ERROR_UNKNOWN = 0;
+
+    /**
+     * Scan failed as the request is not supported.
+     */
+    int ERROR_UNSUPPORTED = 1;
+
+    /** @hide **/
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({ERROR_UNKNOWN, ERROR_UNSUPPORTED})
+    @interface ErrorCode {
+    }
+
     /**
      * Reports a {@link NearbyDevice} being discovered.
      *
@@ -51,4 +70,11 @@ public interface ScanCallback {
      * @param device {@link NearbyDevice} that is lost.
      */
     void onLost(@NonNull NearbyDevice device);
+
+    /**
+     * Notifies clients of error from the scan.
+     *
+     * @param errorCode defined by Nearby
+     */
+    default void onError(@ErrorCode int errorCode) {}
 }
