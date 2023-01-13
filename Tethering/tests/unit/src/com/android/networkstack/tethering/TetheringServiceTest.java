@@ -666,7 +666,7 @@ public final class TetheringServiceTest {
 
             // Calling System.gc() or System.runFinalization() doesn't guarantee GCs or finalizers
             // are executed synchronously. The finalizer is called after GC on a separate thread.
-            final int attempts = 100;
+            final int attempts = 600;
             final long waitIntervalMs = 50;
             for (int i = 0; i < attempts; i++) {
                 forceGc();
