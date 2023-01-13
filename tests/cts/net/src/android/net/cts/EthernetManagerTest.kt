@@ -57,8 +57,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.OutcomeReceiver
-import android.os.SystemProperties
 import android.os.Process
+import android.os.SystemProperties
 import android.platform.test.annotations.AppModeFull
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.net.module.util.ArrayTrackRecord
@@ -77,16 +77,10 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.assertThrows
 import com.android.testutils.runAsShell
 import com.android.testutils.waitForIdle
-import org.junit.After
-import org.junit.Assume.assumeFalse
-import org.junit.Assume.assumeTrue
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
 import java.io.IOException
 import java.net.Inet6Address
-import java.util.Random
 import java.net.Socket
+import java.util.Random
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -99,6 +93,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import org.junit.After
+import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
 
 private const val TAG = "EthernetManagerTest"
 // This timeout does not affect the test duration for passing tests. It needs to be long enough to
@@ -530,12 +530,10 @@ class EthernetManagerTest {
         eventuallyExpect(Lost::class) { n?.equals(it.network) ?: true }
 
     private fun TestableNetworkCallback.assertNeverLost(n: Network? = null) =
-        assertNoCallbackThat() {
-            it is Lost && (n?.equals(it.network) ?: true)
-        }
+        assertNoCallback { it is Lost && (n?.equals(it.network) ?: true) }
 
     private fun TestableNetworkCallback.assertNeverAvailable(n: Network? = null) =
-        assertNoCallbackThat { it is Available && (n?.equals(it.network) ?: true) }
+        assertNoCallback { it is Available && (n?.equals(it.network) ?: true) }
 
     private fun TestableNetworkCallback.expectCapabilitiesWithInterfaceName(name: String) =
         expect<CapabilitiesChanged> { it.caps.networkSpecifier == EthernetNetworkSpecifier(name) }
