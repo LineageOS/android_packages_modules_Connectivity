@@ -30,6 +30,7 @@ function gn_desc() {
     "use_hashed_jni_names = true"
     "treat_warnings_as_errors = false"
     "enable_base_tracing = false"
+    "is_cronet_build = true"
   )
   gn_args+=("target_cpu = \"${1}\"")
 

@@ -151,6 +151,7 @@ import static com.android.server.ConnectivityService.PREFERENCE_ORDER_MOBILE_DAT
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_OEM;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_PROFILE;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_VPN;
+import static com.android.server.ConnectivityService.createDeliveryGroupKeyForConnectivityAction;
 import static com.android.server.ConnectivityServiceTestUtils.transportToLegacyType;
 import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackRegister;
 import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister;
@@ -210,6 +211,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.AlarmManager;
 import android.app.AppOpsManager;
+import android.app.BroadcastOptions;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.admin.DevicePolicyManager;
@@ -360,6 +362,8 @@ import com.android.net.module.util.LocationPermissionChecker;
 import com.android.net.module.util.NetworkMonitorUtils;
 import com.android.networkstack.apishim.ConstantsShim;
 import com.android.networkstack.apishim.NetworkAgentConfigShimImpl;
+import com.android.networkstack.apishim.common.BroadcastOptionsShim;
+import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencies.ReportedInterfaces;
@@ -574,6 +578,7 @@ public class ConnectivityServiceTest {
     @Mock BpfNetMaps mBpfNetMaps;
     @Mock CarrierPrivilegeAuthenticator mCarrierPrivilegeAuthenticator;
     @Mock TetheringManager mTetheringManager;
+    @Mock BroadcastOptionsShim mBroadcastOptionsShim;
 
     // BatteryStatsManager is final and cannot be mocked with regular mockito, so just mock the
     // underlying binder calls.
@@ -820,6 +825,25 @@ public class ConnectivityServiceTest {
             // TODO: ensure MultinetworkPolicyTracker's BroadcastReceiver is tested; just returning
             // null should not pass the test
             return null;
+        }
+
+        @Override
+        public void sendStickyBroadcast(Intent intent, Bundle options) {
+            // Verify that delivery group policy APIs were used on U.
+            if (SdkLevel.isAtLeastU() && CONNECTIVITY_ACTION.equals(intent.getAction())) {
+                final NetworkInfo ni = intent.getParcelableExtra(EXTRA_NETWORK_INFO,
+                        NetworkInfo.class);
+                try {
+                    verify(mBroadcastOptionsShim).setDeliveryGroupPolicy(
+                            eq(ConstantsShim.DELIVERY_GROUP_POLICY_MOST_RECENT));
+                    verify(mBroadcastOptionsShim).setDeliveryGroupMatchingKey(
+                            eq(CONNECTIVITY_ACTION),
+                            eq(createDeliveryGroupKeyForConnectivityAction(ni)));
+                } catch (UnsupportedApiLevelException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            super.sendStickyBroadcast(intent, options);
         }
     }
 
@@ -2052,6 +2076,12 @@ public class ConnectivityServiceTest {
             mRateLimitHistory.add(new Pair<>(iface, -1L));
             assertNotEquals(-1L, (long) mActiveRateLimit.getOrDefault(iface, -1L));
             mActiveRateLimit.put(iface, -1L);
+        }
+
+        @Override
+        public BroadcastOptionsShim makeBroadcastOptionsShim(BroadcastOptions options) {
+            reset(mBroadcastOptionsShim);
+            return mBroadcastOptionsShim;
         }
     }
 
@@ -17352,5 +17382,15 @@ public class ConnectivityServiceTest {
 
         waitForIdle();
         verify(mMockNetd).interfaceSetMtu(eq(ifaceName2), eq(mtu));
+    }
+
+    @Test
+    public void testCreateDeliveryGroupKeyForConnectivityAction() throws Exception {
+        final NetworkInfo info = new NetworkInfo(0 /* type */, 2 /* subtype */,
+                "MOBILE" /* typeName */, "LTE" /* subtypeName */);
+        assertEquals("0;2;null", createDeliveryGroupKeyForConnectivityAction(info));
+
+        info.setExtraInfo("test_info");
+        assertEquals("0;2;test_info", createDeliveryGroupKeyForConnectivityAction(info));
     }
 }
