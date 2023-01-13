@@ -73,8 +73,6 @@ filegroup {
         "java/com/android/server/connectivity/NetdEventListenerServiceTest.java",
         "java/com/android/server/connectivity/VpnTest.java",
         "java/com/android/server/net/ipmemorystore/*.java",
-        "java/com/android/server/connectivity/mdns/**/*.java",
-        "java/com/android/server/connectivity/mdns/**/*.kt",
     ]
 }
 
@@ -149,7 +147,6 @@ android_test {
     static_libs: [
         "services.core",
         "services.net",
-        "service-mdns",
     ],
     jni_libs: [
         "libandroid_net_connectivity_com_android_net_module_util_jni",
