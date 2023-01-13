@@ -46,7 +46,7 @@ public class MdnsDiscoveryManagerTests {
     private static final String SERVICE_TYPE_2 = "_test._tcp.local";
 
     @Mock private ExecutorProvider executorProvider;
-    @Mock private MdnsSocketClient socketClient;
+    @Mock private MdnsSocketClientBase socketClient;
     @Mock private MdnsServiceTypeClient mockServiceTypeClientOne;
     @Mock private MdnsServiceTypeClient mockServiceTypeClientTwo;
 

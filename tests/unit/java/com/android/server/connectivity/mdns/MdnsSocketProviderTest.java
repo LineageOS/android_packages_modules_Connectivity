@@ -96,7 +96,7 @@ public class MdnsSocketProviderTest {
                 .getNetworkInterfaceByName(LOCAL_ONLY_IFACE_NAME);
         doReturn(mTetheredIfaceWrapper).when(mDeps).getNetworkInterfaceByName(TETHERED_IFACE_NAME);
         doReturn(mock(MdnsInterfaceSocket.class))
-                .when(mDeps).createMdnsInterfaceSocket(any(), anyInt());
+                .when(mDeps).createMdnsInterfaceSocket(any(), anyInt(), any(), any());
         final HandlerThread thread = new HandlerThread("MdnsSocketProviderTest");
         thread.start();
         mHandler = new Handler(thread.getLooper());
@@ -165,7 +165,7 @@ public class MdnsSocketProviderTest {
         }
 
         public void expectedSocketCreatedForNetwork(Network network, List<LinkAddress> addresses) {
-            final SocketEvent event = mHistory.poll(DEFAULT_TIMEOUT, c -> true);
+            final SocketEvent event = mHistory.poll(0L /* timeoutMs */, c -> true);
             assertNotNull(event);
             assertTrue(event instanceof SocketCreatedEvent);
             assertEquals(network, event.mNetwork);
@@ -173,7 +173,7 @@ public class MdnsSocketProviderTest {
         }
 
         public void expectedInterfaceDestroyedForNetwork(Network network) {
-            final SocketEvent event = mHistory.poll(DEFAULT_TIMEOUT, c -> true);
+            final SocketEvent event = mHistory.poll(0L /* timeoutMs */, c -> true);
             assertNotNull(event);
             assertTrue(event instanceof InterfaceDestroyedEvent);
             assertEquals(network, event.mNetwork);
@@ -181,7 +181,7 @@ public class MdnsSocketProviderTest {
 
         public void expectedAddressesChangedForNetwork(Network network,
                 List<LinkAddress> addresses) {
-            final SocketEvent event = mHistory.poll(DEFAULT_TIMEOUT, c -> true);
+            final SocketEvent event = mHistory.poll(0L /* timeoutMs */, c -> true);
             assertNotNull(event);
             assertTrue(event instanceof AddressesChangedEvent);
             assertEquals(network, event.mNetwork);
@@ -260,7 +260,8 @@ public class MdnsSocketProviderTest {
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
-        testCallback3.expectedNoCallback();
+        // Expect the socket destroy for tethered interface.
+        testCallback3.expectedInterfaceDestroyedForNetwork(LOCAL_NETWORK);
     }
 
     @Test
