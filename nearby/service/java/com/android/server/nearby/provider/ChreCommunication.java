@@ -30,6 +30,7 @@ import android.hardware.location.NanoAppState;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.nearby.NearbyConfiguration;
 import com.android.server.nearby.injector.Injector;
 
 import com.google.common.base.Preconditions;
@@ -246,6 +247,14 @@ public class ChreCommunication extends ContextHubClientCallback {
 
             if (response.getResult() == ContextHubTransaction.RESULT_SUCCESS) {
                 for (NanoAppState state : response.getContents()) {
+                    long version = state.getNanoAppVersion();
+                    NearbyConfiguration configuration = new NearbyConfiguration();
+                    long minVersion = configuration.getNanoAppMinVersion();
+                    if (version < minVersion) {
+                        Log.w(TAG, String.format("Current nano app version is %s, which does not  "
+                                + "meet minimum version required %s", version, minVersion));
+                        continue;
+                    }
                     if (mNanoAppIds.contains(state.getNanoAppId())) {
                         Log.i(
                                 TAG,
