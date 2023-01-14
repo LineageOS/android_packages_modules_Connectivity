@@ -32,10 +32,13 @@ import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
 
+import static com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -79,6 +82,11 @@ public class IpSecManagerTunnelTest extends IpSecBaseTest {
     @Rule public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
 
     private static final String TAG = IpSecManagerTunnelTest.class.getSimpleName();
+
+    // Redefine this flag here so that IPsec code shipped in a mainline module can build on old
+    // platforms before FEATURE_IPSEC_TUNNEL_MIGRATION API is released.
+    private static final String FEATURE_IPSEC_TUNNEL_MIGRATION =
+            "android.software.ipsec_tunnel_migration";
 
     private static final InetAddress LOCAL_OUTER_4 = InetAddress.parseNumericAddress("192.0.2.1");
     private static final InetAddress REMOTE_OUTER_4 = InetAddress.parseNumericAddress("192.0.2.2");
@@ -992,6 +1000,41 @@ public class IpSecManagerTunnelTest extends IpSecBaseTest {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
         checkTunnelOutput(innerFamily, outerFamily, useEncap, transportInTunnelMode);
         checkTunnelInput(innerFamily, outerFamily, useEncap, transportInTunnelMode);
+    }
+
+    /** Checks if FEATURE_IPSEC_TUNNEL_MIGRATION is enabled on the device */
+    private static boolean hasIpsecTunnelMigrateFeature() {
+        return sContext.getPackageManager().hasSystemFeature(FEATURE_IPSEC_TUNNEL_MIGRATION);
+    }
+
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    @Test
+    public void testHasIpSecTunnelMigrateFeature() throws Exception {
+        // FEATURE_IPSEC_TUNNEL_MIGRATION is required when VSR API is U/U+
+        if (getVsrApiLevel() > Build.VERSION_CODES.TIRAMISU) {
+            assertTrue(hasIpsecTunnelMigrateFeature());
+        }
+    }
+
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    @Test
+    public void testMigrateTunnelModeTransform() throws Exception {
+        assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
+        assumeTrue(hasIpsecTunnelMigrateFeature());
+
+        IpSecTransform.Builder transformBuilder = new IpSecTransform.Builder(sContext);
+        transformBuilder.setEncryption(new IpSecAlgorithm(IpSecAlgorithm.CRYPT_AES_CBC, CRYPT_KEY));
+        transformBuilder.setAuthentication(
+                new IpSecAlgorithm(IpSecAlgorithm.AUTH_HMAC_SHA256, AUTH_KEY, AUTH_KEY.length * 4));
+        int spi = getRandomSpi(LOCAL_OUTER_4, REMOTE_OUTER_4);
+
+        try (IpSecManager.SecurityParameterIndex outSpi =
+                        mISM.allocateSecurityParameterIndex(REMOTE_OUTER_4, spi);
+                IpSecTransform outTunnelTransform =
+                        transformBuilder.buildTunnelModeTransform(LOCAL_INNER_4, outSpi)) {
+            mISM.startTunnelModeTransformMigration(
+                    outTunnelTransform, LOCAL_OUTER_4_NEW, REMOTE_OUTER_4_NEW);
+        }
     }
 
     // Transport-in-Tunnel mode tests
