@@ -2678,12 +2678,19 @@ public class TetheringTest {
     public void testUpstreamNetworkChanged() {
         final Tethering.TetherMainSM stateMachine = (Tethering.TetherMainSM)
                 mTetheringDependencies.mUpstreamNetworkMonitorSM;
+        // Gain upstream.
         final UpstreamNetworkState upstreamState = buildMobileIPv4UpstreamState();
         initTetheringUpstream(upstreamState);
         stateMachine.chooseUpstreamType(true);
-
         mTetheringEventCallback.expectUpstreamChanged(upstreamState.network);
-        verify(mNotificationUpdater, times(1)).onUpstreamCapabilitiesChanged(any());
+        verify(mNotificationUpdater)
+                .onUpstreamCapabilitiesChanged(upstreamState.networkCapabilities);
+
+        // Lose upstream.
+        initTetheringUpstream(null);
+        stateMachine.chooseUpstreamType(true);
+        mTetheringEventCallback.expectUpstreamChanged(NULL_NETWORK);
+        verify(mNotificationUpdater).onUpstreamCapabilitiesChanged(null);
     }
 
     @Test
@@ -2697,7 +2704,8 @@ public class TetheringTest {
         stateMachine.handleUpstreamNetworkMonitorCallback(EVENT_ON_CAPABILITIES, upstreamState);
         // Should have two onUpstreamCapabilitiesChanged().
         // One is called by reportUpstreamChanged(). One is called by EVENT_ON_CAPABILITIES.
-        verify(mNotificationUpdater, times(2)).onUpstreamCapabilitiesChanged(any());
+        verify(mNotificationUpdater, times(2))
+                .onUpstreamCapabilitiesChanged(upstreamState.networkCapabilities);
         reset(mNotificationUpdater);
 
         // Verify that onUpstreamCapabilitiesChanged won't be called if not current upstream network
@@ -2707,6 +2715,27 @@ public class TetheringTest {
                 new Network(WIFI_NETID));
         stateMachine.handleUpstreamNetworkMonitorCallback(EVENT_ON_CAPABILITIES, upstreamState2);
         verify(mNotificationUpdater, never()).onUpstreamCapabilitiesChanged(any());
+    }
+
+    @Test
+    public void testUpstreamCapabilitiesChanged_startStopTethering() throws Exception {
+        final TestNetworkAgent wifi = new TestNetworkAgent(mCm, buildWifiUpstreamState());
+
+        // Start USB tethering with no current upstream.
+        prepareUsbTethering();
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
+
+        // Pretend wifi connected and expect the upstream to be set.
+        wifi.fakeConnect();
+        mCm.makeDefaultNetwork(wifi, CALLBACKS_FIRST);
+        mLooper.dispatchAll();
+        verify(mNotificationUpdater).onUpstreamCapabilitiesChanged(
+                wifi.networkCapabilities);
+
+        // Stop tethering.
+        // Expect that TetherModeAliveState#exit sends capabilities change notification to null.
+        runStopUSBTethering();
+        verify(mNotificationUpdater).onUpstreamCapabilitiesChanged(null);
     }
 
     @Test
