@@ -35,4 +35,6 @@ public class MdnsResponseErrorCode {
     public static final int ERROR_READING_TXT_RDATA = 10;
     public static final int ERROR_SKIPPING_UNKNOWN_RECORD = 11;
     public static final int ERROR_END_OF_FILE = 12;
+    public static final int ERROR_READING_NSEC_RDATA = 13;
+    public static final int ERROR_READING_ANY_RDATA = 14;
 }

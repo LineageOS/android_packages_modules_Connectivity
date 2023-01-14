@@ -2806,7 +2806,8 @@ public class ConnectivityServiceTest {
             // for any other request.
             generalCb.expectLosing(net2);
             net2.assertNotDisconnected(TEST_CALLBACK_TIMEOUT_MS);
-            generalCb.assertNoCallback();
+            // Timeout 0 because after a while LOST will actually arrive
+            generalCb.assertNoCallback(0 /* timeoutMs */);
             net2.expectDisconnected(UNREASONABLY_LONG_ALARM_WAIT_MS);
         } else {
             net2.expectDisconnected(TEST_CALLBACK_TIMEOUT_MS);
@@ -3006,14 +3007,12 @@ public class ConnectivityServiceTest {
      */
     private class TestNetworkCallback extends TestableNetworkCallback {
         TestNetworkCallback() {
-            super(TEST_CALLBACK_TIMEOUT_MS);
-        }
-
-        @Override
-        public void assertNoCallback() {
-            // TODO: better support this use case in TestableNetworkCallback
-            waitForIdle();
-            assertNoCallback(0 /* timeout */);
+            // In the context of this test, the testable network callbacks should use waitForIdle
+            // before calling assertNoCallback in an effort to detect issues where a callback is
+            // not yet sent but a message currently in the queue of a handler will cause it to
+            // be sent soon.
+            super(TEST_CALLBACK_TIMEOUT_MS, TEST_CALLBACK_TIMEOUT_MS,
+                    ConnectivityServiceTest.this::waitForIdle);
         }
 
         public CallbackEntry.Losing expectLosing(final HasNetwork n, final long timeoutMs) {
@@ -3039,9 +3038,15 @@ public class ConnectivityServiceTest {
 
     // Can't be part of TestNetworkCallback because "cannot be declared static; static methods can
     // only be declared in a static or top level type".
+    static void assertNoCallbacks(final long timeoutMs, TestNetworkCallback ... callbacks) {
+        for (TestNetworkCallback c : callbacks) {
+            c.assertNoCallback(timeoutMs);
+        }
+    }
+
     static void assertNoCallbacks(TestNetworkCallback ... callbacks) {
         for (TestNetworkCallback c : callbacks) {
-            c.assertNoCallback();
+            c.assertNoCallback(); // each callback uses its own timeout
         }
     }
 
@@ -3177,7 +3182,10 @@ public class ConnectivityServiceTest {
         wifiNetworkCallback.expectAvailableThenValidatedCallbacks(mWiFiNetworkAgent);
         cellNetworkCallback.expectLosing(mCellNetworkAgent);
         assertEquals(mWiFiNetworkAgent.getNetwork(), mCm.getActiveNetwork());
-        assertNoCallbacks(genericNetworkCallback, wifiNetworkCallback, cellNetworkCallback);
+        // Cell will disconnect after the lingering period. Before that elapses check that
+        // there have been no callbacks.
+        assertNoCallbacks(0 /* timeoutMs */,
+                genericNetworkCallback, wifiNetworkCallback, cellNetworkCallback);
 
         mWiFiNetworkAgent.disconnect();
         genericNetworkCallback.expect(CallbackEntry.LOST, mWiFiNetworkAgent);
@@ -3488,7 +3496,7 @@ public class ConnectivityServiceTest {
         callback.expectLosing(mCellNetworkAgent);
 
         // Let linger run its course.
-        callback.assertNoCallback();
+        callback.assertNoCallback(0 /* timeoutMs */);
         final int lingerTimeoutMs = mService.mLingerDelayMs + mService.mLingerDelayMs / 4;
         callback.expect(CallbackEntry.LOST, mCellNetworkAgent, lingerTimeoutMs);
 
@@ -5927,7 +5935,7 @@ public class ConnectivityServiceTest {
                 .clearCapabilities()
                 .addTransportType(TRANSPORT_WIFI)
                 .build();
-        final TestableNetworkCallback wifiCallback = new TestableNetworkCallback();
+        final TestNetworkCallback wifiCallback = new TestNetworkCallback();
         mCm.registerNetworkCallback(wifiRequest, wifiCallback);
 
         // Bring up validated cell and unvalidated wifi.
@@ -10507,7 +10515,7 @@ public class ConnectivityServiceTest {
         mCm.unregisterNetworkCallback(networkCallback);
     }
 
-    private void expectNat64PrefixChange(TestableNetworkCallback callback,
+    private void expectNat64PrefixChange(TestNetworkCallback callback,
             TestNetworkAgentWrapper agent, IpPrefix prefix) {
         callback.expectLinkPropertiesThat(agent, x -> Objects.equals(x.getNat64Prefix(), prefix));
     }
@@ -16409,7 +16417,7 @@ public class ConnectivityServiceTest {
             final NetworkCallback[] callbacks = new NetworkCallback[remainingCount];
             doAsUid(otherAppUid, () -> {
                 for (int i = 0; i < remainingCount; ++i) {
-                    callbacks[i] = new TestableNetworkCallback();
+                    callbacks[i] = new TestNetworkCallback();
                     mCm.registerDefaultNetworkCallback(callbacks[i]);
                 }
             });
