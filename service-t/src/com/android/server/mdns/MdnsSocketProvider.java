@@ -35,6 +35,7 @@ import android.util.ArrayMap;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 import com.android.net.module.util.ip.NetlinkMonitor;
 import com.android.net.module.util.netlink.NetlinkConstants;
@@ -42,7 +43,6 @@ import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.IOException;
-import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -60,8 +60,13 @@ import java.util.List;
 public class MdnsSocketProvider {
     private static final String TAG = MdnsSocketProvider.class.getSimpleName();
     private static final boolean DBG = MdnsDiscoveryManager.DBG;
+    // This buffer size matches what MdnsSocketClient uses currently.
+    // But 1440 should generally be enough because of standard Ethernet.
+    // Note: mdnsresponder mDNSEmbeddedAPI.h uses 8940 for Ethernet jumbo frames.
+    private static final int READ_BUFFER_SIZE = 2048;
     private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
     @NonNull private final Context mContext;
+    @NonNull private final Looper mLooper;
     @NonNull private final Handler mHandler;
     @NonNull private final Dependencies mDependencies;
     @NonNull private final NetworkCallback mNetworkCallback;
@@ -75,6 +80,7 @@ public class MdnsSocketProvider {
             new ArrayMap<>();
     private final List<String> mLocalOnlyInterfaces = new ArrayList<>();
     private final List<String> mTetheredInterfaces = new ArrayList<>();
+    private final byte[] mPacketReadBuffer = new byte[READ_BUFFER_SIZE];
     private boolean mMonitoringSockets = false;
 
     public MdnsSocketProvider(@NonNull Context context, @NonNull Looper looper) {
@@ -84,6 +90,7 @@ public class MdnsSocketProvider {
     MdnsSocketProvider(@NonNull Context context, @NonNull Looper looper,
             @NonNull Dependencies deps) {
         mContext = context;
+        mLooper = looper;
         mHandler = new Handler(looper);
         mDependencies = deps;
         mNetworkCallback = new NetworkCallback() {
@@ -119,32 +126,33 @@ public class MdnsSocketProvider {
     @VisibleForTesting
     public static class Dependencies {
         /*** Get network interface by given interface name */
-        public NetworkInterfaceWrapper getNetworkInterfaceByName(String interfaceName)
+        public NetworkInterfaceWrapper getNetworkInterfaceByName(@NonNull String interfaceName)
                 throws SocketException {
             final NetworkInterface ni = NetworkInterface.getByName(interfaceName);
             return ni == null ? null : new NetworkInterfaceWrapper(ni);
         }
 
         /*** Check whether given network interface can support mdns */
-        public boolean canScanOnInterface(NetworkInterfaceWrapper networkInterface) {
+        public boolean canScanOnInterface(@NonNull NetworkInterfaceWrapper networkInterface) {
             return MulticastNetworkInterfaceProvider.canScanOnInterface(networkInterface);
         }
 
         /*** Create a MdnsInterfaceSocket */
-        public MdnsInterfaceSocket createMdnsInterfaceSocket(NetworkInterface networkInterface,
-                int port) throws IOException {
-            return new MdnsInterfaceSocket(networkInterface, port);
+        public MdnsInterfaceSocket createMdnsInterfaceSocket(
+                @NonNull NetworkInterface networkInterface, int port, @NonNull Looper looper,
+                @NonNull byte[] packetReadBuffer) throws IOException {
+            return new MdnsInterfaceSocket(networkInterface, port, looper, packetReadBuffer);
         }
     }
 
     /*** Data class for storing socket related info  */
     private static class SocketInfo {
         final MdnsInterfaceSocket mSocket;
-        final List<LinkAddress> mAddresses = new ArrayList<>();
+        final List<LinkAddress> mAddresses;
 
         SocketInfo(MdnsInterfaceSocket socket, List<LinkAddress> addresses) {
             mSocket = socket;
-            mAddresses.addAll(addresses);
+            mAddresses = new ArrayList<>(addresses);
         }
     }
 
@@ -160,8 +168,9 @@ public class MdnsSocketProvider {
         }
     }
 
-    private void ensureRunningOnHandlerThread() {
-        if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+    /*** Ensure that current running thread is same as given handler thread */
+    public static void ensureRunningOnHandlerThread(Handler handler) {
+        if (handler.getLooper().getThread() != Thread.currentThread()) {
             throw new IllegalStateException(
                     "Not running on Handler thread: " + Thread.currentThread().getName());
         }
@@ -169,7 +178,7 @@ public class MdnsSocketProvider {
 
     /*** Start monitoring sockets by listening callbacks for sockets creation or removal */
     public void startMonitoringSockets() {
-        ensureRunningOnHandlerThread();
+        ensureRunningOnHandlerThread(mHandler);
         if (mMonitoringSockets) {
             Log.d(TAG, "Already monitoring sockets.");
             return;
@@ -188,7 +197,7 @@ public class MdnsSocketProvider {
 
     /*** Stop monitoring sockets and unregister callbacks */
     public void stopMonitoringSockets() {
-        ensureRunningOnHandlerThread();
+        ensureRunningOnHandlerThread(mHandler);
         if (!mMonitoringSockets) {
             Log.d(TAG, "Monitoring sockets hasn't been started.");
             return;
@@ -204,19 +213,15 @@ public class MdnsSocketProvider {
         mMonitoringSockets = false;
     }
 
-    private static boolean isNetworkMatched(@Nullable Network targetNetwork,
+    /*** Check whether the target network is matched current network */
+    public static boolean isNetworkMatched(@Nullable Network targetNetwork,
             @NonNull Network currentNetwork) {
         return targetNetwork == null || targetNetwork.equals(currentNetwork);
     }
 
     private boolean matchRequestedNetwork(Network network) {
-        for (int i = 0; i < mCallbacksToRequestedNetworks.size(); i++) {
-            final Network requestedNetwork =  mCallbacksToRequestedNetworks.valueAt(i);
-            if (isNetworkMatched(requestedNetwork, network)) {
-                return true;
-            }
-        }
-        return false;
+        return hasAllNetworksRequest()
+                || mCallbacksToRequestedNetworks.containsValue(network);
     }
 
     private boolean hasAllNetworksRequest() {
@@ -279,15 +284,6 @@ public class MdnsSocketProvider {
         current.addAll(updated);
     }
 
-    private static List<LinkAddress> getLinkAddressFromNetworkInterface(
-            NetworkInterfaceWrapper networkInterface) {
-        List<LinkAddress> addresses = new ArrayList<>();
-        for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
-            addresses.add(new LinkAddress(address));
-        }
-        return addresses;
-    }
-
     private void createSocket(Network network, LinkProperties lp) {
         final String interfaceName = lp.getInterfaceName();
         if (interfaceName == null) {
@@ -307,10 +303,12 @@ public class MdnsSocketProvider {
                         + " with interfaceName:" + interfaceName);
             }
             final MdnsInterfaceSocket socket = mDependencies.createMdnsInterfaceSocket(
-                    networkInterface.getNetworkInterface(), MdnsConstants.MDNS_PORT);
+                    networkInterface.getNetworkInterface(), MdnsConstants.MDNS_PORT, mLooper,
+                    mPacketReadBuffer);
             final List<LinkAddress> addresses;
             if (network.netId == INetd.LOCAL_NET_ID) {
-                addresses = getLinkAddressFromNetworkInterface(networkInterface);
+                addresses = CollectionUtils.map(
+                        networkInterface.getInterfaceAddresses(), LinkAddress::new);
                 mTetherInterfaceSockets.put(interfaceName, new SocketInfo(socket, addresses));
             } else {
                 addresses = lp.getLinkAddresses();
@@ -402,7 +400,7 @@ public class MdnsSocketProvider {
      * @param cb the callback to listen the socket creation.
      */
     public void requestSocket(@Nullable Network network, @NonNull SocketCallback cb) {
-        ensureRunningOnHandlerThread();
+        ensureRunningOnHandlerThread(mHandler);
         mCallbacksToRequestedNetworks.put(cb, network);
         if (network == null) {
             // Does not specify a required network, create sockets for all possible
@@ -425,7 +423,7 @@ public class MdnsSocketProvider {
 
     /*** Unrequest the socket */
     public void unrequestSocket(@NonNull SocketCallback cb) {
-        ensureRunningOnHandlerThread();
+        ensureRunningOnHandlerThread(mHandler);
         mCallbacksToRequestedNetworks.remove(cb);
         if (hasAllNetworksRequest()) {
             // Still has a request for all networks (interfaces).
@@ -434,16 +432,24 @@ public class MdnsSocketProvider {
 
         // Check if remaining requests are matched any of sockets.
         for (int i = mNetworkSockets.size() - 1; i >= 0; i--) {
-            if (matchRequestedNetwork(mNetworkSockets.keyAt(i))) continue;
-            mNetworkSockets.removeAt(i).mSocket.destroy();
+            final Network network = mNetworkSockets.keyAt(i);
+            if (matchRequestedNetwork(network)) continue;
+            final SocketInfo info = mNetworkSockets.removeAt(i);
+            info.mSocket.destroy();
+            // Still notify to unrequester for socket destroy.
+            cb.onInterfaceDestroyed(network, info.mSocket);
         }
 
         // Remove all sockets for tethering interface because these sockets do not have associated
         // networks, and they should invoke by a request for all networks (interfaces). If there is
         // no such request, the sockets for tethering interface should be removed.
         for (int i = mTetherInterfaceSockets.size() - 1; i >= 0; i--) {
-            mTetherInterfaceSockets.removeAt(i).mSocket.destroy();
+            final SocketInfo info = mTetherInterfaceSockets.valueAt(i);
+            info.mSocket.destroy();
+            // Still notify to unrequester for socket destroy.
+            cb.onInterfaceDestroyed(new Network(INetd.LOCAL_NET_ID), info.mSocket);
         }
+        mTetherInterfaceSockets.clear();
     }
 
     /*** Callbacks for listening socket changes */

@@ -22,12 +22,10 @@ import android.os.Looper;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * Sends mDns probe requests to verify service records are unique on the network.
@@ -46,26 +44,21 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
         mLogTag = MdnsProber.class.getSimpleName() + "/" + interfaceTag;
     }
 
-    static class ProbingInfo implements Request {
+    /** Probing request to send with {@link MdnsProber}. */
+    public static class ProbingInfo implements Request {
 
         private final int mServiceId;
         @NonNull
         private final MdnsPacket mPacket;
-        @NonNull
-        private final Supplier<Iterable<SocketAddress>> mDestinationsSupplier;
 
         /**
          * Create a new ProbingInfo
          * @param serviceId Service to probe for.
          * @param probeRecords Records to be probed for uniqueness.
-         * @param destinationsSupplier Supplier for the probe destinations. Will be called on the
-         *                             probe handler thread for each probe.
          */
-        ProbingInfo(int serviceId, @NonNull List<MdnsRecord> probeRecords,
-                @NonNull Supplier<Iterable<SocketAddress>> destinationsSupplier) {
+        ProbingInfo(int serviceId, @NonNull List<MdnsRecord> probeRecords) {
             mServiceId = serviceId;
             mPacket = makePacket(probeRecords);
-            mDestinationsSupplier = destinationsSupplier;
         }
 
         public int getServiceId() {
@@ -76,12 +69,6 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
         @Override
         public MdnsPacket getPacket(int index) {
             return mPacket;
-        }
-
-        @NonNull
-        @Override
-        public Iterable<SocketAddress> getDestinations(int index) {
-            return mDestinationsSupplier.get();
         }
 
         @Override

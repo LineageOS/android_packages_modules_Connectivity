@@ -38,6 +38,7 @@ import androidx.annotation.NonNull;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
+import com.android.server.nearby.fastpair.Constant;
 
 import java.util.Arrays;
 import java.util.List;
@@ -72,6 +73,11 @@ public class PresenceManager {
 
                 @Override
                 public void onLost(@NonNull NearbyDevice device) {}
+
+                @Override
+                public void onError(int errorCode) {
+                    Log.w(Constant.TAG, "[PresenceManager] Scan error is " + errorCode);
+                }
             };
 
     private final BroadcastReceiver mScreenBroadcastReceiver =

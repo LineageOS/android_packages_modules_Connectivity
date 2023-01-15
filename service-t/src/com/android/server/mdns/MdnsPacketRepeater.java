@@ -24,7 +24,7 @@ import android.os.Message;
 import android.util.Log;
 
 import java.io.IOException;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 
 /**
  * A class used to send several packets at given time intervals.
@@ -32,6 +32,14 @@ import java.net.SocketAddress;
  */
 public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     private static final boolean DBG = MdnsAdvertiser.DBG;
+    private static final InetSocketAddress IPV4_ADDR = new InetSocketAddress(
+            MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
+    private static final InetSocketAddress IPV6_ADDR = new InetSocketAddress(
+            MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT);
+    private static final InetSocketAddress[] ALL_ADDRS = new InetSocketAddress[] {
+            IPV4_ADDR, IPV6_ADDR
+    };
+
     @NonNull
     private final MdnsReplySender mReplySender;
     @NonNull
@@ -70,12 +78,6 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         MdnsPacket getPacket(int index);
 
         /**
-         * Get a set of destinations for the packet for one iteration.
-         */
-        @NonNull
-        Iterable<SocketAddress> getDestinations(int index);
-
-        /**
          * Get the delay in milliseconds until the next packet transmission.
          */
         long getDelayMs(int nextIndex);
@@ -110,12 +112,13 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
             }
 
             final MdnsPacket packet = request.getPacket(index);
-            final Iterable<SocketAddress> destinations = request.getDestinations(index);
             if (DBG) {
-                Log.v(getTag(), "Sending packets to " + destinations + " for iteration "
-                        + index + " out of " + request.getNumSends());
+                Log.v(getTag(), "Sending packets for iteration " + index + " out of "
+                        + request.getNumSends());
             }
-            for (SocketAddress destination : destinations) {
+            // Send to both v4 and v6 addresses; the reply sender will take care of ignoring the
+            // send when the socket has not joined the relevant group.
+            for (InetSocketAddress destination : ALL_ADDRS) {
                 try {
                     mReplySender.sendNow(packet, destination);
                 } catch (IOException e) {

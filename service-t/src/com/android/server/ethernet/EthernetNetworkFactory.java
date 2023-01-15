@@ -491,10 +491,19 @@ public class EthernetNetworkFactory {
             mDeps.makeIpClient(mContext, name, mIpClientCallback);
             mIpClientCallback.awaitIpClientStart();
 
+            if (mIpConfig.getProxySettings() == ProxySettings.STATIC
+                    || mIpConfig.getProxySettings() == ProxySettings.PAC) {
+                mIpClient.setHttpProxy(mIpConfig.getHttpProxy());
+            }
+
             if (sTcpBufferSizes == null) {
                 sTcpBufferSizes = mDeps.getTcpBufferSizesFromResource(mContext);
             }
-            provisionIpClient(mIpClient, mIpConfig, sTcpBufferSizes);
+            if (!TextUtils.isEmpty(sTcpBufferSizes)) {
+                mIpClient.setTcpBufferSizes(sTcpBufferSizes);
+            }
+
+            mIpClient.startProvisioning(createProvisioningConfiguration(mIpConfig));
         }
 
         void onIpLayerStarted(@NonNull final LinkProperties linkProperties) {
@@ -633,20 +642,6 @@ public class EthernetNetworkFactory {
             mNetworkOfferCallback = null;
             stop();
             mRequestIds.clear();
-        }
-
-        private static void provisionIpClient(@NonNull final IpClientManager ipClient,
-                @NonNull final IpConfiguration config, @NonNull final String tcpBufferSizes) {
-            if (config.getProxySettings() == ProxySettings.STATIC ||
-                    config.getProxySettings() == ProxySettings.PAC) {
-                ipClient.setHttpProxy(config.getHttpProxy());
-            }
-
-            if (!TextUtils.isEmpty(tcpBufferSizes)) {
-                ipClient.setTcpBufferSizes(tcpBufferSizes);
-            }
-
-            ipClient.startProvisioning(createProvisioningConfiguration(config));
         }
 
         private static ProvisioningConfiguration createProvisioningConfiguration(
