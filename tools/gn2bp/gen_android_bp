@@ -1529,6 +1529,7 @@ def create_java_module(blueprint, gn):
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
   module.aidl["local_include_dirs"] = {"base/android/java/src/"}
   module.sdk_version = "module_current"
+  module.min_sdk_version = 30
   module.apex_available.add(tethering_apex)
   # TODO: support for this flag is removed upstream in crrev/c/4062652.
   # Consider reverting this change upstream, or worst-case downstream.  As an
