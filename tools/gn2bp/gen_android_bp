@@ -1673,6 +1673,7 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-fPIC',
+      '-Wno-c++11-narrowing',
   ]
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.

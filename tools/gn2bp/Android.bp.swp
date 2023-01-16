@@ -4341,6 +4341,7 @@ cc_defaults {
     cflags: [
         "-DGOOGLE_PROTOBUF_NO_RTTI",
         "-Wno-ambiguous-reversed-operator",
+        "-Wno-c++11-narrowing",
         "-Wno-error=return-type",
         "-Wno-macro-redefined",
         "-Wno-missing-field-initializers",
