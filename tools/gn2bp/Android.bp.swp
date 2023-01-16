@@ -8293,6 +8293,7 @@ cc_library_shared {
         "-Wl,-wrap,valloc",
         "-Wl,-wrap,vasprintf",
     ],
+    stem: "libcronet_unittests_android__library",
     target: {
         android_arm: {
             cflags: [

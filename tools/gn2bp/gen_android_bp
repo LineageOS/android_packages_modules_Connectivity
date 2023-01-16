@@ -525,6 +525,12 @@ class Module(object):
     else:
       self.shared_libs.add(lib)
 
+  def is_test(self):
+    if gn_utils.TESTING_SUFFIX in self.name:
+      name_without_prefix = self.name[:self.name.find(gn_utils.TESTING_SUFFIX)]
+      return any([name_without_prefix == label_to_module_name(target) for target in DEFAULT_TESTS])
+    return False
+
   def _output_field(self, output, name, sort=True):
     value = getattr(self, name)
     return write_blueprint_key_value(output, name, value, sort)
@@ -1473,6 +1479,11 @@ def create_modules_from_target(blueprint, gn, gn_target_name, is_test_target):
     # .so file name needs to match with CronetLibraryLoader.java (e.g. libcronet.109.0.5386.0.so)
     # So setting the output name based on the output_name from the desc.json
     module.stem = 'lib' + target.output_name
+
+  if module.is_test():
+    # Tests output should be a shared library in the format of 'lib[module_name]'
+    module.stem = 'lib' + target.get_target_name()[
+                          :target.get_target_name().find(gn_utils.TESTING_SUFFIX)]
 
   # dep_name is an unmangled GN target name (e.g. //foo:bar(toolchain)).
   # Currently, only one module is generated from target even target has multiple toolchains.

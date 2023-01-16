@@ -268,6 +268,9 @@ class GnParser(object):
                   'inputs', 'outputs', 'args', 'script', 'response_file_contents', 'ldflags'):
         self._finalize_attribute(key)
 
+    def get_target_name(self):
+      return self.name[self.name.find(":") + 1:]
+
 
   def __init__(self, builtin_deps):
     self.builtin_deps = builtin_deps
