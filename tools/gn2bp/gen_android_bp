@@ -40,9 +40,13 @@ import gn_utils
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Default targets to translate to the blueprint file.
-default_targets = [
+DEFAULT_TARGETS = [
     '//components/cronet/android:cronet',
     '//components/cronet/android:cronet_android_mainline',
+]
+
+DEFAULT_TESTS = [
+  '//components/cronet/android:cronet_unittests_android__library',
 ]
 
 EXTRAS_ANDROID_BP_FILE = "Android.extras.bp"
@@ -1305,7 +1309,7 @@ def _set_linker_script(module, libs):
 def set_module_flags(module, module_type, cflags, defines, ldflags, libs):
   module.cflags.update(_get_cflags(cflags, defines))
   if module_type != 'cc_object':
-    module.ldflags.update({flag for flag in ldflags 
+    module.ldflags.update({flag for flag in ldflags
             if flag in ldflag_allowlist or flag.startswith("-Wl,-wrap,")})
     _set_linker_script(module, libs)
   # TODO: implement proper cflag parsing.
@@ -1694,6 +1698,7 @@ def create_blueprint_for_targets(gn, targets):
       '-UANDROID',
   ]
   defaults.stl = 'none'
+  defaults.cpp_std = 'c++17'
   defaults.min_sdk_version = 29
   defaults.apex_available.add(tethering_apex)
   blueprint.add_module(defaults)
@@ -1814,7 +1819,7 @@ def main():
   if args.verbose:
     log.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s', level=log.DEBUG)
 
-  targets = args.targets or default_targets
+  targets = args.targets or DEFAULT_TARGETS + DEFAULT_TESTS
   gn = gn_utils.GnParser(builtin_deps)
   for desc_file in args.desc:
     with open(desc_file) as f:
