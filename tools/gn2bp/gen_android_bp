@@ -1306,7 +1306,8 @@ def _get_cflags(cflags, defines):
 def set_module_flags(module, module_type, cflags, defines, ldflags):
   module.cflags.update(_get_cflags(cflags, defines))
   if module_type != 'cc_object':
-    module.ldflags.update({flag for flag in ldflags if flag in ldflag_allowlist})
+    module.ldflags.update({flag for flag in ldflags 
+            if flag in ldflag_allowlist or flag.startswith("-Wl,-wrap,")})
   # TODO: implement proper cflag parsing.
   for flag in cflags:
     if '-std=' in flag:
