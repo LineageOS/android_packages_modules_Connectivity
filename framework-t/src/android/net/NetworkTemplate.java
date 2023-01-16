@@ -258,7 +258,6 @@ public final class NetworkTemplate implements Parcelable {
     }
 
     private final int mMatchRule;
-    private final String mSubscriberId;
 
     /**
      * Ugh, templates are designed to target a single subscriber, but we might
@@ -313,7 +312,7 @@ public final class NetworkTemplate implements Parcelable {
         // to metered networks. It is now possible to match mobile with any meteredness, but
         // in order to preserve backward compatibility of @UnsupportedAppUsage methods, this
         //constructor passes METERED_YES for these types.
-        this(matchRule, subscriberId, new String[] { subscriberId },
+        this(matchRule, new String[] { subscriberId },
                 wifiNetworkKey != null ? new String[] { wifiNetworkKey } : new String[0],
                 (matchRule == MATCH_MOBILE || matchRule == MATCH_MOBILE_WILDCARD
                         || matchRule == MATCH_CARRIER) ? METERED_YES : METERED_ALL,
@@ -321,13 +320,12 @@ public final class NetworkTemplate implements Parcelable {
     }
 
     /** @hide */
-    public NetworkTemplate(int matchRule, String subscriberId, String[] matchSubscriberIds,
-            String[] matchWifiNetworkKeys, int metered, int roaming,
-            int defaultNetwork, int ratType, int oemManaged) {
+    public NetworkTemplate(int matchRule, String[] matchSubscriberIds,
+            String[] matchWifiNetworkKeys, int metered, int roaming, int defaultNetwork,
+            int ratType, int oemManaged) {
         Objects.requireNonNull(matchWifiNetworkKeys);
         Objects.requireNonNull(matchSubscriberIds);
         mMatchRule = matchRule;
-        mSubscriberId = subscriberId;
         mMatchSubscriberIds = matchSubscriberIds;
         mMatchWifiNetworkKeys = matchWifiNetworkKeys;
         mMetered = metered;
@@ -344,7 +342,6 @@ public final class NetworkTemplate implements Parcelable {
 
     private NetworkTemplate(Parcel in) {
         mMatchRule = in.readInt();
-        mSubscriberId = in.readString();
         mMatchSubscriberIds = in.createStringArray();
         mMatchWifiNetworkKeys = in.createStringArray();
         mMetered = in.readInt();
@@ -357,7 +354,6 @@ public final class NetworkTemplate implements Parcelable {
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mMatchRule);
-        dest.writeString(mSubscriberId);
         dest.writeStringArray(mMatchSubscriberIds);
         dest.writeStringArray(mMatchWifiNetworkKeys);
         dest.writeInt(mMetered);
@@ -376,10 +372,6 @@ public final class NetworkTemplate implements Parcelable {
     public String toString() {
         final StringBuilder builder = new StringBuilder("NetworkTemplate: ");
         builder.append("matchRule=").append(getMatchRuleName(mMatchRule));
-        if (mSubscriberId != null) {
-            builder.append(", subscriberId=").append(
-                    NetworkIdentityUtils.scrubSubscriberId(mSubscriberId));
-        }
         if (mMatchSubscriberIds != null) {
             builder.append(", matchSubscriberIds=").append(
                     Arrays.toString(NetworkIdentityUtils.scrubSubscriberIds(mMatchSubscriberIds)));
@@ -406,7 +398,7 @@ public final class NetworkTemplate implements Parcelable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(mMatchRule, mSubscriberId, Arrays.hashCode(mMatchWifiNetworkKeys),
+        return Objects.hash(mMatchRule, Arrays.hashCode(mMatchWifiNetworkKeys),
                 mMetered, mRoaming, mDefaultNetwork, mRatType, mOemManaged);
     }
 
@@ -415,7 +407,6 @@ public final class NetworkTemplate implements Parcelable {
         if (obj instanceof NetworkTemplate) {
             final NetworkTemplate other = (NetworkTemplate) obj;
             return mMatchRule == other.mMatchRule
-                    && Objects.equals(mSubscriberId, other.mSubscriberId)
                     && mMetered == other.mMetered
                     && mRoaming == other.mRoaming
                     && mDefaultNetwork == other.mDefaultNetwork
@@ -456,12 +447,15 @@ public final class NetworkTemplate implements Parcelable {
 
     /**
      * Get subscriber Id of the template.
+     *
+     * @deprecated User should get a subscriberId by {@link #getSubscriberIds} instead.
      * @hide
      */
+    @Deprecated
     @Nullable
     @UnsupportedAppUsage
     public String getSubscriberId() {
-        return mSubscriberId;
+        return CollectionUtils.isEmpty(mMatchSubscriberIds) ? null : mMatchSubscriberIds[0];
     }
 
     /**
@@ -775,15 +769,16 @@ public final class NetworkTemplate implements Parcelable {
         // information. For instances:
         // The TYPE_WIFI with subscriberId means that it is a merged carrier wifi network.
         // The TYPE_CARRIER means that the network associate to specific carrier network.
-        if (template.mSubscriberId == null) return template;
 
-        if (CollectionUtils.contains(merged, template.mSubscriberId)) {
+        if (CollectionUtils.isEmpty(template.mMatchSubscriberIds)) return template;
+
+        if (CollectionUtils.contains(merged, template.mMatchSubscriberIds[0])) {
             // Requested template subscriber is part of the merge group; return
             // a template that matches all merged subscribers.
             final String[] matchWifiNetworkKeys = template.mMatchWifiNetworkKeys;
             // TODO: Use NetworkTemplate.Builder to build a template after NetworkTemplate
             // could handle incompatible subscriberIds. See b/217805241.
-            return new NetworkTemplate(template.mMatchRule, merged[0], merged,
+            return new NetworkTemplate(template.mMatchRule, merged,
                     CollectionUtils.isEmpty(matchWifiNetworkKeys)
                             ? new String[0] : new String[] { matchWifiNetworkKeys[0] },
                     (template.mMatchRule == MATCH_MOBILE
@@ -1002,7 +997,6 @@ public final class NetworkTemplate implements Parcelable {
         public NetworkTemplate build() {
             assertRequestableParameters();
             return new NetworkTemplate(getWildcardDeducedMatchRule(),
-                    mMatchSubscriberIds.isEmpty() ? null : mMatchSubscriberIds.iterator().next(),
                     mMatchSubscriberIds.toArray(new String[0]),
                     mMatchWifiNetworkKeys.toArray(new String[0]), mMetered, mRoaming,
                     mDefaultNetwork, mRatType, mOemManaged);
