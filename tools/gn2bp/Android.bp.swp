@@ -33,32 +33,35 @@ filegroup {
         ":cronet_aml_components_cronet_android_interface_api_version",
         "components/cronet/android/api/src/android/net/http/BidirectionalStream.java",
         "components/cronet/android/api/src/android/net/http/CallbackException.java",
-        "components/cronet/android/api/src/android/net/http/CronetEngine.java",
-        "components/cronet/android/api/src/android/net/http/CronetException.java",
+        "components/cronet/android/api/src/android/net/http/ConnectionMigrationOptions.java",
+        "components/cronet/android/api/src/android/net/http/DnsOptions.java",
         "components/cronet/android/api/src/android/net/http/ExperimentalBidirectionalStream.java",
-        "components/cronet/android/api/src/android/net/http/ExperimentalCronetEngine.java",
+        "components/cronet/android/api/src/android/net/http/ExperimentalHttpEngine.java",
         "components/cronet/android/api/src/android/net/http/ExperimentalUrlRequest.java",
-        "components/cronet/android/api/src/android/net/http/ICronetEngineBuilder.java",
+        "components/cronet/android/api/src/android/net/http/HttpEngine.java",
+        "components/cronet/android/api/src/android/net/http/HttpException.java",
+        "components/cronet/android/api/src/android/net/http/IHttpEngineBuilder.java",
         "components/cronet/android/api/src/android/net/http/InlineExecutionProhibitedException.java",
         "components/cronet/android/api/src/android/net/http/NetworkException.java",
         "components/cronet/android/api/src/android/net/http/NetworkQualityRttListener.java",
         "components/cronet/android/api/src/android/net/http/NetworkQualityThroughputListener.java",
         "components/cronet/android/api/src/android/net/http/QuicException.java",
+        "components/cronet/android/api/src/android/net/http/QuicOptions.java",
         "components/cronet/android/api/src/android/net/http/RequestFinishedInfo.java",
         "components/cronet/android/api/src/android/net/http/UploadDataProvider.java",
         "components/cronet/android/api/src/android/net/http/UploadDataSink.java",
         "components/cronet/android/api/src/android/net/http/UrlRequest.java",
         "components/cronet/android/api/src/android/net/http/UrlResponseInfo.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/ByteArrayCronetCallback.java",
+        "components/cronet/android/api/src/android/net/http/apihelpers/ByteArrayCallback.java",
         "components/cronet/android/api/src/android/net/http/apihelpers/ContentTypeParametersParser.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/CronetRequestCompletionListener.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/CronetResponse.java",
+        "components/cronet/android/api/src/android/net/http/apihelpers/HttpResponse.java",
         "components/cronet/android/api/src/android/net/http/apihelpers/ImplicitFlowControlCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/InMemoryTransformCronetCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/JsonCronetCallback.java",
+        "components/cronet/android/api/src/android/net/http/apihelpers/InMemoryTransformCallback.java",
+        "components/cronet/android/api/src/android/net/http/apihelpers/JsonCallback.java",
         "components/cronet/android/api/src/android/net/http/apihelpers/RedirectHandler.java",
         "components/cronet/android/api/src/android/net/http/apihelpers/RedirectHandlers.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/StringCronetCallback.java",
+        "components/cronet/android/api/src/android/net/http/apihelpers/RequestCompletionListener.java",
+        "components/cronet/android/api/src/android/net/http/apihelpers/StringCallback.java",
         "components/cronet/android/api/src/android/net/http/apihelpers/UploadDataProviders.java",
         "components/cronet/android/api/src/android/net/http/apihelpers/UrlRequestCallbacks.java",
     ],
@@ -1092,6 +1095,7 @@ cc_genrule {
         "base/android/java/src/org/chromium/base/MemoryPressureListener.java",
         "base/android/java/src/org/chromium/base/PathService.java",
         "base/android/java/src/org/chromium/base/PathUtils.java",
+        "base/android/java/src/org/chromium/base/PiiElider.java",
         "base/android/java/src/org/chromium/base/PowerMonitor.java",
         "base/android/java/src/org/chromium/base/RadioUtils.java",
         "base/android/java/src/org/chromium/base/SysUtils.java",
@@ -1164,6 +1168,8 @@ cc_genrule {
          "PathService_jni.h " +
          "--output_name " +
          "PathUtils_jni.h " +
+         "--output_name " +
+         "PiiElider_jni.h " +
          "--output_name " +
          "PowerMonitor_jni.h " +
          "--output_name " +
@@ -1245,6 +1251,8 @@ cc_genrule {
          "--input_file " +
          "$(location base/android/java/src/org/chromium/base/PathUtils.java) " +
          "--input_file " +
+         "$(location base/android/java/src/org/chromium/base/PiiElider.java) " +
+         "--input_file " +
          "$(location base/android/java/src/org/chromium/base/PowerMonitor.java) " +
          "--input_file " +
          "$(location base/android/java/src/org/chromium/base/RadioUtils.java) " +
@@ -1309,6 +1317,7 @@ cc_genrule {
         "base/base_jni_headers/NativeUmaRecorder_jni.h",
         "base/base_jni_headers/PathService_jni.h",
         "base/base_jni_headers/PathUtils_jni.h",
+        "base/base_jni_headers/PiiElider_jni.h",
         "base/base_jni_headers/PostTask_jni.h",
         "base/base_jni_headers/PowerMonitor_jni.h",
         "base/base_jni_headers/RadioUtils_jni.h",
