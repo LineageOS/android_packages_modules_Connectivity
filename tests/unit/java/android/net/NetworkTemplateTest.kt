@@ -34,10 +34,8 @@ import android.net.NetworkStats.METERED_YES
 import android.net.NetworkStats.ROAMING_ALL
 import android.net.NetworkTemplate.MATCH_CARRIER
 import android.net.NetworkTemplate.MATCH_MOBILE
-import android.net.NetworkTemplate.MATCH_MOBILE_WILDCARD
 import android.net.NetworkTemplate.MATCH_TEST
 import android.net.NetworkTemplate.MATCH_WIFI
-import android.net.NetworkTemplate.MATCH_WIFI_WILDCARD
 import android.net.NetworkTemplate.NETWORK_TYPE_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_ALL
 import android.net.NetworkTemplate.OEM_MANAGED_NO
@@ -231,7 +229,6 @@ class NetworkTemplateTest {
         val templateMobileWildcard = buildTemplateMobileWildcard()
         val templateMobileNullImsiWithRatType = NetworkTemplate.Builder(MATCH_MOBILE)
                 .setRatType(TelephonyManager.NETWORK_TYPE_UMTS).build()
-
         val mobileImsi1 = buildMobileNetworkState(TEST_IMSI1)
         val identMobile1 = buildNetworkIdentity(mockContext, mobileImsi1,
                 false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
@@ -453,7 +450,7 @@ class NetworkTemplateTest {
         val templateWifi = NetworkTemplate(MATCH_WIFI, emptyArray<String>(),
                 arrayOf(TEST_WIFI_KEY1), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, 0,
                 OEM_MANAGED_ALL)
-        val templateOem = NetworkTemplate(MATCH_MOBILE_WILDCARD, emptyArray<String>(),
+        val templateOem = NetworkTemplate(MATCH_MOBILE, emptyArray<String>(),
                 emptyArray<String>(), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, 0,
                 OEM_MANAGED_YES)
         assertParcelSane(templateMobile, 8)
@@ -491,13 +488,14 @@ class NetworkTemplateTest {
      * @param matchType A match rule from {@code NetworkTemplate.MATCH_*} corresponding to the
      *         networkType.
      * @param subscriberId To be populated with {@code TEST_IMSI*} only if networkType is
-     *         {@code TYPE_MOBILE}. May be left as null when matchType is
-     *         {@link NetworkTemplate.MATCH_MOBILE_WILDCARD}.
-     * @param templateWifiKey Top be populated with {@code TEST_WIFI_KEY*} only if networkType is
-     *         {@code TYPE_WIFI}. May be left as null when matchType is
-     *         {@link NetworkTemplate.MATCH_WIFI_WILDCARD}.
-     * @param identWifiKey If networkType is {@code TYPE_WIFI}, this value must *NOT* be null. Provide
-     *         one of {@code TEST_WIFI_KEY*}.
+     *         {@code TYPE_MOBILE}. Note that {@code MATCH_MOBILE} with an empty subscriberId list
+     *         will match any subscriber ID.
+     * @param templateWifiKey To be populated with {@code TEST_WIFI_KEY*} only if networkType is
+     *         {@code TYPE_WIFI}. Note that {@code MATCH_WIFI} with both an empty subscriberId list
+     *         and an empty wifiNetworkKey list will match any subscriber ID and/or any wifi network
+     *         key.
+     * @param identWifiKey If networkType is {@code TYPE_WIFI}, this value must *NOT* be null.
+     *         Provide one of {@code TEST_WIFI_KEY*}.
      */
     private fun matchOemManagedIdent(
         networkType: Int,
@@ -507,8 +505,10 @@ class NetworkTemplateTest {
         identWifiKey: String? = null
     ) {
         val oemManagedStates = arrayOf(OEM_NONE, OEM_PAID, OEM_PRIVATE, OEM_PAID or OEM_PRIVATE)
-        val matchSubscriberIds = arrayOf(subscriberId)
-        val matchWifiNetworkKeys = arrayOf(templateWifiKey)
+        val matchSubscriberIds =
+                if (subscriberId == null) emptyArray<String>() else arrayOf(subscriberId)
+        val matchWifiNetworkKeys =
+                if (templateWifiKey == null) emptyArray<String>() else arrayOf(templateWifiKey)
 
         val templateOemYes = NetworkTemplate(matchType, matchSubscriberIds,
                 matchWifiNetworkKeys, METERED_ALL, ROAMING_ALL,
@@ -547,11 +547,10 @@ class NetworkTemplateTest {
     @Test
     fun testOemManagedMatchesIdent() {
         matchOemManagedIdent(TYPE_MOBILE, MATCH_MOBILE, subscriberId = TEST_IMSI1)
-        matchOemManagedIdent(TYPE_MOBILE, MATCH_MOBILE_WILDCARD)
+        matchOemManagedIdent(TYPE_MOBILE, MATCH_MOBILE)
         matchOemManagedIdent(TYPE_WIFI, MATCH_WIFI, templateWifiKey = TEST_WIFI_KEY1,
                 identWifiKey = TEST_WIFI_KEY1)
-        matchOemManagedIdent(TYPE_WIFI, MATCH_WIFI_WILDCARD,
-                identWifiKey = TEST_WIFI_KEY1)
+        matchOemManagedIdent(TYPE_WIFI, MATCH_WIFI, identWifiKey = TEST_WIFI_KEY1)
     }
 
     @Test
