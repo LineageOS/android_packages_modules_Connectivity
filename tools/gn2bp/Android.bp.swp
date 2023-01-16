@@ -4190,6 +4190,7 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    min_sdk_version: "30",
     libs: [
         "androidx.annotation_annotation",
         "androidx.annotation_annotation-experimental-nodeps",
