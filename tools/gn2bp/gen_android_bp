@@ -1825,7 +1825,7 @@ def main():
     with open(desc_file) as f:
       desc = json.load(f)
     for target in targets:
-      gn.parse_gn_desc(desc, target)
+      gn.parse_gn_desc(desc, target, is_test_target=target in DEFAULT_TESTS)
   blueprint = create_blueprint_for_targets(gn, targets)
   project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
   tool_name = os.path.relpath(os.path.abspath(__file__), project_root)
