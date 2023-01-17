@@ -24,14 +24,12 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.net.INetd;
 import android.net.MarkMaskParcel;
 import android.os.Build;
 import android.os.HandlerThread;
 import android.test.suitebuilder.annotation.SmallTest;
 
-import com.android.connectivity.resources.R;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -48,21 +46,19 @@ import java.nio.ByteOrder;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
-public class KeepaliveTrackerTest {
-    private static final int[] TEST_SUPPORTED_KEEPALIVES = {1, 3, 0, 0, 0, 0, 0, 0, 0};
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+public class AutomaticOnOffKeepaliveTrackerTest {
     private static final int TEST_NETID = 0xA85;
     private static final int TEST_NETID_FWMARK = 0x0A85;
     private static final int OTHER_NETID = 0x1A85;
     private static final int NETID_MASK = 0xffff;
-    private static final int SUPPORTED_SLOT_COUNT = 2;
-    private KeepaliveTracker mKeepaliveTracker;
+    private AutomaticOnOffKeepaliveTracker mAOOKeepaliveTracker;
     private HandlerThread mHandlerThread;
 
     @Mock INetd mNetd;
-    @Mock KeepaliveTracker.Dependencies mDependencies;
+    @Mock AutomaticOnOffKeepaliveTracker.Dependencies mDependencies;
     @Mock Context mCtx;
-    @Mock Resources mResources;
+    @Mock KeepaliveTracker mKeepaliveTracker;
 
     // Hexadecimal representation of a SOCK_DIAG response with tcp info.
     private static final String SOCK_DIAG_TCP_INET_HEX =
@@ -169,51 +165,42 @@ public class KeepaliveTrackerTest {
         doReturn(makeMarkMaskParcel(NETID_MASK, TEST_NETID_FWMARK)).when(mNetd)
                 .getFwmarkForNetwork(TEST_NETID);
 
-        doReturn(TEST_SUPPORTED_KEEPALIVES).when(mDependencies).getSupportedKeepalives();
-        doReturn(mResources).when(mDependencies).newConnectivityResources();
-        mockResource();
         doNothing().when(mDependencies).sendRequest(any(), any());
 
         mHandlerThread = new HandlerThread("KeepaliveTrackerTest");
         mHandlerThread.start();
-
-        mKeepaliveTracker = new KeepaliveTracker(mCtx, mHandlerThread.getThreadHandler(),
-                mDependencies);
-    }
-
-    private void mockResource() {
-        doReturn(SUPPORTED_SLOT_COUNT).when(mResources).getInteger(
-                R.integer.config_reservedPrivilegedKeepaliveSlots);
-        doReturn(SUPPORTED_SLOT_COUNT).when(mResources).getInteger(
-                R.integer.config_allowedUnprivilegedKeepalivePerUid);
+        doReturn(mKeepaliveTracker).when(mDependencies).newKeepaliveTracker(
+                mCtx, mHandlerThread.getThreadHandler());
+        mAOOKeepaliveTracker = new AutomaticOnOffKeepaliveTracker(
+                mCtx, mHandlerThread.getThreadHandler(), mDependencies);
     }
 
     @Test
     public void testIsAnyTcpSocketConnected_runOnNonHandlerThread() throws Exception {
         setupResponseWithSocketExisting();
         assertThrows(IllegalStateException.class,
-                () -> mKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID));
+                () -> mAOOKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID));
     }
 
     @Test
     public void testIsAnyTcpSocketConnected_withTargetNetId() throws Exception {
         setupResponseWithSocketExisting();
         mHandlerThread.getThreadHandler().post(
-                () -> assertTrue(mKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID)));
+                () -> assertTrue(mAOOKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID)));
     }
 
     @Test
     public void testIsAnyTcpSocketConnected_withIncorrectNetId() throws Exception {
         setupResponseWithSocketExisting();
         mHandlerThread.getThreadHandler().post(
-                () -> assertFalse(mKeepaliveTracker.isAnyTcpSocketConnected(OTHER_NETID)));
+                () -> assertFalse(mAOOKeepaliveTracker.isAnyTcpSocketConnected(OTHER_NETID)));
     }
 
     @Test
     public void testIsAnyTcpSocketConnected_noSocketExists() throws Exception {
         setupResponseWithoutSocketExisting();
         mHandlerThread.getThreadHandler().post(
-                () -> assertFalse(mKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID)));
+                () -> assertFalse(mAOOKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID)));
     }
 
     private void setupResponseWithSocketExisting() throws Exception {
