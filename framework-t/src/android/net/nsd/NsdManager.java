@@ -242,6 +242,11 @@ public final class NsdManager {
     /** @hide */
     public static final int UNREGISTER_CLIENT                       = 22;
 
+    /** @hide */
+    public static final int MDNS_MONITORING_SOCKETS_CLEANUP         = 23;
+    /** @hide */
+    public static final int MDNS_DISCOVERY_MANAGER_EVENT            = 24;
+
     /** Dns based service discovery protocol */
     public static final int PROTOCOL_DNS_SD = 0x0001;
 
