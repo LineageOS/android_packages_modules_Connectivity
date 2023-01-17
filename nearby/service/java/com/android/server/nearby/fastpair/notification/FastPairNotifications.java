@@ -167,7 +167,8 @@ public class FastPairNotifications {
                         .putExtra(EXTRA_ITEM_ID, item.getId())
                         // Encode account key as a string instead of bytes so that it can be passed
                         // to the string representation of the intent.
-                        .putExtra(EXTRA_FAST_PAIR_SECRET, base16().encode(accountKey));
+                        .putExtra(EXTRA_FAST_PAIR_SECRET, base16().encode(accountKey))
+                        .setPackage(mContext.getPackageName());
         return PendingIntent.getBroadcast(mContext, sRequestCode++, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
     }
@@ -175,7 +176,7 @@ public class FastPairNotifications {
     private PendingIntent getBluetoothSettingsIntent() {
         Intent intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
         return PendingIntent.getActivity(mContext, sRequestCode++, intent,
-                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_MUTABLE);
+                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private LargeHeadsUpNotificationBuilder newBaseBuilder(DiscoveryItem item) {
