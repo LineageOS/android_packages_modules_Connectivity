@@ -1,0 +1,194 @@
+// Signature format: 2.0
+package android.net.http {
+
+  public abstract class CallbackException extends android.net.http.HttpException {
+    ctor protected CallbackException(String, Throwable);
+  }
+
+  public class ConnectionMigrationOptions {
+    method @Nullable public Boolean getEnableDefaultNetworkMigration();
+    method @Nullable public Boolean getEnablePathDegradationMigration();
+  }
+
+  public static class ConnectionMigrationOptions.Builder {
+    ctor public ConnectionMigrationOptions.Builder();
+    method public android.net.http.ConnectionMigrationOptions build();
+    method public android.net.http.ConnectionMigrationOptions.Builder setEnableDefaultNetworkMigration(boolean);
+    method public android.net.http.ConnectionMigrationOptions.Builder setEnablePathDegradationMigration(boolean);
+  }
+
+  public final class DnsOptions {
+    method @Nullable public Boolean getPersistHostCache();
+    method @Nullable public java.time.Duration getPersistHostCachePeriod();
+  }
+
+  public static final class DnsOptions.Builder {
+    ctor public DnsOptions.Builder();
+    method public android.net.http.DnsOptions build();
+    method public android.net.http.DnsOptions.Builder setPersistHostCache(boolean);
+    method public android.net.http.DnsOptions.Builder setPersistHostCachePeriod(java.time.Duration);
+  }
+
+  public abstract class HttpEngine {
+    method public abstract java.net.URLStreamHandlerFactory createURLStreamHandlerFactory();
+    method public abstract String getVersionString();
+    method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, android.net.http.UrlRequest.Callback, java.util.concurrent.Executor);
+    method public abstract java.net.URLConnection openConnection(java.net.URL) throws java.io.IOException;
+    method public abstract void shutdown();
+  }
+
+  public static class HttpEngine.Builder {
+    ctor public HttpEngine.Builder(android.content.Context);
+    method public android.net.http.HttpEngine.Builder addPublicKeyPins(String, java.util.Set<byte[]>, boolean, java.time.Instant);
+    method public android.net.http.HttpEngine.Builder addQuicHint(String, int, int);
+    method public android.net.http.HttpEngine build();
+    method public String getDefaultUserAgent();
+    method public android.net.http.HttpEngine.Builder setConnectionMigrationOptions(android.net.http.ConnectionMigrationOptions);
+    method public android.net.http.HttpEngine.Builder setDnsOptions(android.net.http.DnsOptions);
+    method public android.net.http.HttpEngine.Builder setEnableBrotli(boolean);
+    method public android.net.http.HttpEngine.Builder setEnableHttp2(boolean);
+    method public android.net.http.HttpEngine.Builder setEnableHttpCache(int, long);
+    method public android.net.http.HttpEngine.Builder setEnablePublicKeyPinningBypassForLocalTrustAnchors(boolean);
+    method public android.net.http.HttpEngine.Builder setEnableQuic(boolean);
+    method public android.net.http.HttpEngine.Builder setQuicOptions(android.net.http.QuicOptions);
+    method public android.net.http.HttpEngine.Builder setStoragePath(String);
+    method public android.net.http.HttpEngine.Builder setUserAgent(String);
+    field public static final int HTTP_CACHE_DISABLED = 0; // 0x0
+    field public static final int HTTP_CACHE_DISK = 3; // 0x3
+    field public static final int HTTP_CACHE_DISK_NO_HTTP = 2; // 0x2
+    field public static final int HTTP_CACHE_IN_MEMORY = 1; // 0x1
+  }
+
+  public class HttpException extends java.io.IOException {
+    ctor public HttpException(String, Throwable);
+  }
+
+  public final class InlineExecutionProhibitedException extends java.util.concurrent.RejectedExecutionException {
+    ctor public InlineExecutionProhibitedException();
+  }
+
+  public abstract class NetworkException extends android.net.http.HttpException {
+    ctor public NetworkException(String, Throwable);
+    method public abstract int getErrorCode();
+    method public abstract boolean isImmediatelyRetryable();
+    field public static final int ERROR_ADDRESS_UNREACHABLE = 9; // 0x9
+    field public static final int ERROR_CONNECTION_CLOSED = 5; // 0x5
+    field public static final int ERROR_CONNECTION_REFUSED = 7; // 0x7
+    field public static final int ERROR_CONNECTION_RESET = 8; // 0x8
+    field public static final int ERROR_CONNECTION_TIMED_OUT = 6; // 0x6
+    field public static final int ERROR_HOSTNAME_NOT_RESOLVED = 1; // 0x1
+    field public static final int ERROR_INTERNET_DISCONNECTED = 2; // 0x2
+    field public static final int ERROR_NETWORK_CHANGED = 3; // 0x3
+    field public static final int ERROR_OTHER = 11; // 0xb
+    field public static final int ERROR_QUIC_PROTOCOL_FAILED = 10; // 0xa
+    field public static final int ERROR_TIMED_OUT = 4; // 0x4
+  }
+
+  public abstract class QuicException extends android.net.http.NetworkException {
+    ctor protected QuicException(String, Throwable);
+  }
+
+  public class QuicOptions {
+    method @Nullable public String getHandshakeUserAgent();
+    method @Nullable public Integer getInMemoryServerConfigsCacheSize();
+    method public java.util.Set<java.lang.String> getQuicHostAllowlist();
+  }
+
+  public static class QuicOptions.Builder {
+    ctor public QuicOptions.Builder();
+    method public android.net.http.QuicOptions.Builder addAllowedQuicHost(String);
+    method public android.net.http.QuicOptions build();
+    method public android.net.http.QuicOptions.Builder setHandshakeUserAgent(String);
+    method public android.net.http.QuicOptions.Builder setInMemoryServerConfigsCacheSize(int);
+  }
+
+  public abstract class UploadDataProvider implements java.io.Closeable {
+    ctor public UploadDataProvider();
+    method public void close() throws java.io.IOException;
+    method public abstract long getLength() throws java.io.IOException;
+    method public abstract void read(android.net.http.UploadDataSink, java.nio.ByteBuffer) throws java.io.IOException;
+    method public abstract void rewind(android.net.http.UploadDataSink) throws java.io.IOException;
+  }
+
+  public abstract class UploadDataSink {
+    ctor public UploadDataSink();
+    method public abstract void onReadError(Exception);
+    method public abstract void onReadSucceeded(boolean);
+    method public abstract void onRewindError(Exception);
+    method public abstract void onRewindSucceeded();
+  }
+
+  public abstract class UrlRequest {
+    method public abstract void cancel();
+    method public abstract void followRedirect();
+    method public abstract void getStatus(android.net.http.UrlRequest.StatusListener);
+    method public abstract boolean isDone();
+    method public abstract void read(java.nio.ByteBuffer);
+    method public abstract void start();
+  }
+
+  public abstract static class UrlRequest.Builder {
+    method public abstract android.net.http.UrlRequest.Builder addHeader(String, String);
+    method public abstract android.net.http.UrlRequest.Builder allowDirectExecutor();
+    method public abstract android.net.http.UrlRequest build();
+    method public abstract android.net.http.UrlRequest.Builder disableCache();
+    method public abstract android.net.http.UrlRequest.Builder setHttpMethod(String);
+    method public abstract android.net.http.UrlRequest.Builder setPriority(int);
+    method public abstract android.net.http.UrlRequest.Builder setUploadDataProvider(android.net.http.UploadDataProvider, java.util.concurrent.Executor);
+    field public static final int REQUEST_PRIORITY_HIGHEST = 4; // 0x4
+    field public static final int REQUEST_PRIORITY_IDLE = 0; // 0x0
+    field public static final int REQUEST_PRIORITY_LOW = 2; // 0x2
+    field public static final int REQUEST_PRIORITY_LOWEST = 1; // 0x1
+    field public static final int REQUEST_PRIORITY_MEDIUM = 3; // 0x3
+  }
+
+  public abstract static class UrlRequest.Callback {
+    ctor public UrlRequest.Callback();
+    method public void onCanceled(android.net.http.UrlRequest, android.net.http.UrlResponseInfo);
+    method public abstract void onFailed(android.net.http.UrlRequest, android.net.http.UrlResponseInfo, android.net.http.HttpException);
+    method public abstract void onReadCompleted(android.net.http.UrlRequest, android.net.http.UrlResponseInfo, java.nio.ByteBuffer) throws java.lang.Exception;
+    method public abstract void onRedirectReceived(android.net.http.UrlRequest, android.net.http.UrlResponseInfo, String) throws java.lang.Exception;
+    method public abstract void onResponseStarted(android.net.http.UrlRequest, android.net.http.UrlResponseInfo) throws java.lang.Exception;
+    method public abstract void onSucceeded(android.net.http.UrlRequest, android.net.http.UrlResponseInfo);
+  }
+
+  public static class UrlRequest.Status {
+    field public static final int CONNECTING = 10; // 0xa
+    field public static final int DOWNLOADING_PAC_FILE = 5; // 0x5
+    field public static final int ESTABLISHING_PROXY_TUNNEL = 8; // 0x8
+    field public static final int IDLE = 0; // 0x0
+    field public static final int INVALID = -1; // 0xffffffff
+    field public static final int READING_RESPONSE = 14; // 0xe
+    field public static final int RESOLVING_HOST = 9; // 0x9
+    field public static final int RESOLVING_HOST_IN_PAC_FILE = 7; // 0x7
+    field public static final int RESOLVING_PROXY_FOR_URL = 6; // 0x6
+    field public static final int SENDING_REQUEST = 12; // 0xc
+    field public static final int SSL_HANDSHAKE = 11; // 0xb
+    field public static final int WAITING_FOR_AVAILABLE_SOCKET = 2; // 0x2
+    field public static final int WAITING_FOR_CACHE = 4; // 0x4
+    field public static final int WAITING_FOR_DELEGATE = 3; // 0x3
+    field public static final int WAITING_FOR_RESPONSE = 13; // 0xd
+    field public static final int WAITING_FOR_STALLED_SOCKET_POOL = 1; // 0x1
+  }
+
+  public abstract static class UrlRequest.StatusListener {
+    ctor public UrlRequest.StatusListener();
+    method public abstract void onStatus(int);
+  }
+
+  public abstract class UrlResponseInfo {
+    ctor public UrlResponseInfo();
+    method public abstract java.util.Map<java.lang.String,java.util.List<java.lang.String>> getAllHeaders();
+    method public abstract java.util.List<java.util.Map.Entry<java.lang.String,java.lang.String>> getAllHeadersAsList();
+    method public abstract int getHttpStatusCode();
+    method public abstract String getHttpStatusText();
+    method public abstract String getNegotiatedProtocol();
+    method public abstract String getProxyServer();
+    method public abstract long getReceivedByteCount();
+    method public abstract String getUrl();
+    method public abstract java.util.List<java.lang.String> getUrlChain();
+    method public abstract boolean wasCached();
+  }
+
+}
+
