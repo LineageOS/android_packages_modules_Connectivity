@@ -17,12 +17,14 @@
 package com.android.server.connectivity.mdns;
 
 import android.net.DnsResolver;
+import android.text.TextUtils;
 
 import com.android.net.module.util.CollectionUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * A mDNS "NSEC" record, used in particular for negative responses (RFC6762 6.1).
@@ -139,5 +141,31 @@ public class MdnsNsecRecord extends MdnsRecord {
         writer.writeUInt8(blockNumber);
         writer.writeUInt8(bytesInBlock);
         writer.writeBytes(bytes);
+    }
+
+    @Override
+    public String toString() {
+        return "NSEC: NextDomain: " + TextUtils.join(".", mNextDomain)
+                + " Types " + Arrays.toString(mTypes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(),
+                Arrays.hashCode(mNextDomain), Arrays.hashCode(mTypes));
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof MdnsNsecRecord)) {
+            return false;
+        }
+
+        return super.equals(other)
+                && Arrays.equals(mNextDomain, ((MdnsNsecRecord) other).mNextDomain)
+                && Arrays.equals(mTypes, ((MdnsNsecRecord) other).mTypes);
     }
 }
