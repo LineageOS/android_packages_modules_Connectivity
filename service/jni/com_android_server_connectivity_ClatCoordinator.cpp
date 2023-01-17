@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <linux/if_packet.h>
 #include <linux/if_tun.h>
 #include <linux/ioctl.h>
 #include <log/log.h>
@@ -182,6 +183,12 @@ static jint com_android_server_connectivity_ClatCoordinator_openPacketSocket(JNI
     int sock = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     if (sock < 0) {
         throwIOException(env, "packet socket failed", errno);
+        return -1;
+    }
+    int on = 1;
+    if (setsockopt(sock, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on))) {
+        throwIOException(env, "packet socket auxdata enablement failed", errno);
+        close(sock);
         return -1;
     }
     return sock;
