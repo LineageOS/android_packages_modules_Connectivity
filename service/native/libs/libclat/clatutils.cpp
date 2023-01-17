@@ -29,9 +29,6 @@ extern "C" {
 #include "checksum.h"
 }
 
-// Sync from system/netd/include/netid_client.h.
-#define MARK_UNSET 0u
-
 namespace android {
 namespace net {
 namespace clat {
@@ -128,7 +125,7 @@ int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat
 
     // Socket's mark affects routing decisions (network selection)
     // An fwmark is necessary for clat to bypass the VPN during initialization.
-    if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+    if (setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
         int ret = errno;
         ALOGE("setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
         close(s);
@@ -176,7 +173,7 @@ int detect_mtu(const struct in6_addr* plat_subnet, uint32_t plat_suffix, uint32_
     }
 
     // Socket's mark affects routing decisions (network selection)
-    if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+    if (setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
         int ret = errno;
         ALOGE("setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
         close(s);
