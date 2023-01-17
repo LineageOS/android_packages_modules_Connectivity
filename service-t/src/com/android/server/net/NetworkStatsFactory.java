@@ -200,16 +200,6 @@ public class NetworkStatsFactory {
     }
 
     /**
-     * Parse and return interface-level summary {@link NetworkStats} measured
-     * using {@code /proc/net/dev} style hooks, which may include non IP layer
-     * traffic. Values monotonically increase since device boot, and may include
-     * details about inactive interfaces.
-     */
-    public NetworkStats readNetworkStatsSummaryDev() throws IOException {
-        return mDeps.getNetworkStatsDev();
-    }
-
-    /**
      * Parse and return interface-level summary {@link NetworkStats}. Designed
      * to return only IP layer traffic. Values monotonically increase since
      * device boot, and may include details about inactive interfaces.
