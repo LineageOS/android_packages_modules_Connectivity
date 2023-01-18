@@ -24,8 +24,25 @@
 
 struct tun_data;
 
-#define MAXMTU 65536
-#define PACKETLEN (MAXMTU + sizeof(struct tun_pi))
+// IPv4 header has a u16 total length field, for maximum L3 mtu of 0xFFFF.
+//
+// Translating IPv4 to IPv6 requires removing the IPv4 header (20) and adding
+// an IPv6 header (40), possibly with an extra ipv6 fragment extension header (8).
+//
+// As such the maximum IPv4 L3 mtu size is 0xFFFF (by u16 tot_len field)
+// and the maximum IPv6 L3 mtu size is 0xFFFF + 28 (which is larger)
+//
+// A received non-jumbogram IPv6 frame could potentially be u16 payload_len = 0xFFFF
+// + sizeof ipv6 header = 40, bytes in size.  But such a packet cannot be meaningfully
+// converted to IPv4 (it's too large).  As such the restriction is the same: 0xFFFF + 28
+//
+// (since there's no jumbogram support in IPv4, IPv6 jumbograms cannot be meaningfully
+// converted to IPv4 anyway, and are thus entirely unsupported)
+//
+// We bump it by one more, since it makes truncation more obvious.
+// ie. if we ever read >= MAXMTU bytes we should discard.
+#define MAXMTU (0xFFFF + 28 + 1)
+#define PACKETLEN (sizeof(struct tun_pi) + MAXMTU)
 #define CLATD_VERSION "1.5"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
