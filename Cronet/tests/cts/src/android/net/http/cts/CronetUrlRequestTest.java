@@ -27,7 +27,7 @@ import android.net.http.HttpEngine;
 import android.net.http.UrlRequest;
 import android.net.http.UrlRequest.Status;
 import android.net.http.UrlResponseInfo;
-import android.net.http.cts.util.CronetCtsTestServer;
+import android.net.http.cts.util.HttpCtsTestServer;
 import android.net.http.cts.util.TestStatusListener;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
@@ -43,7 +43,7 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class CronetUrlRequestTest {
     private TestUrlRequestCallback mCallback;
-    private CronetCtsTestServer mTestServer;
+    private HttpCtsTestServer mTestServer;
     private HttpEngine mHttpEngine;
 
     @Before
@@ -53,7 +53,7 @@ public class CronetUrlRequestTest {
         HttpEngine.Builder builder = new HttpEngine.Builder(context);
         mHttpEngine = builder.build();
         mCallback = new TestUrlRequestCallback();
-        mTestServer = new CronetCtsTestServer(context);
+        mTestServer = new HttpCtsTestServer(context);
     }
 
     @After
