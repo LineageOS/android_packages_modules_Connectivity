@@ -45,6 +45,7 @@ public abstract class MdnsRecord {
     private static final int FLAG_CACHE_FLUSH = 0x8000;
 
     public static final long RECEIPT_TIME_NOT_SENT = 0L;
+    public static final int CLASS_ANY = 0x00ff;
 
     /** Status indicating that the record is current. */
     public static final int STATUS_OK = 0;
