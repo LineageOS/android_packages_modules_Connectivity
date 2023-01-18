@@ -57,6 +57,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * TODO(b/215435939) This class doesn't include any logic yet. Because SELinux denies access to
@@ -99,6 +100,7 @@ public class NearbyManagerTest {
         public void onError(int errorCode) {
         }
     };
+
     private static final Executor EXECUTOR = Executors.newSingleThreadExecutor();
 
     @Before
@@ -171,11 +173,25 @@ public class NearbyManagerTest {
         assertThat(mNearbyManager.isFastPairScanEnabled(mContext)).isFalse();
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 34, codeName = "U")
+    public void queryOffloadScanSupport() {
+        OffloadCallback callback = new OffloadCallback();
+        mNearbyManager.queryOffloadScanSupport(EXECUTOR, callback);
+    }
+
     private void enableBluetooth() {
         BluetoothManager manager = mContext.getSystemService(BluetoothManager.class);
         BluetoothAdapter bluetoothAdapter = manager.getAdapter();
         if (!bluetoothAdapter.isEnabled()) {
             assertThat(BTAdapterUtils.enableAdapter(bluetoothAdapter, mContext)).isTrue();
+        }
+    }
+
+    private class OffloadCallback implements Consumer<Boolean> {
+        @Override
+        public void accept(Boolean aBoolean) {
+            // no-op for now
         }
     }
 }
