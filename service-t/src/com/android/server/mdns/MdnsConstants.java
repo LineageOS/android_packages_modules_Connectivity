@@ -37,6 +37,7 @@ public final class MdnsConstants {
     public static final int FLAGS_QUERY = 0x0000;
     public static final int FLAGS_RESPONSE_MASK = 0xF80F;
     public static final int FLAGS_RESPONSE = 0x8000;
+    public static final int FLAG_TRUNCATED = 0x0200;
     public static final int QCLASS_INTERNET = 0x0001;
     public static final int QCLASS_UNICAST = 0x8000;
     public static final String SUBTYPE_LABEL = "_sub";
