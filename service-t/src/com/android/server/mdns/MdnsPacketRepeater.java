@@ -16,6 +16,9 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsRecordRepository.IPV4_ADDR;
+import static com.android.server.connectivity.mdns.MdnsRecordRepository.IPV6_ADDR;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.Handler;
@@ -32,10 +35,6 @@ import java.net.InetSocketAddress;
  */
 public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     private static final boolean DBG = MdnsAdvertiser.DBG;
-    private static final InetSocketAddress IPV4_ADDR = new InetSocketAddress(
-            MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
-    private static final InetSocketAddress IPV6_ADDR = new InetSocketAddress(
-            MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT);
     private static final InetSocketAddress[] ALL_ADDRS = new InetSocketAddress[] {
             IPV4_ADDR, IPV6_ADDR
     };
@@ -114,7 +113,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
             final MdnsPacket packet = request.getPacket(index);
             if (DBG) {
                 Log.v(getTag(), "Sending packets for iteration " + index + " out of "
-                        + request.getNumSends());
+                        + request.getNumSends() + " for ID " + msg.what);
             }
             // Send to both v4 and v6 addresses; the reply sender will take care of ignoring the
             // send when the socket has not joined the relevant group.
