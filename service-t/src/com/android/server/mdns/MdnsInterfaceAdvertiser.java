@@ -25,6 +25,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.connectivity.mdns.MdnsAnnouncer.BaseAnnouncementInfo;
 import com.android.server.connectivity.mdns.MdnsPacketRepeater.PacketRepeaterCallback;
 
 import java.io.IOException;
@@ -113,9 +114,22 @@ public class MdnsInterfaceAdvertiser {
     /**
      * Callbacks from {@link MdnsAnnouncer}.
      */
-    private class AnnouncingCallback
-            implements PacketRepeaterCallback<MdnsAnnouncer.AnnouncementInfo> {
-        // TODO: implement
+    private class AnnouncingCallback implements PacketRepeaterCallback<BaseAnnouncementInfo> {
+        @Override
+        public void onSent(int index, @NonNull BaseAnnouncementInfo info) {
+            mRecordRepository.onAdvertisementSent(info.getServiceId());
+        }
+
+        @Override
+        public void onFinished(@NonNull BaseAnnouncementInfo info) {
+            if (info instanceof MdnsAnnouncer.ExitAnnouncementInfo) {
+                mRecordRepository.removeService(info.getServiceId());
+
+                if (mRecordRepository.getServicesCount() == 0) {
+                    destroyNow();
+                }
+            }
+        }
     }
 
     /**
@@ -139,7 +153,7 @@ public class MdnsInterfaceAdvertiser {
         /** @see MdnsAnnouncer */
         public MdnsAnnouncer makeMdnsAnnouncer(@NonNull String interfaceTag, @NonNull Looper looper,
                 @NonNull MdnsReplySender replySender,
-                @Nullable PacketRepeaterCallback<MdnsAnnouncer.AnnouncementInfo> cb) {
+                @Nullable PacketRepeaterCallback<MdnsAnnouncer.BaseAnnouncementInfo> cb) {
             return new MdnsAnnouncer(interfaceTag, looper, replySender, cb);
         }
 
@@ -210,9 +224,10 @@ public class MdnsInterfaceAdvertiser {
      * This will trigger exit announcements for the service.
      */
     public void removeService(int id) {
+        if (!mRecordRepository.hasActiveService(id)) return;
         mProber.stop(id);
         mAnnouncer.stop(id);
-        final MdnsAnnouncer.AnnouncementInfo exitInfo = mRecordRepository.exitService(id);
+        final MdnsAnnouncer.ExitAnnouncementInfo exitInfo = mRecordRepository.exitService(id);
         if (exitInfo != null) {
             // This effectively schedules destroyNow(), as it is to be called when the exit
             // announcement finishes if there is no service left.
