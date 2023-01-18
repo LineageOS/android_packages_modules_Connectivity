@@ -131,6 +131,11 @@ public class VpnManagerServiceTest extends VpnTestBase {
                 Vpn vpn, VpnProfile profile) {
             return mLockdownVpnTracker;
         }
+
+        @Override
+        public @UserIdInt int getMainUserId() {
+            return UserHandle.USER_SYSTEM;
+        }
     }
 
     @Before
