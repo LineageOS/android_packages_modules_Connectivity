@@ -1802,7 +1802,7 @@ public class TetheringTest {
             TestNetworkAgent mobile, TestNetworkAgent wifi, TestNetworkAgent dun) throws Exception {
         final NetworkCallback dunNetworkCallback = setupDunUpstreamTest(automatic, inOrder);
 
-        // Pretend cellular connected and expect the upstream to be set.
+        // Pretend cellular connected and expect the upstream to be not set.
         mobile.fakeConnect();
         mCm.makeDefaultNetwork(mobile, BROADCAST_FIRST);
         mLooper.dispatchAll();
