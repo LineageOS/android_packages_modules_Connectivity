@@ -38,6 +38,7 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyInt
 import org.mockito.Mockito.argThat
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
@@ -159,6 +160,60 @@ class MdnsAdvertiserTest {
         verify(socketProvider, never()).unrequestSocket(any())
         postSync { intAdvCbCaptor2.value.onDestroyed(mockSocket2) }
         verify(socketProvider).unrequestSocket(socketCb)
+    }
+
+    @Test
+    fun testAddService_Conflicts() {
+        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps)
+        postSync { advertiser.addService(SERVICE_ID_1, SERVICE_1) }
+
+        val oneNetSocketCbCaptor = ArgumentCaptor.forClass(SocketCallback::class.java)
+        verify(socketProvider).requestSocket(eq(TEST_NETWORK_1), oneNetSocketCbCaptor.capture())
+        val oneNetSocketCb = oneNetSocketCbCaptor.value
+
+        // Register a service with the same name on all networks (name conflict)
+        postSync { advertiser.addService(SERVICE_ID_2, ALL_NETWORKS_SERVICE) }
+        val allNetSocketCbCaptor = ArgumentCaptor.forClass(SocketCallback::class.java)
+        verify(socketProvider).requestSocket(eq(null), allNetSocketCbCaptor.capture())
+        val allNetSocketCb = allNetSocketCbCaptor.value
+
+        // Callbacks for matching network and all networks both get the socket
+        postSync {
+            oneNetSocketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR))
+            allNetSocketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR))
+        }
+
+        val expectedRenamed = NsdServiceInfo(
+                "${ALL_NETWORKS_SERVICE.serviceName} (2)", ALL_NETWORKS_SERVICE.serviceType).apply {
+            port = ALL_NETWORKS_SERVICE.port
+            host = ALL_NETWORKS_SERVICE.host
+            network = ALL_NETWORKS_SERVICE.network
+        }
+
+        val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
+        verify(mockDeps).makeAdvertiser(eq(mockSocket1), eq(listOf(TEST_LINKADDR)),
+                eq(thread.looper), any(), intAdvCbCaptor.capture())
+        verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_1),
+                argThat { it.matches(SERVICE_1) })
+        verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_2),
+                argThat { it.matches(expectedRenamed) })
+
+        doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
+        postSync { intAdvCbCaptor.value.onRegisterServiceSucceeded(
+                mockInterfaceAdvertiser1, SERVICE_ID_1) }
+        verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_1), argThat { it.matches(SERVICE_1) })
+
+        doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_2)
+        postSync { intAdvCbCaptor.value.onRegisterServiceSucceeded(
+                mockInterfaceAdvertiser1, SERVICE_ID_2) }
+        verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_2),
+                argThat { it.matches(expectedRenamed) })
+
+        postSync { oneNetSocketCb.onInterfaceDestroyed(TEST_NETWORK_1, mockSocket1) }
+        postSync { allNetSocketCb.onInterfaceDestroyed(TEST_NETWORK_1, mockSocket1) }
+
+        // destroyNow can be called multiple times
+        verify(mockInterfaceAdvertiser1, atLeastOnce()).destroyNow()
     }
 
     private fun postSync(r: () -> Unit) {
