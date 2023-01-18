@@ -65,7 +65,7 @@ android_test {
         "android.test.base",
         "android.test.mock",
         "androidx.annotation_annotation",
-        "framework-cronet",
+        "framework-tethering",
         "org.apache.http.legacy",
     ],
 

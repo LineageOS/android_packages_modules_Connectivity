@@ -25,7 +25,6 @@
 
     <application android:networkSecurityConfig="@xml/network_security_config">
         <uses-library android:name="android.test.runner"/>
-        <uses-library android:name="framework-cronet"/>
     </application>
 
     <instrumentation
