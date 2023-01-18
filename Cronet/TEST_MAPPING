@@ -1,7 +1,7 @@
 {
   "presubmit": [
     {
-      "name": "CtsCronetTestCases"
+      "name": "CtsNetHttpTestCases"
     }
   ]
 }
