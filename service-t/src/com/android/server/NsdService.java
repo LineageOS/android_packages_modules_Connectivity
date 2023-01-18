@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.INetd;
+import android.net.InetAddresses;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.mdns.aidl.DiscoveryInfo;
@@ -75,6 +76,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -192,6 +194,21 @@ public class NsdService extends INsdManager.Stub {
         public void onServiceNameRemoved(@NonNull MdnsServiceInfo serviceInfo) {
             mNsdStateMachine.sendMessage(MDNS_DISCOVERY_MANAGER_EVENT, mTransactionId,
                     NsdManager.SERVICE_LOST,
+                    new MdnsEvent(mClientId, mReqServiceInfo.getServiceType(), serviceInfo));
+        }
+    }
+
+    private class ResolutionListener extends MdnsListener {
+
+        ResolutionListener(int clientId, int transactionId, @NonNull NsdServiceInfo reqServiceInfo,
+                @NonNull String listenServiceType) {
+            super(clientId, transactionId, reqServiceInfo, listenServiceType);
+        }
+
+        @Override
+        public void onServiceFound(MdnsServiceInfo serviceInfo) {
+            mNsdStateMachine.sendMessage(MDNS_DISCOVERY_MANAGER_EVENT, mTransactionId,
+                    NsdManager.RESOLVE_SERVICE_SUCCEEDED,
                     new MdnsEvent(mClientId, mReqServiceInfo.getServiceType(), serviceInfo));
         }
     }
@@ -382,9 +399,6 @@ public class NsdService extends INsdManager.Stub {
                             maybeStartDaemon();
                         }
                         break;
-                    case NsdManager.MDNS_MONITORING_SOCKETS_CLEANUP:
-                        maybeStopMonitoringSockets();
-                        break;
                     default:
                         Log.e(TAG, "Unhandled " + msg);
                         return NOT_HANDLED;
@@ -439,7 +453,6 @@ public class NsdService extends INsdManager.Stub {
                 clientInfo.mClientIds.put(clientId, transactionId);
                 clientInfo.mListeners.put(clientId, listener);
                 mIdToClientInfoMap.put(transactionId, clientInfo);
-                removeMessages(NsdManager.MDNS_MONITORING_SOCKETS_CLEANUP);
             }
 
             private void removeListenerMap(int clientId, int transactionId, ClientInfo clientInfo) {
@@ -472,7 +485,7 @@ public class NsdService extends INsdManager.Stub {
                 if (!matcher.matches()) return null;
                 return matcher.group(1) == null
                         ? serviceType + ".local"
-                        : matcher.group(1) + "._sub" + matcher.group(2) + ".local";
+                        : matcher.group(1) + "_sub." + matcher.group(2) + ".local";
             }
 
             @Override
@@ -482,7 +495,7 @@ public class NsdService extends INsdManager.Stub {
                 final int clientId = msg.arg2;
                 final ListenerArgs args;
                 switch (msg.what) {
-                    case NsdManager.DISCOVER_SERVICES:
+                    case NsdManager.DISCOVER_SERVICES: {
                         if (DBG) Log.d(TAG, "Discover services");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
@@ -536,6 +549,7 @@ public class NsdService extends INsdManager.Stub {
                             }
                         }
                         break;
+                    }
                     case NsdManager.STOP_DISCOVERY:
                         if (DBG) Log.d(TAG, "Stop service discovery");
                         args = (ListenerArgs) msg.obj;
@@ -626,7 +640,7 @@ public class NsdService extends INsdManager.Stub {
                                     clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         }
                         break;
-                    case NsdManager.RESOLVE_SERVICE:
+                    case NsdManager.RESOLVE_SERVICE: {
                         if (DBG) Log.d(TAG, "Resolve service");
                         args = (ListenerArgs) msg.obj;
                         clientInfo = mClients.get(args.connector);
@@ -638,22 +652,43 @@ public class NsdService extends INsdManager.Stub {
                             break;
                         }
 
-                        if (clientInfo.mResolvedService != null) {
-                            clientInfo.onResolveServiceFailed(
-                                    clientId, NsdManager.FAILURE_ALREADY_ACTIVE);
-                            break;
-                        }
-
-                        maybeStartDaemon();
+                        final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        if (resolveService(id, args.serviceInfo)) {
-                            clientInfo.mResolvedService = new NsdServiceInfo();
-                            storeRequestMap(clientId, id, clientInfo, msg.what);
+                        if (mMdnsDiscoveryManager != null) {
+                            final String serviceType = constructServiceType(info.getServiceType());
+                            if (serviceType == null) {
+                                clientInfo.onResolveServiceFailed(clientId,
+                                        NsdManager.FAILURE_INTERNAL_ERROR);
+                                break;
+                            }
+
+                            maybeStartMonitoringSockets();
+                            final MdnsListener listener =
+                                    new ResolutionListener(clientId, id, info, serviceType);
+                            final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
+                                    .setNetwork(info.getNetwork())
+                                    .setIsPassiveMode(true)
+                                    .build();
+                            mMdnsDiscoveryManager.registerListener(serviceType, listener, options);
+                            storeListenerMap(clientId, id, listener, clientInfo);
                         } else {
-                            clientInfo.onResolveServiceFailed(
-                                    clientId, NsdManager.FAILURE_INTERNAL_ERROR);
+                            if (clientInfo.mResolvedService != null) {
+                                clientInfo.onResolveServiceFailed(
+                                        clientId, NsdManager.FAILURE_ALREADY_ACTIVE);
+                                break;
+                            }
+
+                            maybeStartDaemon();
+                            if (resolveService(id, args.serviceInfo)) {
+                                clientInfo.mResolvedService = new NsdServiceInfo();
+                                storeRequestMap(clientId, id, clientInfo, msg.what);
+                            } else {
+                                clientInfo.onResolveServiceFailed(
+                                        clientId, NsdManager.FAILURE_INTERNAL_ERROR);
+                            }
                         }
                         break;
+                    }
                     case MDNS_SERVICE_EVENT:
                         if (!handleMDnsServiceEvent(msg.arg1, msg.arg2, msg.obj)) {
                             return NOT_HANDLED;
@@ -863,6 +898,43 @@ public class NsdService extends INsdManager.Stub {
                     case NsdManager.SERVICE_LOST:
                         clientInfo.onServiceLost(clientId, info);
                         break;
+                    case NsdManager.RESOLVE_SERVICE_SUCCEEDED: {
+                        final MdnsServiceInfo serviceInfo = event.mMdnsServiceInfo;
+                        // Add '.' in front of the service type that aligns with historical behavior
+                        info.setServiceType("." + event.mRequestedServiceType);
+                        info.setPort(serviceInfo.getPort());
+
+                        Map<String, String> attrs = serviceInfo.getAttributes();
+                        for (Map.Entry<String, String> kv : attrs.entrySet()) {
+                            final String key = kv.getKey();
+                            try {
+                                info.setAttribute(key, serviceInfo.getAttributeAsBytes(key));
+                            } catch (IllegalArgumentException e) {
+                                Log.e(TAG, "Invalid attribute", e);
+                            }
+                        }
+                        try {
+                            if (serviceInfo.getIpv4Address() != null) {
+                                info.setHost(InetAddresses.parseNumericAddress(
+                                        serviceInfo.getIpv4Address()));
+                            } else {
+                                info.setHost(InetAddresses.parseNumericAddress(
+                                        serviceInfo.getIpv6Address()));
+                            }
+                            clientInfo.onResolveServiceSucceeded(clientId, info);
+                        } catch (IllegalArgumentException e) {
+                            Log.wtf(TAG, "Invalid address in RESOLVE_SERVICE_SUCCEEDED", e);
+                            clientInfo.onResolveServiceFailed(
+                                    clientId, NsdManager.FAILURE_INTERNAL_ERROR);
+                        }
+
+                        // Unregister the listener immediately like IMDnsEventListener design
+                        final MdnsListener listener = clientInfo.mListeners.get(clientId);
+                        mMdnsDiscoveryManager.unregisterListener(
+                                listener.getListenedServiceType(), listener);
+                        removeListenerMap(clientId, transactionId, clientInfo);
+                        break;
+                    }
                     default:
                         return false;
                 }
