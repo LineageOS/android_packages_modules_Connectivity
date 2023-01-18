@@ -391,6 +391,9 @@ class Module(object):
     self.processor_class = None
     self.sdk_version = None
     self.javacflags = set()
+    self.license_kinds = set()
+    self.license_text = set()
+    self.default_applicable_licenses = set()
 
   def to_string(self, output):
     if self.comment:
@@ -446,6 +449,9 @@ class Module(object):
     self._output_field(output, 'processor_class')
     self._output_field(output, 'sdk_version')
     self._output_field(output, 'javacflags')
+    self._output_field(output, 'license_kinds')
+    self._output_field(output, 'license_text')
+    self._output_field(output, 'default_applicable_licenses')
     if self.rtti:
       self._output_field(output, 'rtti')
 
@@ -1647,6 +1653,59 @@ def create_blueprint_for_targets(gn, targets):
 
   return blueprint
 
+def create_license_module(blueprint):
+  module = Module("license", "external_cronet_license", "LICENSE")
+  module.license_kinds.update({
+      'SPDX-license-identifier-LGPL-2.1',
+      'SPDX-license-identifier-GPL-2.0',
+      'SPDX-license-identifier-MPL',
+      'SPDX-license-identifier-ISC',
+      'SPDX-license-identifier-GPL',
+      'SPDX-license-identifier-AFL-2.0',
+      'SPDX-license-identifier-MPL-2.0',
+      'SPDX-license-identifier-BSD',
+      'SPDX-license-identifier-Apache-2.0',
+      'SPDX-license-identifier-BSL-1.0',
+      'SPDX-license-identifier-LGPL',
+      'SPDX-license-identifier-GPL-3.0',
+      'SPDX-license-identifier-Unicode-DFS',
+      'SPDX-license-identifier-NCSA',
+      'SPDX-license-identifier-OpenSSL',
+      'SPDX-license-identifier-MIT',
+      "SPDX-license-identifier-ICU",
+      'legacy_unencumbered', # public domain
+  })
+  module.license_text.update({
+      "LICENSE",
+      "net/third_party/uri_template/LICENSE",
+      "net/third_party/quiche/src/LICENSE",
+      "base/third_party/symbolize/LICENSE",
+      "base/third_party/superfasthash/LICENSE",
+      "base/third_party/xdg_user_dirs/LICENSE",
+      "base/third_party/double_conversion/LICENSE",
+      "base/third_party/nspr/LICENSE",
+      "base/third_party/dynamic_annotations/LICENSE",
+      "base/third_party/icu/LICENSE",
+      "base/third_party/valgrind/LICENSE",
+      "third_party/brotli/LICENSE",
+      "third_party/protobuf/LICENSE",
+      "third_party/protobuf/third_party/utf8_range/LICENSE",
+      "third_party/metrics_proto/LICENSE",
+      "third_party/boringssl/src/LICENSE",
+      "third_party/boringssl/src/third_party/googletest/LICENSE",
+      "third_party/boringssl/src/third_party/wycheproof_testvectors/LICENSE",
+      "third_party/boringssl/src/third_party/fiat/LICENSE",
+      "third_party/libevent/LICENSE",
+      "third_party/ashmem/LICENSE",
+      "third_party/icu/LICENSE",
+      "third_party/icu/scripts/LICENSE",
+      "third_party/abseil-cpp/LICENSE",
+      "third_party/modp_b64/LICENSE",
+  })
+  default_license = Module("package", "", "PACKAGE")
+  default_license.default_applicable_licenses.add(module.name)
+  blueprint.add_module(module)
+  blueprint.add_module(default_license)
 
 def main():
   parser = argparse.ArgumentParser(
@@ -1698,7 +1757,7 @@ def main():
   # Add any proto groups to the blueprint.
   for l_name, t_names in proto_groups.items():
     create_proto_group_modules(blueprint, gn, l_name, t_names)
-
+  create_license_module(blueprint)
   output = [
       """// Copyright (C) 2022 The Android Open Source Project
 //
