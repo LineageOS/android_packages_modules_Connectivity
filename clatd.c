@@ -76,35 +76,50 @@ int ipv6_address_changed(const char *interface) {
   }
 }
 
-/* function: read_packet
- * reads a packet from the tunnel fd and translates it
- *   read_fd  - file descriptor to read original packet from
- *   write_fd - file descriptor to write translated packet to
- *   to_ipv6  - whether the packet is to be translated to ipv6 or ipv4
- */
-void read_packet(int read_fd, int write_fd, int to_ipv6) {
-  uint8_t buf[PACKETLEN];
-  ssize_t readlen = read(read_fd, buf, PACKETLEN);
+// reads L3 IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
+void process_packet_6_to_4(struct tun_data *tunnel) {
+  uint8_t buf[MAXMTU];
+  ssize_t readlen = read(tunnel->read_fd6, buf, MAXMTU);
 
   if (readlen < 0) {
     if (errno != EAGAIN) {
-      logmsg(ANDROID_LOG_WARN, "read_packet/read error: %s", strerror(errno));
+      logmsg(ANDROID_LOG_WARN, "%s: read error: %s", __func__, strerror(errno));
     }
     return;
   } else if (readlen == 0) {
-    logmsg(ANDROID_LOG_WARN, "read_packet/tun interface removed");
+    logmsg(ANDROID_LOG_WARN, "%s: packet socket removed?", __func__);
     running = 0;
+    return;
+  } else if (readlen >= MAXMTU) {
+    logmsg(ANDROID_LOG_WARN, "%s: read truncation - ignoring pkt", __func__);
     return;
   }
 
-  if (!to_ipv6) {
-    translate_packet(write_fd, 0 /* to_ipv6 */, buf, readlen);
+  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf, readlen);
+}
+
+// reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
+void process_packet_4_to_6(struct tun_data *tunnel) {
+  uint8_t buf[PACKETLEN];
+  ssize_t readlen = read(tunnel->fd4, buf, PACKETLEN);
+
+  if (readlen < 0) {
+    if (errno != EAGAIN) {
+      logmsg(ANDROID_LOG_WARN, "%s: read error: %s", __func__, strerror(errno));
+    }
+    return;
+  } else if (readlen == 0) {
+    logmsg(ANDROID_LOG_WARN, "%s: tun interface removed", __func__);
+    running = 0;
+    return;
+  } else if (readlen >= PACKETLEN) {
+    logmsg(ANDROID_LOG_WARN, "%s: read truncation - ignoring pkt", __func__);
     return;
   }
 
   struct tun_pi *tun_header = (struct tun_pi *)buf;
   if (readlen < (ssize_t)sizeof(*tun_header)) {
-    logmsg(ANDROID_LOG_WARN, "read_packet/short read: got %ld bytes", readlen);
+    logmsg(ANDROID_LOG_WARN, "%s: short read: got %ld bytes", __func__, readlen);
     return;
   }
 
@@ -120,7 +135,7 @@ void read_packet(int read_fd, int write_fd, int to_ipv6) {
 
   uint8_t *packet = (uint8_t *)(tun_header + 1);
   readlen -= sizeof(*tun_header);
-  translate_packet(write_fd, 1 /* to_ipv6 */, packet, readlen);
+  translate_packet(tunnel->write_fd6, 1 /* to_ipv6 */, packet, readlen);
 }
 
 // IPv6 DAD packet format:
@@ -229,13 +244,13 @@ void event_loop(struct tun_data *tunnel) {
         logmsg(ANDROID_LOG_WARN, "event_loop/poll returned an error: %s", strerror(errno));
       }
     } else {
-      // Call read_packet if the socket has data to be read, but also if an
+      // Call process_packet if the socket has data to be read, but also if an
       // error is waiting. If we don't call read() after getting POLLERR, a
       // subsequent poll() will return immediately with POLLERR again,
       // causing this code to spin in a loop. Calling read() will clear the
       // socket error flag instead.
-      if (wait_fd[0].revents) read_packet(tunnel->read_fd6, tunnel->fd4, 0 /* to_ipv6 */);
-      if (wait_fd[1].revents) read_packet(tunnel->fd4, tunnel->write_fd6, 1 /* to_ipv6 */);
+      if (wait_fd[0].revents) process_packet_6_to_4(tunnel);
+      if (wait_fd[1].revents) process_packet_4_to_6(tunnel);
     }
 
     time_t now = time(NULL);
