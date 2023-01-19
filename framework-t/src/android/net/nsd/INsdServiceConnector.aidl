@@ -33,4 +33,6 @@ interface INsdServiceConnector {
     void resolveService(int listenerKey, in NsdServiceInfo serviceInfo);
     void startDaemon();
     void stopResolution(int listenerKey);
+    void registerServiceInfoCallback(int listenerKey, in NsdServiceInfo serviceInfo);
+    void unregisterServiceInfoCallback(int listenerKey);
 }
