@@ -22,6 +22,10 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.http.HttpEngine;
+import android.net.http.UrlRequest;
+import android.net.http.UrlRequest.Status;
+import android.net.http.UrlResponseInfo;
 import android.net.http.cts.util.CronetCtsTestServer;
 import android.net.http.cts.util.TestStatusListener;
 import android.net.http.cts.util.TestUrlRequestCallback;
@@ -31,10 +35,6 @@ import androidx.annotation.NonNull;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
-import org.chromium.net.CronetEngine;
-import org.chromium.net.UrlRequest;
-import org.chromium.net.UrlRequest.Status;
-import org.chromium.net.UrlResponseInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +44,7 @@ import org.junit.runner.RunWith;
 public class CronetUrlRequestTest {
     private static final String TAG = CronetUrlRequestTest.class.getSimpleName();
 
-    @NonNull private CronetEngine mCronetEngine;
+    @NonNull private HttpEngine mHttpEngine;
     @NonNull private TestUrlRequestCallback mCallback;
     @NonNull private ConnectivityManager mCm;
     @NonNull private CronetCtsTestServer mTestServer;
@@ -53,19 +53,19 @@ public class CronetUrlRequestTest {
     public void setUp() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getContext();
         mCm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        CronetEngine.Builder builder = new CronetEngine.Builder(context);
-        builder.enableHttpCache(CronetEngine.Builder.HTTP_CACHE_IN_MEMORY, 100 * 1024)
-                .enableHttp2(true)
-                // .enableBrotli(true)
-                .enableQuic(true);
-        mCronetEngine = builder.build();
+        HttpEngine.Builder builder = new HttpEngine.Builder(context);
+        builder.setEnableHttpCache(HttpEngine.Builder.HTTP_CACHE_IN_MEMORY, 100 * 1024)
+                .setEnableHttp2(true)
+                // .setEnableBrotli(true)
+                .setEnableQuic(true);
+        mHttpEngine = builder.build();
         mCallback = new TestUrlRequestCallback();
         mTestServer = new CronetCtsTestServer(context);
     }
 
     @After
     public void tearDown() throws Exception {
-        mCronetEngine.shutdown();
+        mHttpEngine.shutdown();
         mTestServer.shutdown();
     }
 
@@ -78,7 +78,7 @@ public class CronetUrlRequestTest {
     }
 
     private UrlRequest buildUrlRequest(String url) {
-        return mCronetEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor()).build();
+        return mHttpEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor()).build();
     }
 
     @Test
