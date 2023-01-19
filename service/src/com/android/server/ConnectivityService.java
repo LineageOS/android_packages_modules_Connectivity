@@ -11697,6 +11697,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    @Override
+    public int getUidFirewallRule(final int chain, final int uid) {
+        enforceNetworkStackOrSettingsPermission();
+        return mBpfNetMaps.getUidRule(chain, uid);
+    }
+
     private int getFirewallRuleType(int chain, int rule) {
         final int defaultRule;
         switch (chain) {

@@ -242,6 +242,8 @@ interface IConnectivityManager
 
     void setUidFirewallRule(int chain, int uid, int rule);
 
+    int getUidFirewallRule(int chain, int uid);
+
     void setFirewallChainEnabled(int chain, boolean enable);
 
     boolean getFirewallChainEnabled(int chain);
