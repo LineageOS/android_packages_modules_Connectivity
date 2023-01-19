@@ -31,4 +31,8 @@ oneway interface ISocketKeepaliveCallback
     void onError(int error);
     /** The keepalive on a TCP socket was stopped because the socket received data. */
     void onDataReceived();
+    /** The keepalive was paused by the system because it's not necessary right now. */
+    void onPaused();
+    /** The keepalive was resumed by the system after being suspended. */
+    void onResumed();
 }

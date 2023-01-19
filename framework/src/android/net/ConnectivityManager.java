@@ -2213,9 +2213,13 @@ public class ConnectivityManager {
         /** The requested keepalive was successfully started. */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void onStarted() {}
+        /** The keepalive was resumed after being paused by the system. */
+        public void onResumed() {}
         /** The keepalive was successfully stopped. */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void onStopped() {}
+        /** The keepalive was paused automatically by the system. */
+        public void onPaused() {}
         /** An error occurred. */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void onError(int error) {}
@@ -2314,11 +2318,36 @@ public class ConnectivityManager {
                 }
 
                 @Override
+                public void onResumed() {
+                    final long token = Binder.clearCallingIdentity();
+                    try {
+                        mExecutor.execute(() -> {
+                            callback.onResumed();
+                        });
+                    } finally {
+                        Binder.restoreCallingIdentity(token);
+                    }
+                }
+
+                @Override
                 public void onStopped() {
                     final long token = Binder.clearCallingIdentity();
                     try {
                         mExecutor.execute(() -> {
                             callback.onStopped();
+                        });
+                    } finally {
+                        Binder.restoreCallingIdentity(token);
+                    }
+                    mExecutor.shutdown();
+                }
+
+                @Override
+                public void onPaused() {
+                    final long token = Binder.clearCallingIdentity();
+                    try {
+                        mExecutor.execute(() -> {
+                            callback.onPaused();
                         });
                     } finally {
                         Binder.restoreCallingIdentity(token);
