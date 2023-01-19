@@ -18,8 +18,16 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// cronet_test_java_defaults can be used to specify a java_defaults target that
+// either enables or disables Cronet tests. This is used to disable Cronet
+// tests on tm-mainline-prod where the required APIs are not present.
+cronet_test_java_defaults = "CronetTestJavaDefaultsEnabled"
+// This is a placeholder comment to avoid merge conflicts
+// as cronet_test_java_defaults may have different values
+// depending on the branch
+
 android_test {
-    name: "CtsCronetTestCases",
+    name: "CtsNetHttpTestCases",
     compile_multilib: "both", // Include both the 32 and 64 bit versions
     defaults: ["cts_defaults"],
     sdk_version: "test_current",

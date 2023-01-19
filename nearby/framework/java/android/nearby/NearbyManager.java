@@ -26,6 +26,7 @@ import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.content.Context;
+import android.nearby.aidl.IOffloadCallback;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.util.Log;
@@ -37,6 +38,7 @@ import java.lang.ref.WeakReference;
 import java.util.Objects;
 import java.util.WeakHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 /**
  * This class provides a way to perform Nearby related operations such as scanning, broadcasting
@@ -268,6 +270,22 @@ public class NearbyManager {
     }
 
     /**
+     * Query if offload scan is available in a device. The query is asynchronous and
+     * result is called back in {@link Consumer}, which is set to true if offload is supported.
+     *
+     * @param executor the callback will take place on this {@link Executor}
+     * @param callback the callback invoked with {@code true} if offload is supported
+     */
+    public void queryOffloadScanSupport(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Boolean> callback) {
+        try {
+            mService.queryOffloadScanSupport(new OffloadTransport(executor, callback));
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Read from {@link Settings} whether Fast Pair scan is enabled.
      *
      * @param context either activity or application context for caller to query the setting
@@ -295,6 +313,29 @@ public class NearbyManager {
                 context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, enable ? 1 : 0);
         Log.v(TAG, String.format(
                 "successfully %s Fast Pair scan", enable ? "enables" : "disables"));
+    }
+
+    private static class OffloadTransport extends IOffloadCallback.Stub {
+
+        private final Executor mExecutor;
+        // Null when cancelled
+        volatile @Nullable Consumer<Boolean> mConsumer;
+
+        OffloadTransport(Executor executor, Consumer<Boolean> consumer) {
+            Preconditions.checkArgument(executor != null, "illegal null executor");
+            Preconditions.checkArgument(consumer != null, "illegal null consumer");
+            mExecutor = executor;
+            mConsumer = consumer;
+        }
+
+        @Override
+        public void onQueryComplete(boolean isOffloadSupported) {
+            mExecutor.execute(() -> {
+                if (mConsumer != null) {
+                    mConsumer.accept(isOffloadSupported);
+                }
+            });
+        }
     }
 
     private static class ScanListenerTransport extends IScanListener.Stub {

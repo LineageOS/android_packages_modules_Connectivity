@@ -37,6 +37,7 @@ import android.nearby.INearbyManager;
 import android.nearby.IScanListener;
 import android.nearby.NearbyManager;
 import android.nearby.ScanRequest;
+import android.nearby.aidl.IOffloadCallback;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -143,6 +144,11 @@ public class NearbyService extends INearbyManager.Stub {
         BroadcastPermissions.enforceBroadcastPermission(mContext, identity);
 
         mBroadcastProviderManager.stopBroadcast(listener);
+    }
+
+    @Override
+    public void queryOffloadScanSupport(IOffloadCallback callback) {
+
     }
 
     /**
