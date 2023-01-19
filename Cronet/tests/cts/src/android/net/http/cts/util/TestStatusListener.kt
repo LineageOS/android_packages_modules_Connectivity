@@ -16,9 +16,9 @@
 
 package android.net.http.cts.util
 
+import android.net.http.UrlRequest.StatusListener
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import org.chromium.net.UrlRequest.StatusListener
 import org.junit.Assert.assertSame
 
 private const val TIMEOUT_MS = 12000L
