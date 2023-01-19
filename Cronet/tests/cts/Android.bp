@@ -26,10 +26,28 @@ cronet_test_java_defaults = "CronetTestJavaDefaultsEnabled"
 // as cronet_test_java_defaults may have different values
 // depending on the branch
 
+java_defaults {
+    name: "CronetTestJavaDefaultsEnabled",
+    enabled: true,
+}
+
+java_defaults {
+    name: "CronetTestJavaDefaultsDisabled",
+    enabled: false,
+}
+
+java_defaults {
+    name: "CronetTestJavaDefaults",
+    defaults: [cronet_test_java_defaults],
+}
+
 android_test {
     name: "CtsNetHttpTestCases",
     compile_multilib: "both", // Include both the 32 and 64 bit versions
-    defaults: ["cts_defaults"],
+    defaults: [
+        "CronetTestJavaDefaults",
+        "cts_defaults",
+    ],
     sdk_version: "test_current",
     srcs: [
         "src/**/*.java",
@@ -47,7 +65,7 @@ android_test {
         "android.test.base",
         "android.test.mock",
         "androidx.annotation_annotation",
-        "framework-cronet",
+        "framework-tethering",
         "org.apache.http.legacy",
     ],
 
