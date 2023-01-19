@@ -405,6 +405,13 @@ public class NsdService extends INsdManager.Stub {
                                     clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         }
                         break;
+                    case NsdManager.STOP_RESOLUTION:
+                        cInfo = getClientInfoForReply(msg);
+                        if (cInfo != null) {
+                            cInfo.onStopResolutionFailed(
+                                    clientId, NsdManager.FAILURE_OPERATION_NOT_RUNNING);
+                        }
+                        break;
                     case NsdManager.DAEMON_CLEANUP:
                         maybeStopDaemon();
                         break;
@@ -763,6 +770,29 @@ public class NsdService extends INsdManager.Stub {
                         }
                         break;
                     }
+                    case NsdManager.STOP_RESOLUTION:
+                        if (DBG) Log.d(TAG, "Stop service resolution");
+                        args = (ListenerArgs) msg.obj;
+                        clientInfo = mClients.get(args.connector);
+                        // If the binder death notification for a INsdManagerCallback was received
+                        // before any calls are received by NsdService, the clientInfo would be
+                        // cleared and cause NPE. Add a null check here to prevent this corner case.
+                        if (clientInfo == null) {
+                            Log.e(TAG, "Unknown connector in stop resolution");
+                            break;
+                        }
+
+                        id = clientInfo.mClientIds.get(clientId);
+                        removeRequestMap(clientId, id, clientInfo);
+                        if (stopResolveService(id)) {
+                            clientInfo.onStopResolutionSucceeded(clientId);
+                        } else {
+                            clientInfo.onStopResolutionFailed(
+                                    clientId, NsdManager.FAILURE_OPERATION_NOT_RUNNING);
+                        }
+                        clientInfo.mResolvedService = null;
+                        // TODO: Implement the stop resolution with MdnsDiscoveryManager.
+                        break;
                     case MDNS_SERVICE_EVENT:
                         if (!handleMDnsServiceEvent(msg.arg1, msg.arg2, msg.obj)) {
                             return NOT_HANDLED;
@@ -1307,6 +1337,12 @@ public class NsdService extends INsdManager.Stub {
         }
 
         @Override
+        public void stopResolution(int listenerKey) {
+            mNsdStateMachine.sendMessage(mNsdStateMachine.obtainMessage(
+                    NsdManager.STOP_RESOLUTION, 0, listenerKey, new ListenerArgs(this, null)));
+        }
+
+        @Override
         public void startDaemon() {
             mNsdStateMachine.sendMessage(mNsdStateMachine.obtainMessage(
                     NsdManager.DAEMON_STARTUP, new ListenerArgs(this, null)));
@@ -1641,6 +1677,22 @@ public class NsdService extends INsdManager.Stub {
                 mCb.onResolveServiceSucceeded(listenerKey, info);
             } catch (RemoteException e) {
                 Log.e(TAG, "Error calling onResolveServiceSucceeded", e);
+            }
+        }
+
+        void onStopResolutionFailed(int listenerKey, int error) {
+            try {
+                mCb.onStopResolutionFailed(listenerKey, error);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Error calling onStopResolutionFailed", e);
+            }
+        }
+
+        void onStopResolutionSucceeded(int listenerKey) {
+            try {
+                mCb.onStopResolutionSucceeded(listenerKey);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Error calling onStopResolutionSucceeded", e);
             }
         }
     }
