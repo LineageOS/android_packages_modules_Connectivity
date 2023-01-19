@@ -16,6 +16,7 @@
 
 package android.net.nsd;
 
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
@@ -44,6 +45,8 @@ import android.util.SparseArray;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 
@@ -230,7 +233,6 @@ public final class NsdManager {
 
     /** @hide */
     public static final int DAEMON_CLEANUP                          = 18;
-
     /** @hide */
     public static final int DAEMON_STARTUP                          = 19;
 
@@ -244,6 +246,13 @@ public final class NsdManager {
 
     /** @hide */
     public static final int MDNS_DISCOVERY_MANAGER_EVENT            = 23;
+
+    /** @hide */
+    public static final int STOP_RESOLUTION                         = 24;
+    /** @hide */
+    public static final int STOP_RESOLUTION_FAILED                  = 25;
+    /** @hide */
+    public static final int STOP_RESOLUTION_SUCCEEDED               = 26;
 
     /** Dns based service discovery protocol */
     public static final int PROTOCOL_DNS_SD = 0x0001;
@@ -270,6 +279,9 @@ public final class NsdManager {
         EVENT_NAMES.put(DAEMON_CLEANUP, "DAEMON_CLEANUP");
         EVENT_NAMES.put(DAEMON_STARTUP, "DAEMON_STARTUP");
         EVENT_NAMES.put(MDNS_SERVICE_EVENT, "MDNS_SERVICE_EVENT");
+        EVENT_NAMES.put(STOP_RESOLUTION, "STOP_RESOLUTION");
+        EVENT_NAMES.put(STOP_RESOLUTION_FAILED, "STOP_RESOLUTION_FAILED");
+        EVENT_NAMES.put(STOP_RESOLUTION_SUCCEEDED, "STOP_RESOLUTION_SUCCEEDED");
     }
 
     /** @hide */
@@ -595,6 +607,16 @@ public final class NsdManager {
         public void onResolveServiceSucceeded(int listenerKey, NsdServiceInfo info) {
             sendInfo(RESOLVE_SERVICE_SUCCEEDED, listenerKey, info);
         }
+
+        @Override
+        public void onStopResolutionFailed(int listenerKey, int error) {
+            sendError(STOP_RESOLUTION_FAILED, listenerKey, error);
+        }
+
+        @Override
+        public void onStopResolutionSucceeded(int listenerKey) {
+            sendNoArg(STOP_RESOLUTION_SUCCEEDED, listenerKey);
+        }
     }
 
     /**
@@ -617,6 +639,20 @@ public final class NsdManager {
      * requests from the applications have reached.
      */
     public static final int FAILURE_MAX_LIMIT                   = 4;
+
+    /**
+     * Indicates that the stop operation failed because it is not running.
+     * This failure is passed with {@link ResolveListener#onStopResolutionFailed}.
+     */
+    public static final int FAILURE_OPERATION_NOT_RUNNING       = 5;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            FAILURE_OPERATION_NOT_RUNNING,
+    })
+    public @interface StopOperationFailureCode {
+    }
 
     /** Interface for callback invocation for service discovery */
     public interface DiscoveryListener {
@@ -646,12 +682,49 @@ public final class NsdManager {
         public void onServiceUnregistered(NsdServiceInfo serviceInfo);
     }
 
-    /** Interface for callback invocation for service resolution */
+    /**
+     * Callback for use with {@link NsdManager#resolveService} to resolve the service info and use
+     * with {@link NsdManager#stopServiceResolution} to stop resolution.
+     */
     public interface ResolveListener {
 
-        public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode);
+        /**
+         * Called on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report the resolution was failed with an error.
+         *
+         * A resolution operation would call either onServiceResolved or onResolveFailed once based
+         * on the result.
+         */
+        void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode);
 
-        public void onServiceResolved(NsdServiceInfo serviceInfo);
+        /**
+         * Called on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report the resolved service info.
+         *
+         * A resolution operation would call either onServiceResolved or onResolveFailed once based
+         * on the result.
+         */
+        void onServiceResolved(NsdServiceInfo serviceInfo);
+
+        /**
+         * Called on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report the resolution was stopped.
+         *
+         * A stop resolution operation would call either onResolveStopped or onStopResolutionFailed
+         * once based on the result.
+         */
+        default void onResolveStopped(@NonNull NsdServiceInfo serviceInfo) { }
+
+        /**
+         * Called once on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report that stopping resolution failed with an
+         * error.
+         *
+         * A stop resolution operation would call either onResolveStopped or onStopResolutionFailed
+         * once based on the result.
+         */
+        default void onStopResolutionFailed(@NonNull NsdServiceInfo serviceInfo,
+                @StopOperationFailureCode int errorCode) { }
     }
 
     @VisibleForTesting
@@ -743,6 +816,16 @@ public final class NsdManager {
                     removeListener(key);
                     executor.execute(() -> ((ResolveListener) listener).onServiceResolved(
                             (NsdServiceInfo) obj));
+                    break;
+                case STOP_RESOLUTION_FAILED:
+                    removeListener(key);
+                    executor.execute(() -> ((ResolveListener) listener).onStopResolutionFailed(
+                            ns, errorCode));
+                    break;
+                case STOP_RESOLUTION_SUCCEEDED:
+                    removeListener(key);
+                    executor.execute(() -> ((ResolveListener) listener).onResolveStopped(
+                            ns));
                     break;
                 default:
                     Log.d(TAG, "Ignored " + message);
@@ -1074,6 +1157,29 @@ public final class NsdManager {
         int key = putListener(listener, executor, serviceInfo);
         try {
             mService.resolveService(key, serviceInfo);
+        } catch (RemoteException e) {
+            e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Stop service resolution initiated with {@link #resolveService}.
+     *
+     * A successful stop is notified with a call to {@link ResolveListener#onResolveStopped}.
+     *
+     * <p> Upon failure to stop service resolution for example if resolution is done or the
+     * requester stops resolution repeatedly, the application is notified
+     * {@link ResolveListener#onStopResolutionFailed} with {@link #FAILURE_OPERATION_NOT_RUNNING}
+     *
+     * @param listener This should be a listener object that was passed to {@link #resolveService}.
+     *                 It identifies the resolution that should be stopped and notifies of a
+     *                 successful or unsuccessful stop. Throws {@code IllegalArgumentException} if
+     *                 the listener was not passed to resolveService before.
+     */
+    public void stopServiceResolution(@NonNull ResolveListener listener) {
+        int id = getListenerKey(listener);
+        try {
+            mService.stopResolution(id);
         } catch (RemoteException e) {
             e.rethrowFromSystemServer();
         }
