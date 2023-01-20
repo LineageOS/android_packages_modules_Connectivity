@@ -33,13 +33,13 @@ import java.util.List;
  * TODO: implement receiving replies and handling conflicts.
  */
 public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
+    private static final long CONFLICT_RETRY_DELAY_MS = 5_000L;
     @NonNull
     private final String mLogTag;
 
     public MdnsProber(@NonNull String interfaceTag, @NonNull Looper looper,
             @NonNull MdnsReplySender replySender,
             @NonNull PacketRepeaterCallback<ProbingInfo> cb) {
-        // 3 packets as per https://datatracker.ietf.org/doc/html/rfc6762#section-8.1
         super(looper, replySender, cb);
         mLogTag = MdnsProber.class.getSimpleName() + "/" + interfaceTag;
     }
@@ -139,5 +139,19 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
 
     private void startProbing(@NonNull ProbingInfo info, long delay) {
         startSending(info.getServiceId(), info, delay);
+    }
+
+    /**
+     * Restart probing with new service info as a conflict was found.
+     */
+    public void restartForConflict(@NonNull ProbingInfo newInfo) {
+        stop(newInfo.getServiceId());
+
+        /* RFC 6762 8.1: "If fifteen conflicts occur within any ten-second period, then the host
+        MUST wait at least five seconds before each successive additional probe attempt. [...]
+        For very simple devices, a valid way to comply with this requirement is to always wait
+        five seconds after any failed probe attempt before trying again. */
+        // TODO: count 15 conflicts in 10s instead of waiting for 5s every time
+        startProbing(newInfo, CONFLICT_RETRY_DELAY_MS);
     }
 }

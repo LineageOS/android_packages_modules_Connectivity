@@ -24,6 +24,7 @@ import android.os.HandlerThread
 import com.android.server.connectivity.mdns.MdnsAnnouncer.AnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsRecordRepository.Dependencies
 import com.android.server.connectivity.mdns.MdnsRecordRepository.getReverseDnsAddress
+import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import java.net.InetSocketAddress
@@ -399,6 +400,63 @@ class MdnsRecordRepositoryTest {
                     TEST_HOSTNAME /* nextDomain */,
                     intArrayOf(MdnsRecord.TYPE_A, MdnsRecord.TYPE_AAAA)),
         ), reply.additionalAnswers)
+    }
+
+    @Test
+    fun testGetConflictingServices() {
+        val repository = MdnsRecordRepository(thread.looper, deps)
+        repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+        repository.addService(TEST_SERVICE_ID_2, TEST_SERVICE_2)
+
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                    MdnsServiceRecord(
+                            arrayOf("MyTestService", "_testservice", "_tcp", "local"),
+                            0L /* receiptTimeMillis */, true /* cacheFlush */, 0L /* ttlMillis */,
+                            0 /* servicePriority */, 0 /* serviceWeight */,
+                            TEST_SERVICE_1.port + 1,
+                            TEST_HOSTNAME),
+                    MdnsTextRecord(
+                            arrayOf("MyOtherTestService", "_testservice", "_tcp", "local"),
+                            0L /* receiptTimeMillis */, true /* cacheFlush */, 0L /* ttlMillis */,
+                            listOf(TextEntry.fromString("somedifferent=entry"))),
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        assertEquals(setOf(TEST_SERVICE_ID_1, TEST_SERVICE_ID_2),
+                repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_IdenticalService() {
+        val repository = MdnsRecordRepository(thread.looper, deps)
+        repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+        repository.addService(TEST_SERVICE_ID_2, TEST_SERVICE_2)
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                        MdnsServiceRecord(
+                                arrayOf("MyTestService", "_testservice", "_tcp", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis, 0 /* servicePriority */, 0 /* serviceWeight */,
+                                TEST_SERVICE_1.port,
+                                TEST_HOSTNAME),
+                        MdnsTextRecord(
+                                arrayOf("MyOtherTestService", "_testservice", "_tcp", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis, emptyList()),
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        // Above records are identical to the actual registrations: no conflict
+        assertEquals(emptySet(), repository.getConflictingServices(packet))
     }
 }
 
