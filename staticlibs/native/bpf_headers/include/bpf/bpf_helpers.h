@@ -235,11 +235,12 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
 
 /* type safe macro to declare a map and related accessor functions */
 #define DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md,         \
-                           selinux, pindir, share)                                               \
+                           selinux, pindir, share, min_loader, max_loader, ignore_eng,           \
+                           ignore_user, ignore_userdebug)                                        \
   DEFINE_BPF_MAP_BASE(the_map, TYPE, sizeof(KeyType), sizeof(ValueType),                         \
                       num_entries, usr, grp, md, selinux, pindir, share,                         \
-                      KVER_NONE, KVER_INF, BPFLOADER_MIN_VER, BPFLOADER_MAX_VER,                 \
-                      false, false, false);                                                      \
+                      KVER_NONE, KVER_INF, min_loader, max_loader,                               \
+                      ignore_eng, ignore_user, ignore_userdebug);                                \
     BPF_MAP_ASSERT_OK(BPF_MAP_TYPE_##TYPE, (num_entries), (md));                                 \
     BPF_ANNOTATE_KV_PAIR(the_map, KeyType, ValueType);                                           \
                                                                                                  \
@@ -271,9 +272,11 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
 #error "Bpf Map UID must be left at default of AID_ROOT for BpfLoader prior to v0.28"
 #endif
 
-#define DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md) \
-    DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md, \
-                       DEFAULT_BPF_MAP_SELINUX_CONTEXT, DEFAULT_BPF_MAP_PIN_SUBDIR, false)
+#define DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md)   \
+    DEFINE_BPF_MAP_EXT(the_map, TYPE, KeyType, ValueType, num_entries, usr, grp, md,       \
+                       DEFAULT_BPF_MAP_SELINUX_CONTEXT, DEFAULT_BPF_MAP_PIN_SUBDIR, false, \
+                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, /*ignore_on_eng*/false,       \
+                       /*ignore_on_user*/false, /*ignore_on_userdebug*/false)
 
 #define DEFINE_BPF_MAP(the_map, TYPE, KeyType, ValueType, num_entries) \
     DEFINE_BPF_MAP_UGM(the_map, TYPE, KeyType, ValueType, num_entries, \
