@@ -203,6 +203,59 @@ class MdnsInterfaceAdvertiserTest {
         verify(replySender).queueReply(mockReply)
     }
 
+    @Test
+    fun testConflict() {
+        addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+        doReturn(setOf(TEST_SERVICE_ID_1)).`when`(repository).getConflictingServices(any())
+
+        // Reply obtained with:
+        // scapy.raw(scapy.DNS(
+        //    qd = None,
+        //    an = scapy.DNSRR(type='TXT', rrname='_testservice._tcp.local'))
+        // ).hex().upper()
+        val query = HexDump.hexStringToByteArray("0000010000000001000000000C5F7465737473657276696" +
+                "365045F746370056C6F63616C0000100001000000000000")
+        val src = InetSocketAddress(parseNumericAddress("2001:db8::456"), MdnsConstants.MDNS_PORT)
+        packetHandler.handlePacket(query, query.size, src)
+
+        val packetCaptor = ArgumentCaptor.forClass(MdnsPacket::class.java)
+        verify(repository).getConflictingServices(packetCaptor.capture())
+
+        packetCaptor.value.let {
+            assertEquals(0, it.questions.size)
+            assertEquals(1, it.answers.size)
+            assertEquals(0, it.authorityRecords.size)
+            assertEquals(0, it.additionalRecords.size)
+
+            assertTrue(it.answers[0] is MdnsTextRecord)
+            assertContentEquals(arrayOf("_testservice", "_tcp", "local"), it.answers[0].name)
+        }
+
+        thread.waitForIdle(TIMEOUT_MS)
+        verify(cb).onServiceConflict(advertiser, TEST_SERVICE_ID_1)
+    }
+
+    @Test
+    fun testRestartProbingForConflict() {
+        val mockProbingInfo = mock(ProbingInfo::class.java)
+        doReturn(mockProbingInfo).`when`(repository).setServiceProbing(TEST_SERVICE_ID_1)
+
+        advertiser.restartProbingForConflict(TEST_SERVICE_ID_1)
+
+        verify(prober).restartForConflict(mockProbingInfo)
+    }
+
+    @Test
+    fun testRenameServiceForConflict() {
+        val mockProbingInfo = mock(ProbingInfo::class.java)
+        doReturn(mockProbingInfo).`when`(repository).renameServiceForConflict(
+                TEST_SERVICE_ID_1, TEST_SERVICE_1)
+
+        advertiser.renameServiceForConflict(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+
+        verify(prober).restartForConflict(mockProbingInfo)
+    }
+
     private fun addServiceAndFinishProbing(serviceId: Int, serviceInfo: NsdServiceInfo):
             AnnouncementInfo {
         val testProbingInfo = mock(ProbingInfo::class.java)
