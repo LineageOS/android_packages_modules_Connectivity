@@ -171,6 +171,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         mHandlerThread.start();
         doReturn(mKeepaliveTracker).when(mDependencies).newKeepaliveTracker(
                 mCtx, mHandlerThread.getThreadHandler());
+        doReturn(true).when(mDependencies).isFeatureEnabled(any());
         mAOOKeepaliveTracker = new AutomaticOnOffKeepaliveTracker(
                 mCtx, mHandlerThread.getThreadHandler(), mDependencies);
     }
