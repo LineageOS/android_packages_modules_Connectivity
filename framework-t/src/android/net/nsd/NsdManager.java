@@ -16,6 +16,7 @@
 
 package android.net.nsd;
 
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
@@ -44,6 +45,8 @@ import android.util.SparseArray;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 
@@ -230,7 +233,6 @@ public final class NsdManager {
 
     /** @hide */
     public static final int DAEMON_CLEANUP                          = 18;
-
     /** @hide */
     public static final int DAEMON_STARTUP                          = 19;
 
@@ -244,6 +246,27 @@ public final class NsdManager {
 
     /** @hide */
     public static final int MDNS_DISCOVERY_MANAGER_EVENT            = 23;
+
+    /** @hide */
+    public static final int STOP_RESOLUTION                         = 24;
+    /** @hide */
+    public static final int STOP_RESOLUTION_FAILED                  = 25;
+    /** @hide */
+    public static final int STOP_RESOLUTION_SUCCEEDED               = 26;
+
+    /** @hide */
+    public static final int REGISTER_SERVICE_CALLBACK               = 27;
+    /** @hide */
+    public static final int REGISTER_SERVICE_CALLBACK_FAILED        = 28;
+    /** @hide */
+    public static final int SERVICE_UPDATED                         = 29;
+    /** @hide */
+    public static final int SERVICE_UPDATED_LOST                    = 30;
+
+    /** @hide */
+    public static final int UNREGISTER_SERVICE_CALLBACK             = 31;
+    /** @hide */
+    public static final int UNREGISTER_SERVICE_CALLBACK_SUCCEEDED   = 32;
 
     /** Dns based service discovery protocol */
     public static final int PROTOCOL_DNS_SD = 0x0001;
@@ -270,6 +293,15 @@ public final class NsdManager {
         EVENT_NAMES.put(DAEMON_CLEANUP, "DAEMON_CLEANUP");
         EVENT_NAMES.put(DAEMON_STARTUP, "DAEMON_STARTUP");
         EVENT_NAMES.put(MDNS_SERVICE_EVENT, "MDNS_SERVICE_EVENT");
+        EVENT_NAMES.put(STOP_RESOLUTION, "STOP_RESOLUTION");
+        EVENT_NAMES.put(STOP_RESOLUTION_FAILED, "STOP_RESOLUTION_FAILED");
+        EVENT_NAMES.put(STOP_RESOLUTION_SUCCEEDED, "STOP_RESOLUTION_SUCCEEDED");
+        EVENT_NAMES.put(REGISTER_SERVICE_CALLBACK, "REGISTER_SERVICE_CALLBACK");
+        EVENT_NAMES.put(REGISTER_SERVICE_CALLBACK_FAILED, "REGISTER_SERVICE_CALLBACK_FAILED");
+        EVENT_NAMES.put(SERVICE_UPDATED, "SERVICE_UPDATED");
+        EVENT_NAMES.put(UNREGISTER_SERVICE_CALLBACK, "UNREGISTER_SERVICE_CALLBACK");
+        EVENT_NAMES.put(UNREGISTER_SERVICE_CALLBACK_SUCCEEDED,
+                "UNREGISTER_SERVICE_CALLBACK_SUCCEEDED");
     }
 
     /** @hide */
@@ -595,6 +627,36 @@ public final class NsdManager {
         public void onResolveServiceSucceeded(int listenerKey, NsdServiceInfo info) {
             sendInfo(RESOLVE_SERVICE_SUCCEEDED, listenerKey, info);
         }
+
+        @Override
+        public void onStopResolutionFailed(int listenerKey, int error) {
+            sendError(STOP_RESOLUTION_FAILED, listenerKey, error);
+        }
+
+        @Override
+        public void onStopResolutionSucceeded(int listenerKey) {
+            sendNoArg(STOP_RESOLUTION_SUCCEEDED, listenerKey);
+        }
+
+        @Override
+        public void onServiceInfoCallbackRegistrationFailed(int listenerKey, int error) {
+            sendError(REGISTER_SERVICE_CALLBACK_FAILED, listenerKey, error);
+        }
+
+        @Override
+        public void onServiceUpdated(int listenerKey, NsdServiceInfo info) {
+            sendInfo(SERVICE_UPDATED, listenerKey, info);
+        }
+
+        @Override
+        public void onServiceUpdatedLost(int listenerKey) {
+            sendNoArg(SERVICE_UPDATED_LOST, listenerKey);
+        }
+
+        @Override
+        public void onServiceInfoCallbackUnregistered(int listenerKey) {
+            sendNoArg(UNREGISTER_SERVICE_CALLBACK_SUCCEEDED, listenerKey);
+        }
     }
 
     /**
@@ -617,6 +679,37 @@ public final class NsdManager {
      * requests from the applications have reached.
      */
     public static final int FAILURE_MAX_LIMIT                   = 4;
+
+    /**
+     * Indicates that the stop operation failed because it is not running.
+     * This failure is passed with {@link ResolveListener#onStopResolutionFailed}.
+     */
+    public static final int FAILURE_OPERATION_NOT_RUNNING       = 5;
+
+    /**
+     * Indicates that the service has failed to resolve because of bad parameters.
+     *
+     * This failure is passed with
+     * {@link ServiceInfoCallback#onServiceInfoCallbackRegistrationFailed}.
+     */
+    public static final int FAILURE_BAD_PARAMETERS              = 6;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            FAILURE_OPERATION_NOT_RUNNING,
+    })
+    public @interface StopOperationFailureCode {
+    }
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            FAILURE_ALREADY_ACTIVE,
+            FAILURE_BAD_PARAMETERS,
+    })
+    public @interface ResolutionFailureCode {
+    }
 
     /** Interface for callback invocation for service discovery */
     public interface DiscoveryListener {
@@ -646,12 +739,97 @@ public final class NsdManager {
         public void onServiceUnregistered(NsdServiceInfo serviceInfo);
     }
 
-    /** Interface for callback invocation for service resolution */
+    /**
+     * Callback for use with {@link NsdManager#resolveService} to resolve the service info and use
+     * with {@link NsdManager#stopServiceResolution} to stop resolution.
+     */
     public interface ResolveListener {
 
-        public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode);
+        /**
+         * Called on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report the resolution was failed with an error.
+         *
+         * A resolution operation would call either onServiceResolved or onResolveFailed once based
+         * on the result.
+         */
+        void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode);
 
-        public void onServiceResolved(NsdServiceInfo serviceInfo);
+        /**
+         * Called on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report the resolved service info.
+         *
+         * A resolution operation would call either onServiceResolved or onResolveFailed once based
+         * on the result.
+         */
+        void onServiceResolved(NsdServiceInfo serviceInfo);
+
+        /**
+         * Called on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report the resolution was stopped.
+         *
+         * A stop resolution operation would call either onResolveStopped or onStopResolutionFailed
+         * once based on the result.
+         */
+        default void onResolveStopped(@NonNull NsdServiceInfo serviceInfo) { }
+
+        /**
+         * Called once on the internal thread or with an executor passed to
+         * {@link NsdManager#resolveService} to report that stopping resolution failed with an
+         * error.
+         *
+         * A stop resolution operation would call either onResolveStopped or onStopResolutionFailed
+         * once based on the result.
+         */
+        default void onStopResolutionFailed(@NonNull NsdServiceInfo serviceInfo,
+                @StopOperationFailureCode int errorCode) { }
+    }
+
+    /**
+     * Callback to listen to service info updates.
+     *
+     * For use with {@link NsdManager#registerServiceInfoCallback} to register, and with
+     * {@link NsdManager#unregisterServiceInfoCallback} to stop listening.
+     */
+    public interface ServiceInfoCallback {
+
+        /**
+         * Reports that registering the callback failed with an error.
+         *
+         * Called on the executor passed to {@link NsdManager#registerServiceInfoCallback}.
+         *
+         * onServiceInfoCallbackRegistrationFailed will be called exactly once when the callback
+         * could not be registered. No other callback will be sent in that case.
+         */
+        void onServiceInfoCallbackRegistrationFailed(@ResolutionFailureCode int errorCode);
+
+        /**
+         * Reports updated service info.
+         *
+         * Called on the executor passed to {@link NsdManager#registerServiceInfoCallback}. Any
+         * service updates will be notified via this callback until
+         * {@link NsdManager#unregisterServiceInfoCallback} is called. This will only be called once
+         * the service is found, so may never be called if the service is never present.
+         */
+        void onServiceUpdated(@NonNull NsdServiceInfo serviceInfo);
+
+        /**
+         * Reports when the service that this callback listens to becomes unavailable.
+         *
+         * Called on the executor passed to {@link NsdManager#registerServiceInfoCallback}. The
+         * service may become available again, in which case {@link #onServiceUpdated} will be
+         * called.
+         */
+        void onServiceLost();
+
+        /**
+         * Reports that service info updates have stopped.
+         *
+         * Called on the executor passed to {@link NsdManager#registerServiceInfoCallback}.
+         *
+         * A callback unregistration operation will call onServiceInfoCallbackUnregistered
+         * once. After this, the callback may be reused.
+         */
+        void onServiceInfoCallbackUnregistered();
     }
 
     @VisibleForTesting
@@ -743,6 +921,33 @@ public final class NsdManager {
                     removeListener(key);
                     executor.execute(() -> ((ResolveListener) listener).onServiceResolved(
                             (NsdServiceInfo) obj));
+                    break;
+                case STOP_RESOLUTION_FAILED:
+                    removeListener(key);
+                    executor.execute(() -> ((ResolveListener) listener).onStopResolutionFailed(
+                            ns, errorCode));
+                    break;
+                case STOP_RESOLUTION_SUCCEEDED:
+                    removeListener(key);
+                    executor.execute(() -> ((ResolveListener) listener).onResolveStopped(
+                            ns));
+                    break;
+                case REGISTER_SERVICE_CALLBACK_FAILED:
+                    removeListener(key);
+                    executor.execute(() -> ((ServiceInfoCallback) listener)
+                            .onServiceInfoCallbackRegistrationFailed(errorCode));
+                    break;
+                case SERVICE_UPDATED:
+                    executor.execute(() -> ((ServiceInfoCallback) listener)
+                            .onServiceUpdated((NsdServiceInfo) obj));
+                    break;
+                case SERVICE_UPDATED_LOST:
+                    executor.execute(() -> ((ServiceInfoCallback) listener).onServiceLost());
+                    break;
+                case UNREGISTER_SERVICE_CALLBACK_SUCCEEDED:
+                    removeListener(key);
+                    executor.execute(() -> ((ServiceInfoCallback) listener)
+                            .onServiceInfoCallbackUnregistered());
                     break;
                 default:
                     Log.d(TAG, "Ignored " + message);
@@ -1055,7 +1260,14 @@ public final class NsdManager {
      * @param serviceInfo service to be resolved
      * @param listener to receive callback upon success or failure. Cannot be null.
      * Cannot be in use for an active service resolution.
+     *
+     * @deprecated the returned ServiceInfo may get stale at any time after resolution, including
+     * immediately after the callback is called, and may not contain some service information that
+     * could be delivered later, like additional host addresses. Prefer using
+     * {@link #registerServiceInfoCallback}, which will keep the application up-to-date with the
+     * state of the service.
      */
+    @Deprecated
     public void resolveService(NsdServiceInfo serviceInfo, ResolveListener listener) {
         resolveService(serviceInfo, Runnable::run, listener);
     }
@@ -1067,13 +1279,99 @@ public final class NsdManager {
      * @param serviceInfo service to be resolved
      * @param executor Executor to run listener callbacks with
      * @param listener to receive callback upon success or failure.
+     *
+     * @deprecated the returned ServiceInfo may get stale at any time after resolution, including
+     * immediately after the callback is called, and may not contain some service information that
+     * could be delivered later, like additional host addresses. Prefer using
+     * {@link #registerServiceInfoCallback}, which will keep the application up-to-date with the
+     * state of the service.
      */
+    @Deprecated
     public void resolveService(@NonNull NsdServiceInfo serviceInfo,
             @NonNull Executor executor, @NonNull ResolveListener listener) {
         checkServiceInfo(serviceInfo);
         int key = putListener(listener, executor, serviceInfo);
         try {
             mService.resolveService(key, serviceInfo);
+        } catch (RemoteException e) {
+            e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Stop service resolution initiated with {@link #resolveService}.
+     *
+     * A successful stop is notified with a call to {@link ResolveListener#onResolveStopped}.
+     *
+     * <p> Upon failure to stop service resolution for example if resolution is done or the
+     * requester stops resolution repeatedly, the application is notified
+     * {@link ResolveListener#onStopResolutionFailed} with {@link #FAILURE_OPERATION_NOT_RUNNING}
+     *
+     * @param listener This should be a listener object that was passed to {@link #resolveService}.
+     *                 It identifies the resolution that should be stopped and notifies of a
+     *                 successful or unsuccessful stop. Throws {@code IllegalArgumentException} if
+     *                 the listener was not passed to resolveService before.
+     */
+    public void stopServiceResolution(@NonNull ResolveListener listener) {
+        int id = getListenerKey(listener);
+        try {
+            mService.stopResolution(id);
+        } catch (RemoteException e) {
+            e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Register a callback to listen for updates to a service.
+     *
+     * An application can listen to a service to continuously monitor availability of given service.
+     * The callback methods will be called on the passed executor. And service updates are sent with
+     * continuous calls to {@link ServiceInfoCallback#onServiceUpdated}.
+     *
+     * This is different from {@link #resolveService} which provides one shot service information.
+     *
+     * <p> An application can listen to a service once a time. It needs to cancel the registration
+     * before registering other callbacks. Upon failure to register a callback for example if
+     * it's a duplicated registration, the application is notified through
+     * {@link ServiceInfoCallback#onServiceInfoCallbackRegistrationFailed} with
+     * {@link #FAILURE_BAD_PARAMETERS} or {@link #FAILURE_ALREADY_ACTIVE}.
+     *
+     * @param serviceInfo the service to receive updates for
+     * @param executor Executor to run callbacks with
+     * @param listener to receive callback upon service update
+     */
+    public void registerServiceInfoCallback(@NonNull NsdServiceInfo serviceInfo,
+            @NonNull Executor executor, @NonNull ServiceInfoCallback listener) {
+        checkServiceInfo(serviceInfo);
+        int key = putListener(listener, executor, serviceInfo);
+        try {
+            mService.registerServiceInfoCallback(key, serviceInfo);
+        } catch (RemoteException e) {
+            e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Unregister a callback registered with {@link #registerServiceInfoCallback}.
+     *
+     * A successful unregistration is notified with a call to
+     * {@link ServiceInfoCallback#onServiceInfoCallbackUnregistered}. The same callback can only be
+     * reused after this is called.
+     *
+     * <p>If the callback is not already registered, this will throw with
+     * {@link IllegalArgumentException}.
+     *
+     * @param listener This should be a listener object that was passed to
+     *                 {@link #registerServiceInfoCallback}. It identifies the registration that
+     *                 should be unregistered and notifies of a successful or unsuccessful stop.
+     *                 Throws {@code IllegalArgumentException} if the listener was not passed to
+     *                 {@link #registerServiceInfoCallback} before.
+     */
+    public void unregisterServiceInfoCallback(@NonNull ServiceInfoCallback listener) {
+        // Will throw IllegalArgumentException if the listener is not known
+        int id = getListenerKey(listener);
+        try {
+            mService.unregisterServiceInfoCallback(id);
         } catch (RemoteException e) {
             e.rethrowFromSystemServer();
         }
