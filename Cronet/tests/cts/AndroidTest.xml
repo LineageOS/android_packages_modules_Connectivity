@@ -23,14 +23,14 @@
     <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="cleanup-apks" value="true" />
-        <option name="test-file-name" value="CtsCronetTestCases.apk" />
+        <option name="test-file-name" value="CtsNetHttpTestCases.apk" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.net.http.cts" />
         <option name="runtime-hint" value="10s" />
     </test>
 
-    <!-- Only run CtsCronetTestcasess in MTS if the Tethering Mainline module is installed. -->
+    <!-- Only run CtsNetHttpTestCases in MTS if the Tethering Mainline module is installed. -->
     <object type="module_controller"
             class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
         <option name="mainline-module-package-name" value="com.google.android.tethering" />

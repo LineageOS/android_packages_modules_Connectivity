@@ -16,8 +16,15 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsSocketProvider.ensureRunningOnHandlerThread;
+
 import android.annotation.NonNull;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
+import android.util.Log;
+
+import com.android.server.connectivity.mdns.MdnsRecordRepository.ReplyInfo;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -25,6 +32,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
+import java.util.Collections;
 
 /**
  * A class that handles sending mDNS replies to a {@link MulticastSocket}, possibly queueing them
@@ -33,18 +41,36 @@ import java.net.MulticastSocket;
  * TODO: implement sending after a delay, combining queued replies and duplicate answer suppression
  */
 public class MdnsReplySender {
+    private static final boolean DBG = MdnsAdvertiser.DBG;
+    private static final int MSG_SEND = 1;
+
+    private final String mLogTag;
     @NonNull
     private final MdnsInterfaceSocket mSocket;
     @NonNull
-    private final Looper mLooper;
+    private final Handler mHandler;
     @NonNull
     private final byte[] mPacketCreationBuffer;
 
-    public MdnsReplySender(@NonNull Looper looper,
+    public MdnsReplySender(@NonNull String interfaceTag, @NonNull Looper looper,
             @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer) {
-        mLooper = looper;
+        mHandler = new SendHandler(looper);
+        mLogTag = MdnsReplySender.class.getSimpleName() + "/" +  interfaceTag;
         mSocket = socket;
         mPacketCreationBuffer = packetCreationBuffer;
+    }
+
+    /**
+     * Queue a reply to be sent when its send delay expires.
+     */
+    public void queueReply(@NonNull ReplyInfo reply) {
+        ensureRunningOnHandlerThread(mHandler);
+        // TODO: implement response aggregation (RFC 6762 6.4)
+        mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_SEND, reply), reply.sendDelayMs);
+
+        if (DBG) {
+            Log.v(mLogTag, "Scheduling " + reply);
+        }
     }
 
     /**
@@ -54,9 +80,7 @@ public class MdnsReplySender {
      */
     public void sendNow(@NonNull MdnsPacket packet, @NonNull InetSocketAddress destination)
             throws IOException {
-        if (Thread.currentThread() != mLooper.getThread()) {
-            throw new IllegalStateException("sendNow must be called in the handler thread");
-        }
+        ensureRunningOnHandlerThread(mHandler);
         if (!((destination.getAddress() instanceof Inet6Address && mSocket.hasJoinedIpv6())
                 || (destination.getAddress() instanceof Inet4Address && mSocket.hasJoinedIpv4()))) {
             // Skip sending if the socket has not joined the v4/v6 group (there was no address)
@@ -92,5 +116,38 @@ public class MdnsReplySender {
         System.arraycopy(mPacketCreationBuffer, 0, outBuffer, 0, len);
 
         mSocket.send(new DatagramPacket(outBuffer, 0, len, destination));
+    }
+
+    /**
+     * Cancel all pending sends.
+     */
+    public void cancelAll() {
+        ensureRunningOnHandlerThread(mHandler);
+        mHandler.removeMessages(MSG_SEND);
+    }
+
+    private class SendHandler extends Handler {
+        SendHandler(@NonNull Looper looper) {
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            final ReplyInfo replyInfo = (ReplyInfo) msg.obj;
+            if (DBG) Log.v(mLogTag, "Sending " + replyInfo);
+
+            final int flags = 0x8400; // Response, authoritative (rfc6762 18.4)
+            final MdnsPacket packet = new MdnsPacket(flags,
+                    Collections.emptyList() /* questions */,
+                    replyInfo.answers,
+                    Collections.emptyList() /* authorityRecords */,
+                    replyInfo.additionalAnswers);
+
+            try {
+                sendNow(packet, replyInfo.destination);
+            } catch (IOException e) {
+                Log.e(mLogTag, "Error sending MDNS response", e);
+            }
+        }
     }
 }
