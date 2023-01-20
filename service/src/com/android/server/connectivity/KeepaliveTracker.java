@@ -18,7 +18,6 @@ package com.android.server.connectivity;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.NattSocketKeepalive.NATT_PORT;
-import static android.net.NetworkAgent.CMD_START_SOCKET_KEEPALIVE;
 import static android.net.SocketKeepalive.BINDER_DIED;
 import static android.net.SocketKeepalive.DATA_RECEIVED;
 import static android.net.SocketKeepalive.ERROR_INSUFFICIENT_RESOURCES;
@@ -88,7 +87,6 @@ public class KeepaliveTracker {
     /** Keeps track of keepalive requests. */
     private final HashMap <NetworkAgentInfo, HashMap<Integer, KeepaliveInfo>> mKeepalives =
             new HashMap<> ();
-    private final Handler mConnectivityServiceHandler;
     @NonNull
     private final TcpKeepaliveController mTcpController;
     @NonNull
@@ -109,7 +107,6 @@ public class KeepaliveTracker {
     private final int mAllowedUnprivilegedSlotsForUid;
 
     public KeepaliveTracker(Context context, Handler handler) {
-        mConnectivityServiceHandler = handler;
         mTcpController = new TcpKeepaliveController(handler);
         mContext = context;
 
@@ -130,13 +127,13 @@ public class KeepaliveTracker {
      */
     class KeepaliveInfo implements IBinder.DeathRecipient {
         // Bookkeeping data.
-        private final ISocketKeepaliveCallback mCallback;
+        public final ISocketKeepaliveCallback mCallback;
         private final int mUid;
         private final int mPid;
         private final boolean mPrivileged;
-        private final NetworkAgentInfo mNai;
+        public final NetworkAgentInfo mNai;
         private final int mType;
-        private final FileDescriptor mFd;
+        public final FileDescriptor mFd;
 
         public static final int TYPE_NATT = 1;
         public static final int TYPE_TCP = 2;
@@ -242,6 +239,10 @@ public class KeepaliveTracker {
             if (mCallback != null) {
                 mCallback.asBinder().unlinkToDeath(this, 0);
             }
+        }
+
+        public int getSlot() {
+            return mSlot;
         }
 
         private int checkNetworkConnected() {
@@ -416,6 +417,13 @@ public class KeepaliveTracker {
         void onFileDescriptorInitiatedStop(final int socketKeepaliveReason) {
             handleStopKeepalive(mNai, mSlot, socketKeepaliveReason);
         }
+
+        /**
+         * Construct a new KeepaliveInfo from existing KeepaliveInfo with a new fd.
+         */
+        public KeepaliveInfo withFd(@NonNull FileDescriptor fd) throws InvalidSocketException {
+            return new KeepaliveInfo(mCallback, mNai, mPacket, mInterval, mType, fd);
+        }
     }
 
     void notifyErrorCallback(ISocketKeepaliveCallback cb, int error) {
@@ -445,6 +453,9 @@ public class KeepaliveTracker {
         return slot;
     }
 
+    /**
+     * Handle start keepalives with the message.
+     */
     public void handleStartKeepalive(Message message) {
         KeepaliveInfo ki = (KeepaliveInfo) message.obj;
         NetworkAgentInfo nai = ki.getNai();
@@ -605,7 +616,8 @@ public class KeepaliveTracker {
      * Called when requesting that keepalives be started on a IPsec NAT-T socket. See
      * {@link android.net.SocketKeepalive}.
      **/
-    public void startNattKeepalive(@Nullable NetworkAgentInfo nai,
+    @Nullable
+    public KeepaliveInfo makeNattKeepaliveInfo(@Nullable NetworkAgentInfo nai,
             @Nullable FileDescriptor fd,
             int intervalSeconds,
             @NonNull ISocketKeepaliveCallback cb,
@@ -615,7 +627,7 @@ public class KeepaliveTracker {
             int dstPort) {
         if (nai == null) {
             notifyErrorCallback(cb, ERROR_INVALID_NETWORK);
-            return;
+            return null;
         }
 
         InetAddress srcAddress, dstAddress;
@@ -624,7 +636,7 @@ public class KeepaliveTracker {
             dstAddress = InetAddresses.parseNumericAddress(dstAddrString);
         } catch (IllegalArgumentException e) {
             notifyErrorCallback(cb, ERROR_INVALID_IP_ADDRESS);
-            return;
+            return null;
         }
 
         KeepalivePacketData packet;
@@ -633,7 +645,7 @@ public class KeepaliveTracker {
                     srcAddress, srcPort, dstAddress, NATT_PORT);
         } catch (InvalidPacketException e) {
             notifyErrorCallback(cb, e.getError());
-            return;
+            return null;
         }
         KeepaliveInfo ki = null;
         try {
@@ -642,15 +654,14 @@ public class KeepaliveTracker {
         } catch (InvalidSocketException | IllegalArgumentException | SecurityException e) {
             Log.e(TAG, "Fail to construct keepalive", e);
             notifyErrorCallback(cb, ERROR_INVALID_SOCKET);
-            return;
+            return null;
         }
-        Log.d(TAG, "Created keepalive: " + ki.toString());
-        mConnectivityServiceHandler.obtainMessage(
-                NetworkAgent.CMD_START_SOCKET_KEEPALIVE, ki).sendToTarget();
+        Log.d(TAG, "Created keepalive: " + ki);
+        return ki;
     }
 
     /**
-     * Called by ConnectivityService to start TCP keepalive on a file descriptor.
+     * Make a KeepaliveInfo for a TCP socket.
      *
      * In order to offload keepalive for application correctly, sequence number, ack number and
      * other fields are needed to form the keepalive packet. Thus, this function synchronously
@@ -659,13 +670,14 @@ public class KeepaliveTracker {
      *
      * See {@link android.net.SocketKeepalive}.
      **/
-    public void startTcpKeepalive(@Nullable NetworkAgentInfo nai,
+    @Nullable
+    public KeepaliveInfo makeTcpKeepaliveInfo(@Nullable NetworkAgentInfo nai,
             @NonNull FileDescriptor fd,
             int intervalSeconds,
             @NonNull ISocketKeepaliveCallback cb) {
         if (nai == null) {
             notifyErrorCallback(cb, ERROR_INVALID_NETWORK);
-            return;
+            return null;
         }
 
         final TcpKeepalivePacketData packet;
@@ -673,10 +685,10 @@ public class KeepaliveTracker {
             packet = TcpKeepaliveController.getTcpKeepalivePacket(fd);
         } catch (InvalidSocketException e) {
             notifyErrorCallback(cb, e.error);
-            return;
+            return null;
         } catch (InvalidPacketException e) {
             notifyErrorCallback(cb, e.getError());
-            return;
+            return null;
         }
         KeepaliveInfo ki = null;
         try {
@@ -685,20 +697,22 @@ public class KeepaliveTracker {
         } catch (InvalidSocketException | IllegalArgumentException | SecurityException e) {
             Log.e(TAG, "Fail to construct keepalive e=" + e);
             notifyErrorCallback(cb, ERROR_INVALID_SOCKET);
-            return;
+            return null;
         }
         Log.d(TAG, "Created keepalive: " + ki.toString());
-        mConnectivityServiceHandler.obtainMessage(CMD_START_SOCKET_KEEPALIVE, ki).sendToTarget();
+        return ki;
     }
 
-   /**
-    * Called when requesting that keepalives be started on a IPsec NAT-T socket. This function is
-    * identical to {@link #startNattKeepalive}, but also takes a {@code resourceId}, which is the
-    * resource index bound to the {@link UdpEncapsulationSocket} when creating by
-    * {@link com.android.server.IpSecService} to verify whether the given
-    * {@link UdpEncapsulationSocket} is legitimate.
-    **/
-    public void startNattKeepalive(@Nullable NetworkAgentInfo nai,
+    /**
+     * Make a KeepaliveInfo for an IPSec NAT-T socket.
+     *
+     * This function is identical to {@link #makeNattKeepaliveInfo}, but also takes a
+     * {@code resourceId}, which is the resource index bound to the {@link UdpEncapsulationSocket}
+     * when creating by {@link com.android.server.IpSecService} to verify whether the given
+     * {@link UdpEncapsulationSocket} is legitimate.
+     **/
+    @Nullable
+    public KeepaliveInfo makeNattKeepaliveInfo(@Nullable NetworkAgentInfo nai,
             @Nullable FileDescriptor fd,
             int resourceId,
             int intervalSeconds,
@@ -709,6 +723,7 @@ public class KeepaliveTracker {
         // Ensure that the socket is created by IpSecService.
         if (!isNattKeepaliveSocketValid(fd, resourceId)) {
             notifyErrorCallback(cb, ERROR_INVALID_SOCKET);
+            return null;
         }
 
         // Get src port to adopt old API.
@@ -718,10 +733,11 @@ public class KeepaliveTracker {
             srcPort = ((InetSocketAddress) srcSockAddr).getPort();
         } catch (ErrnoException e) {
             notifyErrorCallback(cb, ERROR_INVALID_SOCKET);
+            return null;
         }
 
         // Forward request to old API.
-        startNattKeepalive(nai, fd, intervalSeconds, cb, srcAddrString, srcPort,
+        return makeNattKeepaliveInfo(nai, fd, intervalSeconds, cb, srcAddrString, srcPort,
                 dstAddrString, dstPort);
     }
 
