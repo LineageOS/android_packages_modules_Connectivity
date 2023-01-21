@@ -416,6 +416,7 @@ package android.nearby {
     method public int getScanType();
     method @NonNull public android.os.WorkSource getWorkSource();
     method public boolean isBleEnabled();
+    method public boolean isOffloadOnly();
     method public static boolean isValidScanMode(int);
     method public static boolean isValidScanType(int);
     method @NonNull public static String scanModeToString(int);
@@ -434,6 +435,7 @@ package android.nearby {
     method @NonNull public android.nearby.ScanRequest.Builder addScanFilter(@NonNull android.nearby.ScanFilter);
     method @NonNull public android.nearby.ScanRequest build();
     method @NonNull public android.nearby.ScanRequest.Builder setBleEnabled(boolean);
+    method @NonNull public android.nearby.ScanRequest.Builder setOffloadOnly(boolean);
     method @NonNull public android.nearby.ScanRequest.Builder setScanMode(int);
     method @NonNull public android.nearby.ScanRequest.Builder setScanType(int);
     method @NonNull @RequiresPermission(android.Manifest.permission.UPDATE_DEVICE_STATS) public android.nearby.ScanRequest.Builder setWorkSource(@Nullable android.os.WorkSource);
