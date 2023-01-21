@@ -278,14 +278,23 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      * Reset a service to the probing state due to a conflict found on the network.
      */
     public void restartProbingForConflict(int serviceId) {
-        // TODO: implement
+        final MdnsProber.ProbingInfo probingInfo = mRecordRepository.setServiceProbing(serviceId);
+        if (probingInfo == null) return;
+
+        mProber.restartForConflict(probingInfo);
     }
 
     /**
      * Rename a service following a conflict found on the network, and restart probing.
+     *
+     * If the service was not registered on this {@link MdnsInterfaceAdvertiser}, this is a no-op.
      */
     public void renameServiceForConflict(int serviceId, NsdServiceInfo newInfo) {
-        // TODO: implement
+        final MdnsProber.ProbingInfo probingInfo = mRecordRepository.renameServiceForConflict(
+                serviceId, newInfo);
+        if (probingInfo == null) return;
+
+        mProber.restartForConflict(probingInfo);
     }
 
     /**
@@ -319,8 +328,15 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
                             + packet.additionalRecords.size() + " additional from " + src);
         }
 
-        final MdnsRecordRepository.ReplyInfo answers =
-                mRecordRepository.getReply(packet, src);
+        for (int conflictServiceId : mRecordRepository.getConflictingServices(packet)) {
+            mCbHandler.post(() -> mCb.onServiceConflict(this, conflictServiceId));
+        }
+
+        // Even in case of conflict, add replies for other services. But in general conflicts would
+        // happen when the incoming packet has answer records (not a question), so there will be no
+        // answer. One exception is simultaneous probe tiebreaking (rfc6762 8.2), in which case the
+        // conflicting service is still probing and won't reply either.
+        final MdnsRecordRepository.ReplyInfo answers = mRecordRepository.getReply(packet, src);
 
         if (answers == null) return;
         mReplySender.queueReply(answers);

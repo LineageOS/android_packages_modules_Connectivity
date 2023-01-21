@@ -50,7 +50,11 @@ public final class TcpSocketKeepalive extends SocketKeepalive {
      *   acknowledgement.
      */
     @Override
-    protected void startImpl(int intervalSec) {
+    protected void startImpl(int intervalSec, int flags) {
+        if (0 != flags) {
+            throw new IllegalArgumentException("Illegal flag value for "
+                    + this.getClass().getSimpleName() + " : " + flags);
+        }
         mExecutor.execute(() -> {
             try {
                 mService.startTcpKeepalive(mNetwork, mPfd, intervalSec, mCallback);
