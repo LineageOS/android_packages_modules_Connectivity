@@ -128,12 +128,17 @@ cflag_allowlist = [
   "-msse4.2",
 ]
 
+def get_linker_script_ldflag(script_path):
+  return f'-Wl,--script,{tree_path}/{script_path}'
+
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
     # TODO: remove if not needed.
     'cronet_aml_components_cronet_android_cronet': [
-        ('linker_scripts', {
-            'base/android/library_loader/anchor_functions.lds',
+        # linker_scripts property is not available in tm-mainline-prod.
+        # So use ldflags to specify linker script.
+        ('ldflags',{
+          get_linker_script_ldflag('base/android/library_loader/anchor_functions.lds'),
         }),
     ],
     'cronet_aml_net_net': [
@@ -370,6 +375,7 @@ class Module(object):
     self.min_sdk_version = None
     self.proto = dict()
     self.linker_scripts = set()
+    self.ldflags = set()
     # The genrule_XXX below are properties that must to be propagated back
     # on the module(s) that depend on the genrule.
     self.genrule_headers = set()
@@ -440,6 +446,7 @@ class Module(object):
     self._output_field(output, 'stubs')
     self._output_field(output, 'proto')
     self._output_field(output, 'linker_scripts')
+    self._output_field(output, 'ldflags')
     self._output_field(output, 'cppflags')
     self._output_field(output, 'libs')
     self._output_field(output, 'stem')
