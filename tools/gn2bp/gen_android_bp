@@ -1576,6 +1576,7 @@ def create_java_api_module(blueprint, gn):
   java_module.sdk_version = "module_current"
   java_module.libs = {
       "androidx.annotation_annotation",
+      "framework-annotations-lib",
     }
   blueprint.add_module(java_module)
   return java_module

@@ -29,6 +29,7 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
+        "framework-annotations-lib",
     ],
     sdk_version: "module_current",
 }
