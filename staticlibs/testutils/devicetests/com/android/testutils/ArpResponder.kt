@@ -17,9 +17,13 @@
 package com.android.testutils
 
 import android.net.MacAddress
+import com.android.net.module.util.NetworkStackConstants.ETHER_HEADER_LEN
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.nio.ByteBuffer
+
+private const val ARP_SENDER_MAC_OFFSET = ETHER_HEADER_LEN + 8
+private const val ARP_TARGET_IPADDR_OFFSET = ETHER_HEADER_LEN + 24
 
 private val TYPE_ARP = byteArrayOf(0x08, 0x06)
 // Arp reply header for IPv4 over ethernet

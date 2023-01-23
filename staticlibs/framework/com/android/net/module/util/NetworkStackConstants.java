@@ -197,6 +197,8 @@ public final class NetworkStackConstants {
      *     - https://tools.ietf.org/html/rfc768
      */
     public static final int UDP_HEADER_LEN = 8;
+    public static final int UDP_SRCPORT_OFFSET = 0;
+    public static final int UDP_DSTPORT_OFFSET = 2;
     public static final int UDP_LENGTH_OFFSET = 4;
     public static final int UDP_CHECKSUM_OFFSET = 6;
 
