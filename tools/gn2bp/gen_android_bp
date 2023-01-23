@@ -1564,8 +1564,12 @@ def create_java_module(blueprint, gn):
 
 def create_java_api_module(blueprint, gn):
   source_module = Module('filegroup', module_prefix + 'api_sources', java_api_target_name)
+  # TODO add the API helpers separately after the main API is checked in and thoroughly reviewed
   source_module.srcs.update([gn_utils.label_to_path(source)
-                             for source in get_api_java_sources(gn)])
+                             for source in get_api_java_sources(gn)
+                             if "apihelpers" not in source])
+  source_module.comment += "\n// TODO(danstahr): add the API helpers separately after the main" \
+                           " API is checked in and thoroughly reviewed"
   source_module.srcs.update([
     ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule').name
     for dep in get_api_java_actions(gn)])
