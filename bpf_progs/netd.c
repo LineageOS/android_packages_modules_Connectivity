@@ -46,8 +46,6 @@ static const int BPF_MATCH = 1;
 static const bool INGRESS = false;
 static const bool EGRESS = true;
 
-#define IP_PROTO_OFF offsetof(struct iphdr, protocol)
-#define IPV6_PROTO_OFF offsetof(struct ipv6hdr, nexthdr)
 
 // offsetof(struct iphdr, ihl) -- but that's a bitfield
 #define IPPROTO_IHL_OFF 0
@@ -231,7 +229,7 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, const
     if (skb->protocol == htons(ETH_P_IP)) {
         uint8_t proto;
         // no need to check for success, proto will be zeroed if bpf_skb_load_bytes_net() fails
-        (void)bpf_skb_load_bytes_net(skb, IP_PROTO_OFF, &proto, sizeof(proto), kver);
+        (void)bpf_skb_load_bytes_net(skb, IP4_OFFSET(protocol), &proto, sizeof(proto), kver);
         if (proto == IPPROTO_ESP) return true;
         if (proto != IPPROTO_TCP) return false;  // handles read failure above
         uint8_t ihl;
@@ -247,7 +245,7 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, const
     } else if (skb->protocol == htons(ETH_P_IPV6)) {
         uint8_t proto;
         // no need to check for success, proto will be zeroed if bpf_skb_load_bytes_net() fails
-        (void)bpf_skb_load_bytes_net(skb, IPV6_PROTO_OFF, &proto, sizeof(proto), kver);
+        (void)bpf_skb_load_bytes_net(skb, IP6_OFFSET(nexthdr), &proto, sizeof(proto), kver);
         if (proto == IPPROTO_ESP) return true;
         if (proto != IPPROTO_TCP) return false;  // handles read failure above
         // if the read below fails, we'll just assume no TCP flags are set, which is fine.
