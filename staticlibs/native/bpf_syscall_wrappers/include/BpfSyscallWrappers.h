@@ -150,6 +150,18 @@ inline int detachSingleProgram(bpf_attach_type type, const BPF_FD_TYPE prog_fd,
                                 });
 }
 
+// Available in 4.12 and later kernels.
+inline int runProgram(const BPF_FD_TYPE prog_fd, const void* data,
+                      const uint32_t data_size) {
+    return bpf(BPF_PROG_RUN, {
+                                     .test = {
+                                             .prog_fd = BPF_FD_TO_U32(prog_fd),
+                                             .data_in = ptr_to_u64(data),
+                                             .data_size_in = data_size,
+                                     },
+                             });
+}
+
 // BPF_OBJ_GET_INFO_BY_FD requires 4.14+ kernel
 //
 // Note: some fields are only defined in newer kernels (ie. the map_info struct grows
