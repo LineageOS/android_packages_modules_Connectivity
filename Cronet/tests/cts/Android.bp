@@ -44,6 +44,7 @@ java_defaults {
 android_library {
     name: "CtsNetHttpTestsLib",
     sdk_version: "test_current",
+    min_sdk_version: "30",
     srcs: [
         "src/**/*.java",
         "src/**/*.kt",
@@ -62,6 +63,7 @@ android_library {
         "framework-tethering",
         "org.apache.http.legacy",
     ],
+    lint: { test: true }
 }
 
 android_test {
