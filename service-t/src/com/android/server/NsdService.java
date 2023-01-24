@@ -919,6 +919,12 @@ public class NsdService extends INsdManager.Stub {
                             // interfaces that do not have an associated Network.
                             break;
                         }
+                        if (foundNetId == INetd.DUMMY_NET_ID) {
+                            // Ignore services on the dummy0 interface: they are only seen when
+                            // discovering locally advertised services, and are not reachable
+                            // through that interface.
+                            break;
+                        }
                         setServiceNetworkForCallback(servInfo, info.netId, info.interfaceIdx);
                         clientInfo.onServiceFound(clientId, servInfo);
                         break;
