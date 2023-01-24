@@ -19,8 +19,8 @@ package android.net.http.cts.util
 import android.content.Context
 import android.webkit.cts.CtsTestServer
 
-/** Extends CtsTestServer to handle POST requests and other cronet specific test requests */
-class CronetCtsTestServer(context: Context) : CtsTestServer(context) {
+/** Extends CtsTestServer to handle POST requests and other test specific requests */
+class HttpCtsTestServer(context: Context) : CtsTestServer(context) {
 
     val successUrl: String = getAssetUrl("html/hello_world.html")
 }
