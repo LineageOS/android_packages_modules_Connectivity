@@ -413,6 +413,35 @@ public class NsdServiceTest {
     }
 
     @Test
+    public void testDiscoverOnBlackholeNetwork() throws Exception {
+        final NsdManager client = connectClient(mService);
+        final DiscoveryListener discListener = mock(DiscoveryListener.class);
+        client.discoverServices(SERVICE_TYPE, PROTOCOL, discListener);
+        waitForIdle();
+
+        final IMDnsEventListener eventListener = getEventListener();
+        final ArgumentCaptor<Integer> discIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(mMockMDnsM).discover(discIdCaptor.capture(), eq(SERVICE_TYPE),
+                eq(0) /* interfaceIdx */);
+        // NsdManager uses a separate HandlerThread to dispatch callbacks (on ServiceHandler), so
+        // this needs to use a timeout
+        verify(discListener, timeout(TIMEOUT_MS)).onDiscoveryStarted(SERVICE_TYPE);
+
+        final DiscoveryInfo discoveryInfo = new DiscoveryInfo(
+                discIdCaptor.getValue(),
+                IMDnsEventListener.SERVICE_FOUND,
+                SERVICE_NAME,
+                SERVICE_TYPE,
+                DOMAIN_NAME,
+                123 /* interfaceIdx */,
+                INetd.DUMMY_NET_ID); // netId of the blackhole network
+        eventListener.onServiceDiscoveryStatus(discoveryInfo);
+        waitForIdle();
+
+        verify(discListener, never()).onServiceFound(any());
+    }
+
+    @Test
     public void testServiceRegistrationSuccessfulAndFailed() throws Exception {
         final NsdManager client = connectClient(mService);
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
