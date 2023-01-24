@@ -25,6 +25,7 @@
 #include <perfetto/trace/android/network_trace.pbzero.h>
 #include <perfetto/trace/profiling/profile_packet.pbzero.h>
 #include <perfetto/tracing/platform.h>
+#include <perfetto/tracing/tracing.h>
 
 // Note: this is initializing state for a templated Perfetto type that resides
 // in the `perfetto` namespace. This must be defined in the global scope.
@@ -43,6 +44,14 @@ void NetworkTraceHandler::RegisterDataSource() {
   perfetto::DataSourceDescriptor dsd;
   dsd.set_name("android.network_packets");
   NetworkTraceHandler::Register(dsd);
+}
+
+// static
+void NetworkTraceHandler::InitPerfettoTracing() {
+  perfetto::TracingInitArgs args = {};
+  args.backends |= perfetto::kSystemBackend;
+  perfetto::Tracing::Initialize(args);
+  NetworkTraceHandler::RegisterDataSource();
 }
 
 NetworkTraceHandler::NetworkTraceHandler()
