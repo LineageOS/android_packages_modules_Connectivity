@@ -59,6 +59,7 @@ android_test {
         "ctstestrunner-axt",
         "ctstestserver",
         "junit",
+        "hamcrest-library",
     ],
     libs: [
         "android.test.runner",
