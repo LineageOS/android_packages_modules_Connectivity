@@ -29,11 +29,13 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
+        "framework-annotations-lib",
     ],
     sdk_version: "module_current",
 }
 
 // GN: //components/cronet/android:cronet_api_java
+// TODO(danstahr): add the API helpers separately after the main API is checked in and thoroughly reviewed
 filegroup {
     name: "cronet_aml_api_sources",
     srcs: [
@@ -59,18 +61,6 @@ filegroup {
         "components/cronet/android/api/src/android/net/http/UploadDataSink.java",
         "components/cronet/android/api/src/android/net/http/UrlRequest.java",
         "components/cronet/android/api/src/android/net/http/UrlResponseInfo.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/ByteArrayCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/ContentTypeParametersParser.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/HttpResponse.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/ImplicitFlowControlCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/InMemoryTransformCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/JsonCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/RedirectHandler.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/RedirectHandlers.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/RequestCompletionListener.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/StringCallback.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/UploadDataProviders.java",
-        "components/cronet/android/api/src/android/net/http/apihelpers/UrlRequestCallbacks.java",
     ],
 }
 
@@ -2469,8 +2459,8 @@ cc_library_shared {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++17",
-    linker_scripts: [
-        "base/android/library_loader/anchor_functions.lds",
+    ldflags: [
+        "-Wl,--script,external/cronet/base/android/library_loader/anchor_functions.lds",
     ],
     stem: "libcronet.108.0.5359.128",
     target: {
