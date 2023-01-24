@@ -39,11 +39,13 @@ import android.nearby.PublicCredential;
 import android.nearby.ScanFilter;
 import android.util.Log;
 
+import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
 import com.google.protobuf.ByteString;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import service.proto.Blefilter;
@@ -64,10 +66,16 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
 
     private final ChreCommunication mChreCommunication;
     private final ChreCallback mChreCallback;
+    private final Object mLock = new Object();
+
     private boolean mChreStarted = false;
     private Blefilter.BleFilters mFilters = null;
     private Context mContext;
     private final IntentFilter mIntentFilter;
+    // Null when the filters are never set
+    @GuardedBy("mLock")
+    @Nullable
+    private List<ScanFilter> mScanFilters;
 
     private final BroadcastReceiver mScreenBroadcastReceiver =
             new BroadcastReceiver() {
@@ -98,20 +106,28 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
     @Override
     protected void onStart() {
         Log.d(TAG, "Start CHRE scan");
-        updateFilters();
+        synchronized (mLock) {
+            updateFiltersLocked();
+        }
     }
 
     @Override
     protected void onStop() {
         Log.d(TAG, "Stop CHRE scan");
-        mScanFilters.clear();
-        updateFilters();
+        synchronized (mLock) {
+            if (mScanFilters != null) {
+                mScanFilters = null;
+            }
+            updateFiltersLocked();
+        }
     }
 
     @Override
-    protected void invalidateScanMode() {
-        onStop();
-        onStart();
+    protected void onSetScanFilters(List<ScanFilter> filters) {
+        synchronized (mLock) {
+            mScanFilters = filters == null ? null : List.copyOf(filters);
+            updateFiltersLocked();
+        }
     }
 
     /**
@@ -123,7 +139,15 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
         return mChreCommunication.available();
     }
 
-    private synchronized void updateFilters() {
+    @VisibleForTesting
+    List<ScanFilter> getFiltersLocked() {
+        synchronized (mLock) {
+            return mScanFilters == null ? null : List.copyOf(mScanFilters);
+        }
+    }
+
+    @GuardedBy("mLock")
+    private void updateFiltersLocked() {
         if (mScanFilters == null) {
             Log.e(TAG, "ScanFilters not set.");
             return;
