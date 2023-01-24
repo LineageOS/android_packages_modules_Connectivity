@@ -39,7 +39,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
-public class CronetEngineTest {
+public class HttpEngineTest {
     private static final String HOST = "source.android.com";
     private static final String URL = "https://" + HOST;
 
@@ -63,7 +63,7 @@ public class CronetEngineTest {
     }
 
     @Test
-    public void testCronetEngine_Default() throws Exception {
+    public void testHttpEngine_Default() throws Exception {
         mEngine = mEngineBuilder.build();
         UrlRequest.Builder builder =
                 mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
@@ -76,7 +76,7 @@ public class CronetEngineTest {
     }
 
     @Test
-    public void testCronetEngine_DisableHttp2() throws Exception {
+    public void testHttpEngine_DisableHttp2() throws Exception {
         mEngine = mEngineBuilder.setEnableHttp2(false).build();
         UrlRequest.Builder builder =
                 mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
@@ -89,7 +89,7 @@ public class CronetEngineTest {
     }
 
     @Test
-    public void testCronetEngine_EnableQuic() throws Exception {
+    public void testHttpEngine_EnableQuic() throws Exception {
         // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
         // If this ends up being flaky, consider sending multiple requests.
         mEngine = mEngineBuilder.setEnableQuic(true).addQuicHint(HOST, 443, 443).build();
@@ -104,7 +104,7 @@ public class CronetEngineTest {
     }
 
     @Test
-    public void testCronetEngine_GetDefaultUserAgent() throws Exception {
+    public void testHttpEngine_GetDefaultUserAgent() throws Exception {
         assertThat(mEngineBuilder.getDefaultUserAgent(), containsString("AndroidHttpClient"));
     }
 }
