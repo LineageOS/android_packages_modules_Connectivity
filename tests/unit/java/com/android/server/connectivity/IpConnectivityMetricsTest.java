@@ -80,6 +80,7 @@ public class IpConnectivityMetricsTest {
 
     private static final byte[] MAC_ADDR =
             {(byte)0x84, (byte)0xc9, (byte)0xb2, (byte)0x6a, (byte)0xed, (byte)0x4b};
+    private static final long NET_HANDLE = new Network(4291).getNetworkHandle();
 
     @Mock Context mCtx;
     @Mock IIpConnectivityMetrics mMockService;
@@ -607,7 +608,7 @@ public class IpConnectivityMetricsTest {
 
     void wakeupEvent(String iface, int uid, int ether, int ip, byte[] mac, String srcIp,
             String dstIp, int sport, int dport, long now) throws Exception {
-        String prefix = NetdEventListenerService.WAKEUP_EVENT_IFACE_PREFIX + iface;
+        String prefix = NET_HANDLE + ":" + iface;
         mNetdListener.onWakeupEvent(prefix, uid, ether, ip, mac, srcIp, dstIp, sport, dport, now);
     }
 
