@@ -21,6 +21,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// bionic kernel uapi linux/udp.h header is munged...
+#define __kernel_udphdr udphdr
+#include <linux/udp.h>
+
+// Offsets from beginning of L4 (TCP/UDP) header
+#define TCP_OFFSET(field) offsetof(struct tcphdr, field)
+#define UDP_OFFSET(field) offsetof(struct udphdr, field)
+
+// Offsets from beginning of L3 (IPv4/IPv6) header
+#define IP4_OFFSET(field) offsetof(struct iphdr, field)
+#define IP6_OFFSET(field) offsetof(struct ipv6hdr, field)
+
 // this returns 0 iff skb->sk is NULL
 static uint64_t (*bpf_get_socket_cookie)(struct __sk_buff* skb) = (void*)BPF_FUNC_get_socket_cookie;
 

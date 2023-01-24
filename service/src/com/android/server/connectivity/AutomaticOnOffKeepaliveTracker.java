@@ -61,6 +61,7 @@ import android.util.SparseArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.HexDump;
 import com.android.net.module.util.SocketUtils;
@@ -76,7 +77,7 @@ import java.net.SocketException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -333,13 +334,10 @@ public class AutomaticOnOffKeepaliveTracker {
      */
     public void handleStopAllKeepalives(NetworkAgentInfo nai, int reason) {
         mKeepaliveTracker.handleStopAllKeepalives(nai, reason);
-        final Iterator<AutomaticOnOffKeepalive> iterator = mAutomaticOnOffKeepalives.iterator();
-        while (iterator.hasNext()) {
-            final AutomaticOnOffKeepalive autoKi = iterator.next();
-            if (autoKi.mKi.getNai() == nai) {
-                cleanupAutoOnOffKeepalive(autoKi);
-                iterator.remove();
-            }
+        final List<AutomaticOnOffKeepalive> matches =
+                CollectionUtils.filter(mAutomaticOnOffKeepalives, it -> it.mKi.getNai() == nai);
+        for (final AutomaticOnOffKeepalive ki : matches) {
+            cleanupAutoOnOffKeepalive(ki);
         }
     }
 
@@ -399,7 +397,6 @@ public class AutomaticOnOffKeepaliveTracker {
         if (autoKi == null) return;
 
         cleanupAutoOnOffKeepalive(autoKi);
-        mAutomaticOnOffKeepalives.remove(autoKi);
     }
 
     private void cleanupAutoOnOffKeepalive(@NonNull final AutomaticOnOffKeepalive autoKi) {
@@ -407,6 +404,7 @@ public class AutomaticOnOffKeepaliveTracker {
         mAlarmManager.cancel(autoKi.mTcpPollingAlarm);
         // Close the duplicated fd that maintains the lifecycle of socket.
         FileUtils.closeQuietly(autoKi.mFd);
+        mAutomaticOnOffKeepalives.remove(autoKi);
     }
 
     /**
