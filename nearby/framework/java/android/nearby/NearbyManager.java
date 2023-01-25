@@ -105,6 +105,8 @@ public class NearbyManager {
         mService = service;
     }
 
+    // This can be null when NearbyDeviceParcelable field not set for Presence device
+    // or the scan type is not recognized.
     @Nullable
     private static NearbyDevice toClientNearbyDevice(
             NearbyDeviceParcelable nearbyDeviceParcelable,
