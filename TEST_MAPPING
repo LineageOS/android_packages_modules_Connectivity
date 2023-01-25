@@ -64,6 +64,9 @@
       "name": "connectivity_native_test"
     },
     {
+      "name": "CtsNetHttpTestCases"
+    },
+    {
       "name": "libclat_test"
     },
     {
