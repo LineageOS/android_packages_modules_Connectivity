@@ -2,9 +2,32 @@
 set -x
 
 # Run this script inside a full chromium checkout.
-# TODO: add support for applying local patches.
 
 OUT_PATH="out/cronet"
+
+#######################################
+# Apply patches in external/cronet.
+# Globals:
+#   ANDROID_BUILD_TOP
+# Arguments:
+#   None
+#######################################
+function apply_patches() {
+  local -r patch_root="${ANDROID_BUILD_TOP}/external/cronet/patches"
+
+  local upstream_patches
+  upstream_patches=$(ls "${patch_root}/upstream-next")
+  local patch
+  for patch in ${upstream_patches}; do
+    git am --3way "${patch_root}/upstream-next/${patch}"
+  done
+
+  local local_patches
+  local_patches=$(ls "${patch_root}/local")
+  for patch in ${local_patches}; do
+    git am --3way "${patch_root}/local/${patch}"
+  done
+}
 
 #######################################
 # Generate desc.json for a specified architecture.
@@ -48,6 +71,7 @@ function gn_desc() {
   gn desc "${OUT_PATH}" --format=json --all-toolchains "//*" > "${out_file}"
 }
 
+apply_patches
 gn_desc x86
 gn_desc x64
 gn_desc arm
