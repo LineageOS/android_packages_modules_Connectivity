@@ -40,7 +40,6 @@ public abstract class AbstractDiscoveryProvider {
     protected final DiscoveryProviderController mController;
     protected final Executor mExecutor;
     protected Listener mListener;
-    protected List<ScanFilter> mScanFilters;
 
     /** Interface for listening to discovery providers. */
     public interface Listener {
@@ -75,6 +74,12 @@ public abstract class AbstractDiscoveryProvider {
      * provider request. Always invoked on the provider executor.
      */
     protected void invalidateScanMode() {}
+
+    /**
+     * Callback invoked to inform the provider of new provider scan filters which replaces any prior
+     * provider filters. Always invoked on the provider executor.
+     */
+    protected void onSetScanFilters(List<ScanFilter> filters) {}
 
     /**
      * Retrieves the controller for this discovery provider. Should never be invoked by subclasses,
@@ -138,7 +143,7 @@ public abstract class AbstractDiscoveryProvider {
 
         @Override
         public void setProviderScanFilters(List<ScanFilter> filters) {
-            mScanFilters = filters;
+            mExecutor.execute(() -> onSetScanFilters(filters));
         }
     }
 }
