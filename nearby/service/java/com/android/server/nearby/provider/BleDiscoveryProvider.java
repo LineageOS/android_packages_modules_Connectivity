@@ -37,6 +37,7 @@ import android.nearby.ScanRequest;
 import android.os.ParcelUuid;
 import android.util.Log;
 
+import com.android.internal.annotations.GuardedBy;
 import com.android.server.nearby.common.bluetooth.fastpair.Constants;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.ExtendedAdvertisement;
@@ -63,6 +64,12 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
     // Don't block the thread as it may be used by other services.
     private static final Executor NEARBY_EXECUTOR = ForegroundThread.getExecutor();
     private final Injector mInjector;
+    private final Object mLock = new Object();
+    // Null when the filters are never set
+    @VisibleForTesting
+    @GuardedBy("mLock")
+    @Nullable
+    private List<android.nearby.ScanFilter> mScanFilters;
     private android.bluetooth.le.ScanCallback mScanCallbackLegacy =
             new android.bluetooth.le.ScanCallback() {
                 @Override
@@ -193,8 +200,10 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
         Log.v(TAG, "Ble scan stopped.");
         bluetoothLeScanner.stopScan(mScanCallback);
         bluetoothLeScanner.stopScan(mScanCallbackLegacy);
-        if (mScanFilters != null) {
-            mScanFilters.clear();
+        synchronized (mLock) {
+            if (mScanFilters != null) {
+                mScanFilters = null;
+            }
         }
     }
 
@@ -202,6 +211,20 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
     protected void invalidateScanMode() {
         onStop();
         onStart();
+    }
+
+    @Override
+    protected void onSetScanFilters(List<android.nearby.ScanFilter> filters) {
+        synchronized (mLock) {
+            mScanFilters = filters == null ? null : List.copyOf(filters);
+        }
+    }
+
+    @VisibleForTesting
+    protected List<android.nearby.ScanFilter> getFiltersLocked() {
+        synchronized (mLock) {
+            return mScanFilters == null ? null : List.copyOf(mScanFilters);
+        }
     }
 
     private void startScan(
@@ -253,24 +276,29 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
 
     private void setPresenceDevice(byte[] data, NearbyDeviceParcelable.Builder builder,
             String deviceName, int rssi) {
-        for (android.nearby.ScanFilter scanFilter : mScanFilters) {
-            if (scanFilter instanceof PresenceScanFilter) {
-                // Iterate all possible authenticity key and identity combinations to decrypt
-                // advertisement
-                PresenceScanFilter presenceFilter = (PresenceScanFilter) scanFilter;
-                for (PublicCredential credential : presenceFilter.getCredentials()) {
-                    ExtendedAdvertisement advertisement =
-                            ExtendedAdvertisement.fromBytes(data, credential);
-                    if (advertisement == null) {
-                        continue;
-                    }
-                    if (CryptorImpIdentityV1.getInstance().verify(
-                            advertisement.getIdentity(),
-                            credential.getEncryptedMetadataKeyTag())) {
-                        builder.setPresenceDevice(getPresenceDevice(advertisement, deviceName,
-                                rssi));
-                        builder.setEncryptionKeyTag(credential.getEncryptedMetadataKeyTag());
-                        return;
+        synchronized (mLock) {
+            if (mScanFilters == null) {
+                return;
+            }
+            for (android.nearby.ScanFilter scanFilter : mScanFilters) {
+                if (scanFilter instanceof PresenceScanFilter) {
+                    // Iterate all possible authenticity key and identity combinations to decrypt
+                    // advertisement
+                    PresenceScanFilter presenceFilter = (PresenceScanFilter) scanFilter;
+                    for (PublicCredential credential : presenceFilter.getCredentials()) {
+                        ExtendedAdvertisement advertisement =
+                                ExtendedAdvertisement.fromBytes(data, credential);
+                        if (advertisement == null) {
+                            continue;
+                        }
+                        if (CryptorImpIdentityV1.getInstance().verify(
+                                advertisement.getIdentity(),
+                                credential.getEncryptedMetadataKeyTag())) {
+                            builder.setPresenceDevice(getPresenceDevice(advertisement, deviceName,
+                                    rssi));
+                            builder.setEncryptionKeyTag(credential.getEncryptedMetadataKeyTag());
+                            return;
+                        }
                     }
                 }
             }

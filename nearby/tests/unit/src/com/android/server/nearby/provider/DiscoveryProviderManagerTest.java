@@ -45,11 +45,17 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DiscoveryProviderManagerTest {
     private static final int SCAN_MODE_CHRE_ONLY = 3;
     private static final int DATA_TYPE_SCAN_MODE = 102;
+    private static final int UID = 1234;
+    private static final int PID = 5678;
+    private static final String PACKAGE_NAME = "android.nearby.test";
 
     @Mock Injector mInjector;
     @Mock Context mContext;
@@ -81,6 +87,8 @@ public class DiscoveryProviderManagerTest {
                 new DiscoveryProviderManager(mContext, mInjector, mBleDiscoveryProvider,
                         mChreDiscoveryProvider,
                         mScanTypeScanListenerRecordMap);
+        mCallerIdentity = CallerIdentity
+                .forTest(UID, PID, PACKAGE_NAME, /* attributionTag= */ null);
     }
 
     @Test
@@ -214,6 +222,89 @@ public class DiscoveryProviderManagerTest {
         Boolean start = mDiscoveryProviderManager.startProviders(scanRequest);
         verify(mBluetoothController, atLeastOnce()).start();
         assertThat(start).isTrue();
+    }
+
+    @Test
+    public void test_stopChreProvider_clearFilters() throws Exception {
+        // Cannot use mocked ChreDiscoveryProvider,
+        // so we cannot use class variable mDiscoveryProviderManager
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        DiscoveryProviderManager manager =
+                new DiscoveryProviderManager(mContext, mInjector, mBleDiscoveryProvider,
+                        new ChreDiscoveryProvider(
+                                mContext,
+                                new ChreCommunication(mInjector, mContext, executor), executor),
+                mScanTypeScanListenerRecordMap);
+        ScanRequest scanRequest = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .addScanFilter(getPresenceScanFilter()).build();
+        DiscoveryProviderManager.ScanListenerRecord record =
+                new DiscoveryProviderManager.ScanListenerRecord(scanRequest, mScanListener,
+                        mCallerIdentity, mScanListenerDeathRecipient);
+        mScanTypeScanListenerRecordMap.put(mIBinder, record);
+        manager.startChreProvider(List.of(getPresenceScanFilter()));
+        // This is an asynchronized process. The filters will be set in executor thread. So we need
+        // to wait for some time to get the correct result.
+        Thread.sleep(200);
+
+        assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
+                .isTrue();
+        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNotNull();
+
+        manager.stopChreProvider();
+        Thread.sleep(200);
+        // The filters should be cleared right after.
+        assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
+                .isFalse();
+        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNull();
+    }
+
+    @Test
+    public void test_restartChreProvider() throws Exception {
+        // Cannot use mocked ChreDiscoveryProvider,
+        // so we cannot use class variable mDiscoveryProviderManager
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        DiscoveryProviderManager manager =
+                new DiscoveryProviderManager(mContext, mInjector, mBleDiscoveryProvider,
+                        new ChreDiscoveryProvider(
+                                mContext,
+                                new ChreCommunication(mInjector, mContext, executor), executor),
+                        mScanTypeScanListenerRecordMap);
+        ScanRequest scanRequest = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .addScanFilter(getPresenceScanFilter()).build();
+        DiscoveryProviderManager.ScanListenerRecord record =
+                new DiscoveryProviderManager.ScanListenerRecord(scanRequest, mScanListener,
+                        mCallerIdentity, mScanListenerDeathRecipient);
+        mScanTypeScanListenerRecordMap.put(mIBinder, record);
+        manager.startChreProvider(List.of(getPresenceScanFilter()));
+        // This is an asynchronized process. The filters will be set in executor thread. So we need
+        // to wait for some time to get the correct result.
+        Thread.sleep(200);
+
+        assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
+                .isTrue();
+        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNotNull();
+
+        // We want to make sure quickly restart the provider the filters should
+        // be reset correctly.
+        // See b/255922206, there can be a race condition that filters get cleared because onStop()
+        // get executed after onStart() if they are called from different threads.
+        manager.stopChreProvider();
+        manager.mChreDiscoveryProvider.getController().setProviderScanFilters(
+                List.of(getPresenceScanFilter()));
+        manager.startChreProvider(List.of(getPresenceScanFilter()));
+        Thread.sleep(200);
+        assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
+                .isTrue();
+        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNotNull();
+
+        // Wait for enough time
+        Thread.sleep(1000);
+
+        assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
+                .isTrue();
+        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNotNull();
     }
 
     private static PresenceScanFilter getPresenceScanFilter() {
