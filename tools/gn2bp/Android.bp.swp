@@ -1962,7 +1962,7 @@ genrule {
         "soong_zip",
     ],
     cmd: "cp $(in) $(genDir)/BuildConfig.java && " +
-         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/BuildConfig.java",
+         "$(location soong_zip) -o $(out) -srcjar -C $(genDir) -f $(genDir)/BuildConfig.java",
     out: [
         "BuildConfig.srcjar",
     ],
@@ -3190,7 +3190,7 @@ genrule {
         "soong_zip",
     ],
     cmd: "cp $(in) $(genDir)/IntegratedModeState.java && " +
-         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/IntegratedModeState.java",
+         "$(location soong_zip) -o $(out) -srcjar -C $(genDir) -f $(genDir)/IntegratedModeState.java",
     out: [
         "IntegratedModeState.srcjar",
     ],
@@ -3256,7 +3256,7 @@ genrule {
         "soong_zip",
     ],
     cmd: "cp $(in) $(genDir)/LoadState.java && " +
-         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/LoadState.java",
+         "$(location soong_zip) -o $(out) -srcjar -C $(genDir) -f $(genDir)/LoadState.java",
     out: [
         "LoadState.srcjar",
     ],
@@ -4279,7 +4279,7 @@ genrule {
         "soong_zip",
     ],
     cmd: "cp $(in) $(genDir)/NetError.java && " +
-         "$(location soong_zip) -o $(out) -srcjar -f $(genDir)/NetError.java",
+         "$(location soong_zip) -o $(out) -srcjar -C $(genDir) -f $(genDir)/NetError.java",
     out: [
         "NetError.srcjar",
     ],
