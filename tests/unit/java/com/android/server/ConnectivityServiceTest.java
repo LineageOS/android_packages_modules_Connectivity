@@ -848,6 +848,7 @@ public class ConnectivityServiceTest {
                     verify(mBroadcastOptionsShim).setDeliveryGroupMatchingKey(
                             eq(CONNECTIVITY_ACTION),
                             eq(createDeliveryGroupKeyForConnectivityAction(ni)));
+                    verify(mBroadcastOptionsShim).setDeferUntilActive(eq(true));
                 } catch (UnsupportedApiLevelException e) {
                     throw new RuntimeException(e);
                 }
