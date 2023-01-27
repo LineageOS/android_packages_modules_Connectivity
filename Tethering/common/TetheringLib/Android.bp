@@ -27,14 +27,6 @@ cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsEnabled"
 // as cronet_defaults may have different values
 // depending on the branch
 
-// cronet_java_defaults_enabled_srcs is used to specify the srcs of CronetJavaDefaultsEnabled
-// This is required until the external/cronet is auto-merged to tm-mainline-prod and
-// :cronet_aml_api_sources is available
-cronet_java_defaults_enabled_srcs = [":cronet_aml_api_sources"]
-// This is a placeholder comment to avoid merge conflicts
-// as cronet_defaults may have different values
-// depending on the branch
-
 java_sdk_library {
     name: "framework-tethering",
     defaults: [
@@ -82,7 +74,7 @@ java_defaults {
 
 java_defaults {
     name: "CronetJavaDefaultsEnabled",
-    srcs: cronet_java_defaults_enabled_srcs,
+    srcs: [":cronet_aml_api_sources"],
     libs: [
         "androidx.annotation_annotation",
     ],
