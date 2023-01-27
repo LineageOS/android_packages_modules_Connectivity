@@ -22,6 +22,7 @@ import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.net.http.HttpEngine;
@@ -62,6 +63,10 @@ public class HttpEngineTest {
         }
     }
 
+    private boolean isQuic(String negotiatedProtocol) {
+        return negotiatedProtocol.startsWith("http/2+quic") || negotiatedProtocol.startsWith("h3");
+    }
+
     @Test
     public void testHttpEngine_Default() throws Exception {
         mEngine = mEngineBuilder.build();
@@ -90,17 +95,24 @@ public class HttpEngineTest {
 
     @Test
     public void testHttpEngine_EnableQuic() throws Exception {
-        // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
-        // If this ends up being flaky, consider sending multiple requests.
         mEngine = mEngineBuilder.setEnableQuic(true).addQuicHint(HOST, 443, 443).build();
-        UrlRequest.Builder builder =
-                mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
-        builder.build().start();
+        // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
+        // We send multiple requests to reduce the flakiness of the test.
+        boolean quicWasUsed = false;
+        for (int i = 0; i < 5; i++) {
+            UrlRequest.Builder builder =
+                    mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
+            builder.build().start();
 
-        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
-        UrlResponseInfo info = mCallback.mResponseInfo;
-        assertOKStatusCode(info);
-        assertEquals("h3", info.getNegotiatedProtocol());
+            mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+            UrlResponseInfo info = mCallback.mResponseInfo;
+            assertOKStatusCode(info);
+            quicWasUsed = isQuic(info.getNegotiatedProtocol());
+            if (quicWasUsed) {
+                break;
+            }
+        }
+        assertTrue(quicWasUsed);
     }
 
     @Test
