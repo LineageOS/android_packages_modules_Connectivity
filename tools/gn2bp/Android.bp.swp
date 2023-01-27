@@ -381,7 +381,7 @@ cc_genrule {
          "--input_file " +
          "java/lang/Runtime.class " +
          "--javap " +
-         "$$(find out/.path -name javap) " +
+         "$$(find $${OUT_DIR:-out}/.path -name javap) " +
          "--package_prefix " +
          "android.net.http.internal",
     out: [
