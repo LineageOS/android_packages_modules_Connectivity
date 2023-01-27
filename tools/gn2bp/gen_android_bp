@@ -969,7 +969,7 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
   def _sanitize_args(self):
     self._set_value_arg('--jar_file', '$(location :current_android_jar)', False)
     if self._has_arg('--jar_file'):
-      self._append_arg('--javap', '$$(find out/.path -name javap)')
+      self._append_arg('--javap', '$$(find $${OUT_DIR:-out}/.path -name javap)')
     self._update_value_arg('--output_dir', self._sanitize_filepath)
     self._update_value_arg('--includes', self._sanitize_filepath, False)
     self._delete_value_arg('--prev_output_dir', False)
