@@ -762,7 +762,7 @@ def create_gcc_preprocess_modules(blueprint, target):
   module.out.add(stem + '.srcjar')
   module.cmd = NEWLINE.join([
     f'cp $(in) $(genDir)/{stem}.java &&',
-    f'$(location soong_zip) -o $(out) -srcjar -f $(genDir)/{stem}.java'
+    f'$(location soong_zip) -o $(out) -srcjar -C $(genDir) -f $(genDir)/{stem}.java'
   ])
   module.tools.add('soong_zip')
   blueprint.add_module(module)
