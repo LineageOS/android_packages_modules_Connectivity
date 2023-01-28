@@ -23,7 +23,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkScore.KEEP_CONNECTED_NONE;
 import static android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI;
 
-import static com.android.net.module.util.BitUtils.appendStringRepresentationOfBitMaskToStringBuilder;
+import static com.android.net.module.util.BitUtils.describeDifferences;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -338,31 +338,14 @@ public class FullScore {
 
     /**
      * Returns a short but human-readable string of updates from an older score.
-     * @param old the old capabilities to diff from
+     * @param old the old score to diff from
      * @return a string fit for logging differences, or null if no differences.
-     *         this method cannot return the empty string.
+     *         this method cannot return the empty string. See BitUtils#describeDifferences.
      */
     @Nullable
     public String describeDifferencesFrom(@Nullable final FullScore old) {
         final long oldPolicies = null == old ? 0 : old.mPolicies;
-        final long changed = oldPolicies ^ mPolicies;
-        if (0 == changed) return null;
-        // If the control reaches here, there are changes (additions, removals, or both) so
-        // the code below is guaranteed to add something to the string and can't return "".
-        final long removed = oldPolicies & changed;
-        final long added = mPolicies & changed;
-        final StringBuilder sb = new StringBuilder();
-        if (0 != removed) {
-            sb.append("-");
-            appendStringRepresentationOfBitMaskToStringBuilder(sb, removed,
-                    FullScore::policyNameOf, "-");
-        }
-        if (0 != added) {
-            sb.append("+");
-            appendStringRepresentationOfBitMaskToStringBuilder(sb, added,
-                    FullScore::policyNameOf, "+");
-        }
-        return sb.toString();
+        return describeDifferences(oldPolicies, mPolicies, FullScore::policyNameOf);
     }
 
     // Example output :
