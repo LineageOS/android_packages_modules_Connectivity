@@ -17,11 +17,13 @@
 package com.android.net.module.util
 
 import com.android.net.module.util.BitUtils.appendStringRepresentationOfBitMaskToStringBuilder
+import com.android.net.module.util.BitUtils.describeDifferences
 import com.android.net.module.util.BitUtils.packBits
 import com.android.net.module.util.BitUtils.unpackBits
-import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Test
 
 class BitUtilsTests {
     @Test
@@ -57,5 +59,24 @@ class BitUtilsTests {
             appendStringRepresentationOfBitMaskToStringBuilder(it, bitMask, { i -> "BIT$i" }, "&")
             assertEquals(expected, it.toString())
         }
+    }
+
+    @Test
+    fun testDescribeDifferences() {
+        fun describe(a: Long, b: Long) = describeDifferences(a, b, Integer::toString)
+        assertNull(describe(0, 0))
+        assertNull(describe(5, 5))
+        assertNull(describe(Long.MAX_VALUE, Long.MAX_VALUE))
+
+        assertEquals("+0", describe(0, 1))
+        assertEquals("-0", describe(1, 0))
+
+        assertEquals("+0+2", describe(0, 5))
+        assertEquals("+2", describe(1, 5))
+        assertEquals("-0+2", describe(1, 4))
+
+        fun makeField(vararg i: Int) = i.sumOf { 1L shl it }
+        assertEquals("-0-4-6-9+1+3+11", describe(makeField(0, 4, 6, 9), makeField(1, 3, 11)))
+        assertEquals("-1-5-9+6+8", describe(makeField(0, 1, 3, 4, 5, 9), makeField(0, 3, 4, 6, 8)))
     }
 }

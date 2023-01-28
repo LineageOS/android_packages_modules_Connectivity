@@ -17,6 +17,7 @@
 package com.android.net.module.util;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 
 /**
  * @hide
@@ -106,5 +107,34 @@ public class BitUtils {
             bitMask >>>= 1;
             ++bitPos;
         }
+    }
+
+    /**
+     * Returns a short but human-readable string of updates between an old and a new bit fields.
+     *
+     * @param oldVal the old bit field to diff from
+     * @param newVal the new bit field to diff to
+     * @return a string fit for logging differences, or null if no differences.
+     *         this method cannot return the empty string.
+     */
+    @Nullable
+    public static String describeDifferences(final long oldVal, final long newVal,
+            @NonNull final NameOf nameFetcher) {
+        final long changed = oldVal ^ newVal;
+        if (0 == changed) return null;
+        // If the control reaches here, there are changes (additions, removals, or both) so
+        // the code below is guaranteed to add something to the string and can't return "".
+        final long removed = oldVal & changed;
+        final long added = newVal & changed;
+        final StringBuilder sb = new StringBuilder();
+        if (0 != removed) {
+            sb.append("-");
+            appendStringRepresentationOfBitMaskToStringBuilder(sb, removed, nameFetcher, "-");
+        }
+        if (0 != added) {
+            sb.append("+");
+            appendStringRepresentationOfBitMaskToStringBuilder(sb, added, nameFetcher, "+");
+        }
+        return sb.toString();
     }
 }
