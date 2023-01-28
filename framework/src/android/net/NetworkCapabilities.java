@@ -18,6 +18,7 @@ package android.net;
 
 import static com.android.internal.annotations.VisibleForTesting.Visibility.PRIVATE;
 import static com.android.net.module.util.BitUtils.appendStringRepresentationOfBitMaskToStringBuilder;
+import static com.android.net.module.util.BitUtils.describeDifferences;
 
 import android.annotation.IntDef;
 import android.annotation.LongDef;
@@ -2069,30 +2070,14 @@ public final class NetworkCapabilities implements Parcelable {
      * Returns a short but human-readable string of updates from an older set of capabilities.
      * @param old the old capabilities to diff from
      * @return a string fit for logging differences, or null if no differences.
-     *         this never returns the empty string.
+     *         this never returns the empty string. See BitUtils#describeDifferences.
      * @hide
      */
     @Nullable
     public String describeCapsDifferencesFrom(@Nullable final NetworkCapabilities old) {
         final long oldCaps = null == old ? 0 : old.mNetworkCapabilities;
-        final long changed = oldCaps ^ mNetworkCapabilities;
-        if (0 == changed) return null;
-        // If the control reaches here, there are changes (additions, removals, or both) so
-        // the code below is guaranteed to add something to the string and can't return "".
-        final long removed = oldCaps & changed;
-        final long added = mNetworkCapabilities & changed;
-        final StringBuilder sb = new StringBuilder();
-        if (0 != removed) {
-            sb.append("-");
-            appendStringRepresentationOfBitMaskToStringBuilder(sb, removed,
-                    NetworkCapabilities::capabilityNameOf, "-");
-        }
-        if (0 != added) {
-            sb.append("+");
-            appendStringRepresentationOfBitMaskToStringBuilder(sb, added,
-                    NetworkCapabilities::capabilityNameOf, "+");
-        }
-        return sb.toString();
+        return describeDifferences(oldCaps, mNetworkCapabilities,
+                NetworkCapabilities::capabilityNameOf);
     }
 
     /**
