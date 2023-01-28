@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package android.nearby.aidl;
-
-import android.nearby.OffloadCapability;
+package android.nearby;
 
 /**
- * Listener for offload queries.
+ * A class that can describe what offload functions are available.
  *
  * {@hide}
  */
-oneway interface IOffloadCallback {
-        /** Invokes when ContextHub transaction completes. */
-        void onQueryComplete(in OffloadCapability capability);
-}
+parcelable OffloadCapability;
+

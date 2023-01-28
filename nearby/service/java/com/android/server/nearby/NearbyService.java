@@ -147,7 +147,7 @@ public class NearbyService extends INearbyManager.Stub {
     }
 
     @Override
-    public void queryOffloadScanSupport(IOffloadCallback callback) {
+    public void queryOffloadCapability(IOffloadCallback callback) {
 
     }
 
