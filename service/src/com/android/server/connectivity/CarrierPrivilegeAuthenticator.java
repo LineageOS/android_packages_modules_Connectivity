@@ -76,7 +76,7 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
             @NonNull final TelephonyManager t,
-            @NonNull final TelephonyManagerShimImpl telephonyManagerShim) {
+            @NonNull final TelephonyManagerShim telephonyManagerShim) {
         mContext = c;
         mTelephonyManager = t;
         mTelephonyManagerShim = telephonyManagerShim;
@@ -92,17 +92,7 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
             @NonNull final TelephonyManager t) {
-        mContext = c;
-        mTelephonyManager = t;
-        mTelephonyManagerShim = TelephonyManagerShimImpl.newInstance(mTelephonyManager);
-        mThread = new HandlerThread(TAG);
-        mThread.start();
-        mHandler = new Handler(mThread.getLooper()) {};
-        synchronized (mLock) {
-            mModemCount = mTelephonyManager.getActiveModemCount();
-            registerForCarrierChanges();
-            updateCarrierServiceUid();
-        }
+        this(c, t, TelephonyManagerShimImpl.newInstance(t));
     }
 
     /**
