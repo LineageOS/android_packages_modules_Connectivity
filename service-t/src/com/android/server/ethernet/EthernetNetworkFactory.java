@@ -657,7 +657,17 @@ public class EthernetNetworkFactory {
         }
 
         void restart() {
-            if (DBG) Log.d(TAG, "reconnecting Ethernet");
+            if (DBG) Log.d(TAG, "restart IpClient");
+
+            if (mIpClient == null) {
+                // If restart() is called from a provisioning failure, it is
+                // possible that link disappeared in the meantime. In that
+                // case, stop() has already been called and IpClient should not
+                // get restarted to prevent a provisioning failure loop.
+                Log.i(TAG, String.format("restart() was called on stopped interface %s", name));
+                return;
+            }
+
             stop();
             start();
         }
