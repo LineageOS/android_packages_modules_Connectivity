@@ -1213,12 +1213,6 @@ public class PermissionMonitor {
 
     /** Should only be used by unit tests */
     @VisibleForTesting
-    public synchronized Set<UidRange> getVpnInterfaceUidRanges(String iface) {
-        return mVpnInterfaceUidRanges.get(iface);
-    }
-
-    /** Should only be used by unit tests */
-    @VisibleForTesting
     synchronized Set<UidRange> getVpnLockdownUidRanges() {
         return mVpnLockdownUidRanges.getSet();
     }
