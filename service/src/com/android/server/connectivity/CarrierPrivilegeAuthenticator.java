@@ -16,8 +16,9 @@
 
 package com.android.server.connectivity;
 
-import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+
+import static com.android.server.connectivity.ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK;
 
 import android.annotation.NonNull;
 import android.content.BroadcastReceiver;
@@ -44,6 +45,7 @@ import com.android.networkstack.apishim.TelephonyManagerShimImpl;
 import com.android.networkstack.apishim.common.TelephonyManagerShim;
 import com.android.networkstack.apishim.common.TelephonyManagerShim.CarrierPrivilegesListenerShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
+import com.android.server.ConnectivityService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,8 +75,10 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
     @NonNull
     private final List<CarrierPrivilegesListenerShim> mCarrierPrivilegesChangedListeners =
             new ArrayList<>();
+    private final boolean mUseCallbacksForServiceChanged;
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
+            @NonNull final ConnectivityService.Dependencies deps,
             @NonNull final TelephonyManager t,
             @NonNull final TelephonyManagerShim telephonyManagerShim) {
         mContext = c;
@@ -82,7 +86,9 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
         mTelephonyManagerShim = telephonyManagerShim;
         mThread = new HandlerThread(TAG);
         mThread.start();
-        mHandler = new Handler(mThread.getLooper()) {};
+        mHandler = new Handler(mThread.getLooper());
+        mUseCallbacksForServiceChanged = deps.isFeatureEnabled(
+                c, CARRIER_SERVICE_CHANGED_USE_CALLBACK);
         synchronized (mLock) {
             mModemCount = mTelephonyManager.getActiveModemCount();
             registerForCarrierChanges();
@@ -91,8 +97,9 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
     }
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
+            @NonNull final ConnectivityService.Dependencies deps,
             @NonNull final TelephonyManager t) {
-        this(c, t, TelephonyManagerShimImpl.newInstance(t));
+        this(c, deps, t, TelephonyManagerShimImpl.newInstance(t));
     }
 
     /**

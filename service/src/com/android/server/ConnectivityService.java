@@ -1427,7 +1427,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context, @NonNull final TelephonyManager tm) {
             if (isAtLeastT()) {
-                return new CarrierPrivilegeAuthenticator(context, tm);
+                return new CarrierPrivilegeAuthenticator(context, this, tm);
             } else {
                 return null;
             }

@@ -71,7 +71,7 @@ open class CSTest {
     init {
         if (!SdkLevel.isAtLeastS()) {
             throw UnsupportedApiLevelException("CSTest subclasses must be annotated to only " +
-                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)");
+                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)")
         }
     }
 
@@ -130,8 +130,10 @@ open class CSTest {
         override fun makeHandlerThread() = csHandlerThread
         override fun makeProxyTracker(context: Context, connServiceHandler: Handler) = proxyTracker
 
-        override fun makeCarrierPrivilegeAuthenticator(context: Context, tm: TelephonyManager) =
-                if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
+        override fun makeCarrierPrivilegeAuthenticator(
+                context: Context,
+                tm: TelephonyManager
+        ) = if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
 
         private inner class AOOKTDeps(c: Context) : AutomaticOnOffKeepaliveTracker.Dependencies(c) {
             override fun isTetheringFeatureNotChickenedOut(name: String): Boolean {
