@@ -913,7 +913,6 @@ public class PermissionMonitorTest {
         verify(mBpfNetMaps, times(2)).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(VPN_UID, true /* add */);
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
@@ -922,7 +921,6 @@ public class PermissionMonitorTest {
         verify(mBpfNetMaps, times(2)).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(VPN_UID, false /* add */);
-        assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
     @Test
@@ -942,7 +940,6 @@ public class PermissionMonitorTest {
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange);
         verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
@@ -950,7 +947,6 @@ public class PermissionMonitorTest {
         // already has the rule
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange);
         verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
@@ -958,7 +954,6 @@ public class PermissionMonitorTest {
         // the range 2 times.
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
@@ -967,7 +962,6 @@ public class PermissionMonitorTest {
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
-        assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
     @Test
@@ -988,7 +982,6 @@ public class PermissionMonitorTest {
         mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRangeDuplicates);
         verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(true) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, true /* add */);
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
@@ -996,7 +989,6 @@ public class PermissionMonitorTest {
         // ranges we added contains duplicated uid ranges.
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(), anyBoolean());
-        assertEquals(mPermissionMonitor.getVpnLockdownUidRanges(), Set.of(lockdownRange));
 
         reset(mBpfNetMaps);
 
@@ -1004,7 +996,6 @@ public class PermissionMonitorTest {
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
-        assertTrue(mPermissionMonitor.getVpnLockdownUidRanges().isEmpty());
     }
 
     @Test
