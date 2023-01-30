@@ -1211,12 +1211,6 @@ public class PermissionMonitor {
         }
     }
 
-    /** Should only be used by unit tests */
-    @VisibleForTesting
-    synchronized Set<UidRange> getVpnLockdownUidRanges() {
-        return mVpnLockdownUidRanges.getSet();
-    }
-
     private synchronized void onSettingChanged() {
         // Step1. Update uids allowed to use restricted networks and compute the set of uids to
         // update.
