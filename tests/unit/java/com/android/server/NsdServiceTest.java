@@ -625,7 +625,7 @@ public class NsdServiceTest {
         waitForIdle();
 
         verify(mMockMDnsM).stopOperation(resolveId);
-        verify(resolveListener, timeout(TIMEOUT_MS)).onResolveStopped(argThat(ns ->
+        verify(resolveListener, timeout(TIMEOUT_MS)).onResolutionStopped(argThat(ns ->
                 request.getServiceName().equals(ns.getServiceName())
                         && request.getServiceType().equals(ns.getServiceType())));
     }
@@ -692,7 +692,7 @@ public class NsdServiceTest {
         waitForIdle();
 
         verify(mMockMDnsM).stopOperation(getAddrId);
-        verify(resolveListener, timeout(TIMEOUT_MS)).onResolveStopped(argThat(ns ->
+        verify(resolveListener, timeout(TIMEOUT_MS)).onResolutionStopped(argThat(ns ->
                 request.getServiceName().equals(ns.getServiceName())
                         && request.getServiceType().equals(ns.getServiceType())));
     }
