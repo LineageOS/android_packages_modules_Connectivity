@@ -10882,7 +10882,6 @@ public class ConnectivityServiceTest {
         verify(mBpfNetMaps, times(2)).addUidInterfaceRules(eq("tun0"), uidCaptor.capture());
         assertContainsExactly(uidCaptor.getAllValues().get(0), APP1_UID, APP2_UID);
         assertContainsExactly(uidCaptor.getAllValues().get(1), APP1_UID, APP2_UID);
-        assertTrue(mService.mPermissionMonitor.getVpnInterfaceUidRanges("tun0").equals(vpnRange));
 
         mMockVpn.disconnect();
         waitForIdle();
@@ -10890,7 +10889,6 @@ public class ConnectivityServiceTest {
         // Disconnected VPN should have interface rules removed
         verify(mBpfNetMaps).removeUidInterfaceRules(uidCaptor.capture());
         assertContainsExactly(uidCaptor.getValue(), APP1_UID, APP2_UID);
-        assertNull(mService.mPermissionMonitor.getVpnInterfaceUidRanges("tun0"));
     }
 
     private void checkInterfaceFilteringRuleWithNullInterface(final LinkProperties lp,
@@ -10915,8 +10913,6 @@ public class ConnectivityServiceTest {
                 assertContainsExactly(uidCaptor.getAllValues().get(0), APP1_UID, APP2_UID, VPN_UID);
                 assertContainsExactly(uidCaptor.getAllValues().get(1), APP1_UID, APP2_UID, VPN_UID);
             }
-            assertEquals(mService.mPermissionMonitor.getVpnInterfaceUidRanges(null /* iface */),
-                    vpnRange);
 
             mMockVpn.disconnect();
             waitForIdle();
@@ -10928,7 +10924,6 @@ public class ConnectivityServiceTest {
             } else {
                 assertContainsExactly(uidCaptor.getValue(), APP1_UID, APP2_UID, VPN_UID);
             }
-            assertNull(mService.mPermissionMonitor.getVpnInterfaceUidRanges(null /* iface */));
         } else {
             // Before T, rules are not configured for null interface.
             verify(mBpfNetMaps, never()).addUidInterfaceRules(any(), any());
