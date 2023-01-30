@@ -57,7 +57,7 @@ import java.util.concurrent.Executor;
  * carrier privileged app that provides the carrier config
  * @hide
  */
-public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
+public class CarrierPrivilegeAuthenticator {
     private static final String TAG = CarrierPrivilegeAuthenticator.class.getSimpleName();
     private static final boolean DBG = true;
 
@@ -92,7 +92,19 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
         final IntentFilter filter = new IntentFilter();
         filter.addAction(TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED);
         synchronized (mLock) {
-            c.registerReceiver(this, filter, null, mHandler);
+            // Never unregistered because the system server never stops
+            c.registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(final Context context, final Intent intent) {
+                    switch (intent.getAction()) {
+                        case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
+                            simConfigChanged();
+                            break;
+                        default:
+                            Log.d(TAG, "Unknown intent received, action: " + intent.getAction());
+                    }
+                }
+            }, filter, null, mHandler);
             simConfigChanged();
         }
     }
@@ -101,22 +113,6 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
             @NonNull final ConnectivityService.Dependencies deps,
             @NonNull final TelephonyManager t) {
         this(c, deps, t, TelephonyManagerShimImpl.newInstance(t));
-    }
-
-    /**
-     * Broadcast receiver for ACTION_MULTI_SIM_CONFIG_CHANGED
-     *
-     * <p>The broadcast receiver is registered with mHandler
-     */
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        switch (intent.getAction()) {
-            case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
-                simConfigChanged();
-                break;
-            default:
-                Log.d(TAG, "Unknown intent received with action: " + intent.getAction());
-        }
     }
 
     private void simConfigChanged() {

@@ -28,6 +28,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
@@ -36,9 +37,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import android.annotation.NonNull;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.NetworkCapabilities;
@@ -84,6 +85,7 @@ public class CarrierPrivilegeAuthenticatorTest {
     @NonNull private TestCarrierPrivilegeAuthenticator mCarrierPrivilegeAuthenticator;
     private final int mCarrierConfigPkgUid = 12345;
     private final String mTestPkg = "com.android.server.connectivity.test";
+    private final BroadcastReceiver mMultiSimBroadcastReceiver;
 
     public class TestCarrierPrivilegeAuthenticator extends CarrierPrivilegeAuthenticator {
         TestCarrierPrivilegeAuthenticator(@NonNull final Context c,
@@ -121,12 +123,12 @@ public class CarrierPrivilegeAuthenticatorTest {
         doReturn(applicationInfo).when(mPackageManager).getApplicationInfo(eq(mTestPkg), anyInt());
         mCarrierPrivilegeAuthenticator =
                 new TestCarrierPrivilegeAuthenticator(mContext, deps, mTelephonyManager);
-    }
-
-    private IntentFilter getIntentFilter() {
-        final ArgumentCaptor<IntentFilter> captor = ArgumentCaptor.forClass(IntentFilter.class);
-        verify(mContext).registerReceiver(any(), captor.capture(), any(), any());
-        return captor.getValue();
+        final ArgumentCaptor<BroadcastReceiver> receiverCaptor =
+                ArgumentCaptor.forClass(BroadcastReceiver.class);
+        verify(mContext).registerReceiver(receiverCaptor.capture(), argThat(filter ->
+                filter.getAction(0).equals(ACTION_MULTI_SIM_CONFIG_CHANGED)
+        ), any() /* broadcast permissions */, any() /* handler */);
+        mMultiSimBroadcastReceiver = receiverCaptor.getValue();
     }
 
     private Map<Integer, CarrierPrivilegesListenerShim> getCarrierPrivilegesListeners() {
@@ -149,15 +151,6 @@ public class CarrierPrivilegeAuthenticatorTest {
     }
     @Test
     public void testConstructor() throws Exception {
-        verify(mContext).registerReceiver(
-                        eq(mCarrierPrivilegeAuthenticator),
-                        any(IntentFilter.class),
-                        any(),
-                        any());
-        final IntentFilter filter = getIntentFilter();
-        assertEquals(1, filter.countActions());
-        assertTrue(filter.hasAction(ACTION_MULTI_SIM_CONFIG_CHANGED));
-
         // Two listeners originally registered, one for slot 0 and one for slot 1
         final Map<Integer, CarrierPrivilegesListenerShim> initialListeners =
                 getCarrierPrivilegesListeners();
@@ -185,8 +178,11 @@ public class CarrierPrivilegeAuthenticatorTest {
         assertEquals(2, initialListeners.size());
 
         doReturn(1).when(mTelephonyManager).getActiveModemCount();
-        mCarrierPrivilegeAuthenticator.onReceive(
-                mContext, buildTestMultiSimConfigBroadcastIntent());
+
+        // This is a little bit cavalier in that the call to onReceive is not on the handler
+        // thread that was specified in registerReceiver.
+        // TODO : capture the handler and call this on it if this causes flakiness.
+        mMultiSimBroadcastReceiver.onReceive(mContext, buildTestMultiSimConfigBroadcastIntent());
         // Check all listeners have been removed
         for (CarrierPrivilegesListenerShim listener : initialListeners.values()) {
             verify(mTelephonyManagerShim).removeCarrierPrivilegesListener(eq(listener));
