@@ -38,6 +38,13 @@ java_defaults {
     name: "ConnectivityNextEnableDefaults",
     enabled: true,
 }
+java_defaults {
+    name: "NetworkStackApiShimSettingsForCurrentBranch",
+    // API shims to include in the networking modules built from the branch. Branches that disable
+    // the "next" targets must use stable shims (latest stable API level) instead of current shims
+    // (X_current API level).
+    static_libs: ["NetworkStackApiCurrentShims"],
+}
 apex_defaults {
     name: "ConnectivityApexDefaults",
     // Tethering app to include in the AOSP apex. Branches that disable the "next" targets may use
