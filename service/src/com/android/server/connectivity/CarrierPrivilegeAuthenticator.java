@@ -119,17 +119,13 @@ public class CarrierPrivilegeAuthenticator {
         synchronized (mLock) {
             unregisterCarrierPrivilegesListeners();
             mModemCount = mTelephonyManager.getActiveModemCount();
-            registerCarrierPrivilegesListeners();
+            registerCarrierPrivilegesListeners(mModemCount);
             updateCarrierServiceUid();
         }
     }
 
-    private void registerCarrierPrivilegesListeners() {
+    private void registerCarrierPrivilegesListeners(final int modemCount) {
         final HandlerExecutor executor = new HandlerExecutor(mHandler);
-        int modemCount;
-        synchronized (mLock) {
-            modemCount = mModemCount;
-        }
         try {
             for (int i = 0; i < modemCount; i++) {
                 CarrierPrivilegesListenerShim carrierPrivilegesListener =
