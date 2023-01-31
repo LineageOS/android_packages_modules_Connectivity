@@ -43,6 +43,10 @@ struct tun_data;
 // ie. if we ever read >= MAXMTU bytes we should discard.
 #define MAXMTU (0xFFFF + 28 + 1)
 #define PACKETLEN (sizeof(struct tun_pi) + MAXMTU)
+
+// logcat_hexdump() maximum binary data length
+#define MAXDUMPLEN PACKETLEN
+
 #define CLATD_VERSION "1.5"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
