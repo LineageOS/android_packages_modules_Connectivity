@@ -1607,7 +1607,6 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-sign-promo',
       '-Wno-unused-parameter',
       '-Wno-null-pointer-subtraction', # Needed to libevent
-      '-Wno-deprecated-non-prototype', # needed for zlib
       '-fvisibility=hidden',
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
