@@ -26,10 +26,10 @@ import android.net.Network;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcel;
-import android.os.StrictMode;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -37,7 +37,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -45,22 +44,11 @@ import java.util.Map;
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
+@ConnectivityModuleTest
 public class NsdServiceInfoTest {
 
     private static final InetAddress IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1");
     private static final InetAddress IPV6_ADDRESS = InetAddresses.parseNumericAddress("2001:db8::");
-    public final static InetAddress LOCALHOST;
-    static {
-        // Because test.
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
-
-        InetAddress _host = null;
-        try {
-            _host = InetAddress.getLocalHost();
-        } catch (UnknownHostException e) { }
-        LOCALHOST = _host;
-    }
 
     @Test
     public void testLimits() throws Exception {
@@ -89,10 +77,10 @@ public class NsdServiceInfoTest {
         // Single key + value length too long.
         exceptionThrown = false;
         try {
-            String longValue = "loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo" +
-                    "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo" +
-                    "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo" +
-                    "ooooooooooooooooooooooooooooong";  // 248 characters.
+            String longValue = "loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+                    + "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+                    + "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+                    + "ooooooooooooooooooooooooooooong";  // 248 characters.
             info.setAttribute("longcat", longValue);  // Key + value == 255 characters.
         } catch (IllegalArgumentException e) {
             exceptionThrown = true;
@@ -127,7 +115,6 @@ public class NsdServiceInfoTest {
         fullInfo.setServiceName("kitten");
         fullInfo.setServiceType("_kitten._tcp");
         fullInfo.setPort(4242);
-        fullInfo.setHost(LOCALHOST);
         fullInfo.setHostAddresses(List.of(IPV4_ADDRESS));
         fullInfo.setNetwork(new Network(123));
         fullInfo.setInterfaceIndex(456);
@@ -143,8 +130,7 @@ public class NsdServiceInfoTest {
         attributedInfo.setServiceName("kitten");
         attributedInfo.setServiceType("_kitten._tcp");
         attributedInfo.setPort(4242);
-        attributedInfo.setHost(LOCALHOST);
-        fullInfo.setHostAddresses(List.of(IPV6_ADDRESS, IPV4_ADDRESS));
+        attributedInfo.setHostAddresses(List.of(IPV6_ADDRESS, IPV4_ADDRESS));
         attributedInfo.setAttribute("color", "pink");
         attributedInfo.setAttribute("sound", (new String("にゃあ")).getBytes("UTF-8"));
         attributedInfo.setAttribute("adorable", (String) null);
