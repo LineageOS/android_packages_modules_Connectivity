@@ -5576,6 +5576,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 // Sent by KeepaliveTracker to process an app request on the state machine thread.
                 case NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE: {
                     NetworkAgentInfo nai = getNetworkAgentInfoForNetwork((Network) msg.obj);
+                    if (nai == null) {
+                        Log.e(TAG, "Attempt to stop keepalive on nonexistent network");
+                        return;
+                    }
                     int slot = msg.arg1;
                     int reason = msg.arg2;
                     mKeepaliveTracker.handleStopKeepalive(nai, slot, reason);
