@@ -152,24 +152,13 @@ public class CarrierPrivilegeAuthenticator {
         }
     }
 
-    private void addCarrierPrivilegesListener(int logicalSlotIndex, Executor executor,
-            CarrierPrivilegesListenerShim listener) {
-        try {
-            mTelephonyManagerShim.addCarrierPrivilegesListener(
-                    logicalSlotIndex, executor, listener);
-        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
-            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
-            Log.e(TAG, "addCarrierPrivilegesListener API is not available");
+    @GuardedBy("mLock")
+    private void unregisterCarrierPrivilegesListeners() {
+        for (CarrierPrivilegesListenerShim carrierPrivilegesListener :
+                mCarrierPrivilegesChangedListeners) {
+            removeCarrierPrivilegesListener(carrierPrivilegesListener);
         }
-    }
-
-    private void removeCarrierPrivilegesListener(CarrierPrivilegesListenerShim listener) {
-        try {
-            mTelephonyManagerShim.removeCarrierPrivilegesListener(listener);
-        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
-            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
-            Log.e(TAG, "removeCarrierPrivilegesListener API is not available");
-        }
+        mCarrierPrivilegesChangedListeners.clear();
     }
 
     private String getCarrierServicePackageNameForLogicalSlot(int logicalSlotIndex) {
@@ -181,14 +170,6 @@ public class CarrierPrivilegeAuthenticator {
             Log.e(TAG, "getCarrierServicePackageNameForLogicalSlot API is not available");
         }
         return null;
-    }
-
-    private void unregisterCarrierPrivilegesListeners() {
-        for (CarrierPrivilegesListenerShim carrierPrivilegesListener :
-                mCarrierPrivilegesChangedListeners) {
-            removeCarrierPrivilegesListener(carrierPrivilegesListener);
-        }
-        mCarrierPrivilegesChangedListeners.clear();
     }
 
     /**
@@ -272,5 +253,27 @@ public class CarrierPrivilegeAuthenticator {
     @VisibleForTesting
     int getCarrierServicePackageUidForSlot(int slotId) {
         return getUidForPackage(getCarrierServicePackageNameForLogicalSlot(slotId));
+    }
+
+    // Helper methods to avoid having to deal with UnsupportedApiLevelException.
+
+    private void addCarrierPrivilegesListener(int logicalSlotIndex, Executor executor,
+            CarrierPrivilegesListenerShim listener) {
+        try {
+            mTelephonyManagerShim.addCarrierPrivilegesListener(
+                    logicalSlotIndex, executor, listener);
+        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
+            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
+            Log.e(TAG, "addCarrierPrivilegesListener API is not available");
+        }
+    }
+
+    private void removeCarrierPrivilegesListener(CarrierPrivilegesListenerShim listener) {
+        try {
+            mTelephonyManagerShim.removeCarrierPrivilegesListener(listener);
+        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
+            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
+            Log.e(TAG, "removeCarrierPrivilegesListener API is not available");
+        }
     }
 }
