@@ -16,6 +16,8 @@
 
 package com.android.networkstack.tethering;
 
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkStats.DEFAULT_NETWORK_NO;
 import static android.net.NetworkStats.METERED_NO;
 import static android.net.NetworkStats.ROAMING_NO;
@@ -77,6 +79,7 @@ import static org.mockito.Mockito.when;
 import android.app.usage.NetworkStatsManager;
 import android.net.INetd;
 import android.net.InetAddresses;
+import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.MacAddress;
@@ -89,6 +92,7 @@ import android.net.ip.IpServer;
 import android.os.Build;
 import android.os.Handler;
 import android.os.test.TestLooper;
+import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -156,11 +160,13 @@ public class BpfCoordinatorTest {
 
     private static final int INVALID_IFINDEX = 0;
     private static final int UPSTREAM_IFINDEX = 1001;
+    private static final int UPSTREAM_XLAT_IFINDEX = 1002;
     private static final int UPSTREAM_IFINDEX2 = 1003;
     private static final int DOWNSTREAM_IFINDEX = 2001;
     private static final int DOWNSTREAM_IFINDEX2 = 2002;
 
     private static final String UPSTREAM_IFACE = "rmnet0";
+    private static final String UPSTREAM_XLAT_IFACE = "v4-rmnet0";
     private static final String UPSTREAM_IFACE2 = "wlan0";
 
     private static final MacAddress DOWNSTREAM_MAC = MacAddress.fromString("12:34:56:78:90:ab");
@@ -183,6 +189,10 @@ public class BpfCoordinatorTest {
     private static final Inet4Address PRIVATE_ADDR2 =
             (Inet4Address) InetAddresses.parseNumericAddress("192.168.90.12");
 
+    private static final Inet4Address XLAT_LOCAL_IPV4ADDR =
+            (Inet4Address) InetAddresses.parseNumericAddress("192.0.0.46");
+    private static final IpPrefix NAT64_IP_PREFIX = new IpPrefix("64:ff9b::/96");
+
     // Generally, public port and private port are the same in the NAT conntrack message.
     // TODO: consider using different private port and public port for testing.
     private static final short REMOTE_PORT = (short) 443;
@@ -194,6 +204,10 @@ public class BpfCoordinatorTest {
     private static final InterfaceParams UPSTREAM_IFACE_PARAMS = new InterfaceParams(
             UPSTREAM_IFACE, UPSTREAM_IFINDEX, null /* macAddr, rawip */,
             NetworkStackConstants.ETHER_MTU);
+    private static final InterfaceParams UPSTREAM_XLAT_IFACE_PARAMS = new InterfaceParams(
+            UPSTREAM_XLAT_IFACE, UPSTREAM_XLAT_IFINDEX, null /* macAddr, rawip */,
+            NetworkStackConstants.ETHER_MTU - 28
+            /* mtu delta from external/android-clat/clatd.c */);
     private static final InterfaceParams UPSTREAM_IFACE_PARAMS2 = new InterfaceParams(
             UPSTREAM_IFACE2, UPSTREAM_IFINDEX2, MacAddress.fromString("44:55:66:00:00:0c"),
             NetworkStackConstants.ETHER_MTU);
@@ -2280,5 +2294,171 @@ public class BpfCoordinatorTest {
     public void testAddTetherOffloadRule4InvalidMtu() throws Exception {
         verifyAddTetherOffloadRule4Mtu(INVALID_MTU, false /* isKernelMtu */,
                 NetworkStackConstants.ETHER_MTU /* expectedMtu */);
+    }
+
+    private static LinkProperties buildUpstreamLinkProperties(final String interfaceName,
+            boolean withIPv4, boolean withIPv6, boolean with464xlat) {
+        final LinkProperties prop = new LinkProperties();
+        prop.setInterfaceName(interfaceName);
+
+        if (withIPv4) {
+            // Assign the address no matter what the interface is. It is okay for now because
+            // only single upstream is available.
+            // TODO: consider to assign address by interface once we need to test two or more
+            // BPF supported upstreams or multi upstreams are supported.
+            prop.addLinkAddress(new LinkAddress(PUBLIC_ADDR, 24));
+        }
+
+        if (withIPv6) {
+            // TODO: make this to be constant. Currently, no test who uses this function cares what
+            // the upstream IPv6 address is.
+            prop.addLinkAddress(new LinkAddress("2001:db8::5175:15ca/64"));
+        }
+
+        if (with464xlat) {
+            final String clatInterface = "v4-" + interfaceName;
+            final LinkProperties stackedLink = new LinkProperties();
+            stackedLink.setInterfaceName(clatInterface);
+            stackedLink.addLinkAddress(new LinkAddress(XLAT_LOCAL_IPV4ADDR, 24));
+            prop.addStackedLink(stackedLink);
+            prop.setNat64Prefix(NAT64_IP_PREFIX);
+        }
+
+        return prop;
+    }
+
+    private void verifyIpv4Upstream(
+            @NonNull final HashMap<Inet4Address, Integer> ipv4UpstreamIndices,
+            @NonNull final SparseArray<String> interfaceNames) {
+        assertEquals(1, ipv4UpstreamIndices.size());
+        Integer upstreamIndex = ipv4UpstreamIndices.get(PUBLIC_ADDR);
+        assertNotNull(upstreamIndex);
+        assertEquals(UPSTREAM_IFINDEX, upstreamIndex.intValue());
+        assertEquals(1, interfaceNames.size());
+        assertTrue(interfaceNames.contains(UPSTREAM_IFINDEX));
+    }
+
+    private void verifyUpdateUpstreamNetworkState()
+            throws Exception {
+        final BpfCoordinator coordinator = makeBpfCoordinator();
+        final HashMap<Inet4Address, Integer> ipv4UpstreamIndices =
+                coordinator.getIpv4UpstreamIndicesForTesting();
+        assertTrue(ipv4UpstreamIndices.isEmpty());
+        final SparseArray<String> interfaceNames =
+                coordinator.getInterfaceNamesForTesting();
+        assertEquals(0, interfaceNames.size());
+
+        // Verify the following are added or removed after upstream changes.
+        // - BpfCoordinator#mIpv4UpstreamIndices (for building IPv4 offload rules)
+        // - BpfCoordinator#mInterfaceNames (for updating limit)
+        //
+        // +-------+-------+-----------------------+
+        // | Test  | Up    |       Protocol        |
+        // | Case# | stream+-------+-------+-------+
+        // |       |       | IPv4  | IPv6  | Xlat  |
+        // +-------+-------+-------+-------+-------+
+        // |   1   | Cell  |   O   |       |       |
+        // +-------+-------+-------+-------+-------+
+        // |   2   | Cell  |       |   O   |       |
+        // +-------+-------+-------+-------+-------+
+        // |   3   | Cell  |   O   |   O   |       |
+        // +-------+-------+-------+-------+-------+
+        // |   4   |   -   |       |       |       |
+        // +-------+-------+-------+-------+-------+
+        // |       | Cell  |   O   |       |       |
+        // |       +-------+-------+-------+-------+
+        // |   5   | Cell  |       |   O   |   O   | <-- doesn't support offload (xlat)
+        // |       +-------+-------+-------+-------+
+        // |       | Cell  |   O   |       |       |
+        // +-------+-------+-------+-------+-------+
+        // |   6   | Wifi  |   O   |   O   |       | <-- doesn't support offload (ether ip)
+        // +-------+-------+-------+-------+-------+
+
+        // [1] Mobile IPv4 only
+        coordinator.addUpstreamNameToLookupTable(UPSTREAM_IFINDEX, UPSTREAM_IFACE);
+        doReturn(UPSTREAM_IFACE_PARAMS).when(mDeps).getInterfaceParams(UPSTREAM_IFACE);
+        final UpstreamNetworkState mobileIPv4UpstreamState = new UpstreamNetworkState(
+                buildUpstreamLinkProperties(UPSTREAM_IFACE,
+                        true /* IPv4 */, false /* IPv6 */, false /* 464xlat */),
+                new NetworkCapabilities().addTransportType(TRANSPORT_CELLULAR),
+                new Network(TEST_NET_ID));
+        coordinator.updateUpstreamNetworkState(mobileIPv4UpstreamState);
+        verifyIpv4Upstream(ipv4UpstreamIndices, interfaceNames);
+
+        // [2] Mobile IPv6 only
+        final UpstreamNetworkState mobileIPv6UpstreamState = new UpstreamNetworkState(
+                buildUpstreamLinkProperties(UPSTREAM_IFACE,
+                        false /* IPv4 */, true /* IPv6 */, false /* 464xlat */),
+                new NetworkCapabilities().addTransportType(TRANSPORT_CELLULAR),
+                new Network(TEST_NET_ID));
+        coordinator.updateUpstreamNetworkState(mobileIPv6UpstreamState);
+        assertTrue(ipv4UpstreamIndices.isEmpty());
+        assertEquals(1, interfaceNames.size());
+        assertTrue(interfaceNames.contains(UPSTREAM_IFINDEX));
+
+        // [3] Mobile IPv4 and IPv6
+        final UpstreamNetworkState mobileDualStackUpstreamState = new UpstreamNetworkState(
+                buildUpstreamLinkProperties(UPSTREAM_IFACE,
+                        true /* IPv4 */, true /* IPv6 */, false /* 464xlat */),
+                new NetworkCapabilities().addTransportType(TRANSPORT_CELLULAR),
+                new Network(TEST_NET_ID));
+        coordinator.updateUpstreamNetworkState(mobileDualStackUpstreamState);
+        verifyIpv4Upstream(ipv4UpstreamIndices, interfaceNames);
+
+        // [4] Lost upstream
+        coordinator.updateUpstreamNetworkState(null);
+        assertTrue(ipv4UpstreamIndices.isEmpty());
+        assertEquals(1, interfaceNames.size());
+        assertTrue(interfaceNames.contains(UPSTREAM_IFINDEX));
+
+        // [5] verify xlat interface
+        // Expect that xlat interface information isn't added to mapping.
+        doReturn(UPSTREAM_XLAT_IFACE_PARAMS).when(mDeps).getInterfaceParams(
+                UPSTREAM_XLAT_IFACE);
+        final UpstreamNetworkState mobile464xlatUpstreamState = new UpstreamNetworkState(
+                buildUpstreamLinkProperties(UPSTREAM_IFACE,
+                        false /* IPv4 */, true /* IPv6 */, true /* 464xlat */),
+                new NetworkCapabilities().addTransportType(TRANSPORT_CELLULAR),
+                new Network(TEST_NET_ID));
+
+        // Need to add a valid IPv4 upstream to verify that xlat interface doesn't support.
+        // Mobile IPv4 only
+        coordinator.updateUpstreamNetworkState(mobileIPv4UpstreamState);
+        verifyIpv4Upstream(ipv4UpstreamIndices, interfaceNames);
+
+        // Mobile IPv6 and xlat
+        // IpServer doesn't add xlat interface mapping via #addUpstreamNameToLookupTable on
+        // S and T devices.
+        coordinator.updateUpstreamNetworkState(mobile464xlatUpstreamState);
+        // Upstream IPv4 address mapping is removed because xlat interface is not supported.
+        assertTrue(ipv4UpstreamIndices.isEmpty());
+        assertEquals(1, interfaceNames.size());
+        assertTrue(interfaceNames.contains(UPSTREAM_IFINDEX));
+
+        // Need to add a valid IPv4 upstream to verify that wifi interface doesn't support.
+        // Mobile IPv4 only
+        coordinator.updateUpstreamNetworkState(mobileIPv4UpstreamState);
+        verifyIpv4Upstream(ipv4UpstreamIndices, interfaceNames);
+
+        // [6] Wifi IPv4 and IPv6
+        // Expect that upstream index map is cleared because ether ip is not supported.
+        coordinator.addUpstreamNameToLookupTable(UPSTREAM_IFINDEX2, UPSTREAM_IFACE2);
+        doReturn(UPSTREAM_IFACE_PARAMS2).when(mDeps).getInterfaceParams(UPSTREAM_IFACE2);
+        final UpstreamNetworkState wifiDualStackUpstreamState = new UpstreamNetworkState(
+                buildUpstreamLinkProperties(UPSTREAM_IFACE2,
+                        true /* IPv4 */, true /* IPv6 */, false /* 464xlat */),
+                new NetworkCapabilities().addTransportType(TRANSPORT_WIFI),
+                new Network(TEST_NET_ID2));
+        coordinator.updateUpstreamNetworkState(wifiDualStackUpstreamState);
+        assertTrue(ipv4UpstreamIndices.isEmpty());
+        assertEquals(2, interfaceNames.size());
+        assertTrue(interfaceNames.contains(UPSTREAM_IFINDEX));
+        assertTrue(interfaceNames.contains(UPSTREAM_IFINDEX2));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testUpdateUpstreamNetworkState() throws Exception {
+        verifyUpdateUpstreamNetworkState();
     }
 }
