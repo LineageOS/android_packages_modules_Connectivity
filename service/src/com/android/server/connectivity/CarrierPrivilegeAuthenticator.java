@@ -124,6 +124,11 @@ public class CarrierPrivilegeAuthenticator {
     }
 
     private class PrivilegeListener implements CarrierPrivilegesListenerShim {
+        public final int mLogicalSlot;
+        PrivilegeListener(final int logicalSlot) {
+            mLogicalSlot = logicalSlot;
+        }
+
         @Override public void onCarrierPrivilegesChanged(
                 @NonNull List<String> privilegedPackageNames,
                 @NonNull int[] privilegedUids) {
@@ -147,8 +152,8 @@ public class CarrierPrivilegeAuthenticator {
         final HandlerExecutor executor = new HandlerExecutor(mHandler);
         try {
             for (int i = 0; i < modemCount; i++) {
-                PrivilegeListener carrierPrivilegesListener = new PrivilegeListener();
-                addCarrierPrivilegesListener(i, executor, carrierPrivilegesListener);
+                PrivilegeListener carrierPrivilegesListener = new PrivilegeListener(i);
+                addCarrierPrivilegesListener(executor, carrierPrivilegesListener);
                 mCarrierPrivilegesChangedListeners.add(carrierPrivilegesListener);
             }
         } catch (IllegalArgumentException e) {
@@ -160,6 +165,7 @@ public class CarrierPrivilegeAuthenticator {
     private void unregisterCarrierPrivilegesListeners() {
         for (PrivilegeListener carrierPrivilegesListener : mCarrierPrivilegesChangedListeners) {
             removeCarrierPrivilegesListener(carrierPrivilegesListener);
+            mCarrierServiceUid.delete(carrierPrivilegesListener.mLogicalSlot);
         }
         mCarrierPrivilegesChangedListeners.clear();
     }
@@ -260,11 +266,11 @@ public class CarrierPrivilegeAuthenticator {
 
     // Helper methods to avoid having to deal with UnsupportedApiLevelException.
 
-    private void addCarrierPrivilegesListener(final int logicalSlotIndex,
-            @NonNull final Executor executor, @NonNull final PrivilegeListener listener) {
+    private void addCarrierPrivilegesListener(@NonNull final Executor executor,
+            @NonNull final PrivilegeListener listener) {
         try {
-            mTelephonyManagerShim.addCarrierPrivilegesListener(
-                    logicalSlotIndex, executor, listener);
+            mTelephonyManagerShim.addCarrierPrivilegesListener(listener.mLogicalSlot, executor,
+                    listener);
         } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
             // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
             Log.e(TAG, "addCarrierPrivilegesListener API is not available");
