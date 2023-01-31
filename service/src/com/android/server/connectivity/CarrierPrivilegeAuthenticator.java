@@ -73,9 +73,7 @@ public class CarrierPrivilegeAuthenticator {
     private final Object mLock = new Object();
     private final Handler mHandler;
     @NonNull
-    @GuardedBy("mLock")
-    private final List<CarrierPrivilegesListenerShim> mCarrierPrivilegesChangedListeners =
-            new ArrayList<>();
+    private final List<PrivilegeListener> mCarrierPrivilegesChangedListeners = new ArrayList<>();
     private final boolean mUseCallbacksForServiceChanged;
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
@@ -125,31 +123,31 @@ public class CarrierPrivilegeAuthenticator {
         }
     }
 
+    private class PrivilegeListener implements CarrierPrivilegesListenerShim {
+        @Override public void onCarrierPrivilegesChanged(
+                @NonNull List<String> privilegedPackageNames,
+                @NonNull int[] privilegedUids) {
+            // Re-trigger the synchronous check (which is also very cheap due
+            // to caching in CarrierPrivilegesTracker). This allows consistency
+            // with the onSubscriptionsChangedListener and broadcasts.
+            updateCarrierServiceUid();
+        }
+        @Override
+        public void onCarrierServiceChanged(
+                @Nullable final String carrierServicePackageName,
+                final int carrierServiceUid) {
+            // Re-trigger the synchronous check (which is also very cheap due
+            // to caching in CarrierPrivilegesTracker). This allows consistency
+            // with the onSubscriptionsChangedListener and broadcasts.
+            updateCarrierServiceUid();
+        }
+    }
+
     private void registerCarrierPrivilegesListeners(final int modemCount) {
         final HandlerExecutor executor = new HandlerExecutor(mHandler);
         try {
             for (int i = 0; i < modemCount; i++) {
-                CarrierPrivilegesListenerShim carrierPrivilegesListener =
-                        new CarrierPrivilegesListenerShim() {
-                            @Override
-                            public void onCarrierPrivilegesChanged(
-                                    @NonNull List<String> privilegedPackageNames,
-                                    @NonNull int[] privilegedUids) {
-                                // Re-trigger the synchronous check (which is also very cheap due
-                                // to caching in CarrierPrivilegesTracker). This allows consistency
-                                // with the onSubscriptionsChangedListener and broadcasts.
-                                updateCarrierServiceUid();
-                            }
-                            @Override
-                            public void onCarrierServiceChanged(
-                                    @Nullable final String carrierServicePackageName,
-                                    final int carrierServiceUid) {
-                                // Re-trigger the synchronous check (which is also very cheap due
-                                // to caching in CarrierPrivilegesTracker). This allows consistency
-                                // with the onSubscriptionsChangedListener and broadcasts.
-                                updateCarrierServiceUid();
-                            }
-                        };
+                PrivilegeListener carrierPrivilegesListener = new PrivilegeListener();
                 addCarrierPrivilegesListener(i, executor, carrierPrivilegesListener);
                 mCarrierPrivilegesChangedListeners.add(carrierPrivilegesListener);
             }
@@ -160,8 +158,7 @@ public class CarrierPrivilegeAuthenticator {
 
     @GuardedBy("mLock")
     private void unregisterCarrierPrivilegesListeners() {
-        for (CarrierPrivilegesListenerShim carrierPrivilegesListener :
-                mCarrierPrivilegesChangedListeners) {
+        for (PrivilegeListener carrierPrivilegesListener : mCarrierPrivilegesChangedListeners) {
             removeCarrierPrivilegesListener(carrierPrivilegesListener);
         }
         mCarrierPrivilegesChangedListeners.clear();
@@ -263,8 +260,8 @@ public class CarrierPrivilegeAuthenticator {
 
     // Helper methods to avoid having to deal with UnsupportedApiLevelException.
 
-    private void addCarrierPrivilegesListener(int logicalSlotIndex, Executor executor,
-            CarrierPrivilegesListenerShim listener) {
+    private void addCarrierPrivilegesListener(final int logicalSlotIndex,
+            @NonNull final Executor executor, @NonNull final PrivilegeListener listener) {
         try {
             mTelephonyManagerShim.addCarrierPrivilegesListener(
                     logicalSlotIndex, executor, listener);
@@ -274,7 +271,7 @@ public class CarrierPrivilegeAuthenticator {
         }
     }
 
-    private void removeCarrierPrivilegesListener(CarrierPrivilegesListenerShim listener) {
+    private void removeCarrierPrivilegesListener(PrivilegeListener listener) {
         try {
             mTelephonyManagerShim.removeCarrierPrivilegesListener(listener);
         } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
