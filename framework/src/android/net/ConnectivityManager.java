@@ -2287,6 +2287,13 @@ public class ConnectivityManager {
                 mExecutor.execute(() -> {
                     try {
                         if (mSlot != null) {
+                            // TODO : this is incorrect, because in the presence of auto on/off
+                            // keepalive the slot associated with this keepalive can have
+                            // changed. Also, this actually causes another problem where some other
+                            // app might stop your keepalive if it just knows the network and
+                            // the slot and goes through the trouble of grabbing the aidl object.
+                            // This code should use the callback to identify what keepalive to
+                            // stop instead.
                             mService.stopKeepalive(mNetwork, mSlot);
                         }
                     } catch (RemoteException e) {
