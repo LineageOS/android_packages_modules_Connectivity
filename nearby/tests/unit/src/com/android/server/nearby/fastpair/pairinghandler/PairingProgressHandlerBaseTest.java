@@ -20,16 +20,21 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.Mockito.when;
 
+import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.res.Resources;
 
 import androidx.annotation.Nullable;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.server.nearby.common.bluetooth.fastpair.FastPairConnection;
 import com.android.server.nearby.common.bluetooth.fastpair.Preferences;
 import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
+import com.android.server.nearby.fastpair.HalfSheetResources;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.footprint.FootprintsDeviceManager;
@@ -64,6 +69,10 @@ public class PairingProgressHandlerBaseTest {
     FastPairConnection mFastPairConnection;
     @Mock
     BluetoothManager mBluetoothManager;
+    @Mock
+    Resources mResources;
+    @Mock
+    NotificationManager mNotificationManager;
 
     private static final String MAC_ADDRESS = "00:11:22:33:44:55";
     private static final byte[] ACCOUNT_KEY = new byte[]{0x01, 0x02};
@@ -81,6 +90,9 @@ public class PairingProgressHandlerBaseTest {
         mLocator.overrideBindingForTest(FastPairCacheManager.class,
                 mFastPairCacheManager);
         mLocator.overrideBindingForTest(Clock.class, mClock);
+        when(mContextWrapper.getResources()).thenReturn(mResources);
+        HalfSheetResources.setResourcesContextForTest(mContextWrapper);
+
         sBluetoothDevice =
                 BluetoothAdapter.getDefaultAdapter().getRemoteDevice("00:11:22:33:44:55");
         sDiscoveryItem = FakeDiscoveryItems.newFastPairDiscoveryItem(mContextWrapper);
@@ -205,10 +217,17 @@ public class PairingProgressHandlerBaseTest {
 
     private PairingProgressHandlerBase createProgressHandler(
             @Nullable byte[] accountKey, DiscoveryItem fastPairItem, boolean isRetroactivePair) {
-        FastPairNotificationManager fastPairNotificationManager =
-                new FastPairNotificationManager(mContextWrapper, fastPairItem, true);
+
         FastPairHalfSheetManager fastPairHalfSheetManager =
                 new FastPairHalfSheetManager(mContextWrapper);
+        // Real context is needed
+        Context context = InstrumentationRegistry.getInstrumentation().getContext();
+        FastPairNotificationManager fastPairNotificationManager =
+                new FastPairNotificationManager(context, 1234, mNotificationManager,
+                        new HalfSheetResources(mContextWrapper));
+
+        mLocator.overrideBindingForTest(FastPairNotificationManager.class,
+                fastPairNotificationManager);
         mLocator.overrideBindingForTest(FastPairHalfSheetManager.class, fastPairHalfSheetManager);
         PairingProgressHandlerBase pairingProgressHandlerBase =
                 PairingProgressHandlerBase.create(

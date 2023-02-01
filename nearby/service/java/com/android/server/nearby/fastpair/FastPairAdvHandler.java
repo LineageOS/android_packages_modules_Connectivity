@@ -36,6 +36,7 @@ import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 import com.android.server.nearby.fastpair.cache.FastPairCacheManager;
 import com.android.server.nearby.fastpair.halfsheet.FastPairHalfSheetManager;
+import com.android.server.nearby.fastpair.notification.FastPairNotificationManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.ArrayUtils;
 import com.android.server.nearby.util.DataUtils;
@@ -215,15 +216,11 @@ public class FastPairAdvHandler {
                 Log.d(TAG, "bloom filter is recognized in the cache");
                 continue;
             }
-
-            if (mIsFirst) {
-                mIsFirst = false;
-                pair(account, scannedDevice, recognizedDevice);
-            }
+            showSubsequentNotification(account, scannedDevice, recognizedDevice);
         }
     }
 
-    private void pair(Account account, FastPairDevice scannedDevice,
+    private void showSubsequentNotification(Account account, FastPairDevice scannedDevice,
             Data.FastPairDeviceWithAccountKey recognizedDevice) {
         // Get full info from api the initial request will only return
         // part of the info due to size limit.
@@ -242,12 +239,13 @@ public class FastPairAdvHandler {
                         .setMacAddress(
                                 scannedDevice.getBluetoothAddress())
                         .build();
-
-        // Connect and show notification
-        Locator.get(mContext, FastPairController.class).pair(
-                new DiscoveryItem(mContext, storedDiscoveryItem),
-                devicesWithAccountKeys.get(0).getAccountKey().toByteArray(),
-                /* companionApp= */ null);
+        // Show notification
+        FastPairNotificationManager fastPairNotificationManager =
+                Locator.get(mContext, FastPairNotificationManager.class);
+        DiscoveryItem item = new DiscoveryItem(mContext, storedDiscoveryItem);
+        Locator.get(mContext, FastPairCacheManager.class).saveDiscoveryItem(item);
+        fastPairNotificationManager.showDiscoveryNotification(item,
+                devicesWithAccountKeys.get(0).getAccountKey().toByteArray());
     }
 
     // Battery advertisement format:
