@@ -375,7 +375,6 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             return this;
         }
 
-
         /**
          * Sets the image url of the discovered Presence device.
          *
@@ -387,7 +386,6 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             return this;
         }
 
-
         /**
          * Sets discovery timestamp, the clock is based on elapsed time.
          *
@@ -398,7 +396,6 @@ public final class PresenceDevice extends NearbyDevice implements Parcelable {
             mDiscoveryTimestampMillis = discoveryTimestampMillis;
             return this;
         }
-
 
         /**
          * Adds an extended property of the discovered presence device.

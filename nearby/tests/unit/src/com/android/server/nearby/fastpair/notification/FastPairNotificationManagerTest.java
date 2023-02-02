@@ -18,38 +18,62 @@ package com.android.server.nearby.fastpair.notification;
 
 import static org.mockito.Mockito.when;
 
+import android.app.NotificationManager;
 import android.content.Context;
+import android.content.res.Resources;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.server.nearby.common.locator.Locator;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
+import com.android.server.nearby.fastpair.HalfSheetResources;
+import com.android.server.nearby.fastpair.cache.DiscoveryItem;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import service.proto.Cache;
+
 public class FastPairNotificationManagerTest {
 
-    @Mock private Context mContext;
-    private static final boolean USE_LARGE_ICON = true;
+    @Mock
+    private Context mContext;
+    @Mock
+    NotificationManager mNotificationManager;
+    @Mock
+    Resources mResources;
+    @Mock
+    private LocatorContextWrapper mLocatorContextWrapper;
+    @Mock
+    private Locator mLocator;
+
     private static final int NOTIFICATION_ID = 1;
-    private static final String COMPANION_APP = "companionApp";
     private static final int BATTERY_LEVEL = 1;
     private static final String DEVICE_NAME = "deviceName";
-    private static final String ADDRESS = "address";
     private FastPairNotificationManager mFastPairNotificationManager;
-    private LocatorContextWrapper mLocatorContextWrapper;
+    private DiscoveryItem mItem;
 
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        mLocatorContextWrapper = new LocatorContextWrapper(mContext);
         when(mContext.getContentResolver()).thenReturn(
                 InstrumentationRegistry.getInstrumentation().getContext().getContentResolver());
+        when(mLocatorContextWrapper.getResources()).thenReturn(mResources);
+        when(mLocatorContextWrapper.getLocator()).thenReturn(mLocator);
+        HalfSheetResources.setResourcesContextForTest(mLocatorContextWrapper);
+        // Real context is needed
+        Context context = InstrumentationRegistry.getInstrumentation().getContext();
+        FastPairNotificationManager fastPairNotificationManager =
         mFastPairNotificationManager =
-                new FastPairNotificationManager(mLocatorContextWrapper, null,
-                        USE_LARGE_ICON, NOTIFICATION_ID);
+                new FastPairNotificationManager(context, NOTIFICATION_ID, mNotificationManager,
+                        new HalfSheetResources(mLocatorContextWrapper));
+        mLocator.overrideBindingForTest(FastPairNotificationManager.class,
+                fastPairNotificationManager);
+
+        mItem = new DiscoveryItem(mLocatorContextWrapper,
+                Cache.StoredDiscoveryItem.newBuilder().setTitle("Device Name").build());
     }
 
     @Test
@@ -60,17 +84,18 @@ public class FastPairNotificationManagerTest {
 
     @Test
     public void  showConnectingNotification() {
-        mFastPairNotificationManager.showConnectingNotification();
+        mFastPairNotificationManager.showConnectingNotification(mItem);
     }
 
     @Test
     public void   showPairingFailedNotification() {
-        mFastPairNotificationManager.showPairingFailedNotification(new byte[]{1});
+        mFastPairNotificationManager
+                .showPairingFailedNotification(mItem, new byte[]{1});
     }
 
     @Test
     public void  showPairingSucceededNotification() {
-        mFastPairNotificationManager.showPairingSucceededNotification(COMPANION_APP,
-                BATTERY_LEVEL, DEVICE_NAME, ADDRESS);
+        mFastPairNotificationManager
+                .showPairingSucceededNotification(mItem, BATTERY_LEVEL, DEVICE_NAME);
     }
 }
