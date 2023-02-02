@@ -50,6 +50,7 @@ void NetworkTraceHandler::RegisterDataSource() {
 void NetworkTraceHandler::InitPerfettoTracing() {
   perfetto::TracingInitArgs args = {};
   args.backends |= perfetto::kSystemBackend;
+  args.enable_system_consumer = false;
   perfetto::Tracing::Initialize(args);
   NetworkTraceHandler::RegisterDataSource();
 }
