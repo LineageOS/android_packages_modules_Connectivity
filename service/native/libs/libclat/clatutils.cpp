@@ -29,13 +29,6 @@ extern "C" {
 #include "checksum.h"
 }
 
-// Sync from external/android-clat/clatd.h
-#define MAXMTU 65536
-#define PACKETLEN (MAXMTU + sizeof(struct tun_pi))
-
-// Sync from system/netd/include/netid_client.h.
-#define MARK_UNSET 0u
-
 namespace android {
 namespace net {
 namespace clat {
@@ -132,7 +125,7 @@ int generateIpv6Address(const char* iface, const in_addr v4, const in6_addr& nat
 
     // Socket's mark affects routing decisions (network selection)
     // An fwmark is necessary for clat to bypass the VPN during initialization.
-    if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+    if (setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
         int ret = errno;
         ALOGE("setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
         close(s);
@@ -180,7 +173,7 @@ int detect_mtu(const struct in6_addr* plat_subnet, uint32_t plat_suffix, uint32_
     }
 
     // Socket's mark affects routing decisions (network selection)
-    if ((mark != MARK_UNSET) && setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
+    if (setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark))) {
         int ret = errno;
         ALOGE("setsockopt(SOL_SOCKET, SO_MARK) failed: %s", strerror(errno));
         close(s);
@@ -235,7 +228,7 @@ int configure_packet_socket(int sock, in6_addr* addr, int ifindex) {
     // Compare it against the first four bytes of our IPv6 address, in host byte order (BPF loads
     // are always in host byte order). If it matches, continue with next instruction (JMP 0). If it
     // doesn't match, jump ahead to statement that returns 0 (ignore packet). Repeat for the other
-    // three words of the IPv6 address, and if they all match, return PACKETLEN (accept packet).
+    // three words of the IPv6 address, and if they all match, return full packet (accept packet).
         BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  24),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[0]), 0, 7),
         BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  28),
@@ -244,7 +237,7 @@ int configure_packet_socket(int sock, in6_addr* addr, int ifindex) {
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[2]), 0, 3),
         BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  36),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[3]), 0, 1),
-        BPF_STMT(BPF_RET | BPF_K,              PACKETLEN),
+        BPF_STMT(BPF_RET | BPF_K,              0xFFFFFFFF),
         BPF_STMT(BPF_RET | BPF_K,              0),
     };
     // clang-format on

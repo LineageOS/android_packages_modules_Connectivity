@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <linux/if_packet.h>
 #include <linux/if_tun.h>
 #include <linux/ioctl.h>
 #include <log/log.h>
@@ -35,9 +36,6 @@
 
 #include "libclat/clatutils.h"
 #include "nativehelper/scoped_utf_chars.h"
-
-// Sync from system/netd/include/netid_client.h
-#define MARK_UNSET 0u
 
 // Sync from system/netd/server/NetdConstants.h
 #define __INT_STRLEN(i) sizeof(#i)
@@ -184,6 +182,12 @@ static jint com_android_server_connectivity_ClatCoordinator_openPacketSocket(JNI
         throwIOException(env, "packet socket failed", errno);
         return -1;
     }
+    int on = 1;
+    if (setsockopt(sock, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on))) {
+        throwIOException(env, "packet socket auxdata enablement failed", errno);
+        close(sock);
+        return -1;
+    }
     return sock;
 }
 
@@ -197,7 +201,7 @@ static jint com_android_server_connectivity_ClatCoordinator_openRawSocket6(JNIEn
     }
 
     // TODO: check the mark validation
-    if (mark != MARK_UNSET && setsockopt(sock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
+    if (setsockopt(sock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
         throwIOException(env, "could not set mark on raw socket", errno);
         close(sock);
         return -1;

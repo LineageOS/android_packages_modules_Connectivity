@@ -49,7 +49,6 @@ import android.net.util.KeepaliveUtils;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
 import android.system.ErrnoException;
@@ -456,8 +455,7 @@ public class KeepaliveTracker {
     /**
      * Handle start keepalives with the message.
      */
-    public void handleStartKeepalive(Message message) {
-        KeepaliveInfo ki = (KeepaliveInfo) message.obj;
+    public void handleStartKeepalive(KeepaliveInfo ki) {
         NetworkAgentInfo nai = ki.getNai();
         int slot = findFirstFreeSlot(nai);
         mKeepalives.get(nai).put(slot, ki);

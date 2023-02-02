@@ -107,6 +107,7 @@ import static java.util.Map.Entry;
 import android.Manifest;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.AppOpsManager;
 import android.app.BroadcastOptions;
@@ -270,6 +271,7 @@ import com.android.networkstack.apishim.common.BroadcastOptionsShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.connectivity.AutodestructReference;
 import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker;
+import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker.AutomaticOnOffKeepalive;
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
 import com.android.server.connectivity.ConnectivityFlags;
@@ -3037,6 +3039,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         sendStickyBroadcast(makeGeneralIntent(info, bcastType));
     }
 
+    // TODO(b/193460475): Remove when tooling supports SystemApi to public API.
+    @SuppressLint("NewApi")
     // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
     @TargetApi(Build.VERSION_CODES.S)
     private void sendStickyBroadcast(Intent intent) {
@@ -5546,9 +5550,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 }
                 case NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE: {
-                    final Network network = (Network) msg.obj;
-                    final int slot = msg.arg1;
+                    final AutomaticOnOffKeepalive ki = (AutomaticOnOffKeepalive) msg.obj;
 
+                    final Network network = ki.getNetwork();
                     boolean networkFound = false;
                     final ArrayList<NetworkAgentInfo> vpnsRunningOnThisNetwork = new ArrayList<>();
                     for (NetworkAgentInfo n : mNetworkAgentInfos) {
@@ -5563,18 +5567,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     if (!networkFound) return;
 
                     if (!vpnsRunningOnThisNetwork.isEmpty()) {
-                        mKeepaliveTracker.handleMonitorAutomaticKeepalive(network, slot,
+                        mKeepaliveTracker.handleMonitorAutomaticKeepalive(ki,
                                 // TODO: check all the VPNs running on top of this network
                                 vpnsRunningOnThisNetwork.get(0).network.netId);
                     } else {
                         // If no VPN, then make sure the keepalive is running.
-                        mKeepaliveTracker.handleMaybeResumeKeepalive(network, slot);
+                        mKeepaliveTracker.handleMaybeResumeKeepalive(ki);
                     }
                     break;
                 }
                 // Sent by KeepaliveTracker to process an app request on the state machine thread.
                 case NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE: {
                     NetworkAgentInfo nai = getNetworkAgentInfoForNetwork((Network) msg.obj);
+                    if (nai == null) {
+                        Log.e(TAG, "Attempt to stop keepalive on nonexistent network");
+                        return;
+                    }
                     int slot = msg.arg1;
                     int reason = msg.arg2;
                     mKeepaliveTracker.handleStopKeepalive(nai, slot, reason);
@@ -8511,6 +8519,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // else not handled
     }
 
+    // TODO(b/193460475): Remove when tooling supports SystemApi to public API.
+    @SuppressLint("NewApi")
     private void sendIntent(PendingIntent pendingIntent, Intent intent) {
         mPendingIntentWakeLock.acquire();
         try {

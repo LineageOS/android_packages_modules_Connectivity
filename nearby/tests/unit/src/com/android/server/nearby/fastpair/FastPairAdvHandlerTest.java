@@ -177,7 +177,8 @@ public class FastPairAdvHandlerTest {
 
         DiscoveryItem discoveryItem =
                 new DiscoveryItem(mLocatorContextWrapper, STORED_DISCOVERY_ITEM);
-        verify(mFastPairController).pair(eq(discoveryItem), eq(ACCOUNT_KEY), eq(null));
+        verify(mFastPairNotificationManager).showDiscoveryNotification(eq(discoveryItem),
+                eq(ACCOUNT_KEY));
         verify(mFastPairHalfSheetManager, never()).showHalfSheet(any());
     }
 
