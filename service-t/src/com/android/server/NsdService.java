@@ -118,13 +118,15 @@ public class NsdService extends INsdManager.Stub {
     private final NsdStateMachine mNsdStateMachine;
     private final MDnsManager mMDnsManager;
     private final MDnsEventCallback mMDnsEventCallback;
-    @Nullable
+    @NonNull
+    private final Dependencies mDeps;
+    @NonNull
     private final MdnsMultinetworkSocketClient mMdnsSocketClient;
-    @Nullable
+    @NonNull
     private final MdnsDiscoveryManager mMdnsDiscoveryManager;
-    @Nullable
+    @NonNull
     private final MdnsSocketProvider mMdnsSocketProvider;
-    @Nullable
+    @NonNull
     private final MdnsAdvertiser mAdvertiser;
     // WARNING : Accessing these values in any thread is not safe, it must only be changed in the
     // state machine thread. If change this outside state machine, it will need to introduce
@@ -311,19 +313,12 @@ public class NsdService extends INsdManager.Stub {
             mIsMonitoringSocketsStarted = true;
         }
 
-        private void maybeStopMonitoringSockets() {
-            if (!mIsMonitoringSocketsStarted) {
-                if (DBG) Log.d(TAG, "Socket monitoring has not been started.");
-                return;
-            }
+        private void maybeStopMonitoringSocketsIfNoActiveRequest() {
+            if (!mIsMonitoringSocketsStarted) return;
+            if (isAnyRequestActive()) return;
+
             mMdnsSocketProvider.stopMonitoringSockets();
             mIsMonitoringSocketsStarted = false;
-        }
-
-        private void maybeStopMonitoringSocketsIfNoActiveRequest() {
-            if (!isAnyRequestActive()) {
-                maybeStopMonitoringSockets();
-            }
         }
 
         NsdStateMachine(String name, Handler handler) {
@@ -362,9 +357,7 @@ public class NsdService extends INsdManager.Stub {
                                 mLegacyClientCount -= 1;
                             }
                         }
-                        if (mMdnsDiscoveryManager != null || mAdvertiser != null) {
-                            maybeStopMonitoringSocketsIfNoActiveRequest();
-                        }
+                        maybeStopMonitoringSocketsIfNoActiveRequest();
                         maybeScheduleStop();
                         break;
                     case NsdManager.DISCOVER_SERVICES:
@@ -579,7 +572,7 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        if (mMdnsDiscoveryManager != null) {
+                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)) {
                             final String serviceType = constructServiceType(info.getServiceType());
                             if (serviceType == null) {
                                 clientInfo.onDiscoverServicesFailed(clientId,
@@ -634,6 +627,9 @@ public class NsdService extends INsdManager.Stub {
                             break;
                         }
                         id = request.mGlobalId;
+                        // Note isMdnsDiscoveryManagerEnabled may have changed to false at this
+                        // point, so this needs to check the type of the original request to
+                        // unregister instead of looking at the flag value.
                         if (request instanceof DiscoveryManagerRequest) {
                             final MdnsListener listener =
                                     ((DiscoveryManagerRequest) request).mListener;
@@ -671,7 +667,7 @@ public class NsdService extends INsdManager.Stub {
                         }
 
                         id = getUniqueId();
-                        if (mAdvertiser != null) {
+                        if (mDeps.isMdnsAdvertiserEnabled(mContext)) {
                             final NsdServiceInfo serviceInfo = args.serviceInfo;
                             final String serviceType = serviceInfo.getServiceType();
                             final String registerServiceType = constructServiceType(serviceType);
@@ -722,7 +718,10 @@ public class NsdService extends INsdManager.Stub {
                         id = request.mGlobalId;
                         removeRequestMap(clientId, id, clientInfo);
 
-                        if (mAdvertiser != null) {
+                        // Note isMdnsAdvertiserEnabled may have changed to false at this point,
+                        // so this needs to check the type of the original request to unregister
+                        // instead of looking at the flag value.
+                        if (request instanceof AdvertiserClientRequest) {
                             mAdvertiser.removeService(id);
                             clientInfo.onUnregisterServiceSucceeded(clientId);
                         } else {
@@ -749,7 +748,7 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        if (mMdnsDiscoveryManager != null) {
+                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)) {
                             final String serviceType = constructServiceType(info.getServiceType());
                             if (serviceType == null) {
                                 clientInfo.onResolveServiceFailed(clientId,
@@ -1241,32 +1240,16 @@ public class NsdService extends INsdManager.Stub {
         mNsdStateMachine.start();
         mMDnsManager = ctx.getSystemService(MDnsManager.class);
         mMDnsEventCallback = new MDnsEventCallback(mNsdStateMachine);
+        mDeps = deps;
 
-        final boolean discoveryManagerEnabled = deps.isMdnsDiscoveryManagerEnabled(ctx);
-        final boolean advertiserEnabled = deps.isMdnsAdvertiserEnabled(ctx);
-        if (discoveryManagerEnabled || advertiserEnabled) {
-            mMdnsSocketProvider = deps.makeMdnsSocketProvider(ctx, handler.getLooper());
-        } else {
-            mMdnsSocketProvider = null;
-        }
-
-        if (discoveryManagerEnabled) {
-            mMdnsSocketClient =
-                    new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider);
-            mMdnsDiscoveryManager =
-                    deps.makeMdnsDiscoveryManager(new ExecutorProvider(), mMdnsSocketClient);
-            handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));
-        } else {
-            mMdnsSocketClient = null;
-            mMdnsDiscoveryManager = null;
-        }
-
-        if (advertiserEnabled) {
-            mAdvertiser = deps.makeMdnsAdvertiser(handler.getLooper(), mMdnsSocketProvider,
-                    new AdvertiserCallback());
-        } else {
-            mAdvertiser = null;
-        }
+        mMdnsSocketProvider = deps.makeMdnsSocketProvider(ctx, handler.getLooper());
+        mMdnsSocketClient =
+                new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider);
+        mMdnsDiscoveryManager =
+                deps.makeMdnsDiscoveryManager(new ExecutorProvider(), mMdnsSocketClient);
+        handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));
+        mAdvertiser = deps.makeMdnsAdvertiser(handler.getLooper(), mMdnsSocketProvider,
+                new AdvertiserCallback());
     }
 
     /**
