@@ -35,6 +35,7 @@ import android.nearby.BroadcastCallback;
 import android.nearby.BroadcastRequest;
 import android.nearby.NearbyDevice;
 import android.nearby.NearbyManager;
+import android.nearby.OffloadCapability;
 import android.nearby.PresenceBroadcastRequest;
 import android.nearby.PrivateCredential;
 import android.nearby.ScanCallback;
@@ -177,7 +178,7 @@ public class NearbyManagerTest {
     @SdkSuppress(minSdkVersion = 34, codeName = "U")
     public void queryOffloadScanSupport() {
         OffloadCallback callback = new OffloadCallback();
-        mNearbyManager.queryOffloadScanSupport(EXECUTOR, callback);
+        mNearbyManager.queryOffloadCapability(EXECUTOR, callback);
     }
 
     private void enableBluetooth() {
@@ -188,9 +189,9 @@ public class NearbyManagerTest {
         }
     }
 
-    private class OffloadCallback implements Consumer<Boolean> {
+    private static class OffloadCallback implements Consumer<OffloadCapability> {
         @Override
-        public void accept(Boolean aBoolean) {
+        public void accept(OffloadCapability aBoolean) {
             // no-op for now
         }
     }
