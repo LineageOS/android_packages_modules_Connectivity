@@ -193,7 +193,7 @@ interface IConnectivityManager
     void startTcpKeepalive(in Network network, in ParcelFileDescriptor pfd, int intervalSeconds,
             in ISocketKeepaliveCallback cb);
 
-    void stopKeepalive(in Network network, int slot);
+    void stopKeepalive(in ISocketKeepaliveCallback cb);
 
     String getCaptivePortalServerUrl();
 

@@ -291,7 +291,9 @@ public abstract class NetworkAgent {
     /**
      * Requests that the specified keepalive packet be stopped.
      *
-     * arg1 = hardware slot number of the keepalive to stop.
+     * arg1 = unused
+     * arg2 = error code (SUCCESS)
+     * obj = callback to identify the keepalive
      *
      * Also used internally by ConnectivityService / KeepaliveTracker, with different semantics.
      * @hide
