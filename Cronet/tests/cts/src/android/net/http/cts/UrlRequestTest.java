@@ -21,6 +21,7 @@ import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertSame;
 
 import android.content.Context;
 import android.net.http.HttpEngine;
@@ -90,5 +91,18 @@ public class UrlRequestTest {
         TestStatusListener statusListener = new TestStatusListener();
         request.getStatus(statusListener);
         statusListener.expectStatus(Status.INVALID);
+    }
+
+    @Test
+    public void testUrlRequestCancel_CancelCalled() throws Exception {
+        UrlRequest request = buildUrlRequest(mTestServer.getSuccessUrl());
+        mCallback.setAutoAdvance(false);
+
+        request.start();
+        mCallback.waitForNextStep();
+        assertSame(mCallback.mResponseStep, ResponseStep.ON_RESPONSE_STARTED);
+
+        request.cancel();
+        mCallback.expectCallback(ResponseStep.ON_CANCELED);
     }
 }
