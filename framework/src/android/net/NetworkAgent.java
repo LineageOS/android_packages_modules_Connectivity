@@ -491,7 +491,7 @@ public abstract class NetworkAgent {
      * TCP sockets are open over a VPN. The system will check periodically for presence of
      * such open sockets, and this message is what triggers the re-evaluation.
      *
-     * obj = AutomaticOnOffKeepaliveObject.
+     * obj = A Binder object associated with the keepalive.
      * @hide
      */
     public static final int CMD_MONITOR_AUTOMATIC_KEEPALIVE = BASE + 30;
