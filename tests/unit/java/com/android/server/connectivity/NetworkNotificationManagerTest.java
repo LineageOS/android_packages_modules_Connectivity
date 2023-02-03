@@ -56,8 +56,10 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
+import android.testing.PollingCheck;
 import android.util.DisplayMetrics;
 import android.widget.TextView;
 
@@ -391,7 +393,15 @@ public class NetworkNotificationManagerTest {
 
         final Instrumentation instr = InstrumentationRegistry.getInstrumentation();
         final UiDevice uiDevice =  UiDevice.getInstance(instr);
-        UiDevice.getInstance(instr).pressHome();
+        final Context ctx = instr.getContext();
+        final PowerManager pm = ctx.getSystemService(PowerManager.class);
+
+        // Wake up the device (it has no effect if the device is already awake).
+        uiDevice.executeShellCommand("input keyevent KEYCODE_WAKEUP");
+        uiDevice.executeShellCommand("wm dismiss-keyguard");
+        PollingCheck.check("Wait for the screen to be turned on failed, timeout=" + TEST_TIMEOUT_MS,
+                TEST_TIMEOUT_MS, () -> pm.isInteractive());
+        uiDevice.pressHome();
 
         // UiDevice.getLauncherPackageName() requires the test manifest to have a <queries> tag for
         // the launcher intent.
@@ -404,7 +414,6 @@ public class NetworkNotificationManagerTest {
         // Non-"no internet" notifications are not affected
         verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(NETWORK_SWITCH.eventId), any());
 
-        final Context ctx = instr.getContext();
         final String testAction = "com.android.connectivity.coverage.TEST_DIALOG";
         final Intent intent = new Intent(testAction)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
