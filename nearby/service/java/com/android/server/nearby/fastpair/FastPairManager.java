@@ -231,7 +231,7 @@ public class FastPairManager {
                 mIntentFilter, Context.RECEIVER_EXPORTED);
 
         // Default false for now.
-        mScanEnabled = NearbyManager.isFastPairScanEnabled(mLocatorContextWrapper.getContext());
+        mScanEnabled = NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper.getContext());
         registerFastPairScanChangeContentObserver(mLocatorContextWrapper.getContentResolver());
     }
 
@@ -435,15 +435,12 @@ public class FastPairManager {
     }
 
     private void registerFastPairScanChangeContentObserver(ContentResolver resolver) {
-        if (mFastPairScanChangeContentObserver != null) {
-            unregisterFastPairScanChangeContentObserver(resolver);
-        }
         mFastPairScanChangeContentObserver = new ContentObserver(ForegroundThread.getHandler()) {
             @Override
             public void onChange(boolean selfChange, Uri uri) {
                 super.onChange(selfChange, uri);
                 setScanEnabled(
-                        NearbyManager.isFastPairScanEnabled(mLocatorContextWrapper.getContext()));
+                        NearbyManager.getFastPairScanEnabled(mLocatorContextWrapper.getContext()));
             }
         };
         try {
@@ -453,15 +450,6 @@ public class FastPairManager {
                     mFastPairScanChangeContentObserver);
         } catch (SecurityException e) {
             Log.e(TAG, "Failed to register content observer for fast pair scan.", e);
-        }
-    }
-
-    private void unregisterFastPairScanChangeContentObserver(ContentResolver resolver) {
-        try {
-            resolver.unregisterContentObserver(mFastPairScanChangeContentObserver);
-            mFastPairScanChangeContentObserver = null;
-        } catch (SecurityException | NullPointerException | IllegalArgumentException e) {
-            Log.w(TAG, "Failed to unregister FastPairScanChange content observer.", e);
         }
     }
 

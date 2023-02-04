@@ -169,9 +169,9 @@ public class NearbyManagerTest {
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void setFastPairScanEnabled() {
         mNearbyManager.setFastPairScanEnabled(mContext, true);
-        assertThat(mNearbyManager.isFastPairScanEnabled(mContext)).isTrue();
+        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isTrue();
         mNearbyManager.setFastPairScanEnabled(mContext, false);
-        assertThat(mNearbyManager.isFastPairScanEnabled(mContext)).isFalse();
+        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isFalse();
     }
 
     @Test
