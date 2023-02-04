@@ -272,16 +272,16 @@ public class NearbyManager {
     }
 
     /**
-     * Query if offload scan is available in a device. The query is asynchronous and
-     * result is called back in {@link Consumer}, which is set to true if offload is supported.
+     * Query offload capability in a device. The query is asynchronous and result is called back
+     * in {@link Consumer}, which is set to true if offload is supported.
      *
      * @param executor the callback will take place on this {@link Executor}
-     * @param callback the callback invoked with {@code true} if offload is supported
+     * @param callback the callback invoked with {@link OffloadCapability}
      */
-    public void queryOffloadScanSupport(@NonNull @CallbackExecutor Executor executor,
-            @NonNull Consumer<Boolean> callback) {
+    public void queryOffloadCapability(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<OffloadCapability> callback) {
         try {
-            mService.queryOffloadScanSupport(new OffloadTransport(executor, callback));
+            mService.queryOffloadCapability(new OffloadTransport(executor, callback));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -321,9 +321,9 @@ public class NearbyManager {
 
         private final Executor mExecutor;
         // Null when cancelled
-        volatile @Nullable Consumer<Boolean> mConsumer;
+        volatile @Nullable Consumer<OffloadCapability> mConsumer;
 
-        OffloadTransport(Executor executor, Consumer<Boolean> consumer) {
+        OffloadTransport(Executor executor, Consumer<OffloadCapability> consumer) {
             Preconditions.checkArgument(executor != null, "illegal null executor");
             Preconditions.checkArgument(consumer != null, "illegal null consumer");
             mExecutor = executor;
@@ -331,10 +331,10 @@ public class NearbyManager {
         }
 
         @Override
-        public void onQueryComplete(boolean isOffloadSupported) {
+        public void onQueryComplete(OffloadCapability capability) {
             mExecutor.execute(() -> {
                 if (mConsumer != null) {
-                    mConsumer.accept(isOffloadSupported);
+                    mConsumer.accept(capability);
                 }
             });
         }

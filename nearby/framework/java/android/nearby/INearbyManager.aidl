@@ -39,5 +39,5 @@ interface INearbyManager {
 
     void stopBroadcast(in IBroadcastListener callback, String packageName, @nullable String attributionTag);
 
-    void queryOffloadScanSupport(in IOffloadCallback callback) ;
+    void queryOffloadCapability(in IOffloadCallback callback) ;
 }
