@@ -130,10 +130,17 @@ class NetworkTemplateTest {
                 mockContext, buildWifiNetworkState(null, TEST_WIFI_KEY1), true, 0)
         val identWifiImsi1Key1 = buildNetworkIdentity(
                 mockContext, buildWifiNetworkState(TEST_IMSI1, TEST_WIFI_KEY1), true, 0)
+        // This identity with a null wifiNetworkKey is to test matchesWifiNetworkKey won't crash
+        // the system when a null wifiNetworkKey is provided, which happens because of a bug in wifi
+        // and it should still match the wifi wildcard template. See b/266598304.
+        val identWifiNullKey = buildNetworkIdentity(
+                mockContext, buildWifiNetworkState(null /* subscriberId */,
+                null /* wifiNetworkKey */), true, 0)
 
         templateWifiWildcard.assertDoesNotMatch(identMobileImsi1)
         templateWifiWildcard.assertMatches(identWifiImsiNullKey1)
         templateWifiWildcard.assertMatches(identWifiImsi1Key1)
+        templateWifiWildcard.assertMatches(identWifiNullKey)
     }
 
     @Test
@@ -148,6 +155,9 @@ class NetworkTemplateTest {
                 .setWifiNetworkKeys(setOf(TEST_WIFI_KEY1)).build()
         val templateWifiKeyAllImsi1 = NetworkTemplate.Builder(MATCH_WIFI)
                 .setSubscriberIds(setOf(TEST_IMSI1)).build()
+        val templateNullWifiKey = NetworkTemplate(MATCH_WIFI,
+                emptyArray<String>() /* subscriberIds */, arrayOf(null) /* wifiNetworkKeys */,
+                METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL)
 
         val identMobile1 = buildNetworkIdentity(mockContext, buildMobileNetworkState(TEST_IMSI1),
                 false, TelephonyManager.NETWORK_TYPE_UMTS)
@@ -159,6 +169,12 @@ class NetworkTemplateTest {
                 mockContext, buildWifiNetworkState(TEST_IMSI2, TEST_WIFI_KEY1), true, 0)
         val identWifiImsi1Key2 = buildNetworkIdentity(
                 mockContext, buildWifiNetworkState(TEST_IMSI1, TEST_WIFI_KEY2), true, 0)
+        // This identity with a null wifiNetworkKey is to test the matchesWifiNetworkKey won't crash
+        // the system when a null wifiNetworkKey is provided, which would happen in some unknown
+        // cases, see b/266598304.
+        val identWifiNullKey = buildNetworkIdentity(
+                mockContext, buildWifiNetworkState(null /* subscriberId */,
+                null /* wifiNetworkKey */), true, 0)
 
         // Verify that template with WiFi Network Key only matches any subscriberId and
         // specific WiFi Network Key.
@@ -191,6 +207,12 @@ class NetworkTemplateTest {
         templateWifiKeyAllImsi1.assertMatches(identWifiImsi1Key1)
         templateWifiKeyAllImsi1.assertDoesNotMatch(identWifiImsi2Key1)
         templateWifiKeyAllImsi1.assertMatches(identWifiImsi1Key2)
+
+        // Test a network identity with null wifiNetworkKey won't crash.
+        // It should not match a template with wifiNetworkKeys is non-null.
+        // Also, it should not match a template with wifiNetworkKeys that contains null.
+        templateWifiKey1.assertDoesNotMatch(identWifiNullKey)
+        templateNullWifiKey.assertDoesNotMatch(identWifiNullKey)
     }
 
     @Test
