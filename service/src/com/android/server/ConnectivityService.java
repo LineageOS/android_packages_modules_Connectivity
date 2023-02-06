@@ -5550,7 +5550,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 }
                 case NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE: {
-                    final AutomaticOnOffKeepalive ki = (AutomaticOnOffKeepalive) msg.obj;
+                    final AutomaticOnOffKeepalive ki =
+                            mKeepaliveTracker.getKeepaliveForBinder((IBinder) msg.obj);
+                    if (null == ki) return; // The callback was unregistered before the alarm fired
 
                     final Network network = ki.getNetwork();
                     boolean networkFound = false;
