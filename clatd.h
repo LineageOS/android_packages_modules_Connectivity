@@ -47,7 +47,7 @@ struct tun_data;
 // logcat_hexdump() maximum binary data length
 #define MAXDUMPLEN PACKETLEN
 
-#define CLATD_VERSION "1.5"
+#define CLATD_VERSION "1.6"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
