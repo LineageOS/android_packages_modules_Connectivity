@@ -53,6 +53,7 @@ import static android.system.OsConstants.IPPROTO_UDP;
 
 import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
 import static com.android.compatibility.common.util.PropertyUtil.getVendorApiLevel;
+import static com.android.testutils.DeviceInfoUtils.isKernelVersionAtLeast;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
@@ -77,6 +78,7 @@ import android.system.OsConstants;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
@@ -362,6 +364,12 @@ public class IpSecManagerTest extends IpSecBaseTest {
         });
     }
 
+    private void assumeExperimentalIpv6UdpEncapSupported() throws Exception {
+        assumeTrue("Not supported before U", SdkLevel.isAtLeastU());
+        assumeTrue("Not supported by kernel", isKernelVersionAtLeast("5.15.31")
+                || (isKernelVersionAtLeast("5.10.108") && !isKernelVersionAtLeast("5.15.0")));
+    }
+
     @Test
     public void testCreateTransformIpv4() throws Exception {
         doTestCreateTransform(IPV4_LOOPBACK, false);
@@ -375,6 +383,12 @@ public class IpSecManagerTest extends IpSecBaseTest {
     @Test
     public void testCreateTransformIpv4Encap() throws Exception {
         doTestCreateTransform(IPV4_LOOPBACK, true);
+    }
+
+    @Test
+    public void testCreateTransformIpv6Encap() throws Exception {
+        assumeExperimentalIpv6UdpEncapSupported();
+        doTestCreateTransform(IPV6_LOOPBACK, true);
     }
 
     /** Snapshot of TrafficStats as of initStatsChecker call for later comparisons */
