@@ -402,6 +402,9 @@ package android.nearby {
     method public void onUpdated(@NonNull android.nearby.NearbyDevice);
     field public static final int ERROR_UNKNOWN = 0; // 0x0
     field public static final int ERROR_UNSUPPORTED = 1; // 0x1
+    field public static final int INVALID_ARGUMENT = 2; // 0x2
+    field public static final int PERMISSION_DENIED = 3; // 0x3
+    field public static final int RESOURCE_EXHAUSTED = 4; // 0x4
   }
 
   public abstract class ScanFilter {
