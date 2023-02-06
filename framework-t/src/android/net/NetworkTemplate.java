@@ -383,8 +383,9 @@ public final class NetworkTemplate implements Parcelable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(mMatchRule, Arrays.hashCode(mMatchWifiNetworkKeys),
-                mMetered, mRoaming, mDefaultNetwork, mRatType, mOemManaged);
+        return Objects.hash(mMatchRule, Arrays.hashCode(mMatchSubscriberIds),
+                Arrays.hashCode(mMatchWifiNetworkKeys), mMetered, mRoaming, mDefaultNetwork,
+                mRatType, mOemManaged);
     }
 
     @Override
@@ -397,6 +398,7 @@ public final class NetworkTemplate implements Parcelable {
                     && mDefaultNetwork == other.mDefaultNetwork
                     && mRatType == other.mRatType
                     && mOemManaged == other.mOemManaged
+                    && Arrays.equals(mMatchSubscriberIds, other.mMatchSubscriberIds)
                     && Arrays.equals(mMatchWifiNetworkKeys, other.mMatchWifiNetworkKeys);
         }
         return false;

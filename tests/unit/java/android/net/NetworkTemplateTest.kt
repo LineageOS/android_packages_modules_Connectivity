@@ -443,6 +443,35 @@ class NetworkTemplateTest {
     }
 
     @Test
+    fun testEquals() {
+        val templateImsi1 = NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES)
+                .setSubscriberIds(setOf(TEST_IMSI1)).setRatType(TelephonyManager.NETWORK_TYPE_UMTS)
+                .build()
+        val dupTemplateImsi1 = NetworkTemplate(MATCH_MOBILE, arrayOf(TEST_IMSI1),
+                emptyArray<String>(), METERED_YES, ROAMING_ALL, DEFAULT_NETWORK_ALL,
+                TelephonyManager.NETWORK_TYPE_UMTS, OEM_MANAGED_ALL)
+        val templateImsi2 = NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES)
+                .setSubscriberIds(setOf(TEST_IMSI2)).setRatType(TelephonyManager.NETWORK_TYPE_UMTS)
+                .build()
+
+        assertEquals(templateImsi1, dupTemplateImsi1)
+        assertEquals(dupTemplateImsi1, templateImsi1)
+        assertNotEquals(templateImsi1, templateImsi2)
+
+        val templateWifiKey1 = NetworkTemplate.Builder(MATCH_WIFI)
+                .setWifiNetworkKeys(setOf(TEST_WIFI_KEY1)).build()
+        val dupTemplateWifiKey1 = NetworkTemplate(MATCH_WIFI, emptyArray<String>(),
+                arrayOf(TEST_WIFI_KEY1), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL,
+                NETWORK_TYPE_ALL, OEM_MANAGED_ALL)
+        val templateWifiKey2 = NetworkTemplate.Builder(MATCH_WIFI)
+                .setWifiNetworkKeys(setOf(TEST_WIFI_KEY2)).build()
+
+        assertEquals(templateWifiKey1, dupTemplateWifiKey1)
+        assertEquals(dupTemplateWifiKey1, templateWifiKey1)
+        assertNotEquals(templateWifiKey1, templateWifiKey2)
+    }
+
+    @Test
     fun testParcelUnparcel() {
         val templateMobile = NetworkTemplate(MATCH_MOBILE, arrayOf(TEST_IMSI1),
                 emptyArray<String>(), METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL,
