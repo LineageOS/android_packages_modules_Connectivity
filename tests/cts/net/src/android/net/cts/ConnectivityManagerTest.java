@@ -1140,11 +1140,8 @@ public class ConnectivityManagerTest {
                 .setPackage(mContext.getPackageName());
         // While ConnectivityService would put extra info such as network or request id before
         // broadcasting the inner intent. The MUTABLE flag needs to be added accordingly.
-        // TODO: replace with PendingIntent.FLAG_MUTABLE when this code compiles against S+ or
-        //  shims.
-        final int pendingIntentFlagMutable = 1 << 25;
         final PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0 /*requestCode*/,
-                intent, PendingIntent.FLAG_CANCEL_CURRENT | pendingIntentFlagMutable);
+                intent, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_MUTABLE);
 
         // We will register for a WIFI network being available or lost.
         mCm.registerNetworkCallback(makeWifiNetworkRequest(), pendingIntent);
@@ -1184,15 +1181,13 @@ public class ConnectivityManagerTest {
         // Avoid receiving broadcasts from other runs by appending a timestamp
         final String broadcastAction = NETWORK_CALLBACK_ACTION + System.currentTimeMillis();
         try {
-            // TODO: replace with PendingIntent.FLAG_MUTABLE when this code compiles against S+
             // Intent is mutable to receive EXTRA_NETWORK_REQUEST from ConnectivityService
-            final int pendingIntentFlagMutable = 1 << 25;
             final String extraBoolKey = "extra_bool";
             firstIntent = PendingIntent.getBroadcast(mContext,
                     0 /* requestCode */,
                     new Intent(broadcastAction).putExtra(extraBoolKey, false)
                             .setPackage(mContext.getPackageName()),
-                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
 
             if (useListen) {
                 mCm.registerNetworkCallback(firstRequest, firstIntent);
@@ -1206,7 +1201,7 @@ public class ConnectivityManagerTest {
                     0 /* requestCode */,
                     new Intent(broadcastAction).putExtra(extraBoolKey, true)
                             .setPackage(mContext.getPackageName()),
-                    PendingIntent.FLAG_UPDATE_CURRENT | pendingIntentFlagMutable);
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
 
             // Because secondIntent.intentFilterEquals the first, the request should be replaced
             if (useListen) {
