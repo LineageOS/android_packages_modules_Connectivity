@@ -65,24 +65,6 @@ import java.util.StringJoiner;
  * bandwidth. Similarly if an application needs an unmetered network for a bulk
  * transfer it can specify that rather than assuming all cellular based
  * connections are metered and all Wi-Fi based connections are not.
- *
- * <p> Starting from Android 14, if the developer wants the application to call
- * {@link android.net.ConnectivityManager#requestNetwork} with some specific capabilities, the
- * developer has to explicitly add the
- * {@link android.content.pm.PackageManager#PROPERTY_SELF_CERTIFIED_NETWORK_CAPABILITIES}
- * property in the AndroidManifest.xml, which points to a self_certified_network_capabilities.xml
- * resource file. In self_certified_network_capabilities.xml, it declares what kind of
- * network capabilities the application wants to have.
- *
- * Here is an example self_certified_network_capabilities.xml:
- * <pre>
- *  {@code
- *  <network-capabilities-declaration xmlns:android="http://schemas.android.com/apk/res/android">
- *     <uses-network-capability android:name="NET_CAPABILITY_PRIORITIZE_LATENCY"/>
- *     <uses-network-capability android:name="NET_CAPABILITY_PRIORITIZE_BANDWIDTH"/>
- * </network-capabilities-declaration>
- *  }
- *  </pre>
  */
 public final class NetworkCapabilities implements Parcelable {
     private static final String TAG = "NetworkCapabilities";
@@ -640,17 +622,11 @@ public final class NetworkCapabilities implements Parcelable {
 
     /**
      * Indicates that this network should be able to prioritize latency for the internet.
-     *
-     * <p> Starting from Android 14, user must explicitly declare they want to use this
-     * capability in app. Please refer to {@link NetworkCapabilities} for more details.
      */
     public static final int NET_CAPABILITY_PRIORITIZE_LATENCY = 34;
 
     /**
      * Indicates that this network should be able to prioritize bandwidth for the internet.
-     *
-     * <p> Starting from Android 14, user must explicitly declare they want to use this
-     * capability in app. Please refer to {@link NetworkCapabilities} for more details.
      */
     public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
 
