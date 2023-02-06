@@ -124,7 +124,7 @@ public class IpSecManagerTest extends IpSecBaseTest {
     @Test
     public void testAllocSpi() throws Exception {
         for (InetAddress addr : GOOGLE_DNS_LIST) {
-            SecurityParameterIndex randomSpi = null, droidSpi = null;
+            SecurityParameterIndex randomSpi, droidSpi;
             randomSpi = mISM.allocateSecurityParameterIndex(addr);
             assertTrue(
                     "Failed to receive a valid SPI",
