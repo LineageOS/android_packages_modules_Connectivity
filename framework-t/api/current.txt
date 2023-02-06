@@ -228,8 +228,8 @@ package android.net.nsd {
   }
 
   public static interface NsdManager.ResolveListener {
+    method public default void onResolutionStopped(@NonNull android.net.nsd.NsdServiceInfo);
     method public void onResolveFailed(android.net.nsd.NsdServiceInfo, int);
-    method public default void onResolveStopped(@NonNull android.net.nsd.NsdServiceInfo);
     method public void onServiceResolved(android.net.nsd.NsdServiceInfo);
     method public default void onStopResolutionFailed(@NonNull android.net.nsd.NsdServiceInfo, int);
   }
