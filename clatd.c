@@ -78,8 +78,19 @@ int ipv6_address_changed(const char *interface) {
 
 // reads L3 IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
 void process_packet_6_to_4(struct tun_data *tunnel) {
+  char cmsg_buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
   uint8_t buf[MAXMTU];
-  ssize_t readlen = read(tunnel->read_fd6, buf, MAXMTU);
+  struct iovec iov = {
+    .iov_base = buf,
+    .iov_len = MAXMTU,
+  };
+  struct msghdr msgh = {
+    .msg_iov = &iov,
+    .msg_iovlen = 1,
+    .msg_control = cmsg_buf,
+    .msg_controllen = sizeof(cmsg_buf),
+  };
+  ssize_t readlen = recvmsg(tunnel->read_fd6, &msgh, /*flags*/ 0);
 
   if (readlen < 0) {
     if (errno != EAGAIN) {
@@ -93,6 +104,21 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
   } else if (readlen >= MAXMTU) {
     logmsg(ANDROID_LOG_WARN, "%s: read truncation - ignoring pkt", __func__);
     return;
+  }
+
+  __u32 tp_status = 0;
+
+  for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msgh); cmsg != NULL; cmsg = CMSG_NXTHDR(&msgh,cmsg)) {
+    if (cmsg->cmsg_level == SOL_PACKET && cmsg->cmsg_type == PACKET_AUXDATA) {
+      struct tpacket_auxdata *aux = (struct tpacket_auxdata *)CMSG_DATA(cmsg);
+      tp_status = aux->tp_status;
+      break;
+    }
+  }
+
+  // This will detect a skb->ip_summed == CHECKSUM_PARTIAL packet with non-final L4 checksum
+  if (tp_status & TP_STATUS_CSUMNOTREADY) {
+    logmsg(ANDROID_LOG_WARN, "read_packet checksum not ready");
   }
 
   translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf, readlen);
