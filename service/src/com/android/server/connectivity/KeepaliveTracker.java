@@ -125,8 +125,9 @@ public class KeepaliveTracker {
      * which is only returned when the hardware has successfully started the keepalive.
      */
     class KeepaliveInfo implements IBinder.DeathRecipient {
-        // Bookkeeping data.
+        // TODO : remove this member. Only AutoOnOffKeepalive should have a reference to this.
         public final ISocketKeepaliveCallback mCallback;
+        // Bookkeeping data.
         private final int mUid;
         private final int mPid;
         private final boolean mPrivileged;
