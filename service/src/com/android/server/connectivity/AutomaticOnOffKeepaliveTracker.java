@@ -96,6 +96,7 @@ public class AutomaticOnOffKeepaliveTracker {
             "com.android.server.connectivity.KeepaliveTracker.TCP_POLLING_ALARM";
     private static final String EXTRA_BINDER_TOKEN = "token";
     private static final long DEFAULT_TCP_POLLING_INTERVAL_MS = 120_000L;
+    private static final long LOW_TCP_POLLING_INTERVAL_MS = 1_000L;
     private static final String AUTOMATIC_ON_OFF_KEEPALIVE_VERSION =
             "automatic_on_off_keepalive_version";
     /**
@@ -154,6 +155,8 @@ public class AutomaticOnOffKeepaliveTracker {
      * This should be only updated in ConnectivityService handler thread.
      */
     private final ArrayList<AutomaticOnOffKeepalive> mAutomaticOnOffKeepalives = new ArrayList<>();
+    // TODO: Remove this when TCP polling design is replaced with callback.
+    private long mTestLowTcpPollingTimerUntilMs = 0;
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -242,6 +245,13 @@ public class AutomaticOnOffKeepaliveTracker {
         public void binderDied() {
             mConnectivityServiceHandler.post(() -> cleanupAutoOnOffKeepalive(this));
         }
+
+        /** Close this automatic on/off keepalive */
+        public void close() {
+            // Close the duplicated fd that maintains the lifecycle of socket. If this fd was
+            // not duplicated this is a no-op.
+            FileUtils.closeQuietly(mFd);
+        }
     }
 
     public AutomaticOnOffKeepaliveTracker(@NonNull Context context, @NonNull Handler handler) {
@@ -267,7 +277,7 @@ public class AutomaticOnOffKeepaliveTracker {
 
     private void startTcpPollingAlarm(@NonNull PendingIntent alarm) {
         final long triggerAtMillis =
-                SystemClock.elapsedRealtime() + DEFAULT_TCP_POLLING_INTERVAL_MS;
+                SystemClock.elapsedRealtime() + getTcpPollingInterval();
         // Setup a non-wake up alarm.
         mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME, triggerAtMillis, alarm);
     }
@@ -417,9 +427,7 @@ public class AutomaticOnOffKeepaliveTracker {
 
     private void cleanupAutoOnOffKeepalive(@NonNull final AutomaticOnOffKeepalive autoKi) {
         ensureRunningOnHandlerThread();
-        // Close the duplicated fd that maintains the lifecycle of socket. If this fd was
-        // not duplicated this is a no-op.
-        FileUtils.closeQuietly(autoKi.mFd);
+        autoKi.close();
         if (null != autoKi.mTcpPollingAlarm) mAlarmManager.cancel(autoKi.mTcpPollingAlarm);
 
         // If the KI is not in the array, it's because it was already removed, or it was never
@@ -638,6 +646,20 @@ public class AutomaticOnOffKeepaliveTracker {
             throw new IllegalStateException(
                     "Not running on handler thread: " + Thread.currentThread().getName());
         }
+    }
+
+    private long getTcpPollingInterval() {
+        final boolean useLowTimer = mTestLowTcpPollingTimerUntilMs > System.currentTimeMillis();
+        return useLowTimer ? LOW_TCP_POLLING_INTERVAL_MS : DEFAULT_TCP_POLLING_INTERVAL_MS;
+    }
+
+    /**
+     * Temporarily use low TCP polling timer for testing.
+     * The value works when the time set is more than {@link System.currentTimeMillis()}.
+     */
+    public void handleSetTestLowTcpPollingTimer(long timeMs) {
+        Log.d(TAG, "handleSetTestLowTcpPollingTimer: " + timeMs);
+        mTestLowTcpPollingTimerUntilMs = timeMs;
     }
 
     /**

@@ -1502,6 +1502,22 @@ public class ConnectivityManager {
     }
 
     /**
+     * Temporarily set automaticOnOff keeplaive TCP polling alarm timer to 1 second.
+     *
+     * TODO: Remove this when the TCP polling design is replaced with callback.
+     * @params timeMs The time of expiry, with System.currentTimeMillis() base. The value should be
+     *                set no more than 5 minutes in the future.
+     * @hide
+     */
+    public void setTestLowTcpPollingTimerForKeepalive(long timeMs) {
+        try {
+            mService.setTestLowTcpPollingTimerForKeepalive(timeMs);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Informs ConnectivityService of whether the legacy lockdown VPN, as implemented by
      * LockdownVpnTracker, is in use. This is deprecated for new devices starting from Android 12
      * but is still supported for backwards compatibility.
