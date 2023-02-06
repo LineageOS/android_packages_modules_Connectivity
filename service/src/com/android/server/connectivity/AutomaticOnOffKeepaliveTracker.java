@@ -45,6 +45,7 @@ import android.net.MarkMaskParcel;
 import android.net.Network;
 import android.net.NetworkAgent;
 import android.net.SocketKeepalive.InvalidSocketException;
+import android.os.Bundle;
 import android.os.FileUtils;
 import android.os.Handler;
 import android.os.IBinder;
@@ -60,6 +61,7 @@ import android.util.SparseArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.BinderUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.HexDump;
@@ -92,8 +94,7 @@ public class AutomaticOnOffKeepaliveTracker {
     private static final int[] ADDRESS_FAMILIES = new int[] {AF_INET6, AF_INET};
     private static final String ACTION_TCP_POLLING_ALARM =
             "com.android.server.connectivity.KeepaliveTracker.TCP_POLLING_ALARM";
-    private static final String EXTRA_NETWORK = "network_id";
-    private static final String EXTRA_SLOT = "slot";
+    private static final String EXTRA_BINDER_TOKEN = "token";
     private static final long DEFAULT_TCP_POLLING_INTERVAL_MS = 120_000L;
     private static final String AUTOMATIC_ON_OFF_KEEPALIVE_VERSION =
             "automatic_on_off_keepalive_version";
@@ -159,11 +160,10 @@ public class AutomaticOnOffKeepaliveTracker {
         public void onReceive(Context context, Intent intent) {
             if (ACTION_TCP_POLLING_ALARM.equals(intent.getAction())) {
                 Log.d(TAG, "Received TCP polling intent");
-                final Network network = intent.getParcelableExtra(EXTRA_NETWORK);
-                final int slot = intent.getIntExtra(EXTRA_SLOT, -1);
+                final IBinder token = intent.getBundleExtra(EXTRA_BINDER_TOKEN).getBinder(
+                        EXTRA_BINDER_TOKEN);
                 mConnectivityServiceHandler.obtainMessage(
-                        NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE,
-                        slot, 0 , network).sendToTarget();
+                        NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE, token).sendToTarget();
             }
         }
     };
@@ -183,6 +183,8 @@ public class AutomaticOnOffKeepaliveTracker {
     public class AutomaticOnOffKeepalive {
         @NonNull
         private final KeepaliveTracker.KeepaliveInfo mKi;
+        @NonNull
+        private final ISocketKeepaliveCallback mCallback;
         @Nullable
         private final FileDescriptor mFd;
         @Nullable
@@ -193,6 +195,7 @@ public class AutomaticOnOffKeepaliveTracker {
         AutomaticOnOffKeepalive(@NonNull final KeepaliveTracker.KeepaliveInfo ki,
                 final boolean autoOnOff, @NonNull Context context) throws InvalidSocketException {
             this.mKi = Objects.requireNonNull(ki);
+            mCallback = ki.mCallback;
             if (autoOnOff && mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION)) {
                 mAutomaticOnOffState = STATE_ENABLED;
                 if (null == ki.mFd) {
@@ -205,8 +208,7 @@ public class AutomaticOnOffKeepaliveTracker {
                     Log.e(TAG, "Cannot dup fd: ", e);
                     throw new InvalidSocketException(ERROR_INVALID_SOCKET, e);
                 }
-                mTcpPollingAlarm = createTcpPollingAlarmIntent(
-                        context, ki.getNai().network(), ki.getSlot());
+                mTcpPollingAlarm = createTcpPollingAlarmIntent(context, mCallback.asBinder());
             } else {
                 mAutomaticOnOffState = STATE_ALWAYS_ON;
                 // A null fd is acceptable in KeepaliveInfo for backward compatibility of
@@ -226,12 +228,14 @@ public class AutomaticOnOffKeepaliveTracker {
         }
 
         private PendingIntent createTcpPollingAlarmIntent(@NonNull Context context,
-                @NonNull Network network, int slot) {
+                @NonNull IBinder token) {
             final Intent intent = new Intent(ACTION_TCP_POLLING_ALARM);
-            intent.putExtra(EXTRA_NETWORK, network);
-            intent.putExtra(EXTRA_SLOT, slot);
-            return PendingIntent.getBroadcast(
-                    context, 0 /* requestCode */, intent, PendingIntent.FLAG_IMMUTABLE);
+            // Intent doesn't expose methods to put extra Binders, but Bundle does.
+            final Bundle b = new Bundle();
+            b.putBinder(EXTRA_BINDER_TOKEN, token);
+            intent.putExtra(EXTRA_BINDER_TOKEN, b);
+            return BinderUtils.withCleanCallingIdentity(() -> PendingIntent.getBroadcast(
+                    context, 0 /* requestCode */, intent, PendingIntent.FLAG_IMMUTABLE));
         }
     }
 
@@ -318,13 +322,14 @@ public class AutomaticOnOffKeepaliveTracker {
             newKi = autoKi.mKi.withFd(autoKi.mFd);
         } catch (InvalidSocketException | IllegalArgumentException | SecurityException e) {
             Log.e(TAG, "Fail to construct keepalive", e);
-            mKeepaliveTracker.notifyErrorCallback(autoKi.mKi.mCallback, ERROR_INVALID_SOCKET);
+            mKeepaliveTracker.notifyErrorCallback(autoKi.mCallback, ERROR_INVALID_SOCKET);
             return;
         }
         autoKi.mAutomaticOnOffState = STATE_ENABLED;
         handleResumeKeepalive(newKi);
     }
 
+    // TODO : this method should be removed ; the keepalives should always be indexed by callback
     private int findAutomaticOnOffKeepaliveIndex(@NonNull Network network, int slot) {
         ensureRunningOnHandlerThread();
 
@@ -338,6 +343,7 @@ public class AutomaticOnOffKeepaliveTracker {
         return -1;
     }
 
+    // TODO : this method should be removed ; the keepalives should always be indexed by callback
     @Nullable
     private AutomaticOnOffKeepalive findAutomaticOnOffKeepalive(@NonNull Network network,
             int slot) {
@@ -345,6 +351,18 @@ public class AutomaticOnOffKeepaliveTracker {
 
         final int index = findAutomaticOnOffKeepaliveIndex(network, slot);
         return (index >= 0) ? mAutomaticOnOffKeepalives.get(index) : null;
+    }
+
+    /**
+     * Find the AutomaticOnOffKeepalive associated with a given callback.
+     * @return the keepalive associated with this callback, or null if none
+     */
+    @Nullable
+    public AutomaticOnOffKeepalive getKeepaliveForBinder(@NonNull final IBinder token) {
+        ensureRunningOnHandlerThread();
+
+        return CollectionUtils.findFirst(mAutomaticOnOffKeepalives,
+                it -> it.mCallback.asBinder().equals(token));
     }
 
     /**
