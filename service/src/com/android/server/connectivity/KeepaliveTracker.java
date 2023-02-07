@@ -589,9 +589,9 @@ public class KeepaliveTracker {
                 Log.d(TAG, "Started keepalive " + slot + " on " + nai.toShortString());
                 ki.mStartedState = KeepaliveInfo.STARTED;
                 try {
-                    ki.mCallback.onStarted(slot);
+                    ki.mCallback.onStarted();
                 } catch (RemoteException e) {
-                    Log.w(TAG, "Discarded onStarted(" + slot + ") callback");
+                    Log.w(TAG, "Discarded onStarted callback");
                 }
             } else {
                 Log.d(TAG, "Failed to start keepalive " + slot + " on " + nai.toShortString()
