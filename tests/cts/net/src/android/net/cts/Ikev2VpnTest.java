@@ -529,11 +529,10 @@ public class Ikev2VpnTest {
             assertFalse(profileState.isLockdownEnabled());
         }
 
-        cb.expectCapabilitiesThat(vpnNetwork, TIMEOUT_MS,
-                caps -> caps.hasTransport(TRANSPORT_VPN)
-                && caps.hasCapability(NET_CAPABILITY_INTERNET)
-                && !caps.hasCapability(NET_CAPABILITY_VALIDATED)
-                && Process.myUid() == caps.getOwnerUid());
+        cb.expectCaps(vpnNetwork, TIMEOUT_MS, c -> c.hasTransport(TRANSPORT_VPN)
+                && c.hasCapability(NET_CAPABILITY_INTERNET)
+                && !c.hasCapability(NET_CAPABILITY_VALIDATED)
+                && Process.myUid() == c.getOwnerUid());
         cb.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, vpnNetwork);
         cb.expect(CallbackEntry.BLOCKED_STATUS, vpnNetwork);
 
