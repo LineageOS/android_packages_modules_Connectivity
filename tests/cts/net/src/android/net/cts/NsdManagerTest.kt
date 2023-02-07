@@ -41,7 +41,7 @@ import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.Se
 import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.ServiceUnregistered
 import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.UnregistrationFailed
 import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ResolveFailed
-import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ResolveStopped
+import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ResolutionStopped
 import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ServiceResolved
 import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.StopResolutionFailed
 import android.net.cts.NsdManagerTest.NsdServiceInfoCallbackRecord.ServiceInfoCallbackEvent.RegisterCallbackFailed
@@ -273,7 +273,7 @@ class NsdManagerTest {
                     ResolveEvent()
 
             data class ServiceResolved(val serviceInfo: NsdServiceInfo) : ResolveEvent()
-            data class ResolveStopped(val serviceInfo: NsdServiceInfo) : ResolveEvent()
+            data class ResolutionStopped(val serviceInfo: NsdServiceInfo) : ResolveEvent()
             data class StopResolutionFailed(val serviceInfo: NsdServiceInfo, val errorCode: Int) :
                     ResolveEvent()
         }
@@ -286,8 +286,8 @@ class NsdManagerTest {
             add(ServiceResolved(si))
         }
 
-        override fun onResolveStopped(si: NsdServiceInfo) {
-            add(ResolveStopped(si))
+        override fun onResolutionStopped(si: NsdServiceInfo) {
+            add(ResolutionStopped(si))
         }
 
         override fun onStopResolutionFailed(si: NsdServiceInfo, err: Int) {
@@ -798,10 +798,10 @@ class NsdManagerTest {
 
         val resolveRecord = NsdResolveRecord()
         // Try to resolve an unknown service then stop it immediately.
-        // Expected ResolveStopped callback.
+        // Expected ResolutionStopped callback.
         nsdShim.resolveService(nsdManager, si, { it.run() }, resolveRecord)
         nsdShim.stopServiceResolution(nsdManager, resolveRecord)
-        val stoppedCb = resolveRecord.expectCallback<ResolveStopped>()
+        val stoppedCb = resolveRecord.expectCallback<ResolutionStopped>()
         assertEquals(si.serviceName, stoppedCb.serviceInfo.serviceName)
         assertEquals(si.serviceType, stoppedCb.serviceInfo.serviceType)
     }

@@ -767,18 +767,18 @@ public final class NsdManager {
          * Called on the internal thread or with an executor passed to
          * {@link NsdManager#resolveService} to report the resolution was stopped.
          *
-         * A stop resolution operation would call either onResolveStopped or onStopResolutionFailed
-         * once based on the result.
+         * A stop resolution operation would call either onResolutionStopped or
+         * onStopResolutionFailed once based on the result.
          */
-        default void onResolveStopped(@NonNull NsdServiceInfo serviceInfo) { }
+        default void onResolutionStopped(@NonNull NsdServiceInfo serviceInfo) { }
 
         /**
          * Called once on the internal thread or with an executor passed to
          * {@link NsdManager#resolveService} to report that stopping resolution failed with an
          * error.
          *
-         * A stop resolution operation would call either onResolveStopped or onStopResolutionFailed
-         * once based on the result.
+         * A stop resolution operation would call either onResolutionStopped or
+         * onStopResolutionFailed once based on the result.
          */
         default void onStopResolutionFailed(@NonNull NsdServiceInfo serviceInfo,
                 @StopOperationFailureCode int errorCode) { }
@@ -929,7 +929,7 @@ public final class NsdManager {
                     break;
                 case STOP_RESOLUTION_SUCCEEDED:
                     removeListener(key);
-                    executor.execute(() -> ((ResolveListener) listener).onResolveStopped(
+                    executor.execute(() -> ((ResolveListener) listener).onResolutionStopped(
                             ns));
                     break;
                 case REGISTER_SERVICE_CALLBACK_FAILED:
@@ -1301,7 +1301,7 @@ public final class NsdManager {
     /**
      * Stop service resolution initiated with {@link #resolveService}.
      *
-     * A successful stop is notified with a call to {@link ResolveListener#onResolveStopped}.
+     * A successful stop is notified with a call to {@link ResolveListener#onResolutionStopped}.
      *
      * <p> Upon failure to stop service resolution for example if resolution is done or the
      * requester stops resolution repeatedly, the application is notified
