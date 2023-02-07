@@ -138,6 +138,7 @@ import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_OEM_PRIVA
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_UNINITIALIZED;
+import static android.net.Proxy.PROXY_CHANGE_ACTION;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
 import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.PREFIX_OPERATION_ADDED;
 import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.PREFIX_OPERATION_REMOVED;
@@ -2273,22 +2274,15 @@ public class ConnectivityServiceTest {
         }
     }
 
-    /** Expects that {@code count} CONNECTIVITY_ACTION broadcasts are received. */
-    private ExpectedBroadcast registerConnectivityBroadcast(final int count) {
-        return registerConnectivityBroadcastThat(count, intent -> true);
-    }
-
-    private ExpectedBroadcast registerConnectivityBroadcastThat(final int count,
+    private ExpectedBroadcast registerBroadcastReceiverThat(final String action, final int count,
             @NonNull final Predicate<Intent> filter) {
-        final IntentFilter intentFilter = new IntentFilter(CONNECTIVITY_ACTION);
+        final IntentFilter intentFilter = new IntentFilter(action);
         // AtomicReference allows receiver to access expected even though it is constructed later.
         final AtomicReference<ExpectedBroadcast> expectedRef = new AtomicReference<>();
         final BroadcastReceiver receiver = new BroadcastReceiver() {
             private int mRemaining = count;
             public void onReceive(Context context, Intent intent) {
-                final int type = intent.getIntExtra(EXTRA_NETWORK_TYPE, -1);
-                final NetworkInfo ni = intent.getParcelableExtra(EXTRA_NETWORK_INFO);
-                Log.d(TAG, "Received CONNECTIVITY_ACTION type=" + type + " ni=" + ni);
+                logIntent(intent);
                 if (!filter.test(intent)) return;
                 if (--mRemaining == 0) {
                     expectedRef.get().complete(intent);
@@ -2301,37 +2295,47 @@ public class ConnectivityServiceTest {
         return expected;
     }
 
+    private void logIntent(Intent intent) {
+        final String action = intent.getAction();
+        if (CONNECTIVITY_ACTION.equals(action)) {
+            final int type = intent.getIntExtra(EXTRA_NETWORK_TYPE, -1);
+            final NetworkInfo ni = intent.getParcelableExtra(EXTRA_NETWORK_INFO);
+            Log.d(TAG, "Received " + action + ", type=" + type + " ni=" + ni);
+        } else if (PROXY_CHANGE_ACTION.equals(action)) {
+            final ProxyInfo proxy = (ProxyInfo) intent.getExtra(
+                    Proxy.EXTRA_PROXY_INFO, ProxyInfo.buildPacProxy(Uri.EMPTY));
+            Log.d(TAG, "Received " + action + ", proxy = " + proxy);
+        } else {
+            throw new IllegalArgumentException("Unsupported logging " + action);
+        }
+    }
+
+    /** Expects that {@code count} CONNECTIVITY_ACTION broadcasts are received. */
+    private ExpectedBroadcast expectConnectivityAction(final int count) {
+        return registerBroadcastReceiverThat(CONNECTIVITY_ACTION, count, intent -> true);
+    }
+
+    private ExpectedBroadcast expectConnectivityAction(int type, NetworkInfo.DetailedState state) {
+        return registerBroadcastReceiverThat(CONNECTIVITY_ACTION, 1, intent -> {
+            final int actualType = intent.getIntExtra(EXTRA_NETWORK_TYPE, -1);
+            final NetworkInfo ni = intent.getParcelableExtra(EXTRA_NETWORK_INFO);
+            return type == actualType
+                    && state == ni.getDetailedState()
+                    && extraInfoInBroadcastHasExpectedNullness(ni);
+        });
+    }
+
+    /** Expects that PROXY_CHANGE_ACTION broadcast is received. */
+    private ExpectedBroadcast expectProxyChangeAction() {
+        return registerBroadcastReceiverThat(PROXY_CHANGE_ACTION, 1, intent -> true);
+    }
+
     private ExpectedBroadcast expectProxyChangeAction(ProxyInfo proxy) {
-        return registerPacProxyBroadcastThat(intent -> {
+        return registerBroadcastReceiverThat(PROXY_CHANGE_ACTION, 1, intent -> {
             final ProxyInfo actualProxy = (ProxyInfo) intent.getExtra(Proxy.EXTRA_PROXY_INFO,
                     ProxyInfo.buildPacProxy(Uri.EMPTY));
             return proxy.equals(actualProxy);
         });
-    }
-
-    private ExpectedBroadcast registerPacProxyBroadcast() {
-        return registerPacProxyBroadcastThat(intent -> true);
-    }
-
-    private ExpectedBroadcast registerPacProxyBroadcastThat(
-            @NonNull final Predicate<Intent> filter) {
-        final IntentFilter intentFilter = new IntentFilter(Proxy.PROXY_CHANGE_ACTION);
-        // AtomicReference allows receiver to access expected even though it is constructed later.
-        final AtomicReference<ExpectedBroadcast> expectedRef = new AtomicReference<>();
-        final BroadcastReceiver receiver = new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                final ProxyInfo proxy = (ProxyInfo) intent.getExtra(
-                            Proxy.EXTRA_PROXY_INFO, ProxyInfo.buildPacProxy(Uri.EMPTY));
-                Log.d(TAG, "Receive PROXY_CHANGE_ACTION, proxy = " + proxy);
-                if (filter.test(intent)) {
-                    expectedRef.get().complete(intent);
-                }
-            }
-        };
-        final ExpectedBroadcast expected = new ExpectedBroadcast(receiver);
-        expectedRef.set(expected);
-        mServiceContext.registerReceiver(receiver, intentFilter);
-        return expected;
     }
 
     private boolean extraInfoInBroadcastHasExpectedNullness(NetworkInfo ni) {
@@ -2347,16 +2351,6 @@ public class ConnectivityServiceTest {
         // a network switch, extraInfo will likely be populated.
         // This is likely a bug in CS, but likely not one we can fix without impacting apps.
         return true;
-    }
-
-    private ExpectedBroadcast expectConnectivityAction(int type, NetworkInfo.DetailedState state) {
-        return registerConnectivityBroadcastThat(1, intent -> {
-            final int actualType = intent.getIntExtra(EXTRA_NETWORK_TYPE, -1);
-            final NetworkInfo ni = intent.getParcelableExtra(EXTRA_NETWORK_INFO);
-            return type == actualType
-                    && state == ni.getDetailedState()
-                    && extraInfoInBroadcastHasExpectedNullness(ni);
-        });
     }
 
     @Test
@@ -2393,7 +2387,7 @@ public class ConnectivityServiceTest {
                 ConnectivityManager.REQUEST_ID_UNSET, NetworkRequest.Type.REQUEST);
 
         // File request, withdraw it and make sure no broadcast is sent
-        b = registerConnectivityBroadcast(1);
+        b = expectConnectivityAction(1);
         final TestNetworkCallback callback = new TestNetworkCallback();
         mCm.requestNetwork(legacyRequest, callback);
         callback.expect(AVAILABLE, mCellAgent);
@@ -2424,7 +2418,7 @@ public class ConnectivityServiceTest {
         assertTrue(mCm.getAllNetworks()[0].equals(mWiFiAgent.getNetwork())
                 || mCm.getAllNetworks()[1].equals(mWiFiAgent.getNetwork()));
         // Test bringing up validated WiFi.
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
@@ -2441,7 +2435,7 @@ public class ConnectivityServiceTest {
         assertLength(1, mCm.getAllNetworks());
         assertEquals(mCm.getAllNetworks()[0], mCm.getActiveNetwork());
         // Test WiFi disconnect.
-        b = registerConnectivityBroadcast(1);
+        b = expectConnectivityAction(1);
         mWiFiAgent.disconnect();
         b.expectBroadcast();
         verifyNoNetwork();
@@ -2607,7 +2601,7 @@ public class ConnectivityServiceTest {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mWiFiAgent.connect(false);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
@@ -2622,17 +2616,17 @@ public class ConnectivityServiceTest {
         verifyActiveNetwork(TRANSPORT_WIFI);
         // Test bringing up validated cellular
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mCellAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Test cellular disconnect.
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mCellAgent.disconnect();
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
         // Test WiFi disconnect.
-        b = registerConnectivityBroadcast(1);
+        b = expectConnectivityAction(1);
         mWiFiAgent.disconnect();
         b.expectBroadcast();
         verifyNoNetwork();
@@ -2655,23 +2649,23 @@ public class ConnectivityServiceTest {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated cellular.
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mCellAgent.connect(false);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Test bringing up unvalidated WiFi.
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.connect(false);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
         // Test WiFi disconnect.
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.disconnect();
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Test cellular disconnect.
-        b = registerConnectivityBroadcast(1);
+        b = expectConnectivityAction(1);
         mCellAgent.disconnect();
         b.expectBroadcast();
         verifyNoNetwork();
@@ -2694,7 +2688,7 @@ public class ConnectivityServiceTest {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi.
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mWiFiAgent.connect(false);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
@@ -2702,14 +2696,14 @@ public class ConnectivityServiceTest {
                 NET_CAPABILITY_VALIDATED));
         // Test bringing up validated cellular.
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mCellAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         assertFalse(mCm.getNetworkCapabilities(mWiFiAgent.getNetwork()).hasCapability(
                 NET_CAPABILITY_VALIDATED));
         // Test cellular disconnect.
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mCellAgent.disconnect();
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
@@ -2849,23 +2843,23 @@ public class ConnectivityServiceTest {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up validated cellular.
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mCellAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Test bringing up validated WiFi.
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
         // Test WiFi getting really weak.
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.adjustScore(-11);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Test WiFi restoring signal strength.
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.adjustScore(11);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
@@ -2930,18 +2924,18 @@ public class ConnectivityServiceTest {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up validated cellular.
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mCellAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Test bringing up validated WiFi.
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
         // Reevaluate WiFi (it'll instantly fail DNS).
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         assertTrue(mCm.getNetworkCapabilities(mWiFiAgent.getNetwork()).hasCapability(
                 NET_CAPABILITY_VALIDATED));
         mCm.reportBadNetwork(mWiFiAgent.getNetwork());
@@ -2951,7 +2945,7 @@ public class ConnectivityServiceTest {
                 NET_CAPABILITY_VALIDATED));
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Reevaluate cellular (it'll instantly fail DNS).
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         assertTrue(mCm.getNetworkCapabilities(mCellAgent.getNetwork()).hasCapability(
                 NET_CAPABILITY_VALIDATED));
         mCm.reportBadNetwork(mCellAgent.getNetwork());
@@ -2981,18 +2975,18 @@ public class ConnectivityServiceTest {
         mService.mCellularRadioTimesharingCapable = cellRadioTimesharingCapable;
         // Test bringing up unvalidated WiFi.
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mWiFiAgent.connect(false);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_WIFI);
         // Test bringing up validated cellular.
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mCellAgent.connect(true);
         b.expectBroadcast();
         verifyActiveNetwork(TRANSPORT_CELLULAR);
         // Reevaluate cellular (it'll instantly fail DNS).
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         assertTrue(mCm.getNetworkCapabilities(mCellAgent.getNetwork()).hasCapability(
                 NET_CAPABILITY_VALIDATED));
         mCm.reportBadNetwork(mCellAgent.getNetwork());
@@ -3131,7 +3125,7 @@ public class ConnectivityServiceTest {
         mCm.registerNetworkCallback(cellRequest, cellNetworkCallback);
 
         // Test unvalidated networks
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
         mCellAgent.connect(false);
         genericNetworkCallback.expectAvailableCallbacksUnvalidated(mCellAgent);
@@ -3146,7 +3140,7 @@ public class ConnectivityServiceTest {
         assertNoCallbacks(genericNetworkCallback, wifiNetworkCallback, cellNetworkCallback);
         assertEquals(mCellAgent.getNetwork(), mCm.getActiveNetwork());
 
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         mWiFiAgent.connect(false);
         genericNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiAgent);
@@ -3155,18 +3149,18 @@ public class ConnectivityServiceTest {
         b.expectBroadcast();
         assertNoCallbacks(genericNetworkCallback, wifiNetworkCallback, cellNetworkCallback);
 
-        b = registerConnectivityBroadcast(2);
+        b = expectConnectivityAction(2);
         mWiFiAgent.disconnect();
-        genericNetworkCallback.expect(LOST, mWiFiAgent);
-        wifiNetworkCallback.expect(LOST, mWiFiAgent);
+        genericNetworkCallback.expect(CallbackEntry.LOST, mWiFiAgent);
+        wifiNetworkCallback.expect(CallbackEntry.LOST, mWiFiAgent);
         cellNetworkCallback.assertNoCallback();
         b.expectBroadcast();
         assertNoCallbacks(genericNetworkCallback, wifiNetworkCallback, cellNetworkCallback);
 
-        b = registerConnectivityBroadcast(1);
+        b = expectConnectivityAction(1);
         mCellAgent.disconnect();
-        genericNetworkCallback.expect(LOST, mCellAgent);
-        cellNetworkCallback.expect(LOST, mCellAgent);
+        genericNetworkCallback.expect(CallbackEntry.LOST, mCellAgent);
+        cellNetworkCallback.expect(CallbackEntry.LOST, mCellAgent);
         b.expectBroadcast();
         assertNoCallbacks(genericNetworkCallback, wifiNetworkCallback, cellNetworkCallback);
 
@@ -6998,7 +6992,7 @@ public class ConnectivityServiceTest {
         assertNotPinnedToWifi();
 
         // Disconnect cell and wifi.
-        ExpectedBroadcast b = registerConnectivityBroadcast(3);  // cell down, wifi up, wifi down.
+        ExpectedBroadcast b = expectConnectivityAction(3);  // cell down, wifi up, wifi down.
         mCellAgent.disconnect();
         mWiFiAgent.disconnect();
         b.expectBroadcast();
@@ -7011,7 +7005,7 @@ public class ConnectivityServiceTest {
         assertPinnedToWifiWithWifiDefault();
 
         // ... and is maintained even when that network is no longer the default.
-        b = registerConnectivityBroadcast(1);
+        b = expectConnectivityAction(1);
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         mCellAgent.connect(true);
         b.expectBroadcast();
@@ -7188,7 +7182,7 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testNetworkInfoOfTypeNone() throws Exception {
-        ExpectedBroadcast b = registerConnectivityBroadcast(1);
+        ExpectedBroadcast b = expectConnectivityAction(1);
 
         verifyNoNetwork();
         TestNetworkAgentWrapper wifiAware = new TestNetworkAgentWrapper(TRANSPORT_WIFI_AWARE);
@@ -12241,7 +12235,7 @@ public class ConnectivityServiceTest {
         assertNull(mService.getProxyForNetwork(null));
         assertNull(mCm.getDefaultProxy());
 
-        final ExpectedBroadcast b1 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b1 = expectProxyChangeAction();
         final LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("tun0");
         lp.addRoute(new RouteInfo(new IpPrefix(Inet4Address.ANY, 0), null));
@@ -12254,7 +12248,7 @@ public class ConnectivityServiceTest {
         b1.expectNoBroadcast(500);
 
         // Update to new range which is old range minus APP1, i.e. only APP2
-        final ExpectedBroadcast b2 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b2 = expectProxyChangeAction();
         final Set<UidRange> newRanges = new HashSet<>(asList(
                 new UidRange(vpnRange.start, APP1_UID - 1),
                 new UidRange(APP1_UID + 1, vpnRange.stop)));
@@ -12268,20 +12262,20 @@ public class ConnectivityServiceTest {
         b2.expectNoBroadcast(500);
 
         final ProxyInfo testProxyInfo = ProxyInfo.buildDirectProxy("test", 8888);
-        final ExpectedBroadcast b3 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b3 = expectProxyChangeAction();
         lp.setHttpProxy(testProxyInfo);
         mMockVpn.sendLinkProperties(lp);
         waitForIdle();
         // Proxy is set, so send a proxy broadcast.
         b3.expectBroadcast();
 
-        final ExpectedBroadcast b4 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b4 = expectProxyChangeAction();
         mMockVpn.setUids(vpnRanges);
         waitForIdle();
         // Uid has changed and proxy is already set, so send a proxy broadcast.
         b4.expectBroadcast();
 
-        final ExpectedBroadcast b5 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b5 = expectProxyChangeAction();
         // Proxy is removed, send a proxy broadcast.
         lp.setHttpProxy(null);
         mMockVpn.sendLinkProperties(lp);
@@ -12314,7 +12308,7 @@ public class ConnectivityServiceTest {
         lp.setHttpProxy(testProxyInfo);
         final UidRange vpnRange = PRIMARY_UIDRANGE;
         final Set<UidRange> vpnRanges = Collections.singleton(vpnRange);
-        final ExpectedBroadcast b1 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b1 = expectProxyChangeAction();
         mMockVpn.setOwnerAndAdminUid(VPN_UID);
         mMockVpn.registerAgent(false, vpnRanges, lp);
         // In any case, the proxy broadcast won't be sent before VPN goes into CONNECTED state.
@@ -12322,7 +12316,7 @@ public class ConnectivityServiceTest {
         // proxy broadcast will get null.
         b1.expectNoBroadcast(500);
 
-        final ExpectedBroadcast b2 = registerPacProxyBroadcast();
+        final ExpectedBroadcast b2 = expectProxyChangeAction();
         mMockVpn.connect(true /* validated */, true /* hasInternet */,
                 false /* privateDnsProbeSent */);
         waitForIdle();
@@ -12358,7 +12352,7 @@ public class ConnectivityServiceTest {
         final LinkProperties cellularLp = new LinkProperties();
         cellularLp.setInterfaceName(MOBILE_IFNAME);
         final ProxyInfo testProxyInfo = ProxyInfo.buildDirectProxy("test", 8888);
-        final ExpectedBroadcast b = registerPacProxyBroadcast();
+        final ExpectedBroadcast b = expectProxyChangeAction();
         cellularLp.setHttpProxy(testProxyInfo);
         mCellAgent.sendLinkProperties(cellularLp);
         b.expectBroadcast();
