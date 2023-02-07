@@ -21,7 +21,6 @@ import static android.annotation.SystemApi.Client.PRIVILEGED_APPS;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
-import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.os.Binder;
 import android.os.ParcelFileDescriptor;
@@ -249,9 +248,6 @@ public abstract class SocketKeepalive implements AutoCloseable {
     @NonNull protected final Executor mExecutor;
     /** @hide */
     @NonNull protected final ISocketKeepaliveCallback mCallback;
-    // TODO: remove slot since mCallback could be used to identify which keepalive to stop.
-    /** @hide */
-    @Nullable protected Integer mSlot;
 
     /** @hide */
     public SocketKeepalive(@NonNull IConnectivityManager service, @NonNull Network network,
@@ -263,11 +259,10 @@ public abstract class SocketKeepalive implements AutoCloseable {
         mExecutor = executor;
         mCallback = new ISocketKeepaliveCallback.Stub() {
             @Override
-            public void onStarted(int slot) {
+            public void onStarted() {
                 final long token = Binder.clearCallingIdentity();
                 try {
                     mExecutor.execute(() -> {
-                        mSlot = slot;
                         callback.onStarted();
                     });
                 } finally {
@@ -280,7 +275,6 @@ public abstract class SocketKeepalive implements AutoCloseable {
                 final long token = Binder.clearCallingIdentity();
                 try {
                     executor.execute(() -> {
-                        mSlot = null;
                         callback.onStopped();
                     });
                 } finally {
@@ -293,7 +287,6 @@ public abstract class SocketKeepalive implements AutoCloseable {
                 final long token = Binder.clearCallingIdentity();
                 try {
                     executor.execute(() -> {
-                        mSlot = null;
                         callback.onError(error);
                     });
                 } finally {
@@ -306,7 +299,6 @@ public abstract class SocketKeepalive implements AutoCloseable {
                 final long token = Binder.clearCallingIdentity();
                 try {
                     executor.execute(() -> {
-                        mSlot = null;
                         callback.onDataReceived();
                     });
                 } finally {
