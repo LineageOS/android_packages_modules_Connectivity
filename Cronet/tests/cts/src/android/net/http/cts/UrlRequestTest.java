@@ -21,6 +21,7 @@ import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 
 import android.content.Context;
@@ -30,6 +31,7 @@ import android.net.http.UrlRequest.Status;
 import android.net.http.UrlResponseInfo;
 import android.net.http.cts.util.HttpCtsTestServer;
 import android.net.http.cts.util.TestStatusListener;
+import android.net.http.cts.util.TestUploadDataProvider;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 
@@ -67,14 +69,14 @@ public class UrlRequestTest {
         }
     }
 
-    private UrlRequest buildUrlRequest(String url) {
-        return mHttpEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor()).build();
+    private UrlRequest.Builder createUrlRequestBuilder(String url) {
+        return mHttpEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor());
     }
 
     @Test
     public void testUrlRequestGet_CompletesSuccessfully() throws Exception {
         String url = mTestServer.getSuccessUrl();
-        UrlRequest request = buildUrlRequest(url);
+        UrlRequest request = createUrlRequestBuilder(url).build();
         request.start();
 
         mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
@@ -85,7 +87,7 @@ public class UrlRequestTest {
 
     @Test
     public void testUrlRequestStatus_InvalidBeforeRequestStarts() throws Exception {
-        UrlRequest request = buildUrlRequest(mTestServer.getSuccessUrl());
+        UrlRequest request = createUrlRequestBuilder(mTestServer.getSuccessUrl()).build();
         // Calling before request is started should give Status.INVALID,
         // since the native adapter is not created.
         TestStatusListener statusListener = new TestStatusListener();
@@ -95,7 +97,7 @@ public class UrlRequestTest {
 
     @Test
     public void testUrlRequestCancel_CancelCalled() throws Exception {
-        UrlRequest request = buildUrlRequest(mTestServer.getSuccessUrl());
+        UrlRequest request = createUrlRequestBuilder(mTestServer.getSuccessUrl()).build();
         mCallback.setAutoAdvance(false);
 
         request.start();
@@ -104,5 +106,23 @@ public class UrlRequestTest {
 
         request.cancel();
         mCallback.expectCallback(ResponseStep.ON_CANCELED);
+    }
+
+    @Test
+    public void testUrlRequestPost_EchoRequestBody() throws Exception {
+        String testData = "test";
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getEchoBodyUrl());
+
+        TestUploadDataProvider dataProvider = new TestUploadDataProvider(
+                TestUploadDataProvider.SuccessCallbackMode.SYNC, mCallback.getExecutor());
+        dataProvider.addRead(testData.getBytes());
+        builder.setUploadDataProvider(dataProvider, mCallback.getExecutor());
+        builder.addHeader("Content-Type", "text/html");
+        builder.build().start();
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+
+        assertOKStatusCode(mCallback.mResponseInfo);
+        assertEquals(testData, mCallback.mResponseAsString);
+        dataProvider.assertClosed();
     }
 }
