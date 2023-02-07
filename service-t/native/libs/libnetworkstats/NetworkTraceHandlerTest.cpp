@@ -87,7 +87,10 @@ class NetworkTraceHandlerTest : public testing::Test {
  protected:
   void SetUp() {
     if (access(PACKET_TRACE_RINGBUF_PATH, R_OK)) {
-      GTEST_SKIP() << "Network tracing is not enabled/loaded on this build";
+      GTEST_SKIP() << "Network tracing is not enabled/loaded on this build.";
+    }
+    if (sizeof(void*) != 8) {
+      GTEST_SKIP() << "Network tracing requires 64-bit build.";
     }
   }
 };
