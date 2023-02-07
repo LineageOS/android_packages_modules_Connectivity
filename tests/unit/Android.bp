@@ -114,6 +114,7 @@ java_defaults {
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
         "services.core-vpn",
+        "testables",
         "cts-net-utils"
     ],
     libs: [
