@@ -179,33 +179,31 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
-    fun testCapabilitiesThat() {
+    fun testExpectCaps() {
         val net = Network(101)
         val netCaps = NetworkCapabilities().addCapability(NOT_METERED).addTransportType(WIFI)
         // Check that expecting capabilitiesThat anything fails when no callback has been received.
-        assertFails { mCallback.expectCapabilitiesThat(net, SHORT_TIMEOUT_MS) { true } }
+        assertFails { mCallback.expectCaps(net, SHORT_TIMEOUT_MS) { true } }
 
         // Basic test for true and false
         mCallback.onCapabilitiesChanged(net, netCaps)
-        mCallback.expectCapabilitiesThat(net) { true }
+        mCallback.expectCaps(net) { true }
         mCallback.onCapabilitiesChanged(net, netCaps)
-        assertFails { mCallback.expectCapabilitiesThat(net, SHORT_TIMEOUT_MS) { false } }
+        assertFails { mCallback.expectCaps(net, SHORT_TIMEOUT_MS) { false } }
 
         // Try a positive and a negative case
         mCallback.onCapabilitiesChanged(net, netCaps)
-        mCallback.expectCapabilitiesThat(net) { caps ->
-            caps.hasCapability(NOT_METERED) &&
-                    caps.hasTransport(WIFI) &&
-                    !caps.hasTransport(CELLULAR)
+        mCallback.expectCaps(net) {
+            it.hasCapability(NOT_METERED) && it.hasTransport(WIFI) && !it.hasTransport(CELLULAR)
         }
         mCallback.onCapabilitiesChanged(net, netCaps)
-        assertFails { mCallback.expectCapabilitiesThat(net, SHORT_TIMEOUT_MS) { caps ->
-            caps.hasTransport(CELLULAR)
-        } }
+        assertFails { mCallback.expectCaps(net, SHORT_TIMEOUT_MS) { it.hasTransport(CELLULAR) } }
 
         // Try a matching callback on the wrong network
         mCallback.onCapabilitiesChanged(net, netCaps)
-        assertFails { mCallback.expectCapabilitiesThat(Network(100), SHORT_TIMEOUT_MS) { true } }
+        assertFails {
+            mCallback.expectCaps(Network(100), SHORT_TIMEOUT_MS) { true }
+        }
     }
 
     @Test
