@@ -91,9 +91,7 @@ public final class NattSocketKeepalive extends SocketKeepalive {
     protected void stopImpl() {
         mExecutor.execute(() -> {
             try {
-                if (mSlot != null) {
-                    mService.stopKeepalive(mNetwork, mSlot);
-                }
+                mService.stopKeepalive(mCallback);
             } catch (RemoteException e) {
                 Log.e(TAG, "Error stopping socket keepalive: ", e);
                 throw e.rethrowFromSystemServer();
