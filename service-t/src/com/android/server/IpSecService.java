@@ -1221,16 +1221,16 @@ public class IpSecService extends IIpSecService.Stub {
      * and re-binding, during which the system could *technically* hand that port out to someone
      * else.
      */
-    private int bindToRandomPort(FileDescriptor sockFd, int family) throws IOException {
-        final InetAddress any = (family == AF_INET6) ? IN6ADDR_ANY : INADDR_ANY;
+    private int bindToRandomPort(FileDescriptor sockFd, int family, InetAddress localAddr)
+            throws IOException {
         for (int i = MAX_PORT_BIND_ATTEMPTS; i > 0; i--) {
             try {
                 FileDescriptor probeSocket = Os.socket(family, SOCK_DGRAM, IPPROTO_UDP);
-                Os.bind(probeSocket, any, 0);
+                Os.bind(probeSocket, localAddr, 0);
                 int port = ((InetSocketAddress) Os.getsockname(probeSocket)).getPort();
                 Os.close(probeSocket);
                 Log.v(TAG, "Binding to port " + port);
-                Os.bind(sockFd, any, port);
+                Os.bind(sockFd, localAddr, port);
                 return port;
             } catch (ErrnoException e) {
                 // Someone miraculously claimed the port just after we closed probeSocket.
@@ -1322,7 +1322,7 @@ public class IpSecService extends IIpSecService.Stub {
                 Log.v(TAG, "Binding to port " + port);
                 Os.bind(pFd.getFileDescriptor(), localAddr, port);
             } else {
-                port = bindToRandomPort(pFd.getFileDescriptor(), family);
+                port = bindToRandomPort(pFd.getFileDescriptor(), family, localAddr);
             }
 
             userRecord.mEncapSocketRecords.put(
