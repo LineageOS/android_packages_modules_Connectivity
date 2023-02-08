@@ -1667,24 +1667,20 @@ def create_blueprint_for_targets(gn, targets):
 def create_license_module(blueprint):
   module = Module("license", "external_cronet_license", "LICENSE")
   module.license_kinds.update({
-      'SPDX-license-identifier-LGPL-2.1',
-      'SPDX-license-identifier-GPL-2.0',
       'SPDX-license-identifier-MPL',
+      'SPDX-license-identifier-MPL-1.1',
       'SPDX-license-identifier-ISC',
-      'SPDX-license-identifier-GPL',
       'SPDX-license-identifier-AFL-2.0',
       'SPDX-license-identifier-MPL-2.0',
       'SPDX-license-identifier-BSD',
       'SPDX-license-identifier-Apache-2.0',
       'SPDX-license-identifier-BSL-1.0',
-      'SPDX-license-identifier-LGPL',
-      'SPDX-license-identifier-GPL-3.0',
       'SPDX-license-identifier-Unicode-DFS',
       'SPDX-license-identifier-NCSA',
       'SPDX-license-identifier-OpenSSL',
       'SPDX-license-identifier-MIT',
       "SPDX-license-identifier-ICU",
-      'legacy_unencumbered', # public domain
+      'legacy_unencumbered',
   })
   module.license_text.update({
       "LICENSE",
