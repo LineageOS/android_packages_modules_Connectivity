@@ -102,6 +102,11 @@
     },
     {
       "name": "FrameworksNetDeflakeTest"
+    },
+    // Run in postsubmit to confirm test passes continously since this is a new test setup
+    // TODO: move tests to presubmit
+    {
+      "name": "NetHttpTests"
     }
   ],
   "mainline-presubmit": [
