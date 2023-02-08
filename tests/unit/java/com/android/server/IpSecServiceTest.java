@@ -82,7 +82,7 @@ public class IpSecServiceTest {
     private static final int MAX_NUM_ENCAP_SOCKETS = 100;
     private static final int MAX_NUM_SPIS = 100;
     private static final int TEST_UDP_ENCAP_INVALID_PORT = 100;
-    private static final int TEST_UDP_ENCAP_PORT_OUT_RANGE = 100000;
+    private static final int TEST_UDP_ENCAP_PORT_OUT_RANGE = 200000;
 
     private static final InetAddress INADDR_ANY;
 
