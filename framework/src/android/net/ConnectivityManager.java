@@ -2279,23 +2279,12 @@ public class ConnectivityManager {
         private final ISocketKeepaliveCallback mCallback;
         private final ExecutorService mExecutor;
 
-        private volatile Integer mSlot;
-
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void stop() {
             try {
                 mExecutor.execute(() -> {
                     try {
-                        if (mSlot != null) {
-                            // TODO : this is incorrect, because in the presence of auto on/off
-                            // keepalive the slot associated with this keepalive can have
-                            // changed. Also, this actually causes another problem where some other
-                            // app might stop your keepalive if it just knows the network and
-                            // the slot and goes through the trouble of grabbing the aidl object.
-                            // This code should use the callback to identify what keepalive to
-                            // stop instead.
-                            mService.stopKeepalive(mNetwork, mSlot);
-                        }
+                        mService.stopKeepalive(mCallback);
                     } catch (RemoteException e) {
                         Log.e(TAG, "Error stopping packet keepalive: ", e);
                         throw e.rethrowFromSystemServer();
@@ -2313,11 +2302,10 @@ public class ConnectivityManager {
             mExecutor = Executors.newSingleThreadExecutor();
             mCallback = new ISocketKeepaliveCallback.Stub() {
                 @Override
-                public void onStarted(int slot) {
+                public void onStarted() {
                     final long token = Binder.clearCallingIdentity();
                     try {
                         mExecutor.execute(() -> {
-                            mSlot = slot;
                             callback.onStarted();
                         });
                     } finally {
@@ -2330,7 +2318,6 @@ public class ConnectivityManager {
                     final long token = Binder.clearCallingIdentity();
                     try {
                         mExecutor.execute(() -> {
-                            mSlot = null;
                             callback.onStopped();
                         });
                     } finally {
@@ -2344,7 +2331,6 @@ public class ConnectivityManager {
                     final long token = Binder.clearCallingIdentity();
                     try {
                         mExecutor.execute(() -> {
-                            mSlot = null;
                             callback.onError(error);
                         });
                     } finally {

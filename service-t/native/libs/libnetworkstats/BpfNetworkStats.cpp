@@ -247,10 +247,6 @@ int parseBpfNetworkStatsDev(std::vector<stats_line>* lines) {
     return parseBpfNetworkStatsDevInternal(lines, ifaceStatsMap, ifaceIndexNameMap);
 }
 
-uint64_t combineUidTag(const uid_t uid, const uint32_t tag) {
-    return (uint64_t)uid << 32 | tag;
-}
-
 void groupNetworkStats(std::vector<stats_line>* lines) {
     if (lines->size() <= 1) return;
     std::sort(lines->begin(), lines->end());

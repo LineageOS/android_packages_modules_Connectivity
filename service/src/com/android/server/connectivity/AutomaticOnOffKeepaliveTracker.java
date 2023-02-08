@@ -54,6 +54,7 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.system.OsConstants;
 import android.system.StructTimeval;
 import android.util.Log;
 import android.util.SparseArray;
@@ -67,6 +68,7 @@ import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.HexDump;
 import com.android.net.module.util.SocketUtils;
 import com.android.net.module.util.netlink.InetDiagMessage;
+import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.StructNlAttr;
 
@@ -329,30 +331,6 @@ public class AutomaticOnOffKeepaliveTracker {
         handleResumeKeepalive(newKi);
     }
 
-    // TODO : this method should be removed ; the keepalives should always be indexed by callback
-    private int findAutomaticOnOffKeepaliveIndex(@NonNull Network network, int slot) {
-        ensureRunningOnHandlerThread();
-
-        int index = 0;
-        for (AutomaticOnOffKeepalive ki : mAutomaticOnOffKeepalives) {
-            if (ki.match(network, slot)) {
-                return index;
-            }
-            index++;
-        }
-        return -1;
-    }
-
-    // TODO : this method should be removed ; the keepalives should always be indexed by callback
-    @Nullable
-    private AutomaticOnOffKeepalive findAutomaticOnOffKeepalive(@NonNull Network network,
-            int slot) {
-        ensureRunningOnHandlerThread();
-
-        final int index = findAutomaticOnOffKeepaliveIndex(network, slot);
-        return (index >= 0) ? mAutomaticOnOffKeepalives.get(index) : null;
-    }
-
     /**
      * Find the AutomaticOnOffKeepalive associated with a given callback.
      * @return the keepalive associated with this callback, or null if none
@@ -415,17 +393,12 @@ public class AutomaticOnOffKeepaliveTracker {
     /**
      * Handle stop keepalives on the specific network with given slot.
      */
-    public void handleStopKeepalive(@NonNull NetworkAgentInfo nai, int slot, int reason) {
-        final AutomaticOnOffKeepalive autoKi = findAutomaticOnOffKeepalive(nai.network, slot);
-        if (null == autoKi) {
-            Log.e(TAG, "Attempt to stop nonexistent keepalive " + slot + " on " + nai);
-            return;
-        }
-
+    public void handleStopKeepalive(@NonNull final AutomaticOnOffKeepalive autoKi, int reason) {
         // Stop the keepalive unless it was suspended. This includes the case where it's managed
         // but enabled, and the case where it's always on.
         if (autoKi.mAutomaticOnOffState != STATE_SUSPENDED) {
-            mKeepaliveTracker.handleStopKeepalive(nai, slot, reason);
+            final KeepaliveTracker.KeepaliveInfo ki = autoKi.mKi;
+            mKeepaliveTracker.handleStopKeepalive(ki.getNai(), ki.getSlot(), reason);
         }
 
         cleanupAutoOnOffKeepalive(autoKi);
@@ -599,6 +572,16 @@ public class AutomaticOnOffKeepaliveTracker {
                     bytes.position(startPos + SOCKDIAG_MSG_HEADER_SIZE);
 
                     if (isTargetTcpSocket(bytes, nlmsgLen, networkMark, networkMask)) {
+                        if (Log.isLoggable(TAG, Log.DEBUG)) {
+                            bytes.position(startPos);
+                            final InetDiagMessage diagMsg = (InetDiagMessage) NetlinkMessage.parse(
+                                    bytes, OsConstants.NETLINK_INET_DIAG);
+                            Log.d(TAG, String.format("Found open TCP connection by uid %d to %s"
+                                            + " cookie %d",
+                                    diagMsg.inetDiagMsg.idiag_uid,
+                                    diagMsg.inetDiagMsg.id.remSocketAddress,
+                                    diagMsg.inetDiagMsg.id.cookie));
+                        }
                         return true;
                     }
                 }

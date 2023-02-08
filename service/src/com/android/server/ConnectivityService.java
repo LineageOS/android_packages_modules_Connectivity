@@ -5580,14 +5580,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
                 // Sent by KeepaliveTracker to process an app request on the state machine thread.
                 case NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE: {
-                    NetworkAgentInfo nai = getNetworkAgentInfoForNetwork((Network) msg.obj);
-                    if (nai == null) {
-                        Log.e(TAG, "Attempt to stop keepalive on nonexistent network");
+                    final AutomaticOnOffKeepalive ki = mKeepaliveTracker.getKeepaliveForBinder(
+                            (IBinder) msg.obj);
+                    if (ki == null) {
+                        Log.e(TAG, "Attempt to stop an already stopped keepalive");
                         return;
                     }
-                    int slot = msg.arg1;
-                    int reason = msg.arg2;
-                    mKeepaliveTracker.handleStopKeepalive(nai, slot, reason);
+                    final int reason = msg.arg2;
+                    mKeepaliveTracker.handleStopKeepalive(ki, reason);
                     break;
                 }
                 case EVENT_REPORT_NETWORK_CONNECTIVITY: {
@@ -9870,9 +9870,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     @Override
-    public void stopKeepalive(Network network, int slot) {
+    public void stopKeepalive(@NonNull final ISocketKeepaliveCallback cb) {
         mHandler.sendMessage(mHandler.obtainMessage(
-                NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE, slot, SocketKeepalive.SUCCESS, network));
+                NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE, 0, SocketKeepalive.SUCCESS,
+                Objects.requireNonNull(cb).asBinder()));
     }
 
     @Override
