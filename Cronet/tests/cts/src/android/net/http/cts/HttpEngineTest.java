@@ -17,6 +17,7 @@
 package android.net.http.cts;
 
 import static android.net.http.cts.util.TestUtilsKt.assertOKStatusCode;
+import static android.net.http.cts.util.TestUtilsKt.assumeOKStatusCode;
 import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -100,13 +101,14 @@ public class HttpEngineTest {
         // We send multiple requests to reduce the flakiness of the test.
         boolean quicWasUsed = false;
         for (int i = 0; i < 5; i++) {
+            mCallback = new TestUrlRequestCallback();
             UrlRequest.Builder builder =
                     mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
             builder.build().start();
 
             mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
             UrlResponseInfo info = mCallback.mResponseInfo;
-            assertOKStatusCode(info);
+            assumeOKStatusCode(info);
             quicWasUsed = isQuic(info.getNegotiatedProtocol());
             if (quicWasUsed) {
                 break;

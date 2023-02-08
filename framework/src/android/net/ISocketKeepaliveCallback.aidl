@@ -24,7 +24,7 @@ package android.net;
 oneway interface ISocketKeepaliveCallback
 {
     /** The keepalive was successfully started. */
-    void onStarted(int slot);
+    void onStarted();
     /** The keepalive was successfully stopped. */
     void onStopped();
     /** The keepalive was stopped because of an error. */

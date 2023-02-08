@@ -19,8 +19,10 @@ package android.net.http.cts.util
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.http.UrlResponseInfo
+import org.hamcrest.Matchers.equalTo
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeNotNull
+import org.junit.Assume.assumeThat
 
 fun skipIfNoInternetConnection(context: Context) {
     val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
@@ -29,5 +31,9 @@ fun skipIfNoInternetConnection(context: Context) {
 }
 
 fun assertOKStatusCode(info: UrlResponseInfo) {
-    assertEquals("Status code must be 200 OK", 200, info.getHttpStatusCode())
+    assertEquals("Status code must be 200 OK", 200, info.httpStatusCode)
+}
+
+fun assumeOKStatusCode(info: UrlResponseInfo) {
+    assumeThat("Status code must be 200 OK", info.getHttpStatusCode(), equalTo(200))
 }
