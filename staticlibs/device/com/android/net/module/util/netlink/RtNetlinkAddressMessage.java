@@ -161,7 +161,7 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
     }
 
     /**
-     * A convenience method to create an RTM_NEWADDR message.
+     * A convenience method to create a RTM_NEWADDR message.
      */
     public static byte[] newRtmNewAddressMessage(int seqNo, @NonNull final InetAddress ip,
             short prefixlen, int flags, byte scope, int ifIndex, long preferred, long valid) {
@@ -192,6 +192,51 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
         return bytes;
     }
 
+    /**
+     * A convenience method to create a RTM_DELADDR message.
+     */
+    public static byte[] newRtmDelAddressMessage(int seqNo, @NonNull final InetAddress ip,
+            short prefixlen, int ifIndex) {
+        Objects.requireNonNull(ip, "IP address to be deleted via netlink message cannot be null");
+
+        final int ifaAddrAttrLength = NetlinkConstants.alignedLengthOf(
+                StructNlAttr.NLA_HEADERLEN + ip.getAddress().length);
+        final int length = StructNlMsgHdr.STRUCT_SIZE + StructIfaddrMsg.STRUCT_SIZE
+                + ifaAddrAttrLength;
+        final byte[] bytes = new byte[length];
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+        byteBuffer.order(ByteOrder.nativeOrder());
+
+        final StructNlMsgHdr nlmsghdr = new StructNlMsgHdr();
+        nlmsghdr.nlmsg_len = length;
+        nlmsghdr.nlmsg_type = NetlinkConstants.RTM_DELADDR;
+        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+        nlmsghdr.nlmsg_seq = seqNo;
+        nlmsghdr.pack(byteBuffer);
+
+        final byte family =
+                (byte) ((ip instanceof Inet6Address) ? OsConstants.AF_INET6 : OsConstants.AF_INET);
+        // Actually kernel ignores scope and flags(only deal with IFA_F_MANAGETEMPADDR, it
+        // indicates that all relevant IPv6 temporary addresses should be deleted as well when
+        // user space intends to delete a global IPv6 address with IFA_F_MANAGETEMPADDR), so
+        // far IFA_F_MANAGETEMPADDR flag isn't used in user space, it's fine to ignore it.
+        // However, we need to add IFA_FLAGS attribute in RTM_DELADDR if flags parsing should
+        // be supported in the future.
+        final StructIfaddrMsg ifaddrmsg = new StructIfaddrMsg(family, prefixlen,
+                (short) 0 /* flags */, (short) 0 /* scope */, ifIndex);
+        ifaddrmsg.pack(byteBuffer);
+
+        final StructNlAttr address = new StructNlAttr(IFA_ADDRESS, ip);
+        address.pack(byteBuffer);
+
+        return bytes;
+    }
+
+    // This function helper gives the required buffer size for IFA_ADDRESS, IFA_CACHEINFO and
+    // IFA_FLAGS attributes encapsulation. However, that's not a mandatory requirement for all
+    // RtNetlinkAddressMessage, e.g. RTM_DELADDR sent from user space to kernel to delete an
+    // IP address only requires IFA_ADDRESS attribute. The caller should check if these attributes
+    // are necessary to carry when constructing a RtNetlinkAddressMessage.
     private int getRequiredSpace() {
         int spaceRequired = StructNlMsgHdr.STRUCT_SIZE + StructIfaddrMsg.STRUCT_SIZE;
         // IFA_ADDRESS attr

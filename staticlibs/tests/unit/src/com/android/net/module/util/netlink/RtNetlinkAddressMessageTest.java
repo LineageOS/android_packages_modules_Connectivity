@@ -179,6 +179,34 @@ public class RtNetlinkAddressMessageTest {
     }
 
     @Test
+    public void testCreateRtmDelAddressMessage() {
+        // Hexadecimal representation of our created packet.
+        final String expectedDelAddressHex =
+                // struct nlmsghdr
+                "2C000000" + // length = 44
+                "1500" +     // type = 21 (RTM_DELADDR)
+                "0500" +     // flags = NLM_F_ACK | NLM_F_REQUEST
+                "01000000" + // seqno = 1
+                "00000000" + // pid = 0 (send to kernel)
+                // struct IfaddrMsg
+                "0A" +       // family = inet6
+                "40" +       // prefix len = 64
+                "00" +       // flags = 0
+                "00" +       // scope = RT_SCOPE_UNIVERSE
+                "3B000000" + // ifindex = 59
+                // struct nlattr: IFA_ADDRESS
+                "1400" +     // len
+                "0100" +     // type
+                "20010DB8000100000000000000000100"; // IP address = 2001:db8:1::100
+        final byte[] expectedDelAddress =
+                HexEncoding.decode(expectedDelAddressHex.toCharArray(), false);
+
+        final byte[] bytes = RtNetlinkAddressMessage.newRtmDelAddressMessage(1 /* seqno */,
+                TEST_GLOBAL_ADDRESS, (short) 64 /* prefix len */, 59 /* ifindex */);
+        assertArrayEquals(expectedDelAddress, bytes);
+    }
+
+    @Test
     public void testCreateRtmNewAddressMessage_nullIpAddress() {
         assertThrows(NullPointerException.class,
                 () -> RtNetlinkAddressMessage.newRtmNewAddressMessage(1 /* seqno */,
@@ -186,6 +214,13 @@ public class RtNetlinkAddressMessageTest {
                         IFA_F_PERMANENT /* flags */, (byte) RT_SCOPE_LINK /* scope */,
                         23 /* ifindex */, (long) 0xFFFFFFFF /* preferred */,
                         (long) 0xFFFFFFFF /* valid */));
+    }
+
+    @Test
+    public void testCreateRtmDelAddressMessage_nullIpAddress() {
+        assertThrows(NullPointerException.class,
+                () -> RtNetlinkAddressMessage.newRtmDelAddressMessage(1 /* seqno */,
+                        null /* IP address */, (short) 0 /* prefix len */, 59 /* ifindex */));
     }
 
     @Test

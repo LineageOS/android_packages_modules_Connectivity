@@ -196,6 +196,27 @@ public class NetlinkUtils {
     }
 
     /**
+     * Send an RTM_DELADDR message to kernel to delete an IPv6 address.
+     *
+     * @param ifIndex interface index.
+     * @param ip IPv6 address to be deleted.
+     * @param prefixlen IPv6 address prefix length.
+     */
+    public static boolean sendRtmDelAddressRequest(int ifIndex, final Inet6Address ip,
+            short prefixlen) {
+        Objects.requireNonNull(ip, "IPv6 address to be deleted should not be null.");
+        final byte[] msg = RtNetlinkAddressMessage.newRtmDelAddressMessage(1 /* seqNo*/, ip,
+                prefixlen, ifIndex);
+        try {
+            NetlinkUtils.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
+            return true;
+        } catch (ErrnoException e) {
+            Log.e(TAG, "Fail to send RTM_DELADDR to delete " + ip.getHostAddress(), e);
+            return false;
+        }
+    }
+
+    /**
      * Create netlink socket with the given netlink protocol type.
      *
      * @return fd the fileDescriptor of the socket.
