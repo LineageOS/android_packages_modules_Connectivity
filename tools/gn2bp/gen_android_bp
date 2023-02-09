@@ -296,6 +296,7 @@ class Target(object):
     self.export_system_include_dirs = set()
     self.generated_headers = set()
     self.export_generated_headers = set()
+    self.ldflags = set()
 
   def to_string(self, output):
     nested_out = []
@@ -313,6 +314,7 @@ class Target(object):
     self._output_field(nested_out, 'export_system_include_dirs')
     self._output_field(nested_out, 'generated_headers')
     self._output_field(nested_out, 'export_generated_headers')
+    self._output_field(nested_out, 'ldflags')
 
     if nested_out:
       output.append('    %s: {' % self.name)
