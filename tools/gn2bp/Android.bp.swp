@@ -4305,7 +4305,6 @@ cc_defaults {
     name: "cronet_aml_defaults",
     cflags: [
         "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-O2",
         "-Wno-ambiguous-reversed-operator",
         "-Wno-error=return-type",
         "-Wno-macro-redefined",
@@ -4317,7 +4316,6 @@ cc_defaults {
         "-Wno-unreachable-code-loop-increment",
         "-Wno-unused-parameter",
         "-fPIC",
-        "-fvisibility=hidden",
     ],
     stl: "none",
     apex_available: [

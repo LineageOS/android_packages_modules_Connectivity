@@ -1634,10 +1634,8 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-sign-promo',
       '-Wno-unused-parameter',
       '-Wno-null-pointer-subtraction', # Needed to libevent
-      '-fvisibility=hidden',
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
-      '-O2',
       '-fPIC',
   ]
   # Chromium builds do not add a dependency for headers found inside the
