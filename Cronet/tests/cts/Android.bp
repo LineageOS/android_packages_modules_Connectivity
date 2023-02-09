@@ -41,13 +41,8 @@ java_defaults {
     defaults: [cronet_test_java_defaults],
 }
 
-android_test {
-    name: "CtsNetHttpTestCases",
-    compile_multilib: "both", // Include both the 32 and 64 bit versions
-    defaults: [
-        "CronetTestJavaDefaults",
-        "cts_defaults",
-    ],
+android_library {
+    name: "CtsNetHttpTestsLib",
     sdk_version: "test_current",
     srcs: [
         "src/**/*.java",
@@ -69,7 +64,17 @@ android_test {
         "framework-tethering",
         "org.apache.http.legacy",
     ],
+}
 
+android_test {
+    name: "CtsNetHttpTestCases",
+    defaults: [
+        "cts_defaults",
+        "CronetTestJavaDefaults",
+    ],
+    sdk_version: "test_current",
+    compile_multilib: "both", // Include both the 32 and 64 bit versions
+    static_libs: ["CtsNetHttpTestsLib"],
     // Tag this as a cts test artifact
     test_suites: [
         "cts",
