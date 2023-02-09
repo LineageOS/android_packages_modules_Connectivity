@@ -17,6 +17,7 @@
 package com.android.server;
 
 import static android.Manifest.permission.DUMP;
+import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.IpSecManager.FEATURE_IPSEC_TUNNEL_MIGRATION;
 import static android.net.IpSecManager.INVALID_RESOURCE_ID;
 import static android.system.OsConstants.AF_INET;
@@ -65,6 +66,7 @@ import android.util.SparseBooleanArray;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.Preconditions;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BinderUtils;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.PermissionUtils;
@@ -102,6 +104,7 @@ public class IpSecService extends IIpSecService.Stub {
 
     private static final int NETD_FETCH_TIMEOUT_MS = 5000; // ms
     private static final InetAddress INADDR_ANY;
+    private static final InetAddress IN6ADDR_ANY;
 
     @VisibleForTesting static final int MAX_PORT_BIND_ATTEMPTS = 10;
 
@@ -110,6 +113,8 @@ public class IpSecService extends IIpSecService.Stub {
     static {
         try {
             INADDR_ANY = InetAddress.getByAddress(new byte[] {0, 0, 0, 0});
+            IN6ADDR_ANY = InetAddress.getByAddress(
+                    new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
@@ -1013,11 +1018,13 @@ public class IpSecService extends IIpSecService.Stub {
     private final class EncapSocketRecord extends OwnedResourceRecord {
         private FileDescriptor mSocket;
         private final int mPort;
+        private final int mFamily;  // TODO: what about IPV6_ADDRFORM?
 
-        EncapSocketRecord(int resourceId, FileDescriptor socket, int port) {
+        EncapSocketRecord(int resourceId, FileDescriptor socket, int port, int family) {
             super(resourceId);
             mSocket = socket;
             mPort = port;
+            mFamily = family;
         }
 
         /** always guarded by IpSecService#this */
@@ -1036,6 +1043,10 @@ public class IpSecService extends IIpSecService.Stub {
 
         public FileDescriptor getFileDescriptor() {
             return mSocket;
+        }
+
+        public int getFamily() {
+            return mFamily;
         }
 
         @Override
@@ -1210,15 +1221,16 @@ public class IpSecService extends IIpSecService.Stub {
      * and re-binding, during which the system could *technically* hand that port out to someone
      * else.
      */
-    private int bindToRandomPort(FileDescriptor sockFd) throws IOException {
+    private int bindToRandomPort(FileDescriptor sockFd, int family, InetAddress localAddr)
+            throws IOException {
         for (int i = MAX_PORT_BIND_ATTEMPTS; i > 0; i--) {
             try {
-                FileDescriptor probeSocket = Os.socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-                Os.bind(probeSocket, INADDR_ANY, 0);
+                FileDescriptor probeSocket = Os.socket(family, SOCK_DGRAM, IPPROTO_UDP);
+                Os.bind(probeSocket, localAddr, 0);
                 int port = ((InetSocketAddress) Os.getsockname(probeSocket)).getPort();
                 Os.close(probeSocket);
                 Log.v(TAG, "Binding to port " + port);
-                Os.bind(sockFd, INADDR_ANY, port);
+                Os.bind(sockFd, localAddr, port);
                 return port;
             } catch (ErrnoException e) {
                 // Someone miraculously claimed the port just after we closed probeSocket.
@@ -1260,6 +1272,19 @@ public class IpSecService extends IIpSecService.Stub {
     @Override
     public synchronized IpSecUdpEncapResponse openUdpEncapsulationSocket(int port, IBinder binder)
             throws RemoteException {
+        // Experimental support for IPv6 UDP encap.
+        final int family;
+        final InetAddress localAddr;
+        if (SdkLevel.isAtLeastU() && port >= 65536) {
+            PermissionUtils.enforceNetworkStackPermissionOr(mContext, NETWORK_SETTINGS);
+            port -= 65536;
+            family = AF_INET6;
+            localAddr = IN6ADDR_ANY;
+        } else {
+            family = AF_INET;
+            localAddr = INADDR_ANY;
+        }
+
         if (port != 0 && (port < FREE_PORT_MIN || port > PORT_MAX)) {
             throw new IllegalArgumentException(
                     "Specified port number must be a valid non-reserved UDP port");
@@ -1278,7 +1303,7 @@ public class IpSecService extends IIpSecService.Stub {
 
             FileDescriptor sockFd = null;
             try {
-                sockFd = Os.socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+                sockFd = Os.socket(family, SOCK_DGRAM, IPPROTO_UDP);
                 pFd = ParcelFileDescriptor.dup(sockFd);
             } finally {
                 IoUtils.closeQuietly(sockFd);
@@ -1295,15 +1320,16 @@ public class IpSecService extends IIpSecService.Stub {
             mNetd.ipSecSetEncapSocketOwner(pFd, callingUid);
             if (port != 0) {
                 Log.v(TAG, "Binding to port " + port);
-                Os.bind(pFd.getFileDescriptor(), INADDR_ANY, port);
+                Os.bind(pFd.getFileDescriptor(), localAddr, port);
             } else {
-                port = bindToRandomPort(pFd.getFileDescriptor());
+                port = bindToRandomPort(pFd.getFileDescriptor(), family, localAddr);
             }
 
             userRecord.mEncapSocketRecords.put(
                     resourceId,
                     new RefcountedResource<EncapSocketRecord>(
-                            new EncapSocketRecord(resourceId, pFd.getFileDescriptor(), port),
+                            new EncapSocketRecord(resourceId, pFd.getFileDescriptor(), port,
+                                    family),
                             binder));
             return new IpSecUdpEncapResponse(IpSecManager.Status.OK, resourceId, port,
                     pFd.getFileDescriptor());
@@ -1580,6 +1606,7 @@ public class IpSecService extends IIpSecService.Stub {
      */
     private void checkIpSecConfig(IpSecConfig config) {
         UserRecord userRecord = mUserResourceTracker.getUserRecord(Binder.getCallingUid());
+        EncapSocketRecord encapSocketRecord = null;
 
         switch (config.getEncapType()) {
             case IpSecTransform.ENCAP_NONE:
@@ -1587,7 +1614,7 @@ public class IpSecService extends IIpSecService.Stub {
             case IpSecTransform.ENCAP_ESPINUDP:
             case IpSecTransform.ENCAP_ESPINUDP_NON_IKE:
                 // Retrieve encap socket record; will throw IllegalArgumentException if not found
-                userRecord.mEncapSocketRecords.getResourceOrThrow(
+                encapSocketRecord = userRecord.mEncapSocketRecords.getResourceOrThrow(
                         config.getEncapSocketResourceId());
 
                 int port = config.getEncapRemotePort();
@@ -1641,10 +1668,9 @@ public class IpSecService extends IIpSecService.Stub {
                             + ") have different address families.");
         }
 
-        // Throw an error if UDP Encapsulation is not used in IPv4.
-        if (config.getEncapType() != IpSecTransform.ENCAP_NONE && sourceFamily != AF_INET) {
+        if (encapSocketRecord != null && encapSocketRecord.getFamily() != destinationFamily) {
             throw new IllegalArgumentException(
-                    "UDP Encapsulation is not supported for this address family");
+                    "UDP encapsulation socket and destination address families must match");
         }
 
         switch (config.getMode()) {
