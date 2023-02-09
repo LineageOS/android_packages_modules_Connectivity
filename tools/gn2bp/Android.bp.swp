@@ -284,6 +284,11 @@ cc_library_static {
         "libgtest_prod_headers",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_arm: {
             srcs: [
@@ -1002,6 +1007,11 @@ cc_library_static {
         "libgtest_prod_headers",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_arm: {
             srcs: [
@@ -1382,6 +1392,11 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -1932,6 +1947,11 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -1976,6 +1996,11 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -2527,6 +2552,9 @@ cc_library_shared {
     ],
     cpp_std: "c++17",
     ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
         "-Wl,--script,external/cronet/base/android/library_loader/anchor_functions.lds",
     ],
     stem: "libcronet.108.0.5359.128",
@@ -3858,6 +3886,11 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -3971,6 +4004,11 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -5516,6 +5554,11 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_arm: {
             srcs: [
@@ -5919,6 +5962,11 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -6423,6 +6471,11 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -6557,6 +6610,11 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -9201,6 +9259,11 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -9370,6 +9433,11 @@ cc_library_static {
         "third_party/brotli/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -9421,6 +9489,11 @@ cc_library_static {
         "third_party/brotli/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -9721,6 +9794,11 @@ cc_library_static {
         "third_party/icu/source/i18n/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     rtti: true,
     target: {
         android_x86: {
@@ -9979,6 +10057,11 @@ cc_library_static {
         "third_party/icu/source/i18n/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     rtti: true,
     target: {
         android_x86: {
@@ -10039,6 +10122,11 @@ cc_library_static {
         "third_party/libevent/android/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -10231,6 +10319,11 @@ cc_library_static {
         "buildtools/third_party/libc++abi/trunk/include",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -10375,6 +10468,11 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++20",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
 }
 
 // GN: //third_party/protobuf:protobuf_lite
@@ -10446,6 +10544,11 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [
@@ -10512,6 +10615,11 @@ cc_binary {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++20",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
 }
 
 // GN: //third_party/protobuf:protoc_lib
@@ -10647,6 +10755,11 @@ cc_library_static {
         "third_party/protobuf/src/",
     ],
     cpp_std: "c++20",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
 }
 
 // GN: //url:buildflags
@@ -10759,6 +10872,11 @@ cc_library_static {
         "third_party/boringssl/src/include/",
     ],
     cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+    ],
     target: {
         android_x86: {
             cflags: [

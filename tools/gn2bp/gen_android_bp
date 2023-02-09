@@ -128,6 +128,14 @@ cflag_allowlist = [
   "-msse4.2",
 ]
 
+# Linker flags which are passed through to the blueprint.
+ldflag_allowlist = [
+  # flags to reduce binary size
+  "-Wl,--as-needed",
+  "-Wl,--gc-sections",
+  "-Wl,--icf=all",
+]
+
 def get_linker_script_ldflag(script_path):
   return f'-Wl,--script,{tree_path}/{script_path}'
 
@@ -1244,8 +1252,10 @@ def _get_cflags(cflags, defines):
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
   return cflags
 
-def set_module_flags(module, cflags, defines):
+def set_module_flags(module, module_type, cflags, defines, ldflags):
   module.cflags.update(_get_cflags(cflags, defines))
+  if module_type != 'cc_object':
+    module.ldflags.update({flag for flag in ldflags if flag in ldflag_allowlist})
   # TODO: implement proper cflag parsing.
   for flag in cflags:
     if '-std=' in flag:
@@ -1337,11 +1347,12 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.rtti = target.rtti
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
-    set_module_flags(module, target.cflags, target.defines)
+    set_module_flags(module, module.type, target.cflags, target.defines, target.ldflags)
     set_module_include_dirs(module, target.cflags, target.include_dirs)
     # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
     for arch_name, arch in target.arch.items():
-      set_module_flags(module.target[arch_name], arch.cflags, arch.defines)
+      set_module_flags(module.target[arch_name], module.type,
+                       arch.cflags, arch.defines, arch.ldflags)
       # -Xclang -target-feature -Xclang +mte are used to enable MTE (Memory Tagging Extensions).
       # Flags which does not start with '-' could not be in the cflags so enabling MTE by
       # -march and -mcpu Feature Modifiers. MTE is only available on arm64. This is needed for
