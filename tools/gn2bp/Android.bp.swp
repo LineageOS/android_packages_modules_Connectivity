@@ -272,6 +272,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-O3",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -294,13 +300,19 @@ cc_library_static {
             srcs: [
                 "base/allocator/partition_allocator/starscan/stack/asm/arm/push_registers_asm.cc",
             ],
+            cflags: [
+                "-fstack-protector",
+            ],
         },
         android_arm64: {
             srcs: [
                 "base/allocator/partition_allocator/starscan/stack/asm/arm64/push_registers_asm.cc",
             ],
             cflags: [
+                "-fstack-protector",
                 "-march=armv8-a+memtag",
+                "-mno-outline",
+                "-mno-outline-atomics",
             ],
         },
         android_x86: {
@@ -316,6 +328,7 @@ cc_library_static {
                 "base/allocator/partition_allocator/starscan/stack/asm/x64/push_registers_asm.cc",
             ],
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -991,6 +1004,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -1021,10 +1040,18 @@ cc_library_static {
                 "base/profiler/chrome_unwinder_android_v2.cc",
                 "base/trace_event/cfi_backtrace_android.cc",
             ],
+            cflags: [
+                "-fstack-protector",
+            ],
         },
         android_arm64: {
             srcs: [
                 "base/android/reached_code_profiler.cc",
+            ],
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
             ],
         },
         android_x86: {
@@ -1040,6 +1067,7 @@ cc_library_static {
                 "base/android/reached_code_profiler_stub.cc",
             ],
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -1384,6 +1412,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -1398,6 +1432,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -1405,6 +1451,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -1708,6 +1755,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -1717,6 +1770,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -1724,6 +1789,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -1939,6 +2005,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -1953,6 +2025,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -1960,6 +2044,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -1988,6 +2073,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -2002,6 +2093,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -2009,6 +2112,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -2255,6 +2359,10 @@ cc_object {
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
     ],
     local_include_dirs: [
         "./",
@@ -2274,6 +2382,9 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-fstack-protector",
+                "-g1",
             ],
         },
         android_arm64: {
@@ -2281,6 +2392,11 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-fstack-protector",
+                "-g1",
+                "-mno-outline",
+                "-mno-outline-atomics",
             ],
         },
         android_x86: {
@@ -2288,6 +2404,8 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-g1",
                 "-msse3",
             ],
         },
@@ -2296,6 +2414,9 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-fstack-protector",
+                "-g1",
                 "-msse3",
             ],
         },
@@ -2309,6 +2430,9 @@ cc_object {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
+                "-O2",
+                "-fstack-protector",
+                "-g2",
                 "-msse3",
             ],
         },
@@ -2353,6 +2477,10 @@ cc_object {
         "-D_LIBCPP_CONSTINIT=constinit",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
     ],
     local_include_dirs: [
         "./",
@@ -2375,6 +2503,9 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-fstack-protector",
+                "-g1",
             ],
         },
         android_arm64: {
@@ -2385,6 +2516,11 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-fstack-protector",
+                "-g1",
+                "-mno-outline",
+                "-mno-outline-atomics",
             ],
         },
         android_x86: {
@@ -2395,6 +2531,8 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-g1",
                 "-msse3",
             ],
         },
@@ -2406,6 +2544,9 @@ cc_object {
                 "-DANDROID",
                 "-DANDROID_NDK_VERSION_ROLL=r23_1",
                 "-DHAVE_SYS_UIO_H",
+                "-Oz",
+                "-fstack-protector",
+                "-g1",
                 "-msse3",
             ],
         },
@@ -2422,6 +2563,9 @@ cc_object {
                 "-D_FILE_OFFSET_BITS=64",
                 "-D_LARGEFILE64_SOURCE",
                 "-D_LARGEFILE_SOURCE",
+                "-O2",
+                "-fstack-protector",
+                "-g2",
                 "-msse3",
             ],
         },
@@ -2537,6 +2681,12 @@ cc_library_shared {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -2559,6 +2709,18 @@ cc_library_shared {
     ],
     stem: "libcronet.108.0.5359.128",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -2566,6 +2728,7 @@ cc_library_shared {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -3206,6 +3369,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -3221,6 +3390,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -3228,6 +3409,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -3572,6 +3754,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -3587,6 +3775,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -3594,6 +3794,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -3667,6 +3868,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -3678,6 +3885,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -3685,6 +3904,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -3743,6 +3963,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -3755,6 +3981,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -3762,6 +4000,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -3876,6 +4115,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -3892,6 +4137,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -3899,6 +4156,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -3994,6 +4252,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -4010,6 +4274,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -4017,6 +4293,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -4028,7 +4305,6 @@ cc_defaults {
     name: "cronet_aml_defaults",
     cflags: [
         "-DGOOGLE_PROTOBUF_NO_RTTI",
-        "-O2",
         "-Wno-ambiguous-reversed-operator",
         "-Wno-error=return-type",
         "-Wno-macro-redefined",
@@ -4040,7 +4316,6 @@ cc_defaults {
         "-Wno-unreachable-code-loop-increment",
         "-Wno-unused-parameter",
         "-fPIC",
-        "-fvisibility=hidden",
     ],
     stl: "none",
     apex_available: [
@@ -4650,6 +4925,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -4666,6 +4947,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -4673,6 +4966,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -4754,6 +5048,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -4770,6 +5070,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -4777,6 +5089,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -4871,6 +5184,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -4887,6 +5206,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -4894,6 +5225,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -5539,6 +5871,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -5564,10 +5902,18 @@ cc_library_static {
             srcs: [
                 "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
             ],
+            cflags: [
+                "-fstack-protector",
+            ],
         },
         android_arm64: {
             srcs: [
                 "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
+            ],
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
             ],
         },
         android_x86: {
@@ -5583,6 +5929,7 @@ cc_library_static {
                 "net/disk_cache/blockfile/mapped_file_bypass_mmap_posix.cc",
             ],
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -5651,6 +5998,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -5664,6 +6017,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -5671,6 +6036,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -5883,6 +6249,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -5898,6 +6270,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -5905,6 +6289,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -5952,6 +6337,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -5968,6 +6359,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -5975,6 +6378,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6457,6 +6861,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6477,6 +6887,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6484,6 +6906,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6534,6 +6957,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6545,6 +6974,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6552,6 +6993,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6600,6 +7042,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6616,6 +7064,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6623,6 +7083,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6656,6 +7117,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6666,6 +7133,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6673,6 +7152,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6702,6 +7182,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6712,6 +7198,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6719,6 +7217,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6748,6 +7247,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6758,6 +7263,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6765,6 +7282,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6794,6 +7312,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6804,6 +7328,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6811,6 +7347,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6840,6 +7377,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6850,6 +7393,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6857,6 +7412,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6886,6 +7442,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6896,6 +7458,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6903,6 +7477,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6932,6 +7507,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6942,6 +7523,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6949,6 +7542,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -6979,6 +7573,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -6989,6 +7589,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -6996,6 +7608,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7025,6 +7638,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7035,6 +7654,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7042,6 +7673,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7073,6 +7705,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7083,6 +7721,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7090,6 +7740,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7119,6 +7770,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7129,6 +7786,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7136,6 +7805,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7165,6 +7835,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7175,6 +7851,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7182,6 +7870,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7211,6 +7900,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7221,6 +7916,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7228,6 +7935,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7257,6 +7965,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7267,6 +7981,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7274,6 +8000,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7303,6 +8030,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7313,6 +8046,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7320,6 +8065,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7349,6 +8095,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7359,6 +8111,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7366,6 +8130,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7395,6 +8160,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7405,6 +8176,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7412,6 +8195,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7441,6 +8225,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7451,6 +8241,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7458,6 +8260,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7487,6 +8290,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7497,6 +8306,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7504,6 +8325,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7533,6 +8355,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7543,6 +8371,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7550,6 +8390,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7580,6 +8421,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7590,6 +8437,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7597,6 +8456,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7629,6 +8489,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7639,6 +8505,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7646,6 +8524,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7678,6 +8557,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7688,6 +8573,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7695,6 +8592,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7727,6 +8625,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7737,6 +8641,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7744,6 +8660,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7776,6 +8693,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7786,6 +8709,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7793,6 +8728,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7825,6 +8761,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7835,6 +8777,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7842,6 +8796,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7874,6 +8829,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7884,6 +8845,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7891,6 +8864,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7920,6 +8894,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7930,6 +8910,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7937,6 +8929,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -7966,6 +8959,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -7976,6 +8975,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -7983,6 +8994,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8015,6 +9027,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8025,6 +9043,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8032,6 +9062,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8062,6 +9093,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8072,6 +9109,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8079,6 +9128,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8108,6 +9158,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8118,6 +9174,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8125,6 +9193,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8156,6 +9225,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8166,6 +9241,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8173,6 +9260,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8208,6 +9296,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8218,6 +9312,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8225,6 +9331,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8254,6 +9361,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8264,6 +9377,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8271,6 +9396,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8300,6 +9426,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8310,6 +9442,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8317,6 +9461,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8346,6 +9491,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8356,6 +9507,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8363,6 +9526,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8394,6 +9558,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8404,6 +9574,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8411,6 +9593,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8445,6 +9628,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8455,6 +9644,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8462,6 +9663,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8503,6 +9705,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8513,6 +9721,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8520,6 +9740,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8549,6 +9770,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8559,6 +9786,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8566,6 +9805,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8601,6 +9841,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8611,6 +9857,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8618,6 +9876,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8647,6 +9906,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8657,6 +9922,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8664,6 +9941,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8701,6 +9979,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8711,6 +9995,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8718,6 +10014,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8751,6 +10048,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8761,6 +10064,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8768,6 +10083,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8797,6 +10113,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8807,6 +10129,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8814,6 +10148,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8843,6 +10178,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8853,6 +10194,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8860,6 +10213,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8888,6 +10242,12 @@ cc_object {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8898,6 +10258,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8905,6 +10277,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -8936,6 +10309,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -8945,6 +10324,18 @@ cc_object {
     ],
     cpp_std: "c++17",
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -8952,6 +10343,7 @@ cc_object {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -9250,6 +10642,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -9265,6 +10663,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -9272,6 +10682,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -9300,6 +10711,12 @@ cc_object {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -9326,6 +10743,9 @@ cc_object {
                 "third_party/boringssl/src/crypto/curve25519/asm/x25519-asm-arm.S",
                 "third_party/boringssl/src/crypto/poly1305/poly1305_arm_asm.S",
             ],
+            cflags: [
+                "-fstack-protector",
+            ],
         },
         android_arm64: {
             srcs: [
@@ -9342,6 +10762,11 @@ cc_object {
                 "third_party/boringssl/linux-aarch64/crypto/fipsmodule/sha512-armv8.S",
                 "third_party/boringssl/linux-aarch64/crypto/fipsmodule/vpaes-armv8.S",
                 "third_party/boringssl/linux-aarch64/crypto/test/trampoline-armv8.S",
+            ],
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
             ],
         },
         android_x86: {
@@ -9388,6 +10813,7 @@ cc_object {
                 "third_party/boringssl/src/crypto/hrss/asm/poly_rq_mul.S",
             ],
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -9424,6 +10850,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -9439,6 +10871,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -9446,6 +10890,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -9480,6 +10925,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -9495,6 +10946,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -9502,6 +10965,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -9784,6 +11248,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -9801,6 +11271,18 @@ cc_library_static {
     ],
     rtti: true,
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -9808,6 +11290,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -10047,6 +11530,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -10064,6 +11553,18 @@ cc_library_static {
     ],
     rtti: true,
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -10071,6 +11572,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -10113,6 +11615,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -10128,6 +11636,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -10135,6 +11655,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -10311,6 +11832,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -10325,6 +11852,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -10332,6 +11871,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -10458,6 +11998,13 @@ cc_library_static {
         "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fstack-protector",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g2",
         "-msse3",
     ],
     local_include_dirs: [
@@ -10535,6 +12082,12 @@ cc_library_static {
         "-D_GNU_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -10550,6 +12103,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -10557,6 +12122,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
@@ -10605,6 +12171,13 @@ cc_binary {
         "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fstack-protector",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g2",
         "-msse3",
     ],
     local_include_dirs: [
@@ -10745,6 +12318,13 @@ cc_library_static {
         "-D_LARGEFILE_SOURCE",
         "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-O2",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fstack-protector",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g2",
         "-msse3",
     ],
     local_include_dirs: [
@@ -10862,6 +12442,12 @@ cc_library_static {
         "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
         "-D__STDC_CONSTANT_MACROS",
         "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
     ],
     local_include_dirs: [
         "./",
@@ -10878,6 +12464,18 @@ cc_library_static {
         "-Wl,--icf=all",
     ],
     target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
         android_x86: {
             cflags: [
                 "-msse3",
@@ -10885,6 +12483,7 @@ cc_library_static {
         },
         android_x86_64: {
             cflags: [
+                "-fstack-protector",
                 "-msse3",
             ],
         },
