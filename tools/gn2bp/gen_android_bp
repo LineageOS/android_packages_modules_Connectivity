@@ -126,6 +126,20 @@ cflag_allowlist = [
   "-msse3",
   # needed for zlib:zlib
   "-msse4.2",
+  # flags to reduce binary size
+  "-O1",
+  "-O2",
+  "-O3",
+  "-Oz",
+  "-g1",
+  "-g2",
+  "-fdata-sections",
+  "-ffunction-sections",
+  "-fvisibility=hidden",
+  "-fvisibility-inlines-hidden",
+  "-fstack-protector",
+  "-mno-outline",
+  "-mno-outline-atomics"
 ]
 
 # Linker flags which are passed through to the blueprint.
