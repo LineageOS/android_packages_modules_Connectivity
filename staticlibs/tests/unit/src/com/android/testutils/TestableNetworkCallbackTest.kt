@@ -140,20 +140,28 @@ class TestableNetworkCallbackTest {
         val meteredNc = NetworkCapabilities()
         val unmeteredNc = NetworkCapabilities().addCapability(NOT_METERED)
         // Check that expecting caps (with or without) fails when no callback has been received.
-        assertFails { mCallback.expectCapabilitiesWith(NOT_METERED, matcher, SHORT_TIMEOUT_MS) }
-        assertFails { mCallback.expectCapabilitiesWithout(NOT_METERED, matcher, SHORT_TIMEOUT_MS) }
+        assertFails {
+            mCallback.expectCaps(matcher, SHORT_TIMEOUT_MS) { it.hasCapability(NOT_METERED) }
+        }
+        assertFails {
+            mCallback.expectCaps(matcher, SHORT_TIMEOUT_MS) { !it.hasCapability(NOT_METERED) }
+        }
 
         // Add NOT_METERED and check that With succeeds and Without fails.
         mCallback.onCapabilitiesChanged(net, unmeteredNc)
-        mCallback.expectCapabilitiesWith(NOT_METERED, matcher)
+        mCallback.expectCaps(matcher) { it.hasCapability(NOT_METERED) }
         mCallback.onCapabilitiesChanged(net, unmeteredNc)
-        assertFails { mCallback.expectCapabilitiesWithout(NOT_METERED, matcher, SHORT_TIMEOUT_MS) }
+        assertFails {
+            mCallback.expectCaps(matcher, SHORT_TIMEOUT_MS) { !it.hasCapability(NOT_METERED) }
+        }
 
         // Don't add NOT_METERED and check that With fails and Without succeeds.
         mCallback.onCapabilitiesChanged(net, meteredNc)
-        assertFails { mCallback.expectCapabilitiesWith(NOT_METERED, matcher, SHORT_TIMEOUT_MS) }
+        assertFails {
+            mCallback.expectCaps(matcher, SHORT_TIMEOUT_MS) { it.hasCapability(NOT_METERED) }
+        }
         mCallback.onCapabilitiesChanged(net, meteredNc)
-        mCallback.expectCapabilitiesWithout(NOT_METERED, matcher)
+        mCallback.expectCaps(matcher) { !it.hasCapability(NOT_METERED) }
     }
 
     @Test
