@@ -30,6 +30,7 @@ import android.net.NetworkRequest
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.net.TestNetworkSpecifier
+import android.net.connectivity.ConnectivityCompatChanges
 import android.net.cts.NsdManagerTest.NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStarted
 import android.net.cts.NsdManagerTest.NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStopped
 import android.net.cts.NsdManagerTest.NsdDiscoveryRecord.DiscoveryEvent.ServiceFound
@@ -40,8 +41,8 @@ import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.Re
 import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.ServiceRegistered
 import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.ServiceUnregistered
 import android.net.cts.NsdManagerTest.NsdRegistrationRecord.RegistrationEvent.UnregistrationFailed
-import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ResolveFailed
 import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ResolutionStopped
+import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ResolveFailed
 import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.ServiceResolved
 import android.net.cts.NsdManagerTest.NsdResolveRecord.ResolveEvent.StopResolutionFailed
 import android.net.cts.NsdManagerTest.NsdServiceInfoCallbackRecord.ServiceInfoCallbackEvent.RegisterCallbackFailed
@@ -783,7 +784,7 @@ class NsdManagerTest {
         // when the compat change is disabled.
         // Note that before T the compat constant had a different int value.
         assertFalse(CompatChanges.isChangeEnabled(
-                NsdManager.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER))
+                ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER))
     }
 
     @Test

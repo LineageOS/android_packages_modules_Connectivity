@@ -16,19 +16,18 @@
 
 package android.net;
 
+import static android.net.connectivity.ConnectivityCompatChanges.EXCLUDED_ROUTES;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.app.compat.CompatChanges;
-import android.compat.annotation.ChangeId;
-import android.compat.annotation.EnabledAfter;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.text.TextUtils;
 
-import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LinkPropertiesUtils;
@@ -58,17 +57,6 @@ import java.util.StringJoiner;
  *
  */
 public final class LinkProperties implements Parcelable {
-    /**
-     * The {@link #getRoutes()} now can contain excluded as well as included routes. Use
-     * {@link RouteInfo#getType()} to determine route type.
-     *
-     * @hide
-     */
-    @ChangeId
-    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.S_V2)
-    @VisibleForTesting
-    public static final long EXCLUDED_ROUTES = 186082280;
-
     // The interface described by the network link.
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
     private String mIfaceName;
