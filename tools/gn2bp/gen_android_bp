@@ -1023,6 +1023,10 @@ class GnRunBinary(BaseActionSanitizer):
     return NEWLINE.join(self.target.args)
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
+  def __init__(self, target, arch, is_test_target):
+    self.is_test_target = is_test_target
+    super().__init__(target, arch)
+
   def _add_location_tag_to_filepath(self, arg):
     if not arg.endswith('.class'):
       # --input_file supports both .class specifiers or source files as arguments.
@@ -1039,7 +1043,9 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     self._delete_value_arg('--prev_output_dir', False)
     self._update_list_arg('--input_file', self._sanitize_filepath)
     self._update_list_arg('--input_file', self._add_location_tag_to_filepath)
-    self._append_arg('--package_prefix', 'android.net.http.internal')
+    if not self.is_test_target:
+      # Only jarjar platform code
+      self._append_arg('--package_prefix', 'android.net.http.internal')
     super()._sanitize_args()
 
   def _sanitize_outputs(self):
@@ -1059,6 +1065,10 @@ class JniGeneratorSanitizer(BaseActionSanitizer):
     return tool_files
 
 class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
+  def __init__(self, target, arch, is_test_target):
+    self.is_test_target = is_test_target
+    super().__init__(target, arch)
+
   def _sanitize_inputs(self):
     self.target.inputs = [file for file in self.target.inputs if not file.startswith('//out/')]
 
@@ -1070,7 +1080,9 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
     # update_jni_registration_module removes them from the srcs of the module
     # It might be better to remove sources by '--sources-exclusions'
     self._delete_value_arg('--sources-exclusions')
-    self._append_arg('--package_prefix', 'android.net.http.internal')
+    if not self.is_test_target:
+      # Only jarjar platform code
+      self._append_arg('--package_prefix', 'android.net.http.internal')
     super()._sanitize_args()
 
   def get_cmd(self):
@@ -1095,7 +1107,10 @@ class JniRegistrationGeneratorSanitizer(BaseActionSanitizer):
 
 class JavaJniRegistrationGeneratorSanitizer(JniRegistrationGeneratorSanitizer):
   def get_name(self):
-    return label_to_module_name(self.target.name) + "__java"
+    name = super().get_name() + "__java"
+    if self.is_test_target:
+      name += gn_utils.TESTING_SUFFIX
+    return name
 
   def _sanitize_outputs(self):
     self.target.outputs = [out for out in self.target.outputs if
@@ -1146,18 +1161,18 @@ class WriteNativeLibrariesJavaSanitizer(BaseActionSanitizer):
     self._set_value_arg('--output', '$(out)')
     super()._sanitize_args()
 
-def get_action_sanitizer(target, type, arch):
+def get_action_sanitizer(target, type, arch, is_test_target):
   if target.script == "//build/write_buildflag_header.py":
     return WriteBuildFlagHeaderSanitizer(target, arch)
   elif target.script == "//build/write_build_date_header.py":
     return WriteBuildDateHeaderSanitizer(target, arch)
   elif target.script == '//base/android/jni_generator/jni_generator.py':
-    return JniGeneratorSanitizer(target, arch)
+    return JniGeneratorSanitizer(target, arch, is_test_target)
   elif target.script == '//base/android/jni_generator/jni_registration_generator.py':
     if type == 'java_genrule':
-      return JavaJniRegistrationGeneratorSanitizer(target, arch)
+      return JavaJniRegistrationGeneratorSanitizer(target, arch, is_test_target)
     else:
-      return JniRegistrationGeneratorSanitizer(target, arch)
+      return JniRegistrationGeneratorSanitizer(target, arch, is_test_target)
   elif target.script == "//build/util/version.py":
     return VersionSanitizer(target, arch)
   elif target.script == "//build/android/gyp/java_cpp_enum.py":
@@ -1176,7 +1191,7 @@ def get_action_sanitizer(target, type, arch):
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target, arch)
 
-def create_action_foreach_modules(blueprint, target):
+def create_action_foreach_modules(blueprint, target, is_test_target):
   """ The following assumes that rebase_path exists in the args.
   The args of an action_foreach contains hints about which output files are generated
   by which source files.
@@ -1207,10 +1222,10 @@ def create_action_foreach_modules(blueprint, target):
         new_args.append(arg)
 
   target.args = new_args
-  return create_action_module(blueprint, target, 'cc_genrule')
+  return create_action_module(blueprint, target, 'cc_genrule', is_test_target)
 
-def create_action_module_internal(target, type, arch=None):
-  sanitizer = get_action_sanitizer(target, type, arch)
+def create_action_module_internal(target, type, is_test_target, arch=None):
+  sanitizer = get_action_sanitizer(target, type, arch, is_test_target)
   sanitizer.sanitize()
 
   module = Module(type, sanitizer.get_name(), target.name)
@@ -1280,7 +1295,7 @@ def merge_modules(modules, genrule_type):
   merged_module.cmd = merge_cmd(modules, genrule_type)
   return merged_module
 
-def create_action_module(blueprint, target, genrule_type):
+def create_action_module(blueprint, target, genrule_type, is_test_target):
   '''
   Create module for action target and add to the blueprint. If target has arch specific attributes
   this function merge them and create a single module.
@@ -1293,11 +1308,11 @@ def create_action_module(blueprint, target, genrule_type):
   # different value for cpu-family arg between archs
   if target.name in ['//build/android:native_libraries_gen',
                      '//build/android:native_libraries_gen__testing']:
-    module = create_action_module_internal(target, genrule_type, target.arch['android_arm'])
+    module = create_action_module_internal(target, genrule_type, is_test_target, target.arch['android_arm'])
     blueprint.add_module(module)
     return module
 
-  modules = {arch_name: create_action_module_internal(target, genrule_type, arch)
+  modules = {arch_name: create_action_module_internal(target, genrule_type, is_test_target, arch)
              for arch_name, arch in target.arch.items()}
   module = merge_modules(modules, genrule_type)
   blueprint.add_module(module)
@@ -1384,9 +1399,9 @@ def create_modules_from_target(blueprint, gn, gn_target_name, is_test_target):
     if module is None:
       return None
   elif target.type == 'action':
-    module = create_action_module(blueprint, target, 'cc_genrule')
+    module = create_action_module(blueprint, target, 'cc_genrule', is_test_target)
   elif target.type == 'action_foreach':
-    module = create_action_foreach_modules(blueprint, target)
+    module = create_action_foreach_modules(blueprint, target, is_test_target)
   elif target.type == 'copy':
     # TODO: careful now! copy targets are not supported yet, but this will stop
     # traversing the dependency tree. For //base:base, this is not a big
@@ -1634,7 +1649,7 @@ def create_java_module(blueprint, gn):
     if target.script == '//build/android/gyp/gcc_preprocess.py':
       module.srcs.add(':' + create_gcc_preprocess_modules(blueprint, target).name)
     else:
-      module.srcs.add(':' + create_action_module(blueprint, target, 'java_genrule').name)
+      module.srcs.add(':' + create_action_module(blueprint, target, 'java_genrule', False).name)
   preprocessor_module = create_java_jni_preprocessor(blueprint)
   module.plugins.add(preprocessor_module.name)
   blueprint.add_module(module)
@@ -1649,7 +1664,7 @@ def create_java_api_module(blueprint, gn):
   source_module.comment += "\n// TODO(danstahr): add the API helpers separately after the main" \
                            " API is checked in and thoroughly reviewed"
   source_module.srcs.update([
-    ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule').name
+    ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule', False).name
     for dep in get_api_java_actions(gn)])
   blueprint.add_module(source_module)
 
