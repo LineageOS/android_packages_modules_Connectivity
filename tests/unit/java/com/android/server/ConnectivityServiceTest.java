@@ -9195,7 +9195,7 @@ public class ConnectivityServiceTest {
         setBlockedReasonChanged(BLOCKED_REASON_BATTERY_SAVER);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_REASON_BATTERY_SAVER);
+                cb -> cb.getReason() == BLOCKED_REASON_BATTERY_SAVER);
         assertNull(mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
@@ -9206,12 +9206,12 @@ public class ConnectivityServiceTest {
         setBlockedReasonChanged(BLOCKED_METERED_REASON_USER_RESTRICTED);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_METERED_REASON_USER_RESTRICTED);
+                cb -> cb.getReason() == BLOCKED_METERED_REASON_USER_RESTRICTED);
 
         setBlockedReasonChanged(BLOCKED_REASON_NONE);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> !cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_REASON_NONE);
+                cb -> cb.getReason() == BLOCKED_REASON_NONE);
         assertEquals(mCellAgent.getNetwork(), mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
@@ -9220,7 +9220,7 @@ public class ConnectivityServiceTest {
         setBlockedReasonChanged(BLOCKED_METERED_REASON_DATA_SAVER);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_METERED_REASON_DATA_SAVER);
+                cb -> cb.getReason() == BLOCKED_METERED_REASON_DATA_SAVER);
         assertNull(mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
@@ -9233,7 +9233,7 @@ public class ConnectivityServiceTest {
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> !cb.getBlocked());
         detailedCallback.expectCaps(mCellAgent, c -> c.hasCapability(NET_CAPABILITY_NOT_METERED));
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_REASON_NONE);
+                cb -> cb.getReason() == BLOCKED_REASON_NONE);
         assertEquals(mCellAgent.getNetwork(), mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
@@ -9246,7 +9246,7 @@ public class ConnectivityServiceTest {
         detailedCallback.expectCaps(mCellAgent,
                 c -> !c.hasCapability(NET_CAPABILITY_NOT_METERED));
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_METERED_REASON_DATA_SAVER);
+                cb -> cb.getReason() == BLOCKED_METERED_REASON_DATA_SAVER);
         assertNull(mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
@@ -9255,7 +9255,7 @@ public class ConnectivityServiceTest {
         setBlockedReasonChanged(BLOCKED_REASON_NONE);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> !cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_REASON_NONE);
+                cb -> cb.getReason() == BLOCKED_REASON_NONE);
         assertEquals(mCellAgent.getNetwork(), mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
@@ -9269,7 +9269,7 @@ public class ConnectivityServiceTest {
         setBlockedReasonChanged(BLOCKED_METERED_REASON_DATA_SAVER);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_METERED_REASON_DATA_SAVER);
+                cb -> cb.getReason() == BLOCKED_METERED_REASON_DATA_SAVER);
         assertNull(mCm.getActiveNetwork());
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.BLOCKED);
@@ -9280,7 +9280,7 @@ public class ConnectivityServiceTest {
         setBlockedReasonChanged(BLOCKED_REASON_NONE);
         cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> !cb.getBlocked());
         detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                cb -> cb.getBlocked() == BLOCKED_REASON_NONE);
+                cb -> cb.getReason() == BLOCKED_REASON_NONE);
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertExtraInfoFromCmPresent(mCellAgent);
