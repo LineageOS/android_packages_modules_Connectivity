@@ -139,7 +139,9 @@ cflag_allowlist = [
   "-fvisibility-inlines-hidden",
   "-fstack-protector",
   "-mno-outline",
-  "-mno-outline-atomics"
+  "-mno-outline-atomics",
+  "-fno-asynchronous-unwind-tables",
+  "-fno-unwind-tables",
 ]
 
 # Linker flags which are passed through to the blueprint.
