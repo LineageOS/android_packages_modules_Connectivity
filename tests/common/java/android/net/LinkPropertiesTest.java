@@ -32,6 +32,7 @@ import static org.junit.Assert.fail;
 
 import android.compat.testing.PlatformCompatChangeRule;
 import android.net.LinkProperties.ProvisioningChange;
+import android.net.connectivity.ConnectivityCompatChanges;
 import android.os.Build;
 import android.system.OsConstants;
 import android.util.ArraySet;
@@ -1261,7 +1262,7 @@ public class LinkPropertiesTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
-    @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
+    @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testHasExcludeRoute() {
         LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("tun0");
@@ -1274,7 +1275,7 @@ public class LinkPropertiesTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
-    @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
+    @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testRouteAddWithSameKey() throws Exception {
         LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("wlan0");
@@ -1348,14 +1349,14 @@ public class LinkPropertiesTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
-    @EnableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
+    @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testExcludedRoutesEnabledByCompatChange() {
         assertExcludeRoutesVisible();
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.R)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
-    @DisableCompatChanges({LinkProperties.EXCLUDED_ROUTES})
+    @DisableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testExcludedRoutesDisabledByCompatChange() {
         checkExcludeRoutesNotVisibleAfterS();
     }
