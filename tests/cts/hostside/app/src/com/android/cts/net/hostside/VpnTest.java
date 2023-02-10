@@ -1645,7 +1645,7 @@ public class VpnTest {
             // BlockedStatusCallback to be fired before checking the blocking status of incoming
             // packets.
             remoteUidCallback.expect(BLOCKED_STATUS_INT, network,
-                    cb -> cb.getBlocked() == BLOCKED_REASON_LOCKDOWN_VPN);
+                    cb -> cb.getReason() == BLOCKED_REASON_LOCKDOWN_VPN);
 
             if (SdkLevel.isAtLeastT()) {
                 // On T and above, lockdown rule drop packets not coming from lo regardless of the
