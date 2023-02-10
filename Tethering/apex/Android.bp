@@ -144,7 +144,6 @@ apex {
 
     compat_configs: [
         "connectivity-platform-compat-config",
-        "connectivity-t-platform-compat-config",
     ],
 }
 
