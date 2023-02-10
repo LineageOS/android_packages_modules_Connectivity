@@ -41,6 +41,7 @@ import static com.android.networkstack.apishim.ConstantsShim.BLOCKED_REASON_NONE
 import static com.android.networkstack.apishim.ConstantsShim.RECEIVER_EXPORTED;
 import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
+import static com.android.testutils.RecorderCallback.CallbackEntry.BLOCKED_STATUS_INT;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1643,7 +1644,8 @@ public class VpnTest {
             // setRequireVpnForUids setup a lockdown rule asynchronously. So it needs to wait for
             // BlockedStatusCallback to be fired before checking the blocking status of incoming
             // packets.
-            remoteUidCallback.expectBlockedStatusCallback(network, BLOCKED_REASON_LOCKDOWN_VPN);
+            remoteUidCallback.expect(BLOCKED_STATUS_INT, network,
+                    cb -> cb.getReason() == BLOCKED_REASON_LOCKDOWN_VPN);
 
             if (SdkLevel.isAtLeastT()) {
                 // On T and above, lockdown rule drop packets not coming from lo regardless of the
@@ -1817,9 +1819,6 @@ public class VpnTest {
         public void expectAvailableCallbacksWithBlockedReasonNone(Network network) {
             super.expectAvailableCallbacks(network, false /* suspended */, true /* validated */,
                     BLOCKED_REASON_NONE, NETWORK_CALLBACK_TIMEOUT_MS);
-        }
-        public void expectBlockedStatusCallback(Network network, int blockedStatus) {
-            super.expectBlockedStatusCallback(blockedStatus, network, NETWORK_CALLBACK_TIMEOUT_MS);
         }
         public void onBlockedStatusChanged(Network network, int blockedReasons) {
             getHistory().add(new CallbackEntry.BlockedStatusInt(network, blockedReasons));
