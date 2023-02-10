@@ -46,6 +46,7 @@ ODR_VIOLATION_IGNORE_TARGETS = {
 }
 ARCH_REGEX = r'(android_x86_64|android_x86|android_arm|android_arm64|host)'
 RESPONSE_FILE = '{{response_file_name}}'
+TESTING_SUFFIX = "__testing"
 AIDL_INCLUDE_DIRS_REGEX = r'--includes=\[(.*)\]'
 
 def repo_root():
@@ -338,6 +339,9 @@ class GnParser(object):
 
     if self._is_java_group(type_, target_name):
       java_group_name = target_name
+
+    if is_test_target:
+      target_name += TESTING_SUFFIX
 
     target = self.all_targets.get(target_name)
     if target is None:
