@@ -83,7 +83,7 @@ open class RecorderCallback private constructor(
         ) : CallbackEntry()
         data class BlockedStatusInt(
             override val network: Network,
-            val blocked: Int
+            val reason: Int
         ) : CallbackEntry()
         // Convenience constants for expecting a type
         companion object {
@@ -448,11 +448,11 @@ open class TestableNetworkCallback private constructor(
         net: Network,
         suspended: Boolean,
         validated: Boolean,
-        blockedStatus: Int,
+        blockedReason: Int,
         tmt: Long
     ) {
         expectAvailableCallbacksCommon(net, suspended, validated, tmt)
-        expect<BlockedStatusInt>(net) { it.blocked == blockedStatus }
+        expect<BlockedStatusInt>(net) { it.reason == blockedReason }
     }
 
     private fun expectAvailableCallbacksCommon(
@@ -500,11 +500,11 @@ open class TestableNetworkCallback private constructor(
 
     fun expectAvailableThenValidatedCallbacks(
         net: Network,
-        blockedStatus: Int,
+        blockedReason: Int,
         tmt: Long = defaultTimeoutMs
     ) {
         expectAvailableCallbacks(net, validated = false, suspended = false,
-                blockedStatus = blockedStatus, tmt = tmt)
+                blockedReason = blockedReason, tmt = tmt)
         expectCaps(net, tmt) { it.hasCapability(NET_CAPABILITY_VALIDATED) }
     }
 
