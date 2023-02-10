@@ -16,6 +16,8 @@
 
 package android.net.nsd;
 
+import static android.net.connectivity.ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER;
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -24,8 +26,6 @@ import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.annotation.SystemService;
 import android.app.compat.CompatChanges;
-import android.compat.annotation.ChangeId;
-import android.compat.annotation.EnabledSince;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
@@ -135,28 +135,6 @@ import java.util.concurrent.Executor;
 public final class NsdManager {
     private static final String TAG = NsdManager.class.getSimpleName();
     private static final boolean DBG = false;
-
-    /**
-     * When enabled, apps targeting < Android 12 are considered legacy for
-     * the NSD native daemon.
-     * The platform will only keep the daemon running as long as there are
-     * any legacy apps connected.
-     *
-     * After Android 12, direct communication with the native daemon might not work since the native
-     * daemon won't always stay alive. Using the NSD APIs from NsdManager as the replacement is
-     * recommended.
-     * Another alternative could be bundling your own mdns solutions instead of
-     * depending on the system mdns native daemon.
-     *
-     * This compatibility change applies to Android 13 and later only. To toggle behavior on
-     * Android 12 and Android 12L, use RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS.
-     *
-     * @hide
-     */
-    @ChangeId
-    @EnabledSince(targetSdkVersion = android.os.Build.VERSION_CODES.S)
-    // This was a platform change ID with value 191844585L before T
-    public static final long RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER = 235355681L;
 
     /**
      * Broadcast intent action to indicate whether network service discovery is
