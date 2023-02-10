@@ -164,6 +164,7 @@ java_sdk_library {
     ],
 }
 
+// This rule is not used anymore(b/268440216).
 platform_compat_config {
     name: "connectivity-t-platform-compat-config",
     src: ":framework-connectivity-t",
