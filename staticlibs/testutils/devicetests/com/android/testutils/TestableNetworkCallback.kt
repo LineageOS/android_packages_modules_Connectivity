@@ -414,13 +414,6 @@ open class TestableNetworkCallback private constructor(
         crossinline predicate: (T) -> Boolean = { true }
     ) = history.poll(timeoutMs, from) { it is T && predicate(it) } as T?
 
-    inline fun expectLinkPropertiesThat(
-        net: Network,
-        tmt: Long = defaultTimeoutMs,
-        valid: (LinkProperties) -> Boolean
-    ): LinkPropertiesChanged =
-            expect(net, tmt, "LinkProperties don't match expectations") { valid(it.lp) }
-
     // Expects onAvailable and the callbacks that follow it. These are:
     // - onSuspended, iff the network was suspended when the callbacks fire.
     // - onCapabilitiesChanged.
@@ -550,13 +543,6 @@ open class TestableNetworkCallback private constructor(
     fun expectAvailableThenValidatedCallbacks(n: HasNetwork) {
         expectAvailableThenValidatedCallbacks(n.network, defaultTimeoutMs)
     }
-
-    @JvmOverloads
-    fun expectLinkPropertiesThat(
-        n: HasNetwork,
-        tmt: Long = defaultTimeoutMs,
-        valid: (LinkProperties) -> Boolean
-    ) = expectLinkPropertiesThat(n.network, tmt, valid)
 
     @JvmOverloads
     fun expectCaps(
