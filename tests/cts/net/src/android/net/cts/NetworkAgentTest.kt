@@ -506,9 +506,7 @@ class NetworkAgentTest {
         val lp = LinkProperties(agent.lp)
         lp.setInterfaceName(ifaceName)
         agent.sendLinkProperties(lp)
-        callback.expectLinkPropertiesThat(agent.network!!) {
-            it.getInterfaceName() == ifaceName
-        }
+        callback.expect<LinkPropertiesChanged>(agent.network!!) { it.lp.interfaceName == ifaceName }
         val nc = NetworkCapabilities(agent.nc)
         nc.addCapability(NET_CAPABILITY_NOT_METERED)
         agent.sendNetworkCapabilities(nc)
