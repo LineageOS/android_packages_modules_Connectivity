@@ -47,22 +47,22 @@ public interface ScanCallback {
     /**
      * Invalid argument such as out-of-range, illegal format etc.
      */
-    int INVALID_ARGUMENT = 2;
+    int ERROR_INVALID_ARGUMENT = 2;
 
     /**
      * Request from clients who do not have permissions.
      */
-    int PERMISSION_DENIED = 3;
+    int ERROR_PERMISSION_DENIED = 3;
 
     /**
      * Request cannot be fulfilled due to limited resource.
      */
-    int RESOURCE_EXHAUSTED = 4;
+    int ERROR_RESOURCE_EXHAUSTED = 4;
 
     /** @hide **/
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({ERROR_UNKNOWN, ERROR_UNSUPPORTED, INVALID_ARGUMENT, PERMISSION_DENIED,
-            RESOURCE_EXHAUSTED})
+    @IntDef({ERROR_UNKNOWN, ERROR_UNSUPPORTED, ERROR_INVALID_ARGUMENT, ERROR_PERMISSION_DENIED,
+            ERROR_RESOURCE_EXHAUSTED})
     @interface ErrorCode {
     }
 
