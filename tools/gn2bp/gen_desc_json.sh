@@ -56,6 +56,7 @@ function gn_desc() {
     "is_cronet_build = true"
     "is_debug = false"
     "is_official_build = true"
+    "use_nss_certs = false"
   )
   gn_args+=("target_cpu = \"${1}\"")
 
