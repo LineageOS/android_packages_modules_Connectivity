@@ -34,6 +34,7 @@ import com.android.testutils.RecorderCallback.CallbackEntry.Companion.NETWORK_CA
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.RESUMED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.SUSPENDED
 import com.android.testutils.RecorderCallback.CallbackEntry.Companion.UNAVAILABLE
+import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -215,7 +216,7 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
-    fun testLinkPropertiesThat() {
+    fun testLinkPropertiesCallbacks() {
         val net = Network(112)
         val linkAddress = LinkAddress("fe80::ace:d00d/64")
         val mtu = 1984
@@ -226,30 +227,30 @@ class TestableNetworkCallbackTest {
         }
 
         // Check that expecting linkPropsThat anything fails when no callback has been received.
-        assertFails { mCallback.expectLinkPropertiesThat(net, SHORT_TIMEOUT_MS) { true } }
+        assertFails { mCallback.expect<LinkPropertiesChanged>(net, SHORT_TIMEOUT_MS) { true } }
 
         // Basic test for true and false
         mCallback.onLinkPropertiesChanged(net, linkProps)
-        mCallback.expectLinkPropertiesThat(net) { true }
+        mCallback.expect<LinkPropertiesChanged>(net) { true }
         mCallback.onLinkPropertiesChanged(net, linkProps)
-        assertFails { mCallback.expectLinkPropertiesThat(net, SHORT_TIMEOUT_MS) { false } }
+        assertFails { mCallback.expect<LinkPropertiesChanged>(net, SHORT_TIMEOUT_MS) { false } }
 
         // Try a positive and negative case
         mCallback.onLinkPropertiesChanged(net, linkProps)
-        mCallback.expectLinkPropertiesThat(net) { lp ->
-            lp.interfaceName == TEST_INTERFACE_NAME &&
-                    lp.linkAddresses.contains(linkAddress) &&
-                    lp.mtu == mtu
+        mCallback.expect<LinkPropertiesChanged>(net) {
+            it.lp.interfaceName == TEST_INTERFACE_NAME &&
+                    it.lp.linkAddresses.contains(linkAddress) &&
+                    it.lp.mtu == mtu
         }
         mCallback.onLinkPropertiesChanged(net, linkProps)
-        assertFails { mCallback.expectLinkPropertiesThat(net, SHORT_TIMEOUT_MS) { lp ->
-            lp.interfaceName != TEST_INTERFACE_NAME
+        assertFails { mCallback.expect<LinkPropertiesChanged>(net, SHORT_TIMEOUT_MS) {
+            it.lp.interfaceName != TEST_INTERFACE_NAME
         } }
 
         // Try a matching callback on the wrong network
         mCallback.onLinkPropertiesChanged(net, linkProps)
-        assertFails { mCallback.expectLinkPropertiesThat(Network(114), SHORT_TIMEOUT_MS) { lp ->
-            lp.interfaceName == TEST_INTERFACE_NAME
+        assertFails { mCallback.expect<LinkPropertiesChanged>(Network(114), SHORT_TIMEOUT_MS) {
+            it.lp.interfaceName == TEST_INTERFACE_NAME
         } }
     }
 
