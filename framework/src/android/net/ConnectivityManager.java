@@ -1505,8 +1505,8 @@ public class ConnectivityManager {
      * Temporarily set automaticOnOff keeplaive TCP polling alarm timer to 1 second.
      *
      * TODO: Remove this when the TCP polling design is replaced with callback.
-     * @params timeMs The time of expiry, with System.currentTimeMillis() base. The value should be
-     *                set no more than 5 minutes in the future.
+     * @param timeMs The time of expiry, with System.currentTimeMillis() base. The value should be
+     *               set no more than 5 minutes in the future.
      * @hide
      */
     public void setTestLowTcpPollingTimerForKeepalive(long timeMs) {
