@@ -31,7 +31,7 @@ package android.net.http {
 
   public abstract class HttpEngine {
     method public abstract java.net.URLStreamHandlerFactory createURLStreamHandlerFactory();
-    method public abstract String getVersionString();
+    method public static String getVersionString();
     method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, android.net.http.UrlRequest.Callback, java.util.concurrent.Executor);
     method public abstract java.net.URLConnection openConnection(java.net.URL) throws java.io.IOException;
     method public abstract void shutdown();
