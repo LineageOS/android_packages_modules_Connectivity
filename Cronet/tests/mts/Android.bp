@@ -37,7 +37,6 @@ android_test {
         "CronetTestJavaDefaults",
         "mts-target-sdk-version-current",
      ],
-     compile_multilib: "both",
      sdk_version: "test_current",
      static_libs: ["NetHttpTestsLibPreJarJar"],
      jarjar_rules: ":framework-tethering-jarjar-rules",
