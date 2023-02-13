@@ -16,6 +16,7 @@
 
 package android.net.http.cts.util;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -23,6 +24,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 
 import android.net.http.CallbackException;
 import android.net.http.HttpException;
@@ -229,6 +232,19 @@ public class TestUrlRequestCallback extends UrlRequest.Callback {
             assertTrue("Did not receive terminal callback before timeout", blockForDone());
         }
         assertSame(expectedStep, mResponseStep);
+    }
+
+    /**
+     * Waits for a terminal callback to complete execution before skipping the test if the
+     * callback is not the expected one
+     *
+     * @param expectedStep the expected callback step
+     */
+    public void assumeCallback(ResponseStep expectedStep) {
+        if (isTerminalCallback(expectedStep)) {
+            assumeTrue("Did not receive terminal callback before timeout", blockForDone());
+        }
+        assumeThat(expectedStep, equalTo(mResponseStep));
     }
 
     /**
