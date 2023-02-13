@@ -53,6 +53,7 @@ import com.android.server.TestNetIdManager
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.ProxyTracker
+import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
 import org.junit.After
 import org.junit.Before
@@ -73,7 +74,6 @@ import org.mockito.Mockito.spy
 import org.mockito.MockitoAnnotations
 import org.mockito.Spy
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -288,10 +288,9 @@ class ConnectivityServiceIntegrationTest {
 
         testCb.expectAvailableCallbacks(na.network, validated = false, tmt = TEST_TIMEOUT_MS)
 
-        val capportData = testCb.expectLinkPropertiesThat(na, TEST_TIMEOUT_MS) {
-            it.captivePortalData != null
+        val capportData = testCb.expect<LinkPropertiesChanged>(na, TEST_TIMEOUT_MS) {
+            it.lp.captivePortalData != null
         }.lp.captivePortalData
-        assertNotNull(capportData)
         assertTrue(capportData.isCaptive)
         assertEquals(Uri.parse("https://login.capport.android.com"), capportData.userPortalUrl)
         assertEquals(Uri.parse("https://venueinfo.capport.android.com"), capportData.venueInfoUrl)
