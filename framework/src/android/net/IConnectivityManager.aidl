@@ -188,7 +188,7 @@ interface IConnectivityManager
 
     void startNattKeepaliveWithFd(in Network network, in ParcelFileDescriptor pfd, int resourceId,
             int intervalSeconds, in ISocketKeepaliveCallback cb, String srcAddr,
-            String dstAddr, boolean automaticOnOffKeepalives);
+            String dstAddr, boolean automaticOnOffKeepalives, in Network underpinnedNetwork);
 
     void startTcpKeepalive(in Network network, in ParcelFileDescriptor pfd, int intervalSeconds,
             in ISocketKeepaliveCallback cb);
