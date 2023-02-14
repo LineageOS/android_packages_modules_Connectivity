@@ -196,11 +196,16 @@ public class AutomaticOnOffKeepaliveTracker {
         private final PendingIntent mTcpPollingAlarm;
         @AutomaticOnOffState
         private int mAutomaticOnOffState;
+        @Nullable
+        private final Network mUnderpinnedNetwork;
 
         AutomaticOnOffKeepalive(@NonNull final KeepaliveTracker.KeepaliveInfo ki,
-                final boolean autoOnOff, @NonNull Context context) throws InvalidSocketException {
+                final boolean autoOnOff, @NonNull Context context,
+                @Nullable Network underpinnedNetwork)
+                throws InvalidSocketException {
             this.mKi = Objects.requireNonNull(ki);
             mCallback = ki.mCallback;
+            mUnderpinnedNetwork = underpinnedNetwork;
             if (autoOnOff && mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION)) {
                 mAutomaticOnOffState = STATE_ENABLED;
                 if (null == ki.mFd) {
@@ -226,6 +231,11 @@ public class AutomaticOnOffKeepaliveTracker {
 
         public Network getNetwork() {
             return mKi.getNai().network;
+        }
+
+        @Nullable
+        public Network getUnderpinnedNetwork() {
+            return mUnderpinnedNetwork;
         }
 
         public boolean match(Network network, int slot) {
@@ -475,13 +485,13 @@ public class AutomaticOnOffKeepaliveTracker {
             @NonNull String srcAddrString,
             int srcPort,
             @NonNull String dstAddrString,
-            int dstPort, boolean automaticOnOffKeepalives) {
+            int dstPort, boolean automaticOnOffKeepalives, @Nullable Network underpinnedNetwork) {
         final KeepaliveTracker.KeepaliveInfo ki = mKeepaliveTracker.makeNattKeepaliveInfo(nai, fd,
                 intervalSeconds, cb, srcAddrString, srcPort, dstAddrString, dstPort);
         if (null == ki) return;
         try {
             final AutomaticOnOffKeepalive autoKi = new AutomaticOnOffKeepalive(ki,
-                    automaticOnOffKeepalives, mContext);
+                    automaticOnOffKeepalives, mContext, underpinnedNetwork);
             mConnectivityServiceHandler.obtainMessage(NetworkAgent.CMD_START_SOCKET_KEEPALIVE,
                     // TODO : move ConnectivityService#encodeBool to a static lib.
                     automaticOnOffKeepalives ? 1 : 0, 0, autoKi).sendToTarget();
@@ -504,13 +514,14 @@ public class AutomaticOnOffKeepaliveTracker {
             @NonNull String srcAddrString,
             @NonNull String dstAddrString,
             int dstPort,
-            boolean automaticOnOffKeepalives) {
+            boolean automaticOnOffKeepalives,
+            @Nullable Network underpinnedNetwork) {
         final KeepaliveTracker.KeepaliveInfo ki = mKeepaliveTracker.makeNattKeepaliveInfo(nai, fd,
                 resourceId, intervalSeconds, cb, srcAddrString, dstAddrString, dstPort);
         if (null == ki) return;
         try {
             final AutomaticOnOffKeepalive autoKi = new AutomaticOnOffKeepalive(ki,
-                    automaticOnOffKeepalives, mContext);
+                    automaticOnOffKeepalives, mContext, underpinnedNetwork);
             mConnectivityServiceHandler.obtainMessage(NetworkAgent.CMD_START_SOCKET_KEEPALIVE,
                     // TODO : move ConnectivityService#encodeBool to a static lib.
                     automaticOnOffKeepalives ? 1 : 0, 0, autoKi).sendToTarget();
@@ -539,7 +550,8 @@ public class AutomaticOnOffKeepaliveTracker {
         if (null == ki) return;
         try {
             final AutomaticOnOffKeepalive autoKi = new AutomaticOnOffKeepalive(ki,
-                    false /* autoOnOff, tcp keepalives are never auto on/off */, mContext);
+                    false /* autoOnOff, tcp keepalives are never auto on/off */,
+                    mContext, null /* underpinnedNetwork, tcp keepalives do not refer to this */);
             mConnectivityServiceHandler.obtainMessage(CMD_START_SOCKET_KEEPALIVE, autoKi)
                     .sendToTarget();
         } catch (InvalidSocketException e) {
