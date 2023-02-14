@@ -82,6 +82,17 @@ filegroup {
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
 
+// The filegroup lists files that are necessary for verifying building mdns as a standalone,
+// for use with service-connectivity-mdns-standalone-build-test
+filegroup {
+    name: "framework-connectivity-t-mdns-standalone-build-sources",
+    srcs: [
+        "src/android/net/nsd/OffloadEngine.java",
+        "src/android/net/nsd/OffloadServiceInfo.java",
+    ],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
+
 java_library {
     name: "framework-connectivity-t-pre-jarjar",
     defaults: ["framework-connectivity-t-defaults"],
