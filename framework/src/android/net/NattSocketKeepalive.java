@@ -66,10 +66,12 @@ public final class NattSocketKeepalive extends SocketKeepalive {
      *                    the supplied {@link Callback} will see a call to
      *                    {@link Callback#onError(int)} with {@link #ERROR_INVALID_INTERVAL}.
      * @param flags Flags to enable/disable available options on this keepalive.
+     * @param underpinnedNetwork The underpinned network of this keepalive.
+     *
      * @hide
      */
     @Override
-    protected void startImpl(int intervalSec, int flags) {
+    protected void startImpl(int intervalSec, int flags, Network underpinnedNetwork) {
         if (0 != (flags & ~FLAG_AUTOMATIC_ON_OFF)) {
             throw new IllegalArgumentException("Illegal flag value for "
                     + this.getClass().getSimpleName() + " : " + flags);
@@ -79,7 +81,8 @@ public final class NattSocketKeepalive extends SocketKeepalive {
             try {
                 mService.startNattKeepaliveWithFd(mNetwork, mPfd, mResourceId,
                         intervalSec, mCallback, mSource.getHostAddress(),
-                        mDestination.getHostAddress(), automaticOnOffKeepalives);
+                        mDestination.getHostAddress(), automaticOnOffKeepalives,
+                        underpinnedNetwork);
             } catch (RemoteException e) {
                 Log.e(TAG, "Error starting socket keepalive: ", e);
                 throw e.rethrowFromSystemServer();
