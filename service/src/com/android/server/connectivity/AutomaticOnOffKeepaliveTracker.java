@@ -254,6 +254,28 @@ public class AutomaticOnOffKeepaliveTracker {
             // not duplicated this is a no-op.
             FileUtils.closeQuietly(mFd);
         }
+
+        private String getAutomaticOnOffStateName(int state) {
+            switch (state) {
+                case STATE_ENABLED:
+                    return "STATE_ENABLED";
+                case STATE_SUSPENDED:
+                    return "STATE_SUSPENDED";
+                case STATE_ALWAYS_ON:
+                    return "STATE_ALWAYS_ON";
+                default:
+                    Log.e(TAG, "Get unexpected state:" + state);
+                    return Integer.toString(state);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "AutomaticOnOffKeepalive [ "
+                    + mKi
+                    + ", state=" + getAutomaticOnOffStateName(mAutomaticOnOffState)
+                    + " ]";
+        }
     }
 
     public AutomaticOnOffKeepaliveTracker(@NonNull Context context, @NonNull Handler handler) {
@@ -529,8 +551,18 @@ public class AutomaticOnOffKeepaliveTracker {
      * Dump AutomaticOnOffKeepaliveTracker state.
      */
     public void dump(IndentingPrintWriter pw) {
-        // TODO: Dump the necessary information for automatic on/off keepalive.
         mKeepaliveTracker.dump(pw);
+        // Reading DeviceConfig will check if the calling uid and calling package name are the same.
+        // Clear calling identity to align the calling uid and package so that it won't fail if cts
+        // would like to do the dump()
+        final boolean featureEnabled = BinderUtils.withCleanCallingIdentity(
+                () -> mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION));
+        pw.println("AutomaticOnOff enabled: " + featureEnabled);
+        pw.increaseIndent();
+        for (AutomaticOnOffKeepalive autoKi : mAutomaticOnOffKeepalives) {
+            pw.println(autoKi.toString());
+        }
+        pw.decreaseIndent();
     }
 
     /**
