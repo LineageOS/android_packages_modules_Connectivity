@@ -18,7 +18,6 @@ package android.nearby;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SystemApi;
 import android.nearby.aidl.FastPairDiscoveryItemParcel;
 
 /**
@@ -26,7 +25,6 @@ import android.nearby.aidl.FastPairDiscoveryItemParcel;
  *
  * @hide
  */
-@SystemApi
 public class FastPairDiscoveryItem {
 
     FastPairDiscoveryItemParcel mMetadataParcel;
@@ -41,7 +39,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getId() {
         return mMetadataParcel.id;
@@ -52,7 +49,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getMacAddress() {
         return mMetadataParcel.macAddress;
@@ -63,7 +59,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getActionUrl() {
         return mMetadataParcel.actionUrl;
@@ -74,7 +69,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getDeviceName() {
         return mMetadataParcel.deviceName;
@@ -85,7 +79,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getTitle() {
         return mMetadataParcel.title;
@@ -96,7 +89,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getDescription() {
         return mMetadataParcel.description;
@@ -107,7 +99,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getDisplayUrl() {
         return mMetadataParcel.displayUrl;
@@ -118,7 +109,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public long getLastObservationTimestampMillis() {
         return mMetadataParcel.lastObservationTimestampMillis;
     }
@@ -128,7 +118,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public long getFirstObservationTimestampMillis() {
         return mMetadataParcel.firstObservationTimestampMillis;
     }
@@ -138,7 +127,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public int getState() {
         return mMetadataParcel.state;
     }
@@ -148,7 +136,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public int getActionUrlType() {
         return mMetadataParcel.actionUrlType;
     }
@@ -158,7 +145,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public int getRssi() {
         return mMetadataParcel.rssi;
     }
@@ -168,7 +154,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public long getPendingAppInstallTimestampMillis() {
         return mMetadataParcel.pendingAppInstallTimestampMillis;
     }
@@ -178,7 +163,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public int getTxPower() {
         return mMetadataParcel.txPower;
     }
@@ -188,7 +172,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getAppName() {
         return mMetadataParcel.appName;
@@ -199,7 +182,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getPackageName() {
         return mMetadataParcel.packageName;
@@ -210,7 +192,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getTriggerId() {
         return mMetadataParcel.triggerId;
@@ -223,7 +204,6 @@ public class FastPairDiscoveryItem {
      * @return IconPng in 32-bit PNG with dimensions of 512px by 512px.
      * @hide
      */
-    @SystemApi
     @Nullable
     public byte[] getIconPng() {
         return mMetadataParcel.iconPng;
@@ -234,7 +214,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     @Nullable
     public String getIconFfeUrl() {
         return mMetadataParcel.iconFifeUrl;
@@ -247,7 +226,6 @@ public class FastPairDiscoveryItem {
      * @return 64-byte authenticationPublicKeySecp256r1.
      * @hide
      */
-    @SystemApi
     @Nullable
     public byte[] getAuthenticationPublicKeySecp256r1() {
         return mMetadataParcel.authenticationPublicKeySecp256r1;
@@ -258,7 +236,6 @@ public class FastPairDiscoveryItem {
      *
      * @hide
      */
-    @SystemApi
     public static final class Builder {
 
         private final FastPairDiscoveryItemParcel mBuilderParcel;
@@ -268,7 +245,6 @@ public class FastPairDiscoveryItem {
          *
          * @hide
          */
-        @SystemApi
         public Builder() {
             mBuilderParcel = new FastPairDiscoveryItemParcel();
         }
@@ -281,7 +257,6 @@ public class FastPairDiscoveryItem {
          *
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setId(@Nullable String id) {
             mBuilderParcel.id = id;
@@ -295,7 +270,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setMacAddress(@Nullable String macAddress) {
             mBuilderParcel.macAddress = macAddress;
@@ -309,7 +283,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setActionUrl(@Nullable String actionUrl) {
             mBuilderParcel.actionUrl = actionUrl;
@@ -322,7 +295,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setDeviceName(@Nullable String deviceName) {
             mBuilderParcel.deviceName = deviceName;
@@ -336,7 +308,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setTitle(@Nullable String title) {
             mBuilderParcel.title = title;
@@ -350,7 +321,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setDescription(@Nullable String description) {
             mBuilderParcel.description = description;
@@ -364,7 +334,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setDisplayUrl(@Nullable String displayUrl) {
             mBuilderParcel.displayUrl = displayUrl;
@@ -379,7 +348,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setLastObservationTimestampMillis(
                 long lastObservationTimestampMillis) {
@@ -395,7 +363,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setFirstObservationTimestampMillis(
                 long firstObservationTimestampMillis) {
@@ -410,7 +377,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setState(int state) {
             mBuilderParcel.state = state;
@@ -424,7 +390,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setActionUrlType(int actionUrlType) {
             mBuilderParcel.actionUrlType = actionUrlType;
@@ -438,7 +403,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setRssi(int rssi) {
             mBuilderParcel.rssi = rssi;
@@ -453,7 +417,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setPendingAppInstallTimestampMillis(long pendingAppInstallTimestampMillis) {
             mBuilderParcel.pendingAppInstallTimestampMillis = pendingAppInstallTimestampMillis;
@@ -467,7 +430,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setTxPower(int txPower) {
             mBuilderParcel.txPower = txPower;
@@ -481,7 +443,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setAppName(@Nullable String appName) {
             mBuilderParcel.appName = appName;
@@ -495,7 +456,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setPackageName(@Nullable String packageName) {
             mBuilderParcel.packageName = packageName;
@@ -509,7 +469,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setTriggerId(@Nullable String triggerId) {
             mBuilderParcel.triggerId = triggerId;
@@ -523,7 +482,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setIconPng(@Nullable byte[] iconPng) {
             mBuilderParcel.iconPng = iconPng;
@@ -537,7 +495,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setIconFfeUrl(@Nullable String iconFifeUrl) {
             mBuilderParcel.iconFifeUrl = iconFifeUrl;
@@ -552,7 +509,6 @@ public class FastPairDiscoveryItem {
          * @return The builder, to facilitate chaining {@code builder.setXXX(..).setXXX(..)}.
          * @hide
          */
-        @SystemApi
         @NonNull
         public Builder setAuthenticationPublicKeySecp256r1(
                 @Nullable byte[] authenticationPublicKeySecp256r1) {
@@ -565,7 +521,6 @@ public class FastPairDiscoveryItem {
          *
          * @hide
          */
-        @SystemApi
         @NonNull
         public FastPairDiscoveryItem build() {
             return new FastPairDiscoveryItem(mBuilderParcel);
