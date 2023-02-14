@@ -251,4 +251,6 @@ interface IConnectivityManager
     IBinder getCompanionDeviceManagerProxyService();
 
     void setVpnNetworkPreference(String session, in UidRange[] ranges);
+
+    void setTestLowTcpPollingTimerForKeepalive(long timeMs);
 }

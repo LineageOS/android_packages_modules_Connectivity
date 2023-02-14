@@ -32,6 +32,7 @@ import static android.net.SocketKeepalive.MAX_INTERVAL_SEC;
 import static android.net.SocketKeepalive.MIN_INTERVAL_SEC;
 import static android.net.SocketKeepalive.NO_KEEPALIVE;
 import static android.net.SocketKeepalive.SUCCESS;
+import static android.net.SocketKeepalive.SUCCESS_PAUSED;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -134,6 +135,9 @@ public class KeepaliveTracker {
         public final NetworkAgentInfo mNai;
         private final int mType;
         public final FileDescriptor mFd;
+        // True if this was resumed from a previously turned off keepalive, otherwise false.
+        // This is necessary to send the correct callbacks.
+        public final boolean mResumed;
 
         public static final int TYPE_NATT = 1;
         public static final int TYPE_TCP = 2;
@@ -160,6 +164,16 @@ public class KeepaliveTracker {
                 int interval,
                 int type,
                 @Nullable FileDescriptor fd) throws InvalidSocketException {
+            this(callback, nai, packet, interval, type, fd, false /* resumed */);
+        }
+
+        KeepaliveInfo(@NonNull ISocketKeepaliveCallback callback,
+                @NonNull NetworkAgentInfo nai,
+                @NonNull KeepalivePacketData packet,
+                int interval,
+                int type,
+                @Nullable FileDescriptor fd,
+                boolean resumed) throws InvalidSocketException {
             mCallback = callback;
             mPid = Binder.getCallingPid();
             mUid = Binder.getCallingUid();
@@ -169,6 +183,7 @@ public class KeepaliveTracker {
             mPacket = packet;
             mInterval = interval;
             mType = type;
+            mResumed = resumed;
 
             // For SocketKeepalive, a dup of fd is kept in mFd so the source port from which the
             // keepalives are sent cannot be reused by another app even if the fd gets closed by
@@ -232,6 +247,8 @@ public class KeepaliveTracker {
 
         /** Called when the application process is killed. */
         public void binderDied() {
+            // TODO b/267106526 : this is not called on the handler thread but stop() happily
+            // assumes it is, which means this is a pretty dangerous race condition.
             stop(BINDER_DIED);
         }
 
@@ -327,6 +344,10 @@ public class KeepaliveTracker {
         }
 
         void start(int slot) {
+            // BINDER_DIED can happen if the binder died before the KeepaliveInfo was created and
+            // the constructor set the state to BINDER_DIED. If that's the case, the KI is already
+            // cleaned up.
+            if (BINDER_DIED == mStartedState) return;
             mSlot = slot;
             int error = isValid();
             if (error == SUCCESS) {
@@ -371,7 +392,10 @@ public class KeepaliveTracker {
             // To prevent races from re-entrance of stop(), return if the state is already stopping.
             // This might happen if multiple event sources stop keepalive in a short time. Such as
             // network disconnect after user calls stop(), or tear down socket after binder died.
-            if (mStartedState == STOPPING) return;
+            // Note that it's always possible this method is called by the auto keepalive timer
+            // or any other way after the binder died, hence the check for BINDER_DIED. If the
+            // binder has died, then the KI has already been cleaned up.
+            if (mStartedState == STOPPING || mStartedState == BINDER_DIED) return;
 
             // Store the reason of stopping, and report it after the keepalive is fully stopped.
             if (mStopReason != ERROR_STOP_REASON_UNINITIALIZED) {
@@ -382,9 +406,10 @@ public class KeepaliveTracker {
                     + ": " + reason);
             switch (mStartedState) {
                 case NOT_STARTED:
-                    // Remove the reference of the keepalive that meet error before starting,
+                    // Remove the reference to this keepalive that had an error before starting,
                     // e.g. invalid parameter.
                     cleanupStoppedKeepalive(mNai, mSlot);
+                    if (BINDER_DIED == reason) mStartedState = BINDER_DIED;
                     break;
                 default:
                     mStartedState = STOPPING;
@@ -422,7 +447,8 @@ public class KeepaliveTracker {
          * Construct a new KeepaliveInfo from existing KeepaliveInfo with a new fd.
          */
         public KeepaliveInfo withFd(@NonNull FileDescriptor fd) throws InvalidSocketException {
-            return new KeepaliveInfo(mCallback, mNai, mPacket, mInterval, mType, fd);
+            return new KeepaliveInfo(mCallback, mNai, mPacket, mInterval, mType, fd,
+                    true /* resumed */);
         }
     }
 
@@ -523,6 +549,12 @@ public class KeepaliveTracker {
             } catch (RemoteException e) {
                 Log.w(TAG, "Discarded onStop callback: " + reason);
             }
+        } else if (reason == SUCCESS_PAUSED) {
+            try {
+                ki.mCallback.onPaused();
+            } catch (RemoteException e) {
+                Log.w(TAG, "Discarded onPaused callback: " + reason);
+            }
         } else if (reason == DATA_RECEIVED) {
             try {
                 ki.mCallback.onDataReceived();
@@ -538,6 +570,25 @@ public class KeepaliveTracker {
         }
 
         ki.unlinkDeathRecipient();
+    }
+
+    /**
+     * Finalize a paused keepalive.
+     *
+     * This will simply send the onStopped() callback after checking that this keepalive is
+     * indeed paused.
+     *
+     * @param ki the keepalive to finalize
+     */
+    public void finalizePausedKeepalive(@NonNull final KeepaliveInfo ki) {
+        if (SUCCESS_PAUSED != ki.mStopReason) {
+            throw new IllegalStateException("Keepalive is not paused");
+        }
+        try {
+            ki.mCallback.onStopped();
+        } catch (RemoteException e) {
+            Log.w(TAG, "Discarded onStopped callback while finalizing paused keepalive");
+        }
     }
 
     public void handleCheckKeepalivesStillValid(NetworkAgentInfo nai) {
@@ -589,9 +640,14 @@ public class KeepaliveTracker {
                 Log.d(TAG, "Started keepalive " + slot + " on " + nai.toShortString());
                 ki.mStartedState = KeepaliveInfo.STARTED;
                 try {
-                    ki.mCallback.onStarted();
+                    if (ki.mResumed) {
+                        ki.mCallback.onResumed();
+                    } else {
+                        ki.mCallback.onStarted();
+                    }
                 } catch (RemoteException e) {
-                    Log.w(TAG, "Discarded onStarted callback");
+                    Log.w(TAG, "Discarded " + (ki.mResumed ? "onResumed" : "onStarted")
+                            + " callback for slot " + slot);
                 }
             } else {
                 Log.d(TAG, "Failed to start keepalive " + slot + " on " + nai.toShortString()
