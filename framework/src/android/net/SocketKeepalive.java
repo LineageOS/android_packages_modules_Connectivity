@@ -355,7 +355,7 @@ public abstract class SocketKeepalive implements AutoCloseable {
      */
     public final void start(@IntRange(from = MIN_INTERVAL_SEC, to = MAX_INTERVAL_SEC)
             int intervalSec) {
-        startImpl(intervalSec, 0 /* flags */);
+        startImpl(intervalSec, 0 /* flags */, null /* underpinnedNetwork */);
     }
 
     /**
@@ -374,16 +374,18 @@ public abstract class SocketKeepalive implements AutoCloseable {
      *                    the supplied {@link Callback} will see a call to
      *                    {@link Callback#onError(int)} with {@link #ERROR_INVALID_INTERVAL}.
      * @param flags Flags to enable/disable available options on this keepalive.
+     * @param underpinnedNetwork The underpinned network of this keepalive.
      * @hide
      */
     @SystemApi(client = PRIVILEGED_APPS)
     public final void start(@IntRange(from = MIN_INTERVAL_SEC, to = MAX_INTERVAL_SEC)
-            int intervalSec, @StartFlags int flags) {
-        startImpl(intervalSec, flags);
+            int intervalSec, @StartFlags int flags, @NonNull Network underpinnedNetwork) {
+        startImpl(intervalSec, flags, underpinnedNetwork);
     }
 
     /** @hide */
-    protected abstract void startImpl(int intervalSec, @StartFlags int flags);
+    protected abstract void startImpl(int intervalSec, @StartFlags int flags,
+            Network underpinnedNetwork);
 
     /**
      * Requests that keepalive be stopped. The application must wait for {@link Callback#onStopped}

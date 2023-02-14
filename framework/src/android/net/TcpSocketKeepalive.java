@@ -50,7 +50,7 @@ public final class TcpSocketKeepalive extends SocketKeepalive {
      *   acknowledgement.
      */
     @Override
-    protected void startImpl(int intervalSec, int flags) {
+    protected void startImpl(int intervalSec, int flags, Network underpinnedNetwork) {
         if (0 != flags) {
             throw new IllegalArgumentException("Illegal flag value for "
                     + this.getClass().getSimpleName() + " : " + flags);
