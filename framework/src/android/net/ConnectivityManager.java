@@ -1502,6 +1502,22 @@ public class ConnectivityManager {
     }
 
     /**
+     * Temporarily set automaticOnOff keeplaive TCP polling alarm timer to 1 second.
+     *
+     * TODO: Remove this when the TCP polling design is replaced with callback.
+     * @param timeMs The time of expiry, with System.currentTimeMillis() base. The value should be
+     *               set no more than 5 minutes in the future.
+     * @hide
+     */
+    public void setTestLowTcpPollingTimerForKeepalive(long timeMs) {
+        try {
+            mService.setTestLowTcpPollingTimerForKeepalive(timeMs);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Informs ConnectivityService of whether the legacy lockdown VPN, as implemented by
      * LockdownVpnTracker, is in use. This is deprecated for new devices starting from Android 12
      * but is still supported for backwards compatibility.
@@ -2213,9 +2229,13 @@ public class ConnectivityManager {
         /** The requested keepalive was successfully started. */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void onStarted() {}
+        /** The keepalive was resumed after being paused by the system. */
+        public void onResumed() {}
         /** The keepalive was successfully stopped. */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void onStopped() {}
+        /** The keepalive was paused automatically by the system. */
+        public void onPaused() {}
         /** An error occurred. */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public void onError(int error) {}
@@ -2314,11 +2334,36 @@ public class ConnectivityManager {
                 }
 
                 @Override
+                public void onResumed() {
+                    final long token = Binder.clearCallingIdentity();
+                    try {
+                        mExecutor.execute(() -> {
+                            callback.onResumed();
+                        });
+                    } finally {
+                        Binder.restoreCallingIdentity(token);
+                    }
+                }
+
+                @Override
                 public void onStopped() {
                     final long token = Binder.clearCallingIdentity();
                     try {
                         mExecutor.execute(() -> {
                             callback.onStopped();
+                        });
+                    } finally {
+                        Binder.restoreCallingIdentity(token);
+                    }
+                    mExecutor.shutdown();
+                }
+
+                @Override
+                public void onPaused() {
+                    final long token = Binder.clearCallingIdentity();
+                    try {
+                        mExecutor.execute(() -> {
+                            callback.onPaused();
                         });
                     } finally {
                         Binder.restoreCallingIdentity(token);
