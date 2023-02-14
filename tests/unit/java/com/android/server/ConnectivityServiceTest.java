@@ -378,6 +378,7 @@ import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.ConnectivityService.ConnectivityDiagnosticsCallbackInfo;
 import com.android.server.ConnectivityService.NetworkRequestInfo;
 import com.android.server.ConnectivityServiceTest.ConnectivityServiceDependencies.ReportedInterfaces;
+import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker;
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
 import com.android.server.connectivity.ConnectivityFlags;
@@ -539,6 +540,7 @@ public class ConnectivityServiceTest {
     private MockContext mServiceContext;
     private HandlerThread mCsHandlerThread;
     private ConnectivityServiceDependencies mDeps;
+    private AutomaticOnOffKeepaliveTrackerDependencies mAutoOnOffKeepaliveDependencies;
     private ConnectivityService mService;
     private WrappedConnectivityManager mCm;
     private TestNetworkAgentWrapper mWiFiAgent;
@@ -1839,7 +1841,8 @@ public class ConnectivityServiceTest {
         doReturn(mResources).when(mockResContext).getResources();
         ConnectivityResources.setResourcesContextForTest(mockResContext);
         mDeps = new ConnectivityServiceDependencies(mockResContext);
-
+        mAutoOnOffKeepaliveDependencies =
+                new AutomaticOnOffKeepaliveTrackerDependencies(mServiceContext);
         mService = new ConnectivityService(mServiceContext,
                 mMockDnsResolver,
                 mock(IpConnectivityLog.class),
@@ -1937,6 +1940,12 @@ public class ConnectivityServiceTest {
             }
             mPolicyTracker = new WrappedMultinetworkPolicyTracker(mServiceContext, h, r);
             return mPolicyTracker;
+        }
+
+        @Override
+        public AutomaticOnOffKeepaliveTracker makeAutomaticOnOffKeepaliveTracker(final Context c,
+                final Handler h) {
+            return new AutomaticOnOffKeepaliveTracker(c, h, mAutoOnOffKeepaliveDependencies);
         }
 
         @Override
@@ -2094,6 +2103,20 @@ public class ConnectivityServiceTest {
         public BroadcastOptionsShim makeBroadcastOptionsShim(BroadcastOptions options) {
             reset(mBroadcastOptionsShim);
             return mBroadcastOptionsShim;
+        }
+    }
+
+    private class AutomaticOnOffKeepaliveTrackerDependencies
+            extends AutomaticOnOffKeepaliveTracker.Dependencies {
+        AutomaticOnOffKeepaliveTrackerDependencies(Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean isFeatureEnabled(@NonNull final String name) {
+            // Tests for enabling the feature are verified in AutomaticOnOffKeepaliveTrackerTest.
+            // Assuming enabled here to focus on ConnectivityService tests.
+            return true;
         }
     }
 
