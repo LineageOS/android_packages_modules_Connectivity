@@ -65,7 +65,7 @@ genrule {
     defaults: ["jarjar-rules-combine-defaults"],
     srcs: [
         "tethering-jni-jarjar-rules.txt",
-        ":connectivity-jarjar-rules",
+        ":frameworks-net-tests-jarjar-rules",
         ":TetheringTestsJarJarRules",
         ":NetworkStackJarJarRules",
     ],

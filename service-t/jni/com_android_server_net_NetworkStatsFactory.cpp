@@ -210,7 +210,8 @@ static const JNINativeMethod gMethods[] = {
 };
 
 int register_android_server_net_NetworkStatsFactory(JNIEnv* env) {
-    int err = jniRegisterNativeMethods(env, "com/android/server/net/NetworkStatsFactory", gMethods,
+    int err = jniRegisterNativeMethods(env,
+            "android/net/connectivity/com/android/server/net/NetworkStatsFactory", gMethods,
             NELEM(gMethods));
     gStringClass = env->FindClass("java/lang/String");
     gStringClass = static_cast<jclass>(env->NewGlobalRef(gStringClass));
