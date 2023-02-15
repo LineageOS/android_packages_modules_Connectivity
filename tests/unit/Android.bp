@@ -69,6 +69,7 @@ filegroup {
         "java/com/android/server/VpnManagerServiceTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
         "java/com/android/server/connectivity/IpConnectivityMetricsTest.java",
+        "java/com/android/server/connectivity/MetricsTestUtil.java",
         "java/com/android/server/connectivity/MultipathPolicyTrackerTest.java",
         "java/com/android/server/connectivity/NetdEventListenerServiceTest.java",
         "java/com/android/server/connectivity/VpnTest.java",
@@ -136,6 +137,37 @@ android_library {
     visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
 }
 
+genrule {
+    name: "frameworks-net-tests-jarjar-rules",
+    defaults: ["jarjar-rules-combine-defaults"],
+    srcs: [
+        ":frameworks-net-tests-lib-jarjar-gen",
+        // This is necessary because the tests use framework-connectivity-internal-test-defaults,
+        // which require the user to use connectivity jarjar rules.
+        ":connectivity-jarjar-rules",
+    ],
+    out: ["frameworks-net-tests-jarjar-rules.txt"],
+    visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
+}
+
+java_genrule {
+    name: "frameworks-net-tests-lib-jarjar-gen",
+    tool_files: [
+        ":FrameworksNetTestsLib{.jar}",
+        "jarjar-excludes.txt",
+    ],
+    tools: [
+        "jarjar-rules-generator",
+    ],
+    out: ["frameworks-net-tests-lib-jarjar-rules.txt"],
+    cmd: "$(location jarjar-rules-generator) " +
+        "$(location :FrameworksNetTestsLib{.jar}) " +
+        "--prefix android.net.connectivity " +
+        "--excludes $(location jarjar-excludes.txt) " +
+        "--output $(out)",
+    visibility: ["//visibility:private"],
+}
+
 android_test {
     name: "FrameworksNetTests",
     enabled: enable_frameworks_net_tests,
@@ -143,7 +175,7 @@ android_test {
         "FrameworksNetTestsDefaults",
         "FrameworksNetTests-jni-defaults",
     ],
-    jarjar_rules: ":connectivity-jarjar-rules",
+    jarjar_rules: ":frameworks-net-tests-jarjar-rules",
     test_suites: ["device-tests"],
     static_libs: [
         "services.core",
