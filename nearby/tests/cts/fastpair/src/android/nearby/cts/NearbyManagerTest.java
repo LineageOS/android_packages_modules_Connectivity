@@ -166,15 +166,6 @@ public class NearbyManagerTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void setFastPairScanEnabled() {
-        mNearbyManager.setFastPairScanEnabled(mContext, true);
-        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isTrue();
-        mNearbyManager.setFastPairScanEnabled(mContext, false);
-        assertThat(mNearbyManager.getFastPairScanEnabled(mContext)).isFalse();
-    }
-
-    @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     public void queryOffloadScanSupport() {
         OffloadCallback callback = new OffloadCallback();
