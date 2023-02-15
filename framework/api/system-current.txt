@@ -470,7 +470,7 @@ package android.net {
   }
 
   public abstract class SocketKeepalive implements java.lang.AutoCloseable {
-    method public final void start(@IntRange(from=0xa, to=0xe10) int, int);
+    method public final void start(@IntRange(from=0xa, to=0xe10) int, int, @NonNull android.net.Network);
     field public static final int ERROR_NO_SUCH_SLOT = -33; // 0xffffffdf
     field public static final int FLAG_AUTOMATIC_ON_OFF = 1; // 0x1
     field public static final int SUCCESS = 0; // 0x0
