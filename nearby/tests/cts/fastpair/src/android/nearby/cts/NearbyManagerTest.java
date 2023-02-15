@@ -175,7 +175,7 @@ public class NearbyManagerTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 34, codeName = "U")
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     public void queryOffloadScanSupport() {
         OffloadCallback callback = new OffloadCallback();
         mNearbyManager.queryOffloadCapability(EXECUTOR, callback);
