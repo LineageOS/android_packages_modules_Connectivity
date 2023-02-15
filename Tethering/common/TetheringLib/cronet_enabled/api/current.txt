@@ -196,10 +196,10 @@ package android.net.http {
 
   public abstract static class UrlRequest.Builder {
     method @NonNull public abstract android.net.http.UrlRequest.Builder addHeader(@NonNull String, @NonNull String);
-    method @NonNull public abstract android.net.http.UrlRequest.Builder allowDirectExecutor();
     method @NonNull public abstract android.net.http.UrlRequest.Builder bindToNetwork(@Nullable android.net.Network);
     method @NonNull public abstract android.net.http.UrlRequest build();
-    method @NonNull public abstract android.net.http.UrlRequest.Builder disableCache();
+    method @NonNull public abstract android.net.http.UrlRequest.Builder setAllowDirectExecutor(boolean);
+    method @NonNull public abstract android.net.http.UrlRequest.Builder setDisableCache(boolean);
     method @NonNull public abstract android.net.http.UrlRequest.Builder setHttpMethod(@NonNull String);
     method @NonNull public abstract android.net.http.UrlRequest.Builder setPriority(int);
     method public abstract android.net.http.UrlRequest.Builder setTrafficStatsTag(int);
