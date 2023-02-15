@@ -116,8 +116,9 @@ static const JNINativeMethod gMethods[] = {
 };
 
 int register_android_server_net_NetworkStatsService(JNIEnv* env) {
-    return jniRegisterNativeMethods(env, "com/android/server/net/NetworkStatsService", gMethods,
-                                    NELEM(gMethods));
+    return jniRegisterNativeMethods(env,
+            "android/net/connectivity/com/android/server/net/NetworkStatsService", gMethods,
+            NELEM(gMethods));
 }
 
 }
