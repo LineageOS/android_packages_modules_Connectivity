@@ -283,7 +283,7 @@ public final class ScanRequest implements Parcelable {
         public Builder() {
             mScanType = INVALID_SCAN_TYPE;
             mBleEnabled = true;
-            mOffloadOnly = true;
+            mOffloadOnly = false;
             mWorkSource = new WorkSource();
             mScanFilters = new ArrayList<>();
         }

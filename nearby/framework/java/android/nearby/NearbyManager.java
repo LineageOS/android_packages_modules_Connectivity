@@ -28,7 +28,6 @@ import android.annotation.SystemService;
 import android.content.Context;
 import android.nearby.aidl.IOffloadCallback;
 import android.os.RemoteException;
-import android.provider.Settings;
 import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
@@ -285,36 +284,6 @@ public class NearbyManager {
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
-    }
-
-    /**
-     * Read from {@link Settings} whether Fast Pair scan is enabled.
-     *
-     * @param context either activity or application context for caller to query the setting
-     * @return whether the Fast Pair scan is enabled
-     * @throws NullPointerException if {@code context} is {@code null}
-     */
-    public static boolean isFastPairScanEnabled(@NonNull Context context) {
-        Objects.requireNonNull(context);
-        final int enabled = Settings.Secure.getInt(
-                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, 0);
-        return enabled != 0;
-    }
-
-    /**
-     * Write into {@link Settings} whether Fast Pair scan is enabled.
-     *
-     * @param context either activity or application context, for caller to set the setting
-     * @param enable whether the Fast Pair scan should be enabled
-     * @throws NullPointerException if {@code context} is {@code null}
-     */
-    @RequiresPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
-    public static void setFastPairScanEnabled(@NonNull Context context, boolean enable) {
-        Objects.requireNonNull(context);
-        Settings.Secure.putInt(
-                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, enable ? 1 : 0);
-        Log.v(TAG, String.format(
-                "successfully %s Fast Pair scan", enable ? "enables" : "disables"));
     }
 
     private static class OffloadTransport extends IOffloadCallback.Stub {

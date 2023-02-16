@@ -1,9 +1,3 @@
 # Classes loaded by SystemServer via their hardcoded name, so they can't be jarjared
 com\.android\.server\.ConnectivityServiceInitializer(\$.+)?
 com\.android\.server\.NetworkStatsServiceInitializer(\$.+)?
-
-# Do not jarjar com.android.server, as several unit tests fail because they lose
-# package-private visibility between jarjared and non-jarjared classes.
-# TODO: fix the tests and also jarjar com.android.server, or at least only exclude a package that
-# is specific to the module like com.android.server.connectivity
-com\.android\.server\..+
