@@ -33,7 +33,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -43,8 +42,6 @@ import android.nearby.NearbyDevice;
 import android.nearby.NearbyManager;
 import android.nearby.ScanCallback;
 import android.nearby.ScanRequest;
-import android.net.Uri;
-import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -105,7 +102,7 @@ public class FastPairManager {
     final LocatorContextWrapper mLocatorContextWrapper;
     final IntentFilter mIntentFilter;
     final Locator mLocator;
-    private boolean mScanEnabled;
+    private boolean mScanEnabled = false;
     private final FastPairCacheManager mFastPairCacheManager;
 
     private final BroadcastReceiver mScreenBroadcastReceiver = new BroadcastReceiver() {
@@ -229,10 +226,6 @@ public class FastPairManager {
 
         mLocatorContextWrapper.getContext().registerReceiver(mScreenBroadcastReceiver,
                 mIntentFilter, Context.RECEIVER_EXPORTED);
-
-        // Default false for now.
-        mScanEnabled = NearbyManager.isFastPairScanEnabled(mLocatorContextWrapper.getContext());
-        registerFastPairScanChangeContentObserver(mLocatorContextWrapper.getContentResolver());
     }
 
     /**
@@ -434,37 +427,6 @@ public class FastPairManager {
         }
     }
 
-    private void registerFastPairScanChangeContentObserver(ContentResolver resolver) {
-        if (mFastPairScanChangeContentObserver != null) {
-            unregisterFastPairScanChangeContentObserver(resolver);
-        }
-        mFastPairScanChangeContentObserver = new ContentObserver(ForegroundThread.getHandler()) {
-            @Override
-            public void onChange(boolean selfChange, Uri uri) {
-                super.onChange(selfChange, uri);
-                setScanEnabled(
-                        NearbyManager.isFastPairScanEnabled(mLocatorContextWrapper.getContext()));
-            }
-        };
-        try {
-            resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(NearbyManager.FAST_PAIR_SCAN_ENABLED),
-                    /* notifyForDescendants= */ false,
-                    mFastPairScanChangeContentObserver);
-        } catch (SecurityException e) {
-            Log.e(TAG, "Failed to register content observer for fast pair scan.", e);
-        }
-    }
-
-    private void unregisterFastPairScanChangeContentObserver(ContentResolver resolver) {
-        try {
-            resolver.unregisterContentObserver(mFastPairScanChangeContentObserver);
-            mFastPairScanChangeContentObserver = null;
-        } catch (SecurityException | NullPointerException | IllegalArgumentException e) {
-            Log.w(TAG, "Failed to unregister FastPairScanChange content observer.", e);
-        }
-    }
-
     /**
      * Processed task in a background thread
      */
@@ -491,13 +453,6 @@ public class FastPairManager {
     private NearbyManager getNearbyManager() {
         return (NearbyManager) mLocatorContextWrapper
                 .getApplicationContext().getSystemService(Context.NEARBY_SERVICE);
-    }
-    private void setScanEnabled(boolean scanEnabled) {
-        if (mScanEnabled == scanEnabled) {
-            return;
-        }
-        mScanEnabled = scanEnabled;
-        invalidateScan();
     }
 
     /**

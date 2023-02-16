@@ -63,7 +63,7 @@
         <uses-library android:name="android.test.runner" />
         <uses-library android:name="android.net.ipsec.ike" />
         <activity
-            android:name="com.android.server.connectivity.NetworkNotificationManagerTest$TestDialogActivity"/>
+            android:name="android.net.connectivity.com.android.server.connectivity.NetworkNotificationManagerTest$TestDialogActivity"/>
     </application>
 
     <instrumentation

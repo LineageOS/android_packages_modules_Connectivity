@@ -86,12 +86,33 @@ public class ScanRequestTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 33, codeName = "T")
-    public void testisEnableBle_defaultTrue() {
+    public void testIsEnableBle_defaultTrue() {
         ScanRequest request = new ScanRequest.Builder()
                 .setScanType(SCAN_TYPE_FAST_PAIR)
                 .build();
 
         assertThat(request.isBleEnabled()).isTrue();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public void testIsOffloadOnly_defaultFalse() {
+        ScanRequest request = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_FAST_PAIR)
+                .build();
+
+        assertThat(request.isOffloadOnly()).isFalse();
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public void testSetOffloadOnly_isOffloadOnlyTrue() {
+        ScanRequest request = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .setOffloadOnly(true)
+                .build();
+
+        assertThat(request.isOffloadOnly()).isTrue();
     }
 
     @Test

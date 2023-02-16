@@ -236,7 +236,7 @@ static const JNINativeMethod gMethods[] = {
 // clang-format on
 
 int register_com_android_server_BpfNetMaps(JNIEnv* env) {
-    return jniRegisterNativeMethods(env, "com/android/server/BpfNetMaps",
+    return jniRegisterNativeMethods(env, "android/net/connectivity/com/android/server/BpfNetMaps",
                                     gMethods, NELEM(gMethods));
 }
 
