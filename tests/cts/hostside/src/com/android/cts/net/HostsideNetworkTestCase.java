@@ -31,6 +31,7 @@ import com.android.tradefed.testtype.DeviceTestCase;
 import com.android.tradefed.testtype.IAbi;
 import com.android.tradefed.testtype.IAbiReceiver;
 import com.android.tradefed.testtype.IBuildReceiver;
+import com.android.tradefed.util.RunUtil;
 
 import java.io.FileNotFoundException;
 import java.util.Map;
@@ -120,7 +121,7 @@ abstract class HostsideNetworkTestCase extends DeviceTestCase implements IAbiRec
             i++;
             Log.v(TAG, "Package " + packageName + " not uninstalled yet (" + result
                     + "); sleeping 1s before polling again");
-            Thread.sleep(1000);
+            RunUtil.getDefault().sleep(1000);
         }
         fail("Package '" + packageName + "' not uinstalled after " + max_tries + " seconds");
     }
