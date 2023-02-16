@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,7 +119,11 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
 
   // This will detect a skb->ip_summed == CHECKSUM_PARTIAL packet with non-final L4 checksum
   if (tp_status & TP_STATUS_CSUMNOTREADY) {
-    logmsg(ANDROID_LOG_WARN, "read_packet checksum not ready");
+    static bool logged = false;
+    if (!logged) {
+      logmsg(ANDROID_LOG_WARN, "read_packet checksum not ready");
+      logged = true;
+    }
   }
 
   translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf, readlen);
