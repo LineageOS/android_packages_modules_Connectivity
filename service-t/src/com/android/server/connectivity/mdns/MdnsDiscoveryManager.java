@@ -77,16 +77,15 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             }
         }
         // Request the network for discovery.
-        socketClient.notifyNetworkRequested(listener, searchOptions.getNetwork());
-
-        // All listeners of the same service types shares the same MdnsServiceTypeClient.
-        MdnsServiceTypeClient serviceTypeClient = serviceTypeClients.get(serviceType);
-        if (serviceTypeClient == null) {
-            serviceTypeClient = createServiceTypeClient(serviceType);
-            serviceTypeClients.put(serviceType, serviceTypeClient);
-        }
-        // TODO(b/264634275): Wait for a socket to be created before sending packets.
-        serviceTypeClient.startSendAndReceive(listener, searchOptions);
+        socketClient.notifyNetworkRequested(listener, searchOptions.getNetwork(), network -> {
+            // All listeners of the same service types shares the same MdnsServiceTypeClient.
+            MdnsServiceTypeClient serviceTypeClient = serviceTypeClients.get(serviceType);
+            if (serviceTypeClient == null) {
+                serviceTypeClient = createServiceTypeClient(serviceType);
+                serviceTypeClients.put(serviceType, serviceTypeClient);
+            }
+            serviceTypeClient.startSendAndReceive(listener, searchOptions);
+        });
     }
 
     /**
