@@ -49,12 +49,14 @@ android_library {
         "src/**/*.kt",
     ],
     static_libs: [
+        "androidx.test.ext.junit",
         "androidx.test.rules",
         "androidx.core_core",
         "ctstestrunner-axt",
         "ctstestserver",
         "junit",
         "hamcrest-library",
+        "kotlin-test",
     ],
     libs: [
         "android.test.runner",
