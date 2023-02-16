@@ -28,6 +28,7 @@ import android.nearby.IScanListener;
 import android.nearby.NearbyDeviceParcelable;
 import android.nearby.NearbyManager;
 import android.nearby.PresenceScanFilter;
+import android.nearby.ScanCallback;
 import android.nearby.ScanFilter;
 import android.nearby.ScanRequest;
 import android.os.IBinder;
@@ -82,7 +83,7 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                     Log.w(TAG, "[DiscoveryProviderManager] scan permission revoked "
                             + "- not forwarding results");
                     try {
-                        record.getScanListener().onError();
+                        record.getScanListener().onError(ScanCallback.ERROR_PERMISSION_DENIED);
                     } catch (RemoteException e) {
                         Log.w(TAG, "DiscoveryProviderManager failed to report error.", e);
                     }
