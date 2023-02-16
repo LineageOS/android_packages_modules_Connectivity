@@ -267,78 +267,33 @@ public class MdnsResponse {
     }
 
     /**
-     * Merges any records that are present in another response into this one.
+     * Drop address records if they are for a hostname that does not match the service record.
      *
-     * @return <code>true</code> if any records were added or updated.
+     * @return True if the records were dropped.
      */
-    public synchronized boolean mergeRecordsFrom(MdnsResponse other) {
-        lastUpdateTime = other.lastUpdateTime;
+    public synchronized boolean dropUnmatchedAddressRecords() {
+        if (this.serviceRecord == null) return false;
+        boolean dropAddressRecords = false;
 
-        boolean updated = false;
-
-        List<MdnsPointerRecord> pointerRecords = other.getPointerRecords();
-        if (pointerRecords != null) {
-            for (MdnsPointerRecord pointerRecord : pointerRecords) {
-                if (addPointerRecord(pointerRecord)) {
-                    updated = true;
-                }
+        if (this.inet4AddressRecord != null) {
+            if (!Arrays.equals(
+                    this.serviceRecord.getServiceHost(), this.inet4AddressRecord.getName())) {
+                dropAddressRecords = true;
+            }
+        }
+        if (this.inet6AddressRecord != null) {
+            if (!Arrays.equals(
+                    this.serviceRecord.getServiceHost(), this.inet6AddressRecord.getName())) {
+                dropAddressRecords = true;
             }
         }
 
-        MdnsServiceRecord serviceRecord = other.getServiceRecord();
-        if (serviceRecord != null) {
-            if (setServiceRecord(serviceRecord)) {
-                updated = true;
-            }
+        if (dropAddressRecords) {
+            setInet4AddressRecord(null);
+            setInet6AddressRecord(null);
+            return true;
         }
-
-        MdnsTextRecord textRecord = other.getTextRecord();
-        if (textRecord != null) {
-            if (setTextRecord(textRecord)) {
-                updated = true;
-            }
-        }
-
-        MdnsInetAddressRecord otherInet4AddressRecord = other.getInet4AddressRecord();
-        if (otherInet4AddressRecord != null && otherInet4AddressRecord.getInet4Address() != null) {
-            if (setInet4AddressRecord(otherInet4AddressRecord)) {
-                updated = true;
-            }
-        }
-
-        MdnsInetAddressRecord otherInet6AddressRecord = other.getInet6AddressRecord();
-        if (otherInet6AddressRecord != null && otherInet6AddressRecord.getInet6Address() != null) {
-            if (setInet6AddressRecord(otherInet6AddressRecord)) {
-                updated = true;
-            }
-        }
-
-        // If the hostname in the service record no longer matches the hostname in either of the
-        // address records, then drop the address records.
-        if (this.serviceRecord != null) {
-            boolean dropAddressRecords = false;
-
-            if (this.inet4AddressRecord != null) {
-                if (!Arrays.equals(
-                        this.serviceRecord.getServiceHost(), this.inet4AddressRecord.getName())) {
-                    dropAddressRecords = true;
-                }
-            }
-            if (this.inet6AddressRecord != null) {
-                if (!Arrays.equals(
-                        this.serviceRecord.getServiceHost(), this.inet6AddressRecord.getName())) {
-                    dropAddressRecords = true;
-                }
-            }
-
-            if (dropAddressRecords) {
-                setInet4AddressRecord(null);
-                setInet6AddressRecord(null);
-                updated = true;
-            }
-        }
-
-        return updated;
+        return false;
     }
 
     /**

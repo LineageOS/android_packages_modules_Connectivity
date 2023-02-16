@@ -20,12 +20,14 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 import android.os.SystemClock;
+import android.util.ArraySet;
 
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 /** A class that decodes mDNS responses from UDP packets. */
@@ -116,16 +118,18 @@ public class MdnsResponseDecoder {
     }
 
     /**
-     * Builds mDNS responses for the desired service type from a packet.
+     * Augments a list of {@link MdnsResponse} with records from a packet. The class does not check
+     * the resulting responses for completeness; the caller should do that.
      *
-     * The class does not check the responses for completeness; the caller should do that.
-     *
-     * @param mdnsPacket The packet to read from.
-     * @param interfaceIndex the network interface index (or {@link
-     *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received.
+     * @param mdnsPacket the response packet with the new records
+     * @param existingResponses list of existing responses. Will not be modified.
+     * @param interfaceIndex the network interface index (or
+     * {@link MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
      * @param network the network at which the packet was received, or null if it is unknown.
+     * @return The set of response instances that were modified or newly added.
      */
-    public List<MdnsResponse> buildResponses(@NonNull MdnsPacket mdnsPacket, int interfaceIndex,
+    public ArraySet<MdnsResponse> augmentResponses(@NonNull MdnsPacket mdnsPacket,
+            @NonNull Collection<MdnsResponse> existingResponses, int interfaceIndex,
             @Nullable Network network) {
         final ArrayList<MdnsRecord> records = new ArrayList<>(
                 mdnsPacket.questions.size() + mdnsPacket.answers.size()
@@ -134,8 +138,11 @@ public class MdnsResponseDecoder {
         records.addAll(mdnsPacket.authorityRecords);
         records.addAll(mdnsPacket.additionalRecords);
 
-        final ArrayList<MdnsResponse> responses = new ArrayList<>();
-
+        final ArraySet<MdnsResponse> modified = new ArraySet<>();
+        final ArrayList<MdnsResponse> responses = new ArrayList<>(existingResponses.size());
+        for (MdnsResponse existing : existingResponses) {
+            responses.add(new MdnsResponse(existing));
+        }
         // The response records are structured in a hierarchy, where some records reference
         // others, as follows:
         //
@@ -178,9 +185,10 @@ public class MdnsResponseDecoder {
                         response = new MdnsResponse(now, interfaceIndex, network);
                         responses.add(response);
                     }
-                    // Set interface index earlier because some responses have PTR record only.
-                    // Need to know every response is getting from which interface.
-                    response.addPointerRecord((MdnsPointerRecord) record);
+
+                    if (response.addPointerRecord((MdnsPointerRecord) record)) {
+                        modified.add(response);
+                    }
                 }
             }
         }
@@ -190,14 +198,15 @@ public class MdnsResponseDecoder {
             if (record instanceof MdnsServiceRecord) {
                 MdnsServiceRecord serviceRecord = (MdnsServiceRecord) record;
                 MdnsResponse response = findResponseWithPointer(responses, serviceRecord.getName());
-                if (response != null) {
-                    response.setServiceRecord(serviceRecord);
+                if (response != null && response.setServiceRecord(serviceRecord)) {
+                    response.dropUnmatchedAddressRecords();
+                    modified.add(response);
                 }
             } else if (record instanceof MdnsTextRecord) {
                 MdnsTextRecord textRecord = (MdnsTextRecord) record;
                 MdnsResponse response = findResponseWithPointer(responses, textRecord.getName());
-                if (response != null) {
-                    response.setTextRecord(textRecord);
+                if (response != null && response.setTextRecord(textRecord)) {
+                    modified.add(response);
                 }
             }
         }
@@ -210,26 +219,33 @@ public class MdnsResponseDecoder {
                     List<MdnsResponse> matchingResponses =
                             findResponsesWithHostName(responses, inetRecord.getName());
                     for (MdnsResponse response : matchingResponses) {
-                        assignInetRecord(response, inetRecord);
+                        if (assignInetRecord(response, inetRecord)) {
+                            modified.add(response);
+                        }
                     }
                 } else {
                     MdnsResponse response =
                             findResponseWithHostName(responses, inetRecord.getName());
                     if (response != null) {
-                        assignInetRecord(response, inetRecord);
+                        if (assignInetRecord(response, inetRecord)) {
+                            modified.add(response);
+                        }
                     }
                 }
             }
         }
-        return responses;
+
+        return modified;
     }
 
-    private static void assignInetRecord(MdnsResponse response, MdnsInetAddressRecord inetRecord) {
+    private static boolean assignInetRecord(
+            MdnsResponse response, MdnsInetAddressRecord inetRecord) {
         if (inetRecord.getInet4Address() != null) {
-            response.setInet4AddressRecord(inetRecord);
+            return response.setInet4AddressRecord(inetRecord);
         } else if (inetRecord.getInet6Address() != null) {
-            response.setInet6AddressRecord(inetRecord);
+            return response.setInet6AddressRecord(inetRecord);
         }
+        return false;
     }
 
     private static List<MdnsResponse> findResponsesWithHostName(

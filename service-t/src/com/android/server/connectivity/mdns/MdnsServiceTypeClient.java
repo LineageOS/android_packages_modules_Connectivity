@@ -23,6 +23,7 @@ import android.annotation.Nullable;
 import android.net.Network;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+import android.util.ArraySet;
 import android.util.Pair;
 
 import com.android.internal.annotations.GuardedBy;
@@ -49,6 +50,7 @@ public class MdnsServiceTypeClient {
 
     private static final int DEFAULT_MTU = 1500;
     private static final MdnsLogger LOGGER = new MdnsLogger("MdnsServiceTypeClient");
+
 
     private final String serviceType;
     private final String[] serviceTypeLabels;
@@ -216,25 +218,15 @@ public class MdnsServiceTypeClient {
      */
     public synchronized void processResponse(@NonNull MdnsPacket packet, int interfaceIndex,
             Network network) {
-        final List<MdnsResponse> responses = responseDecoder.buildResponses(packet, interfaceIndex,
-                network);
-        for (MdnsResponse response : responses) {
-            if (shouldRemoveServiceAfterTtlExpires()) {
-                // Because {@link QueryTask} and {@link processResponse} are running in different
-                // threads. We need to synchronize {@link lock} to protect
-                // {@link instanceNameToResponse} won’t be modified at the same time.
-                synchronized (lock) {
-                    if (response.isGoodbye()) {
-                        onGoodbyeReceived(response.getServiceInstanceName());
-                    } else {
-                        onResponseReceived(response);
-                    }
-                }
-            } else {
-                if (response.isGoodbye()) {
-                    onGoodbyeReceived(response.getServiceInstanceName());
+        synchronized (lock) {
+            final ArraySet<MdnsResponse> modifiedResponses = responseDecoder.augmentResponses(
+                    packet, instanceNameToResponse.values(), interfaceIndex, network);
+
+            for (MdnsResponse modified : modifiedResponses) {
+                if (modified.isGoodbye()) {
+                    onGoodbyeReceived(modified.getServiceInstanceName());
                 } else {
-                    onResponseReceived(response);
+                    onResponseModified(modified);
                 }
             }
         }
@@ -246,31 +238,26 @@ public class MdnsServiceTypeClient {
         }
     }
 
-    private void onResponseReceived(@NonNull MdnsResponse response) {
-        MdnsResponse currentResponse;
-        currentResponse = instanceNameToResponse.get(response.getServiceInstanceName());
+    private void onResponseModified(@NonNull MdnsResponse response) {
+        final MdnsResponse currentResponse =
+                instanceNameToResponse.get(response.getServiceInstanceName());
 
         boolean newServiceFound = false;
-        boolean existingServiceChanged = false;
         boolean serviceBecomesComplete = false;
         if (currentResponse == null) {
             newServiceFound = true;
-            currentResponse = response;
             String serviceInstanceName = response.getServiceInstanceName();
             if (serviceInstanceName != null) {
-                instanceNameToResponse.put(serviceInstanceName, currentResponse);
+                instanceNameToResponse.put(serviceInstanceName, response);
             }
         } else {
             boolean before = currentResponse.isComplete();
-            existingServiceChanged = currentResponse.mergeRecordsFrom(response);
-            boolean after = currentResponse.isComplete();
+            instanceNameToResponse.put(response.getServiceInstanceName(), response);
+            boolean after = response.isComplete();
             serviceBecomesComplete = !before && after;
         }
-        if (!newServiceFound && !existingServiceChanged) {
-            return;
-        }
         MdnsServiceInfo serviceInfo =
-                buildMdnsServiceInfoFromResponse(currentResponse, serviceTypeLabels);
+                buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
 
         for (int i = 0; i < listeners.size(); i++) {
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
@@ -278,7 +265,7 @@ public class MdnsServiceTypeClient {
                 listener.onServiceNameDiscovered(serviceInfo);
             }
 
-            if (currentResponse.isComplete()) {
+            if (response.isComplete()) {
                 if (newServiceFound || serviceBecomesComplete) {
                     listener.onServiceFound(serviceInfo);
                 } else {
