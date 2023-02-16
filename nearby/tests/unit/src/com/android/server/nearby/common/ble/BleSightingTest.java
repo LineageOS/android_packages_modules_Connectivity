@@ -93,7 +93,7 @@ public class BleSightingTest {
         assertThat(sighting.getTimestampNanos())
                 .isEqualTo(TimeUnit.MILLISECONDS.toNanos(TIME_EPOCH_MILLIS));
         assertThat(sighting.toString()).isEqualTo(
-                "BleSighting{device=00:11:22:33:44:55,"
+                "BleSighting{device=" + mBluetoothDevice1 + ","
                         + " bleRecord=BleRecord [advertiseFlags=-1,"
                         + " serviceUuids=[],"
                         + " manufacturerSpecificData={}, serviceData={},"
