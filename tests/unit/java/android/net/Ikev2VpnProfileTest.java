@@ -492,6 +492,29 @@ public class Ikev2VpnProfileTest {
     }
 
     @Test
+    public void testAutomaticNattAndIpVersionConversionIsLossless() throws Exception {
+        final Ikev2VpnProfile.Builder builder = getBuilderWithDefaultOptions();
+        builder.setAutomaticNattKeepaliveTimerEnabled(true);
+        builder.setAutomaticIpVersionSelectionEnabled(true);
+
+        builder.setAuthDigitalSignature(mUserCert, mPrivateKey, mServerRootCa);
+        final Ikev2VpnProfile ikeProfile = builder.build();
+
+        assertEquals(ikeProfile, Ikev2VpnProfile.fromVpnProfile(ikeProfile.toVpnProfile()));
+    }
+
+    @Test
+    public void testAutomaticNattAndIpVersionDefaults() throws Exception {
+        final Ikev2VpnProfile.Builder builder = getBuilderWithDefaultOptions();
+
+        builder.setAuthDigitalSignature(mUserCert, mPrivateKey, mServerRootCa);
+        final Ikev2VpnProfile ikeProfile = builder.build();
+
+        assertEquals(false, ikeProfile.isAutomaticNattKeepaliveTimerEnabled());
+        assertEquals(false, ikeProfile.isAutomaticIpVersionSelectionEnabled());
+    }
+
+    @Test
     public void testEquals() throws Exception {
         // Verify building without IkeTunnelConnectionParams
         final Ikev2VpnProfile.Builder builder = getBuilderWithDefaultOptions();
