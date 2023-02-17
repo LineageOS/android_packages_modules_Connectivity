@@ -19,6 +19,7 @@ package com.android.testutils
 import android.os.Handler
 import android.os.HandlerThread
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -71,6 +72,10 @@ class HandlerUtilsTest {
             visibleOnHandlerThread(handler) { x = attempt }
             assertEquals(attempt, x)
             handler.post { assertEquals(attempt, x) }
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            visibleOnHandlerThread(handler) { throw IllegalArgumentException() }
         }
     }
 }

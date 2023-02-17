@@ -65,11 +65,13 @@ fun waitForIdleSerialExecutor(executor: Executor, timeoutMs: Long) {
  */
 fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable) {
     val cv = ConditionVariable()
+    var e: Exception? = null
     handler.post {
         try {
             r.run()
         } catch (exception: Exception) {
             Log.e(TAG, "visibleOnHandlerThread caught exception", exception)
+            e = exception
         }
         cv.open()
     }
@@ -77,4 +79,5 @@ fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable) {
     // and this thread also has seen the change (since cv.open() happens-before cv.block()
     // returns).
     cv.block()
+    e?.let { throw it }
 }
