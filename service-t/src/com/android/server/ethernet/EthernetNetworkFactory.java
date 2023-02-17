@@ -469,9 +469,7 @@ public class EthernetNetworkFactory {
             // TODO: Update this logic to only do a restart if required. Although a restart may
             //  be required due to the capabilities or ipConfiguration values, not all
             //  capabilities changes require a restart.
-            if (mIpClient != null) {
-                restart();
-            }
+            maybeRestart();
         }
 
         boolean isRestricted() {
@@ -549,7 +547,7 @@ public class EthernetNetworkFactory {
                 // Send a callback in case a provisioning request was in progress.
                 return;
             }
-            restart();
+            maybeRestart();
         }
 
         private void ensureRunningOnEthernetHandlerThread() {
@@ -582,7 +580,7 @@ public class EthernetNetworkFactory {
             // If there is a better network, that will become default and apps
             // will be able to use internet. If ethernet gets connected again,
             // and has backhaul connectivity, it will become default.
-            restart();
+            maybeRestart();
         }
 
         /** Returns true if state has been modified */
@@ -656,18 +654,16 @@ public class EthernetNetworkFactory {
                         .build();
         }
 
-        void restart() {
-            if (DBG) Log.d(TAG, "restart IpClient");
-
+        void maybeRestart() {
             if (mIpClient == null) {
-                // If restart() is called from a provisioning failure, it is
+                // If maybeRestart() is called from a provisioning failure, it is
                 // possible that link disappeared in the meantime. In that
                 // case, stop() has already been called and IpClient should not
                 // get restarted to prevent a provisioning failure loop.
-                Log.i(TAG, String.format("restart() was called on stopped interface %s", name));
+                Log.i(TAG, String.format("maybeRestart() called on stopped interface %s", name));
                 return;
             }
-
+            if (DBG) Log.d(TAG, "restart IpClient");
             stop();
             start();
         }
