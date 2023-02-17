@@ -70,7 +70,7 @@ public class UrlRequestTest {
     }
 
     private UrlRequest.Builder createUrlRequestBuilder(String url) {
-        return mHttpEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor());
+        return mHttpEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
     }
 
     @Test
