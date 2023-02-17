@@ -2423,20 +2423,41 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         xtTotal = mXtRecorder.getTotalSinceBootLocked(template);
         uidTotal = mUidRecorder.getTotalSinceBootLocked(template);
 
-        EventLog.writeEvent(LOG_TAG_NETSTATS_MOBILE_SAMPLE,
-                xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
-                uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
-                currentTime);
+        if (SdkLevel.isAtLeastU()) {
+            EventLog.writeEvent(LOG_TAG_NETSTATS_MOBILE_SAMPLE,
+                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
+                    uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
+                    currentTime);
+        } else {
+            // To keep the format of event log, here replaces the value of DevRecorder with the
+            // value of XtRecorder because they have the same content in old design.
+            EventLog.writeEvent(LOG_TAG_NETSTATS_MOBILE_SAMPLE,
+                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
+                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
+                    uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
+                    currentTime);
+        }
 
         // collect wifi sample
         template = new NetworkTemplate.Builder(MATCH_WIFI).build();
         xtTotal = mXtRecorder.getTotalSinceBootLocked(template);
         uidTotal = mUidRecorder.getTotalSinceBootLocked(template);
 
-        EventLog.writeEvent(LOG_TAG_NETSTATS_WIFI_SAMPLE,
-                xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
-                uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
-                currentTime);
+        if (SdkLevel.isAtLeastU()) {
+            EventLog.writeEvent(LOG_TAG_NETSTATS_WIFI_SAMPLE,
+                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
+                    uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
+                    currentTime);
+        } else {
+            // To keep the format of event log, here replaces the value of DevRecorder with the
+            // value of XtRecorder because they have the same content in old design.
+            EventLog.writeEvent(LOG_TAG_NETSTATS_WIFI_SAMPLE,
+                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
+                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
+                    uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
+                    currentTime);
+
+        }
     }
 
     // deleteKernelTagData can ignore ENOENT; otherwise we should log an error
