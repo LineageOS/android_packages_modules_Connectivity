@@ -3409,11 +3409,15 @@ public class ConnectivityManagerTest {
         runWithShellPermissionIdentity(() -> {
             // Firewall chain status will be restored after the test.
             final boolean wasChainEnabled = mCm.getFirewallChainEnabled(chain);
+            final int previousUidFirewallRule = mCm.getUidFirewallRule(chain, myUid);
             final DatagramSocket srcSock = new DatagramSocket();
             final DatagramSocket dstSock = new DatagramSocket();
             testAndCleanup(() -> {
                 if (wasChainEnabled) {
                     mCm.setFirewallChainEnabled(chain, false /* enable */);
+                }
+                if (previousUidFirewallRule == ruleToAddMatch) {
+                    mCm.setUidFirewallRule(chain, myUid, ruleToRemoveMatch);
                 }
                 dstSock.setSoTimeout(SOCKET_TIMEOUT_MS);
 
@@ -3444,8 +3448,9 @@ public class ConnectivityManagerTest {
                     // Restore the global chain status
                     mCm.setFirewallChainEnabled(chain, wasChainEnabled);
                 }, /* cleanup */ () -> {
+                    // Restore the uid firewall rule status
                     try {
-                        mCm.setUidFirewallRule(chain, myUid, ruleToRemoveMatch);
+                        mCm.setUidFirewallRule(chain, myUid, previousUidFirewallRule);
                     } catch (IllegalStateException ignored) {
                         // Removing match causes an exception when the rule entry for the uid does
                         // not exist. But this is fine and can be ignored.
