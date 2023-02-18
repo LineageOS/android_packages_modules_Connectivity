@@ -1,11 +1,48 @@
 // Signature format: 2.0
 package android.net.http {
 
+  public abstract class BidirectionalStream {
+    ctor public BidirectionalStream();
+    method public abstract void cancel();
+    method public abstract void flush();
+    method public abstract boolean isDone();
+    method public abstract void read(java.nio.ByteBuffer);
+    method public abstract void start();
+    method public abstract void write(java.nio.ByteBuffer, boolean);
+  }
+
+  public abstract static class BidirectionalStream.Builder {
+    ctor public BidirectionalStream.Builder();
+    method public abstract android.net.http.BidirectionalStream.Builder addHeader(String, String);
+    method public abstract android.net.http.BidirectionalStream build();
+    method public abstract android.net.http.BidirectionalStream.Builder delayRequestHeadersUntilFirstFlush(boolean);
+    method public abstract android.net.http.BidirectionalStream.Builder setHttpMethod(String);
+    method public abstract android.net.http.BidirectionalStream.Builder setPriority(int);
+    field public static final int STREAM_PRIORITY_HIGHEST = 4; // 0x4
+    field public static final int STREAM_PRIORITY_IDLE = 0; // 0x0
+    field public static final int STREAM_PRIORITY_LOW = 2; // 0x2
+    field public static final int STREAM_PRIORITY_LOWEST = 1; // 0x1
+    field public static final int STREAM_PRIORITY_MEDIUM = 3; // 0x3
+  }
+
+  public abstract static class BidirectionalStream.Callback {
+    ctor public BidirectionalStream.Callback();
+    method public void onCanceled(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo);
+    method public abstract void onFailed(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, android.net.http.HttpException);
+    method public abstract void onReadCompleted(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, java.nio.ByteBuffer, boolean);
+    method public abstract void onResponseHeadersReceived(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo);
+    method public void onResponseTrailersReceived(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, android.net.http.UrlResponseInfo.HeaderBlock);
+    method public abstract void onStreamReady(android.net.http.BidirectionalStream);
+    method public abstract void onSucceeded(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo);
+    method public abstract void onWriteCompleted(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, java.nio.ByteBuffer, boolean);
+  }
+
   public abstract class CallbackException extends android.net.http.HttpException {
     ctor protected CallbackException(String, Throwable);
   }
 
   public class ConnectionMigrationOptions {
+    method @Nullable public Boolean getAllowNonDefaultNetworkUsage();
     method @Nullable public Boolean getEnableDefaultNetworkMigration();
     method @Nullable public Boolean getEnablePathDegradationMigration();
   }
@@ -13,26 +50,52 @@ package android.net.http {
   public static class ConnectionMigrationOptions.Builder {
     ctor public ConnectionMigrationOptions.Builder();
     method public android.net.http.ConnectionMigrationOptions build();
+    method public android.net.http.ConnectionMigrationOptions.Builder setAllowNonDefaultNetworkUsage(boolean);
     method public android.net.http.ConnectionMigrationOptions.Builder setEnableDefaultNetworkMigration(boolean);
     method public android.net.http.ConnectionMigrationOptions.Builder setEnablePathDegradationMigration(boolean);
   }
 
   public final class DnsOptions {
+    method @Nullable public Boolean getEnableStaleDns();
     method @Nullable public Boolean getPersistHostCache();
     method @Nullable public java.time.Duration getPersistHostCachePeriod();
+    method @Nullable public Boolean getPreestablishConnectionsToStaleDnsResults();
+    method @Nullable public android.net.http.DnsOptions.StaleDnsOptions getStaleDnsOptions();
+    method @Nullable public Boolean getUseHttpStackDnsResolver();
   }
 
   public static final class DnsOptions.Builder {
     ctor public DnsOptions.Builder();
     method public android.net.http.DnsOptions build();
+    method public android.net.http.DnsOptions.Builder setEnableStaleDns(boolean);
     method public android.net.http.DnsOptions.Builder setPersistHostCache(boolean);
     method public android.net.http.DnsOptions.Builder setPersistHostCachePeriod(java.time.Duration);
+    method public android.net.http.DnsOptions.Builder setPreestablishConnectionsToStaleDnsResults(boolean);
+    method public android.net.http.DnsOptions.Builder setStaleDnsOptions(android.net.http.DnsOptions.StaleDnsOptions);
+    method public android.net.http.DnsOptions.Builder setUseHttpStackDnsResolver(boolean);
+  }
+
+  public static class DnsOptions.StaleDnsOptions {
+    method @Nullable public Boolean getAllowCrossNetworkUsage();
+    method @Nullable public Long getFreshLookupTimeoutMillis();
+    method @Nullable public Long getMaxExpiredDelayMillis();
+    method @Nullable public Boolean getUseStaleOnNameNotResolved();
+  }
+
+  public static final class DnsOptions.StaleDnsOptions.Builder {
+    ctor public DnsOptions.StaleDnsOptions.Builder();
+    method public android.net.http.DnsOptions.StaleDnsOptions build();
+    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setAllowCrossNetworkUsage(boolean);
+    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setFreshLookupTimeout(java.time.Duration);
+    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setMaxExpiredDelay(java.time.Duration);
+    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setUseStaleOnNameNotResolved(boolean);
   }
 
   public abstract class HttpEngine {
     method public void bindToNetwork(@Nullable android.net.Network);
     method public abstract java.net.URLStreamHandlerFactory createURLStreamHandlerFactory();
     method public static String getVersionString();
+    method public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(String, android.net.http.BidirectionalStream.Callback, java.util.concurrent.Executor);
     method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, android.net.http.UrlRequest.Callback, java.util.concurrent.Executor);
     method public abstract java.net.URLConnection openConnection(java.net.URL) throws java.io.IOException;
     method public abstract void shutdown();
@@ -100,6 +163,7 @@ package android.net.http {
     method public android.net.http.QuicOptions.Builder addAllowedQuicHost(String);
     method public android.net.http.QuicOptions build();
     method public android.net.http.QuicOptions.Builder setHandshakeUserAgent(String);
+    method public android.net.http.QuicOptions.Builder setIdleConnectionTimeout(java.time.Duration);
     method public android.net.http.QuicOptions.Builder setInMemoryServerConfigsCacheSize(int);
   }
 
@@ -180,8 +244,7 @@ package android.net.http {
 
   public abstract class UrlResponseInfo {
     ctor public UrlResponseInfo();
-    method public abstract java.util.Map<java.lang.String,java.util.List<java.lang.String>> getAllHeaders();
-    method public abstract java.util.List<java.util.Map.Entry<java.lang.String,java.lang.String>> getAllHeadersAsList();
+    method public abstract android.net.http.UrlResponseInfo.HeaderBlock getHeaders();
     method public abstract int getHttpStatusCode();
     method public abstract String getHttpStatusText();
     method public abstract String getNegotiatedProtocol();
@@ -190,6 +253,12 @@ package android.net.http {
     method public abstract String getUrl();
     method public abstract java.util.List<java.lang.String> getUrlChain();
     method public abstract boolean wasCached();
+  }
+
+  public abstract static class UrlResponseInfo.HeaderBlock {
+    ctor public UrlResponseInfo.HeaderBlock();
+    method public abstract java.util.List<java.util.Map.Entry<java.lang.String,java.lang.String>> getAsList();
+    method public abstract java.util.Map<java.lang.String,java.util.List<java.lang.String>> getAsMap();
   }
 
 }
