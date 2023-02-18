@@ -35,5 +35,5 @@ android_test {
         "NetHttpTestsLibPreJarJar",
     ],
     jarjar_rules: ":framework-tethering-jarjar-rules",
-    compile_multilib: "both",
+    compile_multilib: "both", // Include both the 32 and 64 bit versions
 }

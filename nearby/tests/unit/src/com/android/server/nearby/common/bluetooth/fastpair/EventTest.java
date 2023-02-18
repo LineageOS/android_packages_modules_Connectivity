@@ -63,7 +63,7 @@ public class EventTest {
         assertThat(event.isFailure()).isTrue();
         assertThat(event.toString()).isEqualTo(
                 "Event{eventCode=1120, timestamp=1234, profile=1, "
-                        + "bluetoothDevice=11:22:33:44:55:66, "
+                        + "bluetoothDevice=" + BLUETOOTH_DEVICE + ", "
                         + "exception=java.lang.Exception: Test exception}");
 
         Parcel parcel = Parcel.obtain();
