@@ -95,7 +95,6 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
 import android.system.StructPollfd;
-import android.telephony.TelephonyManager;
 import android.test.MoreAsserts;
 import android.text.TextUtils;
 import android.util.ArraySet;
@@ -199,8 +198,8 @@ public class VpnTest {
     private RemoteSocketFactoryClient mRemoteSocketFactoryClient;
     private CtsNetUtils mCtsNetUtils;
     private PackageManager mPackageManager;
-    private TelephonyManager mTelephonyManager;
-
+    private Context mTestContext;
+    private Context mTargetContext;
     Network mNetwork;
     NetworkCallback mCallback;
     final Object mLock = new Object();
@@ -230,21 +229,19 @@ public class VpnTest {
     public void setUp() throws Exception {
         mNetwork = null;
         mCallback = null;
+        mTestContext = getInstrumentation().getContext();
+        mTargetContext = getInstrumentation().getTargetContext();
         storePrivateDnsSetting();
-
         mDevice = UiDevice.getInstance(getInstrumentation());
-        mActivity = launchActivity(getInstrumentation().getTargetContext().getPackageName(),
-                MyActivity.class);
+        mActivity = launchActivity(mTargetContext.getPackageName(), MyActivity.class);
         mPackageName = mActivity.getPackageName();
         mCM = (ConnectivityManager) mActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
         mWifiManager = (WifiManager) mActivity.getSystemService(Context.WIFI_SERVICE);
         mRemoteSocketFactoryClient = new RemoteSocketFactoryClient(mActivity);
         mRemoteSocketFactoryClient.bind();
         mDevice.waitForIdle();
-        mCtsNetUtils = new CtsNetUtils(getInstrumentation().getContext());
-        mPackageManager = getInstrumentation().getContext().getPackageManager();
-        mTelephonyManager =
-                getInstrumentation().getContext().getSystemService(TelephonyManager.class);
+        mCtsNetUtils = new CtsNetUtils(mTestContext);
+        mPackageManager = mTestContext.getPackageManager();
     }
 
     @After
@@ -743,7 +740,7 @@ public class VpnTest {
     }
 
     private ContentResolver getContentResolver() {
-        return getInstrumentation().getContext().getContentResolver();
+        return mTestContext.getContentResolver();
     }
 
     private boolean isPrivateDnsInStrictMode() {
@@ -792,7 +789,7 @@ public class VpnTest {
     }
 
     private void setAndVerifyPrivateDns(boolean strictMode) throws Exception {
-        final ContentResolver cr = getInstrumentation().getContext().getContentResolver();
+        final ContentResolver cr = mTestContext.getContentResolver();
         String privateDnsHostname;
 
         if (strictMode) {
@@ -930,7 +927,7 @@ public class VpnTest {
         }
 
         final BlockingBroadcastReceiver receiver = new BlockingBroadcastReceiver(
-                getInstrumentation().getTargetContext(), MyVpnService.ACTION_ESTABLISHED);
+                mTargetContext, MyVpnService.ACTION_ESTABLISHED);
         receiver.register();
 
         // Test the behaviour of a variety of types of network callbacks.
@@ -1526,7 +1523,7 @@ public class VpnTest {
         private boolean received;
 
         public ProxyChangeBroadcastReceiver() {
-            super(getInstrumentation().getContext(), Proxy.PROXY_CHANGE_ACTION);
+            super(mTestContext, Proxy.PROXY_CHANGE_ACTION);
             received = false;
         }
 
@@ -1556,12 +1553,11 @@ public class VpnTest {
                 "" /* allowedApps */, "com.android.providers.downloads", null /* proxyInfo */,
                 null /* underlyingNetworks */, false /* isAlwaysMetered */);
 
-        final Context context = getInstrumentation().getContext();
-        final DownloadManager dm = context.getSystemService(DownloadManager.class);
+        final DownloadManager dm = mTestContext.getSystemService(DownloadManager.class);
         final DownloadCompleteReceiver receiver = new DownloadCompleteReceiver();
         try {
             final int flags = SdkLevel.isAtLeastT() ? RECEIVER_EXPORTED : 0;
-            context.registerReceiver(receiver,
+            mTestContext.registerReceiver(receiver,
                     new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), flags);
 
             // Enqueue a request and check only one download.
@@ -1579,7 +1575,7 @@ public class VpnTest {
             assertEquals(1, dm.remove(id));
             assertEquals(0, getTotalNumberDownloads(dm, new Query()));
         } finally {
-            context.unregisterReceiver(receiver);
+            mTestContext.unregisterReceiver(receiver);
         }
     }
 
@@ -1616,8 +1612,7 @@ public class VpnTest {
 
         // Create a TUN interface
         final FileDescriptor tunFd = runWithShellPermissionIdentity(() -> {
-            final TestNetworkManager tnm = getInstrumentation().getContext().getSystemService(
-                    TestNetworkManager.class);
+            final TestNetworkManager tnm = mTestContext.getSystemService(TestNetworkManager.class);
             final TestNetworkInterface iface = tnm.createTunInterface(List.of(
                     TEST_IP4_DST_ADDR, TEST_IP6_DST_ADDR));
             return iface.getFileDescriptor().getFileDescriptor();
