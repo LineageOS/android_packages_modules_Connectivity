@@ -8895,6 +8895,14 @@ public class ConnectivityServiceTest {
         final TestNetworkCallback callback = new TestNetworkCallback();
         mCm.registerNetworkCallback(request, callback);
 
+        // File a VPN request to prevent VPN network being lingered.
+        final NetworkRequest vpnRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_VPN)
+                .removeCapability(NET_CAPABILITY_NOT_VPN)
+                .build();
+        final TestNetworkCallback vpnCallback = new TestNetworkCallback();
+        mCm.requestNetwork(vpnRequest, vpnCallback);
+
         // Bring up a VPN
         mMockVpn.establishForMyUid();
         assertUidRangesUpdatedForMyUid(true);
@@ -8953,6 +8961,9 @@ public class ConnectivityServiceTest {
                 && c.getUids().contains(singleUidRange)
                 && c.hasTransport(TRANSPORT_VPN)
                 && !c.hasTransport(TRANSPORT_WIFI));
+
+        mCm.unregisterNetworkCallback(callback);
+        mCm.unregisterNetworkCallback(vpnCallback);
     }
 
     @Test
