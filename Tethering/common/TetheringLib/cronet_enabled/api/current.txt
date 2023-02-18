@@ -18,6 +18,8 @@ package android.net.http {
     method public abstract android.net.http.BidirectionalStream.Builder delayRequestHeadersUntilFirstFlush(boolean);
     method public abstract android.net.http.BidirectionalStream.Builder setHttpMethod(String);
     method public abstract android.net.http.BidirectionalStream.Builder setPriority(int);
+    method public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsTag(int);
+    method public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsUid(int);
     field public static final int STREAM_PRIORITY_HIGHEST = 4; // 0x4
     field public static final int STREAM_PRIORITY_IDLE = 0; // 0x0
     field public static final int STREAM_PRIORITY_LOW = 2; // 0x2
@@ -200,6 +202,8 @@ package android.net.http {
     method public abstract android.net.http.UrlRequest.Builder disableCache();
     method public abstract android.net.http.UrlRequest.Builder setHttpMethod(String);
     method public abstract android.net.http.UrlRequest.Builder setPriority(int);
+    method public abstract android.net.http.UrlRequest.Builder setTrafficStatsTag(int);
+    method public abstract android.net.http.UrlRequest.Builder setTrafficStatsUid(int);
     method public abstract android.net.http.UrlRequest.Builder setUploadDataProvider(android.net.http.UploadDataProvider, java.util.concurrent.Executor);
     field public static final int REQUEST_PRIORITY_HIGHEST = 4; // 0x4
     field public static final int REQUEST_PRIORITY_IDLE = 0; // 0x0
