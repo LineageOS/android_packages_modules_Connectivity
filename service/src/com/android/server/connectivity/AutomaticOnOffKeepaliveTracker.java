@@ -19,7 +19,7 @@ package com.android.server.connectivity;
 import static android.net.NetworkAgent.CMD_START_SOCKET_KEEPALIVE;
 import static android.net.SocketKeepalive.ERROR_INVALID_SOCKET;
 import static android.net.SocketKeepalive.SUCCESS_PAUSED;
-import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
+import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.SOL_SOCKET;
@@ -206,7 +206,8 @@ public class AutomaticOnOffKeepaliveTracker {
             this.mKi = Objects.requireNonNull(ki);
             mCallback = ki.mCallback;
             mUnderpinnedNetwork = underpinnedNetwork;
-            if (autoOnOff && mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION)) {
+            if (autoOnOff && mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION,
+                    true /* defaultEnabled */)) {
                 mAutomaticOnOffState = STATE_ENABLED;
                 if (null == ki.mFd) {
                     throw new IllegalArgumentException("fd can't be null with automatic "
@@ -568,7 +569,8 @@ public class AutomaticOnOffKeepaliveTracker {
         // Clear calling identity to align the calling uid and package so that it won't fail if cts
         // would like to do the dump()
         final boolean featureEnabled = BinderUtils.withCleanCallingIdentity(
-                () -> mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION));
+                () -> mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION,
+                        true /* defaultEnabled */));
         pw.println("AutomaticOnOff enabled: " + featureEnabled);
         pw.increaseIndent();
         for (AutomaticOnOffKeepalive autoKi : mAutomaticOnOffKeepalives) {
@@ -798,10 +800,13 @@ public class AutomaticOnOffKeepaliveTracker {
          * Find out if a feature is enabled from DeviceConfig.
          *
          * @param name The name of the property to look up.
+         * @param defaultEnabled whether to consider the feature enabled in the absence of
+         *                       the flag. This MUST be a statically-known constant.
          * @return whether the feature is enabled
          */
-        public boolean isFeatureEnabled(@NonNull final String name) {
-            return DeviceConfigUtils.isFeatureEnabled(mContext, NAMESPACE_CONNECTIVITY, name);
+        public boolean isFeatureEnabled(@NonNull final String name, final boolean defaultEnabled) {
+            return DeviceConfigUtils.isFeatureEnabled(mContext, NAMESPACE_TETHERING, name,
+                    defaultEnabled);
         }
     }
 }
