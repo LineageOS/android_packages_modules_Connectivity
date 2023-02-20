@@ -195,6 +195,8 @@ interface IConnectivityManager
 
     void stopKeepalive(in ISocketKeepaliveCallback cb);
 
+    int[] getSupportedKeepalives();
+
     String getCaptivePortalServerUrl();
 
     byte[] getNetworkWatchlistConfigHash();
