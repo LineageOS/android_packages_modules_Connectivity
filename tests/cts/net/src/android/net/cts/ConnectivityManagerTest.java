@@ -3372,7 +3372,7 @@ public class ConnectivityManagerTest {
     }
 
     private void checkFirewallBlocking(final DatagramSocket srcSock, final DatagramSocket dstSock,
-            final boolean expectBlock) throws Exception {
+            final boolean expectBlock, final int chain) throws Exception {
         final Random random = new Random();
         final byte[] sendData = new byte[100];
         random.nextBytes(sendData);
@@ -3385,11 +3385,17 @@ public class ConnectivityManagerTest {
             if (expectBlock) {
                 return;
             }
-            fail("Expect not to be blocked by firewall but sending packet was blocked");
+            fail("Expect not to be blocked by firewall but sending packet was blocked:"
+                    + " chain=" + chain
+                    + " chainEnabled=" + mCm.getFirewallChainEnabled(chain)
+                    + " uidFirewallRule=" + mCm.getUidFirewallRule(chain, Process.myUid()));
         }
 
         if (expectBlock) {
-            fail("Expect to be blocked by firewall but sending packet was not blocked");
+            fail("Expect to be blocked by firewall but sending packet was not blocked:"
+                    + " chain=" + chain
+                    + " chainEnabled=" + mCm.getFirewallChainEnabled(chain)
+                    + " uidFirewallRule=" + mCm.getUidFirewallRule(chain, Process.myUid()));
         }
 
         dstSock.receive(pkt);
@@ -3422,25 +3428,27 @@ public class ConnectivityManagerTest {
                 dstSock.setSoTimeout(SOCKET_TIMEOUT_MS);
 
                 // Chain disabled, UID not on chain.
-                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS, chain);
 
                 // Chain enabled, UID not on chain.
                 mCm.setFirewallChainEnabled(chain, true /* enable */);
                 assertTrue(mCm.getFirewallChainEnabled(chain));
-                checkFirewallBlocking(srcSock, dstSock, isAllowList ? EXPECT_BLOCK : EXPECT_PASS);
+                checkFirewallBlocking(
+                        srcSock, dstSock, isAllowList ? EXPECT_BLOCK : EXPECT_PASS, chain);
 
                 // Chain enabled, UID on chain.
                 mCm.setUidFirewallRule(chain, myUid, ruleToAddMatch);
-                checkFirewallBlocking(srcSock, dstSock, isAllowList ?  EXPECT_PASS : EXPECT_BLOCK);
+                checkFirewallBlocking(
+                        srcSock, dstSock, isAllowList ?  EXPECT_PASS : EXPECT_BLOCK, chain);
 
                 // Chain disabled, UID on chain.
                 mCm.setFirewallChainEnabled(chain, false /* enable */);
                 assertFalse(mCm.getFirewallChainEnabled(chain));
-                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS, chain);
 
                 // Chain disabled, UID not on chain.
                 mCm.setUidFirewallRule(chain, myUid, ruleToRemoveMatch);
-                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS);
+                checkFirewallBlocking(srcSock, dstSock, EXPECT_PASS, chain);
             }, /* cleanup */ () -> {
                     srcSock.close();
                     dstSock.close();
