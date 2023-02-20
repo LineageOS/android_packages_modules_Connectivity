@@ -21,7 +21,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
-import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Pair;
@@ -54,6 +53,7 @@ public class MdnsServiceTypeClient {
     private final String serviceType;
     private final String[] serviceTypeLabels;
     private final MdnsSocketClientBase socketClient;
+    private final MdnsResponseDecoder responseDecoder;
     private final ScheduledExecutorService executor;
     private final Object lock = new Object();
     private final ArrayMap<MdnsServiceBrowserListener, MdnsSearchOptions> listeners =
@@ -63,6 +63,8 @@ public class MdnsServiceTypeClient {
             MdnsConfigs.removeServiceAfterTtlExpires();
     private final boolean allowSearchOptionsToRemoveExpiredService =
             MdnsConfigs.allowSearchOptionsToRemoveExpiredService();
+
+    private final MdnsResponseDecoder.Clock clock;
 
     @Nullable private MdnsSearchOptions searchOptions;
 
@@ -85,10 +87,21 @@ public class MdnsServiceTypeClient {
             @NonNull String serviceType,
             @NonNull MdnsSocketClientBase socketClient,
             @NonNull ScheduledExecutorService executor) {
+        this(serviceType, socketClient, executor, new MdnsResponseDecoder.Clock());
+    }
+
+    @VisibleForTesting
+    public MdnsServiceTypeClient(
+            @NonNull String serviceType,
+            @NonNull MdnsSocketClientBase socketClient,
+            @NonNull ScheduledExecutorService executor,
+            @NonNull MdnsResponseDecoder.Clock clock) {
         this.serviceType = serviceType;
         this.socketClient = socketClient;
         this.executor = executor;
-        serviceTypeLabels = TextUtils.split(serviceType, "\\.");
+        this.serviceTypeLabels = TextUtils.split(serviceType, "\\.");
+        this.responseDecoder = new MdnsResponseDecoder(clock, serviceTypeLabels);
+        this.clock = clock;
     }
 
     private static MdnsServiceInfo buildMdnsServiceInfoFromResponse(
@@ -198,23 +211,31 @@ public class MdnsServiceTypeClient {
         return serviceTypeLabels;
     }
 
-    public synchronized void processResponse(@NonNull MdnsResponse response) {
-        if (shouldRemoveServiceAfterTtlExpires()) {
-            // Because {@link QueryTask} and {@link processResponse} are running in different
-            // threads. We need to synchronize {@link lock} to protect
-            // {@link instanceNameToResponse} won’t be modified at the same time.
-            synchronized (lock) {
+    /**
+     * Process an incoming response packet.
+     */
+    public synchronized void processResponse(@NonNull MdnsPacket packet, int interfaceIndex,
+            Network network) {
+        final List<MdnsResponse> responses = responseDecoder.buildResponses(packet, interfaceIndex,
+                network);
+        for (MdnsResponse response : responses) {
+            if (shouldRemoveServiceAfterTtlExpires()) {
+                // Because {@link QueryTask} and {@link processResponse} are running in different
+                // threads. We need to synchronize {@link lock} to protect
+                // {@link instanceNameToResponse} won’t be modified at the same time.
+                synchronized (lock) {
+                    if (response.isGoodbye()) {
+                        onGoodbyeReceived(response.getServiceInstanceName());
+                    } else {
+                        onResponseReceived(response);
+                    }
+                }
+            } else {
                 if (response.isGoodbye()) {
                     onGoodbyeReceived(response.getServiceInstanceName());
                 } else {
                     onResponseReceived(response);
                 }
-            }
-        } else {
-            if (response.isGoodbye()) {
-                onGoodbyeReceived(response.getServiceInstanceName());
-            } else {
-                onResponseReceived(response);
             }
         }
     }
@@ -481,7 +502,7 @@ public class MdnsServiceTypeClient {
                         if (existingResponse.hasServiceRecord()
                                 && existingResponse
                                 .getServiceRecord()
-                                .getRemainingTTL(SystemClock.elapsedRealtime())
+                                .getRemainingTTL(clock.elapsedRealtime())
                                 == 0) {
                             iter.remove();
                             for (int i = 0; i < listeners.size(); i++) {

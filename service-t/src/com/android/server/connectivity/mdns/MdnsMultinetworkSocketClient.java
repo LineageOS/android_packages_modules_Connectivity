@@ -33,7 +33,6 @@ import java.net.DatagramPacket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +47,6 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
 
     @NonNull private final Handler mHandler;
     @NonNull private final MdnsSocketProvider mSocketProvider;
-    @NonNull private final MdnsResponseDecoder mResponseDecoder;
 
     private final Map<MdnsServiceBrowserListener, InterfaceSocketCallback> mRequestedNetworks =
             new ArrayMap<>();
@@ -62,8 +60,6 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             @NonNull MdnsSocketProvider provider) {
         mHandler = new Handler(looper);
         mSocketProvider = provider;
-        mResponseDecoder = new MdnsResponseDecoder(
-                new MdnsResponseDecoder.Clock(), null /* serviceType */);
     }
 
     private class InterfaceSocketCallback implements MdnsSocketProvider.SocketCallback {
@@ -170,19 +166,21 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             @NonNull Network network) {
         int packetNumber = ++mReceivedPacketNumber;
 
-        final List<MdnsResponse> responses = new ArrayList<>();
-        final int errorCode = mResponseDecoder.decode(
-                recvbuf, length, responses, interfaceIndex, network);
-        if (errorCode == MdnsResponseDecoder.SUCCESS) {
-            for (MdnsResponse response : responses) {
+        final MdnsPacket response;
+        try {
+            response = MdnsResponseDecoder.parseResponse(recvbuf, length);
+        } catch (MdnsPacket.ParseException e) {
+            if (e.code != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
+                Log.e(TAG, e.getMessage(), e);
                 if (mCallback != null) {
-                    mCallback.onResponseReceived(response);
+                    mCallback.onFailedToParseMdnsResponse(packetNumber, e.code);
                 }
             }
-        } else if (errorCode != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
-            if (mCallback != null) {
-                mCallback.onFailedToParseMdnsResponse(packetNumber, errorCode);
-            }
+            return;
+        }
+
+        if (mCallback != null) {
+            mCallback.onResponseReceived(response, interfaceIndex, network);
         }
     }
 
