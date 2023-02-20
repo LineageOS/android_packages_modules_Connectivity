@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity;
 
+import static android.Manifest.permission.NETWORK_STACK;
+import static android.content.Context.RECEIVER_NOT_EXPORTED;
 import static android.net.NetworkAgent.CMD_START_SOCKET_KEEPALIVE;
 import static android.net.SocketKeepalive.ERROR_INVALID_SOCKET;
 import static android.net.SocketKeepalive.SUCCESS_PAUSED;
@@ -246,6 +248,7 @@ public class AutomaticOnOffKeepaliveTracker {
         private PendingIntent createTcpPollingAlarmIntent(@NonNull Context context,
                 @NonNull IBinder token) {
             final Intent intent = new Intent(ACTION_TCP_POLLING_ALARM);
+            intent.setPackage(context.getPackageName());
             // Intent doesn't expose methods to put extra Binders, but Bundle does.
             final Bundle b = new Bundle();
             b.putBinder(EXTRA_BINDER_TOKEN, token);
@@ -305,7 +308,7 @@ public class AutomaticOnOffKeepaliveTracker {
 
         if (SdkLevel.isAtLeastU()) {
             mContext.registerReceiver(mReceiver, new IntentFilter(ACTION_TCP_POLLING_ALARM),
-                    null, handler);
+                    NETWORK_STACK, handler, RECEIVER_NOT_EXPORTED);
         }
         mAlarmManager = mContext.getSystemService(AlarmManager.class);
     }
