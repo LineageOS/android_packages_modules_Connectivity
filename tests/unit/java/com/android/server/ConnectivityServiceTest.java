@@ -10420,7 +10420,11 @@ public class ConnectivityServiceTest {
         verify(mMockNetd, times(1)).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
                 eq(Integer.toString(TRANSPORT_CELLULAR)));
         verify(mMockNetd).networkDestroy(cellNetId);
-        verify(mMockNetd).setNetworkAllowlist(any());
+        if (SdkLevel.isAtLeastU()) {
+            verify(mMockNetd).setNetworkAllowlist(any());
+        } else {
+            verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
         verifyNoMoreInteractions(mMockNetd);
         verifyNoMoreInteractions(mClatCoordinator);
         reset(mMockNetd);
@@ -10461,7 +10465,11 @@ public class ConnectivityServiceTest {
         verify(mMockNetd).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
                 eq(Integer.toString(TRANSPORT_CELLULAR)));
         verify(mMockNetd).networkDestroy(cellNetId);
-        verify(mMockNetd).setNetworkAllowlist(any());
+        if (SdkLevel.isAtLeastU()) {
+            verify(mMockNetd).setNetworkAllowlist(any());
+        } else {
+            verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
         verifyNoMoreInteractions(mMockNetd);
         verifyNoMoreInteractions(mClatCoordinator);
 
@@ -15771,7 +15779,11 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 toUidRangeStableParcels(allowedRanges),
                 0 /* subPriority */);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[] { config1User });
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{config1User});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         doReturn(asList(PRIMARY_USER_HANDLE, SECONDARY_USER_HANDLE))
                 .when(mUserManager).getUserHandles(anyBoolean());
@@ -15785,7 +15797,11 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 toUidRangeStableParcels(allowedRanges),
                 0 /* subPriority */);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[] { config2Users });
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{config2Users});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
     }
 
     @Test
@@ -15812,8 +15828,12 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 allowAllUidRangesParcel,
                 0 /* subPriority */);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(
-                new NativeUidRangeConfig[]{cellAllAllowedConfig});
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(
+                    new NativeUidRangeConfig[]{cellAllAllowedConfig});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Verify the same uid ranges are also applied for enterprise network.
         final TestNetworkAgentWrapper enterpriseAgent = makeEnterpriseNetworkAgent(
@@ -15827,9 +15847,13 @@ public class ConnectivityServiceTest {
         // making the order of the list undeterministic. Thus, verify this in order insensitive way.
         final ArgumentCaptor<NativeUidRangeConfig[]> configsCaptor = ArgumentCaptor.forClass(
                 NativeUidRangeConfig[].class);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
-        assertContainsAll(List.of(configsCaptor.getValue()),
-                List.of(cellAllAllowedConfig, enterpriseAllAllowedConfig));
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
+            assertContainsAll(List.of(configsCaptor.getValue()),
+                    List.of(cellAllAllowedConfig, enterpriseAllAllowedConfig));
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Setup profile preference which only applies to test app uid on the managed profile.
         ProfileNetworkPreference.Builder prefBuilder = new ProfileNetworkPreference.Builder();
@@ -15857,24 +15881,36 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 excludeAppRangesParcel,
                 0 /* subPriority */);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
-        assertContainsAll(List.of(configsCaptor.getValue()),
-                List.of(cellExcludeAppConfig, enterpriseAllAllowedConfig));
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
+            assertContainsAll(List.of(configsCaptor.getValue()),
+                    List.of(cellExcludeAppConfig, enterpriseAllAllowedConfig));
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Verify unset by giving all allowed set for all users when the preference got removed.
         mCm.setProfileNetworkPreference(testHandle, PROFILE_NETWORK_PREFERENCE_ENTERPRISE,
                 r -> r.run(), listener);
         listener.expectOnComplete();
-        inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
-        assertContainsAll(List.of(configsCaptor.getValue()),
-                List.of(cellAllAllowedConfig, enterpriseAllAllowedConfig));
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
+            assertContainsAll(List.of(configsCaptor.getValue()),
+                    List.of(cellAllAllowedConfig, enterpriseAllAllowedConfig));
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Verify issuing with cellular set only when a network with enterprise capability
         // disconnects.
         enterpriseAgent.disconnect();
         waitForIdle();
-        inOrder.verify(mMockNetd).setNetworkAllowlist(
-                new NativeUidRangeConfig[]{cellAllAllowedConfig});
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(
+                    new NativeUidRangeConfig[]{cellAllAllowedConfig});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
     }
 
     @Test
@@ -15894,7 +15930,11 @@ public class ConnectivityServiceTest {
                 List.of(prefBuilder.build()),
                 r -> r.run(), listener);
         listener.expectOnComplete();
-        inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{});
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Start with 1 default network, which should be restricted since the blocking
         // preference is already set.
@@ -15918,8 +15958,12 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 excludeAppRangesParcel,
                 0 /* subPriority */);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(
-                new NativeUidRangeConfig[]{cellExcludeAppConfig});
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(
+                    new NativeUidRangeConfig[]{cellExcludeAppConfig});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Verify enterprise network is not blocked for test app.
         final TestNetworkAgentWrapper enterpriseAgent = makeEnterpriseNetworkAgent(
@@ -15938,19 +15982,31 @@ public class ConnectivityServiceTest {
         // making the order of the list undeterministic. Thus, verify this in order insensitive way.
         final ArgumentCaptor<NativeUidRangeConfig[]> configsCaptor = ArgumentCaptor.forClass(
                 NativeUidRangeConfig[].class);
-        inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
-        assertContainsAll(List.of(configsCaptor.getValue()),
-                List.of(enterpriseAllAllowedConfig, cellExcludeAppConfig));
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
+            assertContainsAll(List.of(configsCaptor.getValue()),
+                    List.of(enterpriseAllAllowedConfig, cellExcludeAppConfig));
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         // Verify issuing with cellular set only when enterprise network disconnects.
         enterpriseAgent.disconnect();
         waitForIdle();
-        inOrder.verify(mMockNetd).setNetworkAllowlist(
-                new NativeUidRangeConfig[]{cellExcludeAppConfig});
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(
+                    new NativeUidRangeConfig[]{cellExcludeAppConfig});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
 
         mCellAgent.disconnect();
         waitForIdle();
-        inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{});
+        if (SdkLevel.isAtLeastU()) {
+            inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{});
+        } else {
+            inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
+        }
     }
 
     /**
