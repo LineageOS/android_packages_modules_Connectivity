@@ -25,7 +25,6 @@ import static com.android.internal.annotations.VisibleForTesting.Visibility.PACK
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.IEthernetServiceListener;
 import android.net.INetd;
@@ -57,6 +56,7 @@ import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.RtNetlinkLinkMessage;
 import com.android.net.module.util.netlink.StructIfinfoMsg;
+import com.android.server.connectivity.ConnectivityResources;
 
 import java.io.FileDescriptor;
 import java.net.InetAddress;

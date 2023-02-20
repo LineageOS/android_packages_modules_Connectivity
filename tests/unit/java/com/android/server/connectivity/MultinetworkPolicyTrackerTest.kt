@@ -21,10 +21,8 @@ import android.content.res.Resources
 import android.net.ConnectivityManager.MULTIPATH_PREFERENCE_HANDOVER
 import android.net.ConnectivityManager.MULTIPATH_PREFERENCE_PERFORMANCE
 import android.net.ConnectivityManager.MULTIPATH_PREFERENCE_RELIABILITY
-import android.net.ConnectivityResources
 import android.net.ConnectivitySettingsManager.NETWORK_AVOID_BAD_WIFI
 import android.net.ConnectivitySettingsManager.NETWORK_METERED_MULTIPATH_PREFERENCE
-import com.android.server.connectivity.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
 import android.os.Build
 import android.os.Handler
 import android.os.test.TestLooper
@@ -37,6 +35,7 @@ import androidx.test.filters.SmallTest
 import com.android.connectivity.resources.R
 import com.android.internal.util.test.FakeSettingsProvider
 import com.android.modules.utils.build.SdkLevel
+import com.android.server.connectivity.MultinetworkPolicyTracker.ActiveDataSubscriptionIdListener
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.After
