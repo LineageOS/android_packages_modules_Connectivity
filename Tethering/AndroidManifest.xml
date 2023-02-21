@@ -45,7 +45,6 @@
 
     <!-- Sending non-protected broadcast from system uid is not allowed. -->
     <protected-broadcast android:name="com.android.server.connectivity.tethering.DISABLE_TETHERING" />
-    <protected-broadcast android:name="com.android.server.connectivity.KeepaliveTracker.TCP_POLLING_ALARM" />
 
     <application
         android:process="com.android.networkstack.process"
