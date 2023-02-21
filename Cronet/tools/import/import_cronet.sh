@@ -19,15 +19,16 @@
 #  Environment:
 #   ANDROID_BUILD_TOP: path the root of the current Android directory.
 #  Arguments:
-#   -l: The last revision that was imported.
+#   -l rev: The last revision that was imported.
 #  Optional Arguments:
-#   -n: The new revision to import.
+#   -n rev: The new revision to import.
+#   -f: Force copybara to ignore a failure to find the last imported revision.
 
-OPTSTRING=l:n:
+OPTSTRING=fl:n:
 
 usage() {
     cat <<EOF
-Usage: import_cronet.sh -n new-rev [-l last-rev]
+Usage: import_cronet.sh -n new-rev [-l last-rev] [-f]
 EOF
     exit 1
 }
@@ -39,14 +40,20 @@ EOF
 # Arguments:
 #   new_rev, string
 #   last_rev, string or empty
+#   force, string or empty
 #######################################
 do_run_copybara() {
     local _new_rev=$1
     local _last_rev=$2
+    local _force=$3
 
     local -a flags
     flags+=(--git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet")
     flags+=(--repo-timeout 3h)
+
+    if [ ! -z "${_force}" ]; then
+        flags+=(--force)
+    fi
 
     if [ ! -z "${_last_rev}" ]; then
         flags+=(--last-rev "${_last_rev}")
@@ -60,6 +67,7 @@ do_run_copybara() {
 
 while getopts $OPTSTRING opt; do
     case "${opt}" in
+        f) force=true ;;
         l) last_rev="${OPTARG}" ;;
         n) new_rev="${OPTARG}" ;;
         ?) usage ;;
@@ -72,5 +80,5 @@ if [ -z "${new_rev}" ]; then
     usage
 fi
 
-do_run_copybara "${new_rev}" "${last_rev}"
+do_run_copybara "${new_rev}" "${last_rev}" "${force}"
 
