@@ -20,13 +20,14 @@
 #   ANDROID_BUILD_TOP: path the root of the current Android directory.
 #  Arguments:
 #   -l: The last revision that was imported.
+#  Optional Arguments:
 #   -n: The new revision to import.
 
 OPTSTRING=l:n:
 
 usage() {
     cat <<EOF
-Usage: import_cronet.sh -l last-rev -n new-rev
+Usage: import_cronet.sh -n new-rev [-l last-rev]
 EOF
     exit 1
 }
@@ -36,17 +37,23 @@ EOF
 # Globals:
 #   ANDROID_BUILD_TOP
 # Arguments:
-#   last_rev, string
 #   new_rev, string
+#   last_rev, string or empty
 #######################################
 do_run_copybara() {
-    local _last_rev=$1
-    local _new_rev=$2
+    local _new_rev=$1
+    local _last_rev=$2
+
+    local -a flags
+    flags+=(--git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet")
+    flags+=(--repo-timeout 3h)
+
+    if [ ! -z "${_last_rev}" ]; then
+        flags+=(--last-rev "${_last_rev}")
+    fi
 
     /google/bin/releases/copybara/public/copybara/copybara \
-        --git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet" \
-        --last-rev "${_last_rev}" \
-        --repo-timeout 3h \
+        "${flags[@]}" \
         "${ANDROID_BUILD_TOP}/packages/modules/Connectivity/Cronet/tools/import/copy.bara.sky" \
         import_cronet "${_new_rev}"
 }
@@ -60,17 +67,10 @@ while getopts $OPTSTRING opt; do
     esac
 done
 
-# TODO: Get last-rev from METADATA file.
-# Setting last-rev may only be required for the first commit.
-if [ -z "${last_rev}" ]; then
-    echo "-l argument required"
-    usage
-fi
-
 if [ -z "${new_rev}" ]; then
     echo "-n argument required"
     usage
 fi
 
-do_run_copybara "${last_rev}" "${new_rev}"
+do_run_copybara "${new_rev}" "${last_rev}"
 
