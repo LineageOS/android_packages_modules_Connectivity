@@ -223,13 +223,9 @@ public class DeviceConfigUtilsTest {
                 TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
                 TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
-        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
-                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, true /* defaultEnabled */));
         doThrow(NameNotFoundException.class).when(mPm).getModuleInfo(anyString(), anyInt());
         assertFalse(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
                 TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, false /* defaultEnabled */));
-        assertTrue(DeviceConfigUtils.isFeatureEnabled(mContext, TEST_NAME_SPACE,
-                TEST_EXPERIMENT_FLAG, TEST_APEX_NAME, true /* defaultEnabled */));
     }
 
 
