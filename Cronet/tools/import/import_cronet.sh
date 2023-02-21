@@ -34,6 +34,21 @@ EOF
 }
 
 #######################################
+# Create upstream-import branch in external/cronet.
+# Globals:
+#   ANDROID_BUILD_TOP
+# Arguments:
+#   none
+#######################################
+setup_upstream_import_branch() {
+    local git_dir="${ANDROID_BUILD_TOP}/external/cronet"
+    local initial_empty_repo_sha="d1add53d6e90815f363c91d433735556ce79b0d2"
+
+    # Suppress error message if branch already exists.
+    (cd "${git_dir}" && git branch upstream-import "${initial_empty_repo_sha}") 2>/dev/null
+}
+
+#######################################
 # Runs the copybara import of Chromium
 # Globals:
 #   ANDROID_BUILD_TOP
@@ -80,5 +95,6 @@ if [ -z "${new_rev}" ]; then
     usage
 fi
 
+setup_upstream_import_branch
 do_run_copybara "${new_rev}" "${last_rev}" "${force}"
 
