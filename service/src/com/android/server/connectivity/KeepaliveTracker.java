@@ -58,6 +58,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.connectivity.resources.R;
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.HexDump;
 import com.android.net.module.util.IpUtils;
@@ -125,7 +126,8 @@ public class KeepaliveTracker {
      * All information about this keepalive is known at construction time except the slot number,
      * which is only returned when the hardware has successfully started the keepalive.
      */
-    class KeepaliveInfo implements IBinder.DeathRecipient {
+    @VisibleForTesting
+    public class KeepaliveInfo implements IBinder.DeathRecipient {
         // TODO : remove this member. Only AutoOnOffKeepalive should have a reference to this.
         public final ISocketKeepaliveCallback mCallback;
         // Bookkeeping data.
