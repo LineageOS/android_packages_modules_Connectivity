@@ -429,14 +429,6 @@ class GnParser(object):
         target.transitive_proto_deps.add(dep.name)
         target.proto_paths.update(dep.proto_paths)
         target.transitive_proto_deps.update(dep.transitive_proto_deps)
-      elif dep.type == 'source_set':
-        target.arch[arch].source_set_deps.add(dep.name)
-        target.arch[arch].source_set_deps.update(dep.arch[arch].source_set_deps)
-        # flatten source_set deps
-        if target.is_linker_unit_type():
-          # This ensure that all transitive source set dependencies are
-          # propagated upward to the linker units.
-          target.arch[arch].deps.update(target.arch[arch].source_set_deps)
       elif dep.type == 'group':
         target.update(dep, arch)  # Bubble up groups's cflags/ldflags etc.
       elif dep.type in ['action', 'action_foreach', 'copy']:
@@ -450,12 +442,11 @@ class GnParser(object):
         # java_library.
         pass
 
-      # Source set bubble up transitive source sets but can't be combined with this
-      # if they are combined then source sets will bubble up static libraries
-      # while we only want to have source sets bubble up only source sets.
-      if dep.type == 'static_library':
-        # Bubble up static_libs. Necessary, since soong does not propagate
+      if dep.type in ['static_library', 'source_set']:
+        # Bubble up static_libs and source_set. Necessary, since soong does not propagate
         # static_libs up the build tree.
+        # Source sets are later translated to static_libraries, so it makes sense
+        # to reuse transitive_static_libs_deps.
         target.arch[arch].transitive_static_libs_deps.add(dep.name)
 
       if arch in dep.arch:
