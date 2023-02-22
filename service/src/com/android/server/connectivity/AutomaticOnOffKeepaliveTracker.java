@@ -16,8 +16,6 @@
 
 package com.android.server.connectivity;
 
-import static android.Manifest.permission.NETWORK_STACK;
-import static android.content.Context.RECEIVER_NOT_EXPORTED;
 import static android.net.NetworkAgent.CMD_START_SOCKET_KEEPALIVE;
 import static android.net.SocketKeepalive.ERROR_INVALID_SOCKET;
 import static android.net.SocketKeepalive.SUCCESS_PAUSED;
@@ -36,18 +34,13 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.INetd;
 import android.net.ISocketKeepaliveCallback;
 import android.net.MarkMaskParcel;
 import android.net.Network;
 import android.net.NetworkAgent;
 import android.net.SocketKeepalive.InvalidSocketException;
-import android.os.Bundle;
 import android.os.FileUtils;
 import android.os.Handler;
 import android.os.IBinder;
@@ -63,7 +56,6 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
-import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BinderUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
@@ -96,8 +88,6 @@ import java.util.Objects;
 public class AutomaticOnOffKeepaliveTracker {
     private static final String TAG = "AutomaticOnOffKeepaliveTracker";
     private static final int[] ADDRESS_FAMILIES = new int[] {AF_INET6, AF_INET};
-    private static final String ACTION_TCP_POLLING_ALARM =
-            "com.android.server.connectivity.KeepaliveTracker.TCP_POLLING_ALARM";
     private static final String EXTRA_BINDER_TOKEN = "token";
     private static final long DEFAULT_TCP_POLLING_INTERVAL_MS = 120_000L;
     private static final long LOW_TCP_POLLING_INTERVAL_MS = 1_000L;
@@ -162,19 +152,6 @@ public class AutomaticOnOffKeepaliveTracker {
     // TODO: Remove this when TCP polling design is replaced with callback.
     private long mTestLowTcpPollingTimerUntilMs = 0;
 
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (ACTION_TCP_POLLING_ALARM.equals(intent.getAction())) {
-                Log.d(TAG, "Received TCP polling intent");
-                final IBinder token = intent.getBundleExtra(EXTRA_BINDER_TOKEN).getBinder(
-                        EXTRA_BINDER_TOKEN);
-                mConnectivityServiceHandler.obtainMessage(
-                        NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE, token).sendToTarget();
-            }
-        }
-    };
-
     /**
      * Information about a managed keepalive.
      *
@@ -195,7 +172,7 @@ public class AutomaticOnOffKeepaliveTracker {
         @Nullable
         private final FileDescriptor mFd;
         @Nullable
-        private final PendingIntent mTcpPollingAlarm;
+        private final AlarmManager.OnAlarmListener mAlarmListener;
         @AutomaticOnOffState
         private int mAutomaticOnOffState;
         @Nullable
@@ -221,15 +198,22 @@ public class AutomaticOnOffKeepaliveTracker {
                     Log.e(TAG, "Cannot dup fd: ", e);
                     throw new InvalidSocketException(ERROR_INVALID_SOCKET, e);
                 }
-                mTcpPollingAlarm = createTcpPollingAlarmIntent(context, mCallback.asBinder());
+                mAlarmListener = () -> mConnectivityServiceHandler.obtainMessage(
+                        NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE, mCallback.asBinder())
+                        .sendToTarget();
             } else {
                 mAutomaticOnOffState = STATE_ALWAYS_ON;
                 // A null fd is acceptable in KeepaliveInfo for backward compatibility of
                 // PacketKeepalive API, but it must never happen with automatic keepalives.
                 // TODO : remove mFd from KeepaliveInfo or from this class.
                 mFd = ki.mFd;
-                mTcpPollingAlarm = null;
+                mAlarmListener = null;
             }
+        }
+
+        @VisibleForTesting
+        public ISocketKeepaliveCallback getCallback() {
+            return mCallback;
         }
 
         public Network getNetwork() {
@@ -243,18 +227,6 @@ public class AutomaticOnOffKeepaliveTracker {
 
         public boolean match(Network network, int slot) {
             return mKi.getNai().network().equals(network) && mKi.getSlot() == slot;
-        }
-
-        private PendingIntent createTcpPollingAlarmIntent(@NonNull Context context,
-                @NonNull IBinder token) {
-            final Intent intent = new Intent(ACTION_TCP_POLLING_ALARM);
-            intent.setPackage(context.getPackageName());
-            // Intent doesn't expose methods to put extra Binders, but Bundle does.
-            final Bundle b = new Bundle();
-            b.putBinder(EXTRA_BINDER_TOKEN, token);
-            intent.putExtra(EXTRA_BINDER_TOKEN, b);
-            return BinderUtils.withCleanCallingIdentity(() -> PendingIntent.getBroadcast(
-                    context, 0 /* requestCode */, intent, PendingIntent.FLAG_IMMUTABLE));
         }
 
         @Override
@@ -306,18 +278,15 @@ public class AutomaticOnOffKeepaliveTracker {
         mKeepaliveTracker = mDependencies.newKeepaliveTracker(
                 mContext, mConnectivityServiceHandler);
 
-        if (SdkLevel.isAtLeastU()) {
-            mContext.registerReceiver(mReceiver, new IntentFilter(ACTION_TCP_POLLING_ALARM),
-                    NETWORK_STACK, handler, RECEIVER_NOT_EXPORTED);
-        }
-        mAlarmManager = mContext.getSystemService(AlarmManager.class);
+        mAlarmManager = mDependencies.getAlarmManager(context);
     }
 
-    private void startTcpPollingAlarm(@NonNull PendingIntent alarm) {
+    private void startTcpPollingAlarm(@NonNull final AlarmManager.OnAlarmListener listener) {
         final long triggerAtMillis =
                 SystemClock.elapsedRealtime() + getTcpPollingInterval();
         // Setup a non-wake up alarm.
-        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME, triggerAtMillis, alarm);
+        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME, triggerAtMillis, null /* tag */,
+                listener, mConnectivityServiceHandler);
     }
 
     /**
@@ -354,7 +323,7 @@ public class AutomaticOnOffKeepaliveTracker {
             handleMaybeResumeKeepalive(ki);
         }
         // TODO: listen to socket status instead of periodically check.
-        startTcpPollingAlarm(ki.mTcpPollingAlarm);
+        startTcpPollingAlarm(ki.mAlarmListener);
     }
 
     /**
@@ -434,7 +403,7 @@ public class AutomaticOnOffKeepaliveTracker {
         }
         mAutomaticOnOffKeepalives.add(autoKi);
         if (STATE_ALWAYS_ON != autoKi.mAutomaticOnOffState) {
-            startTcpPollingAlarm(autoKi.mTcpPollingAlarm);
+            startTcpPollingAlarm(autoKi.mAlarmListener);
         }
     }
 
@@ -466,7 +435,7 @@ public class AutomaticOnOffKeepaliveTracker {
     private void cleanupAutoOnOffKeepalive(@NonNull final AutomaticOnOffKeepalive autoKi) {
         ensureRunningOnHandlerThread();
         autoKi.close();
-        if (null != autoKi.mTcpPollingAlarm) mAlarmManager.cancel(autoKi.mTcpPollingAlarm);
+        if (null != autoKi.mAlarmListener) mAlarmManager.cancel(autoKi.mAlarmListener);
 
         // If the KI is not in the array, it's because it was already removed, or it was never
         // added ; the only ways this can happen is if the keepalive is stopped by the app and the
@@ -769,6 +738,13 @@ public class AutomaticOnOffKeepaliveTracker {
         public INetd getNetd() {
             return INetd.Stub.asInterface(
                     (IBinder) mContext.getSystemService(Context.NETD_SERVICE));
+        }
+
+        /**
+         * Get an instance of AlarmManager
+         */
+        public AlarmManager getAlarmManager(@NonNull final Context ctx) {
+            return ctx.getSystemService(AlarmManager.class);
         }
 
         /**
