@@ -159,14 +159,6 @@ def get_linker_script_ldflag(script_path):
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
-    # TODO: remove if not needed.
-    'cronet_aml_components_cronet_android_cronet': [
-        # linker_scripts property is not available in tm-mainline-prod.
-        # So use ldflags to specify linker script.
-        ('ldflags',{
-          get_linker_script_ldflag('base/android/library_loader/anchor_functions.lds'),
-        }),
-    ],
     'cronet_aml_net_net': [
         ('export_static_lib_headers', {
             'cronet_aml_net_third_party_quiche_quiche',
@@ -1305,10 +1297,17 @@ def _get_cflags(cflags, defines):
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
   return cflags
 
-def set_module_flags(module, module_type, cflags, defines, ldflags):
+def _set_linker_script(module, libs):
+  for lib in libs:
+    if lib.endswith(".lds"):
+      module.ldflags.add(get_linker_script_ldflag(gn_utils.label_to_path(lib)))
+
+def set_module_flags(module, module_type, cflags, defines, ldflags, libs):
   module.cflags.update(_get_cflags(cflags, defines))
   if module_type != 'cc_object':
-    module.ldflags.update({flag for flag in ldflags if flag in ldflag_allowlist})
+    module.ldflags.update({flag for flag in ldflags 
+            if flag in ldflag_allowlist or flag.startswith("-Wl,-wrap,")})
+    _set_linker_script(module, libs)
   # TODO: implement proper cflag parsing.
   for flag in cflags:
     if '-std=' in flag:
@@ -1400,12 +1399,13 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.rtti = target.rtti
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
-    set_module_flags(module, module.type, target.cflags, target.defines, target.ldflags)
+    set_module_flags(module, module.type, target.cflags, target.defines, target.ldflags, target.libs)
     set_module_include_dirs(module, target.cflags, target.include_dirs)
     # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
     for arch_name, arch in target.arch.items():
+      # TODO(aymanm): Make libs arch-specific.
       set_module_flags(module.target[arch_name], module.type,
-                       arch.cflags, arch.defines, arch.ldflags)
+                       arch.cflags, arch.defines, arch.ldflags, [])
       # -Xclang -target-feature -Xclang +mte are used to enable MTE (Memory Tagging Extensions).
       # Flags which does not start with '-' could not be in the cflags so enabling MTE by
       # -march and -mcpu Feature Modifiers. MTE is only available on arm64. This is needed for
@@ -1675,6 +1675,7 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-fPIC',
+      '-Wno-c++11-narrowing',
   ]
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
