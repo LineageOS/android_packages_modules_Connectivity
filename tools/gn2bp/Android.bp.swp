@@ -4634,9 +4634,6 @@ java_library {
         include_dirs: [
             "frameworks/base/core/java/",
         ],
-        local_include_dirs: [
-            "base/android/java/src/",
-        ],
     },
     plugins: [
         "cronet_aml_java_jni_annotation_preprocessor",
