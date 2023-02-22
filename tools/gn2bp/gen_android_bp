@@ -940,6 +940,9 @@ class BaseActionSanitizer():
     files = self.target.sources.union(self.target.inputs)
     return {gn_utils.label_to_path(file) for file in files if is_supported_source_file(file)}
 
+  def get_tools(self):
+    return set()
+
   def get_tool_files(self):
     # gn treats inputs and sources for actions equally.
     # soong only supports source files inside srcs, non-source files are added as
@@ -985,6 +988,35 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
     self._set_value_arg('--gen-dir', '.')
     self._set_value_arg('--output', '$(out)')
     super()._sanitize_args()
+
+class GnRunBinary(BaseActionSanitizer):
+  def __init__(self, target, arch):
+    super().__init__(target, arch)
+    self.binary_to_target = {
+      "clang_x64/transport_security_state_generator":
+            "cronet_aml_net_tools_transport_security_state_generator_transport_security_state_generator__testing",
+    }
+    self.binary = self.binary_to_target[self.target.args[0]]
+
+  def _replace_gen_with_location_tag(self, arg):
+    if arg.startswith("gen/"):
+      return "$(location %s)" % arg.replace("gen/", "")
+    return arg
+
+  def _sanitize_args(self):
+    self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._update_all_args(self._replace_gen_with_location_tag)
+    self._set_arg_at(0, '$(location %s)' % self.binary)
+    super()._sanitize_args()
+
+  def get_tools(self):
+    tools = super().get_tools()
+    tools.add(self.binary)
+    return tools
+
+  def get_cmd(self):
+    # Remove the script and use the binary right away
+    return NEWLINE.join(self.target.args)
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
   def _add_location_tag_to_filepath(self, arg):
@@ -1134,6 +1166,8 @@ def get_action_sanitizer(target, type, arch):
     return JavaCppStringSanitizer(target, arch)
   elif target.script == '//build/android/gyp/write_native_libraries_java.py':
     return WriteNativeLibrariesJavaSanitizer(target, arch)
+  elif target.script == '//build/gn_run_binary.py':
+    return GnRunBinary(target, arch)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target, arch)
@@ -1182,6 +1216,7 @@ def create_action_module_internal(target, type, arch=None):
     module.genrule_headers.add(module.name)
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
+  module.tools = sanitizer.get_tools()
 
   return module
 
