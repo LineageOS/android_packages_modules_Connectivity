@@ -43,9 +43,11 @@ import java.nio.ByteBuffer;
  */
 public class StructInetDiagMsg {
     public static final int STRUCT_SIZE = 4 + StructInetDiagSockId.STRUCT_SIZE + 20;
-    private static final int IDIAG_SOCK_ID_OFFSET = StructNlMsgHdr.STRUCT_SIZE + 4;
-    private static final int IDIAG_UID_OFFSET = StructNlMsgHdr.STRUCT_SIZE + 4
-            + StructInetDiagSockId.STRUCT_SIZE + 12;
+    // Offset to the id field from the beginning of inet_diag_msg struct
+    private static final int IDIAG_SOCK_ID_OFFSET = 4;
+    // Offset to the idiag_uid field from the beginning of inet_diag_msg struct
+    private static final int IDIAG_UID_OFFSET =
+            IDIAG_SOCK_ID_OFFSET + StructInetDiagSockId.STRUCT_SIZE + 12;
     public int idiag_uid;
     @NonNull
     public StructInetDiagSockId id;
@@ -58,14 +60,18 @@ public class StructInetDiagMsg {
         if (byteBuffer.remaining() < STRUCT_SIZE) {
             return null;
         }
+        final int baseOffset = byteBuffer.position();
         StructInetDiagMsg struct = new StructInetDiagMsg();
         final byte family = byteBuffer.get();
-        byteBuffer.position(IDIAG_SOCK_ID_OFFSET);
+        byteBuffer.position(baseOffset + IDIAG_SOCK_ID_OFFSET);
         struct.id = StructInetDiagSockId.parse(byteBuffer, family);
         if (struct.id == null) {
             return null;
         }
-        struct.idiag_uid = byteBuffer.getInt(IDIAG_UID_OFFSET);
+        struct.idiag_uid = byteBuffer.getInt(baseOffset + IDIAG_UID_OFFSET);
+
+        // Move position to the end of the inet_diag_msg
+        byteBuffer.position(baseOffset + STRUCT_SIZE);
         return struct;
     }
 
