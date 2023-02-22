@@ -1571,7 +1571,7 @@ def create_java_module(blueprint, gn):
     "modules-utils-build_system",
   }
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
-  module.aidl["local_include_dirs"] = {"base/android/java/src/"}
+  module.aidl["local_include_dirs"] = gn.aidl_local_include_dirs
   module.sdk_version = "module_current"
   module.min_sdk_version = 30
   module.apex_available.add(tethering_apex)
