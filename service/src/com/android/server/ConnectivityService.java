@@ -8854,6 +8854,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void updateProfileAllowedNetworks() {
+        // Netd command is not implemented before U.
+        if (!SdkLevel.isAtLeastU()) return;
+
         ensureRunningOnConnectivityServiceThread();
         final ArrayList<NativeUidRangeConfig> configs = new ArrayList<>();
         final List<UserHandle> users = mContext.getSystemService(UserManager.class)
@@ -8884,8 +8887,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mNetd.setNetworkAllowlist(configs.toArray(new NativeUidRangeConfig[0]));
         } catch (ServiceSpecificException e) {
             // Has the interface disappeared since the network was built?
+            Log.wtf(TAG, "Unexpected ServiceSpecificException", e);
         } catch (RemoteException e) {
-            // Netd died. This usually causes a runtime restart anyway.
+            // Netd died. This will cause a runtime restart anyway.
+            Log.wtf(TAG, "Unexpected RemoteException", e);
         }
     }
 
