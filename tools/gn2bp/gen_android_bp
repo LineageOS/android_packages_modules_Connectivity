@@ -45,6 +45,8 @@ default_targets = [
     '//components/cronet/android:cronet_android_mainline',
 ]
 
+EXTRAS_ANDROID_BP_FILE = "Android.extras.bp"
+
 # Defines a custom init_rc argument to be applied to the corresponding output
 # blueprint target.
 target_initrc = {
@@ -157,14 +159,6 @@ def get_linker_script_ldflag(script_path):
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
-    # TODO: remove if not needed.
-    'cronet_aml_components_cronet_android_cronet': [
-        # linker_scripts property is not available in tm-mainline-prod.
-        # So use ldflags to specify linker script.
-        ('ldflags',{
-          get_linker_script_ldflag('base/android/library_loader/anchor_functions.lds'),
-        }),
-    ],
     'cronet_aml_net_net': [
         ('export_static_lib_headers', {
             'cronet_aml_net_third_party_quiche_quiche',
@@ -938,6 +932,9 @@ class BaseActionSanitizer():
     files = self.target.sources.union(self.target.inputs)
     return {gn_utils.label_to_path(file) for file in files if is_supported_source_file(file)}
 
+  def get_tools(self):
+    return set()
+
   def get_tool_files(self):
     # gn treats inputs and sources for actions equally.
     # soong only supports source files inside srcs, non-source files are added as
@@ -983,6 +980,35 @@ class WriteBuildFlagHeaderSanitizer(BaseActionSanitizer):
     self._set_value_arg('--gen-dir', '.')
     self._set_value_arg('--output', '$(out)')
     super()._sanitize_args()
+
+class GnRunBinary(BaseActionSanitizer):
+  def __init__(self, target, arch):
+    super().__init__(target, arch)
+    self.binary_to_target = {
+      "clang_x64/transport_security_state_generator":
+            "cronet_aml_net_tools_transport_security_state_generator_transport_security_state_generator__testing",
+    }
+    self.binary = self.binary_to_target[self.target.args[0]]
+
+  def _replace_gen_with_location_tag(self, arg):
+    if arg.startswith("gen/"):
+      return "$(location %s)" % arg.replace("gen/", "")
+    return arg
+
+  def _sanitize_args(self):
+    self._update_all_args(self._sanitize_filepath_with_location_tag)
+    self._update_all_args(self._replace_gen_with_location_tag)
+    self._set_arg_at(0, '$(location %s)' % self.binary)
+    super()._sanitize_args()
+
+  def get_tools(self):
+    tools = super().get_tools()
+    tools.add(self.binary)
+    return tools
+
+  def get_cmd(self):
+    # Remove the script and use the binary right away
+    return NEWLINE.join(self.target.args)
 
 class JniGeneratorSanitizer(BaseActionSanitizer):
   def _add_location_tag_to_filepath(self, arg):
@@ -1132,6 +1158,8 @@ def get_action_sanitizer(target, type, arch):
     return JavaCppStringSanitizer(target, arch)
   elif target.script == '//build/android/gyp/write_native_libraries_java.py':
     return WriteNativeLibrariesJavaSanitizer(target, arch)
+  elif target.script == '//build/gn_run_binary.py':
+    return GnRunBinary(target, arch)
   else:
     # TODO: throw exception here once all script hacks have been converted.
     return BaseActionSanitizer(target, arch)
@@ -1180,6 +1208,7 @@ def create_action_module_internal(target, type, arch=None):
     module.genrule_headers.add(module.name)
   module.srcs = sanitizer.get_srcs()
   module.tool_files = sanitizer.get_tool_files()
+  module.tools = sanitizer.get_tools()
 
   return module
 
@@ -1268,10 +1297,17 @@ def _get_cflags(cflags, defines):
   cflags |= set("-D%s" % define.replace("\"", "\\\"") for define in defines)
   return cflags
 
-def set_module_flags(module, module_type, cflags, defines, ldflags):
+def _set_linker_script(module, libs):
+  for lib in libs:
+    if lib.endswith(".lds"):
+      module.ldflags.add(get_linker_script_ldflag(gn_utils.label_to_path(lib)))
+
+def set_module_flags(module, module_type, cflags, defines, ldflags, libs):
   module.cflags.update(_get_cflags(cflags, defines))
   if module_type != 'cc_object':
-    module.ldflags.update({flag for flag in ldflags if flag in ldflag_allowlist})
+    module.ldflags.update({flag for flag in ldflags 
+            if flag in ldflag_allowlist or flag.startswith("-Wl,-wrap,")})
+    _set_linker_script(module, libs)
   # TODO: implement proper cflag parsing.
   for flag in cflags:
     if '-std=' in flag:
@@ -1363,12 +1399,13 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
   module.rtti = target.rtti
 
   if target.type in gn_utils.LINKER_UNIT_TYPES:
-    set_module_flags(module, module.type, target.cflags, target.defines, target.ldflags)
+    set_module_flags(module, module.type, target.cflags, target.defines, target.ldflags, target.libs)
     set_module_include_dirs(module, target.cflags, target.include_dirs)
     # TODO: set_module_xxx is confusing, apply similar function to module and target in better way.
     for arch_name, arch in target.arch.items():
+      # TODO(aymanm): Make libs arch-specific.
       set_module_flags(module.target[arch_name], module.type,
-                       arch.cflags, arch.defines, arch.ldflags)
+                       arch.cflags, arch.defines, arch.ldflags, [])
       # -Xclang -target-feature -Xclang +mte are used to enable MTE (Memory Tagging Extensions).
       # Flags which does not start with '-' could not be in the cflags so enabling MTE by
       # -march and -mcpu Feature Modifiers. MTE is only available on arm64. This is needed for
@@ -1482,14 +1519,13 @@ def create_modules_from_target(blueprint, gn, gn_target_name):
       if dep_module.type == 'cc_library_static':
         module.target[arch_name].static_libs.add(dep_module.name)
       elif dep_module.type == 'cc_genrule':
-        if dep_module.name.endswith(arch_name):
-          module.target[arch_name].generated_headers.update(dep_module.genrule_headers)
-          module.target[arch_name].srcs.update(dep_module.genrule_srcs)
-          module.target[arch_name].shared_libs.update(dep_module.genrule_shared_libs)
-          module.target[arch_name].header_libs.update(dep_module.genrule_header_libs)
-          if module.type not in ["cc_object"]:
-            module.target[arch_name].export_generated_headers.update(
-              dep_module.genrule_headers)
+        module.target[arch_name].generated_headers.update(dep_module.genrule_headers)
+        module.target[arch_name].srcs.update(dep_module.genrule_srcs)
+        module.target[arch_name].shared_libs.update(dep_module.genrule_shared_libs)
+        module.target[arch_name].header_libs.update(dep_module.genrule_header_libs)
+        if module.type not in ["cc_object"]:
+          module.target[arch_name].export_generated_headers.update(
+            dep_module.genrule_headers)
       elif dep_module.type == 'cc_object':
         if dep_module.has_input_files():
           # Only add it as part of srcs if the dep_module has input files otherwise
@@ -1569,7 +1605,7 @@ def create_java_module(blueprint, gn):
     "modules-utils-build_system",
   }
   module.aidl["include_dirs"] = {"frameworks/base/core/java/"}
-  module.aidl["local_include_dirs"] = {"base/android/java/src/"}
+  module.aidl["local_include_dirs"] = gn.aidl_local_include_dirs
   module.sdk_version = "module_current"
   module.min_sdk_version = 30
   module.apex_available.add(tethering_apex)
@@ -1639,6 +1675,7 @@ def create_blueprint_for_targets(gn, targets):
       '-Wno-ambiguous-reversed-operator', # needed for icui18n
       '-Wno-unreachable-code-loop-increment', # needed for icui18n
       '-fPIC',
+      '-Wno-c++11-narrowing',
   ]
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
@@ -1808,6 +1845,8 @@ def main():
 // limitations under the License.
 //
 // This file is automatically generated by %s. Do not edit.
+
+build = ["Android.extras.bp"]
 """ % (tool_name)
   ]
   blueprint.to_string(output)
