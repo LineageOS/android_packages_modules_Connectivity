@@ -1932,7 +1932,8 @@ public class VpnTest extends VpnTestBase {
         verify(mScheduledFuture).cancel(anyBoolean());
 
         // Verify MOBIKE is triggered
-        verify(mIkeSessionWrapper).setNetwork(TEST_NETWORK_2);
+        verify(mIkeSessionWrapper).setNetwork(eq(TEST_NETWORK_2),
+                anyInt() /* ipVersion */, anyInt() /* encapType */, anyInt() /* keepaliveDelay */);
 
         // Mock the MOBIKE procedure
         vpnSnapShot.ikeCb.onIkeSessionConnectionInfoChanged(createIkeConnectInfo_2());
@@ -2112,7 +2113,8 @@ public class VpnTest extends VpnTestBase {
 
     private void verifyMobikeTriggered(List<Network> expected) {
         final ArgumentCaptor<Network> networkCaptor = ArgumentCaptor.forClass(Network.class);
-        verify(mIkeSessionWrapper).setNetwork(networkCaptor.capture());
+        verify(mIkeSessionWrapper).setNetwork(networkCaptor.capture(),
+                anyInt() /* ipVersion */, anyInt() /* encapType */, anyInt() /* keepaliveDelay */);
         assertEquals(expected, Collections.singletonList(networkCaptor.getValue()));
     }
 
@@ -2128,7 +2130,8 @@ public class VpnTest extends VpnTestBase {
         connectivityDiagCallback.onDataStallSuspected(report);
 
         // Should not trigger MOBIKE if MOBIKE is not enabled
-        verify(mIkeSessionWrapper, never()).setNetwork(any());
+        verify(mIkeSessionWrapper, never()).setNetwork(any() /* network */,
+                anyInt() /* ipVersion */, anyInt() /* encapType */, anyInt() /* keepaliveDelay */);
     }
 
     @Test
@@ -2148,7 +2151,8 @@ public class VpnTest extends VpnTestBase {
         // Expect to skip other data stall event if MOBIKE was started.
         reset(mIkeSessionWrapper);
         connectivityDiagCallback.onDataStallSuspected(report);
-        verify(mIkeSessionWrapper, never()).setNetwork(any());
+        verify(mIkeSessionWrapper, never()).setNetwork(any() /* network */,
+                anyInt() /* ipVersion */, anyInt() /* encapType */, anyInt() /* keepaliveDelay */);
 
         reset(mIkev2SessionCreator);
 
