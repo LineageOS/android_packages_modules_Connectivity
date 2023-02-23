@@ -16,32 +16,70 @@
 
 package com.android.server.connectivity;
 
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.TYPE_MOBILE;
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
+import android.app.AlarmManager;
 import android.content.Context;
+import android.content.res.Resources;
+import android.net.ConnectivityResources;
 import android.net.INetd;
+import android.net.ISocketKeepaliveCallback;
+import android.net.KeepalivePacketData;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
 import android.net.MarkMaskParcel;
+import android.net.NattKeepalivePacketData;
+import android.net.Network;
+import android.net.NetworkAgent;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.test.suitebuilder.annotation.SmallTest;
+import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.server.connectivity.KeepaliveTracker.KeepaliveInfo;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
+import com.android.testutils.HandlerUtils;
 
 import libcore.util.HexEncoding;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.io.FileDescriptor;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -49,17 +87,22 @@ import java.nio.ByteOrder;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
 public class AutomaticOnOffKeepaliveTrackerTest {
+    private static final String TAG = AutomaticOnOffKeepaliveTrackerTest.class.getSimpleName();
     private static final int TEST_NETID = 0xA85;
     private static final int TEST_NETID_FWMARK = 0x0A85;
     private static final int OTHER_NETID = 0x1A85;
     private static final int NETID_MASK = 0xffff;
+    private static final int TIMEOUT_MS = 30_000;
+    private static final int MOCK_RESOURCE_ID = 5;
     private AutomaticOnOffKeepaliveTracker mAOOKeepaliveTracker;
     private HandlerThread mHandlerThread;
 
     @Mock INetd mNetd;
     @Mock AutomaticOnOffKeepaliveTracker.Dependencies mDependencies;
     @Mock Context mCtx;
-    @Mock KeepaliveTracker mKeepaliveTracker;
+    @Mock AlarmManager mAlarmManager;
+    TestKeepaliveTracker mKeepaliveTracker;
+    AOOTestHandler mTestHandler;
 
     // Hexadecimal representation of a SOCK_DIAG response with tcp info.
     private static final String SOCK_DIAG_TCP_INET_HEX =
@@ -158,11 +201,46 @@ public class AutomaticOnOffKeepaliveTrackerTest {
     private static final byte[] TEST_RESPONSE_BYTES =
             HexEncoding.decode(TEST_RESPONSE_HEX.toCharArray(), false);
 
+    private class TestKeepaliveTracker extends KeepaliveTracker {
+        private KeepaliveInfo mKi;
+
+        TestKeepaliveTracker(@NonNull final Context context, @NonNull final Handler handler) {
+            super(context, handler);
+        }
+
+        public void setReturnedKeepaliveInfo(@NonNull final KeepaliveInfo ki) {
+            mKi = ki;
+        }
+
+        @NonNull
+        @Override
+        public KeepaliveInfo makeNattKeepaliveInfo(@Nullable final NetworkAgentInfo nai,
+                @Nullable final FileDescriptor fd, final int intervalSeconds,
+                @NonNull final ISocketKeepaliveCallback cb, @NonNull final String srcAddrString,
+                final int srcPort,
+                @NonNull final String dstAddrString, final int dstPort) {
+            if (null == mKi) {
+                throw new IllegalStateException("Must call setReturnedKeepaliveInfo");
+            }
+            return mKi;
+        }
+    }
+
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
+        doReturn(PERMISSION_GRANTED).when(mCtx).checkPermission(any() /* permission */,
+                anyInt() /* pid */, anyInt() /* uid */);
+        ConnectivityResources.setResourcesContextForTest(mCtx);
+        final Resources mockResources = mock(Resources.class);
+        doReturn(MOCK_RESOURCE_ID).when(mockResources).getIdentifier(any() /* name */,
+                any() /* defType */, any() /* defPackage */);
+        doReturn(new String[] { "0,3", "3,3" }).when(mockResources)
+                .getStringArray(MOCK_RESOURCE_ID);
+        doReturn(mockResources).when(mCtx).getResources();
         doReturn(mNetd).when(mDependencies).getNetd();
+        doReturn(mAlarmManager).when(mDependencies).getAlarmManager(any());
         doReturn(makeMarkMaskParcel(NETID_MASK, TEST_NETID_FWMARK)).when(mNetd)
                 .getFwmarkForNetwork(TEST_NETID);
 
@@ -170,11 +248,34 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         mHandlerThread = new HandlerThread("KeepaliveTrackerTest");
         mHandlerThread.start();
-        doReturn(mKeepaliveTracker).when(mDependencies).newKeepaliveTracker(
-                mCtx, mHandlerThread.getThreadHandler());
+        mTestHandler = new AOOTestHandler(mHandlerThread.getLooper());
+        mKeepaliveTracker = new TestKeepaliveTracker(mCtx, mTestHandler);
+        doReturn(mKeepaliveTracker).when(mDependencies).newKeepaliveTracker(mCtx, mTestHandler);
         doReturn(true).when(mDependencies).isFeatureEnabled(any(), anyBoolean());
-        mAOOKeepaliveTracker = new AutomaticOnOffKeepaliveTracker(
-                mCtx, mHandlerThread.getThreadHandler(), mDependencies);
+        mAOOKeepaliveTracker =
+                new AutomaticOnOffKeepaliveTracker(mCtx, mTestHandler, mDependencies);
+    }
+
+    private final class AOOTestHandler extends Handler {
+        public AutomaticOnOffKeepaliveTracker.AutomaticOnOffKeepalive mLastAutoKi = null;
+
+        AOOTestHandler(@NonNull final Looper looper) {
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(@NonNull final Message msg) {
+            switch (msg.what) {
+                case NetworkAgent.CMD_START_SOCKET_KEEPALIVE:
+                    Log.d(TAG, "Test handler received CMD_START_SOCKET_KEEPALIVE : " + msg);
+                    mAOOKeepaliveTracker.handleStartKeepalive(msg);
+                    break;
+                case NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE:
+                    Log.d(TAG, "Test handler received CMD_MONITOR_AUTOMATIC_KEEPALIVE : " + msg);
+                    mLastAutoKi = mAOOKeepaliveTracker.getKeepaliveForBinder((IBinder) msg.obj);
+                    break;
+            }
+        }
     }
 
     @Test
@@ -187,22 +288,77 @@ public class AutomaticOnOffKeepaliveTrackerTest {
     @Test
     public void testIsAnyTcpSocketConnected_withTargetNetId() throws Exception {
         setupResponseWithSocketExisting();
-        mHandlerThread.getThreadHandler().post(
+        mTestHandler.post(
                 () -> assertTrue(mAOOKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID)));
     }
 
     @Test
     public void testIsAnyTcpSocketConnected_withIncorrectNetId() throws Exception {
         setupResponseWithSocketExisting();
-        mHandlerThread.getThreadHandler().post(
+        mTestHandler.post(
                 () -> assertFalse(mAOOKeepaliveTracker.isAnyTcpSocketConnected(OTHER_NETID)));
     }
 
     @Test
     public void testIsAnyTcpSocketConnected_noSocketExists() throws Exception {
         setupResponseWithoutSocketExisting();
-        mHandlerThread.getThreadHandler().post(
+        mTestHandler.post(
                 () -> assertFalse(mAOOKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID)));
+    }
+
+    @Test
+    public void testAlarm() throws Exception {
+        final InetAddress srcAddress = InetAddress.getByAddress(
+                new byte[] { (byte) 192, 0, 0, (byte) 129 });
+        final int srcPort = 12345;
+        final InetAddress dstAddress = InetAddress.getByAddress(new byte[] { 8, 8, 8, 8});
+        final int dstPort = 12345;
+
+        final NetworkAgentInfo nai = mock(NetworkAgentInfo.class);
+        nai.networkCapabilities = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_CELLULAR).build();
+        nai.networkInfo = new NetworkInfo(TYPE_MOBILE, 0 /* subtype */, "LTE", "LTE");
+        nai.networkInfo.setDetailedState(NetworkInfo.DetailedState.CONNECTED, "test reason",
+                "test extra info");
+        nai.linkProperties = new LinkProperties();
+        nai.linkProperties.addLinkAddress(new LinkAddress(srcAddress, 24));
+
+        final Socket socket = new Socket();
+        socket.bind(null);
+        final FileDescriptor fd = socket.getFileDescriptor$();
+        final IBinder binder = new Binder();
+        final ISocketKeepaliveCallback cb = mock(ISocketKeepaliveCallback.class);
+        doReturn(binder).when(cb).asBinder();
+        final Network underpinnedNetwork = mock(Network.class);
+
+        final KeepalivePacketData kpd = new NattKeepalivePacketData(srcAddress, srcPort,
+                dstAddress, dstPort, new byte[] {1});
+        final KeepaliveInfo ki = mKeepaliveTracker.new KeepaliveInfo(cb, nai, kpd,
+                10 /* interval */, KeepaliveInfo.TYPE_NATT, fd);
+        mKeepaliveTracker.setReturnedKeepaliveInfo(ki);
+
+        mAOOKeepaliveTracker.startNattKeepalive(nai, fd, 10 /* intervalSeconds */, cb,
+                srcAddress.toString(), srcPort, dstAddress.toString(), dstPort,
+                true /* automaticOnOffKeepalives */, underpinnedNetwork);
+        HandlerUtils.waitForIdle(mTestHandler, TIMEOUT_MS);
+
+        final ArgumentCaptor<AlarmManager.OnAlarmListener> listenerCaptor =
+                ArgumentCaptor.forClass(AlarmManager.OnAlarmListener.class);
+        verify(mAlarmManager).setExact(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
+                any(), listenerCaptor.capture(), eq(mTestHandler));
+        final AlarmManager.OnAlarmListener listener = listenerCaptor.getValue();
+
+        // For realism, the listener should be posted on the handler
+        mTestHandler.post(() -> listener.onAlarm());
+        // Wait for the listener to be called. The listener enqueues a message to the handler.
+        HandlerUtils.waitForIdle(mTestHandler, TIMEOUT_MS);
+        // Wait for the message posted by the listener to be processed.
+        HandlerUtils.waitForIdle(mTestHandler, TIMEOUT_MS);
+
+        assertNotNull(mTestHandler.mLastAutoKi);
+        assertEquals(cb, mTestHandler.mLastAutoKi.getCallback());
+        assertEquals(underpinnedNetwork, mTestHandler.mLastAutoKi.getUnderpinnedNetwork());
+        socket.close();
     }
 
     private void setupResponseWithSocketExisting() throws Exception {
