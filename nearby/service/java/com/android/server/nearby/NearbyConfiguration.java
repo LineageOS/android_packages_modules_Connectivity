@@ -16,6 +16,7 @@
 
 package com.android.server.nearby;
 
+import android.os.Build;
 import android.provider.DeviceConfig;
 
 /**
@@ -39,6 +40,8 @@ public class NearbyConfiguration {
      */
     public static final String NEARBY_SUPPORT_TEST_APP = "nearby_support_test_app";
 
+    private static final boolean IS_USER_BUILD = "user".equals(Build.TYPE);
+
     private boolean mEnablePresenceBroadcastLegacy;
 
     private int mNanoAppMinVersion;
@@ -50,7 +53,7 @@ public class NearbyConfiguration {
                 NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY, false /* defaultValue */);
         mNanoAppMinVersion = getDeviceConfigInt(
                 NEARBY_MAINLINE_NANO_APP_MIN_VERSION, 0 /* defaultValue */);
-        mSupportTestApp = getDeviceConfigBoolean(
+        mSupportTestApp = !IS_USER_BUILD && getDeviceConfigBoolean(
                 NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
     }
 
