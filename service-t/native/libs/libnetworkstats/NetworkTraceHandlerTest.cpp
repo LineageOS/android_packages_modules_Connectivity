@@ -109,6 +109,24 @@ TEST_F(NetworkTracePollerTest, PollWhileInactive) {
   EXPECT_FALSE(handler.ConsumeAll());
 }
 
+TEST_F(NetworkTracePollerTest, ConcurrentSessions) {
+  // Simulate two concurrent sessions (two starts followed by two stops). Check
+  // that tracing is stopped only after both sessions finish.
+  NetworkTracePoller handler([&](const PacketTrace& pkt) {});
+
+  ASSERT_TRUE(handler.Start(kNeverPoll));
+  EXPECT_TRUE(handler.ConsumeAll());
+
+  ASSERT_TRUE(handler.Start(kNeverPoll));
+  EXPECT_TRUE(handler.ConsumeAll());
+
+  ASSERT_TRUE(handler.Stop());
+  EXPECT_TRUE(handler.ConsumeAll());
+
+  ASSERT_TRUE(handler.Stop());
+  EXPECT_FALSE(handler.ConsumeAll());
+}
+
 TEST_F(NetworkTracePollerTest, TraceTcpSession) {
   __be16 server_port = 0;
   std::vector<PacketTrace> packets;
