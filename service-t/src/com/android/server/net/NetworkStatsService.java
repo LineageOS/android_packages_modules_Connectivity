@@ -2425,8 +2425,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
         if (SdkLevel.isAtLeastU()) {
             EventLog.writeEvent(LOG_TAG_NETSTATS_MOBILE_SAMPLE,
-                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
-                    uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
+                    xtTotal.rxBytes, xtTotal.txBytes, xtTotal.rxPackets, xtTotal.txPackets,
+                    uidTotal.rxBytes, uidTotal.txBytes, uidTotal.rxPackets, uidTotal.txPackets,
                     currentTime);
         } else {
             // To keep the format of event log, here replaces the value of DevRecorder with the
@@ -2445,8 +2445,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
         if (SdkLevel.isAtLeastU()) {
             EventLog.writeEvent(LOG_TAG_NETSTATS_WIFI_SAMPLE,
-                    xtTotal.rxBytes, xtTotal.rxPackets, xtTotal.txBytes, xtTotal.txPackets,
-                    uidTotal.rxBytes, uidTotal.rxPackets, uidTotal.txBytes, uidTotal.txPackets,
+                    xtTotal.rxBytes, xtTotal.txBytes, xtTotal.rxPackets, xtTotal.txPackets,
+                    uidTotal.rxBytes, uidTotal.txBytes, uidTotal.rxPackets, uidTotal.txPackets,
                     currentTime);
         } else {
             // To keep the format of event log, here replaces the value of DevRecorder with the
