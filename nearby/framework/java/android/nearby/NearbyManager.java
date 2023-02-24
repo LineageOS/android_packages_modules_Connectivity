@@ -376,10 +376,10 @@ public class NearbyManager {
         }
 
         @Override
-        public void onError() {
+        public void onError(int errorCode) {
             mExecutor.execute(() -> {
                 if (mScanCallback != null) {
-                    Log.e("NearbyManager", "onError: There is an error in scan.");
+                    mScanCallback.onError(errorCode);
                 }
             });
         }
