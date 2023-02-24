@@ -79,8 +79,14 @@ void NetworkTraceHandler::OnStop(const StopArgs&) { mPoller.Stop(); }
 
 void NetworkTracePoller::SchedulePolling() {
   // Schedules another run of ourselves to recursively poll periodically.
-  mTaskRunner->PostDelayedTask([this]() { SchedulePolling(); }, mPollMs);
-  ConsumeAll();
+  mTaskRunner->PostDelayedTask(
+      [this]() {
+        mMutex.lock();
+        SchedulePolling();
+        ConsumeAllLocked();
+        mMutex.unlock();
+      },
+      mPollMs);
 }
 
 // static class method
@@ -110,6 +116,7 @@ void NetworkTraceHandler::Fill(const PacketTrace& src, TracePacket& dst) {
 bool NetworkTracePoller::Start(uint32_t pollMs) {
   ALOGD("Starting datasource");
 
+  std::scoped_lock<std::mutex> lock(mMutex);
   auto status = mConfigurationMap.init(PACKET_TRACE_ENABLED_MAP_PATH);
   if (!status.ok()) {
     ALOGW("Failed to bind config map: %s", status.error().message().c_str());
@@ -141,6 +148,7 @@ bool NetworkTracePoller::Start(uint32_t pollMs) {
 bool NetworkTracePoller::Stop() {
   ALOGD("Stopping datasource");
 
+  std::scoped_lock<std::mutex> lock(mMutex);
   auto res = mConfigurationMap.writeValue(0, false, BPF_ANY);
   if (!res.ok()) {
     ALOGW("Failed to disable tracing: %s", res.error().message().c_str());
@@ -153,6 +161,11 @@ bool NetworkTracePoller::Stop() {
 }
 
 bool NetworkTracePoller::ConsumeAll() {
+  std::scoped_lock<std::mutex> lock(mMutex);
+  return ConsumeAllLocked();
+}
+
+bool NetworkTracePoller::ConsumeAllLocked() {
   if (mRingBuffer == nullptr) {
     ALOGW("Tracing is not active");
     return false;
