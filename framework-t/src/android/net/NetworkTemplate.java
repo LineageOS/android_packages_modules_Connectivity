@@ -436,6 +436,19 @@ public final class NetworkTemplate implements Parcelable {
         return false;
     }
 
+    // TODO(b/270089918): Remove this method after no callers.
+    /** @hide */
+    public boolean isMatchRuleMobile() {
+        switch (mMatchRule) {
+            case MATCH_MOBILE:
+            // Old MATCH_MOBILE_WILDCARD
+            case 6:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /**
      * Get match rule of the template. See {@code MATCH_*}.
      */
