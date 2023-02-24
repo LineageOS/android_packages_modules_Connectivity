@@ -95,6 +95,13 @@ class NetworkTemplateTest {
             NetworkTemplate.Builder(MATCH_CARRIER).build()
         }
 
+        // Verify carrier and mobile template cannot contain one of subscriber Id is null.
+        listOf(MATCH_MOBILE, MATCH_CARRIER).forEach {
+            assertFailsWith<IllegalArgumentException> {
+                NetworkTemplate.Builder(it).setSubscriberIds(setOf(null)).build()
+            }
+        }
+
         // Verify template which matches metered cellular networks,
         // regardless of IMSI. See buildTemplateMobileWildcard.
         NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build().let {
@@ -155,6 +162,23 @@ class NetworkTemplateTest {
                 assertEquals(expectedTemplate, it)
             }
         }
+    }
+
+    @Test
+    fun testUnsupportedAppUsageConstructor() {
+        val templateMobile = NetworkTemplate(MATCH_MOBILE, null /* subscriberId */,
+                null /* wifiNetworkKey */)
+        val templateMobileWildcard = NetworkTemplate(6 /* MATCH_MOBILE_WILDCARD */,
+                null /* subscriberId */, null /* wifiNetworkKey */)
+        val templateWifiWildcard = NetworkTemplate(7 /* MATCH_WIFI_WILDCARD */,
+                null /* subscriberId */,
+                null /* wifiNetworkKey */)
+
+        assertEquals(NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build(),
+                templateMobile)
+        assertEquals(NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build(),
+                templateMobileWildcard)
+        assertEquals(NetworkTemplate.Builder(MATCH_WIFI).build(), templateWifiWildcard)
     }
 
     @Test
