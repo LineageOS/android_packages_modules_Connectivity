@@ -57,14 +57,12 @@ public class NearbyService extends INearbyManager.Stub {
     public static final String TAG = "NearbyService";
     // Sets to true to start BLE scan from PresenceManager for manual testing.
     public static final Boolean MANUAL_TEST = false;
-    // Sets to true to support Mainline Test App.
-    // This will disable BLE privilege check and legacy broadcast support check.
-    public static final Boolean SUPPORT_TEST_APP = false;
 
     private final Context mContext;
     private Injector mInjector;
     private final FastPairManager mFastPairManager;
     private final PresenceManager mPresenceManager;
+    private final NearbyConfiguration mNearbyConfiguration;
     private final BroadcastReceiver mBluetoothReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -93,6 +91,7 @@ public class NearbyService extends INearbyManager.Stub {
         final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
         mFastPairManager = new FastPairManager(lcw);
         mPresenceManager = new PresenceManager(lcw);
+        mNearbyConfiguration = new NearbyConfiguration();
     }
 
     @VisibleForTesting
@@ -194,8 +193,8 @@ public class NearbyService extends INearbyManager.Stub {
      * throw a {@link SecurityException}.
      */
     @RequiresPermission(android.Manifest.permission.BLUETOOTH_PRIVILEGED)
-    private static void enforceBluetoothPrivilegedPermission(Context context) {
-        if (!SUPPORT_TEST_APP) {
+    private void enforceBluetoothPrivilegedPermission(Context context) {
+        if (!mNearbyConfiguration.isTestAppSupported()) {
             context.enforceCallingOrSelfPermission(
                     android.Manifest.permission.BLUETOOTH_PRIVILEGED,
                     "Need BLUETOOTH PRIVILEGED permission");
