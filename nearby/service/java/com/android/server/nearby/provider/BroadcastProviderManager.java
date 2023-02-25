@@ -16,8 +16,6 @@
 
 package com.android.server.nearby.provider;
 
-import static com.android.server.nearby.NearbyService.SUPPORT_TEST_APP;
-
 import android.annotation.Nullable;
 import android.content.Context;
 import android.nearby.BroadcastCallback;
@@ -71,7 +69,7 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
     public void startBroadcast(BroadcastRequest broadcastRequest, IBroadcastListener listener) {
         synchronized (mLock) {
             mExecutor.execute(() -> {
-                if (!SUPPORT_TEST_APP) {
+                if (!mNearbyConfiguration.isTestAppSupported()) {
                     NearbyConfiguration configuration = new NearbyConfiguration();
                     if (!configuration.isPresenceBroadcastLegacyEnabled()) {
                         reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
@@ -114,7 +112,8 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
      */
     public void stopBroadcast(IBroadcastListener listener) {
         synchronized (mLock) {
-            if (!SUPPORT_TEST_APP && !mNearbyConfiguration.isPresenceBroadcastLegacyEnabled()) {
+            if (!mNearbyConfiguration.isTestAppSupported()
+                    && !mNearbyConfiguration.isPresenceBroadcastLegacyEnabled()) {
                 reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
                 return;
             }
