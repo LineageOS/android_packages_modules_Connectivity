@@ -31,7 +31,5 @@
         android:name="androidx.test.runner.AndroidJUnitRunner"
         android:targetPackage="android.net.http.cts"
         android:label="CTS tests of android.net.http">
-        <meta-data android:name="listener"
-                   android:value="com.android.cts.runner.CtsTestRunListener"/>
     </instrumentation>
 </manifest>
