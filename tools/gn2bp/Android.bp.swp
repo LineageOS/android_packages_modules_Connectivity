@@ -24,19 +24,6 @@ package {
 }
 
 // GN: //components/cronet/android:cronet_api_java
-java_library {
-    name: "cronet_aml_api_java",
-    srcs: [
-        ":cronet_aml_api_sources",
-    ],
-    libs: [
-        "androidx.annotation_annotation",
-        "framework-annotations-lib",
-    ],
-    sdk_version: "module_current",
-}
-
-// GN: //components/cronet/android:cronet_api_java
 // TODO(danstahr): add the API helpers separately after the main API is checked in and thoroughly reviewed
 filegroup {
     name: "cronet_aml_api_sources",
