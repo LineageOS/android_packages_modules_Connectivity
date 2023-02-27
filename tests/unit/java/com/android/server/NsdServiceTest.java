@@ -981,7 +981,9 @@ public class NsdServiceTest {
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
         verify(mDiscoveryManager).registerListener(eq(constructedServiceType),
-                listenerCaptor.capture(), argThat(options -> network.equals(options.getNetwork())));
+                listenerCaptor.capture(), argThat(options ->
+                        network.equals(options.getNetwork())
+                                && SERVICE_NAME.equals(options.getResolveInstanceName())));
 
         final MdnsServiceBrowserListener listener = listenerCaptor.getValue();
         final MdnsServiceInfo mdnsServiceInfo = new MdnsServiceInfo(
