@@ -32,7 +32,6 @@ import java.util.List;
 
 /** A class that decodes mDNS responses from UDP packets. */
 public class MdnsResponseDecoder {
-
     public static final int SUCCESS = 0;
     private static final String TAG = "MdnsResponseDecoder";
     private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
@@ -51,14 +50,8 @@ public class MdnsResponseDecoder {
             List<MdnsResponse> responses, String[] pointer) {
         if (responses != null) {
             for (MdnsResponse response : responses) {
-                List<MdnsPointerRecord> pointerRecords = response.getPointerRecords();
-                if (pointerRecords == null) {
-                    continue;
-                }
-                for (MdnsPointerRecord pointerRecord : pointerRecords) {
-                    if (Arrays.equals(pointerRecord.getPointer(), pointer)) {
-                        return response;
-                    }
+                if (Arrays.equals(response.getServiceName(), pointer)) {
+                    return response;
                 }
             }
         }
@@ -182,7 +175,8 @@ public class MdnsResponseDecoder {
                     MdnsResponse response = findResponseWithPointer(responses,
                             pointerRecord.getPointer());
                     if (response == null) {
-                        response = new MdnsResponse(now, interfaceIndex, network);
+                        response = new MdnsResponse(now, pointerRecord.getPointer(), interfaceIndex,
+                                network);
                         responses.add(response);
                     }
 

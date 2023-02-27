@@ -219,8 +219,12 @@ public class MdnsServiceTypeClient {
     public synchronized void processResponse(@NonNull MdnsPacket packet, int interfaceIndex,
             Network network) {
         synchronized (lock) {
+            // Augment the list of current known responses, and generated responses for resolve
+            // requests if there is no known response
+            final List<MdnsResponse> currentList = new ArrayList<>(instanceNameToResponse.values());
+            currentList.addAll(makeResponsesForResolveIfUnknown(interfaceIndex, network));
             final ArraySet<MdnsResponse> modifiedResponses = responseDecoder.augmentResponses(
-                    packet, instanceNameToResponse.values(), interfaceIndex, network);
+                    packet, currentList, interfaceIndex, network);
 
             for (MdnsResponse modified : modifiedResponses) {
                 if (modified.isGoodbye()) {
@@ -400,6 +404,29 @@ public class MdnsServiceTypeClient {
         }
     }
 
+    private List<MdnsResponse> makeResponsesForResolveIfUnknown(int interfaceIndex,
+            @NonNull Network network) {
+        final List<MdnsResponse> resolveResponses = new ArrayList<>();
+        for (int i = 0; i < listeners.size(); i++) {
+            final String resolveName = listeners.valueAt(i).getResolveInstanceName();
+            if (resolveName == null) {
+                continue;
+            }
+            MdnsResponse knownResponse = instanceNameToResponse.get(resolveName);
+            if (knownResponse == null) {
+                final ArrayList<String> instanceFullName = new ArrayList<>(
+                        serviceTypeLabels.length + 1);
+                instanceFullName.add(resolveName);
+                instanceFullName.addAll(Arrays.asList(serviceTypeLabels));
+                knownResponse = new MdnsResponse(
+                        0L /* lastUpdateTime */, instanceFullName.toArray(new String[0]),
+                        interfaceIndex, network);
+            }
+            resolveResponses.add(knownResponse);
+        }
+        return resolveResponses;
+    }
+
     // A FutureTask that enqueues a single query, and schedule a new FutureTask for the next task.
     private class QueryTask implements Runnable {
 
@@ -411,35 +438,17 @@ public class MdnsServiceTypeClient {
 
         @Override
         public void run() {
-            final List<MdnsResponse> servicesToResolve = new ArrayList<>();
-            boolean sendDiscoveryQueries = false;
+            final List<MdnsResponse> servicesToResolve;
+            final boolean sendDiscoveryQueries;
             synchronized (lock) {
-                for (int i = 0; i < listeners.size(); i++) {
-                    final String resolveName = listeners.valueAt(i).getResolveInstanceName();
-                    if (resolveName == null) {
-                        sendDiscoveryQueries = true;
-                        continue;
-                    }
-                    MdnsResponse knownResponse = instanceNameToResponse.get(resolveName);
-                    if (knownResponse == null) {
-                        // The listener is requesting to resolve a service that has no info in
-                        // cache. Use the provided name to generate a minimal response with just a
-                        // PTR record, so other records are queried to complete it.
-                        // Only the names are used to know which queries to send, other
-                        // parameters do not matter.
-                        knownResponse = new MdnsResponse(
-                                0L /* now */, 0 /* interfaceIndex */, config.network);
-                        final ArrayList<String> instanceFullName = new ArrayList<>(
-                                serviceTypeLabels.length + 1);
-                        instanceFullName.add(resolveName);
-                        instanceFullName.addAll(Arrays.asList(serviceTypeLabels));
-                        knownResponse.addPointerRecord(new MdnsPointerRecord(
-                                serviceTypeLabels, 0L /* receiptTimeMillis */,
-                                false /* cacheFlush */, 0L /* ttlMillis */,
-                                instanceFullName.toArray(new String[0])));
-                    }
-                    servicesToResolve.add(knownResponse);
-                }
+                // The listener is requesting to resolve a service that has no info in
+                // cache. Use the provided name to generate a minimal response, so other records are
+                // queried to complete it.
+                // Only the names are used to know which queries to send, other parameters like
+                // interfaceIndex do not matter.
+                servicesToResolve = makeResponsesForResolveIfUnknown(
+                        0 /* interfaceIndex */, config.network);
+                sendDiscoveryQueries = servicesToResolve.size() < listeners.size();
             }
             Pair<Integer, List<String>> result;
             try {
