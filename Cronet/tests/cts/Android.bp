@@ -50,8 +50,6 @@ android_library {
     ],
     static_libs: [
         "androidx.test.ext.junit",
-        "androidx.test.rules",
-        "androidx.core_core",
         "ctstestrunner-axt",
         "ctstestserver",
         "junit",
@@ -59,9 +57,7 @@ android_library {
         "kotlin-test",
     ],
     libs: [
-        "android.test.runner",
         "android.test.base",
-        "android.test.mock",
         "androidx.annotation_annotation",
         "framework-tethering",
         "org.apache.http.legacy",
