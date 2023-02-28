@@ -27,7 +27,8 @@ import org.junit.Assume.assumeThat
 fun skipIfNoInternetConnection(context: Context) {
     val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
     assumeNotNull(
-        "This test requires a working Internet connection", connectivityManager.getActiveNetwork())
+        "This test requires a working Internet connection", connectivityManager!!.activeNetwork
+    )
 }
 
 fun assertOKStatusCode(info: UrlResponseInfo) {
@@ -35,5 +36,5 @@ fun assertOKStatusCode(info: UrlResponseInfo) {
 }
 
 fun assumeOKStatusCode(info: UrlResponseInfo) {
-    assumeThat("Status code must be 200 OK", info.getHttpStatusCode(), equalTo(200))
+    assumeThat("Status code must be 200 OK", info.httpStatusCode, equalTo(200))
 }
