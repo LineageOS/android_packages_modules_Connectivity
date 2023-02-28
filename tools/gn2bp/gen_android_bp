@@ -51,6 +51,7 @@ DEFAULT_TESTS = [
 
 EXTRAS_ANDROID_BP_FILE = "Android.extras.bp"
 
+CRONET_API_MODULE_NAME = "cronet_aml_api_java"
 # Defines a custom init_rc argument to be applied to the corresponding output
 # blueprint target.
 target_initrc = {
@@ -1687,16 +1688,7 @@ def create_java_api_module(blueprint, gn):
     ':' + create_action_module(blueprint, gn.get_target(dep), 'java_genrule', False).name
     for dep in get_api_java_actions(gn)])
   blueprint.add_module(source_module)
-
-  java_module = Module('java_library', module_prefix + 'api_java', java_api_target_name)
-  java_module.srcs.add(":" + source_module.name)
-  java_module.sdk_version = "module_current"
-  java_module.libs = {
-      "androidx.annotation_annotation",
-      "framework-annotations-lib",
-    }
-  blueprint.add_module(java_module)
-  return java_module
+  return source_module
 
 def update_jni_registration_module(module, gn):
   # TODO: java_sources might not contain all the required java files
@@ -1753,11 +1745,11 @@ def create_blueprint_for_targets(gn, targets, test_targets):
   for test_target in test_targets:
     create_modules_from_target(blueprint, gn, test_target + gn_utils.TESTING_SUFFIX, is_test_target=True)
 
-  java_api_module = create_java_api_module(blueprint, gn)
+  create_java_api_module(blueprint, gn)
   java_module = create_java_module(blueprint, gn, is_test_target=False)
-  java_module.libs.add(java_api_module.name)
+  java_module.libs.add(CRONET_API_MODULE_NAME)
   java_module_testing = create_java_module(blueprint, gn, is_test_target=True)
-  java_module_testing.libs.add(java_api_module.name)
+  java_module_testing.libs.add(CRONET_API_MODULE_NAME)
   for module in blueprint.modules.values():
     if 'cronet_jni_registration' in module.name:
       update_jni_registration_module(module, gn)
