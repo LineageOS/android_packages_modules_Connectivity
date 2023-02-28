@@ -114,34 +114,39 @@ android_test {
     ],
 }
 
-android_test {
-    name: "CtsNetTestCasesMaxTargetSdk31",  // Must match CtsNetTestCasesMaxTargetSdk31 annotation.
+java_defaults {
+    name: "CtsNetTestCasesMaxTargetSdkDefaults",
     defaults: [
         "CtsNetTestCasesDefaults",
         "CtsNetTestCasesApiStableDefaults",
     ],
-    target_sdk_version: "31",
-    package_name: "android.net.cts.maxtargetsdk31",  // CTS package names must be unique.
-    instrumentation_target_package: "android.net.cts.maxtargetsdk31",
     test_suites: [
         "cts",
         "general-tests",
-        "mts-networking",
+        "mts-tethering",
     ],
 }
 
 android_test {
+    name: "CtsNetTestCasesMaxTargetSdk33",  // Must match CtsNetTestCasesMaxTargetSdk33 annotation.
+    defaults: ["CtsNetTestCasesMaxTargetSdkDefaults"],
+    target_sdk_version: "33",
+    package_name: "android.net.cts.maxtargetsdk33",
+    instrumentation_target_package: "android.net.cts.maxtargetsdk33",
+}
+
+android_test {
+    name: "CtsNetTestCasesMaxTargetSdk31",  // Must match CtsNetTestCasesMaxTargetSdk31 annotation.
+    defaults: ["CtsNetTestCasesMaxTargetSdkDefaults"],
+    target_sdk_version: "31",
+    package_name: "android.net.cts.maxtargetsdk31",  // CTS package names must be unique.
+    instrumentation_target_package: "android.net.cts.maxtargetsdk31",
+}
+
+android_test {
     name: "CtsNetTestCasesMaxTargetSdk30",  // Must match CtsNetTestCasesMaxTargetSdk30 annotation.
-    defaults: [
-        "CtsNetTestCasesDefaults",
-        "CtsNetTestCasesApiStableDefaults",
-    ],
+    defaults: ["CtsNetTestCasesMaxTargetSdkDefaults"],
     target_sdk_version: "30",
     package_name: "android.net.cts.maxtargetsdk30",  // CTS package names must be unique.
     instrumentation_target_package: "android.net.cts.maxtargetsdk30",
-    test_suites: [
-        "cts",
-        "general-tests",
-        "mts-networking",
-    ],
 }
