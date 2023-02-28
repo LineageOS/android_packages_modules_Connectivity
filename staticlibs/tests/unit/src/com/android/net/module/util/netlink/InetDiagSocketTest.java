@@ -22,6 +22,8 @@ import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 import static android.system.OsConstants.NETLINK_INET_DIAG;
 
+import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DESTROY;
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_ACK;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
@@ -221,14 +223,14 @@ public class InetDiagSocketTest {
             msg = InetDiagMessage.inetDiagReqV2(IPPROTO_TCP, null, remote, AF_INET6,
                     NLM_F_REQUEST);
             fail("Both remote and local should be null, expected UnknownHostException");
-        } catch (NullPointerException e) {
+        } catch (IllegalArgumentException e) {
         }
 
         try {
             msg = InetDiagMessage.inetDiagReqV2(IPPROTO_TCP, local, null, AF_INET6,
                     NLM_F_REQUEST, 0 /* pad */, 0 /* idiagExt */, TCP_ALL_STATES);
             fail("Both remote and local should be null, expected UnknownHostException");
-        } catch (NullPointerException e) {
+        } catch (IllegalArgumentException e) {
         }
 
         msg = InetDiagMessage.inetDiagReqV2(IPPROTO_TCP, null, null, AF_INET6,
@@ -275,6 +277,45 @@ public class InetDiagSocketTest {
                 AF_INET6,
                 NLM_F_REQUEST);
         assertArrayEquals(INET_DIAG_REQ_V2_TCP_INET6_V4_MAPPED_BYTES, msg);
+    }
+
+    // Hexadecimal representation of InetDiagReqV2 request with SOCK_DESTROY
+    private static final String INET_DIAG_REQ_V2_TCP_INET6_DESTROY_HEX =
+            // struct nlmsghdr
+            "48000000" +     // length = 72
+            "1500" +         // type = SOCK_DESTROY
+            "0500" +         // flags = NLM_F_REQUEST | NLM_F_ACK
+            "00000000" +     // seqno
+            "00000000" +     // pid (0 == kernel)
+            // struct inet_diag_req_v2
+            "0a" +           // family = AF_INET6
+            "06" +           // protcol = IPPROTO_TCP
+            "00" +           // idiag_ext
+            "00" +           // pad
+            "ffffffff" +     // idiag_states = TCP_ALL_STATES
+            // inet_diag_sockid
+            "a817" +     // idiag_sport = 43031
+            "960f" +     // idiag_dport = 38415
+            "20010db8000000000000000000000001" + // idiag_src = 2001:db8::1
+            "20010db8000000000000000000000002" + // idiag_dst = 2001:db8::2
+            "07000000" + // idiag_if = 7
+            "5800000000000000"; // idiag_cookie = 88
+
+    private static final byte[] INET_DIAG_REQ_V2_TCP_INET6_DESTROY_BYTES =
+            HexEncoding.decode(INET_DIAG_REQ_V2_TCP_INET6_DESTROY_HEX.toCharArray(), false);
+
+    @Test
+    public void testInetDiagReqV2TcpInet6Destroy() throws Exception {
+        final StructInetDiagSockId sockId = new StructInetDiagSockId(
+                new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::1"), 43031),
+                new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::2"), 38415),
+                7  /* ifIndex */,
+                88 /* cookie */);
+        final byte[] msg = InetDiagMessage.inetDiagReqV2(IPPROTO_TCP, sockId, AF_INET6,
+                SOCK_DESTROY, (short) (NLM_F_REQUEST | NLM_F_ACK), 0 /* pad */, 0 /* idiagExt */,
+                TCP_ALL_STATES);
+
+        assertArrayEquals(INET_DIAG_REQ_V2_TCP_INET6_DESTROY_BYTES, msg);
     }
 
     private void assertNlMsgHdr(StructNlMsgHdr hdr, short type, short flags, int seq, int pid) {
