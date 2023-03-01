@@ -4427,7 +4427,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mQosCallbackTracker.handleNetworkReleased(nai.network);
         for (String iface : nai.linkProperties.getAllInterfaceNames()) {
             // Disable wakeup packet monitoring for each interface.
-            wakeupModifyInterface(iface, nai.networkCapabilities, false);
+            wakeupModifyInterface(iface, nai, false);
         }
         nai.networkMonitor().notifyNetworkDisconnected();
         mNetworkAgentInfos.remove(nai);
@@ -7706,7 +7706,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // the LinkProperties for the network are accurate.
         networkAgent.clatd.fixupLinkProperties(oldLp, newLp);
 
-        updateInterfaces(newLp, oldLp, netId, networkAgent.networkCapabilities);
+        updateInterfaces(newLp, oldLp, netId, networkAgent);
 
         // update filtering rules, need to happen after the interface update so netd knows about the
         // new interface (the interface name -> index map becomes initialized)
@@ -7814,10 +7814,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return captivePortalBuilder.build();
     }
 
-    private void wakeupModifyInterface(String iface, NetworkCapabilities caps, boolean add) {
+    private String makeNflogPrefix(String iface, long networkHandle) {
+        // This needs to be kept in sync and backwards compatible with the decoding logic in
+        // NetdEventListenerService, which is non-mainline code.
+        return SdkLevel.isAtLeastU() ? (networkHandle + ":" + iface) : ("iface:" + iface);
+    }
+
+    private void wakeupModifyInterface(String iface, NetworkAgentInfo nai, boolean add) {
         // Marks are only available on WiFi interfaces. Checking for
         // marks on unsupported interfaces is harmless.
-        if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+        if (!nai.networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
             return;
         }
 
@@ -7830,7 +7836,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
 
-        final String prefix = "iface:" + iface;
+        final String prefix = makeNflogPrefix(iface, nai.network.getNetworkHandle());
         try {
             if (add) {
                 mNetd.wakeupAddInterface(iface, prefix, mark, mask);
@@ -7840,12 +7846,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (Exception e) {
             loge("Exception modifying wakeup packet monitoring: " + e);
         }
-
     }
 
     private void updateInterfaces(final @NonNull LinkProperties newLp,
             final @Nullable LinkProperties oldLp, final int netId,
-            final @NonNull NetworkCapabilities caps) {
+            final @NonNull NetworkAgentInfo nai) {
         final CompareResult<String> interfaceDiff = new CompareResult<>(
                 oldLp != null ? oldLp.getAllInterfaceNames() : null, newLp.getAllInterfaceNames());
         if (!interfaceDiff.added.isEmpty()) {
@@ -7853,9 +7858,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 try {
                     if (DBG) log("Adding iface " + iface + " to network " + netId);
                     mNetd.networkAddInterface(netId, iface);
-                    wakeupModifyInterface(iface, caps, true);
+                    wakeupModifyInterface(iface, nai, true);
                     mDeps.reportNetworkInterfaceForTransports(mContext, iface,
-                            caps.getTransportTypes());
+                            nai.networkCapabilities.getTransportTypes());
                 } catch (Exception e) {
                     logw("Exception adding interface: " + e);
                 }
@@ -7864,7 +7869,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         for (final String iface : interfaceDiff.removed) {
             try {
                 if (DBG) log("Removing iface " + iface + " from network " + netId);
-                wakeupModifyInterface(iface, caps, false);
+                wakeupModifyInterface(iface, nai, false);
                 mNetd.networkRemoveInterface(netId, iface);
             } catch (Exception e) {
                 loge("Exception removing interface: " + e);

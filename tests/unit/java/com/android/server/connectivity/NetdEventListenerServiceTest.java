@@ -60,6 +60,8 @@ public class NetdEventListenerServiceTest {
     private static final String EXAMPLE_IPV4 = "192.0.2.1";
     private static final String EXAMPLE_IPV6 = "2001:db8:1200::2:1";
 
+    private static final long NET_HANDLE = new Network(5391).getNetworkHandle();
+
     private static final byte[] MAC_ADDR =
             {(byte)0x84, (byte)0xc9, (byte)0xb2, (byte)0x6a, (byte)0xed, (byte)0x4b};
 
@@ -498,7 +500,7 @@ public class NetdEventListenerServiceTest {
 
     void wakeupEvent(String iface, int uid, int ether, int ip, byte[] mac, String srcIp,
             String dstIp, int sport, int dport, long now) throws Exception {
-        String prefix = NetdEventListenerService.WAKEUP_EVENT_IFACE_PREFIX + iface;
+        String prefix = NET_HANDLE + ":" + iface;
         mService.onWakeupEvent(prefix, uid, ether, ip, mac, srcIp, dstIp, sport, dport, now);
     }
 
