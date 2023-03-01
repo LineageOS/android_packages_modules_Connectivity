@@ -17,8 +17,8 @@ common_excludes = [
     "**/Android.bp",
     "**/Android.mk",
 
-    # Exclude existing OWNERS files
-    "**/OWNERS",
+    # Exclude existing *OWNERS files
+    "**/*OWNERS",
 ]
 
 cronet_origin_files = glob(
