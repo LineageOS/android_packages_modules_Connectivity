@@ -35,8 +35,8 @@ import android.net.http.cts.util.TestUploadDataProvider;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 
-import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.runner.AndroidJUnit4;
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.After;
 import org.junit.Before;
@@ -51,7 +51,7 @@ public class UrlRequestTest {
 
     @Before
     public void setUp() throws Exception {
-        Context context = InstrumentationRegistry.getInstrumentation().getContext();
+        Context context = ApplicationProvider.getApplicationContext();
         skipIfNoInternetConnection(context);
         HttpEngine.Builder builder = new HttpEngine.Builder(context);
         mHttpEngine = builder.build();
