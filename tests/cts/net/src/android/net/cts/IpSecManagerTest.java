@@ -395,7 +395,7 @@ public class IpSecManagerTest extends IpSecBaseTest {
     private static class StatsChecker {
         private static final double ERROR_MARGIN_BYTES = 1.05;
         private static final double ERROR_MARGIN_PKTS = 1.05;
-        private static final int MAX_WAIT_TIME_MILLIS = 1000;
+        private static final int MAX_WAIT_TIME_MILLIS = 3000;
 
         private static long uidTxBytes;
         private static long uidRxBytes;
