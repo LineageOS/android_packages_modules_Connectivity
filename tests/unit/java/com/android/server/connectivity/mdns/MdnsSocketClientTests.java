@@ -18,13 +18,11 @@ package com.android.server.connectivity.mdns;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -48,7 +46,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -373,7 +370,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeast(1))
-                .onResponseReceived(any(MdnsResponse.class));
+                .onResponseReceived(any(MdnsPacket.class), anyInt(), any());
     }
 
     @Test
@@ -382,7 +379,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeastOnce())
-                .onResponseReceived(any(MdnsResponse.class));
+                .onResponseReceived(any(MdnsPacket.class), anyInt(), any());
 
         mdnsClient.stopDiscovery();
     }
@@ -514,7 +511,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeastOnce())
-                .onResponseReceived(argThat(response -> response.getInterfaceIndex() == 21));
+                .onResponseReceived(any(), eq(21), any());
     }
 
     @Test
@@ -536,11 +533,7 @@ public class MdnsSocketClientTests {
         mdnsClient.setCallback(mockCallback);
         mdnsClient.startDiscovery();
 
-        ArgumentCaptor<MdnsResponse> mdnsResponseCaptor =
-                ArgumentCaptor.forClass(MdnsResponse.class);
         verify(mockMulticastSocket, never()).getInterfaceIndex();
-        verify(mockCallback, timeout(TIMEOUT).atLeast(1))
-                .onResponseReceived(mdnsResponseCaptor.capture());
-        assertEquals(-1, mdnsResponseCaptor.getValue().getInterfaceIndex());
+        verify(mockCallback, timeout(TIMEOUT).atLeast(1)).onResponseReceived(any(), eq(-1), any());
     }
 }

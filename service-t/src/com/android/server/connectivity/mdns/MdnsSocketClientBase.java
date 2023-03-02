@@ -72,7 +72,8 @@ public interface MdnsSocketClientBase {
     /*** Callback for mdns response  */
     interface Callback {
         /*** Receive a mdns response */
-        void onResponseReceived(@NonNull MdnsResponse response);
+        void onResponseReceived(@NonNull MdnsPacket packet, int interfaceIndex,
+                @Nullable Network network);
 
         /*** Parse a mdns response failed */
         void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode);
