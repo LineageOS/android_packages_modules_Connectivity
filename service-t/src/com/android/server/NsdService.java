@@ -545,12 +545,6 @@ public class NsdService extends INsdManager.Stub {
                 return new String(out.array(), 0, out.position(), utf8);
             }
 
-            private void stopDiscoveryManagerRequest(ClientRequest request, int clientId, int id,
-                    ClientInfo clientInfo) {
-                clientInfo.unregisterMdnsListenerFromRequest(request);
-                removeRequestMap(clientId, id, clientInfo);
-            }
-
             @Override
             public boolean processMessage(Message msg) {
                 final ClientInfo clientInfo;
@@ -637,7 +631,11 @@ public class NsdService extends INsdManager.Stub {
                         // point, so this needs to check the type of the original request to
                         // unregister instead of looking at the flag value.
                         if (request instanceof DiscoveryManagerRequest) {
-                            stopDiscoveryManagerRequest(request, clientId, id, clientInfo);
+                            final MdnsListener listener =
+                                    ((DiscoveryManagerRequest) request).mListener;
+                            mMdnsDiscoveryManager.unregisterListener(
+                                    listener.getListenedServiceType(), listener);
+                            removeRequestMap(clientId, id, clientInfo);
                             clientInfo.onStopDiscoverySucceeded(clientId);
                         } else {
                             removeRequestMap(clientId, id, clientInfo);
@@ -805,22 +803,15 @@ public class NsdService extends INsdManager.Stub {
                             break;
                         }
                         id = request.mGlobalId;
-                        // Note isMdnsDiscoveryManagerEnabled may have changed to false at this
-                        // point, so this needs to check the type of the original request to
-                        // unregister instead of looking at the flag value.
-                        if (request instanceof DiscoveryManagerRequest) {
-                            stopDiscoveryManagerRequest(request, clientId, id, clientInfo);
+                        removeRequestMap(clientId, id, clientInfo);
+                        if (stopResolveService(id)) {
                             clientInfo.onStopResolutionSucceeded(clientId);
                         } else {
-                            removeRequestMap(clientId, id, clientInfo);
-                            if (stopResolveService(id)) {
-                                clientInfo.onStopResolutionSucceeded(clientId);
-                            } else {
-                                clientInfo.onStopResolutionFailed(
-                                        clientId, NsdManager.FAILURE_OPERATION_NOT_RUNNING);
-                            }
-                            clientInfo.mResolvedService = null;
+                            clientInfo.onStopResolutionFailed(
+                                    clientId, NsdManager.FAILURE_OPERATION_NOT_RUNNING);
                         }
+                        clientInfo.mResolvedService = null;
+                        // TODO: Implement the stop resolution with MdnsDiscoveryManager.
                         break;
                     }
                     case NsdManager.REGISTER_SERVICE_CALLBACK:
@@ -1173,7 +1164,10 @@ public class NsdService extends INsdManager.Stub {
                             Log.wtf(TAG, "non-DiscoveryManager request in DiscoveryManager event");
                             break;
                         }
-                        stopDiscoveryManagerRequest(request, clientId, transactionId, clientInfo);
+                        final MdnsListener listener = ((DiscoveryManagerRequest) request).mListener;
+                        mMdnsDiscoveryManager.unregisterListener(
+                                listener.getListenedServiceType(), listener);
+                        removeRequestMap(clientId, transactionId, clientInfo);
                         break;
                     }
                     default:
@@ -1700,13 +1694,6 @@ public class NsdService extends INsdManager.Stub {
             mIsPreSClient = true;
         }
 
-        private void unregisterMdnsListenerFromRequest(ClientRequest request) {
-            final MdnsListener listener =
-                    ((DiscoveryManagerRequest) request).mListener;
-            mMdnsDiscoveryManager.unregisterListener(
-                    listener.getListenedServiceType(), listener);
-        }
-
         // Remove any pending requests from the global map when we get rid of a client,
         // and send cancellations to the daemon.
         private void expungeAllRequests() {
@@ -1722,7 +1709,10 @@ public class NsdService extends INsdManager.Stub {
                 }
 
                 if (request instanceof DiscoveryManagerRequest) {
-                    unregisterMdnsListenerFromRequest(request);
+                    final MdnsListener listener =
+                            ((DiscoveryManagerRequest) request).mListener;
+                    mMdnsDiscoveryManager.unregisterListener(
+                            listener.getListenedServiceType(), listener);
                     continue;
                 }
 
