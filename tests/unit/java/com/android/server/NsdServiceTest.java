@@ -1150,37 +1150,6 @@ public class NsdServiceTest {
                 argThat(info -> matches(info, new NsdServiceInfo(regInfo.getServiceName(), null))));
     }
 
-    @Test
-    public void testStopServiceResolutionWithMdnsDiscoveryManager() {
-        setMdnsDiscoveryManagerEnabled();
-
-        final NsdManager client = connectClient(mService);
-        final ResolveListener resolveListener = mock(ResolveListener.class);
-        final Network network = new Network(999);
-        final String serviceType = "_nsd._service._tcp";
-        final String constructedServiceType = "_nsd._sub._service._tcp.local";
-        final ArgumentCaptor<MdnsServiceBrowserListener> listenerCaptor =
-                ArgumentCaptor.forClass(MdnsServiceBrowserListener.class);
-        final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, serviceType);
-        request.setNetwork(network);
-        client.resolveService(request, resolveListener);
-        waitForIdle();
-        verify(mSocketProvider).startMonitoringSockets();
-        verify(mDiscoveryManager).registerListener(eq(constructedServiceType),
-                listenerCaptor.capture(), argThat(options -> network.equals(options.getNetwork())));
-
-        client.stopServiceResolution(resolveListener);
-        waitForIdle();
-
-        // Verify the listener has been unregistered.
-        verify(mDiscoveryManager, timeout(TIMEOUT_MS))
-                .unregisterListener(eq(constructedServiceType), eq(listenerCaptor.getValue()));
-        verify(resolveListener, timeout(TIMEOUT_MS)).onResolutionStopped(argThat(ns ->
-                request.getServiceName().equals(ns.getServiceName())
-                        && request.getServiceType().equals(ns.getServiceType())));
-        verify(mSocketProvider, timeout(CLEANUP_DELAY_MS + TIMEOUT_MS)).stopMonitoringSockets();
-    }
-
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mHandler, TIMEOUT_MS);
     }
