@@ -41,6 +41,7 @@ import libcore.util.HexEncoding;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -49,6 +50,21 @@ import java.nio.ByteOrder;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class InetDiagSocketTest {
+    // ::FFFF:192.0.2.1
+    private static final byte[] SRC_V4_MAPPED_V6_ADDRESS_BYTES = {
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0xff, (byte) 0xff,
+            (byte) 0xc0, (byte) 0x00, (byte) 0x02, (byte) 0x01,
+    };
+    // ::FFFF:192.0.2.2
+    private static final byte[] DST_V4_MAPPED_V6_ADDRESS_BYTES = {
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0xff, (byte) 0xff,
+            (byte) 0xc0, (byte) 0x00, (byte) 0x02, (byte) 0x02,
+    };
+
     // Hexadecimal representation of InetDiagReqV2 request.
     private static final String INET_DIAG_REQ_V2_UDP_INET4_HEX =
             // struct nlmsghdr
@@ -221,6 +237,46 @@ public class InetDiagSocketTest {
         assertArrayEquals(INET_DIAG_REQ_V2_TCP_INET6_NO_ID_SPECIFIED_BYTES, msgExt);
     }
 
+    // Hexadecimal representation of InetDiagReqV2 request with v4-mapped v6 address
+    private static final String INET_DIAG_REQ_V2_TCP_INET6_V4_MAPPED_HEX =
+            // struct nlmsghdr
+            "48000000" +     // length = 72
+            "1400" +         // type = SOCK_DIAG_BY_FAMILY
+            "0100" +         // flags = NLM_F_REQUEST
+            "00000000" +     // seqno
+            "00000000" +     // pid (0 == kernel)
+            // struct inet_diag_req_v2
+            "0a" +           // family = AF_INET6
+            "06" +           // protcol = IPPROTO_TCP
+            "00" +           // idiag_ext
+            "00" +           // pad
+            "ffffffff" +     // idiag_states
+            // inet_diag_sockid
+            "a817" +     // idiag_sport = 43031
+            "960f" +     // idiag_dport = 38415
+            "00000000000000000000ffffc0000201" + // idiag_src = ::FFFF:192.0.2.1
+            "00000000000000000000ffffc0000202" + // idiag_dst = ::FFFF:192.0.2.2
+            "00000000" +     // idiag_if
+            "ffffffffffffffff"; // idiag_cookie = INET_DIAG_NOCOOKIE
+
+    private static final byte[] INET_DIAG_REQ_V2_TCP_INET6_V4_MAPPED_BYTES =
+            HexEncoding.decode(INET_DIAG_REQ_V2_TCP_INET6_V4_MAPPED_HEX.toCharArray(), false);
+
+    @Test
+    public void testInetDiagReqV2TcpInet6V4Mapped() throws Exception {
+        final Inet6Address srcAddr = Inet6Address.getByAddress(
+                null /* host */, SRC_V4_MAPPED_V6_ADDRESS_BYTES, -1 /* scope_id */);
+        final Inet6Address dstAddr = Inet6Address.getByAddress(
+                null /* host */, DST_V4_MAPPED_V6_ADDRESS_BYTES, -1 /* scope_id */);
+        final byte[] msg = InetDiagMessage.inetDiagReqV2(
+                IPPROTO_TCP,
+                new InetSocketAddress(srcAddr, 43031),
+                new InetSocketAddress(dstAddr, 38415),
+                AF_INET6,
+                NLM_F_REQUEST);
+        assertArrayEquals(INET_DIAG_REQ_V2_TCP_INET6_V4_MAPPED_BYTES, msg);
+    }
+
     private void assertNlMsgHdr(StructNlMsgHdr hdr, short type, short flags, int seq, int pid) {
         assertNotNull(hdr);
         assertEquals(type, hdr.nlmsg_type);
@@ -352,7 +408,7 @@ public class InetDiagSocketTest {
     @Test
     public void testParseInetDiagResponse() throws Exception {
         final ByteBuffer byteBuffer = ByteBuffer.wrap(INET_DIAG_MSG_BYTES);
-        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.order(ByteOrder.nativeOrder());
         assertInetDiagMsg1(NetlinkMessage.parse(byteBuffer, NETLINK_INET_DIAG));
     }
 
@@ -363,8 +419,87 @@ public class InetDiagSocketTest {
     @Test
     public void testParseInetDiagResponseMultiple() {
         final ByteBuffer byteBuffer = ByteBuffer.wrap(INET_DIAG_MSG_BYTES_MULTIPLE);
-        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.order(ByteOrder.nativeOrder());
         assertInetDiagMsg1(NetlinkMessage.parse(byteBuffer, NETLINK_INET_DIAG));
         assertInetDiagMsg2(NetlinkMessage.parse(byteBuffer, NETLINK_INET_DIAG));
+    }
+
+    private static final String INET_DIAG_SOCK_ID_V4_MAPPED_V6_HEX =
+            "a845" +     // idiag_sport = 43077
+            "01bb" +     // idiag_dport = 443
+            "00000000000000000000ffffc0000201" + // idiag_src = ::FFFF:192.0.2.1
+            "00000000000000000000ffffc0000202" + // idiag_dst = ::FFFF:192.0.2.2
+            "08000000" + // idiag_if = 8
+            "6300000000000000"; // idiag_cookie = 99
+
+    private static final byte[] INET_DIAG_SOCK_ID_V4_MAPPED_V6_BYTES =
+            HexEncoding.decode(INET_DIAG_SOCK_ID_V4_MAPPED_V6_HEX.toCharArray(), false);
+
+    @Test
+    public void testParseAndPackInetDiagSockIdV4MappedV6() {
+        final ByteBuffer parseByteBuffer = ByteBuffer.wrap(INET_DIAG_SOCK_ID_V4_MAPPED_V6_BYTES);
+        parseByteBuffer.order(ByteOrder.nativeOrder());
+        final StructInetDiagSockId diagSockId =
+                StructInetDiagSockId.parse(parseByteBuffer, (short) AF_INET6);
+        assertNotNull(diagSockId);
+
+        final ByteBuffer packByteBuffer =
+                ByteBuffer.allocate(INET_DIAG_SOCK_ID_V4_MAPPED_V6_BYTES.length);
+        diagSockId.pack(packByteBuffer);
+
+        // Move position to the head since ByteBuffer#equals compares the values from the current
+        // position.
+        parseByteBuffer.position(0);
+        packByteBuffer.position(0);
+        assertEquals(parseByteBuffer, packByteBuffer);
+    }
+
+    // Hexadecimal representation of InetDiagMessage with v4-mapped v6 address
+    private static final String INET_DIAG_MSG_V4_MAPPED_V6_HEX =
+            // struct nlmsghdr
+            "58000000" +     // length = 88
+            "1400" +         // type = SOCK_DIAG_BY_FAMILY
+            "0200" +         // flags = NLM_F_MULTI
+            "00000000" +     // seqno
+            "f5220000" +     // pid
+            // struct inet_diag_msg
+            "0a" +           // family = AF_INET6
+            "01" +           // idiag_state = 1
+            "02" +           // idiag_timer = 2
+            "03" +           // idiag_retrans = 3
+                // inet_diag_sockid
+                "a817" +     // idiag_sport = 43031
+                "960f" +     // idiag_dport = 38415
+                "00000000000000000000ffffc0000201" + // idiag_src = ::FFFF:192.0.2.1
+                "00000000000000000000ffffc0000202" + // idiag_dst = ::FFFF:192.0.2.2
+                "07000000" + // idiag_if = 7
+                "5800000000000000" + // idiag_cookie = 88
+            "04000000" +     // idiag_expires = 4
+            "05000000" +     // idiag_rqueue = 5
+            "06000000" +     // idiag_wqueue = 6
+            "a3270000" +     // idiag_uid = 10147
+            "A57E1900";      // idiag_inode = 1670821
+
+    private static final byte[] INET_DIAG_MSG_V4_MAPPED_V6_BYTES =
+            HexEncoding.decode(INET_DIAG_MSG_V4_MAPPED_V6_HEX.toCharArray(), false);
+
+    @Test
+    public void testParseInetDiagResponseV4MappedV6() throws Exception {
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(INET_DIAG_MSG_V4_MAPPED_V6_BYTES);
+        byteBuffer.order(ByteOrder.nativeOrder());
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_INET_DIAG);
+
+        assertNotNull(msg);
+        assertTrue(msg instanceof InetDiagMessage);
+        final InetDiagMessage inetDiagMsg = (InetDiagMessage) msg;
+        final Inet6Address srcAddr = Inet6Address.getByAddress(
+                null /* host */, SRC_V4_MAPPED_V6_ADDRESS_BYTES, -1 /* scope_id */);
+        final Inet6Address dstAddr = Inet6Address.getByAddress(
+                null /* host */, DST_V4_MAPPED_V6_ADDRESS_BYTES, -1 /* scope_id */);
+        assertInetDiagSockId(inetDiagMsg.inetDiagMsg.id,
+                new InetSocketAddress(srcAddr, 43031),
+                new InetSocketAddress(dstAddr, 38415),
+                7  /* ifIndex */,
+                88 /* cookie */);
     }
 }

@@ -29,6 +29,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -89,43 +90,53 @@ public class StructInetDiagSockId {
         final int srcPort = Short.toUnsignedInt(byteBuffer.getShort());
         final int dstPort = Short.toUnsignedInt(byteBuffer.getShort());
 
-        final byte[] srcAddrByte;
-        final byte[] dstAddrByte;
+        final InetAddress srcAddr;
+        final InetAddress dstAddr;
         if (family == AF_INET) {
-            srcAddrByte = new byte[IPV4_ADDR_LEN];
-            dstAddrByte = new byte[IPV4_ADDR_LEN];
+            final byte[] srcAddrByte = new byte[IPV4_ADDR_LEN];
+            final byte[] dstAddrByte = new byte[IPV4_ADDR_LEN];
             byteBuffer.get(srcAddrByte);
             // Address always uses IPV6_ADDR_LEN in the buffer. So if the address is IPv4, position
             // needs to be advanced to the next field.
             byteBuffer.position(byteBuffer.position() + (IPV6_ADDR_LEN - IPV4_ADDR_LEN));
             byteBuffer.get(dstAddrByte);
             byteBuffer.position(byteBuffer.position() + (IPV6_ADDR_LEN - IPV4_ADDR_LEN));
+            try {
+                srcAddr = Inet4Address.getByAddress(srcAddrByte);
+                dstAddr = Inet4Address.getByAddress(dstAddrByte);
+            } catch (UnknownHostException e) {
+                Log.wtf(TAG, "Failed to parse address: " + e);
+                return null;
+            }
         } else if (family == AF_INET6) {
-            srcAddrByte = new byte[IPV6_ADDR_LEN];
-            dstAddrByte = new byte[IPV6_ADDR_LEN];
+            final byte[] srcAddrByte = new byte[IPV6_ADDR_LEN];
+            final byte[] dstAddrByte = new byte[IPV6_ADDR_LEN];
             byteBuffer.get(srcAddrByte);
             byteBuffer.get(dstAddrByte);
+            try {
+                // Using Inet6Address.getByAddress to be consistent with idiag_family field since
+                // InetAddress.getByAddress returns Inet4Address if the address is v4-mapped v6
+                // address.
+                srcAddr = Inet6Address.getByAddress(
+                        null /* host */, srcAddrByte, -1 /* scope_id */);
+                dstAddr = Inet6Address.getByAddress(
+                        null /* host */, dstAddrByte, -1 /* scope_id */);
+            } catch (UnknownHostException e) {
+                Log.wtf(TAG, "Failed to parse address: " + e);
+                return null;
+            }
         } else {
             Log.wtf(TAG, "Invalid address family: " + family);
             return null;
         }
 
-        final InetSocketAddress srcAddr;
-        final InetSocketAddress dstAddr;
-        try {
-            srcAddr = new InetSocketAddress(InetAddress.getByAddress(srcAddrByte), srcPort);
-            dstAddr = new InetSocketAddress(InetAddress.getByAddress(dstAddrByte), dstPort);
-        } catch (UnknownHostException e) {
-            // Should not happen. UnknownHostException is thrown only if addr byte array is of
-            // illegal length.
-            Log.wtf(TAG, "Failed to parse address: " + e);
-            return null;
-        }
+        final InetSocketAddress srcSocketAddr = new InetSocketAddress(srcAddr, srcPort);
+        final InetSocketAddress dstSocketAddr = new InetSocketAddress(dstAddr, dstPort);
 
         byteBuffer.order(ByteOrder.nativeOrder());
         final int ifIndex = byteBuffer.getInt();
         final long cookie = byteBuffer.getLong();
-        return new StructInetDiagSockId(srcAddr, dstAddr, ifIndex, cookie);
+        return new StructInetDiagSockId(srcSocketAddr, dstSocketAddr, ifIndex, cookie);
     }
 
     /**
