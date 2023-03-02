@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 /** An mDNS response. */
 public class MdnsResponse {
@@ -62,27 +63,35 @@ public class MdnsResponse {
         network = base.network;
     }
 
-    // This generic typed helper compares records for equality.
-    // Returns True if records are the same.
-    private <T> boolean recordsAreSame(T a, T b) {
-        return ((a == null) && (b == null)) || ((a != null) && (b != null) && a.equals(b));
+    /**
+     * Compare records for equality, including their TTL.
+     *
+     * MdnsRecord#equals ignores TTL and receiptTimeMillis, but methods in this class need to update
+     * records when the TTL changes (especially for goodbye announcements).
+     */
+    private boolean recordsAreSame(MdnsRecord a, MdnsRecord b) {
+        if (!Objects.equals(a, b)) return false;
+        return a == null || a.getTtl() == b.getTtl();
     }
 
     /**
      * Adds a pointer record.
      *
      * @return <code>true</code> if the record was added, or <code>false</code> if a matching
-     * pointer
-     * record is already present in the response.
+     * pointer record is already present in the response with the same TTL.
      */
     public synchronized boolean addPointerRecord(MdnsPointerRecord pointerRecord) {
-        if (!pointerRecords.contains(pointerRecord)) {
-            pointerRecords.add(pointerRecord);
-            records.add(pointerRecord);
-            return true;
+        final int existing = pointerRecords.indexOf(pointerRecord);
+        if (existing >= 0) {
+            if (recordsAreSame(pointerRecord, pointerRecords.get(existing))) {
+                return false;
+            }
+            pointerRecords.remove(existing);
+            records.remove(existing);
         }
-
-        return false;
+        pointerRecords.add(pointerRecord);
+        records.add(pointerRecord);
+        return true;
     }
 
     /** Gets the pointer records. */
