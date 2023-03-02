@@ -16,8 +16,6 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.server.connectivity.mdns.MdnsSocketClientBase.Callback;
-
 import android.Manifest.permission;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -35,7 +33,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Timer;
@@ -73,7 +70,6 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     private final Context context;
     private final byte[] multicastReceiverBuffer = new byte[RECEIVER_BUFFER_SIZE];
     @Nullable private final byte[] unicastReceiverBuffer;
-    private final MdnsResponseDecoder responseDecoder;
     private final MulticastLock multicastLock;
     private final boolean useSeparateSocketForUnicast =
             MdnsConfigs.useSeparateSocketToSendUnicastQuery();
@@ -110,7 +106,6 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     public MdnsSocketClient(@NonNull Context context, @NonNull MulticastLock multicastLock) {
         this.context = context;
         this.multicastLock = multicastLock;
-        responseDecoder = new MdnsResponseDecoder(new MdnsResponseDecoder.Clock(), null);
         if (useSeparateSocketForUnicast) {
             unicastReceiverBuffer = new byte[RECEIVER_BUFFER_SIZE];
         } else {
@@ -421,37 +416,27 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             int interfaceIndex, @Nullable Network network) {
         int packetNumber = ++receivedPacketNumber;
 
-        List<MdnsResponse> responses = new LinkedList<>();
-        int errorCode = responseDecoder.decode(packet, responses, interfaceIndex, network);
-        if (errorCode == MdnsResponseDecoder.SUCCESS) {
-            if (responseType.equals(MULTICAST_TYPE)) {
-                receivedMulticastResponse = true;
-                if (cannotReceiveMulticastResponse.getAndSet(false)) {
-                    // If we are already in the bad state, receiving a multicast response means
-                    // we are recovered.
-                    LOGGER.e(
-                            "Recovered from the state where the phone can't receive any multicast"
-                                    + " response");
-                }
-            } else {
-                receivedUnicastResponse = true;
-            }
-            for (MdnsResponse response : responses) {
-                String serviceInstanceName = response.getServiceInstanceName();
-                LOGGER.log("mDNS %s response received: %s at ifIndex %d", responseType,
-                        serviceInstanceName, interfaceIndex);
-                if (callback != null) {
-                    callback.onResponseReceived(response);
-                }
-            }
-        } else if (errorCode != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
+        final MdnsPacket response;
+        try {
+            response = MdnsResponseDecoder.parseResponse(packet.getData(), packet.getLength());
+        } catch (MdnsPacket.ParseException e) {
             LOGGER.w(String.format("Error while decoding %s packet (%d): %d",
-                    responseType, packetNumber, errorCode));
+                    responseType, packetNumber, e.code));
             if (callback != null) {
-                callback.onFailedToParseMdnsResponse(packetNumber, errorCode);
+                callback.onFailedToParseMdnsResponse(packetNumber, e.code);
             }
+            return e.code;
         }
-        return errorCode;
+
+        if (response == null) {
+            return MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE;
+        }
+
+        if (callback != null) {
+            callback.onResponseReceived(response, interfaceIndex, network);
+        }
+
+        return MdnsResponseErrorCode.SUCCESS;
     }
 
     @VisibleForTesting

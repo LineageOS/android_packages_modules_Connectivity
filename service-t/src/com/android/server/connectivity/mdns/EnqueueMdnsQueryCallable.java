@@ -60,13 +60,21 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         }
     }
 
+    @NonNull
     private final WeakReference<MdnsSocketClientBase> weakRequestSender;
+    @NonNull
     private final MdnsPacketWriter packetWriter;
+    @NonNull
     private final String[] serviceTypeLabels;
+    @NonNull
     private final List<String> subtypes;
     private final boolean expectUnicastResponse;
     private final int transactionId;
+    @Nullable
     private final Network network;
+    private final boolean sendDiscoveryQueries;
+    @NonNull
+    private final List<MdnsResponse> servicesToResolve;
 
     EnqueueMdnsQueryCallable(
             @NonNull MdnsSocketClientBase requestSender,
@@ -75,7 +83,9 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             @NonNull Collection<String> subtypes,
             boolean expectUnicastResponse,
             int transactionId,
-            @Nullable Network network) {
+            @Nullable Network network,
+            boolean sendDiscoveryQueries,
+            @NonNull Collection<MdnsResponse> servicesToResolve) {
         weakRequestSender = new WeakReference<>(requestSender);
         this.packetWriter = packetWriter;
         serviceTypeLabels = TextUtils.split(serviceType, "\\.");
@@ -83,6 +93,8 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         this.expectUnicastResponse = expectUnicastResponse;
         this.transactionId = transactionId;
         this.network = network;
+        this.sendDiscoveryQueries = sendDiscoveryQueries;
+        this.servicesToResolve = new ArrayList<>(servicesToResolve);
     }
 
     // Incompatible return type for override of Callable#call().
@@ -96,9 +108,48 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
                 return null;
             }
 
-            int numQuestions = 1;
-            if (!subtypes.isEmpty()) {
-                numQuestions += subtypes.size();
+            int numQuestions = 0;
+
+            if (sendDiscoveryQueries) {
+                numQuestions++; // Base service type
+                if (!subtypes.isEmpty()) {
+                    numQuestions += subtypes.size();
+                }
+            }
+
+            // List of (name, type) to query
+            final ArrayList<Pair<String[], Integer>> missingKnownAnswerRecords = new ArrayList<>();
+            for (MdnsResponse response : servicesToResolve) {
+                // In practice responses should always have at least one pointer record, since the
+                // record is added after creation in MdnsResponseDecoder. All PTR records point to
+                // the same instance name, since addPointerRecord is only called on instances
+                // obtained through MdnsResponseDecoder.findResponseWithPointer.
+                // TODO: also send queries to renew record TTL (as per RFC6762 7.1 no need to query
+                // if remaining TTL is more than half the original one, so send the queries if half
+                // the TTL has passed).
+                if (!response.hasPointerRecords() || response.isComplete()) continue;
+                final String[] instanceName = response.getPointerRecords().get(0).getPointer();
+                if (instanceName == null) continue;
+                if (!response.hasTextRecord()) {
+                    missingKnownAnswerRecords.add(new Pair<>(instanceName, MdnsRecord.TYPE_TXT));
+                }
+                if (!response.hasServiceRecord()) {
+                    missingKnownAnswerRecords.add(new Pair<>(instanceName, MdnsRecord.TYPE_SRV));
+                    // The hostname is not yet known, so queries for address records will be sent
+                    // the next time the EnqueueMdnsQueryCallable is enqueued if the reply does not
+                    // contain them. In practice, advertisers should include the address records
+                    // when queried for SRV, although it's not a MUST requirement (RFC6763 12.2).
+                } else if (!response.hasInet4AddressRecord() && !response.hasInet6AddressRecord()) {
+                    final String[] host = response.getServiceRecord().getServiceHost();
+                    missingKnownAnswerRecords.add(new Pair<>(host, MdnsRecord.TYPE_A));
+                    missingKnownAnswerRecords.add(new Pair<>(host, MdnsRecord.TYPE_AAAA));
+                }
+            }
+            numQuestions += missingKnownAnswerRecords.size();
+
+            if (numQuestions == 0) {
+                // No query to send
+                return null;
             }
 
             // Header.
@@ -109,28 +160,25 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             packetWriter.writeUInt16(0); // number of authority entries
             packetWriter.writeUInt16(0); // number of additional records
 
-            // Question(s). There will be one question for each (fqdn+subtype, recordType)
-          // combination,
-            // as well as one for each (fqdn, recordType) combination.
-
-            for (String subtype : subtypes) {
-                String[] labels = new String[serviceTypeLabels.length + 2];
-                labels[0] = MdnsConstants.SUBTYPE_PREFIX + subtype;
-                labels[1] = MdnsConstants.SUBTYPE_LABEL;
-                System.arraycopy(serviceTypeLabels, 0, labels, 2, serviceTypeLabels.length);
-
-                packetWriter.writeLabels(labels);
-                packetWriter.writeUInt16(MdnsRecord.TYPE_PTR);
-                packetWriter.writeUInt16(
-                        MdnsConstants.QCLASS_INTERNET
-                                | (expectUnicastResponse ? MdnsConstants.QCLASS_UNICAST : 0));
+            // Question(s) for missing records on known answers
+            for (Pair<String[], Integer> question : missingKnownAnswerRecords) {
+                writeQuestion(question.first, question.second);
             }
 
-            packetWriter.writeLabels(serviceTypeLabels);
-            packetWriter.writeUInt16(MdnsRecord.TYPE_PTR);
-            packetWriter.writeUInt16(
-                    MdnsConstants.QCLASS_INTERNET
-                            | (expectUnicastResponse ? MdnsConstants.QCLASS_UNICAST : 0));
+            // Question(s) for discovering other services with the type. There will be one question
+            // for each (fqdn+subtype, recordType) combination, as well as one for each (fqdn,
+            // recordType) combination.
+            if (sendDiscoveryQueries) {
+                for (String subtype : subtypes) {
+                    String[] labels = new String[serviceTypeLabels.length + 2];
+                    labels[0] = MdnsConstants.SUBTYPE_PREFIX + subtype;
+                    labels[1] = MdnsConstants.SUBTYPE_LABEL;
+                    System.arraycopy(serviceTypeLabels, 0, labels, 2, serviceTypeLabels.length);
+
+                    writeQuestion(labels, MdnsRecord.TYPE_PTR);
+                }
+                writeQuestion(serviceTypeLabels, MdnsRecord.TYPE_PTR);
+            }
 
             if (requestSender instanceof MdnsMultinetworkSocketClient) {
                 sendPacketToIpv4AndIpv6(requestSender, MdnsConstants.MDNS_PORT, network);
@@ -157,6 +205,14 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
                     TextUtils.join(",", subtypes)), e);
             return null;
         }
+    }
+
+    private void writeQuestion(String[] labels, int type) throws IOException {
+        packetWriter.writeLabels(labels);
+        packetWriter.writeUInt16(type);
+        packetWriter.writeUInt16(
+                MdnsConstants.QCLASS_INTERNET
+                        | (expectUnicastResponse ? MdnsConstants.QCLASS_UNICAST : 0));
     }
 
     private void sendPacketTo(MdnsSocketClientBase requestSender, InetSocketAddress address)
