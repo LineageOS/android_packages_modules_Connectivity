@@ -111,17 +111,18 @@ public final class NetworkStatsAccess {
         final DevicePolicyManager mDpm = context.getSystemService(DevicePolicyManager.class);
         final TelephonyManager tm = (TelephonyManager)
                 context.getSystemService(Context.TELEPHONY_SERVICE);
-        boolean hasCarrierPrivileges;
-        final long token = Binder.clearCallingIdentity();
+        final boolean hasCarrierPrivileges;
+        final boolean isDeviceOwner;
+        long token = Binder.clearCallingIdentity();
         try {
             hasCarrierPrivileges = tm != null
                     && tm.checkCarrierPrivilegesForPackageAnyPhone(callingPackage)
                             == TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS;
+            isDeviceOwner = mDpm != null && mDpm.isDeviceOwnerApp(callingPackage);
         } finally {
             Binder.restoreCallingIdentity(token);
         }
 
-        final boolean isDeviceOwner = mDpm != null && mDpm.isDeviceOwnerApp(callingPackage);
         final int appId = UserHandle.getAppId(callingUid);
 
         final boolean isNetworkStack = context.checkPermission(
@@ -135,15 +136,20 @@ public final class NetworkStatsAccess {
             return NetworkStatsAccess.Level.DEVICE;
         }
 
-        boolean hasAppOpsPermission = hasAppOpsPermission(context, callingUid, callingPackage);
+        final boolean hasAppOpsPermission =
+                hasAppOpsPermission(context, callingUid, callingPackage);
         if (hasAppOpsPermission || context.checkCallingOrSelfPermission(
                 READ_NETWORK_USAGE_HISTORY) == PackageManager.PERMISSION_GRANTED) {
             return NetworkStatsAccess.Level.DEVICESUMMARY;
         }
 
-        //TODO(b/169395065) Figure out if this flow makes sense in Device Owner mode.
-        boolean isProfileOwner = mDpm != null && (mDpm.isProfileOwnerApp(callingPackage)
-                || mDpm.isDeviceOwnerApp(callingPackage));
+        final boolean isProfileOwner;
+        token = Binder.clearCallingIdentity();
+        try {
+            isProfileOwner = mDpm != null && mDpm.isProfileOwnerApp(callingPackage);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
         if (isProfileOwner) {
             // Apps with the AppOps permission, profile owners, and apps with the privileged
             // permission can access data usage for all apps in this user/profile.
