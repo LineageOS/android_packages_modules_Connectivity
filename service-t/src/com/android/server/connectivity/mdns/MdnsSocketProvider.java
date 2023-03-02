@@ -82,6 +82,7 @@ public class MdnsSocketProvider {
     private final List<String> mTetheredInterfaces = new ArrayList<>();
     private final byte[] mPacketReadBuffer = new byte[READ_BUFFER_SIZE];
     private boolean mMonitoringSockets = false;
+    private boolean mRequestStop = false;
 
     public MdnsSocketProvider(@NonNull Context context, @NonNull Looper looper) {
         this(context, looper, new Dependencies());
@@ -179,6 +180,7 @@ public class MdnsSocketProvider {
     /*** Start monitoring sockets by listening callbacks for sockets creation or removal */
     public void startMonitoringSockets() {
         ensureRunningOnHandlerThread(mHandler);
+        mRequestStop = false; // Reset stop request flag.
         if (mMonitoringSockets) {
             Log.d(TAG, "Already monitoring sockets.");
             return;
@@ -195,22 +197,34 @@ public class MdnsSocketProvider {
         mMonitoringSockets = true;
     }
 
-    /*** Stop monitoring sockets and unregister callbacks */
-    public void stopMonitoringSockets() {
+    private void maybeStopMonitoringSockets() {
+        if (!mMonitoringSockets) return; // Already unregistered.
+        if (!mRequestStop) return; // No stop request.
+
+        // Only unregister the network callback if there is no socket request.
+        if (mCallbacksToRequestedNetworks.isEmpty()) {
+            mContext.getSystemService(ConnectivityManager.class)
+                    .unregisterNetworkCallback(mNetworkCallback);
+
+            final TetheringManager tetheringManager = mContext.getSystemService(
+                    TetheringManager.class);
+            tetheringManager.unregisterTetheringEventCallback(mTetheringEventCallback);
+
+            mHandler.post(mNetlinkMonitor::stop);
+            mMonitoringSockets = false;
+        }
+    }
+
+    /*** Request to stop monitoring sockets and unregister callbacks */
+    public void requestStopWhenInactive() {
         ensureRunningOnHandlerThread(mHandler);
         if (!mMonitoringSockets) {
             Log.d(TAG, "Monitoring sockets hasn't been started.");
             return;
         }
-        if (DBG) Log.d(TAG, "Stop monitoring sockets.");
-        mContext.getSystemService(ConnectivityManager.class)
-                .unregisterNetworkCallback(mNetworkCallback);
-
-        final TetheringManager tetheringManager = mContext.getSystemService(TetheringManager.class);
-        tetheringManager.unregisterTetheringEventCallback(mTetheringEventCallback);
-
-        mHandler.post(mNetlinkMonitor::stop);
-        mMonitoringSockets = false;
+        if (DBG) Log.d(TAG, "Try to stop monitoring sockets.");
+        mRequestStop = true;
+        maybeStopMonitoringSockets();
     }
 
     /*** Check whether the target network is matched current network */
@@ -450,6 +464,9 @@ public class MdnsSocketProvider {
             cb.onInterfaceDestroyed(new Network(INetd.LOCAL_NET_ID), info.mSocket);
         }
         mTetherInterfaceSockets.clear();
+
+        // Try to unregister network callback.
+        maybeStopMonitoringSockets();
     }
 
     /*** Callbacks for listening socket changes */
