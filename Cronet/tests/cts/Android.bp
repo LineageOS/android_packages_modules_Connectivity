@@ -29,6 +29,10 @@ cronet_test_java_defaults = "CronetTestJavaDefaultsEnabled"
 java_defaults {
     name: "CronetTestJavaDefaultsEnabled",
     enabled: true,
+    // TODO(danstahr): move to unconditional static_libs once the T branch is abandoned
+    static_libs: [
+        "truth",
+    ],
 }
 
 java_defaults {
@@ -43,6 +47,10 @@ java_defaults {
 
 android_library {
     name: "CtsNetHttpTestsLib",
+    defaults: [
+        "cts_defaults",
+        "CronetTestJavaDefaults",
+    ],
     sdk_version: "test_current",
     srcs: [
         "src/**/*.java",
