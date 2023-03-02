@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.annotation.NonNull;
+import android.net.Network;
 import android.text.TextUtils;
 
 import com.android.testutils.DevSdkIgnoreRule;
@@ -35,7 +36,10 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 /** Tests for {@link MdnsDiscoveryManager}. */
 @RunWith(DevSdkIgnoreRunner.class)
@@ -111,25 +115,38 @@ public class MdnsDiscoveryManagerTests {
         discoveryManager.registerListener(
                 SERVICE_TYPE_2, mockListenerTwo, MdnsSearchOptions.getDefaultOptions());
 
-        MdnsResponse responseForServiceTypeOne = createMockResponse(SERVICE_TYPE_1);
-        discoveryManager.onResponseReceived(responseForServiceTypeOne);
-        verify(mockServiceTypeClientOne).processResponse(responseForServiceTypeOne);
+        MdnsPacket responseForServiceTypeOne = createMdnsPacket(SERVICE_TYPE_1);
+        final int ifIndex = 1;
+        final Network network = mock(Network.class);
+        discoveryManager.onResponseReceived(responseForServiceTypeOne, ifIndex, network);
+        verify(mockServiceTypeClientOne).processResponse(responseForServiceTypeOne, ifIndex,
+                network);
 
-        MdnsResponse responseForServiceTypeTwo = createMockResponse(SERVICE_TYPE_2);
-        discoveryManager.onResponseReceived(responseForServiceTypeTwo);
-        verify(mockServiceTypeClientTwo).processResponse(responseForServiceTypeTwo);
+        MdnsPacket responseForServiceTypeTwo = createMdnsPacket(SERVICE_TYPE_2);
+        discoveryManager.onResponseReceived(responseForServiceTypeTwo, ifIndex, network);
+        verify(mockServiceTypeClientTwo).processResponse(responseForServiceTypeTwo, ifIndex,
+                network);
 
-        MdnsResponse responseForSubtype = createMockResponse("subtype._sub._googlecast._tcp.local");
-        discoveryManager.onResponseReceived(responseForSubtype);
-        verify(mockServiceTypeClientOne).processResponse(responseForSubtype);
+        MdnsPacket responseForSubtype = createMdnsPacket("subtype._sub._googlecast._tcp.local");
+        discoveryManager.onResponseReceived(responseForSubtype, ifIndex, network);
+        verify(mockServiceTypeClientOne).processResponse(responseForSubtype, ifIndex, network);
     }
 
-    private MdnsResponse createMockResponse(String serviceType) {
-        MdnsPointerRecord mockPointerRecord = mock(MdnsPointerRecord.class);
-        MdnsResponse mockResponse = mock(MdnsResponse.class);
-        when(mockResponse.getPointerRecords())
-                .thenReturn(Collections.singletonList(mockPointerRecord));
-        when(mockPointerRecord.getName()).thenReturn(TextUtils.split(serviceType, "\\."));
-        return mockResponse;
+    private MdnsPacket createMdnsPacket(String serviceType) {
+        final String[] type = TextUtils.split(serviceType, "\\.");
+        final ArrayList<String> name = new ArrayList<>(type.length + 1);
+        name.add("TestName");
+        name.addAll(Arrays.asList(type));
+        return new MdnsPacket(0 /* flags */,
+                Collections.emptyList() /* questions */,
+                List.of(new MdnsPointerRecord(
+                        type,
+                        0L /* receiptTimeMillis */,
+                        false /* cacheFlush */,
+                        120000 /* ttlMillis */,
+                        name.toArray(new String[0])
+                        )) /* answers */,
+                Collections.emptyList() /* authorityRecords */,
+                Collections.emptyList() /* additionalRecords */);
     }
 }
