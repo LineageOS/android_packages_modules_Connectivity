@@ -317,7 +317,7 @@ public class NsdService extends INsdManager.Stub {
             if (!mIsMonitoringSocketsStarted) return;
             if (isAnyRequestActive()) return;
 
-            mMdnsSocketProvider.stopMonitoringSockets();
+            mMdnsSocketProvider.requestStopWhenInactive();
             mIsMonitoringSocketsStarted = false;
         }
 
