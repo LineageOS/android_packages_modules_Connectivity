@@ -100,7 +100,7 @@ public class MdnsResponseDecoder {
             mdnsPacket = MdnsPacket.parseRecordsSection(reader, flags);
             if (mdnsPacket.answers.size() < 1) {
                 throw new MdnsPacket.ParseException(
-                        MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE, "Response has no answers",
+                        MdnsResponseErrorCode.ERROR_NO_ANSWERS, "Response has no answers",
                         null);
             }
             return mdnsPacket;
