@@ -16,10 +16,14 @@
 
 package android.net.http.cts.util;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 
 import android.net.http.BidirectionalStream;
 import android.net.http.HttpException;
@@ -40,6 +44,7 @@ import java.util.concurrent.ThreadFactory;
  * an arbitrary step.
  */
 public class TestBidirectionalStreamCallback extends BidirectionalStream.Callback {
+    private static final int TIMEOUT_MS = 12_000;
     public UrlResponseInfo mResponseInfo;
     public HttpException mError;
 
@@ -135,6 +140,17 @@ public class TestBidirectionalStreamCallback extends BidirectionalStream.Callbac
         THROW_SYNC
     }
 
+    private boolean isTerminalCallback(ResponseStep step) {
+        switch (step) {
+            case ON_SUCCEEDED:
+            case ON_CANCELED:
+            case ON_FAILED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public TestBidirectionalStreamCallback() {
         mUseDirectExecutor = false;
         mDirectExecutor = null;
@@ -154,8 +170,41 @@ public class TestBidirectionalStreamCallback extends BidirectionalStream.Callbac
         mFailureType = failureType;
     }
 
-    public void blockForDone() {
-        mDone.block();
+    public boolean blockForDone() {
+        return mDone.block(TIMEOUT_MS);
+    }
+
+    /**
+     * Waits for a terminal callback to complete execution before failing if the callback is not the
+     * expected one
+     *
+     * @param expectedStep the expected callback step
+     */
+    public void expectCallback(ResponseStep expectedStep) {
+        if (isTerminalCallback(expectedStep)) {
+            assertTrue(String.format(
+                            "Request timed out. Expected %s callback. Current callback is %s",
+                            expectedStep, mResponseStep),
+                    blockForDone());
+        }
+        assertSame(expectedStep, mResponseStep);
+    }
+
+    /**
+     * Waits for a terminal callback to complete execution before skipping the test if the callback
+     * is not the expected one
+     *
+     * @param expectedStep the expected callback step
+     */
+    public void assumeCallback(ResponseStep expectedStep) {
+        if (isTerminalCallback(expectedStep)) {
+            assumeTrue(
+                    String.format(
+                            "Request timed out. Expected %s callback. Current callback is %s",
+                            expectedStep, mResponseStep),
+                    blockForDone());
+        }
+        assumeThat(expectedStep, equalTo(mResponseStep));
     }
 
     public void waitForNextReadStep() {
