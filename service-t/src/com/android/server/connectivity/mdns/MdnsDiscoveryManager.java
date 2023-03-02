@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns;
 import android.Manifest.permission;
 import android.annotation.NonNull;
 import android.annotation.RequiresPermission;
+import android.net.Network;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
@@ -27,7 +28,6 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -119,22 +119,10 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     }
 
     @Override
-    public synchronized void onResponseReceived(@NonNull MdnsResponse response) {
-        String[] name =
-                response.getPointerRecords().isEmpty()
-                        ? null
-                        : response.getPointerRecords().get(0).getName();
-        if (name != null) {
-            for (MdnsServiceTypeClient serviceTypeClient : serviceTypeClients.values()) {
-                String[] serviceType = serviceTypeClient.getServiceTypeLabels();
-                if ((Arrays.equals(name, serviceType)
-                        || ((name.length == (serviceType.length + 2))
-                        && name[1].equals(MdnsConstants.SUBTYPE_LABEL)
-                        && MdnsRecord.labelsAreSuffix(serviceType, name)))) {
-                    serviceTypeClient.processResponse(response);
-                    return;
-                }
-            }
+    public synchronized void onResponseReceived(@NonNull MdnsPacket packet,
+            int interfaceIndex, Network network) {
+        for (MdnsServiceTypeClient serviceTypeClient : serviceTypeClients.values()) {
+            serviceTypeClient.processResponse(packet, interfaceIndex, network);
         }
     }
 
