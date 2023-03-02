@@ -27,6 +27,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -109,12 +110,15 @@ public class MdnsSocketProviderTest {
         final HandlerThread thread = new HandlerThread("MdnsSocketProviderTest");
         thread.start();
         mHandler = new Handler(thread.getLooper());
+        mSocketProvider = new MdnsSocketProvider(mContext, thread.getLooper(), mDeps);
+    }
 
+    private void startMonitoringSockets() {
         final ArgumentCaptor<NetworkCallback> nwCallbackCaptor =
                 ArgumentCaptor.forClass(NetworkCallback.class);
         final ArgumentCaptor<TetheringEventCallback> teCallbackCaptor =
                 ArgumentCaptor.forClass(TetheringEventCallback.class);
-        mSocketProvider = new MdnsSocketProvider(mContext, thread.getLooper(), mDeps);
+
         mHandler.post(mSocketProvider::startMonitoringSockets);
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         verify(mCm).registerNetworkCallback(any(), nwCallbackCaptor.capture(), any());
@@ -205,6 +209,8 @@ public class MdnsSocketProviderTest {
 
     @Test
     public void testSocketRequestAndUnrequestSocket() {
+        startMonitoringSockets();
+
         final TestSocketCallback testCallback1 = new TestSocketCallback();
         mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback1));
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
@@ -275,6 +281,8 @@ public class MdnsSocketProviderTest {
 
     @Test
     public void testAddressesChanged() throws Exception {
+        startMonitoringSockets();
+
         final TestSocketCallback testCallback = new TestSocketCallback();
         mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
@@ -296,5 +304,54 @@ public class MdnsSocketProviderTest {
         verify(mTestNetworkIfaceWrapper, times(1)).getNetworkInterface();
         testCallback.expectedAddressesChangedForNetwork(
                 TEST_NETWORK, List.of(LINKADDRV4, LINKADDRV6));
+    }
+
+    @Test
+    public void testStartAndStopMonitoringSockets() {
+        // Stop monitoring sockets before start. Should not unregister any network callback.
+        mHandler.post(mSocketProvider::requestStopWhenInactive);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, never()).unregisterNetworkCallback(any(NetworkCallback.class));
+        verify(mTm, never()).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
+
+        // Start sockets monitoring.
+        startMonitoringSockets();
+        // Request a socket then unrequest it. Expect no network callback unregistration.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        testCallback.expectedNoCallback();
+        mHandler.post(()-> mSocketProvider.unrequestSocket(testCallback));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, never()).unregisterNetworkCallback(any(NetworkCallback.class));
+        verify(mTm, never()).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
+        // Request stop and it should unregister network callback immediately because there is no
+        // socket request.
+        mHandler.post(mSocketProvider::requestStopWhenInactive);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
+        verify(mTm, times(1)).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
+
+        // Start sockets monitoring and request a socket again.
+        mHandler.post(mSocketProvider::startMonitoringSockets);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, times(2)).registerNetworkCallback(any(), any(NetworkCallback.class), any());
+        verify(mTm, times(2)).registerTetheringEventCallback(
+                any(), any(TetheringEventCallback.class));
+        final TestSocketCallback testCallback2 = new TestSocketCallback();
+        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback2));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        testCallback2.expectedNoCallback();
+        // Try to stop monitoring sockets but should be ignored and wait until all socket are
+        // unrequested.
+        mHandler.post(mSocketProvider::requestStopWhenInactive);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
+        verify(mTm, times(1)).unregisterTetheringEventCallback(any());
+        // Unrequest the socket then network callbacks should be unregistered.
+        mHandler.post(()-> mSocketProvider.unrequestSocket(testCallback2));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, times(2)).unregisterNetworkCallback(any(NetworkCallback.class));
+        verify(mTm, times(2)).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
     }
 }
