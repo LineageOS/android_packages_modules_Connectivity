@@ -46,7 +46,8 @@ public class MdnsSearchOptions implements Parcelable {
                 public MdnsSearchOptions createFromParcel(Parcel source) {
                     return new MdnsSearchOptions(source.createStringArrayList(),
                             source.readBoolean(), source.readBoolean(),
-                            source.readParcelable(null));
+                            source.readParcelable(null),
+                            source.readString());
                 }
 
                 @Override
@@ -56,6 +57,8 @@ public class MdnsSearchOptions implements Parcelable {
             };
     private static MdnsSearchOptions defaultOptions;
     private final List<String> subtypes;
+    @Nullable
+    private final String resolveInstanceName;
 
     private final boolean isPassiveMode;
     private final boolean removeExpiredService;
@@ -64,7 +67,7 @@ public class MdnsSearchOptions implements Parcelable {
 
     /** Parcelable constructs for a {@link MdnsSearchOptions}. */
     MdnsSearchOptions(List<String> subtypes, boolean isPassiveMode, boolean removeExpiredService,
-            @Nullable Network network) {
+            @Nullable Network network, @Nullable String resolveInstanceName) {
         this.subtypes = new ArrayList<>();
         if (subtypes != null) {
             this.subtypes.addAll(subtypes);
@@ -72,6 +75,7 @@ public class MdnsSearchOptions implements Parcelable {
         this.isPassiveMode = isPassiveMode;
         this.removeExpiredService = removeExpiredService;
         mNetwork = network;
+        this.resolveInstanceName = resolveInstanceName;
     }
 
     /** Returns a {@link Builder} for {@link MdnsSearchOptions}. */
@@ -115,6 +119,15 @@ public class MdnsSearchOptions implements Parcelable {
         return mNetwork;
     }
 
+    /**
+     * If non-null, queries should try to resolve all records of this specific service, rather than
+     * discovering all services.
+     */
+    @Nullable
+    public String getResolveInstanceName() {
+        return resolveInstanceName;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -126,6 +139,7 @@ public class MdnsSearchOptions implements Parcelable {
         out.writeBoolean(isPassiveMode);
         out.writeBoolean(removeExpiredService);
         out.writeParcelable(mNetwork, 0);
+        out.writeString(resolveInstanceName);
     }
 
     /** A builder to create {@link MdnsSearchOptions}. */
@@ -134,6 +148,7 @@ public class MdnsSearchOptions implements Parcelable {
         private boolean isPassiveMode = true;
         private boolean removeExpiredService;
         private Network mNetwork;
+        private String resolveInstanceName;
 
         private Builder() {
             subtypes = new ArraySet<>();
@@ -194,10 +209,22 @@ public class MdnsSearchOptions implements Parcelable {
             return this;
         }
 
+        /**
+         * Set the instance name to resolve.
+         *
+         * If non-null, queries should try to resolve all records of this specific service,
+         * rather than discovering all services.
+         * @param name The instance name.
+         */
+        public Builder setResolveInstanceName(String name) {
+            resolveInstanceName = name;
+            return this;
+        }
+
         /** Builds a {@link MdnsSearchOptions} with the arguments supplied to this builder. */
         public MdnsSearchOptions build() {
             return new MdnsSearchOptions(new ArrayList<>(subtypes), isPassiveMode,
-                    removeExpiredService, mNetwork);
+                    removeExpiredService, mNetwork, resolveInstanceName);
         }
     }
 }
