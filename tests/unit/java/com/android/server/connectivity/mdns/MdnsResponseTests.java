@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static android.net.InetAddresses.parseNumericAddress;
+
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
@@ -25,6 +27,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+
+import static java.util.Collections.emptyList;
 
 import android.net.Network;
 
@@ -329,5 +333,36 @@ public class MdnsResponseTests {
         MdnsResponse response2 = makeMdnsResponse(100, recordList);
         // Merging should not indicate any change.
         assertFalse(response.mergeRecordsFrom(response2));
+    }
+
+    @Test
+    public void copyConstructor() {
+        final MdnsResponse response = new MdnsResponse(/* now= */ 0, INTERFACE_INDEX, mNetwork);
+        final String[] hostname = new String[] { "MyHostname" };
+        final String[] serviceName = new String[] { "MyService", "_type", "_tcp", "local" };
+        final String[] serviceType = new String[] { "_type", "_tcp", "local" };
+        response.addPointerRecord(new MdnsPointerRecord(serviceType, 0L /* receiptTimeMillis */,
+                false /* cacheFlush */, 1234L /* ttlMillis */, serviceName));
+        response.setServiceRecord(new MdnsServiceRecord(serviceName, 0L /* receiptTimeMillis */,
+                true /* cacheFlush */, 1234L /* ttlMillis */, 0 /* servicePriority */,
+                0 /* serviceWeight */, 0 /* servicePort */, hostname));
+        response.setTextRecord(new MdnsTextRecord(serviceName, 0L /* receiptTimeMillis */,
+                true /* cacheFlush */, 1234L /* ttlMillis */, emptyList() /* entries */));
+        response.setInet4AddressRecord(new MdnsInetAddressRecord(
+                hostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
+                1234L /* ttlMillis */, parseNumericAddress("192.0.2.123")));
+        response.setInet6AddressRecord(new MdnsInetAddressRecord(
+                hostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
+                1234L /* ttlMillis */, parseNumericAddress("2001:db8::123")));
+        final MdnsResponse copy = new MdnsResponse(response);
+
+        assertEquals(response.getInet6AddressRecord(), copy.getInet6AddressRecord());
+        assertEquals(response.getInet4AddressRecord(), copy.getInet4AddressRecord());
+        assertEquals(response.getPointerRecords(), copy.getPointerRecords());
+        assertEquals(response.getServiceRecord(), copy.getServiceRecord());
+        assertEquals(response.getTextRecord(), copy.getTextRecord());
+        assertEquals(response.getRecords(), copy.getRecords());
+        assertEquals(response.getNetwork(), copy.getNetwork());
+        assertEquals(response.getInterfaceIndex(), copy.getInterfaceIndex());
     }
 }

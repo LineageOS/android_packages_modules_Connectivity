@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static android.net.InetAddresses.parseNumericAddress;
+
 import static com.android.server.connectivity.mdns.MdnsResponseDecoder.Clock;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
@@ -239,25 +241,29 @@ public class MdnsResponseDecoderTests {
 
     @Test
     public void testIsComplete() {
-        MdnsResponse response = responses.get(0);
+        MdnsResponse response = new MdnsResponse(responses.get(0));
         assertTrue(response.isComplete());
 
         response.clearPointerRecords();
         assertFalse(response.isComplete());
 
-        response = responses.get(0);
+        response = new MdnsResponse(responses.get(0));
         response.setInet4AddressRecord(null);
         assertFalse(response.isComplete());
 
-        response = responses.get(0);
+        response.setInet6AddressRecord(new MdnsInetAddressRecord(new String[] { "testhostname" },
+                0L /* receiptTimeMillis */, false /* cacheFlush */, 1234L /* ttlMillis */,
+                parseNumericAddress("2008:db1::123")));
+        assertTrue(response.isComplete());
+
         response.setInet6AddressRecord(null);
         assertFalse(response.isComplete());
 
-        response = responses.get(0);
+        response = new MdnsResponse(responses.get(0));
         response.setServiceRecord(null);
         assertFalse(response.isComplete());
 
-        response = responses.get(0);
+        response = new MdnsResponse(responses.get(0));
         response.setTextRecord(null);
         assertFalse(response.isComplete());
     }
