@@ -43,7 +43,6 @@ import java.net.DatagramPacket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
-import java.util.LinkedList;
 import java.util.List;
 
 @RunWith(DevSdkIgnoreRunner.class)
@@ -154,35 +153,22 @@ public class MdnsResponseDecoderTests {
     private static final String[] MATTER_SERVICE_TYPE =
             new String[] {MATTER_SERVICE_NAME, "_tcp", "local"};
 
-    private final List<MdnsResponse> responses = new LinkedList<>();
+    private List<MdnsResponse> responses;
 
     private final Clock mClock = mock(Clock.class);
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
         assertNotNull(data);
-        DatagramPacket packet = new DatagramPacket(data, data.length);
-        packet.setSocketAddress(
-                new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT));
-        responses.clear();
-        int errorCode = decoder.decode(
-                packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
-        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
+        responses = decode(decoder, data);
         assertEquals(1, responses.size());
     }
 
     @Test
-    public void testDecodeWithNullServiceType() {
+    public void testDecodeWithNullServiceType() throws Exception {
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
-        assertNotNull(data);
-        DatagramPacket packet = new DatagramPacket(data, data.length);
-        packet.setSocketAddress(
-                new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT));
-        responses.clear();
-        int errorCode = decoder.decode(
-                packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
-        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
+        responses = decode(decoder, data);
         assertEquals(2, responses.size());
     }
 
@@ -235,15 +221,9 @@ public class MdnsResponseDecoderTests {
     public void testDecodeIPv6AnswerPacket() throws IOException {
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
         assertNotNull(data6);
-        DatagramPacket packet = new DatagramPacket(data6, data6.length);
-        packet.setSocketAddress(
-                new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
-        responses.clear();
-        int errorCode = decoder.decode(
-                packet, responses, MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
-        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
-
+        responses = decode(decoder, data6);
+        assertEquals(1, responses.size());
         MdnsResponse response = responses.get(0);
         assertTrue(response.isComplete());
 
@@ -283,39 +263,33 @@ public class MdnsResponseDecoderTests {
     }
 
     @Test
-    public void decode_withInterfaceIndex_populatesInterfaceIndex() {
+    public void decode_withInterfaceIndex_populatesInterfaceIndex() throws Exception {
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
         assertNotNull(data6);
         DatagramPacket packet = new DatagramPacket(data6, data6.length);
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
-        responses.clear();
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(data6, data6.length);
+        assertNotNull(parsedPacket);
+
         final Network network = mock(Network.class);
-        int errorCode = decoder.decode(
-                packet, responses, /* interfaceIndex= */ 10, network);
-        assertEquals(errorCode, MdnsResponseDecoder.SUCCESS);
+        responses = decoder.buildResponses(parsedPacket,
+                /* interfaceIndex= */ 10, network /* expireOnExit= */);
+
         assertEquals(responses.size(), 1);
         assertEquals(responses.get(0).getInterfaceIndex(), 10);
         assertEquals(network, responses.get(0).getNetwork());
     }
 
     @Test
-    public void decode_singleHostname_multipleSrvRecords_flagEnabled_multipleCompleteResponses() {
+    public void decode_singleHostname_multipleSrvRecords_flagEnabled_multipleCompleteResponses()
+            throws Exception {
         //MdnsScannerConfigsFlagsImpl.allowMultipleSrvRecordsPerHost.override(true);
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, MATTER_SERVICE_TYPE);
         assertNotNull(matterDuplicateHostname);
 
-        DatagramPacket packet =
-                new DatagramPacket(matterDuplicateHostname, matterDuplicateHostname.length);
-
-        packet.setSocketAddress(
-                new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
-
-        responses.clear();
-        int errorCode = decoder.decode(
-                packet, responses, /* interfaceIndex= */ 0, mock(Network.class));
-        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
+        responses = decode(decoder, matterDuplicateHostname);
 
         // This should emit two records:
         assertEquals(2, responses.size());
@@ -336,21 +310,13 @@ public class MdnsResponseDecoderTests {
 
     @Test
     @Ignore("MdnsConfigs is not configurable currently.")
-    public void decode_singleHostname_multipleSrvRecords_flagDisabled_singleCompleteResponse() {
+    public void decode_singleHostname_multipleSrvRecords_flagDisabled_singleCompleteResponse()
+            throws Exception {
         //MdnsScannerConfigsFlagsImpl.allowMultipleSrvRecordsPerHost.override(false);
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, MATTER_SERVICE_TYPE);
         assertNotNull(matterDuplicateHostname);
 
-        DatagramPacket packet =
-                new DatagramPacket(matterDuplicateHostname, matterDuplicateHostname.length);
-
-        packet.setSocketAddress(
-                new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
-
-        responses.clear();
-        int errorCode = decoder.decode(
-                packet, responses, /* interfaceIndex= */ 0, mock(Network.class));
-        assertEquals(MdnsResponseDecoder.SUCCESS, errorCode);
+        responses = decode(decoder, matterDuplicateHostname);
 
         // This should emit only two records:
         assertEquals(2, responses.size());
@@ -358,5 +324,15 @@ public class MdnsResponseDecoderTests {
         // But only the first is complete:
         assertTrue(responses.get(0).isComplete());
         assertFalse(responses.get(1).isComplete());
+    }
+
+
+    private List<MdnsResponse> decode(MdnsResponseDecoder decoder, byte[] data)
+            throws MdnsPacket.ParseException {
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(data, data.length);
+        assertNotNull(parsedPacket);
+
+        return decoder.buildResponses(parsedPacket,
+                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
     }
 }
