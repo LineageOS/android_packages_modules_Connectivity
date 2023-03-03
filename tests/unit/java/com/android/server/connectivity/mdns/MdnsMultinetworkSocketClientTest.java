@@ -19,9 +19,9 @@ package com.android.server.connectivity.mdns;
 import static com.android.server.connectivity.mdns.MdnsSocketProvider.SocketCallback;
 import static com.android.server.connectivity.mdns.MulticastPacketReader.PacketHandler;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.timeout;
@@ -146,16 +146,23 @@ public class MdnsMultinetworkSocketClientTest {
         // Send the data and verify the received records.
         final PacketHandler handler = handlerCaptor.getValue();
         handler.handlePacket(data, data.length, null /* src */);
-        final ArgumentCaptor<MdnsResponse> responseCaptor =
-                ArgumentCaptor.forClass(MdnsResponse.class);
-        verify(mCallback).onResponseReceived(responseCaptor.capture());
-        final MdnsResponse response = responseCaptor.getValue();
-        assertTrue(response.hasPointerRecords());
-        assertArrayEquals("_testtype._tcp.local".split("\\."),
-                response.getPointerRecords().get(0).getName());
-        assertTrue(response.hasServiceRecord());
-        assertEquals("testservice", response.getServiceRecord().getServiceInstanceName());
-        assertEquals("Android.local".split("\\."),
-                response.getServiceRecord().getServiceHost());
+        final ArgumentCaptor<MdnsPacket> responseCaptor =
+                ArgumentCaptor.forClass(MdnsPacket.class);
+        verify(mCallback).onResponseReceived(responseCaptor.capture(), anyInt(), any());
+        final MdnsPacket response = responseCaptor.getValue();
+        assertEquals(0, response.questions.size());
+        assertEquals(0, response.additionalRecords.size());
+        assertEquals(0, response.authorityRecords.size());
+
+        final String[] serviceName = "testservice._testtype._tcp.local".split("\\.");
+        assertEquals(List.of(
+                new MdnsPointerRecord("_testtype._tcp.local".split("\\."),
+                        0L /* receiptTimeMillis */, false /* cacheFlush */, 4500000 /* ttlMillis */,
+                        serviceName),
+                new MdnsServiceRecord(serviceName, 0L /* receiptTimeMillis */,
+                        false /* cacheFlush */, 4500000 /* ttlMillis */, 0 /* servicePriority */,
+                        0 /* serviceWeight */, 31234 /* servicePort */,
+                        new String[] { "Android", "local" } /* serviceHost */)
+        ), response.answers);
     }
 }

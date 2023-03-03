@@ -24,7 +24,6 @@ import android.os.SystemClock;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.EOFException;
-import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -82,34 +81,16 @@ public class MdnsResponseDecoder {
 
     /**
      * Decodes all mDNS responses for the desired service type from a packet. The class does not
-     * check
-     * the responses for completeness; the caller should do that.
-     *
-     * @param packet The packet to read from.
-     * @param interfaceIndex the network interface index (or {@link
-     *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
-     * @param network the network at which the packet was received, or null if it is unknown.
-     * @return A list of mDNS responses, or null if the packet contained no appropriate responses.
-     */
-    public int decode(@NonNull DatagramPacket packet, @NonNull List<MdnsResponse> responses,
-            int interfaceIndex, @Nullable Network network) {
-        return decode(packet.getData(), packet.getLength(), responses, interfaceIndex, network);
-    }
-
-    /**
-     * Decodes all mDNS responses for the desired service type from a packet. The class does not
-     * check
-     * the responses for completeness; the caller should do that.
+     * check the responses for completeness; the caller should do that.
      *
      * @param recvbuf The received data buffer to read from.
      * @param length The length of received data buffer.
-     * @param interfaceIndex the network interface index (or {@link
-     *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
-     * @param network the network at which the packet was received, or null if it is unknown.
-     * @return A list of mDNS responses, or null if the packet contained no appropriate responses.
+     * @return A decoded {@link MdnsPacket}.
+     * @throws MdnsPacket.ParseException if a response packet could not be parsed.
      */
-    public int decode(@NonNull byte[] recvbuf, int length, @NonNull List<MdnsResponse> responses,
-            int interfaceIndex, @Nullable Network network) {
+    @NonNull
+    public static MdnsPacket parseResponse(@NonNull byte[] recvbuf, int length)
+            throws MdnsPacket.ParseException {
         MdnsPacketReader reader = new MdnsPacketReader(recvbuf, length);
 
         final MdnsPacket mdnsPacket;
@@ -117,27 +98,43 @@ public class MdnsResponseDecoder {
             reader.readUInt16(); // transaction ID (not used)
             int flags = reader.readUInt16();
             if ((flags & MdnsConstants.FLAGS_RESPONSE_MASK) != MdnsConstants.FLAGS_RESPONSE) {
-                return MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE;
+                throw new MdnsPacket.ParseException(
+                        MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE, "Not a response", null);
             }
 
             mdnsPacket = MdnsPacket.parseRecordsSection(reader, flags);
             if (mdnsPacket.answers.size() < 1) {
-                return MdnsResponseErrorCode.ERROR_NO_ANSWERS;
+                throw new MdnsPacket.ParseException(
+                        MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE, "Response has no answers",
+                        null);
             }
+            return mdnsPacket;
         } catch (EOFException e) {
-            LOGGER.e("Reached the end of the mDNS response unexpectedly.", e);
-            return MdnsResponseErrorCode.ERROR_END_OF_FILE;
-        } catch (MdnsPacket.ParseException e) {
-            LOGGER.e(e.getMessage(), e);
-            return e.code;
+            throw new MdnsPacket.ParseException(MdnsResponseErrorCode.ERROR_END_OF_FILE,
+                    "Reached the end of the mDNS response unexpectedly.", e);
         }
+    }
 
+    /**
+     * Builds mDNS responses for the desired service type from a packet.
+     *
+     * The class does not check the responses for completeness; the caller should do that.
+     *
+     * @param mdnsPacket The packet to read from.
+     * @param interfaceIndex the network interface index (or {@link
+     *     MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received.
+     * @param network the network at which the packet was received, or null if it is unknown.
+     */
+    public List<MdnsResponse> buildResponses(@NonNull MdnsPacket mdnsPacket, int interfaceIndex,
+            @Nullable Network network) {
         final ArrayList<MdnsRecord> records = new ArrayList<>(
                 mdnsPacket.questions.size() + mdnsPacket.answers.size()
                         + mdnsPacket.authorityRecords.size() + mdnsPacket.additionalRecords.size());
         records.addAll(mdnsPacket.answers);
         records.addAll(mdnsPacket.authorityRecords);
         records.addAll(mdnsPacket.additionalRecords);
+
+        final ArrayList<MdnsResponse> responses = new ArrayList<>();
 
         // The response records are structured in a hierarchy, where some records reference
         // others, as follows:
@@ -224,8 +221,7 @@ public class MdnsResponseDecoder {
                 }
             }
         }
-
-        return SUCCESS;
+        return responses;
     }
 
     private static void assignInetRecord(MdnsResponse response, MdnsInetAddressRecord inetRecord) {
