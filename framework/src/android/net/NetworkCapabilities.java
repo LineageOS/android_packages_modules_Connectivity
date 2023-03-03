@@ -757,10 +757,10 @@ public final class NetworkCapabilities implements Parcelable {
                     NET_CAPABILITY_PARTIAL_CONNECTIVITY);
 
     /**
-     * Capabilities that are allowed for test networks. This list must be set so that it is safe
-     * for an unprivileged user to create a network with these capabilities via shell. As such,
-     * it must never contain capabilities that are generally useful to the system, such as
-     * INTERNET, IMS, SUPL, etc.
+     * Capabilities that are allowed for all test networks. This list must be set so that it is safe
+     * for an unprivileged user to create a network with these capabilities via shell. As such, it
+     * must never contain capabilities that are generally useful to the system, such as INTERNET,
+     * IMS, SUPL, etc.
      */
     private static final long TEST_NETWORKS_ALLOWED_CAPABILITIES =
             BitUtils.packBitList(
@@ -772,6 +772,14 @@ public final class NetworkCapabilities implements Parcelable {
             NET_CAPABILITY_NOT_CONGESTED,
             NET_CAPABILITY_NOT_SUSPENDED,
             NET_CAPABILITY_NOT_VCN_MANAGED);
+
+    /**
+     * Extra allowed capabilities for test networks that do not have TRANSPORT_CELLULAR. Test
+     * networks with TRANSPORT_CELLULAR must not have those capabilities in order to mitigate
+     * the risk of being used by running apps.
+     */
+    private static final long TEST_NETWORKS_EXTRA_ALLOWED_CAPABILITIES_ON_NON_CELL =
+            BitUtils.packBitList(NET_CAPABILITY_CBS, NET_CAPABILITY_DUN, NET_CAPABILITY_RCS);
 
     /**
      * Adds the given capability to this {@code NetworkCapability} instance.
@@ -1133,7 +1141,13 @@ public final class NetworkCapabilities implements Parcelable {
             // If the test network is restricted, then it may declare any transport.
             mTransportTypes = (originalTransportTypes | (1 << TRANSPORT_TEST));
         }
+
         mNetworkCapabilities = originalCapabilities & TEST_NETWORKS_ALLOWED_CAPABILITIES;
+        if (!hasTransport(TRANSPORT_CELLULAR)) {
+            mNetworkCapabilities |=
+                    (originalCapabilities & TEST_NETWORKS_EXTRA_ALLOWED_CAPABILITIES_ON_NON_CELL);
+        }
+
         mNetworkSpecifier = originalSpecifier;
         mSignalStrength = originalSignalStrength;
         mTransportInfo = originalTransportInfo;
