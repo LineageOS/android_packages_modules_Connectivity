@@ -25,9 +25,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +70,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /** Tests for {@link MdnsServiceTypeClient}. */
 @RunWith(DevSdkIgnoreRunner.class)
@@ -888,6 +891,102 @@ public class MdnsServiceTypeClientTests {
                 5354 /* port */,
                 Collections.singletonList("ABCDE") /* subTypes */,
                 Collections.singletonMap("key", "value") /* attributes */,
+                INTERFACE_INDEX,
+                mockNetwork);
+    }
+
+    @Test
+    public void testProcessResponse_Resolve() throws Exception {
+        client = new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor);
+
+        final String instanceName = "service-instance";
+        final String[] hostname = new String[] { "testhost "};
+        final String ipV4Address = "192.0.2.0";
+        final String ipV6Address = "2001:db8::";
+
+        final MdnsSearchOptions resolveOptions = MdnsSearchOptions.newBuilder()
+                .setResolveInstanceName(instanceName).build();
+
+        client.startSendAndReceive(mockListenerOne, resolveOptions);
+        InOrder inOrder = inOrder(mockListenerOne, mockSocketClient);
+
+        // Verify a query for SRV/TXT was sent, but no PTR query
+        final ArgumentCaptor<DatagramPacket> srvTxtQueryCaptor =
+                ArgumentCaptor.forClass(DatagramPacket.class);
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
+        // Send twice for IPv4 and IPv6
+        inOrder.verify(mockSocketClient, times(2)).sendUnicastPacket(srvTxtQueryCaptor.capture(),
+                eq(null) /* network */);
+
+        final MdnsPacket srvTxtQueryPacket = MdnsPacket.parse(
+                new MdnsPacketReader(srvTxtQueryCaptor.getValue()));
+        final List<MdnsRecord> srvTxtQuestions = srvTxtQueryPacket.questions;
+
+        final String[] serviceName = Stream.concat(Stream.of(instanceName),
+                Arrays.stream(SERVICE_TYPE_LABELS)).toArray(String[]::new);
+        assertFalse(srvTxtQuestions.stream().anyMatch(q -> q.getType() == MdnsRecord.TYPE_PTR));
+        assertTrue(srvTxtQuestions.stream().anyMatch(q ->
+                q.getType() == MdnsRecord.TYPE_SRV && Arrays.equals(q.name, serviceName)));
+        assertTrue(srvTxtQuestions.stream().anyMatch(q ->
+                q.getType() == MdnsRecord.TYPE_TXT && Arrays.equals(q.name, serviceName)));
+
+        // Process a response with SRV+TXT
+        final MdnsPacket srvTxtResponse = new MdnsPacket(
+                0 /* flags */,
+                Collections.emptyList() /* questions */,
+                List.of(
+                        new MdnsServiceRecord(serviceName, 0L /* receiptTimeMillis */,
+                                true /* cacheFlush */, TEST_TTL, 0 /* servicePriority */,
+                                0 /* serviceWeight */, 1234 /* servicePort */, hostname),
+                        new MdnsTextRecord(serviceName, 0L /* receiptTimeMillis */,
+                                true /* cacheFlush */, TEST_TTL,
+                                Collections.emptyList() /* entries */)),
+                Collections.emptyList() /* authorityRecords */,
+                Collections.emptyList() /* additionalRecords */);
+
+        client.processResponse(srvTxtResponse, INTERFACE_INDEX, mockNetwork);
+
+        // Expect a query for A/AAAA
+        final ArgumentCaptor<DatagramPacket> addressQueryCaptor =
+                ArgumentCaptor.forClass(DatagramPacket.class);
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
+        inOrder.verify(mockSocketClient, times(2)).sendMulticastPacket(addressQueryCaptor.capture(),
+                eq(null) /* network */);
+
+        final MdnsPacket addressQueryPacket = MdnsPacket.parse(
+                new MdnsPacketReader(addressQueryCaptor.getValue()));
+        final List<MdnsRecord> addressQueryQuestions = addressQueryPacket.questions;
+        assertTrue(addressQueryQuestions.stream().anyMatch(q ->
+                q.getType() == MdnsRecord.TYPE_A && Arrays.equals(q.name, hostname)));
+        assertTrue(addressQueryQuestions.stream().anyMatch(q ->
+                q.getType() == MdnsRecord.TYPE_AAAA && Arrays.equals(q.name, hostname)));
+
+        // Process a response with address records
+        final MdnsPacket addressResponse = new MdnsPacket(
+                0 /* flags */,
+                Collections.emptyList() /* questions */,
+                List.of(
+                        new MdnsInetAddressRecord(hostname, 0L /* receiptTimeMillis */,
+                                true /* cacheFlush */, TEST_TTL,
+                                InetAddresses.parseNumericAddress(ipV4Address)),
+                        new MdnsInetAddressRecord(hostname, 0L /* receiptTimeMillis */,
+                                true /* cacheFlush */, TEST_TTL,
+                                InetAddresses.parseNumericAddress(ipV6Address))),
+                Collections.emptyList() /* authorityRecords */,
+                Collections.emptyList() /* additionalRecords */);
+
+        inOrder.verify(mockListenerOne, never()).onServiceNameDiscovered(any());
+        client.processResponse(addressResponse, INTERFACE_INDEX, mockNetwork);
+
+        inOrder.verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        verifyServiceInfo(serviceInfoCaptor.getValue(),
+                instanceName,
+                SERVICE_TYPE_LABELS,
+                ipV4Address,
+                ipV6Address,
+                1234 /* port */,
+                Collections.emptyList() /* subTypes */,
+                Collections.emptyMap() /* attributes */,
                 INTERFACE_INDEX,
                 mockNetwork);
     }
