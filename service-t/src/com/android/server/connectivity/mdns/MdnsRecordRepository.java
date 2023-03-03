@@ -47,7 +47,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -90,15 +89,16 @@ public class MdnsRecordRepository {
     @NonNull
     private final Looper mLooper;
     @NonNull
-    private String[] mDeviceHostname;
+    private final String[] mDeviceHostname;
 
-    public MdnsRecordRepository(@NonNull Looper looper) {
-        this(looper, new Dependencies());
+    public MdnsRecordRepository(@NonNull Looper looper, @NonNull String[] deviceHostname) {
+        this(looper, new Dependencies(), deviceHostname);
     }
 
     @VisibleForTesting
-    public MdnsRecordRepository(@NonNull Looper looper, @NonNull Dependencies deps) {
-        mDeviceHostname = deps.getHostname();
+    public MdnsRecordRepository(@NonNull Looper looper, @NonNull Dependencies deps,
+            @NonNull String[] deviceHostname) {
+        mDeviceHostname = deviceHostname;
         mLooper = looper;
     }
 
@@ -107,25 +107,6 @@ public class MdnsRecordRepository {
      */
     @VisibleForTesting
     public static class Dependencies {
-        /**
-         * Get a unique hostname to be used by the device.
-         */
-        @NonNull
-        public String[] getHostname() {
-            // Generate a very-probably-unique hostname. This allows minimizing possible conflicts
-            // to the point that probing for it is no longer necessary (as per RFC6762 8.1 last
-            // paragraph), and does not leak more information than what could already be obtained by
-            // looking at the mDNS packets source address.
-            // This differs from historical behavior that just used "Android.local" for many
-            // devices, creating a lot of conflicts.
-            // Having a different hostname per interface is an acceptable option as per RFC6762 14.
-            // This hostname will change every time the interface is reconnected, so this does not
-            // allow tracking the device.
-            // TODO: consider deriving a hostname from other sources, such as the IPv6 addresses
-            // (reusing the same privacy-protecting mechanics).
-            return new String[] {
-                    "Android_" + UUID.randomUUID().toString().replace("-", ""), LOCAL_TLD };
-        }
 
         /**
          * @see NetworkInterface#getInetAddresses().
