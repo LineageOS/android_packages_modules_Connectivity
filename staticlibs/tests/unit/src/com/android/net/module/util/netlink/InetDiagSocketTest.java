@@ -16,6 +16,8 @@
 
 package com.android.net.module.util.netlink;
 
+import static android.os.Process.ROOT_UID;
+import static android.os.Process.SHELL_UID;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.IPPROTO_TCP;
@@ -34,6 +36,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import android.net.InetAddresses;
+import android.util.ArraySet;
+import android.util.Range;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -46,8 +50,11 @@ import org.junit.runner.RunWith;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.List;
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -542,5 +549,144 @@ public class InetDiagSocketTest {
                 new InetSocketAddress(dstAddr, 38415),
                 7  /* ifIndex */,
                 88 /* cookie */);
+    }
+
+    private void doTestIsLoopback(InetAddress srcAddr, InetAddress dstAddr, boolean expected) {
+        final InetDiagMessage inetDiagMsg = new InetDiagMessage(new StructNlMsgHdr());
+        inetDiagMsg.inetDiagMsg.id = new StructInetDiagSockId(
+                new InetSocketAddress(srcAddr, 43031),
+                new InetSocketAddress(dstAddr, 38415)
+        );
+
+        assertEquals(expected, InetDiagMessage.isLoopback(inetDiagMsg));
+    }
+
+    @Test
+    public void testIsLoopback() {
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("127.0.0.1"),
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                true
+        );
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                InetAddresses.parseNumericAddress("127.7.7.7"),
+                true
+        );
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("::1"),
+                InetAddresses.parseNumericAddress("::1"),
+                true
+        );
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("::1"),
+                InetAddresses.parseNumericAddress("2001:db8::1"),
+                true
+        );
+    }
+
+    @Test
+    public void testIsLoopbackSameSrcDstAddress()  {
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                true
+        );
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("2001:db8::1"),
+                InetAddresses.parseNumericAddress("2001:db8::1"),
+                true
+        );
+    }
+
+    @Test
+    public void testIsLoopbackNonLoopbackSocket()  {
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                InetAddresses.parseNumericAddress("192.0.2.2"),
+                false
+        );
+        doTestIsLoopback(
+                InetAddresses.parseNumericAddress("2001:db8::1"),
+                InetAddresses.parseNumericAddress("2001:db8::2"),
+                false
+        );
+    }
+
+    @Test
+    public void testIsLoopbackV4MappedV6() throws UnknownHostException {
+        // ::FFFF:127.1.2.3
+        final byte[] addrLoopbackByte = {
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0xff, (byte) 0xff,
+                (byte) 0x7f, (byte) 0x01, (byte) 0x02, (byte) 0x03,
+        };
+        // ::FFFF:192.0.2.1
+        final byte[] addrNonLoopbackByte1 = {
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0xff, (byte) 0xff,
+                (byte) 0xc0, (byte) 0x00, (byte) 0x02, (byte) 0x01,
+        };
+        // ::FFFF:192.0.2.2
+        final byte[] addrNonLoopbackByte2 = {
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0xff, (byte) 0xff,
+                (byte) 0xc0, (byte) 0x00, (byte) 0x02, (byte) 0x02,
+        };
+
+        final Inet6Address addrLoopback = Inet6Address.getByAddress(null, addrLoopbackByte, -1);
+        final Inet6Address addrNonLoopback1 =
+                Inet6Address.getByAddress(null, addrNonLoopbackByte1, -1);
+        final Inet6Address addrNonLoopback2 =
+                Inet6Address.getByAddress(null, addrNonLoopbackByte2, -1);
+
+        doTestIsLoopback(addrLoopback, addrNonLoopback1, true);
+        doTestIsLoopback(addrNonLoopback1, addrNonLoopback2, false);
+        doTestIsLoopback(addrNonLoopback1, addrNonLoopback1, true);
+    }
+
+    private void doTestContainsUid(final int uid, final Set<Range<Integer>> ranges,
+            final boolean expected) {
+        final InetDiagMessage inetDiagMsg = new InetDiagMessage(new StructNlMsgHdr());
+        inetDiagMsg.inetDiagMsg.idiag_uid = uid;
+        assertEquals(expected, InetDiagMessage.containsUid(inetDiagMsg, ranges));
+    }
+
+    @Test
+    public void testContainsUid() {
+        doTestContainsUid(77 /* uid */,
+                new ArraySet<>(List.of(new Range<>(0, 100))),
+                true /* expected */);
+        doTestContainsUid(77 /* uid */,
+                new ArraySet<>(List.of(new Range<>(77, 77), new Range<>(100, 200))),
+                true /* expected */);
+
+        doTestContainsUid(77 /* uid */,
+                new ArraySet<>(List.of(new Range<>(100, 200))),
+                false /* expected */);
+        doTestContainsUid(77 /* uid */,
+                new ArraySet<>(List.of(new Range<>(0, 76), new Range<>(78, 100))),
+                false /* expected */);
+    }
+
+    private void doTestIsAdbSocket(final int uid, final boolean expected) {
+        final InetDiagMessage inetDiagMsg = new InetDiagMessage(new StructNlMsgHdr());
+        inetDiagMsg.inetDiagMsg.idiag_uid = uid;
+        inetDiagMsg.inetDiagMsg.id = new StructInetDiagSockId(
+                new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::1"), 38417),
+                new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::2"), 38415)
+        );
+        assertEquals(expected, InetDiagMessage.isAdbSocket(inetDiagMsg));
+    }
+
+    @Test
+    public void testIsAdbSocket() {
+        final int appUid = 10108;
+        doTestIsAdbSocket(SHELL_UID,  true /* expected */);
+        doTestIsAdbSocket(ROOT_UID, false /* expected */);
+        doTestIsAdbSocket(appUid, false /* expected */);
     }
 }
