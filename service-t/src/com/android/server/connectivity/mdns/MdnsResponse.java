@@ -16,16 +16,19 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 /** An mDNS response. */
 public class MdnsResponse {
@@ -38,37 +41,65 @@ public class MdnsResponse {
     private long lastUpdateTime;
     private final int interfaceIndex;
     @Nullable private final Network network;
+    @NonNull private final String[] serviceName;
 
     /** Constructs a new, empty response. */
-    public MdnsResponse(long now, int interfaceIndex, @Nullable Network network) {
+    public MdnsResponse(long now, @NonNull String[] serviceName, int interfaceIndex,
+            @Nullable Network network) {
         lastUpdateTime = now;
         records = new LinkedList<>();
         pointerRecords = new LinkedList<>();
         this.interfaceIndex = interfaceIndex;
         this.network = network;
+        this.serviceName = serviceName;
     }
 
-    // This generic typed helper compares records for equality.
-    // Returns True if records are the same.
-    private <T> boolean recordsAreSame(T a, T b) {
-        return ((a == null) && (b == null)) || ((a != null) && (b != null) && a.equals(b));
+    public MdnsResponse(@NonNull MdnsResponse base) {
+        records = new ArrayList<>(base.records);
+        pointerRecords = new ArrayList<>(base.pointerRecords);
+        serviceRecord = base.serviceRecord;
+        textRecord = base.textRecord;
+        inet4AddressRecord = base.inet4AddressRecord;
+        inet6AddressRecord = base.inet6AddressRecord;
+        lastUpdateTime = base.lastUpdateTime;
+        serviceName = base.serviceName;
+        interfaceIndex = base.interfaceIndex;
+        network = base.network;
+    }
+
+    /**
+     * Compare records for equality, including their TTL.
+     *
+     * MdnsRecord#equals ignores TTL and receiptTimeMillis, but methods in this class need to update
+     * records when the TTL changes (especially for goodbye announcements).
+     */
+    private boolean recordsAreSame(MdnsRecord a, MdnsRecord b) {
+        if (!Objects.equals(a, b)) return false;
+        return a == null || a.getTtl() == b.getTtl();
     }
 
     /**
      * Adds a pointer record.
      *
      * @return <code>true</code> if the record was added, or <code>false</code> if a matching
-     * pointer
-     * record is already present in the response.
+     * pointer record is already present in the response with the same TTL.
      */
     public synchronized boolean addPointerRecord(MdnsPointerRecord pointerRecord) {
-        if (!pointerRecords.contains(pointerRecord)) {
-            pointerRecords.add(pointerRecord);
-            records.add(pointerRecord);
-            return true;
+        if (!Arrays.equals(serviceName, pointerRecord.getPointer())) {
+            throw new IllegalArgumentException(
+                    "Pointer records for different service names cannot be added");
         }
-
-        return false;
+        final int existing = pointerRecords.indexOf(pointerRecord);
+        if (existing >= 0) {
+            if (recordsAreSame(pointerRecord, pointerRecords.get(existing))) {
+                return false;
+            }
+            pointerRecords.remove(existing);
+            records.remove(existing);
+        }
+        pointerRecords.add(pointerRecord);
+        records.add(pointerRecord);
+        return true;
     }
 
     /** Gets the pointer records. */
@@ -178,6 +209,7 @@ public class MdnsResponse {
         }
         if (this.inet4AddressRecord != null) {
             records.remove(this.inet4AddressRecord);
+            this.inet4AddressRecord = null;
         }
         if (newInet4AddressRecord != null && newInet4AddressRecord.getInet4Address() != null) {
             this.inet4AddressRecord = newInet4AddressRecord;
@@ -203,6 +235,7 @@ public class MdnsResponse {
         }
         if (this.inet6AddressRecord != null) {
             records.remove(this.inet6AddressRecord);
+            this.inet6AddressRecord = null;
         }
         if (newInet6AddressRecord != null && newInet6AddressRecord.getInet6Address() != null) {
             this.inet6AddressRecord = newInet6AddressRecord;
@@ -242,87 +275,42 @@ public class MdnsResponse {
     }
 
     /**
-     * Merges any records that are present in another response into this one.
+     * Drop address records if they are for a hostname that does not match the service record.
      *
-     * @return <code>true</code> if any records were added or updated.
+     * @return True if the records were dropped.
      */
-    public synchronized boolean mergeRecordsFrom(MdnsResponse other) {
-        lastUpdateTime = other.lastUpdateTime;
+    public synchronized boolean dropUnmatchedAddressRecords() {
+        if (this.serviceRecord == null) return false;
+        boolean dropAddressRecords = false;
 
-        boolean updated = false;
-
-        List<MdnsPointerRecord> pointerRecords = other.getPointerRecords();
-        if (pointerRecords != null) {
-            for (MdnsPointerRecord pointerRecord : pointerRecords) {
-                if (addPointerRecord(pointerRecord)) {
-                    updated = true;
-                }
+        if (this.inet4AddressRecord != null) {
+            if (!Arrays.equals(
+                    this.serviceRecord.getServiceHost(), this.inet4AddressRecord.getName())) {
+                dropAddressRecords = true;
+            }
+        }
+        if (this.inet6AddressRecord != null) {
+            if (!Arrays.equals(
+                    this.serviceRecord.getServiceHost(), this.inet6AddressRecord.getName())) {
+                dropAddressRecords = true;
             }
         }
 
-        MdnsServiceRecord serviceRecord = other.getServiceRecord();
-        if (serviceRecord != null) {
-            if (setServiceRecord(serviceRecord)) {
-                updated = true;
-            }
+        if (dropAddressRecords) {
+            setInet4AddressRecord(null);
+            setInet6AddressRecord(null);
+            return true;
         }
-
-        MdnsTextRecord textRecord = other.getTextRecord();
-        if (textRecord != null) {
-            if (setTextRecord(textRecord)) {
-                updated = true;
-            }
-        }
-
-        MdnsInetAddressRecord otherInet4AddressRecord = other.getInet4AddressRecord();
-        if (otherInet4AddressRecord != null && otherInet4AddressRecord.getInet4Address() != null) {
-            if (setInet4AddressRecord(otherInet4AddressRecord)) {
-                updated = true;
-            }
-        }
-
-        MdnsInetAddressRecord otherInet6AddressRecord = other.getInet6AddressRecord();
-        if (otherInet6AddressRecord != null && otherInet6AddressRecord.getInet6Address() != null) {
-            if (setInet6AddressRecord(otherInet6AddressRecord)) {
-                updated = true;
-            }
-        }
-
-        // If the hostname in the service record no longer matches the hostname in either of the
-        // address records, then drop the address records.
-        if (this.serviceRecord != null) {
-            boolean dropAddressRecords = false;
-
-            if (this.inet4AddressRecord != null) {
-                if (!Arrays.equals(
-                        this.serviceRecord.getServiceHost(), this.inet4AddressRecord.getName())) {
-                    dropAddressRecords = true;
-                }
-            }
-            if (this.inet6AddressRecord != null) {
-                if (!Arrays.equals(
-                        this.serviceRecord.getServiceHost(), this.inet6AddressRecord.getName())) {
-                    dropAddressRecords = true;
-                }
-            }
-
-            if (dropAddressRecords) {
-                setInet4AddressRecord(null);
-                setInet6AddressRecord(null);
-                updated = true;
-            }
-        }
-
-        return updated;
+        return false;
     }
 
     /**
-     * Tests if the response is complete. A response is considered complete if it contains PTR, SRV,
-     * TXT, and A (for IPv4) or AAAA (for IPv6) records.
+     * Tests if the response is complete. A response is considered complete if it contains SRV,
+     * TXT, and A (for IPv4) or AAAA (for IPv6) records. The service type->name mapping is always
+     * known when constructing a MdnsResponse, so this may return true when there is no PTR record.
      */
     public synchronized boolean isComplete() {
-        return !pointerRecords.isEmpty()
-                && (serviceRecord != null)
+        return (serviceRecord != null)
                 && (textRecord != null)
                 && (inet4AddressRecord != null || inet6AddressRecord != null);
     }
@@ -331,12 +319,14 @@ public class MdnsResponse {
      * Returns the key for this response. The key uniquely identifies the response by its service
      * name.
      */
-    public synchronized String getServiceInstanceName() {
-        if (pointerRecords.isEmpty()) {
-            return null;
-        }
-        String[] pointers = pointerRecords.get(0).getPointer();
-        return ((pointers != null) && (pointers.length > 0)) ? pointers[0] : null;
+    @Nullable
+    public String getServiceInstanceName() {
+        return serviceName.length > 0 ? serviceName[0] : null;
+    }
+
+    @NonNull
+    public String[] getServiceName() {
+        return serviceName;
     }
 
     /**
