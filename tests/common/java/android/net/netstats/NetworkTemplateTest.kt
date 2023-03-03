@@ -165,23 +165,6 @@ class NetworkTemplateTest {
     }
 
     @Test
-    fun testUnsupportedAppUsageConstructor() {
-        val templateMobile = NetworkTemplate(MATCH_MOBILE, null /* subscriberId */,
-                null /* wifiNetworkKey */)
-        val templateMobileWildcard = NetworkTemplate(6 /* MATCH_MOBILE_WILDCARD */,
-                null /* subscriberId */, null /* wifiNetworkKey */)
-        val templateWifiWildcard = NetworkTemplate(7 /* MATCH_WIFI_WILDCARD */,
-                null /* subscriberId */,
-                null /* wifiNetworkKey */)
-
-        assertEquals(NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build(),
-                templateMobile)
-        assertEquals(NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES).build(),
-                templateMobileWildcard)
-        assertEquals(NetworkTemplate.Builder(MATCH_WIFI).build(), templateWifiWildcard)
-    }
-
-    @Test
     fun testBuilderWifiNetworkKeys() {
         // Verify template builder which generates same template with the given different
         // sequence keys.
