@@ -21,6 +21,7 @@ import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
 
+import static com.android.server.NsdService.constructServiceType;
 import static com.android.testutils.ContextUtils.mockService;
 
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
@@ -1179,6 +1180,19 @@ public class NsdServiceTest {
                 request.getServiceName().equals(ns.getServiceName())
                         && request.getServiceType().equals(ns.getServiceType())));
         verify(mSocketProvider, timeout(CLEANUP_DELAY_MS + TIMEOUT_MS)).requestStopWhenInactive();
+    }
+
+    @Test
+    public void testConstructServiceType() {
+        final String serviceType1 = "test._tcp";
+        final String serviceType2 = "_test._quic";
+        final String serviceType3 = "_123._udp.";
+        final String serviceType4 = "_TEST._999._tcp.";
+
+        assertEquals(null, constructServiceType(serviceType1));
+        assertEquals(null, constructServiceType(serviceType2));
+        assertEquals("_123._udp", constructServiceType(serviceType3));
+        assertEquals("_TEST._sub._999._tcp", constructServiceType(serviceType4));
     }
 
     private void waitForIdle() {

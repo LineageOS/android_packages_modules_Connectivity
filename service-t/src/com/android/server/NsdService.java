@@ -496,31 +496,6 @@ public class NsdService extends INsdManager.Stub {
                 clientInfo.mClientIdForServiceUpdates = 0;
             }
 
-            /**
-             * Check the given service type is valid and construct it to a service type
-             * which can use for discovery / resolution service.
-             *
-             * <p> The valid service type should be 2 labels, or 3 labels if the query is for a
-             * subtype (see RFC6763 7.1). Each label is up to 63 characters and must start with an
-             * underscore; they are alphanumerical characters or dashes or underscore, except the
-             * last one that is just alphanumerical. The last label must be _tcp or _udp.
-             *
-             * @param serviceType the request service type for discovery / resolution service
-             * @return constructed service type or null if the given service type is invalid.
-             */
-            @Nullable
-            private String constructServiceType(String serviceType) {
-                if (TextUtils.isEmpty(serviceType)) return null;
-
-                final Pattern serviceTypePattern = Pattern.compile(
-                        "^(_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]\\.)?"
-                                + "(_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]\\._(?:tcp|udp))$");
-                final Matcher matcher = serviceTypePattern.matcher(serviceType);
-                if (!matcher.matches()) return null;
-                return matcher.group(1) == null
-                        ? serviceType
-                        : matcher.group(1) + "_sub." + matcher.group(2);
-            }
 
             /**
              * Truncate a service name to up to 63 UTF-8 bytes.
@@ -1231,6 +1206,34 @@ public class NsdService extends INsdManager.Stub {
             sb.append(c);
         }
         return sb.toString();
+    }
+
+    /**
+     * Check the given service type is valid and construct it to a service type
+     * which can use for discovery / resolution service.
+     *
+     * <p> The valid service type should be 2 labels, or 3 labels if the query is for a
+     * subtype (see RFC6763 7.1). Each label is up to 63 characters and must start with an
+     * underscore; they are alphanumerical characters or dashes or underscore, except the
+     * last one that is just alphanumerical. The last label must be _tcp or _udp.
+     *
+     * @param serviceType the request service type for discovery / resolution service
+     * @return constructed service type or null if the given service type is invalid.
+     */
+    @Nullable
+    public static String constructServiceType(String serviceType) {
+        if (TextUtils.isEmpty(serviceType)) return null;
+
+        final Pattern serviceTypePattern = Pattern.compile(
+                "^(_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]\\.)?"
+                        + "(_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]\\._(?:tcp|udp))"
+                        // Drop '.' at the end of service type that is compatible with old backend.
+                        + "\\.?$");
+        final Matcher matcher = serviceTypePattern.matcher(serviceType);
+        if (!matcher.matches()) return null;
+        return matcher.group(1) == null
+                ? matcher.group(2)
+                : matcher.group(1) + "_sub." + matcher.group(2);
     }
 
     @VisibleForTesting
