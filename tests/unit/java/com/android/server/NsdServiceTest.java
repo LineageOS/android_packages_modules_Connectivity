@@ -1057,6 +1057,54 @@ public class NsdServiceTest {
     }
 
     @Test
+    public void testTypeSpecificFeatureFlagging() {
+        doReturn("_type1._tcp:flag1,_type2._tcp:flag2").when(mDeps).getTypeAllowlistFlags();
+        doReturn(true).when(mDeps).isFeatureEnabled(any(),
+                eq("mdns_discovery_manager_allowlist_flag1_version"));
+        doReturn(true).when(mDeps).isFeatureEnabled(any(),
+                eq("mdns_advertiser_allowlist_flag2_version"));
+
+        final NsdManager client = connectClient(mService);
+        final NsdServiceInfo service1 = new NsdServiceInfo(SERVICE_NAME, "_type1._tcp");
+        service1.setHostAddresses(List.of(parseNumericAddress("2001:db8::123")));
+        service1.setPort(1234);
+        final NsdServiceInfo service2 = new NsdServiceInfo(SERVICE_NAME, "_type2._tcp");
+        service2.setHostAddresses(List.of(parseNumericAddress("2001:db8::123")));
+        service2.setPort(1234);
+
+        client.discoverServices(service1.getServiceType(),
+                NsdManager.PROTOCOL_DNS_SD, mock(DiscoveryListener.class));
+        client.discoverServices(service2.getServiceType(),
+                NsdManager.PROTOCOL_DNS_SD, mock(DiscoveryListener.class));
+        waitForIdle();
+
+        // The DiscoveryManager is enabled for _type1 but not _type2
+        verify(mDiscoveryManager).registerListener(eq("_type1._tcp.local"), any(), any());
+        verify(mDiscoveryManager, never()).registerListener(
+                eq("_type2._tcp.local"), any(), any());
+
+        client.resolveService(service1, mock(ResolveListener.class));
+        client.resolveService(service2, mock(ResolveListener.class));
+        waitForIdle();
+
+        // Same behavior for resolve
+        verify(mDiscoveryManager, times(2)).registerListener(
+                eq("_type1._tcp.local"), any(), any());
+        verify(mDiscoveryManager, never()).registerListener(
+                eq("_type2._tcp.local"), any(), any());
+
+        client.registerService(service1, NsdManager.PROTOCOL_DNS_SD,
+                mock(RegistrationListener.class));
+        client.registerService(service2, NsdManager.PROTOCOL_DNS_SD,
+                mock(RegistrationListener.class));
+        waitForIdle();
+
+        // The advertiser is enabled for _type2 but not _type1
+        verify(mAdvertiser, never()).addService(anyInt(), argThat(info -> matches(info, service1)));
+        verify(mAdvertiser).addService(anyInt(), argThat(info -> matches(info, service2)));
+    }
+
+    @Test
     public void testAdvertiseWithMdnsAdvertiser() {
         setMdnsAdvertiserEnabled();
 
