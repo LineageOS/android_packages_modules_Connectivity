@@ -120,21 +120,17 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             // List of (name, type) to query
             final ArrayList<Pair<String[], Integer>> missingKnownAnswerRecords = new ArrayList<>();
             for (MdnsResponse response : servicesToResolve) {
-                // In practice responses should always have at least one pointer record, since the
-                // record is added after creation in MdnsResponseDecoder. All PTR records point to
-                // the same instance name, since addPointerRecord is only called on instances
-                // obtained through MdnsResponseDecoder.findResponseWithPointer.
                 // TODO: also send queries to renew record TTL (as per RFC6762 7.1 no need to query
                 // if remaining TTL is more than half the original one, so send the queries if half
                 // the TTL has passed).
-                if (!response.hasPointerRecords() || response.isComplete()) continue;
-                final String[] instanceName = response.getPointerRecords().get(0).getPointer();
-                if (instanceName == null) continue;
+                if (response.isComplete()) continue;
+                final String[] serviceName = response.getServiceName();
+                if (serviceName == null) continue;
                 if (!response.hasTextRecord()) {
-                    missingKnownAnswerRecords.add(new Pair<>(instanceName, MdnsRecord.TYPE_TXT));
+                    missingKnownAnswerRecords.add(new Pair<>(serviceName, MdnsRecord.TYPE_TXT));
                 }
                 if (!response.hasServiceRecord()) {
-                    missingKnownAnswerRecords.add(new Pair<>(instanceName, MdnsRecord.TYPE_SRV));
+                    missingKnownAnswerRecords.add(new Pair<>(serviceName, MdnsRecord.TYPE_SRV));
                     // The hostname is not yet known, so queries for address records will be sent
                     // the next time the EnqueueMdnsQueryCallable is enqueued if the reply does not
                     // contain them. In practice, advertisers should include the address records
