@@ -763,6 +763,7 @@ public class NsdService extends INsdManager.Stub {
                             final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                     .setNetwork(info.getNetwork())
                                     .setIsPassiveMode(true)
+                                    .setResolveInstanceName(info.getServiceName())
                                     .build();
                             mMdnsDiscoveryManager.registerListener(
                                     resolveServiceType, listener, options);
@@ -775,7 +776,7 @@ public class NsdService extends INsdManager.Stub {
                             }
 
                             maybeStartDaemon();
-                            if (resolveService(id, args.serviceInfo)) {
+                            if (resolveService(id, info)) {
                                 clientInfo.mResolvedService = new NsdServiceInfo();
                                 storeLegacyRequestMap(clientId, id, clientInfo, msg.what);
                             } else {
