@@ -55,6 +55,7 @@ private const val TIMEOUT_MS = 10_000L
 
 private val TEST_ADDRS = listOf(LinkAddress(parseNumericAddress("2001:db8::123"), 64))
 private val TEST_BUFFER = ByteArray(1300)
+private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 
 private const val TEST_SERVICE_ID_1 = 42
 private val TEST_SERVICE_1 = NsdServiceInfo().apply {
@@ -88,12 +89,23 @@ class MdnsInterfaceAdvertiserTest {
     private val packetHandler get() = packetHandlerCaptor.value
 
     private val advertiser by lazy {
-        MdnsInterfaceAdvertiser(LOG_TAG, socket, TEST_ADDRS, thread.looper, TEST_BUFFER, cb, deps)
+        MdnsInterfaceAdvertiser(
+            LOG_TAG,
+            socket,
+            TEST_ADDRS,
+            thread.looper,
+            TEST_BUFFER,
+            cb,
+            deps,
+            TEST_HOSTNAME
+        )
     }
 
     @Before
     fun setUp() {
-        doReturn(repository).`when`(deps).makeRecordRepository(any())
+        doReturn(repository).`when`(deps).makeRecordRepository(any(),
+            eq(TEST_HOSTNAME)
+        )
         doReturn(replySender).`when`(deps).makeReplySender(anyString(), any(), any(), any())
         doReturn(announcer).`when`(deps).makeMdnsAnnouncer(anyString(), any(), any(), any())
         doReturn(prober).`when`(deps).makeMdnsProber(anyString(), any(), any(), any())
