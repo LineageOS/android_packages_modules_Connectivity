@@ -415,11 +415,6 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     }
 
     int match = bpf_owner_match(skb, sock_uid, egress, kver);
-    if (egress && (match == DROP)) {
-        // If an outbound packet is going to be dropped, we do not count that
-        // traffic.
-        return match;
-    }
 
 // Workaround for secureVPN with VpnIsolation enabled, refer to b/159994981 for details.
 // Keep TAG_SYSTEM_DNS in sync with DnsResolver/include/netd_resolv/resolv.h
@@ -431,6 +426,9 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     } else {
         if (match == DROP_UNLESS_DNS) match = DROP;
     }
+
+    // If an outbound packet is going to be dropped, we do not count that traffic.
+    if (egress && (match == DROP)) return DROP;
 
     StatsKey key = {.uid = uid, .tag = tag, .counterSet = 0, .ifaceIndex = skb->ifindex};
 
