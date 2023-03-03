@@ -20,6 +20,7 @@ import static android.net.ConnectivityManager.NETID_UNSET;
 import static android.net.nsd.NsdManager.MDNS_DISCOVERY_MANAGER_EVENT;
 import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
+import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -109,6 +110,34 @@ public class NsdService extends INsdManager.Stub {
      * implementation.
      */
     private static final String MDNS_ADVERTISER_VERSION = "mdns_advertiser_version";
+
+    /**
+     * Comma-separated list of type:flag mappings indicating the flags to use to allowlist
+     * discovery/advertising using MdnsDiscoveryManager / MdnsAdvertiser for a given type.
+     *
+     * For example _mytype._tcp.local and _othertype._tcp.local would be configured with:
+     * _mytype._tcp:mytype,_othertype._tcp.local:othertype
+     *
+     * In which case the flags:
+     * "mdns_discovery_manager_allowlist_mytype_version",
+     * "mdns_advertiser_allowlist_mytype_version",
+     * "mdns_discovery_manager_allowlist_othertype_version",
+     * "mdns_advertiser_allowlist_othertype_version"
+     * would be used to toggle MdnsDiscoveryManager / MdnsAdvertiser for each type. The flags will
+     * be read with
+     * {@link DeviceConfigUtils#isFeatureEnabled(Context, String, String, String, boolean)}.
+     *
+     * @see #MDNS_DISCOVERY_MANAGER_ALLOWLIST_FLAG_PREFIX
+     * @see #MDNS_ADVERTISER_ALLOWLIST_FLAG_PREFIX
+     * @see #MDNS_ALLOWLIST_FLAG_SUFFIX
+     */
+    private static final String MDNS_TYPE_ALLOWLIST_FLAGS = "mdns_type_allowlist_flags";
+
+    private static final String MDNS_DISCOVERY_MANAGER_ALLOWLIST_FLAG_PREFIX =
+            "mdns_discovery_manager_allowlist_";
+    private static final String MDNS_ADVERTISER_ALLOWLIST_FLAG_PREFIX =
+            "mdns_advertiser_allowlist_";
+    private static final String MDNS_ALLOWLIST_FLAG_SUFFIX = "_version";
 
     public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     private static final long CLEANUP_DELAY_MS = 10000;
@@ -572,8 +601,9 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)) {
-                            final String serviceType = constructServiceType(info.getServiceType());
+                        final String serviceType = constructServiceType(info.getServiceType());
+                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)
+                                || useDiscoveryManagerForType(serviceType)) {
                             if (serviceType == null) {
                                 clientInfo.onDiscoverServicesFailed(clientId,
                                         NsdManager.FAILURE_INTERNAL_ERROR);
@@ -667,10 +697,11 @@ public class NsdService extends INsdManager.Stub {
                         }
 
                         id = getUniqueId();
-                        if (mDeps.isMdnsAdvertiserEnabled(mContext)) {
-                            final NsdServiceInfo serviceInfo = args.serviceInfo;
-                            final String serviceType = serviceInfo.getServiceType();
-                            final String registerServiceType = constructServiceType(serviceType);
+                        final NsdServiceInfo serviceInfo = args.serviceInfo;
+                        final String serviceType = serviceInfo.getServiceType();
+                        final String registerServiceType = constructServiceType(serviceType);
+                        if (mDeps.isMdnsAdvertiserEnabled(mContext)
+                                || useAdvertiserForType(registerServiceType)) {
                             if (registerServiceType == null) {
                                 Log.e(TAG, "Invalid service type: " + serviceType);
                                 clientInfo.onRegisterServiceFailed(clientId,
@@ -686,7 +717,7 @@ public class NsdService extends INsdManager.Stub {
                             storeAdvertiserRequestMap(clientId, id, clientInfo);
                         } else {
                             maybeStartDaemon();
-                            if (registerService(id, args.serviceInfo)) {
+                            if (registerService(id, serviceInfo)) {
                                 if (DBG) Log.d(TAG, "Register " + clientId + " " + id);
                                 storeLegacyRequestMap(clientId, id, clientInfo, msg.what);
                                 // Return success after mDns reports success
@@ -748,8 +779,9 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)) {
-                            final String serviceType = constructServiceType(info.getServiceType());
+                        final String serviceType = constructServiceType(info.getServiceType());
+                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)
+                                || useDiscoveryManagerForType(serviceType)) {
                             if (serviceType == null) {
                                 clientInfo.onResolveServiceFailed(clientId,
                                         NsdManager.FAILURE_INTERNAL_ERROR);
@@ -1281,6 +1313,24 @@ public class NsdService extends INsdManager.Stub {
         }
 
         /**
+         * Get the type allowlist flag value.
+         * @see #MDNS_TYPE_ALLOWLIST_FLAGS
+         */
+        @Nullable
+        public String getTypeAllowlistFlags() {
+            return DeviceConfigUtils.getDeviceConfigProperty(NAMESPACE_TETHERING,
+                    MDNS_TYPE_ALLOWLIST_FLAGS, null);
+        }
+
+        /**
+         * @see DeviceConfigUtils#isFeatureEnabled(Context, String, String, String, boolean)
+         */
+        public boolean isFeatureEnabled(Context context, String feature) {
+            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_TETHERING,
+                    feature, DeviceConfigUtils.TETHERING_MODULE_NAME, false /* defaultEnabled */);
+        }
+
+        /**
          * @see MdnsDiscoveryManager
          */
         public MdnsDiscoveryManager makeMdnsDiscoveryManager(
@@ -1303,6 +1353,41 @@ public class NsdService extends INsdManager.Stub {
         public MdnsSocketProvider makeMdnsSocketProvider(Context context, Looper looper) {
             return new MdnsSocketProvider(context, looper);
         }
+    }
+
+    /**
+     * Return whether a type is allowlisted to use the Java backend.
+     * @param type The service type
+     * @param flagPrefix One of {@link #MDNS_ADVERTISER_ALLOWLIST_FLAG_PREFIX} or
+     *                   {@link #MDNS_DISCOVERY_MANAGER_ALLOWLIST_FLAG_PREFIX}.
+     */
+    private boolean isTypeAllowlistedForJavaBackend(@Nullable String type,
+            @NonNull String flagPrefix) {
+        if (type == null) return false;
+        final String typesConfig = mDeps.getTypeAllowlistFlags();
+        if (TextUtils.isEmpty(typesConfig)) return false;
+
+        final String mappingPrefix = type + ":";
+        String mappedFlag = null;
+        for (String mapping : TextUtils.split(typesConfig, ",")) {
+            if (mapping.startsWith(mappingPrefix)) {
+                mappedFlag = mapping.substring(mappingPrefix.length());
+                break;
+            }
+        }
+
+        if (mappedFlag == null) return false;
+
+        return mDeps.isFeatureEnabled(mContext,
+                flagPrefix + mappedFlag + MDNS_ALLOWLIST_FLAG_SUFFIX);
+    }
+
+    private boolean useDiscoveryManagerForType(@Nullable String type) {
+        return isTypeAllowlistedForJavaBackend(type, MDNS_DISCOVERY_MANAGER_ALLOWLIST_FLAG_PREFIX);
+    }
+
+    private boolean useAdvertiserForType(@Nullable String type) {
+        return isTypeAllowlistedForJavaBackend(type, MDNS_ADVERTISER_ALLOWLIST_FLAG_PREFIX);
     }
 
     public static NsdService create(Context context) {
