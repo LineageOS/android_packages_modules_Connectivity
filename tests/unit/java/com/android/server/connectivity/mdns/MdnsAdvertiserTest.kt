@@ -42,6 +42,7 @@ import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 private const val SERVICE_ID_1 = 1
@@ -51,6 +52,7 @@ private val TEST_ADDR = parseNumericAddress("2001:db8::123")
 private val TEST_LINKADDR = LinkAddress(TEST_ADDR, 64 /* prefixLength */)
 private val TEST_NETWORK_1 = mock(Network::class.java)
 private val TEST_NETWORK_2 = mock(Network::class.java)
+private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 
 private val SERVICE_1 = NsdServiceInfo("TestServiceName", "_advertisertest._tcp").apply {
     port = 12345
@@ -81,10 +83,13 @@ class MdnsAdvertiserTest {
     @Before
     fun setUp() {
         thread.start()
+        doReturn(TEST_HOSTNAME).`when`(mockDeps).generateHostname()
         doReturn(mockInterfaceAdvertiser1).`when`(mockDeps).makeAdvertiser(eq(mockSocket1),
-                any(), any(), any(), any())
+                any(), any(), any(), any(), eq(TEST_HOSTNAME)
+        )
         doReturn(mockInterfaceAdvertiser2).`when`(mockDeps).makeAdvertiser(eq(mockSocket2),
-                any(), any(), any(), any())
+                any(), any(), any(), any(), eq(TEST_HOSTNAME)
+        )
         doReturn(true).`when`(mockInterfaceAdvertiser1).isProbing(anyInt())
         doReturn(true).`when`(mockInterfaceAdvertiser2).isProbing(anyInt())
     }
@@ -106,8 +111,14 @@ class MdnsAdvertiserTest {
         postSync { socketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR)) }
 
         val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
-        verify(mockDeps).makeAdvertiser(eq(mockSocket1),
-                eq(listOf(TEST_LINKADDR)), eq(thread.looper), any(), intAdvCbCaptor.capture())
+        verify(mockDeps).makeAdvertiser(
+            eq(mockSocket1),
+            eq(listOf(TEST_LINKADDR)),
+            eq(thread.looper),
+            any(),
+            intAdvCbCaptor.capture(),
+            eq(TEST_HOSTNAME)
+        )
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
         postSync { intAdvCbCaptor.value.onRegisterServiceSucceeded(
@@ -134,9 +145,11 @@ class MdnsAdvertiserTest {
         val intAdvCbCaptor1 = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         val intAdvCbCaptor2 = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         verify(mockDeps).makeAdvertiser(eq(mockSocket1), eq(listOf(TEST_LINKADDR)),
-                eq(thread.looper), any(), intAdvCbCaptor1.capture())
+                eq(thread.looper), any(), intAdvCbCaptor1.capture(), eq(TEST_HOSTNAME)
+        )
         verify(mockDeps).makeAdvertiser(eq(mockSocket2), eq(listOf(TEST_LINKADDR)),
-                eq(thread.looper), any(), intAdvCbCaptor2.capture())
+                eq(thread.looper), any(), intAdvCbCaptor2.capture(), eq(TEST_HOSTNAME)
+        )
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
         postSync { intAdvCbCaptor1.value.onRegisterServiceSucceeded(
@@ -192,7 +205,8 @@ class MdnsAdvertiserTest {
 
         val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         verify(mockDeps).makeAdvertiser(eq(mockSocket1), eq(listOf(TEST_LINKADDR)),
-                eq(thread.looper), any(), intAdvCbCaptor.capture())
+                eq(thread.looper), any(), intAdvCbCaptor.capture(), eq(TEST_HOSTNAME)
+        )
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_1),
                 argThat { it.matches(SERVICE_1) })
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_2),
@@ -214,6 +228,15 @@ class MdnsAdvertiserTest {
 
         // destroyNow can be called multiple times
         verify(mockInterfaceAdvertiser1, atLeastOnce()).destroyNow()
+    }
+
+    @Test
+    fun testRemoveService_whenAllServiceRemoved_thenUpdateHostName() {
+        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps)
+        verify(mockDeps, times(1)).generateHostname()
+        postSync { advertiser.addService(SERVICE_ID_1, SERVICE_1) }
+        postSync { advertiser.removeService(SERVICE_ID_1) }
+        verify(mockDeps, times(2)).generateHostname()
     }
 
     private fun postSync(r: () -> Unit) {
