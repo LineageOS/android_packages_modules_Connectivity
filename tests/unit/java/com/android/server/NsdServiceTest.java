@@ -21,6 +21,7 @@ import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
 
+import static com.android.server.NsdService.constructServiceType;
 import static com.android.testutils.ContextUtils.mockService;
 
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
@@ -1198,6 +1199,50 @@ public class NsdServiceTest {
 
         verify(regListener, timeout(TIMEOUT_MS)).onServiceRegistered(
                 argThat(info -> matches(info, new NsdServiceInfo(regInfo.getServiceName(), null))));
+    }
+
+    @Test
+    public void testStopServiceResolutionWithMdnsDiscoveryManager() {
+        setMdnsDiscoveryManagerEnabled();
+
+        final NsdManager client = connectClient(mService);
+        final ResolveListener resolveListener = mock(ResolveListener.class);
+        final Network network = new Network(999);
+        final String serviceType = "_nsd._service._tcp";
+        final String constructedServiceType = "_nsd._sub._service._tcp.local";
+        final ArgumentCaptor<MdnsServiceBrowserListener> listenerCaptor =
+                ArgumentCaptor.forClass(MdnsServiceBrowserListener.class);
+        final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, serviceType);
+        request.setNetwork(network);
+        client.resolveService(request, resolveListener);
+        waitForIdle();
+        verify(mSocketProvider).startMonitoringSockets();
+        verify(mDiscoveryManager).registerListener(eq(constructedServiceType),
+                listenerCaptor.capture(), argThat(options -> network.equals(options.getNetwork())));
+
+        client.stopServiceResolution(resolveListener);
+        waitForIdle();
+
+        // Verify the listener has been unregistered.
+        verify(mDiscoveryManager, timeout(TIMEOUT_MS))
+                .unregisterListener(eq(constructedServiceType), eq(listenerCaptor.getValue()));
+        verify(resolveListener, timeout(TIMEOUT_MS)).onResolutionStopped(argThat(ns ->
+                request.getServiceName().equals(ns.getServiceName())
+                        && request.getServiceType().equals(ns.getServiceType())));
+        verify(mSocketProvider, timeout(CLEANUP_DELAY_MS + TIMEOUT_MS)).requestStopWhenInactive();
+    }
+
+    @Test
+    public void testConstructServiceType() {
+        final String serviceType1 = "test._tcp";
+        final String serviceType2 = "_test._quic";
+        final String serviceType3 = "_123._udp.";
+        final String serviceType4 = "_TEST._999._tcp.";
+
+        assertEquals(null, constructServiceType(serviceType1));
+        assertEquals(null, constructServiceType(serviceType2));
+        assertEquals("_123._udp", constructServiceType(serviceType3));
+        assertEquals("_TEST._sub._999._tcp", constructServiceType(serviceType4));
     }
 
     private void waitForIdle() {
