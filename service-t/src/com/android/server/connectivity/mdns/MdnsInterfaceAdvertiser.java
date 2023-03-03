@@ -141,8 +141,9 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     public static class Dependencies {
         /** @see MdnsRecordRepository */
         @NonNull
-        public MdnsRecordRepository makeRecordRepository(@NonNull Looper looper) {
-            return new MdnsRecordRepository(looper);
+        public MdnsRecordRepository makeRecordRepository(@NonNull Looper looper,
+                @NonNull String[] deviceHostName) {
+            return new MdnsRecordRepository(looper, deviceHostName);
         }
 
         /** @see MdnsReplySender */
@@ -169,17 +170,18 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
 
     public MdnsInterfaceAdvertiser(@NonNull String logTag,
             @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
-            @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb) {
+            @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb,
+            @NonNull String[] deviceHostName) {
         this(logTag, socket, initialAddresses, looper, packetCreationBuffer, cb,
-                new Dependencies());
+                new Dependencies(), deviceHostName);
     }
 
     public MdnsInterfaceAdvertiser(@NonNull String logTag,
             @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
             @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb,
-            @NonNull Dependencies deps) {
+            @NonNull Dependencies deps, @NonNull String[] deviceHostName) {
         mTag = MdnsInterfaceAdvertiser.class.getSimpleName() + "/" + logTag;
-        mRecordRepository = deps.makeRecordRepository(looper);
+        mRecordRepository = deps.makeRecordRepository(looper, deviceHostName);
         mRecordRepository.updateAddresses(initialAddresses);
         mSocket = socket;
         mCb = cb;
