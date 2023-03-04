@@ -51,6 +51,7 @@ import android.util.ArraySet;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetworkIdentityUtils;
 
@@ -246,6 +247,38 @@ public final class NetworkTemplate implements Parcelable {
         return new NetworkTemplate.Builder(MATCH_ETHERNET).build();
     }
 
+    /**
+     * Template to combine all {@link ConnectivityManager#TYPE_BLUETOOTH} style
+     * networks together.
+     *
+     * @hide
+     */
+    // TODO(b/270089918): Remove this method. This can only be done after there are no more callers,
+    //  including in OEM code which can access this by linking against the framework.
+    public static NetworkTemplate buildTemplateBluetooth() {
+        if (SdkLevel.isAtLeastU()) {
+            throw new UnsupportedOperationException(
+                    "buildTemplateBluetooth is not supported on Android U devices or above");
+        }
+        return new NetworkTemplate.Builder(MATCH_BLUETOOTH).build();
+    }
+
+    /**
+     * Template to combine all {@link ConnectivityManager#TYPE_PROXY} style
+     * networks together.
+     *
+     * @hide
+     */
+    // TODO(b/270089918): Remove this method. This can only be done after there are no more callers,
+    //  including in OEM code which can access this by linking against the framework.
+    public static NetworkTemplate buildTemplateProxy() {
+        if (SdkLevel.isAtLeastU()) {
+            throw new UnsupportedOperationException(
+                    "buildTemplateProxy is not supported on Android U devices or above");
+        }
+        return new NetworkTemplate(MATCH_PROXY, null, null);
+    }
+
     private final int mMatchRule;
 
     /**
@@ -316,6 +349,10 @@ public final class NetworkTemplate implements Parcelable {
         if (matchRule == 6 || matchRule == 7) {
             Log.e(TAG, "Use MATCH_MOBILE with empty subscriberIds or MATCH_WIFI with empty "
                     + "wifiNetworkKeys instead of template with matchRule=" + matchRule);
+            if (SdkLevel.isAtLeastU()) {
+                throw new UnsupportedOperationException(
+                        "Wildcard templates are not supported on Android U devices or above");
+            }
         }
     }
 
@@ -334,6 +371,43 @@ public final class NetworkTemplate implements Parcelable {
             return METERED_YES;
         }
         return METERED_ALL;
+    }
+
+    /** @hide */
+    // TODO(b/270089918): Remove this method after no callers.
+    public NetworkTemplate(int matchRule, String subscriberId, String[] matchSubscriberIds,
+            String wifiNetworkKey) {
+        // Older versions used to only match MATCH_MOBILE and MATCH_MOBILE_WILDCARD templates
+        // to metered networks. It is now possible to match mobile with any meteredness, but
+        // in order to preserve backward compatibility of @UnsupportedAppUsage methods, this
+        // constructor passes METERED_YES for these types.
+        this(getBackwardsCompatibleMatchRule(matchRule), matchSubscriberIds,
+                wifiNetworkKey != null ? new String[] { wifiNetworkKey } : new String[0],
+                getMeterednessForBackwardsCompatibility(matchRule),
+                ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
+                OEM_MANAGED_ALL);
+        if (SdkLevel.isAtLeastU()) {
+            throw new UnsupportedOperationException(
+                    "This constructor is not supported on Android U devices or above");
+        }
+    }
+
+    /** @hide */
+    // TODO(b/269974916): Remove this method after Android U is released.
+    //  This is only used by CTS of Android T.
+    public NetworkTemplate(int matchRule, String subscriberId, String[] matchSubscriberIds,
+            String[] matchWifiNetworkKeys, int metered, int roaming,
+            int defaultNetwork, int ratType, int oemManaged, int subscriberIdMatchRule) {
+        // subscriberId and subscriberIdMatchRule aren't used since they are replaced by
+        // matchSubscriberIds, which could be null to indicate the intention of matching any
+        // subscriberIds.
+        this(getBackwardsCompatibleMatchRule(matchRule),
+                matchSubscriberIds == null ? new String[]{} : matchSubscriberIds,
+                matchWifiNetworkKeys, metered, roaming, defaultNetwork, ratType, oemManaged);
+        if (SdkLevel.isAtLeastU()) {
+            throw new UnsupportedOperationException(
+                    "This constructor is not supported on Android U devices or above");
+        }
     }
 
     /** @hide */
@@ -436,9 +510,14 @@ public final class NetworkTemplate implements Parcelable {
         return false;
     }
 
-    // TODO(b/270089918): Remove this method after no callers.
+    // TODO(b/270089918): Remove this method. This can only be done after there are no more callers,
+    //  including in OEM code which can access this by linking against the framework.
     /** @hide */
     public boolean isMatchRuleMobile() {
+        if (SdkLevel.isAtLeastU()) {
+            throw new UnsupportedOperationException(
+                    "isMatchRuleMobile is not supported on Android U devices or above");
+        }
         switch (mMatchRule) {
             case MATCH_MOBILE:
             // Old MATCH_MOBILE_WILDCARD
