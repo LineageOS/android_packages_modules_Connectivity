@@ -158,7 +158,7 @@ public class UrlRequestTest {
         UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
         builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR);
         builder.addHeader("Content-Type", "text/plain;charset=UTF-8");
-        builder.setAllowDirectExecutor(true);
+        builder.setDirectExecutorAllowed(true);
         builder.build().start();
         callback.blockForDone();
 
