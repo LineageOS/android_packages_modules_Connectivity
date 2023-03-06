@@ -55,13 +55,12 @@ void NetworkTraceHandler::InitPerfettoTracing() {
   NetworkTraceHandler::RegisterDataSource();
 }
 
-NetworkTraceHandler::NetworkTraceHandler()
-    : NetworkTraceHandler([this](const PacketTrace& pkt) {
-        NetworkTraceHandler::Trace(
-            [this, pkt](NetworkTraceHandler::TraceContext ctx) {
-              Fill(pkt, *ctx.NewTracePacket());
-            });
-      }) {}
+// static
+NetworkTracePoller NetworkTraceHandler::sPoller([](const PacketTrace& pkt) {
+  NetworkTraceHandler::Trace([pkt](NetworkTraceHandler::TraceContext ctx) {
+    NetworkTraceHandler::Fill(pkt, *ctx.NewTracePacket());
+  });
+});
 
 void NetworkTraceHandler::OnSetup(const SetupArgs& args) {
   const std::string& raw = args.config->network_packet_trace_config_raw();
@@ -75,21 +74,27 @@ void NetworkTraceHandler::OnSetup(const SetupArgs& args) {
 }
 
 void NetworkTraceHandler::OnStart(const StartArgs&) {
-  if (!Start()) return;
-  mTaskRunner = perfetto::Platform::GetDefaultPlatform()->CreateTaskRunner({});
-  Loop();
+  mStarted = sPoller.Start(mPollMs);
 }
 
 void NetworkTraceHandler::OnStop(const StopArgs&) {
-  Stop();
-  mTaskRunner.reset();
+  if (mStarted) sPoller.Stop();
+  mStarted = false;
 }
 
-void NetworkTraceHandler::Loop() {
-  mTaskRunner->PostDelayedTask([this]() { Loop(); }, mPollMs);
-  ConsumeAll();
+void NetworkTracePoller::SchedulePolling() {
+  // Schedules another run of ourselves to recursively poll periodically.
+  mTaskRunner->PostDelayedTask(
+      [this]() {
+        mMutex.lock();
+        SchedulePolling();
+        ConsumeAllLocked();
+        mMutex.unlock();
+      },
+      mPollMs);
 }
 
+// static class method
 void NetworkTraceHandler::Fill(const PacketTrace& src, TracePacket& dst) {
   dst.set_timestamp(src.timestampNs);
   auto* event = dst.set_network_packet();
@@ -113,8 +118,22 @@ void NetworkTraceHandler::Fill(const PacketTrace& src, TracePacket& dst) {
   }
 }
 
-bool NetworkTraceHandler::Start() {
+bool NetworkTracePoller::Start(uint32_t pollMs) {
   ALOGD("Starting datasource");
+
+  std::scoped_lock<std::mutex> lock(mMutex);
+  if (mSessionCount > 0) {
+    if (mPollMs != pollMs) {
+      // Nothing technical prevents mPollMs from changing, it's just unclear
+      // what the right behavior is. Taking the min of active values could poll
+      // too frequently giving some sessions too much data. Taking the max could
+      // be too infrequent. For now, do nothing.
+      ALOGI("poll_ms can't be changed while running, ignoring poll_ms=%d",
+            pollMs);
+    }
+    mSessionCount++;
+    return true;
+  }
 
   auto status = mConfigurationMap.init(PACKET_TRACE_ENABLED_MAP_PATH);
   if (!status.ok()) {
@@ -136,24 +155,41 @@ bool NetworkTraceHandler::Start() {
     return false;
   }
 
+  // Start a task runner to run ConsumeAll every mPollMs milliseconds.
+  mTaskRunner = perfetto::Platform::GetDefaultPlatform()->CreateTaskRunner({});
+  mPollMs = pollMs;
+  SchedulePolling();
+
+  mSessionCount++;
   return true;
 }
 
-bool NetworkTraceHandler::Stop() {
+bool NetworkTracePoller::Stop() {
   ALOGD("Stopping datasource");
+
+  std::scoped_lock<std::mutex> lock(mMutex);
+  if (mSessionCount == 0) return false;  // This should never happen
+
+  // If this isn't the last session, don't clean up yet.
+  if (--mSessionCount > 0) return true;
 
   auto res = mConfigurationMap.writeValue(0, false, BPF_ANY);
   if (!res.ok()) {
     ALOGW("Failed to disable tracing: %s", res.error().message().c_str());
-    return false;
   }
 
+  mTaskRunner.reset();
   mRingBuffer.reset();
 
-  return true;
+  return res.ok();
 }
 
-bool NetworkTraceHandler::ConsumeAll() {
+bool NetworkTracePoller::ConsumeAll() {
+  std::scoped_lock<std::mutex> lock(mMutex);
+  return ConsumeAllLocked();
+}
+
+bool NetworkTracePoller::ConsumeAllLocked() {
   if (mRingBuffer == nullptr) {
     ALOGW("Tracing is not active");
     return false;
