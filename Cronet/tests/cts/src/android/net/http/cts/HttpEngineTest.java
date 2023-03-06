@@ -23,6 +23,7 @@ import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -49,12 +50,13 @@ public class HttpEngineTest {
     private TestUrlRequestCallback mCallback;
     private UrlRequest mRequest;
     private HttpEngine mEngine;
+    private Context mContext;
 
     @Before
     public void setUp() throws Exception {
-        Context context = ApplicationProvider.getApplicationContext();
-        skipIfNoInternetConnection(context);
-        mEngineBuilder = new HttpEngine.Builder(context);
+        mContext = ApplicationProvider.getApplicationContext();
+        skipIfNoInternetConnection(mContext);
+        mEngineBuilder = new HttpEngine.Builder(mContext);
         mCallback = new TestUrlRequestCallback();
     }
 
@@ -87,6 +89,38 @@ public class HttpEngineTest {
         UrlResponseInfo info = mCallback.mResponseInfo;
         assertOKStatusCode(info);
         assertEquals("h2", info.getNegotiatedProtocol());
+    }
+
+    @Test
+    public void testHttpEngine_EnableHttpCache() {
+        // We need a server which sets cache-control != no-cache.
+        String url = "https://www.example.com";
+        mEngine =
+                mEngineBuilder
+                        .setStoragePath(mContext.getApplicationInfo().dataDir)
+                        .setEnableHttpCache(HttpEngine.Builder.HTTP_CACHE_DISK,
+                                            /* maxSize */ 100 * 1024)
+                        .build();
+
+        UrlRequest.Builder builder =
+                mEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor());
+        mRequest = builder.build();
+        mRequest.start();
+        // This tests uses a non-hermetic server. Instead of asserting, assume the next callback.
+        // This way, if the request were to fail, the test would just be skipped instead of failing.
+        mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assumeOKStatusCode(info);
+        assertFalse(info.wasCached());
+
+        mCallback = new TestUrlRequestCallback();
+        builder = mEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor());
+        mRequest = builder.build();
+        mRequest.start();
+        mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
+        info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
+        assertTrue(info.wasCached());
     }
 
     @Test
