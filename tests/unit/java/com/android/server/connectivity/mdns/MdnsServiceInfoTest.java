@@ -119,6 +119,26 @@ public class MdnsServiceInfoTest {
     }
 
     @Test
+    public void constructor_createWithUppercaseKeys_correctAttributes() {
+        MdnsServiceInfo info =
+                new MdnsServiceInfo(
+                        "my-mdns-service",
+                        new String[] {"_testtype", "_tcp"},
+                        List.of(),
+                        new String[] {"my-host", "local"},
+                        12345,
+                        "192.168.1.1",
+                        "2001::1",
+                        List.of("KEY=Value"),
+                        /* textEntries= */ null);
+
+        assertEquals("Value", info.getAttributeByKey("key"));
+        assertEquals("Value", info.getAttributeByKey("KEY"));
+        assertEquals(1, info.getAttributes().size());
+        assertEquals("KEY", info.getAttributes().keySet().iterator().next());
+    }
+
+    @Test
     public void getInterfaceIndex_constructorWithDefaultValues_returnsMinusOne() {
         MdnsServiceInfo info =
                 new MdnsServiceInfo(
