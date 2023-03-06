@@ -108,10 +108,10 @@ public class MdnsResponseTests {
                 0 /* serviceWeight */, 0 /* servicePort */, hostname));
         response.setTextRecord(new MdnsTextRecord(serviceName, 0L /* receiptTimeMillis */,
                 true /* cacheFlush */, recordsTtlMillis, emptyList() /* entries */));
-        response.setInet4AddressRecord(new MdnsInetAddressRecord(
+        response.addInet4AddressRecord(new MdnsInetAddressRecord(
                 hostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
                 recordsTtlMillis, parseNumericAddress("192.0.2.123")));
-        response.setInet6AddressRecord(new MdnsInetAddressRecord(
+        response.addInet6AddressRecord(new MdnsInetAddressRecord(
                 hostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
                 recordsTtlMillis, parseNumericAddress("2001:db8::123")));
         return response;
@@ -126,7 +126,7 @@ public class MdnsResponseTests {
         MdnsInetAddressRecord record = new MdnsInetAddressRecord(name, MdnsRecord.TYPE_A, reader);
         MdnsResponse response = new MdnsResponse(0, TEST_SERVICE_NAME, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasInet4AddressRecord());
-        assertTrue(response.setInet4AddressRecord(record));
+        assertTrue(response.addInet4AddressRecord(record));
         assertEquals(response.getInet4AddressRecord(), record);
     }
 
@@ -140,7 +140,7 @@ public class MdnsResponseTests {
                 new MdnsInetAddressRecord(name, MdnsRecord.TYPE_AAAA, reader);
         MdnsResponse response = new MdnsResponse(0, TEST_SERVICE_NAME, INTERFACE_INDEX, mNetwork);
         assertFalse(response.hasInet6AddressRecord());
-        assertTrue(response.setInet6AddressRecord(record));
+        assertTrue(response.addInet6AddressRecord(record));
         assertEquals(response.getInet6AddressRecord(), record);
     }
 
@@ -228,8 +228,8 @@ public class MdnsResponseTests {
         final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS);
 
         assertFalse(response.addPointerRecord(response.getPointerRecords().get(0)));
-        assertFalse(response.setInet6AddressRecord(response.getInet6AddressRecord()));
-        assertFalse(response.setInet4AddressRecord(response.getInet4AddressRecord()));
+        assertFalse(response.addInet6AddressRecord(response.getInet6AddressRecord()));
+        assertFalse(response.addInet4AddressRecord(response.getInet4AddressRecord()));
         assertFalse(response.setServiceRecord(response.getServiceRecord()));
         assertFalse(response.setTextRecord(response.getTextRecord()));
     }
@@ -245,12 +245,14 @@ public class MdnsResponseTests {
         assertTrue(response.getRecords().stream().anyMatch(r ->
                 r == response.getPointerRecords().get(0)));
 
-        assertTrue(response.setInet6AddressRecord(ttlZeroResponse.getInet6AddressRecord()));
+        assertTrue(response.addInet6AddressRecord(ttlZeroResponse.getInet6AddressRecord()));
+        assertEquals(1, response.getInet6AddressRecords().size());
         assertEquals(0, response.getInet6AddressRecord().getTtl());
         assertTrue(response.getRecords().stream().anyMatch(r ->
                 r == response.getInet6AddressRecord()));
 
-        assertTrue(response.setInet4AddressRecord(ttlZeroResponse.getInet4AddressRecord()));
+        assertTrue(response.addInet4AddressRecord(ttlZeroResponse.getInet4AddressRecord()));
+        assertEquals(1, response.getInet4AddressRecords().size());
         assertEquals(0, response.getInet4AddressRecord().getTtl());
         assertTrue(response.getRecords().stream().anyMatch(r ->
                 r == response.getInet4AddressRecord()));
