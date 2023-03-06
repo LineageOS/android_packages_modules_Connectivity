@@ -20,6 +20,8 @@ package {
 android_library {
     name: "NetHttpTestsLibPreJarJar",
     srcs: [":cronet_aml_javatests_sources"],
+    sdk_version: "test_current",
+    min_sdk_version: "30",
     static_libs: [
         "androidx.test.ext.junit",
         "androidx.test.rules",
@@ -28,7 +30,8 @@ android_library {
     libs: [
         "android.test.base",
         "framework-tethering-pre-jarjar",
-    ]
+    ],
+    lint: { test: true }
 }
 
 android_test {
