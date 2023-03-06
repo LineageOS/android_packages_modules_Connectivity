@@ -39,6 +39,9 @@ using ::testing::Test;
 
 namespace android {
 namespace bpf {
+// Use uint32 max to cause the handler to never Loop. Instead, the tests will
+// manually drive things by calling ConsumeAll explicitly.
+constexpr uint32_t kNeverPoll = std::numeric_limits<uint32_t>::max();
 
 __be16 bindAndListen(int s) {
   sockaddr_in sin = {.sin_family = AF_INET};
@@ -83,7 +86,7 @@ struct PacketPrinter {
   }
 };
 
-class NetworkTraceHandlerTest : public testing::Test {
+class NetworkTracePollerTest : public testing::Test {
  protected:
   void SetUp() {
     if (access(PACKET_TRACE_RINGBUF_PATH, R_OK)) {
@@ -95,31 +98,49 @@ class NetworkTraceHandlerTest : public testing::Test {
   }
 };
 
-TEST_F(NetworkTraceHandlerTest, PollWhileInactive) {
-  NetworkTraceHandler handler([&](const PacketTrace& pkt) {});
+TEST_F(NetworkTracePollerTest, PollWhileInactive) {
+  NetworkTracePoller handler([&](const PacketTrace& pkt) {});
 
   // One succeed after start and before stop.
   EXPECT_FALSE(handler.ConsumeAll());
-  ASSERT_TRUE(handler.Start());
+  ASSERT_TRUE(handler.Start(kNeverPoll));
   EXPECT_TRUE(handler.ConsumeAll());
   ASSERT_TRUE(handler.Stop());
   EXPECT_FALSE(handler.ConsumeAll());
 }
 
-TEST_F(NetworkTraceHandlerTest, TraceTcpSession) {
+TEST_F(NetworkTracePollerTest, ConcurrentSessions) {
+  // Simulate two concurrent sessions (two starts followed by two stops). Check
+  // that tracing is stopped only after both sessions finish.
+  NetworkTracePoller handler([&](const PacketTrace& pkt) {});
+
+  ASSERT_TRUE(handler.Start(kNeverPoll));
+  EXPECT_TRUE(handler.ConsumeAll());
+
+  ASSERT_TRUE(handler.Start(kNeverPoll));
+  EXPECT_TRUE(handler.ConsumeAll());
+
+  ASSERT_TRUE(handler.Stop());
+  EXPECT_TRUE(handler.ConsumeAll());
+
+  ASSERT_TRUE(handler.Stop());
+  EXPECT_FALSE(handler.ConsumeAll());
+}
+
+TEST_F(NetworkTracePollerTest, TraceTcpSession) {
   __be16 server_port = 0;
   std::vector<PacketTrace> packets;
 
   // Record all packets with the bound address and current uid. This callback is
   // involked only within ConsumeAll, at which point the port should have
   // already been filled in and all packets have been processed.
-  NetworkTraceHandler handler([&](const PacketTrace& pkt) {
+  NetworkTracePoller handler([&](const PacketTrace& pkt) {
     if (pkt.sport != server_port && pkt.dport != server_port) return;
     if (pkt.uid != getuid()) return;
     packets.push_back(pkt);
   });
 
-  ASSERT_TRUE(handler.Start());
+  ASSERT_TRUE(handler.Start(kNeverPoll));
   const uint32_t kClientTag = 2468;
   const uint32_t kServerTag = 1357;
 
