@@ -16,8 +16,9 @@
   -->
 <configuration description="Runs NetHttp Mainline Tests.">
     <!-- Only run tests if the device under test is SDK version 30 or above. -->
+    <!-- TODO Switch back to Sdk30 when b/270049141 is fixed -->
     <object type="module_controller"
-            class="com.android.tradefed.testtype.suite.module.Sdk30ModuleController" />
+            class="com.android.tradefed.testtype.suite.module.Sdk31ModuleController" />
 
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="NetHttpTests.apk" />
