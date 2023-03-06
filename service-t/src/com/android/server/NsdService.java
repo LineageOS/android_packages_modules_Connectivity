@@ -80,6 +80,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1161,17 +1162,27 @@ public class NsdService extends INsdManager.Stub {
                                 Log.e(TAG, "Invalid attribute", e);
                             }
                         }
-                        try {
-                            if (serviceInfo.getIpv4Address() != null) {
-                                info.setHost(InetAddresses.parseNumericAddress(
-                                        serviceInfo.getIpv4Address()));
-                            } else {
-                                info.setHost(InetAddresses.parseNumericAddress(
-                                        serviceInfo.getIpv6Address()));
+                        final List<InetAddress> addresses = new ArrayList<>();
+                        for (String ipv4Address : serviceInfo.getIpv4Addresses()) {
+                            try {
+                                addresses.add(InetAddresses.parseNumericAddress(ipv4Address));
+                            } catch (IllegalArgumentException e) {
+                                Log.wtf(TAG, "Invalid ipv4 address", e);
                             }
+                        }
+                        for (String ipv6Address : serviceInfo.getIpv6Addresses()) {
+                            try {
+                                addresses.add(InetAddresses.parseNumericAddress(ipv6Address));
+                            } catch (IllegalArgumentException e) {
+                                Log.wtf(TAG, "Invalid ipv6 address", e);
+                            }
+                        }
+
+                        if (addresses.size() != 0) {
+                            info.setHostAddresses(addresses);
                             clientInfo.onResolveServiceSucceeded(clientId, info);
-                        } catch (IllegalArgumentException e) {
-                            Log.wtf(TAG, "Invalid address in RESOLVE_SERVICE_SUCCEEDED", e);
+                        } else {
+                            // No address. Notify resolution failure.
                             clientInfo.onResolveServiceFailed(
                                     clientId, NsdManager.FAILURE_INTERNAL_ERROR);
                         }
