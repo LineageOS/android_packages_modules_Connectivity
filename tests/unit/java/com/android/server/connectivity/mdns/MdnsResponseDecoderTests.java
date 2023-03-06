@@ -158,16 +158,16 @@ public class MdnsResponseDecoderTests {
 
     // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.3
     private static final byte[] DATAIN_IPV4_1 = HexDump.hexStringToByteArray(
-            "0974657374686f73743100000100010000007800040a010203");
+            "0974657374686f73743100000180010000007800040a010203");
     // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.4
     private static final byte[] DATAIN_IPV4_2 = HexDump.hexStringToByteArray(
-            "0974657374686f73743100000100010000007800040a010204");
+            "0974657374686f73743100000180010000007800040a010204");
     // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040
     private static final byte[] DATAIN_IPV6_1 = HexDump.hexStringToByteArray(
-            "0974657374686f73743100001c0001000000780010aabbccdd11223344a0b0c0d010203040");
+            "0974657374686f73743100001c8001000000780010aabbccdd11223344a0b0c0d010203040");
     // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3030
     private static final byte[] DATAIN_IPV6_2 = HexDump.hexStringToByteArray(
-            "0974657374686f73743100001c0001000000780010aabbccdd11223344a0b0c0d010203030");
+            "0974657374686f73743100001c8001000000780010aabbccdd11223344a0b0c0d010203030");
     // MDNS record w/name "test" & PTR to foo.bar.quxx
     private static final byte[] DATAIN_PTR_1 = HexDump.hexStringToByteArray(
             "047465737400000C000100001194000E03666F6F03626172047175787800");
@@ -295,15 +295,15 @@ public class MdnsResponseDecoderTests {
         assertTrue(response.isComplete());
 
         response = new MdnsResponse(responses.valueAt(0));
-        response.setInet4AddressRecord(null);
+        response.clearInet4AddressRecords();
         assertFalse(response.isComplete());
 
-        response.setInet6AddressRecord(new MdnsInetAddressRecord(new String[] { "testhostname" },
+        response.addInet6AddressRecord(new MdnsInetAddressRecord(new String[] { "testhostname" },
                 0L /* receiptTimeMillis */, false /* cacheFlush */, 1234L /* ttlMillis */,
                 parseNumericAddress("2008:db1::123")));
         assertTrue(response.isComplete());
 
-        response.setInet6AddressRecord(null);
+        response.clearInet6AddressRecords();
         assertFalse(response.isComplete());
 
         response = new MdnsResponse(responses.valueAt(0));
@@ -356,10 +356,12 @@ public class MdnsResponseDecoderTests {
         assertTrue(response2.isComplete());
 
         // And should both have the same IPv6 address:
-        assertEquals(parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"),
-                response1.getInet6AddressRecord().getInet6Address());
-        assertEquals(parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"),
-                response2.getInet6AddressRecord().getInet6Address());
+        assertTrue(response1.getInet6AddressRecords().stream().anyMatch(
+                record -> record.getInet6Address().equals(
+                        parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"))));
+        assertTrue(response2.getInet6AddressRecords().stream().anyMatch(
+                record -> record.getInet6Address().equals(
+                        parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"))));
     }
 
     @Test
@@ -514,9 +516,9 @@ public class MdnsResponseDecoderTests {
             reader.skip(2); // skip record type indication.
             // Apply the right kind of record to the response.
             if (responseData.recordClass == MdnsInet4AddressRecord.class) {
-                response.setInet4AddressRecord(new MdnsInet4AddressRecord(name, reader));
+                response.addInet4AddressRecord(new MdnsInet4AddressRecord(name, reader));
             } else if (responseData.recordClass == MdnsInet6AddressRecord.class) {
-                response.setInet6AddressRecord(new MdnsInet6AddressRecord(name, reader));
+                response.addInet6AddressRecord(new MdnsInet6AddressRecord(name, reader));
             } else if (responseData.recordClass == MdnsPointerRecord.class) {
                 response.addPointerRecord(new MdnsPointerRecord(name, reader));
             } else if (responseData.recordClass == MdnsServiceRecord.class) {
