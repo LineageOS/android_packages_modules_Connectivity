@@ -123,9 +123,9 @@ import java.util.Set;
  * Look up the specific capability and the {@link ConnectivityManager#requestNetwork}
  * method for limitations applicable to each capability.
  *
- * <p>Also, starting with {@link Build.VERSION_CODES#UPSIDE_DOWN_CAKE}, some capabilities
+ * <p>Also, starting with {@code Build.VERSION_CODES#UPSIDE_DOWN_CAKE}, some capabilities
  * require the application to self-certify by explicitly adding the
- * {@link android.content.pm.PackageManager#PROPERTY_SELF_CERTIFIED_NETWORK_CAPABILITIES}
+ * {@code android.content.pm.PackageManager#PROPERTY_SELF_CERTIFIED_NETWORK_CAPABILITIES}
  * property in the AndroidManifest.xml, which points to an XML resource file. In the
  * XML resource file, the application declares what kind of network capabilities the application
  * wants to have.
