@@ -140,6 +140,36 @@ public class HttpEngineTest {
     }
 
     @Test
+    public void testHttpEngine_EnablePublicKeyPinningBypassForLocalTrustAnchors() {
+        // For known hosts, requests should succeed whether we're bypassing the local trust anchor
+        // or not.
+        mEngine = mEngineBuilder.setEnablePublicKeyPinningBypassForLocalTrustAnchors(false).build();
+        UrlRequest.Builder builder =
+                mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
+        mRequest = builder.build();
+        mRequest.start();
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+
+        mEngine.shutdown();
+        mEngine = mEngineBuilder.setEnablePublicKeyPinningBypassForLocalTrustAnchors(true).build();
+        mCallback = new TestUrlRequestCallback();
+        builder = mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
+        mRequest = builder.build();
+        mRequest.start();
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+
+        // TODO(b/270918920): We should also test with a certificate not present in the device's
+        // trusted store.
+        // This requires either:
+        // * Mocking the underlying CertificateVerifier.
+        // * Or, having the server return a root certificate not present in the device's trusted
+        //   store.
+        // The former doesn't make sense for a CTS test as it would depend on the underlying
+        // implementation. The latter is something we should support once we write a proper test
+        // server.
+    }
+
+    @Test
     public void testHttpEngine_EnableQuic() throws Exception {
         mEngine = mEngineBuilder.setEnableQuic(true).addQuicHint(HOST, 443, 443).build();
         // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
