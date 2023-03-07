@@ -31,10 +31,10 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A class representing a discovered mDNS service instance.
@@ -57,8 +57,8 @@ public class MdnsServiceInfo implements Parcelable {
                             source.createStringArrayList(),
                             source.createStringArray(),
                             source.readInt(),
-                            source.readString(),
-                            source.readString(),
+                            source.createStringArrayList(),
+                            source.createStringArrayList(),
                             source.createStringArrayList(),
                             source.createTypedArrayList(TextEntry.CREATOR),
                             source.readInt(),
@@ -76,10 +76,10 @@ public class MdnsServiceInfo implements Parcelable {
     private final List<String> subtypes;
     private final String[] hostName;
     private final int port;
-    @Nullable
-    private final String ipv4Address;
-    @Nullable
-    private final String ipv6Address;
+    @NonNull
+    private final List<String> ipv4Addresses;
+    @NonNull
+    private final List<String> ipv6Addresses;
     final List<String> textStrings;
     @Nullable
     final List<TextEntry> textEntries;
@@ -105,8 +105,8 @@ public class MdnsServiceInfo implements Parcelable {
                 subtypes,
                 hostName,
                 port,
-                ipv4Address,
-                ipv6Address,
+                List.of(ipv4Address),
+                List.of(ipv6Address),
                 textStrings,
                 /* textEntries= */ null,
                 /* interfaceIndex= */ INTERFACE_INDEX_UNSPECIFIED,
@@ -130,8 +130,8 @@ public class MdnsServiceInfo implements Parcelable {
                 subtypes,
                 hostName,
                 port,
-                ipv4Address,
-                ipv6Address,
+                List.of(ipv4Address),
+                List.of(ipv6Address),
                 textStrings,
                 textEntries,
                 /* interfaceIndex= */ INTERFACE_INDEX_UNSPECIFIED,
@@ -160,8 +160,8 @@ public class MdnsServiceInfo implements Parcelable {
                 subtypes,
                 hostName,
                 port,
-                ipv4Address,
-                ipv6Address,
+                List.of(ipv4Address),
+                List.of(ipv6Address),
                 textStrings,
                 textEntries,
                 interfaceIndex,
@@ -179,8 +179,8 @@ public class MdnsServiceInfo implements Parcelable {
             @Nullable List<String> subtypes,
             String[] hostName,
             int port,
-            @Nullable String ipv4Address,
-            @Nullable String ipv6Address,
+            @NonNull List<String> ipv4Addresses,
+            @NonNull List<String> ipv6Addresses,
             @Nullable List<String> textStrings,
             @Nullable List<TextEntry> textEntries,
             int interfaceIndex,
@@ -193,8 +193,8 @@ public class MdnsServiceInfo implements Parcelable {
         }
         this.hostName = hostName;
         this.port = port;
-        this.ipv4Address = ipv4Address;
-        this.ipv6Address = ipv6Address;
+        this.ipv4Addresses = new ArrayList<>(ipv4Addresses);
+        this.ipv6Addresses = new ArrayList<>(ipv6Addresses);
         this.textStrings = new ArrayList<>();
         if (textStrings != null) {
             this.textStrings.addAll(textStrings);
@@ -205,17 +205,14 @@ public class MdnsServiceInfo implements Parcelable {
         // compatibility. We should prefer only {@code textEntries} if it's not null.
         List<TextEntry> entries =
                 (this.textEntries != null) ? this.textEntries : parseTextStrings(this.textStrings);
-        Map<String, byte[]> attributes = new HashMap<>(entries.size());
+        // The map of attributes is case-insensitive.
+        final Map<String, byte[]> attributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         for (TextEntry entry : entries) {
-            String key = entry.getKey().toLowerCase(Locale.ENGLISH);
-
             // Per https://datatracker.ietf.org/doc/html/rfc6763#section-6.4, only the first entry
             // of the same key should be accepted:
             // If a client receives a TXT record containing the same key more than once, then the
             // client MUST silently ignore all but the first occurrence of that attribute.
-            if (!attributes.containsKey(key)) {
-                attributes.put(key, entry.getValue());
-            }
+            attributes.putIfAbsent(entry.getKey(), entry.getValue());
         }
         this.attributes = Collections.unmodifiableMap(attributes);
         this.interfaceIndex = interfaceIndex;
@@ -263,16 +260,41 @@ public class MdnsServiceInfo implements Parcelable {
         return port;
     }
 
-    /** Returns the IPV4 address of this service instance. */
+    /** Returns the IPV4 addresses of this service instance. */
+    @NonNull
+    public List<String> getIpv4Addresses() {
+        return Collections.unmodifiableList(ipv4Addresses);
+    }
+
+    /**
+     * Returns the first IPV4 address of this service instance.
+     *
+     * @deprecated Use {@link #getIpv4Addresses()} to get the entire list of IPV4
+     * addresses for
+     * the host.
+     */
     @Nullable
+    @Deprecated
     public String getIpv4Address() {
-        return ipv4Address;
+        return ipv4Addresses.isEmpty() ? null : ipv4Addresses.get(0);
     }
 
     /** Returns the IPV6 address of this service instance. */
+    @NonNull
+    public List<String> getIpv6Addresses() {
+        return Collections.unmodifiableList(ipv6Addresses);
+    }
+
+    /**
+     * Returns the first IPV6 address of this service instance.
+     *
+     * @deprecated Use {@link #getIpv6Addresses()} to get the entire list of IPV6 addresses for
+     * the host.
+     */
     @Nullable
+    @Deprecated
     public String getIpv6Address() {
-        return ipv6Address;
+        return ipv6Addresses.isEmpty() ? null : ipv6Addresses.get(0);
     }
 
     /**
@@ -311,12 +333,12 @@ public class MdnsServiceInfo implements Parcelable {
      */
     @Nullable
     public byte[] getAttributeAsBytes(@NonNull String key) {
-        return attributes.get(key.toLowerCase(Locale.ENGLISH));
+        return attributes.get(key);
     }
 
     /** Returns an immutable map of all attributes. */
     public Map<String, String> getAttributes() {
-        Map<String, String> map = new HashMap<>(attributes.size());
+        Map<String, String> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         for (Map.Entry<String, byte[]> kv : attributes.entrySet()) {
             final byte[] value = kv.getValue();
             map.put(kv.getKey(), value == null ? null : new String(value, UTF_8));
@@ -336,8 +358,8 @@ public class MdnsServiceInfo implements Parcelable {
         out.writeStringList(subtypes);
         out.writeStringArray(hostName);
         out.writeInt(port);
-        out.writeString(ipv4Address);
-        out.writeString(ipv6Address);
+        out.writeStringList(ipv4Addresses);
+        out.writeStringList(ipv6Addresses);
         out.writeStringList(textStrings);
         out.writeTypedList(textEntries);
         out.writeInt(interfaceIndex);
@@ -346,13 +368,16 @@ public class MdnsServiceInfo implements Parcelable {
 
     @Override
     public String toString() {
-        return String.format(
-                Locale.ROOT,
-                "Name: %s, subtypes: %s, ip: %s, port: %d",
-                serviceInstanceName,
-                TextUtils.join(",", subtypes),
-                ipv4Address,
-                port);
+        return "Name: " + serviceInstanceName
+                + ", type: " + TextUtils.join(".", serviceType)
+                + ", subtypes: " + TextUtils.join(",", subtypes)
+                + ", ip: " + ipv4Addresses
+                + ", ipv6: " + ipv6Addresses
+                + ", port: " + port
+                + ", interfaceIndex: " + interfaceIndex
+                + ", network: " + network
+                + ", textStrings: " + textStrings
+                + ", textEntries: " + textEntries;
     }
 
 

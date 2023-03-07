@@ -896,8 +896,8 @@ public class NsdServiceTest {
                 List.of(), /* subtypes */
                 new String[] {"android", "local"}, /* hostName */
                 12345, /* port */
-                IPV4_ADDRESS,
-                IPV6_ADDRESS,
+                List.of(IPV4_ADDRESS),
+                List.of(IPV6_ADDRESS),
                 List.of(), /* textStrings */
                 List.of(), /* textEntries */
                 1234, /* interfaceIndex */
@@ -916,8 +916,8 @@ public class NsdServiceTest {
                 null, /* subtypes */
                 null, /* hostName */
                 0, /* port */
-                null, /* ipv4Address */
-                null, /* ipv6Address */
+                List.of(), /* ipv4Address */
+                List.of(), /* ipv6Address */
                 null, /* textStrings */
                 null, /* textEntries */
                 1234, /* interfaceIndex */
@@ -993,8 +993,8 @@ public class NsdServiceTest {
                 List.of(), /* subtypes */
                 new String[]{"android", "local"}, /* hostName */
                 PORT,
-                IPV4_ADDRESS,
-                IPV6_ADDRESS,
+                List.of(IPV4_ADDRESS),
+                List.of("2001:db8::1", "2001:db8::2"),
                 List.of() /* textStrings */,
                 List.of(MdnsServiceInfo.TextEntry.fromBytes(new byte[]{
                         'k', 'e', 'y', '=', (byte) 0xFF, (byte) 0xFE})) /* textEntries */,
@@ -1014,6 +1014,11 @@ public class NsdServiceTest {
         assertEquals(1, info.getAttributes().size());
         assertArrayEquals(new byte[]{(byte) 0xFF, (byte) 0xFE}, info.getAttributes().get("key"));
         assertEquals(parseNumericAddress(IPV4_ADDRESS), info.getHost());
+        assertEquals(3, info.getHostAddresses().size());
+        assertTrue(info.getHostAddresses().stream().anyMatch(
+                address -> address.equals(parseNumericAddress("2001:db8::1"))));
+        assertTrue(info.getHostAddresses().stream().anyMatch(
+                address -> address.equals(parseNumericAddress("2001:db8::2"))));
         assertEquals(network, info.getNetwork());
 
         // Verify the listener has been unregistered.

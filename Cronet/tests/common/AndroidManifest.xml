@@ -18,6 +18,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools"
           package="com.android.net.http.tests.coverage">
+
     <!-- NetHttpCoverageTests combines CtsNetHttpTestCases and NetHttpTests targets,
      so permissions and others are declared in their respective manifests -->
     <application tools:replace="android:label"

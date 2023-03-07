@@ -115,15 +115,19 @@ public class MdnsServiceTypeClient {
             port = response.getServiceRecord().getServicePort();
         }
 
-        String ipv4Address = null;
-        String ipv6Address = null;
+        final List<String> ipv4Addresses = new ArrayList<>();
+        final List<String> ipv6Addresses = new ArrayList<>();
         if (response.hasInet4AddressRecord()) {
-            Inet4Address inet4Address = response.getInet4AddressRecord().getInet4Address();
-            ipv4Address = (inet4Address == null) ? null : inet4Address.getHostAddress();
+            for (MdnsInetAddressRecord inetAddressRecord : response.getInet4AddressRecords()) {
+                final Inet4Address inet4Address = inetAddressRecord.getInet4Address();
+                ipv4Addresses.add((inet4Address == null) ? null : inet4Address.getHostAddress());
+            }
         }
         if (response.hasInet6AddressRecord()) {
-            Inet6Address inet6Address = response.getInet6AddressRecord().getInet6Address();
-            ipv6Address = (inet6Address == null) ? null : inet6Address.getHostAddress();
+            for (MdnsInetAddressRecord inetAddressRecord : response.getInet6AddressRecords()) {
+                final Inet6Address inet6Address = inetAddressRecord.getInet6Address();
+                ipv6Addresses.add((inet6Address == null) ? null : inet6Address.getHostAddress());
+            }
         }
         String serviceInstanceName = response.getServiceInstanceName();
         if (serviceInstanceName == null) {
@@ -143,8 +147,8 @@ public class MdnsServiceTypeClient {
                 response.getSubtypes(),
                 hostName,
                 port,
-                ipv4Address,
-                ipv6Address,
+                ipv4Addresses,
+                ipv6Addresses,
                 textStrings,
                 textEntries,
                 response.getInterfaceIndex(),
