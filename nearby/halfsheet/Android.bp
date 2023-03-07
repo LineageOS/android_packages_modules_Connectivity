@@ -28,7 +28,7 @@ android_app {
     certificate: ":com.android.nearby.halfsheetcertificate",
     libs: [
         "framework-bluetooth",
-        "framework-connectivity-t",
+        "framework-connectivity-t.impl",
         "framework-nearby-static",
     ],
     static_libs: [
