@@ -385,7 +385,7 @@ public class EthernetTracker {
         return mFactory.hasInterface(iface);
     }
 
-    String[] getInterfaces(boolean includeRestricted) {
+    String[] getClientModeInterfaces(boolean includeRestricted) {
         return mFactory.getAvailableInterfaces(includeRestricted);
     }
 
@@ -428,7 +428,7 @@ public class EthernetTracker {
                 // Remote process has already died
                 return;
             }
-            for (String iface : getInterfaces(canUseRestrictedNetworks)) {
+            for (String iface : getClientModeInterfaces(canUseRestrictedNetworks)) {
                 unicastInterfaceStateChange(listener, iface);
             }
 

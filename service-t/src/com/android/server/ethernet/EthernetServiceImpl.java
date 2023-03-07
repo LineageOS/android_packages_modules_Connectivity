@@ -92,7 +92,7 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
     @Override
     public String[] getAvailableInterfaces() throws RemoteException {
         PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
-        return mTracker.getInterfaces(checkUseRestrictedNetworksPermission());
+        return mTracker.getClientModeInterfaces(checkUseRestrictedNetworksPermission());
     }
 
     /**
