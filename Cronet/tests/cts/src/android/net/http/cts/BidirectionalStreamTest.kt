@@ -63,7 +63,7 @@ class BidirectionalStreamTest {
     }
 
     private fun createBidirectionalStreamBuilder(url: String): BidirectionalStream.Builder {
-        return httpEngine.newBidirectionalStreamBuilder(url, callback, callback.executor)
+        return httpEngine.newBidirectionalStreamBuilder(url, callback.executor, callback)
     }
 
     @Test
