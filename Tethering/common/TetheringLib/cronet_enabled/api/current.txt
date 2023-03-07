@@ -95,7 +95,7 @@ package android.net.http {
 
   public abstract class HttpEngine {
     method public void bindToNetwork(@Nullable android.net.Network);
-    method public abstract java.net.URLStreamHandlerFactory createURLStreamHandlerFactory();
+    method public abstract java.net.URLStreamHandlerFactory createUrlStreamHandlerFactory();
     method public static String getVersionString();
     method public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(String, java.util.concurrent.Executor, android.net.http.BidirectionalStream.Callback);
     method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, java.util.concurrent.Executor, android.net.http.UrlRequest.Callback);
