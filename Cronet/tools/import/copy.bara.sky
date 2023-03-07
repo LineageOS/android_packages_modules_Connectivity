@@ -95,10 +95,9 @@ core.workflow(
     name = "import_cronet",
     authoring = authoring.overwrite("Cronet Mainline Eng <cronet-mainline-eng+copybara@google.com>"),
     origin = git.origin(
-        url = "rpc://chromium/chromium/src",
+        url = "https://chromium.googlesource.com/chromium/src.git",
         # Source ref is set by the invoking script.
         ref = "overwritten-by-script",
-        partial_fetch = True,
     ),
     origin_files = cronet_origin_files,
     destination = git.destination(
