@@ -78,7 +78,8 @@ public interface MdnsSocketClientBase {
                 @Nullable Network network);
 
         /*** Parse a mdns response failed */
-        void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode);
+        void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode,
+                @Nullable Network network);
     }
 
     /*** Callback for requested socket creation  */
