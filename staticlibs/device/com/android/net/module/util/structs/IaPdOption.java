@@ -50,15 +50,15 @@ public class IaPdOption extends Struct {
     public static final int LENGTH = 12; // option length excluding IA_PD options
 
     @Field(order = 0, type = Type.S16)
-    public short code;
+    public final short code;
     @Field(order = 1, type = Type.S16)
-    public short length;
+    public final short length;
     @Field(order = 2, type = Type.U32)
-    public long id;
+    public final long id;
     @Field(order = 3, type = Type.U32)
-    public long t1;
+    public final long t1;
     @Field(order = 4, type = Type.U32)
-    public long t2;
+    public final long t2;
 
     IaPdOption(final short code, final short length, final long id, final long t1,
             final long t2) {
