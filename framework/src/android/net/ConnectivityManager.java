@@ -2521,7 +2521,7 @@ public class ConnectivityManager {
     @RequiresPermission(android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD)
     public @NonNull SocketKeepalive createSocketKeepalive(@NonNull Network network,
             @NonNull Socket socket,
-            @NonNull Executor executor,
+            @NonNull @CallbackExecutor Executor executor,
             @NonNull Callback callback) {
         ParcelFileDescriptor dup;
         try {
@@ -5494,9 +5494,9 @@ public class ConnectivityManager {
      * @return {@code uid} if the connection is found and the app has permission to observe it
      *     (e.g., if it is associated with the calling VPN app's VpnService tunnel) or {@link
      *     android.os.Process#INVALID_UID} if the connection is not found.
-     * @throws {@link SecurityException} if the caller is not the active VpnService for the current
+     * @throws SecurityException if the caller is not the active VpnService for the current
      *     user.
-     * @throws {@link IllegalArgumentException} if an unsupported protocol is requested.
+     * @throws IllegalArgumentException if an unsupported protocol is requested.
      */
     public int getConnectionOwnerUid(
             int protocol, @NonNull InetSocketAddress local, @NonNull InetSocketAddress remote) {
