@@ -97,8 +97,9 @@ package android.net.http {
     method public void bindToNetwork(@Nullable android.net.Network);
     method public abstract java.net.URLStreamHandlerFactory createURLStreamHandlerFactory();
     method public static String getVersionString();
-    method public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(String, android.net.http.BidirectionalStream.Callback, java.util.concurrent.Executor);
-    method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, android.net.http.UrlRequest.Callback, java.util.concurrent.Executor);
+    method public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(String, java.util.concurrent.Executor, android.net.http.BidirectionalStream.Callback);
+    method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, java.util.concurrent.Executor, android.net.http.UrlRequest.Callback);
+    method public android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, android.net.http.UrlRequest.Callback, java.util.concurrent.Executor);
     method public abstract java.net.URLConnection openConnection(java.net.URL) throws java.io.IOException;
     method public abstract void shutdown();
   }
