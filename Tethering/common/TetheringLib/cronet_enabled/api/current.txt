@@ -49,7 +49,7 @@ package android.net.http {
     method @Nullable public Boolean getEnablePathDegradationMigration();
   }
 
-  public static class ConnectionMigrationOptions.Builder {
+  public static final class ConnectionMigrationOptions.Builder {
     ctor public ConnectionMigrationOptions.Builder();
     method public android.net.http.ConnectionMigrationOptions build();
     method public android.net.http.ConnectionMigrationOptions.Builder setAllowNonDefaultNetworkUsage(boolean);
@@ -160,7 +160,7 @@ package android.net.http {
     method @NonNull public java.util.Set<java.lang.String> getQuicHostAllowlist();
   }
 
-  public static class QuicOptions.Builder {
+  public static final class QuicOptions.Builder {
     ctor public QuicOptions.Builder();
     method @NonNull public android.net.http.QuicOptions.Builder addAllowedQuicHost(@NonNull String);
     method @NonNull public android.net.http.QuicOptions build();
