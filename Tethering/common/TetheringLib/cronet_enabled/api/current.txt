@@ -242,9 +242,8 @@ package android.net.http {
     field public static final int WAITING_FOR_STALLED_SOCKET_POOL = 1; // 0x1
   }
 
-  public abstract static class UrlRequest.StatusListener {
-    ctor public UrlRequest.StatusListener();
-    method public abstract void onStatus(int);
+  public static interface UrlRequest.StatusListener {
+    method public void onStatus(int);
   }
 
   public abstract class UrlResponseInfo {
