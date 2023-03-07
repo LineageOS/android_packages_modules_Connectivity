@@ -66,6 +66,15 @@ do_run_copybara() {
     flags+=(--git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet")
     flags+=(--repo-timeout 3h)
 
+    # git_checkout_hook.sh reruns git clone and subsequently invokes gclient,
+    # so this can take a while.
+    flags+=(--commands-timeout 3h)
+
+    # Export _new_rev for use in git_checkout_hook.sh.
+    # Arguments are not supported for --git-origin-checkout-hook.
+    export REV="${_new_rev}"
+    flags+=(--git-origin-checkout-hook="${PWD}/git_checkout_hook.sh")
+
     if [ ! -z "${_force}" ]; then
         flags+=(--force)
     fi
