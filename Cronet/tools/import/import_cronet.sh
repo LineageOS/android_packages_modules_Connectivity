@@ -19,16 +19,33 @@
 #  Environment:
 #   ANDROID_BUILD_TOP: path the root of the current Android directory.
 #  Arguments:
-#   -l: The last revision that was imported.
-#   -n: The new revision to import.
+#   -l rev: The last revision that was imported.
+#  Optional Arguments:
+#   -n rev: The new revision to import.
+#   -f: Force copybara to ignore a failure to find the last imported revision.
 
-OPTSTRING=l:n:
+OPTSTRING=fl:n:
 
 usage() {
     cat <<EOF
-Usage: import_cronet.sh -l last-rev -n new-rev
+Usage: import_cronet.sh -n new-rev [-l last-rev] [-f]
 EOF
     exit 1
+}
+
+#######################################
+# Create upstream-import branch in external/cronet.
+# Globals:
+#   ANDROID_BUILD_TOP
+# Arguments:
+#   none
+#######################################
+setup_upstream_import_branch() {
+    local git_dir="${ANDROID_BUILD_TOP}/external/cronet"
+    local initial_empty_repo_sha="d1add53d6e90815f363c91d433735556ce79b0d2"
+
+    # Suppress error message if branch already exists.
+    (cd "${git_dir}" && git branch upstream-import "${initial_empty_repo_sha}") 2>/dev/null
 }
 
 #######################################
@@ -36,23 +53,36 @@ EOF
 # Globals:
 #   ANDROID_BUILD_TOP
 # Arguments:
-#   last_rev, string
 #   new_rev, string
+#   last_rev, string or empty
+#   force, string or empty
 #######################################
 do_run_copybara() {
-    local _last_rev=$1
-    local _new_rev=$2
+    local _new_rev=$1
+    local _last_rev=$2
+    local _force=$3
+
+    local -a flags
+    flags+=(--git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet")
+    flags+=(--repo-timeout 3h)
+
+    if [ ! -z "${_force}" ]; then
+        flags+=(--force)
+    fi
+
+    if [ ! -z "${_last_rev}" ]; then
+        flags+=(--last-rev "${_last_rev}")
+    fi
 
     /google/bin/releases/copybara/public/copybara/copybara \
-        --git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet" \
-        --last-rev "${_last_rev}" \
-        --repo-timeout 3h \
+        "${flags[@]}" \
         "${ANDROID_BUILD_TOP}/packages/modules/Connectivity/Cronet/tools/import/copy.bara.sky" \
         import_cronet "${_new_rev}"
 }
 
 while getopts $OPTSTRING opt; do
     case "${opt}" in
+        f) force=true ;;
         l) last_rev="${OPTARG}" ;;
         n) new_rev="${OPTARG}" ;;
         ?) usage ;;
@@ -60,17 +90,11 @@ while getopts $OPTSTRING opt; do
     esac
 done
 
-# TODO: Get last-rev from METADATA file.
-# Setting last-rev may only be required for the first commit.
-if [ -z "${last_rev}" ]; then
-    echo "-l argument required"
-    usage
-fi
-
 if [ -z "${new_rev}" ]; then
     echo "-n argument required"
     usage
 fi
 
-do_run_copybara "${last_rev}" "${new_rev}"
+setup_upstream_import_branch
+do_run_copybara "${new_rev}" "${last_rev}" "${force}"
 
