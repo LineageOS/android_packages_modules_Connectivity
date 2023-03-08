@@ -879,7 +879,7 @@ class NsdManagerTest {
 
     @Test
     fun testRegisterServiceInfoCallback() {
-        // This test requires shims supporting U+ APIs (NsdManager.subscribeService)
+        // This test requires shims supporting U+ APIs (NsdManager.registerServiceInfoCallback)
         assumeTrue(TestUtils.shouldTestUApis())
 
         // Ensure Wi-Fi network connected and get addresses
@@ -909,16 +909,14 @@ class NsdManagerTest {
             val foundInfo = discoveryRecord.waitForServiceDiscovered(
                     serviceName, wifiNetwork)
 
-            // Subscribe to service and check the addresses are the same as Wi-Fi addresses
+            // Register service callback and check the addresses are the same as Wi-Fi addresses
             nsdShim.registerServiceInfoCallback(nsdManager, foundInfo, { it.run() }, cbRecord)
-            for (i in addresses.indices) {
-                val subscribeCb = cbRecord.expectCallback<ServiceUpdated>()
-                assertEquals(foundInfo.serviceName, subscribeCb.serviceInfo.serviceName)
-                val hostAddresses = subscribeCb.serviceInfo.hostAddresses
-                assertEquals(i + 1, hostAddresses.size)
-                for (hostAddress in hostAddresses) {
-                    assertTrue(addresses.contains(hostAddress))
-                }
+            val serviceInfoCb = cbRecord.expectCallback<ServiceUpdated>()
+            assertEquals(foundInfo.serviceName, serviceInfoCb.serviceInfo.serviceName)
+            val hostAddresses = serviceInfoCb.serviceInfo.hostAddresses
+            assertEquals(addresses.size, hostAddresses.size)
+            for (hostAddress in hostAddresses) {
+                assertTrue(addresses.contains(hostAddress))
             }
         } cleanupStep {
             nsdManager.unregisterService(registrationRecord)
