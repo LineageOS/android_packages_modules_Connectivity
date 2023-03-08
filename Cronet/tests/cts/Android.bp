@@ -64,6 +64,7 @@ android_library {
         "junit",
         "hamcrest-library",
         "kotlin-test",
+        "mockito-target",
     ],
     libs: [
         "android.test.base",
