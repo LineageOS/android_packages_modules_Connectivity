@@ -412,7 +412,8 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeast(1))
-                .onFailedToParseMdnsResponse(anyInt(), eq(MdnsResponseErrorCode.ERROR_END_OF_FILE));
+                .onFailedToParseMdnsResponse(
+                        anyInt(), eq(MdnsResponseErrorCode.ERROR_END_OF_FILE), any());
 
         mdnsClient.stopDiscovery();
     }
@@ -433,7 +434,8 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeast(1))
-                .onFailedToParseMdnsResponse(1, MdnsResponseErrorCode.ERROR_END_OF_FILE);
+                .onFailedToParseMdnsResponse(
+                        eq(1), eq(MdnsResponseErrorCode.ERROR_END_OF_FILE), any());
 
         mdnsClient.stopDiscovery();
     }

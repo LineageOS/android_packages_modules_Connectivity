@@ -423,7 +423,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             LOGGER.w(String.format("Error while decoding %s packet (%d): %d",
                     responseType, packetNumber, e.code));
             if (callback != null) {
-                callback.onFailedToParseMdnsResponse(packetNumber, e.code);
+                callback.onFailedToParseMdnsResponse(packetNumber, e.code, network);
             }
             return e.code;
         }

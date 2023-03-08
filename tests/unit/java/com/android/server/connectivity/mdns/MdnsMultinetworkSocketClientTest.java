@@ -62,6 +62,7 @@ public class MdnsMultinetworkSocketClientTest {
     @Mock private MdnsInterfaceSocket mSocket;
     @Mock private MdnsServiceBrowserListener mListener;
     @Mock private MdnsSocketClientBase.Callback mCallback;
+    @Mock private MdnsSocketClientBase.SocketCreationCallback mSocketCreationCallback;
     private MdnsMultinetworkSocketClient mSocketClient;
     private Handler mHandler;
 
@@ -78,7 +79,8 @@ public class MdnsMultinetworkSocketClientTest {
     private SocketCallback expectSocketCallback() {
         final ArgumentCaptor<SocketCallback> callbackCaptor =
                 ArgumentCaptor.forClass(SocketCallback.class);
-        mHandler.post(() -> mSocketClient.notifyNetworkRequested(mListener, mNetwork));
+        mHandler.post(() -> mSocketClient.notifyNetworkRequested(
+                mListener, mNetwork, mSocketCreationCallback));
         verify(mProvider, timeout(DEFAULT_TIMEOUT))
                 .requestSocket(eq(mNetwork), callbackCaptor.capture());
         return callbackCaptor.getValue();
@@ -107,6 +109,7 @@ public class MdnsMultinetworkSocketClientTest {
         doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
         // Notify socket created
         callback.onSocketCreated(mNetwork, mSocket, List.of());
+        verify(mSocketCreationCallback).onSocketCreated(mNetwork);
 
         // Send packet to IPv4 with target network and verify sending has been called.
         mSocketClient.sendMulticastPacket(ipv4Packet, mNetwork);
@@ -138,6 +141,7 @@ public class MdnsMultinetworkSocketClientTest {
         doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
         // Notify socket created
         callback.onSocketCreated(mNetwork, mSocket, List.of());
+        verify(mSocketCreationCallback).onSocketCreated(mNetwork);
 
         final ArgumentCaptor<PacketHandler> handlerCaptor =
                 ArgumentCaptor.forClass(PacketHandler.class);
