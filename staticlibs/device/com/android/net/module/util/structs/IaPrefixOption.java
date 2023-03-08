@@ -55,17 +55,17 @@ public class IaPrefixOption extends Struct {
     public static final int LENGTH = 25; // option length excluding IAprefix-options
 
     @Field(order = 0, type = Type.S16)
-    public short code;
+    public final short code;
     @Field(order = 1, type = Type.S16)
-    public short length;
+    public final short length;
     @Field(order = 2, type = Type.U32)
-    public long preferred;
+    public final long preferred;
     @Field(order = 3, type = Type.U32)
-    public long valid;
+    public final long valid;
     @Field(order = 4, type = Type.U8)
-    public short prefixLen;
+    public final short prefixLen;
     @Field(order = 5, type = Type.ByteArray, arraysize = 16)
-    public byte[] prefix;
+    public final byte[] prefix;
 
     IaPrefixOption(final short code, final short length, final long preferred,
             final long valid, final short prefixLen, final byte[] prefix) {
