@@ -34,8 +34,6 @@ import com.android.server.BpfNetMaps;
 
 import java.io.IOException;
 import java.net.ProtocolException;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -144,36 +142,6 @@ public class NetworkStatsFactory {
      */
     public void updateUnderlyingNetworkInfos(UnderlyingNetworkInfo[] vpnArray) {
         mUnderlyingNetworkInfos = vpnArray.clone();
-    }
-
-    /**
-     * Get a set of interfaces containing specified ifaces and stacked interfaces.
-     *
-     * <p>The added stacked interfaces are ifaces stacked on top of the specified ones, or ifaces
-     * on which the specified ones are stacked. Stacked interfaces are those noted with
-     * {@link #noteStackedIface(String, String)}, but only interfaces noted before this method
-     * is called are guaranteed to be included.
-     */
-    public String[] augmentWithStackedInterfaces(@Nullable String[] requiredIfaces) {
-        if (requiredIfaces == NetworkStats.INTERFACES_ALL) {
-            return null;
-        }
-
-        HashSet<String> relatedIfaces = new HashSet<>(Arrays.asList(requiredIfaces));
-        // ConcurrentHashMap's EntrySet iterators are "guaranteed to traverse
-        // elements as they existed upon construction exactly once, and may
-        // (but are not guaranteed to) reflect any modifications subsequent to construction".
-        // This is enough here.
-        for (Map.Entry<String, String> entry : mStackedIfaces.entrySet()) {
-            if (relatedIfaces.contains(entry.getKey())) {
-                relatedIfaces.add(entry.getValue());
-            } else if (relatedIfaces.contains(entry.getValue())) {
-                relatedIfaces.add(entry.getKey());
-            }
-        }
-
-        String[] outArray = new String[relatedIfaces.size()];
-        return relatedIfaces.toArray(outArray);
     }
 
     /**
