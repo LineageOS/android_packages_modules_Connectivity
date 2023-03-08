@@ -1312,7 +1312,7 @@ public final class NsdManager {
      * before registering other callbacks. Upon failure to register a callback for example if
      * it's a duplicated registration, the application is notified through
      * {@link ServiceInfoCallback#onServiceInfoCallbackRegistrationFailed} with
-     * {@link #FAILURE_BAD_PARAMETERS} or {@link #FAILURE_ALREADY_ACTIVE}.
+     * {@link #FAILURE_BAD_PARAMETERS}.
      *
      * @param serviceInfo the service to receive updates for
      * @param executor Executor to run callbacks with
