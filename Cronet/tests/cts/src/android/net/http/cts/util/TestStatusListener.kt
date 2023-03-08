@@ -24,7 +24,7 @@ import org.junit.Assert.assertSame
 private const val TIMEOUT_MS = 12000L
 
 /** Test status listener for requests */
-class TestStatusListener : StatusListener() {
+class TestStatusListener : StatusListener {
     private val statusFuture = CompletableFuture<Int>()
 
     override fun onStatus(status: Int) {
