@@ -33,17 +33,26 @@
 namespace android {
 namespace bpf {
 
+// See kernel's net/core/sock_diag.c __sock_gen_cookie()
+// the implementation of which guarantees 0 will never be returned,
+// primarily because 0 is used to mean not yet initialized,
+// and socket cookies are only assigned on first fetch.
 constexpr const uint64_t NONEXISTENT_COOKIE = 0;
 
 static inline uint64_t getSocketCookie(int sockFd) {
     uint64_t sock_cookie;
     socklen_t cookie_len = sizeof(sock_cookie);
-    int res = getsockopt(sockFd, SOL_SOCKET, SO_COOKIE, &sock_cookie, &cookie_len);
-    if (res < 0) {
-        res = -errno;
-        ALOGE("Failed to get socket cookie: %s\n", strerror(errno));
-        errno = -res;
-        // 0 is an invalid cookie. See sock_gen_cookie.
+    if (getsockopt(sockFd, SOL_SOCKET, SO_COOKIE, &sock_cookie, &cookie_len)) {
+        // Failure is almost certainly either EBADF or ENOTSOCK
+        const int err = errno;
+        ALOGE("Failed to get socket cookie: %s\n", strerror(err));
+        errno = err;
+        return NONEXISTENT_COOKIE;
+    }
+    if (cookie_len != sizeof(sock_cookie)) {
+        // This probably cannot actually happen, but...
+        ALOGE("Failed to get socket cookie: len %d != 8\n", cookie_len);
+        errno = 523; // EBADCOOKIE: kernel internal, seems reasonable enough...
         return NONEXISTENT_COOKIE;
     }
     return sock_cookie;
@@ -56,19 +65,19 @@ static inline int synchronizeKernelRCU() {
     //
     // Linux 4.14/4.19/5.4/5.10/5.15 (and 5.18) still have this same behaviour.
     // see net/key/af_key.c: pfkey_release() -> synchronize_rcu()
-    int pfSocket = socket(AF_KEY, SOCK_RAW | SOCK_CLOEXEC, PF_KEY_V2);
+    const int pfSocket = socket(AF_KEY, SOCK_RAW | SOCK_CLOEXEC, PF_KEY_V2);
 
     if (pfSocket < 0) {
-        int ret = -errno;
-        ALOGE("create PF_KEY socket failed: %s", strerror(errno));
-        return ret;
+        const int err = errno;
+        ALOGE("create PF_KEY socket failed: %s", strerror(err));
+        return -err;
     }
 
     // When closing socket, synchronize_rcu() gets called in sock_release().
     if (close(pfSocket)) {
-        int ret = -errno;
-        ALOGE("failed to close the PF_KEY socket: %s", strerror(errno));
-        return ret;
+        const int err = errno;
+        ALOGE("failed to close the PF_KEY socket: %s", strerror(err));
+        return -err;
     }
     return 0;
 }
@@ -79,10 +88,8 @@ static inline int setrlimitForTest() {
             .rlim_cur = 1073741824,  // 1 GiB
             .rlim_max = 1073741824,  // 1 GiB
     };
-    int res = setrlimit(RLIMIT_MEMLOCK, &limit);
-    if (res) {
-        ALOGE("Failed to set the default MEMLOCK rlimit: %s", strerror(errno));
-    }
+    const int res = setrlimit(RLIMIT_MEMLOCK, &limit);
+    if (res) ALOGE("Failed to set the default MEMLOCK rlimit: %s", strerror(errno));
     return res;
 }
 
