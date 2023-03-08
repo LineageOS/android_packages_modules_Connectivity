@@ -21,6 +21,8 @@ import static android.net.nsd.NsdManager.MDNS_DISCOVERY_MANAGER_EVENT;
 import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
+import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -1265,8 +1267,9 @@ public class NsdService extends INsdManager.Stub {
          * @return true if the MdnsDiscoveryManager feature is enabled.
          */
         public boolean isMdnsDiscoveryManagerEnabled(Context context) {
-            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_CONNECTIVITY,
-                    MDNS_DISCOVERY_MANAGER_VERSION, false /* defaultEnabled */);
+            return isAtLeastU() || DeviceConfigUtils.isFeatureEnabled(context,
+                    NAMESPACE_CONNECTIVITY, MDNS_DISCOVERY_MANAGER_VERSION,
+                    false /* defaultEnabled */);
         }
 
         /**
@@ -1276,8 +1279,8 @@ public class NsdService extends INsdManager.Stub {
          * @return true if the MdnsAdvertiser feature is enabled.
          */
         public boolean isMdnsAdvertiserEnabled(Context context) {
-            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_CONNECTIVITY,
-                    MDNS_ADVERTISER_VERSION, false /* defaultEnabled */);
+            return isAtLeastU() || DeviceConfigUtils.isFeatureEnabled(context,
+                    NAMESPACE_CONNECTIVITY, MDNS_ADVERTISER_VERSION, false /* defaultEnabled */);
         }
 
         /**
