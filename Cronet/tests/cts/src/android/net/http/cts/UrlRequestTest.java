@@ -22,10 +22,16 @@ import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.net.http.HttpEngine;
+import android.net.http.HttpException;
+import android.net.http.InlineExecutionProhibitedException;
+import android.net.http.UploadDataProvider;
+import android.net.http.UploadDataSink;
 import android.net.http.UrlRequest;
 import android.net.http.UrlRequest.Status;
 import android.net.http.UrlResponseInfo;
@@ -43,8 +49,18 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 @RunWith(AndroidJUnit4.class)
 public class UrlRequestTest {
+    private static final Executor DIRECT_EXECUTOR = Runnable::run;
+
     private TestUrlRequestCallback mCallback;
     private HttpCtsTestServer mTestServer;
     private HttpEngine mHttpEngine;
@@ -128,8 +144,203 @@ public class UrlRequestTest {
     }
 
     @Test
-    public void testUrlRequestFail_FailedCalled() throws Exception {
+    public void testUrlRequestFail_FailedCalled() {
         createUrlRequestBuilder("http://0.0.0.0:0/").build().start();
         mCallback.expectCallback(ResponseStep.ON_FAILED);
+    }
+
+    @Test
+    public void testUrlRequest_directExecutor_allowed() throws InterruptedException {
+        TestUrlRequestCallback callback = new TestUrlRequestCallback();
+        callback.setAllowDirectExecutor(true);
+        UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
+                mTestServer.getEchoBodyUrl(), callback, DIRECT_EXECUTOR);
+        UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
+        builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR);
+        builder.addHeader("Content-Type", "text/plain;charset=UTF-8");
+        builder.setAllowDirectExecutor(true);
+        builder.build().start();
+        callback.blockForDone();
+
+        if (callback.mOnErrorCalled) {
+            throw new AssertionError("Expected no exception", callback.mError);
+        }
+
+        assertEquals(200, callback.mResponseInfo.getHttpStatusCode());
+        assertEquals("test", callback.mResponseAsString);
+    }
+
+    @Test
+    public void testUrlRequest_directExecutor_disallowed_uploadDataProvider() throws Exception {
+        TestUrlRequestCallback callback = new TestUrlRequestCallback();
+        // This applies just locally to the test callback, not to SUT
+        callback.setAllowDirectExecutor(true);
+
+        UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
+                mTestServer.getEchoBodyUrl(), callback, Executors.newSingleThreadExecutor());
+        UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
+
+        builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR)
+                .addHeader("Content-Type", "text/plain;charset=UTF-8")
+                .build()
+                .start();
+        callback.blockForDone();
+
+        assertTrue(callback.mOnErrorCalled);
+        assertTrue(callback.mError.getCause() instanceof InlineExecutionProhibitedException);
+    }
+
+    @Test
+    public void testUrlRequest_directExecutor_disallowed_responseCallback() throws Exception {
+        TestUrlRequestCallback callback = new TestUrlRequestCallback();
+        // This applies just locally to the test callback, not to SUT
+        callback.setAllowDirectExecutor(true);
+
+        UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
+                mTestServer.getEchoBodyUrl(), callback, DIRECT_EXECUTOR);
+        UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
+
+        builder.setUploadDataProvider(dataProvider, Executors.newSingleThreadExecutor())
+                .addHeader("Content-Type", "text/plain;charset=UTF-8")
+                .build()
+                .start();
+        callback.blockForDone();
+
+        assertTrue(callback.mOnErrorCalled);
+        assertTrue(callback.mError.getCause() instanceof InlineExecutionProhibitedException);
+    }
+
+    @Test
+    public void testUrlRequest_nonDirectByteBuffer() throws Exception {
+        BlockingQueue<HttpException> onFailedException = new ArrayBlockingQueue<>(1);
+
+        UrlRequest request =
+                mHttpEngine
+                        .newUrlRequestBuilder(
+                                mTestServer.getSuccessUrl(),
+                                new StubUrlRequestCallback() {
+                                    @Override
+                                    public void onResponseStarted(
+                                            UrlRequest request, UrlResponseInfo info) {
+                                        // note: allocate, not allocateDirect
+                                        request.read(ByteBuffer.allocate(1024));
+                                    }
+
+                                    @Override
+                                    public void onFailed(
+                                            UrlRequest request,
+                                            UrlResponseInfo info,
+                                            HttpException error) {
+                                        onFailedException.add(error);
+                                    }
+                                },
+                                Executors.newSingleThreadExecutor())
+                        .build();
+        request.start();
+
+        HttpException e = onFailedException.poll(5, TimeUnit.SECONDS);
+        assertNotNull(e);
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
+        assertTrue(e.getCause().getMessage().contains("direct"));
+    }
+
+    @Test
+    public void testUrlRequest_fullByteBuffer() throws Exception {
+        BlockingQueue<HttpException> onFailedException = new ArrayBlockingQueue<>(1);
+
+        UrlRequest request =
+                mHttpEngine
+                        .newUrlRequestBuilder(
+                                mTestServer.getSuccessUrl(),
+                                new StubUrlRequestCallback() {
+                                    @Override
+                                    public void onResponseStarted(
+                                            UrlRequest request, UrlResponseInfo info) {
+                                        ByteBuffer bb = ByteBuffer.allocateDirect(1024);
+                                        bb.position(bb.limit());
+                                        request.read(bb);
+                                    }
+
+                                    @Override
+                                    public void onFailed(
+                                            UrlRequest request,
+                                            UrlResponseInfo info,
+                                            HttpException error) {
+                                        onFailedException.add(error);
+                                    }
+                                },
+                                Executors.newSingleThreadExecutor())
+                        .build();
+        request.start();
+
+        HttpException e = onFailedException.poll(5, TimeUnit.SECONDS);
+        assertNotNull(e);
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
+        assertTrue(e.getCause().getMessage().contains("full"));
+    }
+
+    private static class StubUrlRequestCallback extends UrlRequest.Callback {
+
+        @Override
+        public void onRedirectReceived(
+                UrlRequest request, UrlResponseInfo info, String newLocationUrl) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void onResponseStarted(UrlRequest request, UrlResponseInfo info) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void onReadCompleted(
+                UrlRequest request, UrlResponseInfo info, ByteBuffer byteBuffer) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void onSucceeded(UrlRequest request, UrlResponseInfo info) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void onFailed(UrlRequest request, UrlResponseInfo info, HttpException error) {
+            throw new UnsupportedOperationException(error);
+        }
+    }
+
+    private static class InMemoryUploadDataProvider extends UploadDataProvider {
+        private final byte[] mBody;
+        private int mNextChunkStartIndex = 0;
+
+        private InMemoryUploadDataProvider(byte[] body) {
+            this.mBody = body;
+        }
+
+        static InMemoryUploadDataProvider fromUtf8String(String body) {
+            return new InMemoryUploadDataProvider(body.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public long getLength() {
+            return mBody.length;
+        }
+
+        @Override
+        public void read(UploadDataSink uploadDataSink, ByteBuffer byteBuffer) {
+            if (mNextChunkStartIndex >= getLength()) {
+                throw new IllegalStateException("Body of known length is exhausted");
+            }
+            int nextChunkSize =
+                    Math.min(mBody.length - mNextChunkStartIndex, byteBuffer.remaining());
+            byteBuffer.put(mBody, mNextChunkStartIndex, nextChunkSize);
+            mNextChunkStartIndex += nextChunkSize;
+            uploadDataSink.onReadSucceeded(false);
+        }
+
+        @Override
+        public void rewind(UploadDataSink uploadDataSink) {
+            mNextChunkStartIndex = 0;
+        }
     }
 }
