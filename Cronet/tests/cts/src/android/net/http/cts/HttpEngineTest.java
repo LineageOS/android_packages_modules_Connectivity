@@ -20,6 +20,8 @@ import static android.net.http.cts.util.TestUtilsKt.assertOKStatusCode;
 import static android.net.http.cts.util.TestUtilsKt.assumeOKStatusCode;
 import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
@@ -30,6 +32,7 @@ import android.content.Context;
 import android.net.http.HttpEngine;
 import android.net.http.UrlRequest;
 import android.net.http.UrlResponseInfo;
+import android.net.http.cts.util.HttpCtsTestServer;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 
@@ -199,5 +202,55 @@ public class HttpEngineTest {
     @Test
     public void testHttpEngine_GetDefaultUserAgent() throws Exception {
         assertThat(mEngineBuilder.getDefaultUserAgent(), containsString("AndroidHttpClient"));
+    }
+
+    @Test
+    public void testHttpEngine_requestUsesDefaultUserAgent() throws Exception {
+        mEngine = mEngineBuilder.build();
+        HttpCtsTestServer server =
+                new HttpCtsTestServer(ApplicationProvider.getApplicationContext());
+
+        String url = server.getUserAgentUrl();
+        UrlRequest request =
+                mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback).build();
+        request.start();
+
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
+        String receivedUserAgent = extractUserAgent(mCallback.mResponseAsString);
+
+        assertThat(receivedUserAgent).isEqualTo(mEngineBuilder.getDefaultUserAgent());
+    }
+
+    @Test
+    public void testHttpEngine_requestUsesCustomUserAgent() throws Exception {
+        String userAgent = "CtsTests User Agent";
+        HttpCtsTestServer server =
+                new HttpCtsTestServer(ApplicationProvider.getApplicationContext());
+        mEngine =
+                new HttpEngine.Builder(ApplicationProvider.getApplicationContext())
+                        .setUserAgent(userAgent)
+                        .build();
+
+        String url = server.getUserAgentUrl();
+        UrlRequest request =
+                mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback).build();
+        request.start();
+
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
+        String receivedUserAgent = extractUserAgent(mCallback.mResponseAsString);
+
+        assertThat(receivedUserAgent).isEqualTo(userAgent);
+    }
+
+    private static String extractUserAgent(String userAgentResponseBody) {
+        // If someone wants to be evil and have the title HTML tag a part of the user agent,
+        // they'll have to fix this method :)
+        return userAgentResponseBody
+                .replaceFirst(".*<title>", "")
+                .replaceFirst("</title>.*", "");
     }
 }
