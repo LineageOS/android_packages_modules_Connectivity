@@ -29,10 +29,10 @@ import com.android.testutils.ConnectUtil
 import com.android.testutils.RecorderCallback
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.tryTest
-import org.junit.Test
-import org.junit.runner.RunWith
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import org.junit.Test
+import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ConnectivityCheckTest {
@@ -76,7 +76,7 @@ class ConnectivityCheckTest {
                         .addTransportType(TRANSPORT_CELLULAR)
                         .addCapability(NET_CAPABILITY_INTERNET).build(), cb)
         tryTest {
-            cb.eventuallyExpectOrNull<RecorderCallback.CallbackEntry.Available>()
+            cb.poll { it is RecorderCallback.CallbackEntry.Available }
                     ?: fail("The device does not have mobile data available. Check that it is " +
                             "setup with a SIM card that has a working data plan, and that the " +
                             "APN configuration is valid.")
