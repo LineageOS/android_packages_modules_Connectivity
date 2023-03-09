@@ -106,6 +106,7 @@ import android.net.TelephonyNetworkSpecifier;
 import android.net.TetherStatsParcel;
 import android.net.TetheringManager;
 import android.net.TrafficStats;
+import android.net.TransportInfo;
 import android.net.UnderlyingNetworkInfo;
 import android.net.Uri;
 import android.net.netstats.IUsageCallback;
@@ -113,6 +114,7 @@ import android.net.netstats.NetworkStatsDataMigrationUtils;
 import android.net.netstats.provider.INetworkStatsProvider;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.net.netstats.provider.NetworkStatsProvider;
+import android.net.wifi.WifiInfo;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -2122,6 +2124,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             final NetworkIdentity ident = NetworkIdentity.buildNetworkIdentity(mContext, snapshot,
                     isDefault, ratType);
 
+            // If WifiInfo contains a null network key then this identity should not be added into
+            // the network identity set. See b/266598304.
+            final TransportInfo transportInfo = snapshot.getNetworkCapabilities()
+                    .getTransportInfo();
+            if (transportInfo instanceof WifiInfo) {
+                final WifiInfo info = (WifiInfo) transportInfo;
+                if (info.getNetworkKey() == null) continue;
+            }
             // Traffic occurring on the base interface is always counted for
             // both total usage and UID details.
             final String baseIface = snapshot.getLinkProperties().getInterfaceName();

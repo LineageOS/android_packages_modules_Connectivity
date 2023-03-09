@@ -700,7 +700,15 @@ public final class NetworkTemplate implements Parcelable {
      *                  to know details about the key.
      */
     private boolean matchesWifiNetworkKey(@NonNull String wifiNetworkKey) {
-        Objects.requireNonNull(wifiNetworkKey);
+        // Note that this code accepts null wifi network keys because of a past bug where wifi
+        // code was sending a null network key for some connected networks, which isn't expected
+        // and ended up stored in the data on many devices.
+        // A null network key in the data matches a wildcard template (one where
+        // {@code mMatchWifiNetworkKeys} is empty), but not one where {@code MatchWifiNetworkKeys}
+        // contains null. See b/266598304.
+        if (wifiNetworkKey == null) {
+            return CollectionUtils.isEmpty(mMatchWifiNetworkKeys);
+        }
         return CollectionUtils.isEmpty(mMatchWifiNetworkKeys)
                 || CollectionUtils.contains(mMatchWifiNetworkKeys, wifiNetworkKey);
     }
