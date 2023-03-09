@@ -37,8 +37,6 @@ import android.net.cts.NetworkValidationTestUtil.setHttpUrlDeviceConfig
 import android.net.cts.NetworkValidationTestUtil.setHttpsUrlDeviceConfig
 import android.net.cts.NetworkValidationTestUtil.setUrlExpirationDeviceConfig
 import android.net.cts.util.CtsNetUtils
-import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL
-import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
@@ -47,28 +45,30 @@ import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import androidx.test.runner.AndroidJUnit4
 import com.android.modules.utils.build.SdkLevel.isAtLeastR
+import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL
+import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
 import com.android.testutils.DeviceConfigRule
-import com.android.testutils.RecorderCallback
+import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestHttpServer.Request
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import fi.iki.elonen.NanoHTTPD.Response.Status
-import junit.framework.AssertionFailedError
-import org.junit.After
-import org.junit.Assume.assumeTrue
-import org.junit.Assume.assumeFalse
-import org.junit.Before
-import org.junit.BeforeClass
-import org.junit.Rule
-import org.junit.runner.RunWith
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import junit.framework.AssertionFailedError
 import kotlin.test.Test
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.After
+import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Rule
+import org.junit.runner.RunWith
 
 private const val TEST_HTTPS_URL_PATH = "/https_path"
 private const val TEST_HTTP_URL_PATH = "/http_path"
@@ -151,8 +151,8 @@ class CaptivePortalTest {
                 .build()
         val cellCb = TestableNetworkCallback(timeoutMs = TEST_TIMEOUT_MS)
         cm.registerNetworkCallback(cellReq, cellCb)
-        val cb = cellCb.eventuallyExpectOrNull<RecorderCallback.CallbackEntry.CapabilitiesChanged> {
-            it.network == cellNetwork && it.caps.hasCapability(NET_CAPABILITY_VALIDATED)
+        val cb = cellCb.poll { it.network == cellNetwork &&
+                it is CapabilitiesChanged && it.caps.hasCapability(NET_CAPABILITY_VALIDATED)
         }
         assertNotNull(cb, "Mobile network $cellNetwork has no access to the internet. " +
                 "Check the mobile data connection.")
