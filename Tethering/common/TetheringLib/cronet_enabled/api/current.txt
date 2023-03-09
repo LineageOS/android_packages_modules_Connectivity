@@ -35,16 +35,15 @@ package android.net.http {
     method @NonNull public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsUid(int);
   }
 
-  public abstract static class BidirectionalStream.Callback {
-    ctor public BidirectionalStream.Callback();
+  public static interface BidirectionalStream.Callback {
     method public void onCanceled(@NonNull android.net.http.BidirectionalStream, @Nullable android.net.http.UrlResponseInfo);
-    method public abstract void onFailed(@NonNull android.net.http.BidirectionalStream, @Nullable android.net.http.UrlResponseInfo, @NonNull android.net.http.HttpException);
-    method public abstract void onReadCompleted(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer, boolean);
-    method public abstract void onResponseHeadersReceived(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo);
+    method public void onFailed(@NonNull android.net.http.BidirectionalStream, @Nullable android.net.http.UrlResponseInfo, @NonNull android.net.http.HttpException);
+    method public void onReadCompleted(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer, boolean);
+    method public void onResponseHeadersReceived(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo);
     method public void onResponseTrailersReceived(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull android.net.http.HeaderBlock);
-    method public abstract void onStreamReady(@NonNull android.net.http.BidirectionalStream);
-    method public abstract void onSucceeded(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo);
-    method public abstract void onWriteCompleted(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer, boolean);
+    method public void onStreamReady(@NonNull android.net.http.BidirectionalStream);
+    method public void onSucceeded(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo);
+    method public void onWriteCompleted(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer, boolean);
   }
 
   public abstract class CallbackException extends android.net.http.HttpException {
