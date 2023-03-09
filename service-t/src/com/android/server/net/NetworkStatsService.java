@@ -537,7 +537,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                                     BroadcastOptions.makeBasic())
                                     .setDeliveryGroupPolicy(
                                             ConstantsShim.DELIVERY_GROUP_POLICY_MOST_RECENT)
-                                    .setDeferUntilActive(true)
+                                    .setDeferralPolicy(
+                                            ConstantsShim.DEFERRAL_POLICY_UNTIL_ACTIVE)
                                     .toBundle();
                         } catch (UnsupportedApiLevelException e) {
                             Log.wtf(TAG, "Using unsupported API" + e);
