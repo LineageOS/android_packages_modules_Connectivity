@@ -26,7 +26,7 @@ class QuicOptionsTest {
     @Test
     fun testQuicOptions_defaultValues() {
         val quicOptions = QuicOptions.Builder().build()
-        assertThat(quicOptions.quicHostAllowlist).isEmpty()
+        assertThat(quicOptions.allowedQuicHosts).isEmpty()
         assertThat(quicOptions.handshakeUserAgent).isNull()
         // TODO(danstahr): idleConnectionTimeout getter should be public
         // assertThat(quicOptions.idleConnectionTimeout).isNull()
@@ -41,7 +41,7 @@ class QuicOptionsTest {
                 .addAllowedQuicHost("foo")
                 .addAllowedQuicHost("baz")
                 .build()
-        assertThat(quicOptions.quicHostAllowlist)
+        assertThat(quicOptions.allowedQuicHosts)
                 .containsExactly("foo", "bar", "baz")
                 .inOrder()
     }
