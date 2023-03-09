@@ -62,6 +62,7 @@ cc_test {
     header_libs: ["bpf_connectivity_headers"],
     srcs: [
         "BpfNetworkStatsTest.cpp",
+        "NetworkTraceHandlerTest.cpp",
         "NetworkTracePollerTest.cpp",
     ],
     cflags: [
@@ -74,6 +75,8 @@ cc_test {
         "libgmock",
         "libnetworkstats",
         "libperfetto_client_experimental",
+        "libprotobuf-cpp-lite",
+        "perfetto_trace_protos",
     ],
     shared_libs: [
         "libbase",

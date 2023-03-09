@@ -46,6 +46,11 @@ class NetworkTraceHandler : public perfetto::DataSource<NetworkTraceHandler> {
   void OnStart(const StartArgs&) override;
   void OnStop(const StopArgs&) override;
 
+  // Writes the packets as Perfetto TracePackets, creating packets as needed
+  // using the provided callback (which allows easy testing).
+  void Write(const std::vector<PacketTrace>& packets,
+             NetworkTraceHandler::TraceContext& ctx);
+
  private:
   // Convert a PacketTrace into a Perfetto trace packet.
   static void Fill(const PacketTrace& src,
