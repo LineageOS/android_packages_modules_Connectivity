@@ -64,7 +64,9 @@ public interface MdnsSocketClientBase {
 
     /*** Notify that the given network is requested for mdns discovery / resolution */
     default void notifyNetworkRequested(@NonNull MdnsServiceBrowserListener listener,
-            @Nullable Network network) { }
+            @Nullable Network network, @NonNull SocketCreationCallback socketCreationCallback) {
+        socketCreationCallback.onSocketCreated(network);
+    }
 
     /*** Notify that the network is unrequested */
     default void notifyNetworkUnrequested(@NonNull MdnsServiceBrowserListener listener) { }
@@ -76,6 +78,13 @@ public interface MdnsSocketClientBase {
                 @Nullable Network network);
 
         /*** Parse a mdns response failed */
-        void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode);
+        void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode,
+                @Nullable Network network);
+    }
+
+    /*** Callback for requested socket creation  */
+    interface SocketCreationCallback {
+        /*** Notify requested socket is created */
+        void onSocketCreated(@Nullable Network network);
     }
 }

@@ -6,20 +6,20 @@ package android.net.http {
     method public abstract void cancel();
     method public abstract void flush();
     method public abstract boolean isDone();
-    method public abstract void read(java.nio.ByteBuffer);
+    method public abstract void read(@NonNull java.nio.ByteBuffer);
     method public abstract void start();
-    method public abstract void write(java.nio.ByteBuffer, boolean);
+    method public abstract void write(@NonNull java.nio.ByteBuffer, boolean);
   }
 
   public abstract static class BidirectionalStream.Builder {
     ctor public BidirectionalStream.Builder();
-    method public abstract android.net.http.BidirectionalStream.Builder addHeader(String, String);
-    method public abstract android.net.http.BidirectionalStream build();
-    method public abstract android.net.http.BidirectionalStream.Builder delayRequestHeadersUntilFirstFlush(boolean);
-    method public abstract android.net.http.BidirectionalStream.Builder setHttpMethod(String);
-    method public abstract android.net.http.BidirectionalStream.Builder setPriority(int);
-    method public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsTag(int);
-    method public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsUid(int);
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder addHeader(@NonNull String, @NonNull String);
+    method @NonNull public abstract android.net.http.BidirectionalStream build();
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder delayRequestHeadersUntilFirstFlush(boolean);
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder setHttpMethod(@NonNull String);
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder setPriority(int);
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsTag(int);
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder setTrafficStatsUid(int);
     field public static final int STREAM_PRIORITY_HIGHEST = 4; // 0x4
     field public static final int STREAM_PRIORITY_IDLE = 0; // 0x0
     field public static final int STREAM_PRIORITY_LOW = 2; // 0x2
@@ -29,18 +29,18 @@ package android.net.http {
 
   public abstract static class BidirectionalStream.Callback {
     ctor public BidirectionalStream.Callback();
-    method public void onCanceled(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo);
-    method public abstract void onFailed(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, android.net.http.HttpException);
-    method public abstract void onReadCompleted(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, java.nio.ByteBuffer, boolean);
-    method public abstract void onResponseHeadersReceived(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo);
-    method public void onResponseTrailersReceived(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, android.net.http.UrlResponseInfo.HeaderBlock);
-    method public abstract void onStreamReady(android.net.http.BidirectionalStream);
-    method public abstract void onSucceeded(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo);
-    method public abstract void onWriteCompleted(android.net.http.BidirectionalStream, android.net.http.UrlResponseInfo, java.nio.ByteBuffer, boolean);
+    method public void onCanceled(@NonNull android.net.http.BidirectionalStream, @Nullable android.net.http.UrlResponseInfo);
+    method public abstract void onFailed(@NonNull android.net.http.BidirectionalStream, @Nullable android.net.http.UrlResponseInfo, @NonNull android.net.http.HttpException);
+    method public abstract void onReadCompleted(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer, boolean);
+    method public abstract void onResponseHeadersReceived(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo);
+    method public void onResponseTrailersReceived(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull android.net.http.UrlResponseInfo.HeaderBlock);
+    method public abstract void onStreamReady(@NonNull android.net.http.BidirectionalStream);
+    method public abstract void onSucceeded(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo);
+    method public abstract void onWriteCompleted(@NonNull android.net.http.BidirectionalStream, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer, boolean);
   }
 
   public abstract class CallbackException extends android.net.http.HttpException {
-    ctor protected CallbackException(String, Throwable);
+    ctor protected CallbackException(@Nullable String, @Nullable Throwable);
   }
 
   public class ConnectionMigrationOptions {
@@ -51,10 +51,10 @@ package android.net.http {
 
   public static final class ConnectionMigrationOptions.Builder {
     ctor public ConnectionMigrationOptions.Builder();
-    method public android.net.http.ConnectionMigrationOptions build();
-    method public android.net.http.ConnectionMigrationOptions.Builder setAllowNonDefaultNetworkUsage(boolean);
-    method public android.net.http.ConnectionMigrationOptions.Builder setEnableDefaultNetworkMigration(boolean);
-    method public android.net.http.ConnectionMigrationOptions.Builder setEnablePathDegradationMigration(boolean);
+    method @NonNull public android.net.http.ConnectionMigrationOptions build();
+    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setAllowNonDefaultNetworkUsage(boolean);
+    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setEnableDefaultNetworkMigration(boolean);
+    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setEnablePathDegradationMigration(boolean);
   }
 
   public final class DnsOptions {
@@ -68,13 +68,13 @@ package android.net.http {
 
   public static final class DnsOptions.Builder {
     ctor public DnsOptions.Builder();
-    method public android.net.http.DnsOptions build();
-    method public android.net.http.DnsOptions.Builder setEnableStaleDns(boolean);
-    method public android.net.http.DnsOptions.Builder setPersistHostCache(boolean);
-    method public android.net.http.DnsOptions.Builder setPersistHostCachePeriod(java.time.Duration);
-    method public android.net.http.DnsOptions.Builder setPreestablishConnectionsToStaleDnsResults(boolean);
-    method public android.net.http.DnsOptions.Builder setStaleDnsOptions(android.net.http.DnsOptions.StaleDnsOptions);
-    method public android.net.http.DnsOptions.Builder setUseHttpStackDnsResolver(boolean);
+    method @NonNull public android.net.http.DnsOptions build();
+    method @NonNull public android.net.http.DnsOptions.Builder setEnableStaleDns(boolean);
+    method @NonNull public android.net.http.DnsOptions.Builder setPersistHostCache(boolean);
+    method @NonNull public android.net.http.DnsOptions.Builder setPersistHostCachePeriod(@NonNull java.time.Duration);
+    method @NonNull public android.net.http.DnsOptions.Builder setPreestablishConnectionsToStaleDnsResults(boolean);
+    method @NonNull public android.net.http.DnsOptions.Builder setStaleDnsOptions(@NonNull android.net.http.DnsOptions.StaleDnsOptions);
+    method @NonNull public android.net.http.DnsOptions.Builder setUseHttpStackDnsResolver(boolean);
   }
 
   public static class DnsOptions.StaleDnsOptions {
@@ -86,40 +86,40 @@ package android.net.http {
 
   public static final class DnsOptions.StaleDnsOptions.Builder {
     ctor public DnsOptions.StaleDnsOptions.Builder();
-    method public android.net.http.DnsOptions.StaleDnsOptions build();
-    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setAllowCrossNetworkUsage(boolean);
-    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setFreshLookupTimeout(java.time.Duration);
-    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setMaxExpiredDelay(java.time.Duration);
-    method public android.net.http.DnsOptions.StaleDnsOptions.Builder setUseStaleOnNameNotResolved(boolean);
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions build();
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setAllowCrossNetworkUsage(boolean);
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setFreshLookupTimeout(@NonNull java.time.Duration);
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setMaxExpiredDelay(@NonNull java.time.Duration);
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setUseStaleOnNameNotResolved(boolean);
   }
 
   public abstract class HttpEngine {
     method public void bindToNetwork(@Nullable android.net.Network);
-    method public abstract java.net.URLStreamHandlerFactory createUrlStreamHandlerFactory();
-    method public static String getVersionString();
-    method public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(String, java.util.concurrent.Executor, android.net.http.BidirectionalStream.Callback);
-    method public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, java.util.concurrent.Executor, android.net.http.UrlRequest.Callback);
-    method public android.net.http.UrlRequest.Builder newUrlRequestBuilder(String, android.net.http.UrlRequest.Callback, java.util.concurrent.Executor);
-    method public abstract java.net.URLConnection openConnection(java.net.URL) throws java.io.IOException;
+    method @NonNull public abstract java.net.URLStreamHandlerFactory createUrlStreamHandlerFactory();
+    method @NonNull public static String getVersionString();
+    method @NonNull public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.net.http.BidirectionalStream.Callback);
+    method @NonNull public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.net.http.UrlRequest.Callback);
+    method @NonNull public android.net.http.UrlRequest.Builder newUrlRequestBuilder(@NonNull String, @NonNull android.net.http.UrlRequest.Callback, @NonNull java.util.concurrent.Executor);
+    method @NonNull public abstract java.net.URLConnection openConnection(@NonNull java.net.URL) throws java.io.IOException;
     method public abstract void shutdown();
   }
 
   public static class HttpEngine.Builder {
-    ctor public HttpEngine.Builder(android.content.Context);
-    method public android.net.http.HttpEngine.Builder addPublicKeyPins(String, java.util.Set<byte[]>, boolean, java.time.Instant);
-    method public android.net.http.HttpEngine.Builder addQuicHint(String, int, int);
-    method public android.net.http.HttpEngine build();
-    method public String getDefaultUserAgent();
-    method public android.net.http.HttpEngine.Builder setConnectionMigrationOptions(android.net.http.ConnectionMigrationOptions);
-    method public android.net.http.HttpEngine.Builder setDnsOptions(android.net.http.DnsOptions);
-    method public android.net.http.HttpEngine.Builder setEnableBrotli(boolean);
-    method public android.net.http.HttpEngine.Builder setEnableHttp2(boolean);
-    method public android.net.http.HttpEngine.Builder setEnableHttpCache(int, long);
-    method public android.net.http.HttpEngine.Builder setEnablePublicKeyPinningBypassForLocalTrustAnchors(boolean);
-    method public android.net.http.HttpEngine.Builder setEnableQuic(boolean);
-    method public android.net.http.HttpEngine.Builder setQuicOptions(android.net.http.QuicOptions);
-    method public android.net.http.HttpEngine.Builder setStoragePath(String);
-    method public android.net.http.HttpEngine.Builder setUserAgent(String);
+    ctor public HttpEngine.Builder(@NonNull android.content.Context);
+    method @NonNull public android.net.http.HttpEngine.Builder addPublicKeyPins(@NonNull String, @NonNull java.util.Set<byte[]>, boolean, @NonNull java.time.Instant);
+    method @NonNull public android.net.http.HttpEngine.Builder addQuicHint(@NonNull String, int, int);
+    method @NonNull public android.net.http.HttpEngine build();
+    method @NonNull public String getDefaultUserAgent();
+    method @NonNull public android.net.http.HttpEngine.Builder setConnectionMigrationOptions(@NonNull android.net.http.ConnectionMigrationOptions);
+    method @NonNull public android.net.http.HttpEngine.Builder setDnsOptions(@NonNull android.net.http.DnsOptions);
+    method @NonNull public android.net.http.HttpEngine.Builder setEnableBrotli(boolean);
+    method @NonNull public android.net.http.HttpEngine.Builder setEnableHttp2(boolean);
+    method @NonNull public android.net.http.HttpEngine.Builder setEnableHttpCache(int, long);
+    method @NonNull public android.net.http.HttpEngine.Builder setEnablePublicKeyPinningBypassForLocalTrustAnchors(boolean);
+    method @NonNull public android.net.http.HttpEngine.Builder setEnableQuic(boolean);
+    method @NonNull public android.net.http.HttpEngine.Builder setQuicOptions(@NonNull android.net.http.QuicOptions);
+    method @NonNull public android.net.http.HttpEngine.Builder setStoragePath(@NonNull String);
+    method @NonNull public android.net.http.HttpEngine.Builder setUserAgent(@NonNull String);
     field public static final int HTTP_CACHE_DISABLED = 0; // 0x0
     field public static final int HTTP_CACHE_DISK = 3; // 0x3
     field public static final int HTTP_CACHE_DISK_NO_HTTP = 2; // 0x2
@@ -166,7 +166,7 @@ package android.net.http {
     method @NonNull public android.net.http.QuicOptions.Builder addAllowedQuicHost(@NonNull String);
     method @NonNull public android.net.http.QuicOptions build();
     method @NonNull public android.net.http.QuicOptions.Builder setHandshakeUserAgent(@NonNull String);
-    method public android.net.http.QuicOptions.Builder setIdleConnectionTimeout(java.time.Duration);
+    method @NonNull public android.net.http.QuicOptions.Builder setIdleConnectionTimeout(@NonNull java.time.Duration);
     method @NonNull public android.net.http.QuicOptions.Builder setInMemoryServerConfigsCacheSize(int);
   }
 
@@ -203,8 +203,8 @@ package android.net.http {
     method @NonNull public abstract android.net.http.UrlRequest.Builder setDisableCache(boolean);
     method @NonNull public abstract android.net.http.UrlRequest.Builder setHttpMethod(@NonNull String);
     method @NonNull public abstract android.net.http.UrlRequest.Builder setPriority(int);
-    method public abstract android.net.http.UrlRequest.Builder setTrafficStatsTag(int);
-    method public abstract android.net.http.UrlRequest.Builder setTrafficStatsUid(int);
+    method @NonNull public abstract android.net.http.UrlRequest.Builder setTrafficStatsTag(int);
+    method @NonNull public abstract android.net.http.UrlRequest.Builder setTrafficStatsUid(int);
     method @NonNull public abstract android.net.http.UrlRequest.Builder setUploadDataProvider(@NonNull android.net.http.UploadDataProvider, @NonNull java.util.concurrent.Executor);
     field public static final int REQUEST_PRIORITY_HIGHEST = 4; // 0x4
     field public static final int REQUEST_PRIORITY_IDLE = 0; // 0x0
@@ -260,8 +260,8 @@ package android.net.http {
 
   public abstract static class UrlResponseInfo.HeaderBlock {
     ctor public UrlResponseInfo.HeaderBlock();
-    method public abstract java.util.List<java.util.Map.Entry<java.lang.String,java.lang.String>> getAsList();
-    method public abstract java.util.Map<java.lang.String,java.util.List<java.lang.String>> getAsMap();
+    method @NonNull public abstract java.util.List<java.util.Map.Entry<java.lang.String,java.lang.String>> getAsList();
+    method @NonNull public abstract java.util.Map<java.lang.String,java.util.List<java.lang.String>> getAsMap();
   }
 
 }
