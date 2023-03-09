@@ -44,7 +44,7 @@ import java.util.concurrent.ThreadFactory;
  * the stream completes on another thread. Allows to cancel, block stream or throw an exception from
  * an arbitrary step.
  */
-public class TestBidirectionalStreamCallback extends BidirectionalStream.Callback {
+public class TestBidirectionalStreamCallback implements BidirectionalStream.Callback {
     private static final int TIMEOUT_MS = 12_000;
     public UrlResponseInfo mResponseInfo;
     public HttpException mError;
