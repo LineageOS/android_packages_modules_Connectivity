@@ -38,9 +38,10 @@ namespace internal {
 // it is not meant to be used elsewhere.
 class NetworkTracePoller {
  public:
+  using EventSink = std::function<void(const std::vector<PacketTrace>&)>;
+
   // Testonly: initialize with a callback capable of intercepting data.
-  NetworkTracePoller(std::function<void(const PacketTrace&)> callback)
-      : mCallback(std::move(callback)) {}
+  NetworkTracePoller(EventSink callback) : mCallback(std::move(callback)) {}
 
   // Starts tracing with the given poll interval.
   bool Start(uint32_t pollMs) EXCLUDES(mMutex);
@@ -67,7 +68,7 @@ class NetworkTracePoller {
   uint32_t mPollMs GUARDED_BY(mMutex);
 
   // The function to process PacketTrace, typically a Perfetto sink.
-  std::function<void(const PacketTrace&)> mCallback GUARDED_BY(mMutex);
+  EventSink mCallback GUARDED_BY(mMutex);
 
   // The BPF ring buffer handle.
   std::unique_ptr<BpfRingbuf<PacketTrace>> mRingBuffer GUARDED_BY(mMutex);

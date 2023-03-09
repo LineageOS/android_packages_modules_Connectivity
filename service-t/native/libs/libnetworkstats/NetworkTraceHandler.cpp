@@ -57,11 +57,14 @@ void NetworkTraceHandler::InitPerfettoTracing() {
 }
 
 // static
-NetworkTracePoller NetworkTraceHandler::sPoller([](const PacketTrace& pkt) {
-  NetworkTraceHandler::Trace([pkt](NetworkTraceHandler::TraceContext ctx) {
-    NetworkTraceHandler::Fill(pkt, *ctx.NewTracePacket());
-  });
-});
+NetworkTracePoller NetworkTraceHandler::sPoller(
+    [](const std::vector<PacketTrace>& packets) {
+      NetworkTraceHandler::Trace([&](NetworkTraceHandler::TraceContext ctx) {
+        for (const PacketTrace& pkt : packets) {
+          NetworkTraceHandler::Fill(pkt, *ctx.NewTracePacket());
+        }
+      });
+    });
 
 void NetworkTraceHandler::OnSetup(const SetupArgs& args) {
   const std::string& raw = args.config->network_packet_trace_config_raw();
@@ -72,6 +75,12 @@ void NetworkTraceHandler::OnSetup(const SetupArgs& args) {
     ALOGI("poll_ms is missing or below the 100ms minimum. Increasing to 100ms");
     mPollMs = 100;
   }
+
+  mInternLimit = config.intern_limit();
+  mAggregationThreshold = config.aggregation_threshold();
+  mDropLocalPort = config.drop_local_port();
+  mDropRemotePort = config.drop_remote_port();
+  mDropTcpFlags = config.drop_tcp_flags();
 }
 
 void NetworkTraceHandler::OnStart(const StartArgs&) {
