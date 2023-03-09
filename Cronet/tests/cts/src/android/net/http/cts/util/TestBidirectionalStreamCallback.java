@@ -26,6 +26,7 @@ import static org.junit.Assume.assumeThat;
 import static org.junit.Assume.assumeTrue;
 
 import android.net.http.BidirectionalStream;
+import android.net.http.HeaderBlock;
 import android.net.http.HttpException;
 import android.net.http.UrlResponseInfo;
 import android.os.ConditionVariable;
@@ -56,7 +57,7 @@ public class TestBidirectionalStreamCallback extends BidirectionalStream.Callbac
     public int mHttpResponseDataLength;
     public String mResponseAsString = "";
 
-    public UrlResponseInfo.HeaderBlock mTrailers;
+    public HeaderBlock mTrailers;
 
     private static final int READ_BUFFER_SIZE = 32 * 1024;
 
@@ -337,7 +338,7 @@ public class TestBidirectionalStreamCallback extends BidirectionalStream.Callbac
     public void onResponseTrailersReceived(
             BidirectionalStream stream,
             UrlResponseInfo info,
-            UrlResponseInfo.HeaderBlock trailers) {
+            HeaderBlock trailers) {
         checkOnValidThread();
         assertFalse(stream.isDone());
         assertNull(mError);
