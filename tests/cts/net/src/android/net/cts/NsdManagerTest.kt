@@ -934,9 +934,7 @@ class NsdManagerTest {
         // This test requires shims supporting U+ APIs (NsdManager.registerServiceInfoCallback)
         assumeTrue(TestUtils.shouldTestUApis())
 
-        // Ensure Wi-Fi network connected and get addresses
-        val wifiNetwork = ctsNetUtils.ensureWifiConnected()
-        val lp = cm.getLinkProperties(wifiNetwork)
+        val lp = cm.getLinkProperties(testNetwork1.network)
         assertNotNull(lp)
         val addresses = lp.addresses
         assertFalse(addresses.isEmpty())
@@ -944,24 +942,24 @@ class NsdManagerTest {
         val si = NsdServiceInfo().apply {
             serviceType = this@NsdManagerTest.serviceType
             serviceName = this@NsdManagerTest.serviceName
-            network = wifiNetwork
+            network = testNetwork1.network
             port = 12345 // Test won't try to connect so port does not matter
         }
 
-        // Register service on Wi-Fi network
+        // Register service on the network
         val registrationRecord = NsdRegistrationRecord()
         registerService(registrationRecord, si)
 
         val discoveryRecord = NsdDiscoveryRecord()
         val cbRecord = NsdServiceInfoCallbackRecord()
         tryTest {
-            // Discover service on Wi-Fi network.
+            // Discover service on the network.
             nsdShim.discoverServices(nsdManager, serviceType, NsdManager.PROTOCOL_DNS_SD,
-                    wifiNetwork, Executor { it.run() }, discoveryRecord)
+                    testNetwork1.network, Executor { it.run() }, discoveryRecord)
             val foundInfo = discoveryRecord.waitForServiceDiscovered(
-                    serviceName, wifiNetwork)
+                    serviceName, testNetwork1.network)
 
-            // Register service callback and check the addresses are the same as Wi-Fi addresses
+            // Register service callback and check the addresses are the same as network addresses
             nsdShim.registerServiceInfoCallback(nsdManager, foundInfo, { it.run() }, cbRecord)
             val serviceInfoCb = cbRecord.expectCallback<ServiceUpdated>()
             assertEquals(foundInfo.serviceName, serviceInfoCb.serviceInfo.serviceName)
