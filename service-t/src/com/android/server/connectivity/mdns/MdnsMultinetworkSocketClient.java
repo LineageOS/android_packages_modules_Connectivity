@@ -63,6 +63,12 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     }
 
     private class InterfaceSocketCallback implements MdnsSocketProvider.SocketCallback {
+        private final SocketCreationCallback mSocketCreationCallback;
+
+        InterfaceSocketCallback(SocketCreationCallback socketCreationCallback) {
+            mSocketCreationCallback = socketCreationCallback;
+        }
+
         @Override
         public void onSocketCreated(@NonNull Network network,
                 @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> addresses) {
@@ -76,6 +82,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             }
             socket.addPacketHandler(handler);
             mActiveNetworkSockets.put(socket, network);
+            mSocketCreationCallback.onSocketCreated(network);
         }
 
         @Override
@@ -114,10 +121,11 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
      * @param listener the listener for discovery.
      * @param network the target network for discovery. Null means discovery on all possible
      *                interfaces.
+     * @param socketCreationCallback the callback to notify socket creation.
      */
     @Override
     public void notifyNetworkRequested(@NonNull MdnsServiceBrowserListener listener,
-            @Nullable Network network) {
+            @Nullable Network network, @NonNull SocketCreationCallback socketCreationCallback) {
         ensureRunningOnHandlerThread(mHandler);
         InterfaceSocketCallback callback = mRequestedNetworks.get(listener);
         if (callback != null) {
@@ -125,7 +133,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         }
 
         if (DBG) Log.d(TAG, "notifyNetworkRequested: network=" + network);
-        callback = new InterfaceSocketCallback();
+        callback = new InterfaceSocketCallback(socketCreationCallback);
         mRequestedNetworks.put(listener, callback);
         mSocketProvider.requestSocket(network, callback);
     }
@@ -173,7 +181,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             if (e.code != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
                 Log.e(TAG, e.getMessage(), e);
                 if (mCallback != null) {
-                    mCallback.onFailedToParseMdnsResponse(packetNumber, e.code);
+                    mCallback.onFailedToParseMdnsResponse(packetNumber, e.code, network);
                 }
             }
             return;
