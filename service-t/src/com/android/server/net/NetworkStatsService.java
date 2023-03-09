@@ -1730,11 +1730,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         PermissionUtils.enforceNetworkStackPermission(mContext);
         try {
             final String[] ifaceArray = getAllIfacesSinceBoot(transport);
-            // TODO(b/215633405) : mMobileIfaces and mWifiIfaces already contain the stacked
-            // interfaces, so this is not useful, remove it.
-            final String[] ifacesToQuery =
-                    mStatsFactory.augmentWithStackedInterfaces(ifaceArray);
-            final NetworkStats stats = getNetworkStatsUidDetail(ifacesToQuery);
+            final NetworkStats stats = getNetworkStatsUidDetail(ifaceArray);
             // Clear the interfaces of the stats before returning, so callers won't get this
             // information. This is because no caller needs this information for now, and it
             // makes it easier to change the implementation later by using the histories in the
