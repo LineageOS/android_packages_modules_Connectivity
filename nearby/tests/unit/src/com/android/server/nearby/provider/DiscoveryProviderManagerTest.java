@@ -256,7 +256,7 @@ public class DiscoveryProviderManagerTest {
         // The filters should be cleared right after.
         assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
                 .isFalse();
-        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNull();
+        assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isEmpty();
     }
 
     @Test
