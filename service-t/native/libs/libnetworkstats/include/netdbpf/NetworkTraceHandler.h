@@ -54,7 +54,7 @@ class NetworkTraceHandler : public perfetto::DataSource<NetworkTraceHandler> {
  private:
   // Convert a PacketTrace into a Perfetto trace packet.
   static void Fill(const PacketTrace& src,
-                   ::perfetto::protos::pbzero::TracePacket& dst);
+                   ::perfetto::protos::pbzero::NetworkPacketEvent* event);
 
   static internal::NetworkTracePoller sPoller;
   bool mStarted;

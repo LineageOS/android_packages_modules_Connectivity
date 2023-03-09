@@ -76,7 +76,7 @@ class NetworkTraceHandlerTest : public testing::Test {
     // This is a real trace and includes irrelevant trace packets such as trace
     // metadata. The following strips the results to just the packets we want.
     for (const auto& pkt : trace.packet()) {
-      if (pkt.has_network_packet()) {
+      if (pkt.has_network_packet() || pkt.has_network_packet_bundle()) {
         output->emplace_back(pkt);
       }
     }
@@ -125,11 +125,12 @@ TEST_F(NetworkTraceHandlerTest, WriteBasicFields) {
 
   ASSERT_EQ(events.size(), 1);
   EXPECT_THAT(events[0].timestamp(), 1000);
-  EXPECT_THAT(events[0].network_packet().length(), 100);
-  EXPECT_THAT(events[0].network_packet().uid(), 10);
-  EXPECT_THAT(events[0].network_packet().tag(), 123);
-  EXPECT_THAT(events[0].network_packet().ip_proto(), 6);
-  EXPECT_THAT(events[0].network_packet().tcp_flags(), 1);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().uid(), 10);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().tag(), 123);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().ip_proto(), 6);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().tcp_flags(), 1);
+  EXPECT_THAT(events[0].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(100));
 }
 
 TEST_F(NetworkTraceHandlerTest, WriteDirectionAndPorts) {
@@ -152,14 +153,44 @@ TEST_F(NetworkTraceHandlerTest, WriteDirectionAndPorts) {
   ASSERT_TRUE(TraceAndSortPackets(input, &events));
 
   ASSERT_EQ(events.size(), 2);
-  EXPECT_THAT(events[0].network_packet().local_port(), 8080);
-  EXPECT_THAT(events[0].network_packet().remote_port(), 443);
-  EXPECT_THAT(events[0].network_packet().direction(),
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().local_port(), 8080);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().remote_port(), 443);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().direction(),
               TrafficDirection::DIR_EGRESS);
-  EXPECT_THAT(events[1].network_packet().local_port(), 8080);
-  EXPECT_THAT(events[1].network_packet().remote_port(), 443);
-  EXPECT_THAT(events[1].network_packet().direction(),
+  EXPECT_THAT(events[1].network_packet_bundle().ctx().local_port(), 8080);
+  EXPECT_THAT(events[1].network_packet_bundle().ctx().remote_port(), 443);
+  EXPECT_THAT(events[1].network_packet_bundle().ctx().direction(),
               TrafficDirection::DIR_INGRESS);
+}
+
+TEST_F(NetworkTraceHandlerTest, BasicBundling) {
+  std::vector<PacketTrace> input = {
+      PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
+      PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
+      PacketTrace{.uid = 123, .timestampNs = 4, .length = 300},
+
+      PacketTrace{.uid = 456, .timestampNs = 2, .length = 400},
+      PacketTrace{.uid = 456, .timestampNs = 4, .length = 100},
+  };
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(TraceAndSortPackets(input, &events));
+
+  ASSERT_EQ(events.size(), 2);
+
+  EXPECT_THAT(events[0].timestamp(), 1);
+  EXPECT_THAT(events[0].network_packet_bundle().ctx().uid(), 123);
+  EXPECT_THAT(events[0].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(200, 100, 300));
+  EXPECT_THAT(events[0].network_packet_bundle().packet_timestamps(),
+              testing::ElementsAre(1, 0, 3));
+
+  EXPECT_THAT(events[1].timestamp(), 2);
+  EXPECT_THAT(events[1].network_packet_bundle().ctx().uid(), 456);
+  EXPECT_THAT(events[1].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(400, 100));
+  EXPECT_THAT(events[1].network_packet_bundle().packet_timestamps(),
+              testing::ElementsAre(0, 2));
 }
 
 }  // namespace bpf
