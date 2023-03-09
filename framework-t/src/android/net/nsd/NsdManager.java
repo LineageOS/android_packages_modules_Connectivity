@@ -16,6 +16,7 @@
 
 package android.net.nsd;
 
+import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_PLATFORM_MDNS_BACKEND;
 import static android.net.connectivity.ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER;
 
 import android.annotation.IntDef;
@@ -510,7 +511,8 @@ public final class NsdManager {
         mHandler = new ServiceHandler(t.getLooper());
 
         try {
-            mService = service.connect(new NsdCallbackImpl(mHandler));
+            mService = service.connect(new NsdCallbackImpl(mHandler), CompatChanges.isChangeEnabled(
+                    ENABLE_PLATFORM_MDNS_BACKEND));
         } catch (RemoteException e) {
             throw new RuntimeException("Failed to connect to NsdService");
         }
