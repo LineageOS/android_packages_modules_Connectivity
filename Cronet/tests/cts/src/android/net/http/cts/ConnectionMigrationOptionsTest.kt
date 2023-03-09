@@ -17,10 +17,10 @@
 package android.net.http.cts
 
 import android.net.http.ConnectionMigrationOptions
+import android.net.http.ConnectionMigrationOptions.MIGRATION_OPTION_ENABLED
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -29,18 +29,20 @@ class ConnectionMigrationOptionsTest {
     @Test
     fun testConnectionMigrationOptions_enableDefaultNetworkMigration_returnSetValue() {
         val options =
-            ConnectionMigrationOptions.Builder().setEnableDefaultNetworkMigration(true).build()
+            ConnectionMigrationOptions.Builder()
+                    .setDefaultNetworkMigrationEnabled(MIGRATION_OPTION_ENABLED)
+                    .build()
 
-        assertNotNull(options.enableDefaultNetworkMigration)
-        assertTrue(options.enableDefaultNetworkMigration!!)
+        assertEquals(MIGRATION_OPTION_ENABLED, options.defaultNetworkMigrationEnabled)
     }
 
     @Test
     fun testConnectionMigrationOptions_enablePathDegradationMigration_returnSetValue() {
         val options =
-            ConnectionMigrationOptions.Builder().setEnablePathDegradationMigration(true).build()
+            ConnectionMigrationOptions.Builder()
+                    .setPathDegradationMigrationEnabled(MIGRATION_OPTION_ENABLED)
+                    .build()
 
-        assertNotNull(options.enablePathDegradationMigration)
-        assertTrue(options.enablePathDegradationMigration!!)
+        assertEquals(MIGRATION_OPTION_ENABLED, options.pathDegradationMigrationEnabled)
     }
 }
