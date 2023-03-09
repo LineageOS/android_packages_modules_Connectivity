@@ -220,7 +220,8 @@ open class TestableNetworkCallback private constructor(
      * Long.MAX_VALUE.
      */
     @JvmOverloads
-    fun poll(timeoutMs: Long = defaultTimeoutMs): CallbackEntry? = history.poll(timeoutMs)
+    fun poll(timeoutMs: Long = defaultTimeoutMs, predicate: (CallbackEntry) -> Boolean = { true }) =
+            history.poll(timeoutMs, predicate)
 
     /**
      * Get the next callback or throw if timeout.
@@ -385,7 +386,7 @@ open class TestableNetworkCallback private constructor(
         timeoutMs: Long = defaultTimeoutMs,
         from: Int = mark,
         crossinline predicate: (T) -> Boolean = { true }
-    ): T = eventuallyExpectOrNull(timeoutMs, from, predicate).also {
+    ): T = history.poll(timeoutMs, from) { it is T && predicate(it) }.also {
         assertNotNull(it, "Callback ${T::class} not received within ${timeoutMs}ms")
     } as T
 
@@ -407,7 +408,7 @@ open class TestableNetworkCallback private constructor(
         assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms")
     } as T
 
-    // TODO (b/157405399) straighten and unify the method names
+    // TODO (b/157405399) remove this method when there are no longer any uses of it.
     inline fun <reified T : CallbackEntry> eventuallyExpectOrNull(
         timeoutMs: Long = defaultTimeoutMs,
         from: Int = mark,
