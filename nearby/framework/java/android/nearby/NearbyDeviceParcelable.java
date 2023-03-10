@@ -46,6 +46,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
                 @Override
                 public NearbyDeviceParcelable createFromParcel(Parcel in) {
                     Builder builder = new Builder();
+                    builder.setDeviceId(in.readLong());
                     builder.setScanType(in.readInt());
                     if (in.readInt() == 1) {
                         builder.setName(in.readString());
@@ -96,6 +97,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
                 }
             };
 
+    private final long mDeviceId;
     @ScanRequest.ScanType int mScanType;
     @Nullable private final String mName;
     @NearbyDevice.Medium private final int mMedium;
@@ -111,6 +113,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Nullable private final byte[] mEncryptionKeyTag;
 
     private NearbyDeviceParcelable(
+            long deviceId,
             @ScanRequest.ScanType int scanType,
             @Nullable String name,
             int medium,
@@ -124,6 +127,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
             @Nullable byte[] salt,
             @Nullable PresenceDevice presenceDevice,
             @Nullable byte[] encryptionKeyTag) {
+        mDeviceId = deviceId;
         mScanType = scanType;
         mName = name;
         mMedium = medium;
@@ -153,6 +157,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
      */
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeLong(mDeviceId);
         dest.writeInt(mScanType);
         dest.writeInt(mName == null ? 0 : 1);
         if (mName != null) {
@@ -196,7 +201,9 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Override
     public String toString() {
         return "NearbyDeviceParcelable["
-                + "scanType="
+                + "deviceId="
+                + mDeviceId
+                + ", scanType="
                 + mScanType
                 + ", name="
                 + mName
@@ -223,24 +230,25 @@ public final class NearbyDeviceParcelable implements Parcelable {
     public boolean equals(Object other) {
         if (other instanceof NearbyDeviceParcelable) {
             NearbyDeviceParcelable otherNearbyDeviceParcelable = (NearbyDeviceParcelable) other;
-            return mScanType == otherNearbyDeviceParcelable.mScanType
+            return  mDeviceId == otherNearbyDeviceParcelable.mDeviceId
+                    && mScanType == otherNearbyDeviceParcelable.mScanType
                     && (Objects.equals(mName, otherNearbyDeviceParcelable.mName))
                     && (mMedium == otherNearbyDeviceParcelable.mMedium)
                     && (mTxPower == otherNearbyDeviceParcelable.mTxPower)
                     && (mRssi == otherNearbyDeviceParcelable.mRssi)
                     && (mAction == otherNearbyDeviceParcelable.mAction)
                     && (Objects.equals(
-                            mPublicCredential, otherNearbyDeviceParcelable.mPublicCredential))
+                    mPublicCredential, otherNearbyDeviceParcelable.mPublicCredential))
                     && (Objects.equals(
-                            mBluetoothAddress, otherNearbyDeviceParcelable.mBluetoothAddress))
+                    mBluetoothAddress, otherNearbyDeviceParcelable.mBluetoothAddress))
                     && (Objects.equals(
-                            mFastPairModelId, otherNearbyDeviceParcelable.mFastPairModelId))
+                    mFastPairModelId, otherNearbyDeviceParcelable.mFastPairModelId))
                     && (Arrays.equals(mData, otherNearbyDeviceParcelable.mData))
                     && (Arrays.equals(mSalt, otherNearbyDeviceParcelable.mSalt))
                     && (Objects.equals(
-                            mPresenceDevice, otherNearbyDeviceParcelable.mPresenceDevice))
+                    mPresenceDevice, otherNearbyDeviceParcelable.mPresenceDevice))
                     && (Arrays.equals(
-                            mEncryptionKeyTag, otherNearbyDeviceParcelable.mEncryptionKeyTag));
+                    mEncryptionKeyTag, otherNearbyDeviceParcelable.mEncryptionKeyTag));
         }
         return false;
     }
@@ -248,6 +256,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
     @Override
     public int hashCode() {
         return Objects.hash(
+                mDeviceId,
                 mScanType,
                 mName,
                 mMedium,
@@ -260,6 +269,16 @@ public final class NearbyDeviceParcelable implements Parcelable {
                 Arrays.hashCode(mSalt),
                 mPresenceDevice,
                 Arrays.hashCode(mEncryptionKeyTag));
+    }
+
+    /**
+     * The id of the device.
+     * <p>This id is not a hardware id. It may rotate based on the remote device's broadcasts.
+     *
+     * @hide
+     */
+    public long getDeviceId() {
+        return mDeviceId;
     }
 
     /**
@@ -405,6 +424,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
 
     /** Builder class for {@link NearbyDeviceParcelable}. */
     public static final class Builder {
+        private long mDeviceId = -1;
         @Nullable private String mName;
         @NearbyDevice.Medium private int mMedium;
         private int mTxPower;
@@ -418,6 +438,12 @@ public final class NearbyDeviceParcelable implements Parcelable {
         @Nullable private byte[] mSalt;
         @Nullable private PresenceDevice mPresenceDevice;
         @Nullable private byte[] mEncryptionKeyTag;
+
+        /** Sets the id of the device. */
+        public Builder setDeviceId(long deviceId) {
+            this.mDeviceId = deviceId;
+            return this;
+        }
 
         /**
          * Sets the scan type of the NearbyDeviceParcelable.
@@ -569,6 +595,7 @@ public final class NearbyDeviceParcelable implements Parcelable {
         @NonNull
         public NearbyDeviceParcelable build() {
             return new NearbyDeviceParcelable(
+                    mDeviceId,
                     mScanType,
                     mName,
                     mMedium,
