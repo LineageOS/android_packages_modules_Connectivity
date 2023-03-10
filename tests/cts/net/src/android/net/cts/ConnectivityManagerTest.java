@@ -2434,11 +2434,11 @@ public class ConnectivityManagerTest {
         runWithShellPermissionIdentity(() -> registerDefaultNetworkCallbackForUid(
                 otherUid, otherUidCallback, handler), NETWORK_SETTINGS);
 
-        final Network defaultNetwork = mCm.getActiveNetwork();
+        final Network defaultNetwork = myUidCallback.expect(CallbackEntry.AVAILABLE).getNetwork();
         final List<DetailedBlockedStatusCallback> allCallbacks =
                 List.of(myUidCallback, otherUidCallback);
         for (DetailedBlockedStatusCallback callback : allCallbacks) {
-            callback.expectAvailableCallbacksWithBlockedReasonNone(defaultNetwork);
+            callback.eventuallyExpectBlockedStatusCallback(defaultNetwork, BLOCKED_REASON_NONE);
         }
 
         final Range<Integer> myUidRange = new Range<>(myUid, myUid);
