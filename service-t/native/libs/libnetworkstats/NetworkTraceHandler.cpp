@@ -165,7 +165,16 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
   }
   std::unordered_map<BundleKey, BundleDetails, BundleHash, BundleEq> bundles;
   for (const PacketTrace& pkt : packets) {
-    BundleDetails& bundle = bundles[pkt];
+    BundleKey key = pkt;
+
+    // Dropping fields should remove them from the output and remove them from
+    // the aggregation key. In order to do the latter without changing the hash
+    // function, set the dropped fields to zero.
+    if (mDropTcpFlags) key.tcpFlags = 0;
+    if (mDropLocalPort) (key.egress ? key.sport : key.dport) = 0;
+    if (mDropRemotePort) (key.egress ? key.dport : key.sport) = 0;
+
+    BundleDetails& bundle = bundles[key];
     bundle.time_and_len.emplace_back(pkt.timestampNs, pkt.length);
     bundle.minTs = std::min(bundle.minTs, pkt.timestampNs);
     bundle.maxTs = std::max(bundle.maxTs, pkt.timestampNs);
@@ -201,7 +210,6 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
   }
 }
 
-// static class method
 void NetworkTraceHandler::Fill(const PacketTrace& src,
                                NetworkPacketEvent* event) {
   event->set_direction(src.egress ? TrafficDirection::DIR_EGRESS
@@ -209,11 +217,17 @@ void NetworkTraceHandler::Fill(const PacketTrace& src,
   event->set_uid(src.uid);
   event->set_tag(src.tag);
 
-  event->set_local_port(src.egress ? ntohs(src.sport) : ntohs(src.dport));
-  event->set_remote_port(src.egress ? ntohs(src.dport) : ntohs(src.sport));
+  if (!mDropLocalPort) {
+    event->set_local_port(ntohs(src.egress ? src.sport : src.dport));
+  }
+  if (!mDropRemotePort) {
+    event->set_remote_port(ntohs(src.egress ? src.dport : src.sport));
+  }
+  if (!mDropTcpFlags) {
+    event->set_tcp_flags(src.tcpFlags);
+  }
 
   event->set_ip_proto(src.ipProto);
-  event->set_tcp_flags(src.tcpFlags);
 
   char ifname[IF_NAMESIZE] = {};
   if (if_indextoname(src.ifindex, ifname) == ifname) {

@@ -237,5 +237,106 @@ TEST_F(NetworkTraceHandlerTest, AggregationThreshold) {
               testing::ElementsAre(0, 2));
 }
 
+TEST_F(NetworkTraceHandlerTest, DropLocalPort) {
+  NetworkPacketTraceConfig config;
+  config.set_drop_local_port(true);
+  config.set_aggregation_threshold(10);
+
+  __be16 a = htons(10000);
+  __be16 b = htons(10001);
+  std::vector<PacketTrace> input = {
+      // Recall that local is `src` for egress and `dst` for ingress.
+      PacketTrace{.timestampNs = 1, .length = 2, .egress = true, .sport = a},
+      PacketTrace{.timestampNs = 2, .length = 4, .egress = false, .dport = a},
+      PacketTrace{.timestampNs = 3, .length = 6, .egress = true, .sport = b},
+      PacketTrace{.timestampNs = 4, .length = 8, .egress = false, .dport = b},
+  };
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
+  ASSERT_EQ(events.size(), 2);
+
+  // Despite having different local ports, drop and bundle by remaining fields.
+  EXPECT_EQ(events[0].network_packet_bundle().ctx().direction(),
+            TrafficDirection::DIR_EGRESS);
+  EXPECT_THAT(events[0].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(2, 6));
+
+  EXPECT_EQ(events[1].network_packet_bundle().ctx().direction(),
+            TrafficDirection::DIR_INGRESS);
+  EXPECT_THAT(events[1].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(4, 8));
+
+  // Local port shouldn't be in output.
+  EXPECT_FALSE(events[0].network_packet_bundle().ctx().has_local_port());
+  EXPECT_FALSE(events[1].network_packet_bundle().ctx().has_local_port());
+}
+
+TEST_F(NetworkTraceHandlerTest, DropRemotePort) {
+  NetworkPacketTraceConfig config;
+  config.set_drop_remote_port(true);
+  config.set_aggregation_threshold(10);
+
+  __be16 a = htons(443);
+  __be16 b = htons(80);
+  std::vector<PacketTrace> input = {
+      // Recall that remote is `dst` for egress and `src` for ingress.
+      PacketTrace{.timestampNs = 1, .length = 2, .egress = true, .dport = a},
+      PacketTrace{.timestampNs = 2, .length = 4, .egress = false, .sport = a},
+      PacketTrace{.timestampNs = 3, .length = 6, .egress = true, .dport = b},
+      PacketTrace{.timestampNs = 4, .length = 8, .egress = false, .sport = b},
+  };
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
+  ASSERT_EQ(events.size(), 2);
+
+  // Despite having different remote ports, drop and bundle by remaining fields.
+  EXPECT_EQ(events[0].network_packet_bundle().ctx().direction(),
+            TrafficDirection::DIR_EGRESS);
+  EXPECT_THAT(events[0].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(2, 6));
+
+  EXPECT_EQ(events[1].network_packet_bundle().ctx().direction(),
+            TrafficDirection::DIR_INGRESS);
+  EXPECT_THAT(events[1].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(4, 8));
+
+  // Remote port shouldn't be in output.
+  EXPECT_FALSE(events[0].network_packet_bundle().ctx().has_remote_port());
+  EXPECT_FALSE(events[1].network_packet_bundle().ctx().has_remote_port());
+}
+
+TEST_F(NetworkTraceHandlerTest, DropTcpFlags) {
+  NetworkPacketTraceConfig config;
+  config.set_drop_tcp_flags(true);
+  config.set_aggregation_threshold(10);
+
+  std::vector<PacketTrace> input = {
+      PacketTrace{.timestampNs = 1, .uid = 123, .length = 1, .tcpFlags = 1},
+      PacketTrace{.timestampNs = 2, .uid = 123, .length = 2, .tcpFlags = 2},
+      PacketTrace{.timestampNs = 3, .uid = 456, .length = 3, .tcpFlags = 1},
+      PacketTrace{.timestampNs = 4, .uid = 456, .length = 4, .tcpFlags = 2},
+  };
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
+
+  ASSERT_EQ(events.size(), 2);
+
+  // Despite having different tcp flags, drop and bundle by remaining fields.
+  EXPECT_EQ(events[0].network_packet_bundle().ctx().uid(), 123);
+  EXPECT_THAT(events[0].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(1, 2));
+
+  EXPECT_EQ(events[1].network_packet_bundle().ctx().uid(), 456);
+  EXPECT_THAT(events[1].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(3, 4));
+
+  // Tcp flags shouldn't be in output.
+  EXPECT_FALSE(events[0].network_packet_bundle().ctx().has_tcp_flags());
+  EXPECT_FALSE(events[1].network_packet_bundle().ctx().has_tcp_flags());
+}
+
 }  // namespace bpf
 }  // namespace android
