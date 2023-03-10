@@ -26,6 +26,7 @@ cc_library {
     srcs: [
         "BpfNetworkStats.cpp",
         "NetworkTraceHandler.cpp",
+        "NetworkTracePoller.cpp",
     ],
     shared_libs: [
         "libbase",
@@ -61,7 +62,7 @@ cc_test {
     header_libs: ["bpf_connectivity_headers"],
     srcs: [
         "BpfNetworkStatsTest.cpp",
-        "NetworkTraceHandlerTest.cpp",
+        "NetworkTracePollerTest.cpp",
     ],
     cflags: [
         "-Wall",
