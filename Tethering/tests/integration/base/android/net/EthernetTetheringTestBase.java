@@ -72,6 +72,8 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.PacketBuilder;
+import com.android.net.module.util.Struct;
+import com.android.net.module.util.structs.Ipv6Header;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TapPacketReader;
 import com.android.testutils.TestNetworkTracker;
@@ -1011,6 +1013,18 @@ public abstract class EthernetTetheringTestBase {
         }
 
         return new TetheringTester(mDownstreamReader, mUpstreamReader);
+    }
+
+    @NonNull
+    protected Inet6Address getClatIpv6Address(TetheringTester tester, TetheredDevice tethered)
+            throws Exception {
+        // Send an IPv4 UDP packet from client and check that a CLAT translated IPv6 UDP packet can
+        // be found on upstream interface. Get CLAT IPv6 address from the CLAT translated IPv6 UDP
+        // packet.
+        byte[] expectedPacket = probeV4TetheringConnectivity(tester, tethered, true /* is4To6 */);
+
+        // Above has guaranteed that the found packet is an IPv6 packet without ether header.
+        return Struct.parse(Ipv6Header.class, ByteBuffer.wrap(expectedPacket)).srcIp;
     }
 
     protected <T> List<T> toList(T... array) {

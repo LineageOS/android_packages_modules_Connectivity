@@ -37,6 +37,7 @@ import static com.android.networkstack.tethering.util.TetheringUtils.getTetherin
 
 import android.app.usage.NetworkStatsManager;
 import android.net.INetd;
+import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.NetworkStats;
 import android.net.NetworkStats.Entry;
@@ -878,6 +879,27 @@ public class BpfCoordinator {
         return true;
     }
 
+    private int getMtu(@NonNull final String ifaceName, @NonNull final LinkProperties lp) {
+        int mtu = INVALID_MTU;
+
+        if (ifaceName.equals(lp.getInterfaceName())) {
+            mtu = lp.getMtu();
+        }
+
+        // Get mtu via kernel if mtu is not found in LinkProperties.
+        if (mtu == INVALID_MTU) {
+            mtu = mDeps.getNetworkInterfaceMtu(ifaceName);
+        }
+
+        // Use default mtu if can't find any.
+        if (mtu == INVALID_MTU) mtu = NetworkStackConstants.ETHER_MTU;
+
+        // Clamp to minimum ipv4 mtu
+        if (mtu < IPV4_MIN_MTU) mtu = IPV4_MIN_MTU;
+
+        return mtu;
+    }
+
     /**
      * Call when UpstreamNetworkState may be changed.
      * If upstream has ipv4 for tethering, update this new UpstreamNetworkState
@@ -900,16 +922,7 @@ public class BpfCoordinator {
             final String ifaceName = ns.linkProperties.getInterfaceName();
             final InterfaceParams params = mDeps.getInterfaceParams(ifaceName);
             final boolean isVcn = isVcnInterface(ifaceName);
-            mtu = ns.linkProperties.getMtu();
-            if (mtu == INVALID_MTU) {
-                // Get mtu via kernel if mtu is not found in LinkProperties.
-                mtu = mDeps.getNetworkInterfaceMtu(ifaceName);
-            }
-
-            // Use default mtu if can't find any.
-            if (mtu == INVALID_MTU) mtu = NetworkStackConstants.ETHER_MTU;
-            // Clamp to minimum ipv4 mtu
-            if (mtu < IPV4_MIN_MTU) mtu = IPV4_MIN_MTU;
+            mtu = getMtu(ifaceName, ns.linkProperties);
 
             if (!isVcn && params != null && !params.hasMacAddress /* raw ip upstream only */) {
                 upstreamIndex = params.index;
