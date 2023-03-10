@@ -203,5 +203,39 @@ TEST_F(NetworkTraceHandlerTest, BasicBundling) {
               testing::ElementsAre(0, 2));
 }
 
+TEST_F(NetworkTraceHandlerTest, AggregationThreshold) {
+  // With an aggregation threshold of 3, the set of packets with uid=123 will
+  // be aggregated (3>=3) whereas packets with uid=456 get per-packet info.
+  NetworkPacketTraceConfig config;
+  config.set_aggregation_threshold(3);
+
+  std::vector<PacketTrace> input = {
+      PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
+      PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
+      PacketTrace{.uid = 123, .timestampNs = 4, .length = 300},
+
+      PacketTrace{.uid = 456, .timestampNs = 2, .length = 400},
+      PacketTrace{.uid = 456, .timestampNs = 4, .length = 100},
+  };
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
+
+  ASSERT_EQ(events.size(), 2);
+
+  EXPECT_EQ(events[0].timestamp(), 1);
+  EXPECT_EQ(events[0].network_packet_bundle().ctx().uid(), 123);
+  EXPECT_EQ(events[0].network_packet_bundle().total_duration(), 3);
+  EXPECT_EQ(events[0].network_packet_bundle().total_packets(), 3);
+  EXPECT_EQ(events[0].network_packet_bundle().total_length(), 600);
+
+  EXPECT_EQ(events[1].timestamp(), 2);
+  EXPECT_EQ(events[1].network_packet_bundle().ctx().uid(), 456);
+  EXPECT_THAT(events[1].network_packet_bundle().packet_lengths(),
+              testing::ElementsAre(400, 100));
+  EXPECT_THAT(events[1].network_packet_bundle().packet_timestamps(),
+              testing::ElementsAre(0, 2));
+}
+
 }  // namespace bpf
 }  // namespace android

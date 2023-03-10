@@ -182,15 +182,22 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
     auto* event = dst->set_network_packet_bundle();
     Fill(key, event->set_ctx());
 
-    protozero::PackedVarInt offsets;
-    protozero::PackedVarInt lengths;
-    for (const auto& kv : details.time_and_len) {
-      offsets.Append(kv.first - details.minTs);
-      lengths.Append(kv.second);
-    }
+    int count = details.time_and_len.size();
+    if (!mAggregationThreshold || count < mAggregationThreshold) {
+      protozero::PackedVarInt offsets;
+      protozero::PackedVarInt lengths;
+      for (const auto& kv : details.time_and_len) {
+        offsets.Append(kv.first - details.minTs);
+        lengths.Append(kv.second);
+      }
 
-    event->set_packet_timestamps(offsets);
-    event->set_packet_lengths(lengths);
+      event->set_packet_timestamps(offsets);
+      event->set_packet_lengths(lengths);
+    } else {
+      event->set_total_duration(details.maxTs - details.minTs);
+      event->set_total_length(details.bytes);
+      event->set_total_packets(count);
+    }
   }
 }
 
