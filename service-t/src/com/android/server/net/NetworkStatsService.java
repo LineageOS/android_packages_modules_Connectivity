@@ -106,6 +106,7 @@ import android.net.TelephonyNetworkSpecifier;
 import android.net.TetherStatsParcel;
 import android.net.TetheringManager;
 import android.net.TrafficStats;
+import android.net.TransportInfo;
 import android.net.UnderlyingNetworkInfo;
 import android.net.Uri;
 import android.net.netstats.IUsageCallback;
@@ -113,6 +114,7 @@ import android.net.netstats.NetworkStatsDataMigrationUtils;
 import android.net.netstats.provider.INetworkStatsProvider;
 import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.net.netstats.provider.NetworkStatsProvider;
+import android.net.wifi.WifiInfo;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -537,7 +539,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                                     BroadcastOptions.makeBasic())
                                     .setDeliveryGroupPolicy(
                                             ConstantsShim.DELIVERY_GROUP_POLICY_MOST_RECENT)
-                                    .setDeferUntilActive(true)
+                                    .setDeferralPolicy(
+                                            ConstantsShim.DEFERRAL_POLICY_UNTIL_ACTIVE)
                                     .toBundle();
                         } catch (UnsupportedApiLevelException e) {
                             Log.wtf(TAG, "Using unsupported API" + e);
@@ -1729,11 +1732,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         PermissionUtils.enforceNetworkStackPermission(mContext);
         try {
             final String[] ifaceArray = getAllIfacesSinceBoot(transport);
-            // TODO(b/215633405) : mMobileIfaces and mWifiIfaces already contain the stacked
-            // interfaces, so this is not useful, remove it.
-            final String[] ifacesToQuery =
-                    mStatsFactory.augmentWithStackedInterfaces(ifaceArray);
-            final NetworkStats stats = getNetworkStatsUidDetail(ifacesToQuery);
+            final NetworkStats stats = getNetworkStatsUidDetail(ifaceArray);
             // Clear the interfaces of the stats before returning, so callers won't get this
             // information. This is because no caller needs this information for now, and it
             // makes it easier to change the implementation later by using the histories in the
@@ -2125,6 +2124,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             final NetworkIdentity ident = NetworkIdentity.buildNetworkIdentity(mContext, snapshot,
                     isDefault, ratType);
 
+            // If WifiInfo contains a null network key then this identity should not be added into
+            // the network identity set. See b/266598304.
+            final TransportInfo transportInfo = snapshot.getNetworkCapabilities()
+                    .getTransportInfo();
+            if (transportInfo instanceof WifiInfo) {
+                final WifiInfo info = (WifiInfo) transportInfo;
+                if (info.getNetworkKey() == null) continue;
+            }
             // Traffic occurring on the base interface is always counted for
             // both total usage and UID details.
             final String baseIface = snapshot.getLinkProperties().getInterfaceName();
