@@ -50,7 +50,7 @@ class NetworkExceptionTest {
         val httpEngine = HttpEngine.Builder(ApplicationProvider.getApplicationContext()).build()
         val callback = TestUrlRequestCallback()
         val request =
-            httpEngine.newUrlRequestBuilder("http://localhost", callback, callback.executor).build()
+            httpEngine.newUrlRequestBuilder("http://localhost", callback.executor, callback).build()
 
         request.start()
         callback.blockForDone()
