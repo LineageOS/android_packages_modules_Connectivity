@@ -53,7 +53,7 @@ class CallbackExceptionTest {
         val callback = TestUrlRequestCallback()
         callback.setFailure(FailureType.THROW_SYNC, ResponseStep.ON_RESPONSE_STARTED)
         val request = httpEngine
-            .newUrlRequestBuilder(server.successUrl, callback, callback.executor)
+            .newUrlRequestBuilder(server.successUrl, callback.executor, callback)
             .build()
 
         request.start()
