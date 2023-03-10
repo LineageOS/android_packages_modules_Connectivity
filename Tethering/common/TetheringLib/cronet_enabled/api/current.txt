@@ -118,7 +118,6 @@ package android.net.http {
     method @NonNull public static String getVersionString();
     method @NonNull public abstract android.net.http.BidirectionalStream.Builder newBidirectionalStreamBuilder(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.net.http.BidirectionalStream.Callback);
     method @NonNull public abstract android.net.http.UrlRequest.Builder newUrlRequestBuilder(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.net.http.UrlRequest.Callback);
-    method @NonNull public android.net.http.UrlRequest.Builder newUrlRequestBuilder(@NonNull String, @NonNull android.net.http.UrlRequest.Callback, @NonNull java.util.concurrent.Executor);
     method @NonNull public abstract java.net.URLConnection openConnection(@NonNull java.net.URL) throws java.io.IOException;
     method public abstract void shutdown();
   }
