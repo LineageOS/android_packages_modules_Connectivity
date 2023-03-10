@@ -40,7 +40,7 @@ class UrlResponseInfoTest {
         val httpEngine = HttpEngine.Builder(context).build()
         val callback = TestUrlRequestCallback()
         val url = server.successUrl
-        val request = httpEngine.newUrlRequestBuilder(url, callback, callback.executor).build()
+        val request = httpEngine.newUrlRequestBuilder(url, callback.executor, callback).build()
 
         request.start()
         callback.expectCallback(ResponseStep.ON_SUCCEEDED)
