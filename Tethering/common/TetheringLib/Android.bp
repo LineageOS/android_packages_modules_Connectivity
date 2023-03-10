@@ -65,6 +65,7 @@ java_sdk_library {
 
     hostdex: true, // for hiddenapi check
     permitted_packages: ["android.net"],
+    lint: { strict_updatability_linting: true },
 }
 
 java_defaults {
@@ -81,20 +82,11 @@ java_defaults {
     impl_only_static_libs: [
         "cronet_aml_java",
     ],
-    // STOPSHIP(b/265674359): fix all Cronet lint warnings and re-enable lint
-    // directly in framework-tethering
-    lint: {
-         enabled: false,
-    },
-    api_lint: {
-        enabled: false,
-    },
     api_dir: "cronet_enabled/api",
 }
 
 java_defaults {
   name: "CronetJavaDefaultsDisabled",
-  lint: { strict_updatability_linting: true },
 }
 
 java_defaults {
