@@ -33,6 +33,7 @@ PERFETTO_DEFINE_DATA_SOURCE_STATIC_MEMBERS(android::bpf::NetworkTraceHandler);
 
 namespace android {
 namespace bpf {
+using ::android::bpf::internal::NetworkTracePoller;
 using ::perfetto::protos::pbzero::NetworkPacketEvent;
 using ::perfetto::protos::pbzero::NetworkPacketTraceConfig;
 using ::perfetto::protos::pbzero::TracePacket;
@@ -82,18 +83,6 @@ void NetworkTraceHandler::OnStop(const StopArgs&) {
   mStarted = false;
 }
 
-void NetworkTracePoller::SchedulePolling() {
-  // Schedules another run of ourselves to recursively poll periodically.
-  mTaskRunner->PostDelayedTask(
-      [this]() {
-        mMutex.lock();
-        SchedulePolling();
-        ConsumeAllLocked();
-        mMutex.unlock();
-      },
-      mPollMs);
-}
-
 // static class method
 void NetworkTraceHandler::Fill(const PacketTrace& src, TracePacket& dst) {
   dst.set_timestamp(src.timestampNs);
@@ -116,92 +105,6 @@ void NetworkTraceHandler::Fill(const PacketTrace& src, TracePacket& dst) {
   } else {
     event->set_interface("error");
   }
-}
-
-bool NetworkTracePoller::Start(uint32_t pollMs) {
-  ALOGD("Starting datasource");
-
-  std::scoped_lock<std::mutex> lock(mMutex);
-  if (mSessionCount > 0) {
-    if (mPollMs != pollMs) {
-      // Nothing technical prevents mPollMs from changing, it's just unclear
-      // what the right behavior is. Taking the min of active values could poll
-      // too frequently giving some sessions too much data. Taking the max could
-      // be too infrequent. For now, do nothing.
-      ALOGI("poll_ms can't be changed while running, ignoring poll_ms=%d",
-            pollMs);
-    }
-    mSessionCount++;
-    return true;
-  }
-
-  auto status = mConfigurationMap.init(PACKET_TRACE_ENABLED_MAP_PATH);
-  if (!status.ok()) {
-    ALOGW("Failed to bind config map: %s", status.error().message().c_str());
-    return false;
-  }
-
-  auto rb = BpfRingbuf<PacketTrace>::Create(PACKET_TRACE_RINGBUF_PATH);
-  if (!rb.ok()) {
-    ALOGW("Failed to create ringbuf: %s", rb.error().message().c_str());
-    return false;
-  }
-
-  mRingBuffer = std::move(*rb);
-
-  auto res = mConfigurationMap.writeValue(0, true, BPF_ANY);
-  if (!res.ok()) {
-    ALOGW("Failed to enable tracing: %s", res.error().message().c_str());
-    return false;
-  }
-
-  // Start a task runner to run ConsumeAll every mPollMs milliseconds.
-  mTaskRunner = perfetto::Platform::GetDefaultPlatform()->CreateTaskRunner({});
-  mPollMs = pollMs;
-  SchedulePolling();
-
-  mSessionCount++;
-  return true;
-}
-
-bool NetworkTracePoller::Stop() {
-  ALOGD("Stopping datasource");
-
-  std::scoped_lock<std::mutex> lock(mMutex);
-  if (mSessionCount == 0) return false;  // This should never happen
-
-  // If this isn't the last session, don't clean up yet.
-  if (--mSessionCount > 0) return true;
-
-  auto res = mConfigurationMap.writeValue(0, false, BPF_ANY);
-  if (!res.ok()) {
-    ALOGW("Failed to disable tracing: %s", res.error().message().c_str());
-  }
-
-  mTaskRunner.reset();
-  mRingBuffer.reset();
-
-  return res.ok();
-}
-
-bool NetworkTracePoller::ConsumeAll() {
-  std::scoped_lock<std::mutex> lock(mMutex);
-  return ConsumeAllLocked();
-}
-
-bool NetworkTracePoller::ConsumeAllLocked() {
-  if (mRingBuffer == nullptr) {
-    ALOGW("Tracing is not active");
-    return false;
-  }
-
-  base::Result<int> ret = mRingBuffer->ConsumeAll(mCallback);
-  if (!ret.ok()) {
-    ALOGW("Failed to poll ringbuf: %s", ret.error().message().c_str());
-    return false;
-  }
-
-  return true;
 }
 
 }  // namespace bpf

@@ -28,7 +28,7 @@
 
 #include <vector>
 
-#include "netdbpf/NetworkTraceHandler.h"
+#include "netdbpf/NetworkTracePoller.h"
 
 using ::testing::AllOf;
 using ::testing::AnyOf;
@@ -39,6 +39,7 @@ using ::testing::Test;
 
 namespace android {
 namespace bpf {
+namespace internal {
 // Use uint32 max to cause the handler to never Loop. Instead, the tests will
 // manually drive things by calling ConsumeAll explicitly.
 constexpr uint32_t kNeverPoll = std::numeric_limits<uint32_t>::max();
@@ -218,5 +219,6 @@ TEST_F(NetworkTracePollerTest, TraceTcpSession) {
       << PacketPrinter{packets};
 }
 
+}  // namespace internal
 }  // namespace bpf
 }  // namespace android
