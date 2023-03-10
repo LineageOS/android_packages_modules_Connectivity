@@ -154,7 +154,7 @@ public class UrlRequestTest {
         TestUrlRequestCallback callback = new TestUrlRequestCallback();
         callback.setAllowDirectExecutor(true);
         UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
-                mTestServer.getEchoBodyUrl(), callback, DIRECT_EXECUTOR);
+                mTestServer.getEchoBodyUrl(), DIRECT_EXECUTOR, callback);
         UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
         builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR);
         builder.addHeader("Content-Type", "text/plain;charset=UTF-8");
@@ -177,7 +177,7 @@ public class UrlRequestTest {
         callback.setAllowDirectExecutor(true);
 
         UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
-                mTestServer.getEchoBodyUrl(), callback, Executors.newSingleThreadExecutor());
+                mTestServer.getEchoBodyUrl(), Executors.newSingleThreadExecutor(), callback);
         UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
 
         builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR)
@@ -197,7 +197,7 @@ public class UrlRequestTest {
         callback.setAllowDirectExecutor(true);
 
         UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
-                mTestServer.getEchoBodyUrl(), callback, DIRECT_EXECUTOR);
+                mTestServer.getEchoBodyUrl(), DIRECT_EXECUTOR, callback);
         UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
 
         builder.setUploadDataProvider(dataProvider, Executors.newSingleThreadExecutor())
@@ -218,6 +218,7 @@ public class UrlRequestTest {
                 mHttpEngine
                         .newUrlRequestBuilder(
                                 mTestServer.getSuccessUrl(),
+                                Executors.newSingleThreadExecutor(),
                                 new StubUrlRequestCallback() {
                                     @Override
                                     public void onResponseStarted(
@@ -233,8 +234,7 @@ public class UrlRequestTest {
                                             HttpException error) {
                                         onFailedException.add(error);
                                     }
-                                },
-                                Executors.newSingleThreadExecutor())
+                                })
                         .build();
         request.start();
 
@@ -252,6 +252,7 @@ public class UrlRequestTest {
                 mHttpEngine
                         .newUrlRequestBuilder(
                                 mTestServer.getSuccessUrl(),
+                                Executors.newSingleThreadExecutor(),
                                 new StubUrlRequestCallback() {
                                     @Override
                                     public void onResponseStarted(
@@ -268,8 +269,7 @@ public class UrlRequestTest {
                                             HttpException error) {
                                         onFailedException.add(error);
                                     }
-                                },
-                                Executors.newSingleThreadExecutor())
+                                })
                         .build();
         request.start();
 
