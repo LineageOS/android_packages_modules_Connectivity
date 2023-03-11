@@ -106,7 +106,7 @@ public class HttpEngineTest {
                         .build();
 
         UrlRequest.Builder builder =
-                mEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor());
+                mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
         // This tests uses a non-hermetic server. Instead of asserting, assume the next callback.
@@ -117,7 +117,7 @@ public class HttpEngineTest {
         assertFalse(info.wasCached());
 
         mCallback = new TestUrlRequestCallback();
-        builder = mEngine.newUrlRequestBuilder(url, mCallback, mCallback.getExecutor());
+        builder = mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
         mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
@@ -148,7 +148,7 @@ public class HttpEngineTest {
         // or not.
         mEngine = mEngineBuilder.setEnablePublicKeyPinningBypassForLocalTrustAnchors(false).build();
         UrlRequest.Builder builder =
-                mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
+                mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
         mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
@@ -156,7 +156,7 @@ public class HttpEngineTest {
         mEngine.shutdown();
         mEngine = mEngineBuilder.setEnablePublicKeyPinningBypassForLocalTrustAnchors(true).build();
         mCallback = new TestUrlRequestCallback();
-        builder = mEngine.newUrlRequestBuilder(URL, mCallback, mCallback.getExecutor());
+        builder = mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
         mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
