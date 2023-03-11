@@ -1955,43 +1955,54 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
-    public void testMigrateIkeSession_FromIkeTunnConnParams_AutoTimerNoTimer()
-            throws Exception {
+    public void testMigrateIkeSession_FromIkeTunnConnParams_AutoTimerNoTimer() throws Exception {
         doTestMigrateIkeSession_FromIkeTunnConnParams(
                 false /* isAutomaticIpVersionSelectionEnabled */,
                 true /* isAutomaticNattKeepaliveTimerEnabled */,
-                TEST_KEEPALIVE_TIMEOUT_UNSET);
+                TEST_KEEPALIVE_TIMEOUT_UNSET /* keepaliveInProfile */,
+                ESP_IP_VERSION_AUTO /* ipVersionInProfile */,
+                ESP_ENCAP_TYPE_AUTO /* encapTypeInProfile */);
     }
 
     @Test
-    public void testMigrateIkeSession_FromIkeTunnConnParams_AutoTimerTimerSet()
-            throws Exception {
+    public void testMigrateIkeSession_FromIkeTunnConnParams_AutoTimerTimerSet() throws Exception {
         doTestMigrateIkeSession_FromIkeTunnConnParams(
                 false /* isAutomaticIpVersionSelectionEnabled */,
                 true /* isAutomaticNattKeepaliveTimerEnabled */,
-                TEST_KEEPALIVE_TIMER);
+                TEST_KEEPALIVE_TIMER /* keepaliveInProfile */,
+                ESP_IP_VERSION_AUTO /* ipVersionInProfile */,
+                ESP_ENCAP_TYPE_AUTO /* encapTypeInProfile */);
     }
 
     @Test
-    public void testMigrateIkeSession_FromIkeTunnConnParams_AutoIp()
-            throws Exception {
+    public void testMigrateIkeSession_FromIkeTunnConnParams_AutoIp() throws Exception {
         doTestMigrateIkeSession_FromIkeTunnConnParams(
                 true /* isAutomaticIpVersionSelectionEnabled */,
                 false /* isAutomaticNattKeepaliveTimerEnabled */,
-                TEST_KEEPALIVE_TIMEOUT_UNSET);
+                TEST_KEEPALIVE_TIMEOUT_UNSET /* keepaliveInProfile */,
+                ESP_IP_VERSION_AUTO /* ipVersionInProfile */,
+                ESP_ENCAP_TYPE_AUTO /* encapTypeInProfile */);
     }
 
     @Test
-    public void testMigrateIkeSession_FromNotIkeTunnConnParams_AutoTimer()
-            throws Exception {
+    public void testMigrateIkeSession_FromIkeTunnConnParams_AssignedIpProtocol() throws Exception {
+        doTestMigrateIkeSession_FromIkeTunnConnParams(
+                false /* isAutomaticIpVersionSelectionEnabled */,
+                false /* isAutomaticNattKeepaliveTimerEnabled */,
+                TEST_KEEPALIVE_TIMEOUT_UNSET /* keepaliveInProfile */,
+                ESP_IP_VERSION_IPV4 /* ipVersionInProfile */,
+                ESP_ENCAP_TYPE_UDP /* encapTypeInProfile */);
+    }
+
+    @Test
+    public void testMigrateIkeSession_FromNotIkeTunnConnParams_AutoTimer() throws Exception {
         doTestMigrateIkeSession_FromNotIkeTunnConnParams(
                 false /* isAutomaticIpVersionSelectionEnabled */,
                 true /* isAutomaticNattKeepaliveTimerEnabled */);
     }
 
     @Test
-    public void testMigrateIkeSession_FromNotIkeTunnConnParams_AutoIp()
-            throws Exception {
+    public void testMigrateIkeSession_FromNotIkeTunnConnParams_AutoIp() throws Exception {
         doTestMigrateIkeSession_FromNotIkeTunnConnParams(
                 true /* isAutomaticIpVersionSelectionEnabled */,
                 false /* isAutomaticNattKeepaliveTimerEnabled */);
@@ -2011,16 +2022,27 @@ public class VpnTest extends VpnTestBase {
         final int expectedKeepalive = isAutomaticNattKeepaliveTimerEnabled
                 ? AUTOMATIC_KEEPALIVE_DELAY_SECONDS
                 : DEFAULT_UDP_PORT_4500_NAT_TIMEOUT_SEC_INT;
-        doTestMigrateIkeSession(ikeProfile.toVpnProfile(), expectedKeepalive,
-                isAutomaticIpVersionSelectionEnabled);
+        doTestMigrateIkeSession(ikeProfile.toVpnProfile(),
+                expectedKeepalive,
+                ESP_IP_VERSION_AUTO /* expectedIpVersion */,
+                ESP_ENCAP_TYPE_AUTO /* expectedEncapType */);
     }
 
     private void doTestMigrateIkeSession_FromIkeTunnConnParams(
             boolean isAutomaticIpVersionSelectionEnabled,
             boolean isAutomaticNattKeepaliveTimerEnabled,
-            int keepaliveInProfile) throws Exception {
-        final IkeSessionParams ikeSessionParams = getTestIkeSessionParams(true /* testIpv6 */,
+            int keepaliveInProfile,
+            int ipVersionInProfile,
+            int encapTypeInProfile) throws Exception {
+        // TODO: Update helper function in IkeSessionTestUtils to support building IkeSessionParams
+        // with IP version and encap type when mainline-prod branch support these two APIs.
+        final IkeSessionParams params = getTestIkeSessionParams(true /* testIpv6 */,
                 new IkeFqdnIdentification(TEST_IDENTITY), keepaliveInProfile);
+        final IkeSessionParams ikeSessionParams = new IkeSessionParams.Builder(params)
+                .setIpVersion(ipVersionInProfile)
+                .setEncapType(encapTypeInProfile)
+                .build();
+
         final IkeTunnelConnectionParams tunnelParams =
                 new IkeTunnelConnectionParams(ikeSessionParams, CHILD_PARAMS);
         final Ikev2VpnProfile ikeProfile = new Ikev2VpnProfile.Builder(tunnelParams)
@@ -2032,17 +2054,18 @@ public class VpnTest extends VpnTestBase {
         final int expectedKeepalive = isAutomaticNattKeepaliveTimerEnabled
                 ? AUTOMATIC_KEEPALIVE_DELAY_SECONDS
                 : ikeSessionParams.getNattKeepAliveDelaySeconds();
+        final int expectedIpVersion = isAutomaticIpVersionSelectionEnabled
+                ? ESP_IP_VERSION_AUTO
+                : ikeSessionParams.getIpVersion();
+        final int expectedEncapType = isAutomaticIpVersionSelectionEnabled
+                ? ESP_ENCAP_TYPE_AUTO
+                : ikeSessionParams.getEncapType();
         doTestMigrateIkeSession(ikeProfile.toVpnProfile(), expectedKeepalive,
-                isAutomaticIpVersionSelectionEnabled);
+                expectedIpVersion, expectedEncapType);
     }
 
-    private void doTestMigrateIkeSession(VpnProfile profile, int expectedKeepalive,
-            boolean isAutomaticIpVersionSelectionEnabled) throws Exception {
-        final int expectedIpVersion = isAutomaticIpVersionSelectionEnabled
-                ? ESP_IP_VERSION_AUTO : ESP_IP_VERSION_AUTO;
-        final int expectedEncapType = isAutomaticIpVersionSelectionEnabled
-                ? ESP_ENCAP_TYPE_AUTO : ESP_IP_VERSION_AUTO;
-
+    private void doTestMigrateIkeSession(VpnProfile profile,
+            int expectedKeepalive, int expectedIpVersion, int expectedEncapType) throws Exception {
         final PlatformVpnSnapshot vpnSnapShot =
                 verifySetupPlatformVpn(profile,
                         createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */),
