@@ -19,6 +19,8 @@ package android.net.http.cts;
 import static android.net.http.cts.util.TestUtilsKt.assertOKStatusCode;
 import static android.net.http.cts.util.TestUtilsKt.skipIfNoInternetConnection;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
@@ -40,15 +42,19 @@ import android.net.http.cts.util.TestStatusListener;
 import android.net.http.cts.util.TestUploadDataProvider;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
+import android.net.http.cts.util.UploadDataProviders;
 
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import com.google.common.base.Strings;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -277,6 +283,31 @@ public class UrlRequestTest {
         assertNotNull(e);
         assertTrue(e.getCause() instanceof IllegalArgumentException);
         assertTrue(e.getCause().getMessage().contains("full"));
+    }
+
+    @Test
+    public void testUrlRequestPost_withRedirect() throws Exception {
+        String body = Strings.repeat(
+                "Hello, this is a really interesting body, so write this 100 times.", 100);
+
+        String redirectUrlParameter =
+                URLEncoder.encode(mTestServer.getEchoBodyUrl(), "UTF-8");
+        createUrlRequestBuilder(
+                String.format(
+                        "%s/alt_redirect?dest=%s&statusCode=307",
+                        mTestServer.getBaseUri(),
+                        redirectUrlParameter))
+                .setHttpMethod("POST")
+                .addHeader("Content-Type", "text/plain")
+                .setUploadDataProvider(
+                        UploadDataProviders.create(body.getBytes(StandardCharsets.UTF_8)),
+                        mCallback.getExecutor())
+                .build()
+                .start();
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+
+        assertOKStatusCode(mCallback.mResponseInfo);
+        assertThat(mCallback.mResponseAsString).isEqualTo(body);
     }
 
     private static class StubUrlRequestCallback extends UrlRequest.Callback {
