@@ -190,6 +190,9 @@ additional_args = {
     ],
 }
 
+def always_disable(module, arch):
+  return None
+
 def enable_brotli(module, arch):
   # Requires crrev/c/4111690
   if arch is None:
@@ -227,17 +230,17 @@ def enable_boringssl(module, arch):
 # depends on.
 builtin_deps = {
     '//buildtools/third_party/libunwind:libunwind':
-        lambda m, a: None, # disable libunwind
+        always_disable,
     '//buildtools/third_party/libunwind:libunwind__testing':
-        lambda m, a: None, # disable libunwind
+        always_disable,
     '//net/data/ssl/chrome_root_store:gen_root_store_inc':
-        lambda m, a: None,
+        always_disable,
     '//net/data/ssl/chrome_root_store:gen_root_store_inc__testing':
-        lambda m, a: None,
+        always_disable,
     '//net/tools/root_store_tool:root_store_tool':
-        lambda m, a: None,
+        always_disable,
     '//net/tools/root_store_tool:root_store_tool__testing':
-        lambda m, a: None,
+        always_disable,
     '//third_party/zlib:zlib':
         enable_zlib,
     '//third_party/zlib:zlib__testing':
