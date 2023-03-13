@@ -8470,6 +8470,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         exemptUids[1] = nai.networkCapabilities.getOwnerUid();
         UidRangeParcel[] ranges = toUidRangeStableParcels(uidRanges);
 
+        // Close sockets before modifying uid ranges so that RST packets can reach to the server.
         maybeCloseSockets(nai, ranges, exemptUids);
         try {
             if (add) {
@@ -8483,6 +8484,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             loge("Exception while " + (add ? "adding" : "removing") + " uid ranges " + uidRanges +
                     " on netId " + nai.network.netId + ". " + e);
         }
+        // Close sockets that established connection while requesting netd.
         maybeCloseSockets(nai, ranges, exemptUids);
     }
 
