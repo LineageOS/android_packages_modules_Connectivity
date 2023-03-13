@@ -58,12 +58,20 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
     @Nullable
     private StructIfacacheInfo mIfacacheInfo;
 
-    private RtNetlinkAddressMessage(@NonNull StructNlMsgHdr header) {
+    @VisibleForTesting
+    public RtNetlinkAddressMessage(@NonNull final StructNlMsgHdr header,
+            @NonNull final StructIfaddrMsg ifaddrMsg,
+            @NonNull final InetAddress ipAddress,
+            @Nullable final StructIfacacheInfo structIfacacheInfo,
+            int flags) {
         super(header);
-        mIfaddrmsg = null;
-        mIpAddress = null;
-        mIfacacheInfo = null;
-        mFlags = 0;
+        mIfaddrmsg = ifaddrMsg;
+        mIpAddress = ipAddress;
+        mIfacacheInfo = structIfacacheInfo;
+        mFlags = flags;
+    }
+    private RtNetlinkAddressMessage(@NonNull StructNlMsgHdr header) {
+        this(header, null, null, null, 0);
     }
 
     public int getFlags() {
