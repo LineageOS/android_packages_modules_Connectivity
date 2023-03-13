@@ -80,10 +80,10 @@ int ipv6_address_changed(const char *interface) {
 // reads L3 IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
 void process_packet_6_to_4(struct tun_data *tunnel) {
   char cmsg_buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
-  uint8_t buf[MAXMTU];
+  uint8_t buf[MAXMTU + 1];  // +1 to make packet truncation obvious
   struct iovec iov = {
     .iov_base = buf,
-    .iov_len = MAXMTU,
+    .iov_len = sizeof(buf),
   };
   struct msghdr msgh = {
     .msg_iov = &iov,
@@ -102,7 +102,7 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     logmsg(ANDROID_LOG_WARN, "%s: packet socket removed?", __func__);
     running = 0;
     return;
-  } else if (readlen >= MAXMTU) {
+  } else if (readlen >= sizeof(buf)) {
     logmsg(ANDROID_LOG_WARN, "%s: read truncation - ignoring pkt", __func__);
     return;
   }
@@ -131,8 +131,8 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
 
 // reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
 void process_packet_4_to_6(struct tun_data *tunnel) {
-  uint8_t buf[PACKETLEN];
-  ssize_t readlen = read(tunnel->fd4, buf, PACKETLEN);
+  uint8_t buf[sizeof(struct tun_pi) + MAXMTU + 1]; // +1 to make packet truncation obvious
+  ssize_t readlen = read(tunnel->fd4, buf, sizeof(buf));
 
   if (readlen < 0) {
     if (errno != EAGAIN) {
@@ -143,7 +143,7 @@ void process_packet_4_to_6(struct tun_data *tunnel) {
     logmsg(ANDROID_LOG_WARN, "%s: tun interface removed", __func__);
     running = 0;
     return;
-  } else if (readlen >= PACKETLEN) {
+  } else if (readlen >= sizeof(buf)) {
     logmsg(ANDROID_LOG_WARN, "%s: read truncation - ignoring pkt", __func__);
     return;
   }
