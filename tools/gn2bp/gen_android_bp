@@ -215,6 +215,14 @@ def enable_zlib(module, arch):
   else:
     module.arch[arch].shared_libs.add('libz')
 
+def enable_boringssl(module, arch):
+  if arch is None:
+    shared_libs = module.shared_libs
+  else:
+    shared_libs = module.arch[arch].shared_libs
+  shared_libs.add('//external/cronet/third_party/boringssl:libcrypto')
+  shared_libs.add('//external/cronet/third_party/boringssl:libssl')
+
 # Android equivalents for third-party libraries that the upstream project
 # depends on.
 builtin_deps = {
@@ -234,6 +242,13 @@ builtin_deps = {
         enable_zlib,
     '//third_party/zlib:zlib__testing':
         enable_zlib,
+    '//third_party/boringssl:boringssl':
+        enable_boringssl,
+    '//third_party/boringssl:boringssl_asm':
+        # Due to FIPS requirements, downstream BoringSSL has a different "shape" than upstream's.
+        # We're guaranteed that if X depends on :boringssl it will also depend on :boringssl_asm.
+        # Hence, always drop :boringssl_asm and handle the translation entirely in :boringssl.
+        always_disable,
 }
 
 experimental_android_deps = {
