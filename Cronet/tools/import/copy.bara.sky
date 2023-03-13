@@ -19,6 +19,7 @@ common_excludes = [
 
     # Exclude existing *OWNERS files
     "**/*OWNERS",
+    "**/.git/**",
 ]
 
 cronet_origin_files = glob(
@@ -94,11 +95,8 @@ cronet_origin_files = glob(
 core.workflow(
     name = "import_cronet",
     authoring = authoring.overwrite("Cronet Mainline Eng <cronet-mainline-eng+copybara@google.com>"),
-    origin = git.origin(
-        url = "https://chromium.googlesource.com/chromium/src.git",
-        # Source ref is set by the invoking script.
-        ref = "overwritten-by-script",
-    ),
+    # Origin folder is specified via source_ref argument, see import_cronet.sh
+    origin = folder.origin(),
     origin_files = cronet_origin_files,
     destination = git.destination(
         # The destination URL is set by the invoking script.
