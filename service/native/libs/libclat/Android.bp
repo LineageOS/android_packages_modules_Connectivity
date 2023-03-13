@@ -23,6 +23,9 @@ cc_library_static {
         "clatutils.cpp",
     ],
     stl: "libc++_static",
+    header_libs: [
+        "bpf_headers",
+    ],
     static_libs: [
         "libip_checksum",
     ],

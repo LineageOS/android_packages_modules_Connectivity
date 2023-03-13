@@ -25,6 +25,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <bpf/BpfClassic.h>
+
 extern "C" {
 #include "checksum.h"
 }
@@ -216,25 +218,17 @@ int detect_mtu(const struct in6_addr* const plat_subnet, const uint32_t plat_suf
  * returns: 0 on success, -errno on failure
  */
 int configure_packet_socket(const int sock, const in6_addr* const addr, const int ifindex) {
-    const uint32_t* ipv6 = addr->s6_addr32;
-
     // clang-format off
     struct sock_filter filter_code[] = {
-    // Load the first four bytes of the IPv6 destination address (starts 24 bytes in).
-    // Compare it against the first four bytes of our IPv6 address, in host byte order (BPF loads
-    // are always in host byte order). If it matches, continue with next instruction (JMP 0). If it
-    // doesn't match, jump ahead to statement that returns 0 (ignore packet). Repeat for the other
-    // three words of the IPv6 address, and if they all match, return full packet (accept packet).
-        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  24),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[0]), 0, 7),
-        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  28),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[1]), 0, 5),
-        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  32),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[2]), 0, 3),
-        BPF_STMT(BPF_LD  | BPF_W   | BPF_ABS,  36),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,    htonl(ipv6[3]), 0, 1),
-        BPF_STMT(BPF_RET | BPF_K,              0xFFFFFFFF),
-        BPF_STMT(BPF_RET | BPF_K,              0),
+        BPF_LOAD_IPV6_BE32(daddr.s6_addr32[0]),
+        BPF2_REJECT_IF_NOT_EQUAL(ntohl(addr->s6_addr32[0])),
+        BPF_LOAD_IPV6_BE32(daddr.s6_addr32[1]),
+        BPF2_REJECT_IF_NOT_EQUAL(ntohl(addr->s6_addr32[1])),
+        BPF_LOAD_IPV6_BE32(daddr.s6_addr32[2]),
+        BPF2_REJECT_IF_NOT_EQUAL(ntohl(addr->s6_addr32[2])),
+        BPF_LOAD_IPV6_BE32(daddr.s6_addr32[3]),
+        BPF2_REJECT_IF_NOT_EQUAL(ntohl(addr->s6_addr32[3])),
+        BPF_ACCEPT,
     };
     // clang-format on
     struct sock_fprog filter = {sizeof(filter_code) / sizeof(filter_code[0]), filter_code};
