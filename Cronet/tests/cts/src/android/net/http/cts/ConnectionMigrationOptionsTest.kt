@@ -18,6 +18,7 @@ package android.net.http.cts
 
 import android.net.http.ConnectionMigrationOptions
 import android.net.http.ConnectionMigrationOptions.MIGRATION_OPTION_ENABLED
+import android.net.http.ConnectionMigrationOptions.MIGRATION_OPTION_UNSPECIFIED
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,6 +26,16 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ConnectionMigrationOptionsTest {
+
+    @Test
+    fun testConnectionMigrationOptions_defaultValues() {
+        val options =
+                ConnectionMigrationOptions.Builder().build()
+
+        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.allowNonDefaultNetworkUsageEnabled)
+        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.defaultNetworkMigrationEnabled)
+        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.pathDegradationMigrationEnabled)
+    }
 
     @Test
     fun testConnectionMigrationOptions_enableDefaultNetworkMigration_returnSetValue() {
@@ -44,5 +55,14 @@ class ConnectionMigrationOptionsTest {
                     .build()
 
         assertEquals(MIGRATION_OPTION_ENABLED, options.pathDegradationMigrationEnabled)
+    }
+
+    @Test
+    fun testConnectionMigrationOptions_allowNonDefaultNetworkUsage_returnSetValue() {
+        val options =
+                ConnectionMigrationOptions.Builder()
+                        .setAllowNonDefaultNetworkUsageEnabled(MIGRATION_OPTION_ENABLED).build()
+
+        assertEquals(MIGRATION_OPTION_ENABLED, options.allowNonDefaultNetworkUsageEnabled)
     }
 }
