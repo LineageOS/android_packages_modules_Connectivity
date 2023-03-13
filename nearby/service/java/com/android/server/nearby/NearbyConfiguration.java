@@ -19,6 +19,12 @@ package com.android.server.nearby;
 import android.os.Build;
 import android.provider.DeviceConfig;
 
+import androidx.annotation.NonNull;
+
+import com.android.internal.annotations.GuardedBy;
+
+import java.util.concurrent.Executors;
+
 /**
  * A utility class for encapsulating Nearby feature flag configurations.
  */
@@ -42,50 +48,75 @@ public class NearbyConfiguration {
 
     private static final boolean IS_USER_BUILD = "user".equals(Build.TYPE);
 
+    private final DeviceConfigListener mDeviceConfigListener = new DeviceConfigListener();
+    private final Object mDeviceConfigLock = new Object();
+
+    @GuardedBy("mDeviceConfigLock")
     private boolean mEnablePresenceBroadcastLegacy;
-
+    @GuardedBy("mDeviceConfigLock")
     private int mNanoAppMinVersion;
-
+    @GuardedBy("mDeviceConfigLock")
     private boolean mSupportTestApp;
 
     public NearbyConfiguration() {
-        mEnablePresenceBroadcastLegacy = getDeviceConfigBoolean(
-                NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY, false /* defaultValue */);
-        mNanoAppMinVersion = getDeviceConfigInt(
-                NEARBY_MAINLINE_NANO_APP_MIN_VERSION, 0 /* defaultValue */);
-        mSupportTestApp = !IS_USER_BUILD && getDeviceConfigBoolean(
-                NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
+        mDeviceConfigListener.start();
     }
 
     /**
      * Returns whether broadcasting legacy presence spec is enabled.
      */
     public boolean isPresenceBroadcastLegacyEnabled() {
-        return mEnablePresenceBroadcastLegacy;
+        synchronized (mDeviceConfigLock) {
+            return mEnablePresenceBroadcastLegacy;
+        }
     }
 
     public int getNanoAppMinVersion() {
-        return mNanoAppMinVersion;
+        synchronized (mDeviceConfigLock) {
+            return mNanoAppMinVersion;
+        }
     }
 
     /**
      * @return {@code true} when in test mode and allows customization.
      */
     public boolean isTestAppSupported() {
-        return mSupportTestApp;
+        synchronized (mDeviceConfigLock) {
+            return mSupportTestApp;
+        }
     }
 
-    private boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {
+    private class DeviceConfigListener implements DeviceConfig.OnPropertiesChangedListener {
+        public void start() {
+            DeviceConfig.addOnPropertiesChangedListener(DeviceConfig.NAMESPACE_TETHERING,
+                    Executors.newSingleThreadExecutor(), this);
+            onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_TETHERING));
+        }
+
+        @Override
+        public void onPropertiesChanged(@NonNull DeviceConfig.Properties properties) {
+            synchronized (mDeviceConfigLock) {
+                mEnablePresenceBroadcastLegacy = getDeviceConfigBoolean(
+                        NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY, false /* defaultValue */);
+                mNanoAppMinVersion = getDeviceConfigInt(
+                        NEARBY_MAINLINE_NANO_APP_MIN_VERSION, 0 /* defaultValue */);
+                mSupportTestApp = !IS_USER_BUILD && getDeviceConfigBoolean(
+                        NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
+            }
+        }
+    }
+
+    private static boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {
         final String value = getDeviceConfigProperty(name);
         return value != null ? Boolean.parseBoolean(value) : defaultValue;
     }
 
-    private int getDeviceConfigInt(final String name, final int defaultValue) {
+    private static int getDeviceConfigInt(final String name, final int defaultValue) {
         final String value = getDeviceConfigProperty(name);
         return value != null ? Integer.parseInt(value) : defaultValue;
     }
 
-    private String getDeviceConfigProperty(String name) {
+    private static String getDeviceConfigProperty(String name) {
         return DeviceConfig.getProperty(DeviceConfig.NAMESPACE_TETHERING, name);
     }
 }
