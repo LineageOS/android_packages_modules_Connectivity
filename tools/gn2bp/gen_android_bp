@@ -39,6 +39,8 @@ import gn_utils
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+CRONET_LICENSE_NAME = "external_cronet_license"
+
 # Default targets to translate to the blueprint file.
 DEFAULT_TARGETS = [
     '//components/cronet/android:cronet',
@@ -1764,54 +1766,10 @@ def create_blueprint_for_targets(gn, targets, test_targets):
 
   return blueprint
 
-def create_license_module(blueprint):
-  module = Module("license", "external_cronet_license", "LICENSE")
-  module.license_kinds.update({
-      'SPDX-license-identifier-MPL',
-      'SPDX-license-identifier-MPL-1.1',
-      'SPDX-license-identifier-ISC',
-      'SPDX-license-identifier-AFL-2.0',
-      'SPDX-license-identifier-MPL-2.0',
-      'SPDX-license-identifier-BSD',
-      'SPDX-license-identifier-Apache-2.0',
-      'SPDX-license-identifier-BSL-1.0',
-      'SPDX-license-identifier-Unicode-DFS',
-      'SPDX-license-identifier-NCSA',
-      'SPDX-license-identifier-OpenSSL',
-      'SPDX-license-identifier-MIT',
-      "SPDX-license-identifier-ICU",
-      'legacy_unencumbered',
-  })
-  module.license_text.update({
-      "LICENSE",
-      "net/third_party/uri_template/LICENSE",
-      "net/third_party/quiche/src/LICENSE",
-      "base/third_party/symbolize/LICENSE",
-      "base/third_party/superfasthash/LICENSE",
-      "base/third_party/xdg_user_dirs/LICENSE",
-      "base/third_party/double_conversion/LICENSE",
-      "base/third_party/nspr/LICENSE",
-      "base/third_party/dynamic_annotations/LICENSE",
-      "base/third_party/icu/LICENSE",
-      "base/third_party/valgrind/LICENSE",
-      "third_party/brotli/LICENSE",
-      "third_party/protobuf/LICENSE",
-      "third_party/protobuf/third_party/utf8_range/LICENSE",
-      "third_party/metrics_proto/LICENSE",
-      "third_party/boringssl/src/LICENSE",
-      "third_party/boringssl/src/third_party/googletest/LICENSE",
-      "third_party/boringssl/src/third_party/wycheproof_testvectors/LICENSE",
-      "third_party/boringssl/src/third_party/fiat/LICENSE",
-      "third_party/libevent/LICENSE",
-      "third_party/ashmem/LICENSE",
-      "third_party/icu/LICENSE",
-      "third_party/icu/scripts/LICENSE",
-      "third_party/abseil-cpp/LICENSE",
-      "third_party/modp_b64/LICENSE",
-  })
+def create_default_license_module(blueprint):
   default_license = Module("package", "", "PACKAGE")
-  default_license.default_applicable_licenses.add(module.name)
-  blueprint.add_module(module)
+  default_license.comment = "The actual license can be found in Android.extras.bp"
+  default_license.default_applicable_licenses.add(CRONET_LICENSE_NAME)
   blueprint.add_module(default_license)
 
 def main():
@@ -1866,7 +1824,7 @@ def main():
   # Add any proto groups to the blueprint.
   for l_name, t_names in proto_groups.items():
     create_proto_group_modules(blueprint, gn, l_name, t_names)
-  create_license_module(blueprint)
+  create_default_license_module(blueprint)
   output = [
       """// Copyright (C) 2022 The Android Open Source Project
 //
