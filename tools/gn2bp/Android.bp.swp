@@ -16,7 +16,7 @@
 
 build = ["Android.extras.bp"]
 
-// GN: PACKAGE
+// The actual license can be found in Android.extras.bp
 package {
     default_applicable_licenses: [
         "external_cronet_license",
@@ -35224,54 +35224,6 @@ cc_genrule {
     ],
     apex_available: [
         "com.android.tethering",
-    ],
-}
-
-// GN: LICENSE
-license {
-    name: "external_cronet_license",
-    license_kinds: [
-        "SPDX-license-identifier-AFL-2.0",
-        "SPDX-license-identifier-Apache-2.0",
-        "SPDX-license-identifier-BSD",
-        "SPDX-license-identifier-BSL-1.0",
-        "SPDX-license-identifier-ICU",
-        "SPDX-license-identifier-ISC",
-        "SPDX-license-identifier-MIT",
-        "SPDX-license-identifier-MPL",
-        "SPDX-license-identifier-MPL-1.1",
-        "SPDX-license-identifier-MPL-2.0",
-        "SPDX-license-identifier-NCSA",
-        "SPDX-license-identifier-OpenSSL",
-        "SPDX-license-identifier-Unicode-DFS",
-        "legacy_unencumbered",
-    ],
-    license_text: [
-        "LICENSE",
-        "base/third_party/double_conversion/LICENSE",
-        "base/third_party/dynamic_annotations/LICENSE",
-        "base/third_party/icu/LICENSE",
-        "base/third_party/nspr/LICENSE",
-        "base/third_party/superfasthash/LICENSE",
-        "base/third_party/symbolize/LICENSE",
-        "base/third_party/valgrind/LICENSE",
-        "base/third_party/xdg_user_dirs/LICENSE",
-        "net/third_party/quiche/src/LICENSE",
-        "net/third_party/uri_template/LICENSE",
-        "third_party/abseil-cpp/LICENSE",
-        "third_party/ashmem/LICENSE",
-        "third_party/boringssl/src/LICENSE",
-        "third_party/boringssl/src/third_party/fiat/LICENSE",
-        "third_party/boringssl/src/third_party/googletest/LICENSE",
-        "third_party/boringssl/src/third_party/wycheproof_testvectors/LICENSE",
-        "third_party/brotli/LICENSE",
-        "third_party/icu/LICENSE",
-        "third_party/icu/scripts/LICENSE",
-        "third_party/libevent/LICENSE",
-        "third_party/metrics_proto/LICENSE",
-        "third_party/modp_b64/LICENSE",
-        "third_party/protobuf/LICENSE",
-        "third_party/protobuf/third_party/utf8_range/LICENSE",
     ],
 }
 
