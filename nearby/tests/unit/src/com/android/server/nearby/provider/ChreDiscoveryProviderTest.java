@@ -75,7 +75,6 @@ public class ChreDiscoveryProviderTest {
 
     private ChreDiscoveryProvider mChreDiscoveryProvider;
 
-
     @Before
     public void setUp() {
         InstrumentationRegistry.getInstrumentation().getUiAutomation()
