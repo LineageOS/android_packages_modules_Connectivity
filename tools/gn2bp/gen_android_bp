@@ -1041,10 +1041,19 @@ class GnRunBinary(BaseActionSanitizer):
       return "$(location %s)" % arg.replace("gen/", "")
     return arg
 
+  def _replace_binary(self, arg):
+    if arg in self.binary_to_target:
+      return '$(location %s)' % self.binary
+    return arg
+
+  def _remove_python_args(self):
+    self.target.args = [arg for arg in self.target.args if "python3" not in arg]
+
   def _sanitize_args(self):
     self._update_all_args(self._sanitize_filepath_with_location_tag)
     self._update_all_args(self._replace_gen_with_location_tag)
-    self._set_arg_at(0, '$(location %s)' % self.binary)
+    self._update_all_args(self._replace_binary)
+    self._remove_python_args()
     super()._sanitize_args()
 
   def get_tools(self):
@@ -1238,7 +1247,8 @@ def create_action_foreach_modules(blueprint, target, is_test_target):
     # don't add script arg for the first source -- create_action_module
     # already does this.
     if i != 0:
-      new_args.append('&& python3 $(location %s)' %
+      new_args.append('&&')
+      new_args.append('python3 $(location %s)' %
                    gn_utils.label_to_path(target.script))
     for arg in target.args:
       if '{{source}}' in arg:
@@ -1252,6 +1262,10 @@ def create_action_foreach_modules(blueprint, target, is_test_target):
         for out in target.outputs:
           if out.endswith(file_name):
             new_args.append('$(location %s)' % out)
+
+        for file in target.sources:
+          if file.endswith(file_name):
+            new_args.append('$(location %s)' % gn_utils.label_to_path(file))
       else:
         new_args.append(arg)
 
