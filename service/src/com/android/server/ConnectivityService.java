@@ -911,7 +911,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     // This is the cache for the packageName -> ApplicationSelfCertifiedNetworkCapabilities. This
     // value can be accessed from both handler thread and any random binder thread. Therefore,
-    // accessing this value requires holding a lock.
+    // accessing this value requires holding a lock. The cache is the same across all the users.
     @GuardedBy("mSelfCertifiedCapabilityCache")
     private final Map<String, ApplicationSelfCertifiedNetworkCapabilities>
             mSelfCertifiedCapabilityCache = new HashMap<>();
@@ -7001,6 +7001,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
         ApplicationSelfCertifiedNetworkCapabilities applicationNetworkCapabilities;
+        final long ident = Binder.clearCallingIdentity();
         try {
             synchronized (mSelfCertifiedCapabilityCache) {
                 applicationNetworkCapabilities = mSelfCertifiedCapabilityCache.get(
@@ -7027,6 +7028,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                             + " property");
         } catch (XmlPullParserException | IOException | InvalidTagException e) {
             throw new SecurityException(e.getMessage());
+        } finally {
+            Binder.restoreCallingIdentity(ident);
         }
 
         applicationNetworkCapabilities.enforceSelfCertifiedNetworkCapabilitiesDeclared(
@@ -8467,6 +8470,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         exemptUids[1] = nai.networkCapabilities.getOwnerUid();
         UidRangeParcel[] ranges = toUidRangeStableParcels(uidRanges);
 
+        // Close sockets before modifying uid ranges so that RST packets can reach to the server.
         maybeCloseSockets(nai, ranges, exemptUids);
         try {
             if (add) {
@@ -8480,6 +8484,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             loge("Exception while " + (add ? "adding" : "removing") + " uid ranges " + uidRanges +
                     " on netId " + nai.network.netId + ". " + e);
         }
+        // Close sockets that established connection while requesting netd.
         maybeCloseSockets(nai, ranges, exemptUids);
     }
 
