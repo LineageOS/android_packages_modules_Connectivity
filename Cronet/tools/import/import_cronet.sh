@@ -33,6 +33,8 @@ EOF
     exit 1
 }
 
+COPYBARA_FOLDER_ORIGIN="/tmp/copybara-origin"
+
 #######################################
 # Create upstream-import branch in external/cronet.
 # Globals:
@@ -49,22 +51,59 @@ setup_upstream_import_branch() {
 }
 
 #######################################
+# Setup folder.origin for copybara inside /tmp
+# Globals:
+#   COPYBARA_FOLDER_ORIGIN
+# Arguments:
+#   new_rev, string
+#######################################
+setup_folder_origin() {
+    local _new_rev=$1
+    mkdir -p "${COPYBARA_FOLDER_ORIGIN}"
+    cd "${COPYBARA_FOLDER_ORIGIN}"
+
+    # For this to work _new_rev must be a branch or a tag.
+    git clone --depth=1 --branch "${_new_rev}" https://chromium.googlesource.com/chromium/src.git
+
+    cat <<EOF >.gclient
+solutions = [
+  {
+    "name": "src",
+    "url": "https://chromium.googlesource.com/chromium/src.git",
+    "managed": False,
+    "custom_deps": {},
+    "custom_vars": {},
+  },
+]
+target_os = ["android"]
+EOF
+    cd src
+    # Set appropriate gclient flags to speed up syncing.
+    gclient sync \
+        --no-history
+        --shallow
+}
+
+#######################################
 # Runs the copybara import of Chromium
 # Globals:
 #   ANDROID_BUILD_TOP
+#   COPYBARA_FOLDER_ORIGIN
 # Arguments:
-#   new_rev, string
 #   last_rev, string or empty
 #   force, string or empty
 #######################################
 do_run_copybara() {
-    local _new_rev=$1
-    local _last_rev=$2
-    local _force=$3
+    local _last_rev=$1
+    local _force=$2
 
     local -a flags
     flags+=(--git-destination-url="file://${ANDROID_BUILD_TOP}/external/cronet")
-    flags+=(--repo-timeout 3h)
+    flags+=(--repo-timeout 3m)
+
+    # buildtools/third_party/libc++ contains an invalid symlink
+    flags+=(--folder-origin-ignore-invalid-symlinks)
+    flags+=(--git-no-verify)
 
     if [ ! -z "${_force}" ]; then
         flags+=(--force)
@@ -77,7 +116,7 @@ do_run_copybara() {
     /google/bin/releases/copybara/public/copybara/copybara \
         "${flags[@]}" \
         "${ANDROID_BUILD_TOP}/packages/modules/Connectivity/Cronet/tools/import/copy.bara.sky" \
-        import_cronet "${_new_rev}"
+        import_cronet "${COPYBARA_FOLDER_ORIGIN}/src"
 }
 
 while getopts $OPTSTRING opt; do
@@ -96,5 +135,6 @@ if [ -z "${new_rev}" ]; then
 fi
 
 setup_upstream_import_branch
-do_run_copybara "${new_rev}" "${last_rev}" "${force}"
+setup_folder_origin "${new_rev}"
+do_run_copybara "${last_rev}" "${force}"
 
