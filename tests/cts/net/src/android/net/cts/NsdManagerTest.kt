@@ -68,6 +68,7 @@ import android.platform.test.annotations.AppModeFull
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants.AF_INET6
+import android.system.OsConstants.EADDRNOTAVAIL
 import android.system.OsConstants.ENETUNREACH
 import android.system.OsConstants.IPPROTO_UDP
 import android.system.OsConstants.SOCK_DGRAM
@@ -404,7 +405,7 @@ class NsdManagerTest {
                 Os.connect(sock, parseNumericAddress("ff02::fb%$ifaceName"), 12345)
                 true
             }.catch<ErrnoException> {
-                if (it.errno != ENETUNREACH) {
+                if (it.errno != ENETUNREACH && it.errno != EADDRNOTAVAIL) {
                     throw it
                 }
                 false
