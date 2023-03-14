@@ -21,6 +21,7 @@ import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY;
+import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_APP;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
@@ -114,6 +115,9 @@ public class BroadcastProviderManagerTest {
     public void testStartAdvertising_featureDisabled() throws Exception {
         DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
                 "false", false);
+        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP,
+                "false", false);
+
         mBroadcastProviderManager = new BroadcastProviderManager(MoreExecutors.directExecutor(),
                 mBleBroadcastProvider);
         mBroadcastProviderManager.startBroadcast(mBroadcastRequest, mBroadcastListener);
