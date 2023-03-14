@@ -46,6 +46,7 @@ java_defaults {
 
     // Change to system current when TetheringManager move to bootclass path.
     platform_apis: true,
+    host_required: ["net-tests-utils-host-common"],
 }
 
 // Tethering CTS tests that target the latest released SDK. These tests can be installed on release
