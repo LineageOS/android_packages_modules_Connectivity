@@ -44,6 +44,8 @@ import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 import android.net.http.cts.util.UploadDataProviders;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -310,7 +312,7 @@ public class UrlRequestTest {
         assertThat(mCallback.mResponseAsString).isEqualTo(body);
     }
 
-    private static class StubUrlRequestCallback extends UrlRequest.Callback {
+    private static class StubUrlRequestCallback implements UrlRequest.Callback {
 
         @Override
         public void onRedirectReceived(
@@ -337,6 +339,11 @@ public class UrlRequestTest {
         @Override
         public void onFailed(UrlRequest request, UrlResponseInfo info, HttpException error) {
             throw new UnsupportedOperationException(error);
+        }
+
+        @Override
+        public void onCanceled(@NonNull UrlRequest request, @Nullable UrlResponseInfo info) {
+            throw new UnsupportedOperationException();
         }
     }
 
