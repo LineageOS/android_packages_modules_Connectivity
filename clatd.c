@@ -79,12 +79,15 @@ int ipv6_address_changed(const char *interface) {
 
 // reads L3 IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
 void process_packet_6_to_4(struct tun_data *tunnel) {
-  char cmsg_buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
-  uint8_t buf[MAXMTU + 1];  // +1 to make packet truncation obvious
+  // ethernet header is 14 bytes, plus 4 for a normal VLAN tag or 8 for Q-in-Q
+  // we don't really support vlans (or especially Q-in-Q)...
+  // but a few bytes of extra buffer space doesn't hurt...
+  uint8_t buf[22 + MAXMTU + 1];  // +1 to make packet truncation obvious
   struct iovec iov = {
     .iov_base = buf,
     .iov_len = sizeof(buf),
   };
+  char cmsg_buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
   struct msghdr msgh = {
     .msg_iov = &iov,
     .msg_iovlen = 1,
@@ -108,13 +111,21 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
   }
 
   __u32 tp_status = 0;
+  __u16 tp_net = 0;
 
   for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msgh); cmsg != NULL; cmsg = CMSG_NXTHDR(&msgh,cmsg)) {
     if (cmsg->cmsg_level == SOL_PACKET && cmsg->cmsg_type == PACKET_AUXDATA) {
       struct tpacket_auxdata *aux = (struct tpacket_auxdata *)CMSG_DATA(cmsg);
       tp_status = aux->tp_status;
+      tp_net = aux->tp_net;
       break;
     }
+  }
+
+  if (readlen < tp_net) {
+    logmsg(ANDROID_LOG_WARN, "%s: ignoring %zd byte pkt shorter than %u L2 header",
+           __func__, readlen, tp_net);
+    return;
   }
 
   // This will detect a skb->ip_summed == CHECKSUM_PARTIAL packet with non-final L4 checksum
@@ -126,7 +137,7 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     }
   }
 
-  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf, readlen);
+  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf + tp_net, readlen - tp_net);
 }
 
 // reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
