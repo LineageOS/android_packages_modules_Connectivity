@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  * method to block thread until the request completes on another thread.
  * Allows us to cancel, block request or throw an exception from an arbitrary step.
  */
-public class TestUrlRequestCallback extends UrlRequest.Callback {
+public class TestUrlRequestCallback implements UrlRequest.Callback {
     private static final int TIMEOUT_MS = 12_000;
     public ArrayList<UrlResponseInfo> mRedirectResponseInfoList = new ArrayList<>();
     public ArrayList<String> mRedirectUrlList = new ArrayList<>();
