@@ -70,10 +70,7 @@ cronet_origin_files = glob(
         "base/third_party/icu/**",
         "base/third_party/nspr/**",
         "base/third_party/superfasthash/**",
-        # TODO: we should be able to remove this dependency.
-        "base/third_party/symbolize/**",
         "base/third_party/valgrind/**",
-        "base/third_party/xdg_user_dirs/**",
         "buildtools/third_party/libc++/**",
         "buildtools/third_party/libc++abi/**",
         # Note: Only used for tests.
