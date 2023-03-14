@@ -136,6 +136,7 @@ class MdnsInterfaceAdvertiserTest {
     @After
     fun tearDown() {
         thread.quitSafely()
+        thread.join()
     }
 
     @Test
