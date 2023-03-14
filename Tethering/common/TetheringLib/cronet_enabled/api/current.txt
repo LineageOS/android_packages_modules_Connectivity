@@ -241,14 +241,13 @@ package android.net.http {
     method @NonNull public abstract android.net.http.UrlRequest.Builder setUploadDataProvider(@NonNull android.net.http.UploadDataProvider, @NonNull java.util.concurrent.Executor);
   }
 
-  public abstract static class UrlRequest.Callback {
-    ctor public UrlRequest.Callback();
+  public static interface UrlRequest.Callback {
     method public void onCanceled(@NonNull android.net.http.UrlRequest, @Nullable android.net.http.UrlResponseInfo);
-    method public abstract void onFailed(@NonNull android.net.http.UrlRequest, @Nullable android.net.http.UrlResponseInfo, @NonNull android.net.http.HttpException);
-    method public abstract void onReadCompleted(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer) throws java.lang.Exception;
-    method public abstract void onRedirectReceived(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo, @NonNull String) throws java.lang.Exception;
-    method public abstract void onResponseStarted(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo) throws java.lang.Exception;
-    method public abstract void onSucceeded(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo);
+    method public void onFailed(@NonNull android.net.http.UrlRequest, @Nullable android.net.http.UrlResponseInfo, @NonNull android.net.http.HttpException);
+    method public void onReadCompleted(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo, @NonNull java.nio.ByteBuffer) throws java.lang.Exception;
+    method public void onRedirectReceived(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo, @NonNull String) throws java.lang.Exception;
+    method public void onResponseStarted(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo) throws java.lang.Exception;
+    method public void onSucceeded(@NonNull android.net.http.UrlRequest, @NonNull android.net.http.UrlResponseInfo);
   }
 
   public static class UrlRequest.Status {
