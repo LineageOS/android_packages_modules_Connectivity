@@ -16,6 +16,8 @@
 
 package com.android.nearby.halfsheet;
 
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+
 import static com.android.nearby.halfsheet.fragment.DevicePairingFragment.APP_LAUNCH_FRAGMENT_TYPE;
 import static com.android.server.nearby.common.bluetooth.fastpair.FastPairConstants.EXTRA_MODEL_ID;
 import static com.android.server.nearby.common.fastpair.service.UserActionHandlerBase.EXTRA_MAC_ADDRESS;
@@ -226,7 +228,8 @@ public class HalfSheetActivity extends FragmentActivity {
                                     EXTRA_HALF_SHEET_IS_RETROACTIVE,
                                     getIntent().getBooleanExtra(EXTRA_HALF_SHEET_IS_RETROACTIVE,
                                             false))
-                            .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()));
+                            .putExtra(EXTRA_MAC_ADDRESS, mScanFastPairStoreItem.getAddress()),
+                    ACCESS_FINE_LOCATION);
         }
     }
 

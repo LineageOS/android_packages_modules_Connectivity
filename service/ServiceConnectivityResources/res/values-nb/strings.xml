@@ -18,7 +18,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="connectivityResourcesAppLabel" msgid="2476261877900882974">"Ressurser for systemtilkobling"</string>
-    <string name="wifi_available_sign_in" msgid="8041178343789805553">"Logg på Wi-Fi-nettverket"</string>
+    <string name="wifi_available_sign_in" msgid="8041178343789805553">"Logg på Wifi-nettverket"</string>
     <string name="network_available_sign_in" msgid="2622520134876355561">"Logg på nettverk"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
