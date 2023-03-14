@@ -167,6 +167,21 @@ def get_linker_script_ldflag(script_path):
 
 # Additional arguments to apply to Android.bp rules.
 additional_args = {
+    'cronet_aml_net_third_party_quiche_net_quic_test_tools_proto_gen_headers': [
+      ('export_include_dirs', {
+        "net/third_party/quiche/src",
+      })
+    ],
+    'cronet_aml_net_third_party_quiche_net_quic_test_tools_proto__testing_gen_headers': [
+        ('export_include_dirs', {
+        "net/third_party/quiche/src",
+        })
+     ],
+    'cronet_aml_third_party_quic_trace_quic_trace_proto__testing_gen_headers': [
+        ('export_include_dirs', {
+          "third_party/quic_trace/src",
+        })
+    ],
     'cronet_aml_net_net': [
         ('export_static_lib_headers', {
             'cronet_aml_net_third_party_quiche_quiche',
