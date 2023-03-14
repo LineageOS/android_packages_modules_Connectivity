@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "netdbpf/NetworkTraceHandler.h"
+#include "protos/perfetto/config/android/network_trace_config.gen.h"
 #include "protos/perfetto/trace/android/network_trace.pb.h"
 #include "protos/perfetto/trace/trace.pb.h"
 #include "protos/perfetto/trace/trace_packet.pb.h"
@@ -27,6 +28,7 @@
 namespace android {
 namespace bpf {
 using ::perfetto::protos::NetworkPacketEvent;
+using ::perfetto::protos::NetworkPacketTraceConfig;
 using ::perfetto::protos::Trace;
 using ::perfetto::protos::TracePacket;
 using ::perfetto::protos::TrafficDirection;
@@ -42,7 +44,8 @@ class HandlerForTest : public NetworkTraceHandler {
 class NetworkTraceHandlerTest : public testing::Test {
  protected:
   // Starts a tracing session with the handler under test.
-  std::unique_ptr<perfetto::TracingSession> StartTracing() {
+  std::unique_ptr<perfetto::TracingSession> StartTracing(
+      NetworkPacketTraceConfig settings) {
     perfetto::TracingInitArgs args;
     args.backends = perfetto::kInProcessBackend;
     perfetto::Tracing::Initialize(args);
@@ -53,7 +56,9 @@ class NetworkTraceHandlerTest : public testing::Test {
 
     perfetto::TraceConfig cfg;
     cfg.add_buffers()->set_size_kb(1024);
-    cfg.add_data_sources()->mutable_config()->set_name("test.network_packets");
+    auto* config = cfg.add_data_sources()->mutable_config();
+    config->set_name("test.network_packets");
+    config->set_network_packet_trace_config_raw(settings.SerializeAsString());
 
     auto session = perfetto::Tracing::NewTrace(perfetto::kInProcessBackend);
     session->Setup(cfg);
@@ -86,8 +91,9 @@ class NetworkTraceHandlerTest : public testing::Test {
 
   // This runs a trace with a single call to Write.
   bool TraceAndSortPackets(const std::vector<PacketTrace>& input,
-                           std::vector<TracePacket>* output) {
-    auto session = StartTracing();
+                           std::vector<TracePacket>* output,
+                           NetworkPacketTraceConfig config = {}) {
+    auto session = StartTracing(config);
     HandlerForTest::Trace([&](HandlerForTest::TraceContext ctx) {
       ctx.GetDataSourceLocked()->Write(input, ctx);
       ctx.Flush();
@@ -125,12 +131,11 @@ TEST_F(NetworkTraceHandlerTest, WriteBasicFields) {
 
   ASSERT_EQ(events.size(), 1);
   EXPECT_THAT(events[0].timestamp(), 1000);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().uid(), 10);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().tag(), 123);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().ip_proto(), 6);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().tcp_flags(), 1);
-  EXPECT_THAT(events[0].network_packet_bundle().packet_lengths(),
-              testing::ElementsAre(100));
+  EXPECT_THAT(events[0].network_packet().uid(), 10);
+  EXPECT_THAT(events[0].network_packet().tag(), 123);
+  EXPECT_THAT(events[0].network_packet().ip_proto(), 6);
+  EXPECT_THAT(events[0].network_packet().tcp_flags(), 1);
+  EXPECT_THAT(events[0].network_packet().length(), 100);
 }
 
 TEST_F(NetworkTraceHandlerTest, WriteDirectionAndPorts) {
@@ -153,17 +158,22 @@ TEST_F(NetworkTraceHandlerTest, WriteDirectionAndPorts) {
   ASSERT_TRUE(TraceAndSortPackets(input, &events));
 
   ASSERT_EQ(events.size(), 2);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().local_port(), 8080);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().remote_port(), 443);
-  EXPECT_THAT(events[0].network_packet_bundle().ctx().direction(),
+  EXPECT_THAT(events[0].network_packet().local_port(), 8080);
+  EXPECT_THAT(events[0].network_packet().remote_port(), 443);
+  EXPECT_THAT(events[0].network_packet().direction(),
               TrafficDirection::DIR_EGRESS);
-  EXPECT_THAT(events[1].network_packet_bundle().ctx().local_port(), 8080);
-  EXPECT_THAT(events[1].network_packet_bundle().ctx().remote_port(), 443);
-  EXPECT_THAT(events[1].network_packet_bundle().ctx().direction(),
+  EXPECT_THAT(events[1].network_packet().local_port(), 8080);
+  EXPECT_THAT(events[1].network_packet().remote_port(), 443);
+  EXPECT_THAT(events[1].network_packet().direction(),
               TrafficDirection::DIR_INGRESS);
 }
 
 TEST_F(NetworkTraceHandlerTest, BasicBundling) {
+  // TODO: remove this once bundling becomes default. Until then, set arbitrary
+  // aggregation threshold to enable bundling.
+  NetworkPacketTraceConfig config;
+  config.set_aggregation_threshold(10);
+
   std::vector<PacketTrace> input = {
       PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
       PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
@@ -174,7 +184,7 @@ TEST_F(NetworkTraceHandlerTest, BasicBundling) {
   };
 
   std::vector<TracePacket> events;
-  ASSERT_TRUE(TraceAndSortPackets(input, &events));
+  ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
 
   ASSERT_EQ(events.size(), 2);
 
