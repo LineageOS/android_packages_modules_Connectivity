@@ -16734,6 +16734,7 @@ cc_genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/third_party/quiche/src",
         "net/third_party/quiche/src/quiche/quic/test_tools",
         "protos",
     ],
@@ -16775,6 +16776,7 @@ cc_genrule {
     ],
     export_include_dirs: [
         ".",
+        "net/third_party/quiche/src",
         "net/third_party/quiche/src/quiche/quic/test_tools",
         "protos",
     ],
@@ -31817,6 +31819,7 @@ cc_genrule {
     export_include_dirs: [
         ".",
         "protos",
+        "third_party/quic_trace/src",
         "third_party/quic_trace/src/quic_trace",
     ],
     apex_available: [
