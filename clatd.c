@@ -36,6 +36,7 @@
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <linux/if_tun.h>
+#include <linux/virtio_net.h>
 #include <net/if.h>
 #include <sys/uio.h>
 
@@ -83,6 +84,7 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
   // we don't really support vlans (or especially Q-in-Q)...
   // but a few bytes of extra buffer space doesn't hurt...
   struct {
+    struct virtio_net_hdr vnet;
     uint8_t payload[22 + MAXMTU];
     char pad; // +1 to make packet truncation obvious
   } buf;
@@ -125,7 +127,7 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     }
   }
 
-  if (readlen < tp_net) {
+  if (readlen < sizeof(struct virtio_net_hdr) + tp_net) {
     logmsg(ANDROID_LOG_WARN, "%s: ignoring %zd byte pkt shorter than %u L2 header",
            __func__, readlen, tp_net);
     return;
@@ -140,7 +142,7 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     }
   }
 
-  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf.payload + tp_net, readlen - tp_net);
+  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf.payload + tp_net, readlen - sizeof(struct virtio_net_hdr) - tp_net);
 }
 
 // reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
