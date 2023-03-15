@@ -142,8 +142,12 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
 
 // reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
 void process_packet_4_to_6(struct tun_data *tunnel) {
-  uint8_t buf[sizeof(struct tun_pi) + MAXMTU + 1]; // +1 to make packet truncation obvious
-  ssize_t readlen = read(tunnel->fd4, buf, sizeof(buf));
+  struct {
+    struct tun_pi pi;
+    uint8_t payload[MAXMTU];
+    char pad; // +1 byte to make packet truncation obvious
+  } buf;
+  ssize_t readlen = read(tunnel->fd4, &buf, sizeof(buf));
 
   if (readlen < 0) {
     if (errno != EAGAIN) {
@@ -159,25 +163,23 @@ void process_packet_4_to_6(struct tun_data *tunnel) {
     return;
   }
 
-  struct tun_pi *tun_header = (struct tun_pi *)buf;
-  if (readlen < (ssize_t)sizeof(*tun_header)) {
+  if (readlen < (ssize_t)sizeof(buf.pi)) {
     logmsg(ANDROID_LOG_WARN, "%s: short read: got %ld bytes", __func__, readlen);
     return;
   }
 
-  uint16_t proto = ntohs(tun_header->proto);
+  uint16_t proto = ntohs(buf.pi.proto);
   if (proto != ETH_P_IP) {
     logmsg(ANDROID_LOG_WARN, "%s: unknown packet type = 0x%x", __func__, proto);
     return;
   }
 
-  if (tun_header->flags != 0) {
-    logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, tun_header->flags);
+  if (buf.pi.flags != 0) {
+    logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, buf.pi.flags);
   }
 
-  uint8_t *packet = (uint8_t *)(tun_header + 1);
-  readlen -= sizeof(*tun_header);
-  translate_packet(tunnel->write_fd6, 1 /* to_ipv6 */, packet, readlen);
+  readlen -= sizeof(buf.pi);
+  translate_packet(tunnel->write_fd6, 1 /* to_ipv6 */, buf.payload, readlen);
 }
 
 // IPv6 DAD packet format:
