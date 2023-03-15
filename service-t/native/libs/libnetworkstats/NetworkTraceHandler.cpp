@@ -39,6 +39,62 @@ using ::perfetto::protos::pbzero::NetworkPacketTraceConfig;
 using ::perfetto::protos::pbzero::TracePacket;
 using ::perfetto::protos::pbzero::TrafficDirection;
 
+// Bundling takes groups of packets with similar contextual fields (generally,
+// all fields except timestamp and length) and summarises them in a single trace
+// packet. For example, rather than
+//
+//   {.timestampNs = 1, .uid = 1000, .tag = 123, .len = 72}
+//   {.timestampNs = 2, .uid = 1000, .tag = 123, .len = 100}
+//   {.timestampNs = 5, .uid = 1000, .tag = 123, .len = 456}
+//
+// The output will be something like
+//   {
+//     .timestamp = 1
+//     .ctx = {.uid = 1000, .tag = 123}
+//     .timestamp = [0, 1, 4], // delta encoded
+//     .length = [72, 100, 456], // should be zipped with timestamps
+//   }
+//
+// Most workloads have many packets from few contexts. Bundling greatly reduces
+// the amount of redundant information written, thus reducing the overall trace
+// size. Interning ids are similarly based on unique bundle contexts.
+
+// Keys are PacketTraces where timestamp and length are ignored.
+using BundleKey = PacketTrace;
+
+// Based on boost::hash_combine
+template <typename T, typename... Rest>
+void HashCombine(std::size_t& seed, const T& val, const Rest&... rest) {
+  seed ^= std::hash<T>()(val) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  (HashCombine(seed, rest), ...);
+}
+
+// Details summarises the timestamp and lengths of packets in a bundle.
+struct BundleDetails {
+  std::vector<std::pair<uint64_t, uint32_t>> time_and_len;
+  uint64_t minTs = std::numeric_limits<uint64_t>::max();
+  uint64_t maxTs = std::numeric_limits<uint64_t>::min();
+  uint32_t bytes = 0;
+};
+
+#define AGG_FIELDS(x)                                              \
+  (x).ifindex, (x).uid, (x).tag, (x).sport, (x).dport, (x).egress, \
+      (x).ipProto, (x).tcpFlags
+
+struct BundleHash {
+  std::size_t operator()(const BundleKey& a) const {
+    std::size_t seed = 0;
+    HashCombine(seed, AGG_FIELDS(a));
+    return seed;
+  }
+};
+
+struct BundleEq {
+  bool operator()(const BundleKey& a, const BundleKey& b) const {
+    return std::tie(AGG_FIELDS(a)) == std::tie(AGG_FIELDS(b));
+  }
+};
+
 // static
 void NetworkTraceHandler::RegisterDataSource() {
   ALOGD("Registering Perfetto data source");
@@ -96,26 +152,82 @@ void NetworkTraceHandler::OnStop(const StopArgs&) {
 
 void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
                                 NetworkTraceHandler::TraceContext& ctx) {
+  // TODO: remove this fallback once Perfetto stable has support for bundles.
+  if (!mInternLimit && !mAggregationThreshold) {
+    for (const PacketTrace& pkt : packets) {
+      auto dst = ctx.NewTracePacket();
+      dst->set_timestamp(pkt.timestampNs);
+      auto* event = dst->set_network_packet();
+      event->set_length(pkt.length);
+      Fill(pkt, event);
+    }
+    return;
+  }
+  std::unordered_map<BundleKey, BundleDetails, BundleHash, BundleEq> bundles;
   for (const PacketTrace& pkt : packets) {
-    Fill(pkt, *ctx.NewTracePacket());
+    BundleKey key = pkt;
+
+    // Dropping fields should remove them from the output and remove them from
+    // the aggregation key. In order to do the latter without changing the hash
+    // function, set the dropped fields to zero.
+    if (mDropTcpFlags) key.tcpFlags = 0;
+    if (mDropLocalPort) (key.egress ? key.sport : key.dport) = 0;
+    if (mDropRemotePort) (key.egress ? key.dport : key.sport) = 0;
+
+    BundleDetails& bundle = bundles[key];
+    bundle.time_and_len.emplace_back(pkt.timestampNs, pkt.length);
+    bundle.minTs = std::min(bundle.minTs, pkt.timestampNs);
+    bundle.maxTs = std::max(bundle.maxTs, pkt.timestampNs);
+    bundle.bytes += pkt.length;
+  }
+
+  for (const auto& kv : bundles) {
+    const BundleKey& key = kv.first;
+    const BundleDetails& details = kv.second;
+
+    auto dst = ctx.NewTracePacket();
+    dst->set_timestamp(details.minTs);
+
+    auto* event = dst->set_network_packet_bundle();
+    Fill(key, event->set_ctx());
+
+    int count = details.time_and_len.size();
+    if (!mAggregationThreshold || count < mAggregationThreshold) {
+      protozero::PackedVarInt offsets;
+      protozero::PackedVarInt lengths;
+      for (const auto& kv : details.time_and_len) {
+        offsets.Append(kv.first - details.minTs);
+        lengths.Append(kv.second);
+      }
+
+      event->set_packet_timestamps(offsets);
+      event->set_packet_lengths(lengths);
+    } else {
+      event->set_total_duration(details.maxTs - details.minTs);
+      event->set_total_length(details.bytes);
+      event->set_total_packets(count);
+    }
   }
 }
 
-// static class method
-void NetworkTraceHandler::Fill(const PacketTrace& src, TracePacket& dst) {
-  dst.set_timestamp(src.timestampNs);
-  auto* event = dst.set_network_packet();
+void NetworkTraceHandler::Fill(const PacketTrace& src,
+                               NetworkPacketEvent* event) {
   event->set_direction(src.egress ? TrafficDirection::DIR_EGRESS
                                   : TrafficDirection::DIR_INGRESS);
-  event->set_length(src.length);
   event->set_uid(src.uid);
   event->set_tag(src.tag);
 
-  event->set_local_port(src.egress ? ntohs(src.sport) : ntohs(src.dport));
-  event->set_remote_port(src.egress ? ntohs(src.dport) : ntohs(src.sport));
+  if (!mDropLocalPort) {
+    event->set_local_port(ntohs(src.egress ? src.sport : src.dport));
+  }
+  if (!mDropRemotePort) {
+    event->set_remote_port(ntohs(src.egress ? src.dport : src.sport));
+  }
+  if (!mDropTcpFlags) {
+    event->set_tcp_flags(src.tcpFlags);
+  }
 
   event->set_ip_proto(src.ipProto);
-  event->set_tcp_flags(src.tcpFlags);
 
   char ifname[IF_NAMESIZE] = {};
   if (if_indextoname(src.ifindex, ifname) == ifname) {
