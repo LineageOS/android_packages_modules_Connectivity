@@ -338,5 +338,57 @@ TEST_F(NetworkTraceHandlerTest, DropTcpFlags) {
   EXPECT_FALSE(events[1].network_packet_bundle().ctx().has_tcp_flags());
 }
 
+TEST_F(NetworkTraceHandlerTest, Interning) {
+  NetworkPacketTraceConfig config;
+  config.set_intern_limit(2);
+
+  // The test writes 4 packets coming from three sources (uids). With an intern
+  // limit of 2, the first two sources should be interned. This test splits this
+  // into individual writes since internally an unordered map is used and would
+  // otherwise non-deterministically choose what to intern (this is fine for
+  // real use, but not good for test assertions).
+  std::vector<std::vector<PacketTrace>> inputs = {
+      {PacketTrace{.timestampNs = 1, .uid = 123}},
+      {PacketTrace{.timestampNs = 2, .uid = 456}},
+      {PacketTrace{.timestampNs = 3, .uid = 789}},
+      {PacketTrace{.timestampNs = 4, .uid = 123}},
+  };
+
+  auto session = StartTracing(config);
+
+  HandlerForTest::Trace([&](HandlerForTest::TraceContext ctx) {
+    ctx.GetDataSourceLocked()->Write(inputs[0], ctx);
+    ctx.GetDataSourceLocked()->Write(inputs[1], ctx);
+    ctx.GetDataSourceLocked()->Write(inputs[2], ctx);
+    ctx.GetDataSourceLocked()->Write(inputs[3], ctx);
+    ctx.Flush();
+  });
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(StopTracing(session.get(), &events));
+
+  ASSERT_EQ(events.size(), 4);
+
+  // First time seen, emit new interned data, bundle uses iid instead of ctx.
+  EXPECT_EQ(events[0].network_packet_bundle().iid(), 1);
+  ASSERT_EQ(events[0].interned_data().packet_context().size(), 1);
+  EXPECT_EQ(events[0].interned_data().packet_context(0).iid(), 1);
+  EXPECT_EQ(events[0].interned_data().packet_context(0).ctx().uid(), 123);
+
+  // First time seen, emit new interned data, bundle uses iid instead of ctx.
+  EXPECT_EQ(events[1].network_packet_bundle().iid(), 2);
+  ASSERT_EQ(events[1].interned_data().packet_context().size(), 1);
+  EXPECT_EQ(events[1].interned_data().packet_context(0).iid(), 2);
+  EXPECT_EQ(events[1].interned_data().packet_context(0).ctx().uid(), 456);
+
+  // Not enough room in intern table (limit 2), inline the context.
+  EXPECT_EQ(events[2].network_packet_bundle().ctx().uid(), 789);
+  EXPECT_EQ(events[2].interned_data().packet_context().size(), 0);
+
+  // Second time seen, no need to re-emit interned data, only record iid.
+  EXPECT_EQ(events[3].network_packet_bundle().iid(), 1);
+  EXPECT_EQ(events[3].interned_data().packet_context().size(), 0);
+}
+
 }  // namespace bpf
 }  // namespace android
