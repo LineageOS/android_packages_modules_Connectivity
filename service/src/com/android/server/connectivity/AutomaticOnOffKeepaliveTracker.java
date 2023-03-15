@@ -88,7 +88,6 @@ import java.util.Objects;
 public class AutomaticOnOffKeepaliveTracker {
     private static final String TAG = "AutomaticOnOffKeepaliveTracker";
     private static final int[] ADDRESS_FAMILIES = new int[] {AF_INET6, AF_INET};
-    private static final String EXTRA_BINDER_TOKEN = "token";
     private static final long DEFAULT_TCP_POLLING_INTERVAL_MS = 120_000L;
     private static final long LOW_TCP_POLLING_INTERVAL_MS = 1_000L;
     private static final String AUTOMATIC_ON_OFF_KEEPALIVE_VERSION =
