@@ -253,6 +253,7 @@ public abstract class EthernetTetheringTestBase {
             if (mRunTests) cleanUp();
         } finally {
             mHandlerThread.quitSafely();
+            mHandlerThread.join();
             mUiAutomation.dropShellPermissionIdentity();
         }
     }
