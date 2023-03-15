@@ -100,7 +100,7 @@ class NetworkTracePollerTest : public testing::Test {
 };
 
 TEST_F(NetworkTracePollerTest, PollWhileInactive) {
-  NetworkTracePoller handler([&](const PacketTrace& pkt) {});
+  NetworkTracePoller handler([&](const std::vector<PacketTrace>& pkt) {});
 
   // One succeed after start and before stop.
   EXPECT_FALSE(handler.ConsumeAll());
@@ -113,7 +113,7 @@ TEST_F(NetworkTracePollerTest, PollWhileInactive) {
 TEST_F(NetworkTracePollerTest, ConcurrentSessions) {
   // Simulate two concurrent sessions (two starts followed by two stops). Check
   // that tracing is stopped only after both sessions finish.
-  NetworkTracePoller handler([&](const PacketTrace& pkt) {});
+  NetworkTracePoller handler([&](const std::vector<PacketTrace>& pkt) {});
 
   ASSERT_TRUE(handler.Start(kNeverPoll));
   EXPECT_TRUE(handler.ConsumeAll());
@@ -135,10 +135,12 @@ TEST_F(NetworkTracePollerTest, TraceTcpSession) {
   // Record all packets with the bound address and current uid. This callback is
   // involked only within ConsumeAll, at which point the port should have
   // already been filled in and all packets have been processed.
-  NetworkTracePoller handler([&](const PacketTrace& pkt) {
-    if (pkt.sport != server_port && pkt.dport != server_port) return;
-    if (pkt.uid != getuid()) return;
-    packets.push_back(pkt);
+  NetworkTracePoller handler([&](const std::vector<PacketTrace>& pkts) {
+    for (const PacketTrace& pkt : pkts) {
+      if (pkt.sport != server_port && pkt.dport != server_port) return;
+      if (pkt.uid != getuid()) return;
+      packets.push_back(pkt);
+    }
   });
 
   ASSERT_TRUE(handler.Start(kNeverPoll));
