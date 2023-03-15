@@ -77,14 +77,17 @@ int ipv6_address_changed(const char *interface) {
   }
 }
 
-// reads L3 IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
+// reads IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
 void process_packet_6_to_4(struct tun_data *tunnel) {
   // ethernet header is 14 bytes, plus 4 for a normal VLAN tag or 8 for Q-in-Q
   // we don't really support vlans (or especially Q-in-Q)...
   // but a few bytes of extra buffer space doesn't hurt...
-  uint8_t buf[22 + MAXMTU + 1];  // +1 to make packet truncation obvious
+  struct {
+    uint8_t payload[22 + MAXMTU];
+    char pad; // +1 to make packet truncation obvious
+  } buf;
   struct iovec iov = {
-    .iov_base = buf,
+    .iov_base = &buf,
     .iov_len = sizeof(buf),
   };
   char cmsg_buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
@@ -137,7 +140,7 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     }
   }
 
-  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf + tp_net, readlen - tp_net);
+  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf.payload + tp_net, readlen - tp_net);
 }
 
 // reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
