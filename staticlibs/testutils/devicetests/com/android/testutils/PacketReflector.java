@@ -18,9 +18,8 @@ package com.android.testutils;
 
 import static android.system.OsConstants.ICMP6_ECHO_REPLY;
 import static android.system.OsConstants.ICMP6_ECHO_REQUEST;
-import static android.system.OsConstants.ICMP_ECHO;
-import static android.system.OsConstants.ICMP_ECHOREPLY;
 
+import android.annotation.NonNull;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -30,41 +29,41 @@ import java.io.IOException;
 
 public class PacketReflector extends Thread {
 
-    private static int IPV4_HEADER_LENGTH = 20;
-    private static int IPV6_HEADER_LENGTH = 40;
+    private static final int IPV4_HEADER_LENGTH = 20;
+    private static final int IPV6_HEADER_LENGTH = 40;
 
-    private static int IPV4_ADDR_OFFSET = 12;
-    private static int IPV6_ADDR_OFFSET = 8;
-    private static int IPV4_ADDR_LENGTH = 4;
-    private static int IPV6_ADDR_LENGTH = 16;
+    private static final int IPV4_ADDR_OFFSET = 12;
+    private static final int IPV6_ADDR_OFFSET = 8;
+    private static final int IPV4_ADDR_LENGTH = 4;
+    private static final int IPV6_ADDR_LENGTH = 16;
 
-    private static int IPV4_PROTO_OFFSET = 9;
-    private static int IPV6_PROTO_OFFSET = 6;
+    private static final int IPV4_PROTO_OFFSET = 9;
+    private static final int IPV6_PROTO_OFFSET = 6;
 
     private static final byte IPPROTO_ICMP = 1;
     private static final byte IPPROTO_TCP = 6;
     private static final byte IPPROTO_UDP = 17;
     private static final byte IPPROTO_ICMPV6 = 58;
 
-    private static int ICMP_HEADER_LENGTH = 8;
-    private static int TCP_HEADER_LENGTH = 20;
-    private static int UDP_HEADER_LENGTH = 8;
+    private static final int ICMP_HEADER_LENGTH = 8;
+    private static final int TCP_HEADER_LENGTH = 20;
+    private static final int UDP_HEADER_LENGTH = 8;
 
     private static final byte ICMP_ECHO = 8;
     private static final byte ICMP_ECHOREPLY = 0;
 
     private static String TAG = "PacketReflector";
 
-    private FileDescriptor mFd;
-    private byte[] mBuf;
+    @NonNull private FileDescriptor mFd;
+    @NonNull private byte[] mBuf;
 
-    public PacketReflector(FileDescriptor fd, int mtu) {
+    public PacketReflector(@NonNull FileDescriptor fd, int mtu) {
         super("PacketReflector");
         mFd = fd;
         mBuf = new byte[mtu];
     }
 
-    private static void swapBytes(byte[] buf, int pos1, int pos2, int len) {
+    private static void swapBytes(@NonNull byte[] buf, int pos1, int pos2, int len) {
         for (int i = 0; i < len; i++) {
             byte b = buf[pos1 + i];
             buf[pos1 + i] = buf[pos2 + i];
@@ -72,9 +71,9 @@ public class PacketReflector extends Thread {
         }
     }
 
-    private static void swapAddresses(byte[] buf, int version) {
+    private static void swapAddresses(@NonNull byte[] buf, int version) {
         int addrPos, addrLen;
-        switch(version) {
+        switch (version) {
             case 4:
                 addrPos = IPV4_ADDR_OFFSET;
                 addrLen = IPV4_ADDR_LENGTH;
@@ -91,7 +90,7 @@ public class PacketReflector extends Thread {
 
     // Reflect TCP packets: swap the source and destination addresses, but don't change the ports.
     // This is used by the test to "connect to itself" through the VPN.
-    private void processTcpPacket(byte[] buf, int version, int len, int hdrLen) {
+    private void processTcpPacket(@NonNull byte[] buf, int version, int len, int hdrLen) {
         if (len < hdrLen + TCP_HEADER_LENGTH) {
             return;
         }
@@ -105,7 +104,7 @@ public class PacketReflector extends Thread {
 
     // Echo UDP packets: swap source and destination addresses, and source and destination ports.
     // This is used by the test to check that the bytes it sends are echoed back.
-    private void processUdpPacket(byte[] buf, int version, int len, int hdrLen) {
+    private void processUdpPacket(@NonNull byte[] buf, int version, int len, int hdrLen) {
         if (len < hdrLen + UDP_HEADER_LENGTH) {
             return;
         }
@@ -121,14 +120,14 @@ public class PacketReflector extends Thread {
         writePacket(buf, len);
     }
 
-    private void processIcmpPacket(byte[] buf, int version, int len, int hdrLen) {
+    private void processIcmpPacket(@NonNull byte[] buf, int version, int len, int hdrLen) {
         if (len < hdrLen + ICMP_HEADER_LENGTH) {
             return;
         }
 
         byte type = buf[hdrLen];
         if (!(version == 4 && type == ICMP_ECHO) &&
-            !(version == 6 && type == (byte) ICMP6_ECHO_REQUEST)) {
+                !(version == 6 && type == (byte) ICMP6_ECHO_REQUEST)) {
             return;
         }
 
@@ -144,7 +143,7 @@ public class PacketReflector extends Thread {
         int received = readPacket(buf);
         if (received != len) {
             Log.i(TAG, "Reflecting ping did not result in ping response: " +
-                       "read=" + received + " expected=" + len);
+                    "read=" + received + " expected=" + len);
             return;
         }
 
@@ -166,7 +165,7 @@ public class PacketReflector extends Thread {
         // Since Linux kernel 4.2, net.ipv6.auto_flowlabels is set by default, and therefore
         // the request and reply may have different IPv6 flow label: ignore that as well.
         if (version == 6) {
-            request[1] = (byte)(request[1] & 0xf0 | buf[1] & 0x0f);
+            request[1] = (byte) (request[1] & 0xf0 | buf[1] & 0x0f);
             request[2] = buf[2];
             request[3] = buf[3];
         }
@@ -183,19 +182,19 @@ public class PacketReflector extends Thread {
         writePacket(buf, len);
     }
 
-    private void writePacket(byte[] buf, int len) {
+    private void writePacket(@NonNull byte[] buf, int len) {
         try {
             Os.write(mFd, buf, 0, len);
-        } catch (ErrnoException|IOException e) {
+        } catch (ErrnoException | IOException e) {
             Log.e(TAG, "Error writing packet: " + e.getMessage());
         }
     }
 
-    private int readPacket(byte[] buf) {
+    private int readPacket(@NonNull byte[] buf) {
         int len;
         try {
             len = Os.read(mFd, buf, 0, buf.length);
-        } catch (ErrnoException|IOException e) {
+        } catch (ErrnoException | IOException e) {
             Log.e(TAG, "Error reading packet: " + e.getMessage());
             len = -1;
         }
@@ -210,17 +209,13 @@ public class PacketReflector extends Thread {
         }
 
         int version = mBuf[0] >> 4;
-        int addrPos, protoPos, hdrLen, addrLen;
+        int protoPos, hdrLen;
         if (version == 4) {
             hdrLen = IPV4_HEADER_LENGTH;
             protoPos = IPV4_PROTO_OFFSET;
-            addrPos = IPV4_ADDR_OFFSET;
-            addrLen = IPV4_ADDR_LENGTH;
         } else if (version == 6) {
             hdrLen = IPV6_HEADER_LENGTH;
             protoPos = IPV6_PROTO_OFFSET;
-            addrPos = IPV6_ADDR_OFFSET;
-            addrLen = IPV6_ADDR_LENGTH;
         } else {
             return;
         }
@@ -232,6 +227,7 @@ public class PacketReflector extends Thread {
         byte proto = mBuf[protoPos];
         switch (proto) {
             case IPPROTO_ICMP:
+                // fall through
             case IPPROTO_ICMPV6:
                 processIcmpPacket(mBuf, version, len, hdrLen);
                 break;
