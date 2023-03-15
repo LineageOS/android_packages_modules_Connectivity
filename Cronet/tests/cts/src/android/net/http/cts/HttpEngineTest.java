@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.net.Network;
 import android.net.http.ConnectionMigrationOptions;
+import android.net.http.DnsOptions;
 import android.net.http.HttpEngine;
 import android.net.http.UrlRequest;
 import android.net.http.UrlResponseInfo;
@@ -307,6 +308,21 @@ public class HttpEngineTest {
     public void testHttpEngine_setConnectionMigrationOptions_requestSucceeds() {
         ConnectionMigrationOptions options = new ConnectionMigrationOptions.Builder().build();
         mEngine = mEngineBuilder.setConnectionMigrationOptions(options).build();
+        UrlRequest.Builder builder =
+                mEngine.newUrlRequestBuilder(
+                        mTestServer.getSuccessUrl(), mCallback.getExecutor(), mCallback);
+        mRequest = builder.build();
+        mRequest.start();
+
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
+    }
+
+    @Test
+    public void testHttpEngine_setDnsOptions_requestSucceeds() {
+        DnsOptions options = new DnsOptions.Builder().build();
+        mEngine = mEngineBuilder.setDnsOptions(options).build();
         UrlRequest.Builder builder =
                 mEngine.newUrlRequestBuilder(
                         mTestServer.getSuccessUrl(), mCallback.getExecutor(), mCallback);
