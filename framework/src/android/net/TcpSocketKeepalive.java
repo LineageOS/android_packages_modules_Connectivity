@@ -55,6 +55,12 @@ public final class TcpSocketKeepalive extends SocketKeepalive {
             throw new IllegalArgumentException("Illegal flag value for "
                     + this.getClass().getSimpleName() + " : " + flags);
         }
+
+        if (underpinnedNetwork != null) {
+            throw new IllegalArgumentException("Illegal underpinned network for "
+                    + this.getClass().getSimpleName() + " : " + underpinnedNetwork);
+        }
+
         mExecutor.execute(() -> {
             try {
                 mService.startTcpKeepalive(mNetwork, mPfd, intervalSec, mCallback);
