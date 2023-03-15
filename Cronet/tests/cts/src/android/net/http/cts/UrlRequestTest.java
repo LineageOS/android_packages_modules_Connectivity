@@ -288,6 +288,24 @@ public class UrlRequestTest {
     }
 
     @Test
+    public void testUrlRequest_redirects() throws Exception {
+        int expectedNumRedirects = 5;
+        String url =
+                mTestServer.getRedirectingAssetUrl("html/hello_world.html", expectedNumRedirects);
+
+        UrlRequest request = createUrlRequestBuilder(url).build();
+        request.start();
+
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
+        assertThat(mCallback.mResponseAsString).contains("hello world");
+        assertThat(info.getUrlChain()).hasSize(expectedNumRedirects + 1);
+        assertThat(info.getUrlChain().get(0)).isEqualTo(url);
+        assertThat(info.getUrlChain().get(expectedNumRedirects)).isEqualTo(info.getUrl());
+    }
+
+    @Test
     public void testUrlRequestPost_withRedirect() throws Exception {
         String body = Strings.repeat(
                 "Hello, this is a really interesting body, so write this 100 times.", 100);
