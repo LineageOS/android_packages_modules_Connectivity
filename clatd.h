@@ -48,7 +48,7 @@ struct tun_data;
 // plus some extra just-in-case headroom, because it doesn't hurt.
 #define MAXDUMPLEN (64 + MAXMTU)
 
-#define CLATD_VERSION "1.6"
+#define CLATD_VERSION "1.7"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
