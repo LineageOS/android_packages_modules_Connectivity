@@ -153,11 +153,12 @@ public class HttpEngineTest {
 
     @Test
     public void testHttpEngine_EnablePublicKeyPinningBypassForLocalTrustAnchors() {
+        String url = mTestServer.getSuccessUrl();
         // For known hosts, requests should succeed whether we're bypassing the local trust anchor
         // or not.
         mEngine = mEngineBuilder.setEnablePublicKeyPinningBypassForLocalTrustAnchors(false).build();
         UrlRequest.Builder builder =
-                mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
+                mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
         mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
@@ -165,7 +166,7 @@ public class HttpEngineTest {
         mEngine.shutdown();
         mEngine = mEngineBuilder.setEnablePublicKeyPinningBypassForLocalTrustAnchors(true).build();
         mCallback = new TestUrlRequestCallback();
-        builder = mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
+        builder = mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
         mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
