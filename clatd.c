@@ -44,36 +44,12 @@
 #include "checksum.h"
 #include "config.h"
 #include "dump.h"
-#include "getaddr.h"
 #include "logging.h"
 #include "translate.h"
 
 struct clat_config Global_Clatd_Config;
 
 volatile sig_atomic_t running = 1;
-
-int ipv6_address_changed(const char *interface) {
-  union anyip *interface_ip;
-
-  interface_ip = getinterface_ip(interface, AF_INET6);
-  if (!interface_ip) {
-    logmsg(ANDROID_LOG_ERROR, "Unable to find an IPv6 address on interface %s", interface);
-    return 1;
-  }
-
-  if (!ipv6_prefix_equal(&interface_ip->ip6, &Global_Clatd_Config.ipv6_local_subnet)) {
-    char oldstr[INET6_ADDRSTRLEN];
-    char newstr[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, &Global_Clatd_Config.ipv6_local_subnet, oldstr, sizeof(oldstr));
-    inet_ntop(AF_INET6, &interface_ip->ip6, newstr, sizeof(newstr));
-    logmsg(ANDROID_LOG_INFO, "IPv6 prefix on %s changed: %s -> %s", interface, oldstr, newstr);
-    free(interface_ip);
-    return 1;
-  } else {
-    free(interface_ip);
-    return 0;
-  }
-}
 
 // reads IPv6 packet from AF_PACKET socket, translates to IPv4, writes to tun
 void process_packet_6_to_4(struct tun_data *tunnel) {
@@ -297,17 +273,13 @@ void event_loop(struct tun_data *tunnel) {
   // TODO: actually perform true DAD
   send_dad(tunnel->write_fd6, &Global_Clatd_Config.ipv6_local_subnet);
 
-  time_t last_interface_poll;
   struct pollfd wait_fd[] = {
     { tunnel->read_fd6, POLLIN, 0 },
     { tunnel->fd4, POLLIN, 0 },
   };
 
-  // start the poll timer
-  last_interface_poll = time(NULL);
-
   while (running) {
-    if (poll(wait_fd, ARRAY_SIZE(wait_fd), NO_TRAFFIC_INTERFACE_POLL_FREQUENCY * 1000) == -1) {
+    if (poll(wait_fd, ARRAY_SIZE(wait_fd), -1) == -1) {
       if (errno != EINTR) {
         logmsg(ANDROID_LOG_WARN, "event_loop/poll returned an error: %s", strerror(errno));
       }
@@ -319,14 +291,6 @@ void event_loop(struct tun_data *tunnel) {
       // socket error flag instead.
       if (wait_fd[0].revents) process_packet_6_to_4(tunnel);
       if (wait_fd[1].revents) process_packet_4_to_6(tunnel);
-    }
-
-    time_t now = time(NULL);
-    if (now >= (last_interface_poll + INTERFACE_POLL_FREQUENCY)) {
-      last_interface_poll = now;
-      if (ipv6_address_changed(Global_Clatd_Config.native_ipv6_interface)) {
-        break;
-      }
     }
   }
 }
