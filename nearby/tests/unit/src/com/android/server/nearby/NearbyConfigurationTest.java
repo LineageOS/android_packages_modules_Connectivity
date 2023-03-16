@@ -30,12 +30,14 @@ import android.provider.DeviceConfig;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public final class NearbyConfigurationTest {
 
     private NearbyConfiguration mNearbyConfiguration;
+
     @Before
     public void setUp() {
         InstrumentationRegistry.getInstrumentation().getUiAutomation()
@@ -69,5 +71,16 @@ public final class NearbyConfigurationTest {
         assertThat(mNearbyConfiguration.isTestAppSupported()).isTrue();
         assertThat(mNearbyConfiguration.isPresenceBroadcastLegacyEnabled()).isTrue();
         assertThat(mNearbyConfiguration.getNanoAppMinVersion()).isEqualTo(3);
+    }
+
+    @After
+    public void tearDown() {
+        // Sets DeviceConfig values back to default
+        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP,
+                "false", true);
+        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
+                "false", true);
+        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
+                "0", true);
     }
 }
