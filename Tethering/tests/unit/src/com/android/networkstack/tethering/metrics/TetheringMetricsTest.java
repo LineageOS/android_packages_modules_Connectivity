@@ -48,7 +48,6 @@ import android.stats.connectivity.DownstreamType;
 import android.stats.connectivity.ErrorCode;
 import android.stats.connectivity.UpstreamType;
 import android.stats.connectivity.UserType;
-import android.util.Pair;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -99,11 +98,8 @@ public final class TetheringMetricsTest {
         mTetheringMetrics.sendReport(downstream);
     }
 
-    private void runDownstreamTypesTest(final Pair<Integer, DownstreamType> testPair)
+    private void runDownstreamTypesTest(final int type, final DownstreamType expectedResult)
             throws Exception {
-        final int type = testPair.first;
-        final DownstreamType expectedResult = testPair.second;
-
         mTetheringMetrics.createBuilder(type, TEST_CALLER_PKG);
         updateErrorAndSendReport(type, TETHER_ERROR_NO_ERROR);
         verifyReport(expectedResult, ErrorCode.EC_NO_ERROR, UserType.USER_UNKNOWN);
@@ -112,22 +108,16 @@ public final class TetheringMetricsTest {
 
     @Test
     public void testDownstreamTypes() throws Exception {
-        runDownstreamTypesTest(new Pair<>(TETHERING_WIFI, DownstreamType.DS_TETHERING_WIFI));
-        runDownstreamTypesTest(new Pair<>(TETHERING_WIFI_P2P,
-                DownstreamType.DS_TETHERING_WIFI_P2P));
-        runDownstreamTypesTest(new Pair<>(TETHERING_BLUETOOTH,
-                DownstreamType.DS_TETHERING_BLUETOOTH));
-        runDownstreamTypesTest(new Pair<>(TETHERING_USB, DownstreamType.DS_TETHERING_USB));
-        runDownstreamTypesTest(new Pair<>(TETHERING_NCM, DownstreamType.DS_TETHERING_NCM));
-        runDownstreamTypesTest(new Pair<>(TETHERING_ETHERNET,
-                DownstreamType.DS_TETHERING_ETHERNET));
+        runDownstreamTypesTest(TETHERING_WIFI, DownstreamType.DS_TETHERING_WIFI);
+        runDownstreamTypesTest(TETHERING_WIFI_P2P, DownstreamType.DS_TETHERING_WIFI_P2P);
+        runDownstreamTypesTest(TETHERING_BLUETOOTH, DownstreamType.DS_TETHERING_BLUETOOTH);
+        runDownstreamTypesTest(TETHERING_USB, DownstreamType.DS_TETHERING_USB);
+        runDownstreamTypesTest(TETHERING_NCM, DownstreamType.DS_TETHERING_NCM);
+        runDownstreamTypesTest(TETHERING_ETHERNET, DownstreamType.DS_TETHERING_ETHERNET);
     }
 
-    private void runErrorCodesTest(final Pair<Integer, ErrorCode> testPair)
+    private void runErrorCodesTest(final int errorCode, final ErrorCode expectedResult)
             throws Exception {
-        final int errorCode = testPair.first;
-        final ErrorCode expectedResult = testPair.second;
-
         mTetheringMetrics.createBuilder(TETHERING_WIFI, TEST_CALLER_PKG);
         updateErrorAndSendReport(TETHERING_WIFI, errorCode);
         verifyReport(DownstreamType.DS_TETHERING_WIFI, expectedResult, UserType.USER_UNKNOWN);
@@ -135,39 +125,31 @@ public final class TetheringMetricsTest {
 
     @Test
     public void testErrorCodes() throws Exception {
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_NO_ERROR, ErrorCode.EC_NO_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_UNKNOWN_IFACE, ErrorCode.EC_UNKNOWN_IFACE));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_SERVICE_UNAVAIL, ErrorCode.EC_SERVICE_UNAVAIL));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_UNSUPPORTED, ErrorCode.EC_UNSUPPORTED));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_UNAVAIL_IFACE, ErrorCode.EC_UNAVAIL_IFACE));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_INTERNAL_ERROR, ErrorCode.EC_INTERNAL_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_TETHER_IFACE_ERROR,
-                ErrorCode.EC_TETHER_IFACE_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_UNTETHER_IFACE_ERROR,
-                ErrorCode.EC_UNTETHER_IFACE_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_ENABLE_FORWARDING_ERROR,
-                ErrorCode.EC_ENABLE_FORWARDING_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_DISABLE_FORWARDING_ERROR,
-                ErrorCode.EC_DISABLE_FORWARDING_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_IFACE_CFG_ERROR, ErrorCode.EC_IFACE_CFG_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_PROVISIONING_FAILED,
-                ErrorCode.EC_PROVISIONING_FAILED));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_DHCPSERVER_ERROR,
-                ErrorCode.EC_DHCPSERVER_ERROR));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_ENTITLEMENT_UNKNOWN,
-                ErrorCode.EC_ENTITLEMENT_UNKNOWN));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_NO_CHANGE_TETHERING_PERMISSION,
-                ErrorCode.EC_NO_CHANGE_TETHERING_PERMISSION));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_NO_ACCESS_TETHERING_PERMISSION,
-                ErrorCode.EC_NO_ACCESS_TETHERING_PERMISSION));
-        runErrorCodesTest(new Pair<>(TETHER_ERROR_UNKNOWN_TYPE, ErrorCode.EC_UNKNOWN_TYPE));
+        runErrorCodesTest(TETHER_ERROR_NO_ERROR, ErrorCode.EC_NO_ERROR);
+        runErrorCodesTest(TETHER_ERROR_UNKNOWN_IFACE, ErrorCode.EC_UNKNOWN_IFACE);
+        runErrorCodesTest(TETHER_ERROR_SERVICE_UNAVAIL, ErrorCode.EC_SERVICE_UNAVAIL);
+        runErrorCodesTest(TETHER_ERROR_UNSUPPORTED, ErrorCode.EC_UNSUPPORTED);
+        runErrorCodesTest(TETHER_ERROR_UNAVAIL_IFACE, ErrorCode.EC_UNAVAIL_IFACE);
+        runErrorCodesTest(TETHER_ERROR_INTERNAL_ERROR, ErrorCode.EC_INTERNAL_ERROR);
+        runErrorCodesTest(TETHER_ERROR_TETHER_IFACE_ERROR, ErrorCode.EC_TETHER_IFACE_ERROR);
+        runErrorCodesTest(TETHER_ERROR_UNTETHER_IFACE_ERROR, ErrorCode.EC_UNTETHER_IFACE_ERROR);
+        runErrorCodesTest(TETHER_ERROR_ENABLE_FORWARDING_ERROR,
+                ErrorCode.EC_ENABLE_FORWARDING_ERROR);
+        runErrorCodesTest(TETHER_ERROR_DISABLE_FORWARDING_ERROR,
+                ErrorCode.EC_DISABLE_FORWARDING_ERROR);
+        runErrorCodesTest(TETHER_ERROR_IFACE_CFG_ERROR, ErrorCode.EC_IFACE_CFG_ERROR);
+        runErrorCodesTest(TETHER_ERROR_PROVISIONING_FAILED, ErrorCode.EC_PROVISIONING_FAILED);
+        runErrorCodesTest(TETHER_ERROR_DHCPSERVER_ERROR, ErrorCode.EC_DHCPSERVER_ERROR);
+        runErrorCodesTest(TETHER_ERROR_ENTITLEMENT_UNKNOWN, ErrorCode.EC_ENTITLEMENT_UNKNOWN);
+        runErrorCodesTest(TETHER_ERROR_NO_CHANGE_TETHERING_PERMISSION,
+                ErrorCode.EC_NO_CHANGE_TETHERING_PERMISSION);
+        runErrorCodesTest(TETHER_ERROR_NO_ACCESS_TETHERING_PERMISSION,
+                ErrorCode.EC_NO_ACCESS_TETHERING_PERMISSION);
+        runErrorCodesTest(TETHER_ERROR_UNKNOWN_TYPE, ErrorCode.EC_UNKNOWN_TYPE);
     }
 
-    private void runUserTypesTest(final Pair<String, UserType> testPair)
+    private void runUserTypesTest(final String callerPkg, final UserType expectedResult)
             throws Exception {
-        final String callerPkg = testPair.first;
-        final UserType expectedResult = testPair.second;
-
         mTetheringMetrics.createBuilder(TETHERING_WIFI, callerPkg);
         updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
         verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR, expectedResult);
@@ -176,10 +158,10 @@ public final class TetheringMetricsTest {
 
     @Test
     public void testUserTypes() throws Exception {
-        runUserTypesTest(new Pair<>(TEST_CALLER_PKG, UserType.USER_UNKNOWN));
-        runUserTypesTest(new Pair<>(SETTINGS_PKG, UserType.USER_SETTINGS));
-        runUserTypesTest(new Pair<>(SYSTEMUI_PKG, UserType.USER_SYSTEMUI));
-        runUserTypesTest(new Pair<>(GMS_PKG, UserType.USER_GMS));
+        runUserTypesTest(TEST_CALLER_PKG, UserType.USER_UNKNOWN);
+        runUserTypesTest(SETTINGS_PKG, UserType.USER_SETTINGS);
+        runUserTypesTest(SYSTEMUI_PKG, UserType.USER_SYSTEMUI);
+        runUserTypesTest(GMS_PKG, UserType.USER_GMS);
     }
 
     @Test
