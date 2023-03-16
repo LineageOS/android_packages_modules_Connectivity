@@ -124,13 +124,14 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     }
   }
 
-  if (readlen < sizeof(struct virtio_net_hdr) + tp_net) {
-    logmsg(ANDROID_LOG_WARN, "%s: ignoring %zd byte pkt shorter than %zu+%u L2 header",
-           __func__, readlen, sizeof(struct virtio_net_hdr), tp_net);
+  const int payload_offset = offsetof(typeof(buf), payload);
+  if (readlen < payload_offset + tp_net) {
+    logmsg(ANDROID_LOG_WARN, "%s: ignoring %zd byte pkt shorter than %d+%u L2 header",
+           __func__, readlen, payload_offset, tp_net);
     return;
   }
 
-  const int pkt_len = readlen - sizeof(struct virtio_net_hdr);
+  const int pkt_len = readlen - payload_offset;
 
   // This will detect a skb->ip_summed == CHECKSUM_PARTIAL packet with non-final L4 checksum
   if (tp_status & TP_STATUS_CSUMNOTREADY) {
@@ -183,10 +184,14 @@ void process_packet_4_to_6(struct tun_data *tunnel) {
     return;
   }
 
-  if (readlen < (ssize_t)sizeof(buf.pi)) {
+  const int payload_offset = offsetof(typeof(buf), payload);
+
+  if (readlen < payload_offset) {
     logmsg(ANDROID_LOG_WARN, "%s: short read: got %ld bytes", __func__, readlen);
     return;
   }
+
+  const int pkt_len = readlen - payload_offset;
 
   uint16_t proto = ntohs(buf.pi.proto);
   if (proto != ETH_P_IP) {
@@ -198,8 +203,7 @@ void process_packet_4_to_6(struct tun_data *tunnel) {
     logmsg(ANDROID_LOG_WARN, "%s: unexpected flags = %d", __func__, buf.pi.flags);
   }
 
-  readlen -= sizeof(buf.pi);
-  translate_packet(tunnel->write_fd6, 1 /* to_ipv6 */, buf.payload, readlen);
+  translate_packet(tunnel->write_fd6, 1 /* to_ipv6 */, buf.payload, pkt_len);
 }
 
 // IPv6 DAD packet format:
