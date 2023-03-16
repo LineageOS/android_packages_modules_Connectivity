@@ -127,7 +127,7 @@ java_genrule {
     out: ["framework_tethering_jarjar_rules.txt"],
     cmd: "$(location jarjar-rules-generator) " +
         "$(location :framework-tethering-pre-jarjar{.jar}) " +
-        "--apistubs $(location :framework-tethering.stubs.module_lib{.jar}) " + 
+        "--apistubs $(location :framework-tethering.stubs.module_lib{.jar}) " +
         "--prefix android.net.http.internal " +
         "--excludes $(location jarjar-excludes.txt) " +
         "--output $(out)",
@@ -151,6 +151,7 @@ java_defaults {
 
 filegroup {
     name: "framework-tethering-srcs",
+    defaults: ["framework-sources-module-defaults"],
     srcs: [
         "src/**/*.aidl",
         "src/**/*.java",
