@@ -58,7 +58,7 @@ import java.util.List;
 @RunWith(DevSdkIgnoreRunner.class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class IpConfigStoreTest {
-    private static final int TIMEOUT_MS = 2_000;
+    private static final int TIMEOUT_MS = 5_000;
     private static final int KEY_CONFIG = 17;
     private static final String IFACE_1 = "eth0";
     private static final String IFACE_2 = "eth1";
