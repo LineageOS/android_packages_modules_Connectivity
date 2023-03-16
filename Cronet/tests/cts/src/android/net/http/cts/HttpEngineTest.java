@@ -105,8 +105,9 @@ public class HttpEngineTest {
 
     @Test
     public void testHttpEngine_EnableHttpCache() {
-        // We need a server which sets cache-control != no-cache.
-        String url = "https://www.example.com";
+        String url = mTestServer.getCacheableTestDownloadUrl(
+                /* downloadId */ "cacheable-download",
+                /* numBytes */ 10);
         mEngine =
                 mEngineBuilder
                         .setStoragePath(mContext.getApplicationInfo().dataDir)
@@ -118,9 +119,7 @@ public class HttpEngineTest {
                 mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
-        // This tests uses a non-hermetic server. Instead of asserting, assume the next callback.
-        // This way, if the request were to fail, the test would just be skipped instead of failing.
-        mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
         UrlResponseInfo info = mCallback.mResponseInfo;
         assumeOKStatusCode(info);
         assertFalse(info.wasCached());
@@ -129,7 +128,7 @@ public class HttpEngineTest {
         builder = mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
         mRequest = builder.build();
         mRequest.start();
-        mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
         info = mCallback.mResponseInfo;
         assertOKStatusCode(info);
         assertTrue(info.wasCached());
