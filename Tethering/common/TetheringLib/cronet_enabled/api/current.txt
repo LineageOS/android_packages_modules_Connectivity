@@ -177,7 +177,8 @@ package android.net.http {
     method @NonNull public java.util.Set<java.lang.String> getAllowedQuicHosts();
     method @Nullable public String getHandshakeUserAgent();
     method @Nullable public java.time.Duration getIdleConnectionTimeout();
-    method @Nullable public Integer getInMemoryServerConfigsCacheSize();
+    method public int getInMemoryServerConfigsCacheSize();
+    method public boolean hasInMemoryServerConfigsCacheSize();
   }
 
   public static final class QuicOptions.Builder {
