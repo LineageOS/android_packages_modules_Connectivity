@@ -125,21 +125,39 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
   }
 
   if (readlen < sizeof(struct virtio_net_hdr) + tp_net) {
-    logmsg(ANDROID_LOG_WARN, "%s: ignoring %zd byte pkt shorter than %u L2 header",
-           __func__, readlen, tp_net);
+    logmsg(ANDROID_LOG_WARN, "%s: ignoring %zd byte pkt shorter than %zu+%u L2 header",
+           __func__, readlen, sizeof(struct virtio_net_hdr), tp_net);
     return;
   }
+
+  const int pkt_len = readlen - sizeof(struct virtio_net_hdr);
 
   // This will detect a skb->ip_summed == CHECKSUM_PARTIAL packet with non-final L4 checksum
   if (tp_status & TP_STATUS_CSUMNOTREADY) {
     static bool logged = false;
     if (!logged) {
-      logmsg(ANDROID_LOG_WARN, "read_packet checksum not ready");
+      logmsg(ANDROID_LOG_WARN, "%s: L4 checksum calculation required", __func__);
       logged = true;
+    }
+
+    // These are non-negative by virtue of csum_start/offset being u16
+    const int cs_start = buf.vnet.csum_start;
+    const int cs_offset = cs_start + buf.vnet.csum_offset;
+    if (cs_start > pkt_len) {
+      logmsg(ANDROID_LOG_ERROR, "%s: out of range - checksum start %d > %d",
+             __func__, cs_start, pkt_len);
+    } else if (cs_offset + 1 >= pkt_len) {
+      logmsg(ANDROID_LOG_ERROR, "%s: out of range - checksum offset %d + 1 >= %d",
+             __func__, cs_offset, pkt_len);
+    } else {
+      uint16_t csum = ip_checksum(buf.payload + cs_start, pkt_len - cs_start);
+      if (!csum) csum = 0xFFFF;  // required fixup for UDP, TCP must live with it
+      buf.payload[cs_offset] = csum & 0xFF;
+      buf.payload[cs_offset + 1] = csum >> 8;
     }
   }
 
-  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf.payload + tp_net, readlen - sizeof(struct virtio_net_hdr) - tp_net);
+  translate_packet(tunnel->fd4, 0 /* to_ipv6 */, buf.payload + tp_net, pkt_len - tp_net);
 }
 
 // reads TUN_PI + L3 IPv4 packet from tun, translates to IPv6, writes to AF_INET6/RAW socket
