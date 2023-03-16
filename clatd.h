@@ -52,15 +52,8 @@ struct tun_data;
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-// how frequently (in seconds) to poll for an address change while traffic is passing
-#define INTERFACE_POLL_FREQUENCY 30
-
-// how frequently (in seconds) to poll for an address change while there is no traffic
-#define NO_TRAFFIC_INTERFACE_POLL_FREQUENCY 90
-
 extern volatile sig_atomic_t running;
 
-int ipv6_address_changed(const char *interface);
 void event_loop(struct tun_data *tunnel);
 
 /* function: parse_int
