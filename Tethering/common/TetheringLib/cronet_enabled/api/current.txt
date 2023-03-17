@@ -51,9 +51,9 @@ package android.net.http {
   }
 
   public class ConnectionMigrationOptions {
-    method public int getAllowNonDefaultNetworkUsageEnabled();
-    method public int getDefaultNetworkMigrationEnabled();
-    method public int getPathDegradationMigrationEnabled();
+    method public int getAllowNonDefaultNetworkUsage();
+    method public int getDefaultNetworkMigration();
+    method public int getPathDegradationMigration();
     field public static final int MIGRATION_OPTION_DISABLED = 2; // 0x2
     field public static final int MIGRATION_OPTION_ENABLED = 1; // 0x1
     field public static final int MIGRATION_OPTION_UNSPECIFIED = 0; // 0x0
@@ -62,18 +62,18 @@ package android.net.http {
   public static final class ConnectionMigrationOptions.Builder {
     ctor public ConnectionMigrationOptions.Builder();
     method @NonNull public android.net.http.ConnectionMigrationOptions build();
-    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setAllowNonDefaultNetworkUsageEnabled(int);
-    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setDefaultNetworkMigrationEnabled(int);
-    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setPathDegradationMigrationEnabled(int);
+    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setAllowNonDefaultNetworkUsage(int);
+    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setDefaultNetworkMigration(int);
+    method @NonNull public android.net.http.ConnectionMigrationOptions.Builder setPathDegradationMigration(int);
   }
 
   public final class DnsOptions {
-    method public int getPersistHostCacheEnabled();
+    method public int getPersistHostCache();
     method @Nullable public java.time.Duration getPersistHostCachePeriod();
-    method public int getPreestablishConnectionsToStaleDnsResultsEnabled();
-    method public int getStaleDnsEnabled();
+    method public int getPreestablishConnectionsToStaleDnsResults();
+    method public int getStaleDns();
     method @Nullable public android.net.http.DnsOptions.StaleDnsOptions getStaleDnsOptions();
-    method public int getUseHttpStackDnsResolverEnabled();
+    method public int getUseHttpStackDnsResolver();
     field public static final int DNS_OPTION_DISABLED = 2; // 0x2
     field public static final int DNS_OPTION_ENABLED = 1; // 0x1
     field public static final int DNS_OPTION_UNSPECIFIED = 0; // 0x0
@@ -82,28 +82,28 @@ package android.net.http {
   public static final class DnsOptions.Builder {
     ctor public DnsOptions.Builder();
     method @NonNull public android.net.http.DnsOptions build();
-    method @NonNull public android.net.http.DnsOptions.Builder setPersistHostCacheEnabled(int);
+    method @NonNull public android.net.http.DnsOptions.Builder setPersistHostCache(int);
     method @NonNull public android.net.http.DnsOptions.Builder setPersistHostCachePeriod(@NonNull java.time.Duration);
-    method @NonNull public android.net.http.DnsOptions.Builder setPreestablishConnectionsToStaleDnsResultsEnabled(int);
-    method @NonNull public android.net.http.DnsOptions.Builder setStaleDnsEnabled(int);
+    method @NonNull public android.net.http.DnsOptions.Builder setPreestablishConnectionsToStaleDnsResults(int);
+    method @NonNull public android.net.http.DnsOptions.Builder setStaleDns(int);
     method @NonNull public android.net.http.DnsOptions.Builder setStaleDnsOptions(@NonNull android.net.http.DnsOptions.StaleDnsOptions);
-    method @NonNull public android.net.http.DnsOptions.Builder setUseHttpStackDnsResolverEnabled(int);
+    method @NonNull public android.net.http.DnsOptions.Builder setUseHttpStackDnsResolver(int);
   }
 
   public static class DnsOptions.StaleDnsOptions {
-    method public int getAllowCrossNetworkUsageEnabled();
+    method public int getAllowCrossNetworkUsage();
     method @Nullable public java.time.Duration getFreshLookupTimeout();
     method @Nullable public java.time.Duration getMaxExpiredDelay();
-    method public int getUseStaleOnNameNotResolvedEnabled();
+    method public int getUseStaleOnNameNotResolved();
   }
 
   public static final class DnsOptions.StaleDnsOptions.Builder {
     ctor public DnsOptions.StaleDnsOptions.Builder();
     method @NonNull public android.net.http.DnsOptions.StaleDnsOptions build();
-    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setAllowCrossNetworkUsageEnabled(int);
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setAllowCrossNetworkUsage(int);
     method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setFreshLookupTimeout(@NonNull java.time.Duration);
     method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setMaxExpiredDelay(@NonNull java.time.Duration);
-    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setUseStaleOnNameNotResolvedEnabled(int);
+    method @NonNull public android.net.http.DnsOptions.StaleDnsOptions.Builder setUseStaleOnNameNotResolved(int);
   }
 
   public abstract class HeaderBlock {
