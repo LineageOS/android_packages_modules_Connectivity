@@ -16,15 +16,13 @@
 
 filegroup {
     name: "framework-connectivity-tiramisu-updatable-sources",
+    defaults: ["framework-sources-module-defaults"],
     srcs: [
         "src/**/*.java",
         "src/**/*.aidl",
     ],
     path: "src",
-    visibility: [
-        "//frameworks/base",
-        "//packages/modules/Connectivity:__subpackages__",
-    ],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
 
 cc_library_shared {

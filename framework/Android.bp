@@ -45,14 +45,12 @@ filegroup {
 // TODO: use a java_library in the bootclasspath instead
 filegroup {
     name: "framework-connectivity-sources",
+    defaults: ["framework-sources-module-defaults"],
     srcs: [
         ":framework-connectivity-internal-sources",
         ":framework-connectivity-aidl-export-sources",
     ],
-    visibility: [
-        "//frameworks/base",
-        "//packages/modules/Connectivity:__subpackages__",
-    ],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
 
 java_defaults {
