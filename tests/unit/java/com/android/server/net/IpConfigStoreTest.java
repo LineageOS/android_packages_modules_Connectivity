@@ -36,7 +36,6 @@ import androidx.test.InstrumentationRegistry;
 
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
-import com.android.testutils.HandlerUtils;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -139,6 +138,8 @@ public class IpConfigStoreTest {
                     }
                     @Override
                     public void quitHandlerThread(HandlerThread handlerThread) {
+                        // Don't join in here, quitHandlerThread runs on the
+                        // handler thread itself.
                         testHandlerThread.quitSafely();
                     }
         };
@@ -155,7 +156,7 @@ public class IpConfigStoreTest {
         final DelayedDiskWrite writer = new DelayedDiskWrite(dependencies);
         final IpConfigStore store = new IpConfigStore(writer);
         store.writeIpConfigurations(configFile.getPath(), expectedNetworks);
-        HandlerUtils.waitForIdle(testHandlerThread, TIMEOUT_MS);
+        testHandlerThread.join();
 
         // Read IP config from the file path.
         final ArrayMap<String, IpConfiguration> actualNetworks =

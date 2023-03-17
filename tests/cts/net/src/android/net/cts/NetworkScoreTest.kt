@@ -90,6 +90,7 @@ class NetworkScoreTest {
         mCm.unregisterNetworkCallback(agentCleanUpCb)
 
         mHandlerThread.quitSafely()
+        mHandlerThread.join()
         callbacksToCleanUp.forEach { mCm.unregisterNetworkCallback(it) }
     }
 
