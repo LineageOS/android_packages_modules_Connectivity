@@ -156,16 +156,20 @@ public class MdnsResponseDecoderTests {
             + "010001000000780004C0A8018A0000000000000000000000000000"
             + "000000");
 
-    // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.3
+    // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.3. Also set cache flush bit
+    // for the records changed.
     private static final byte[] DATAIN_IPV4_1 = HexDump.hexStringToByteArray(
             "0974657374686f73743100000180010000007800040a010203");
-    // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.4
+    // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.4. Also set cache flush bit
+    // for the records changed.
     private static final byte[] DATAIN_IPV4_2 = HexDump.hexStringToByteArray(
             "0974657374686f73743100000180010000007800040a010204");
-    // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040
+    // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040.
+    // Also set cache flush bit for the records changed.
     private static final byte[] DATAIN_IPV6_1 = HexDump.hexStringToByteArray(
             "0974657374686f73743100001c8001000000780010aabbccdd11223344a0b0c0d010203040");
-    // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3030
+    // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3030.
+    // Also set cache flush bit for the records changed.
     private static final byte[] DATAIN_IPV6_2 = HexDump.hexStringToByteArray(
             "0974657374686f73743100001c8001000000780010aabbccdd11223344a0b0c0d010203030");
     // MDNS record w/name "test" & PTR to foo.bar.quxx
