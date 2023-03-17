@@ -220,9 +220,10 @@ public class MdnsResponseDecoder {
                         // This bit, the cache-flush bit, tells neighboring hosts
                         // that this is not a shared record type.  Instead of merging this new
                         // record additively into the cache in addition to any previous records with
-                        // the same name, rrtype, and rrclass, all old records with that name,
-                        // rrtype, and rrclass that were received more than one second ago are
-                        // declared invalid, and marked to expire from the cache in one second.
+                        // the same name, rrtype, and rrclass.
+                        // TODO: All old records with that name, rrtype, and rrclass that were
+                        //       received more than one second ago are declared invalid, and marked
+                        //       to expire from the cache in one second.
                         if (inetRecord.getCacheFlush()) {
                             response.clearInet4AddressRecords();
                             response.clearInet6AddressRecords();
@@ -236,9 +237,10 @@ public class MdnsResponseDecoder {
                         // This bit, the cache-flush bit, tells neighboring hosts
                         // that this is not a shared record type.  Instead of merging this new
                         // record additively into the cache in addition to any previous records with
-                        // the same name, rrtype, and rrclass, all old records with that name,
-                        // rrtype, and rrclass that were received more than one second ago are
-                        // declared invalid, and marked to expire from the cache in one second.
+                        // the same name, rrtype, and rrclass.
+                        // TODO: All old records with that name, rrtype, and rrclass that were
+                        //       received more than one second ago are declared invalid, and marked
+                        //       to expire from the cache in one second.
                         if (inetRecord.getCacheFlush()) {
                             response.clearInet4AddressRecords();
                             response.clearInet6AddressRecords();
