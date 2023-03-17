@@ -32,10 +32,10 @@ filegroup {
 
 filegroup {
     name: "framework-nearby-sources",
+    defaults: ["framework-sources-module-defaults"],
     srcs: [
         ":framework-nearby-java-sources",
     ],
-    visibility: ["//frameworks/base"],
 }
 
 // Build of only framework-nearby (not as part of connectivity) for
