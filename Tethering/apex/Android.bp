@@ -66,19 +66,11 @@ apex_defaults {
 
 apex_defaults {
     name: "CronetInTetheringApexDefaultsEnabled",
-    jni_libs: [
-        "//external/cronet:cronet_aml_components_cronet_android_cronet",
-        "//external/cronet/third_party/boringssl:libcrypto",
-        "//external/cronet/third_party/boringssl:libssl",
-    ],
+    jni_libs: ["cronet_aml_components_cronet_android_cronet"],
     arch: {
         riscv64: {
             // TODO: remove this when there is a riscv64 libcronet
-            exclude_jni_libs: [
-                "//external/cronet:cronet_aml_components_cronet_android_cronet",
-                "//external/cronet/third_party/boringssl:libcrypto",
-                "//external/cronet/third_party/boringssl:libssl",
-            ],
+            exclude_jni_libs: ["cronet_aml_components_cronet_android_cronet"],
         },
     },
 }
