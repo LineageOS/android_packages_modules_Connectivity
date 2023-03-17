@@ -32,37 +32,37 @@ class ConnectionMigrationOptionsTest {
         val options =
                 ConnectionMigrationOptions.Builder().build()
 
-        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.allowNonDefaultNetworkUsageEnabled)
-        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.defaultNetworkMigrationEnabled)
-        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.pathDegradationMigrationEnabled)
+        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.allowNonDefaultNetworkUsage)
+        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.defaultNetworkMigration)
+        assertEquals(MIGRATION_OPTION_UNSPECIFIED, options.pathDegradationMigration)
     }
 
     @Test
     fun testConnectionMigrationOptions_enableDefaultNetworkMigration_returnSetValue() {
         val options =
             ConnectionMigrationOptions.Builder()
-                    .setDefaultNetworkMigrationEnabled(MIGRATION_OPTION_ENABLED)
+                    .setDefaultNetworkMigration(MIGRATION_OPTION_ENABLED)
                     .build()
 
-        assertEquals(MIGRATION_OPTION_ENABLED, options.defaultNetworkMigrationEnabled)
+        assertEquals(MIGRATION_OPTION_ENABLED, options.defaultNetworkMigration)
     }
 
     @Test
     fun testConnectionMigrationOptions_enablePathDegradationMigration_returnSetValue() {
         val options =
             ConnectionMigrationOptions.Builder()
-                    .setPathDegradationMigrationEnabled(MIGRATION_OPTION_ENABLED)
+                    .setPathDegradationMigration(MIGRATION_OPTION_ENABLED)
                     .build()
 
-        assertEquals(MIGRATION_OPTION_ENABLED, options.pathDegradationMigrationEnabled)
+        assertEquals(MIGRATION_OPTION_ENABLED, options.pathDegradationMigration)
     }
 
     @Test
     fun testConnectionMigrationOptions_allowNonDefaultNetworkUsage_returnSetValue() {
         val options =
                 ConnectionMigrationOptions.Builder()
-                        .setAllowNonDefaultNetworkUsageEnabled(MIGRATION_OPTION_ENABLED).build()
+                        .setAllowNonDefaultNetworkUsage(MIGRATION_OPTION_ENABLED).build()
 
-        assertEquals(MIGRATION_OPTION_ENABLED, options.allowNonDefaultNetworkUsageEnabled)
+        assertEquals(MIGRATION_OPTION_ENABLED, options.allowNonDefaultNetworkUsage)
     }
 }
