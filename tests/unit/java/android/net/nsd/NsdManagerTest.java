@@ -21,6 +21,7 @@ import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -73,11 +74,11 @@ public class NsdManagerTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        doReturn(mServiceConn).when(mService).connect(any());
+        doReturn(mServiceConn).when(mService).connect(any(), anyBoolean());
         mManager = new NsdManager(mContext, mService);
         final ArgumentCaptor<INsdManagerCallback> cbCaptor = ArgumentCaptor.forClass(
                 INsdManagerCallback.class);
-        verify(mService).connect(cbCaptor.capture());
+        verify(mService).connect(cbCaptor.capture(), anyBoolean());
         mCallback = cbCaptor.getValue();
     }
 
