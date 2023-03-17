@@ -68,6 +68,7 @@ class MdnsProberTest {
     @After
     fun tearDown() {
         thread.quitSafely()
+        thread.join()
     }
 
     private class TestProbeInfo(probeRecords: List<MdnsRecord>, private val delayMs: Long = 1L) :

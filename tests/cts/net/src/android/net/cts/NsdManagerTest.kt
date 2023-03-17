@@ -432,6 +432,7 @@ class NsdManagerTest {
         }
         handlerThread.waitForIdle(TIMEOUT_MS)
         handlerThread.quitSafely()
+        handlerThread.join()
     }
 
     @Test
