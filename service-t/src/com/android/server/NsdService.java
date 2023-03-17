@@ -53,7 +53,6 @@ import android.os.RemoteException;
 import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.Pair;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -397,13 +396,12 @@ public class NsdService extends INsdManager.Stub {
                 final int clientId = msg.arg2;
                 switch (msg.what) {
                     case NsdManager.REGISTER_CLIENT:
-                        final Pair<NsdServiceConnector, INsdManagerCallback> arg =
-                                (Pair<NsdServiceConnector, INsdManagerCallback>) msg.obj;
-                        final INsdManagerCallback cb = arg.second;
+                        final ConnectorArgs arg = (ConnectorArgs) msg.obj;
+                        final INsdManagerCallback cb = arg.callback;
                         try {
-                            cb.asBinder().linkToDeath(arg.first, 0);
-                            cInfo = new ClientInfo(cb);
-                            mClients.put(arg.first, cInfo);
+                            cb.asBinder().linkToDeath(arg.connector, 0);
+                            cInfo = new ClientInfo(cb, arg.useJavaBackend);
+                            mClients.put(arg.connector, cInfo);
                         } catch (RemoteException e) {
                             Log.w(TAG, "Client " + clientId + " has already died");
                         }
@@ -608,7 +606,8 @@ public class NsdService extends INsdManager.Stub {
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
                         final String serviceType = constructServiceType(info.getServiceType());
-                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)
+                        if (clientInfo.mUseJavaBackend
+                                || mDeps.isMdnsDiscoveryManagerEnabled(mContext)
                                 || useDiscoveryManagerForType(serviceType)) {
                             if (serviceType == null) {
                                 clientInfo.onDiscoverServicesFailed(clientId,
@@ -702,7 +701,8 @@ public class NsdService extends INsdManager.Stub {
                         final NsdServiceInfo serviceInfo = args.serviceInfo;
                         final String serviceType = serviceInfo.getServiceType();
                         final String registerServiceType = constructServiceType(serviceType);
-                        if (mDeps.isMdnsAdvertiserEnabled(mContext)
+                        if (clientInfo.mUseJavaBackend
+                                || mDeps.isMdnsAdvertiserEnabled(mContext)
                                 || useAdvertiserForType(registerServiceType)) {
                             if (registerServiceType == null) {
                                 Log.e(TAG, "Invalid service type: " + serviceType);
@@ -782,7 +782,8 @@ public class NsdService extends INsdManager.Stub {
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
                         final String serviceType = constructServiceType(info.getServiceType());
-                        if (mDeps.isMdnsDiscoveryManagerEnabled(mContext)
+                        if (clientInfo.mUseJavaBackend
+                                ||  mDeps.isMdnsDiscoveryManagerEnabled(mContext)
                                 || useDiscoveryManagerForType(serviceType)) {
                             if (serviceType == null) {
                                 clientInfo.onResolveServiceFailed(clientId,
@@ -1532,12 +1533,27 @@ public class NsdService extends INsdManager.Stub {
         }
     }
 
+    private static class ConnectorArgs {
+        @NonNull public final NsdServiceConnector connector;
+        @NonNull public final INsdManagerCallback callback;
+        public final boolean useJavaBackend;
+
+        ConnectorArgs(@NonNull NsdServiceConnector connector, @NonNull INsdManagerCallback callback,
+                boolean useJavaBackend) {
+            this.connector = connector;
+            this.callback = callback;
+            this.useJavaBackend = useJavaBackend;
+        }
+    }
+
     @Override
-    public INsdServiceConnector connect(INsdManagerCallback cb) {
+    public INsdServiceConnector connect(INsdManagerCallback cb, boolean useJavaBackend) {
         mContext.enforceCallingOrSelfPermission(android.Manifest.permission.INTERNET, "NsdService");
+        if (DBG) Log.d(TAG, "New client connect. useJavaBackend=" + useJavaBackend);
         final INsdServiceConnector connector = new NsdServiceConnector();
         mNsdStateMachine.sendMessage(mNsdStateMachine.obtainMessage(
-                NsdManager.REGISTER_CLIENT, new Pair<>(connector, cb)));
+                NsdManager.REGISTER_CLIENT,
+                new ConnectorArgs((NsdServiceConnector) connector, cb, useJavaBackend)));
         return connector;
     }
 
@@ -1793,9 +1809,12 @@ public class NsdService extends INsdManager.Stub {
 
         // The target SDK of this client < Build.VERSION_CODES.S
         private boolean mIsPreSClient = false;
+        // The flag of using java backend if the client's target SDK >= U
+        private final boolean mUseJavaBackend;
 
-        private ClientInfo(INsdManagerCallback cb) {
+        private ClientInfo(INsdManagerCallback cb, boolean useJavaBackend) {
             mCb = cb;
+            mUseJavaBackend = useJavaBackend;
             if (DBG) Log.d(TAG, "New client");
         }
 
