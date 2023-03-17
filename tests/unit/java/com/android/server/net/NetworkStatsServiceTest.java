@@ -539,6 +539,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mService = null;
 
         mHandlerThread.quitSafely();
+        mHandlerThread.join();
     }
 
     private void initWifiStats(NetworkStateSnapshot snapshot) throws Exception {
