@@ -96,6 +96,8 @@ import com.android.testutils.tryTest
 import com.android.testutils.waitForIdle
 import java.io.File
 import java.io.IOException
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.nio.charset.StandardCharsets
@@ -132,6 +134,7 @@ private val nsdShim = NsdShimImpl.newInstance()
 
 @AppModeFull(reason = "Socket cannot bind in instant app mode")
 @RunWith(AndroidJUnit4::class)
+@ConnectivityModuleTest
 class NsdManagerTest {
     // Rule used to filter CtsNetTestCasesMaxTargetSdkXX
     @get:Rule
@@ -696,6 +699,20 @@ class NsdManagerTest {
         }
     }
 
+    private fun checkAddressScopeId(iface: TestNetworkInterface, address: List<InetAddress>) {
+        val targetSdkVersion = context.packageManager
+            .getTargetSdkVersion(context.applicationInfo.packageName)
+        if (targetSdkVersion <= Build.VERSION_CODES.TIRAMISU) {
+            return
+        }
+        val ifaceIdx = NetworkInterface.getByName(iface.interfaceName).index
+        address.forEach {
+            if (it is Inet6Address && it.isLinkLocalAddress) {
+                assertEquals(ifaceIdx, it.scopeId)
+            }
+        }
+    }
+
     @Test
     fun testNsdManager_ResolveOnNetwork() {
         // This test requires shims supporting T+ APIs (NsdServiceInfo.network)
@@ -731,6 +748,7 @@ class NsdManagerTest {
                 assertEquals(registeredInfo.serviceName, it.serviceName)
                 assertEquals(si.port, it.port)
                 assertEquals(testNetwork1.network, nsdShim.getNetwork(it))
+                checkAddressScopeId(testNetwork1.iface, it.hostAddresses)
             }
             // TODO: check that MDNS packets are sent only on testNetwork1.
         } cleanupStep {
@@ -970,6 +988,7 @@ class NsdManagerTest {
             for (hostAddress in hostAddresses) {
                 assertTrue(addresses.contains(hostAddress))
             }
+            checkAddressScopeId(testNetwork1.iface, serviceInfoCb.serviceInfo.hostAddresses)
         } cleanupStep {
             nsdManager.unregisterService(registrationRecord)
             registrationRecord.expectCallback<ServiceUnregistered>()
