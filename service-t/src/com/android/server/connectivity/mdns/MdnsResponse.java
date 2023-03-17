@@ -81,6 +81,21 @@ public class MdnsResponse {
         return a == null || a.getTtl() == b.getTtl();
     }
 
+    private <T extends MdnsRecord> boolean addOrReplaceRecord(@NonNull T record,
+            @NonNull List<T> recordsList) {
+        final int existing = recordsList.indexOf(record);
+        if (existing >= 0) {
+            if (recordsAreSame(record, recordsList.get(existing))) {
+                return false;
+            }
+            final MdnsRecord existedRecord = recordsList.remove(existing);
+            records.remove(existedRecord);
+        }
+        recordsList.add(record);
+        records.add(record);
+        return true;
+    }
+
     /**
      * Adds a pointer record.
      *
@@ -92,17 +107,7 @@ public class MdnsResponse {
             throw new IllegalArgumentException(
                     "Pointer records for different service names cannot be added");
         }
-        final int existing = pointerRecords.indexOf(pointerRecord);
-        if (existing >= 0) {
-            if (recordsAreSame(pointerRecord, pointerRecords.get(existing))) {
-                return false;
-            }
-            final MdnsRecord record = pointerRecords.remove(existing);
-            records.remove(record);
-        }
-        pointerRecords.add(pointerRecord);
-        records.add(pointerRecord);
-        return true;
+        return addOrReplaceRecord(pointerRecord, pointerRecords);
     }
 
     /** Gets the pointer records. */
@@ -207,17 +212,7 @@ public class MdnsResponse {
     /** Add the IPv4 address record. */
     public synchronized boolean addInet4AddressRecord(
             @NonNull MdnsInetAddressRecord newInet4AddressRecord) {
-        final int existing = inet4AddressRecords.indexOf(newInet4AddressRecord);
-        if (existing >= 0) {
-            if (recordsAreSame(newInet4AddressRecord, inet4AddressRecords.get(existing))) {
-                return false;
-            }
-            final MdnsRecord record = inet4AddressRecords.remove(existing);
-            records.remove(record);
-        }
-        inet4AddressRecords.add(newInet4AddressRecord);
-        records.add(newInet4AddressRecord);
-        return true;
+        return addOrReplaceRecord(newInet4AddressRecord, inet4AddressRecords);
     }
 
     /** Gets the IPv4 address records. */
@@ -248,17 +243,7 @@ public class MdnsResponse {
     /** Sets the IPv6 address records. */
     public synchronized boolean addInet6AddressRecord(
             @NonNull MdnsInetAddressRecord newInet6AddressRecord) {
-        final int existing = inet6AddressRecords.indexOf(newInet6AddressRecord);
-        if (existing >= 0) {
-            if (recordsAreSame(newInet6AddressRecord, inet6AddressRecords.get(existing))) {
-                return false;
-            }
-            final MdnsRecord record = inet6AddressRecords.remove(existing);
-            records.remove(record);
-        }
-        inet6AddressRecords.add(newInet6AddressRecord);
-        records.add(newInet6AddressRecord);
-        return true;
+        return addOrReplaceRecord(newInet6AddressRecord, inet6AddressRecords);
     }
 
     /**
