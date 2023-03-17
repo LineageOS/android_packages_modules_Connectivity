@@ -34,22 +34,22 @@ class DnsOptionsTest {
     fun testDnsOptions_defaultValues() {
         val options = DnsOptions.Builder().build()
 
-        assertEquals(DNS_OPTION_UNSPECIFIED, options.persistHostCacheEnabled)
+        assertEquals(DNS_OPTION_UNSPECIFIED, options.persistHostCache)
         assertNull(options.persistHostCachePeriod)
-        assertEquals(DNS_OPTION_UNSPECIFIED, options.staleDnsEnabled)
+        assertEquals(DNS_OPTION_UNSPECIFIED, options.staleDns)
         assertNull(options.staleDnsOptions)
-        assertEquals(DNS_OPTION_UNSPECIFIED, options.useHttpStackDnsResolverEnabled)
+        assertEquals(DNS_OPTION_UNSPECIFIED, options.useHttpStackDnsResolver)
         assertEquals(DNS_OPTION_UNSPECIFIED,
-                options.preestablishConnectionsToStaleDnsResultsEnabled)
+                options.preestablishConnectionsToStaleDnsResults)
     }
 
     @Test
     fun testDnsOptions_persistHostCache_returnSetValue() {
         val options = DnsOptions.Builder()
-                .setPersistHostCacheEnabled(DNS_OPTION_ENABLED)
+                .setPersistHostCache(DNS_OPTION_ENABLED)
                 .build()
 
-        assertEquals(DNS_OPTION_ENABLED, options.persistHostCacheEnabled)
+        assertEquals(DNS_OPTION_ENABLED, options.persistHostCache)
     }
 
     @Test
@@ -63,43 +63,43 @@ class DnsOptionsTest {
     @Test
     fun testDnsOptions_enableStaleDns_returnSetValue() {
         val options = DnsOptions.Builder()
-                .setStaleDnsEnabled(DNS_OPTION_ENABLED)
+                .setStaleDns(DNS_OPTION_ENABLED)
                 .build()
 
-        assertEquals(DNS_OPTION_ENABLED, options.staleDnsEnabled)
+        assertEquals(DNS_OPTION_ENABLED, options.staleDns)
     }
 
     @Test
     fun testDnsOptions_useHttpStackDnsResolver_returnsSetValue() {
         val options = DnsOptions.Builder()
-                .setUseHttpStackDnsResolverEnabled(DNS_OPTION_ENABLED)
+                .setUseHttpStackDnsResolver(DNS_OPTION_ENABLED)
                 .build()
 
-        assertEquals(DNS_OPTION_ENABLED, options.useHttpStackDnsResolverEnabled)
+        assertEquals(DNS_OPTION_ENABLED, options.useHttpStackDnsResolver)
     }
 
     @Test
     fun testDnsOptions_preestablishConnectionsToStaleDnsResults_returnsSetValue() {
         val options = DnsOptions.Builder()
-                .setPreestablishConnectionsToStaleDnsResultsEnabled(DNS_OPTION_ENABLED)
+                .setPreestablishConnectionsToStaleDnsResults(DNS_OPTION_ENABLED)
                 .build()
 
         assertEquals(DNS_OPTION_ENABLED,
-                options.preestablishConnectionsToStaleDnsResultsEnabled)
+                options.preestablishConnectionsToStaleDnsResults)
     }
 
     @Test
     fun testDnsOptions_setStaleDnsOptions_returnsSetValues() {
         val staleOptions = DnsOptions.StaleDnsOptions.Builder()
-                .setAllowCrossNetworkUsageEnabled(DNS_OPTION_ENABLED)
+                .setAllowCrossNetworkUsage(DNS_OPTION_ENABLED)
                 .setFreshLookupTimeout(Duration.ofMillis(1234))
                 .build()
         val options = DnsOptions.Builder()
-                .setStaleDnsEnabled(DNS_OPTION_ENABLED)
+                .setStaleDns(DNS_OPTION_ENABLED)
                 .setStaleDnsOptions(staleOptions)
                 .build()
 
-        assertEquals(DNS_OPTION_ENABLED, options.staleDnsEnabled)
+        assertEquals(DNS_OPTION_ENABLED, options.staleDns)
         assertEquals(staleOptions, options.staleDnsOptions)
     }
 
@@ -107,18 +107,18 @@ class DnsOptionsTest {
     fun testStaleDnsOptions_defaultValues() {
         val options = DnsOptions.StaleDnsOptions.Builder().build()
 
-        assertEquals(DNS_OPTION_UNSPECIFIED, options.allowCrossNetworkUsageEnabled)
+        assertEquals(DNS_OPTION_UNSPECIFIED, options.allowCrossNetworkUsage)
         assertNull(options.freshLookupTimeout)
         assertNull(options.maxExpiredDelay)
-        assertEquals(DNS_OPTION_UNSPECIFIED, options.useStaleOnNameNotResolvedEnabled)
+        assertEquals(DNS_OPTION_UNSPECIFIED, options.useStaleOnNameNotResolved)
     }
 
     @Test
     fun testStaleDnsOptions_allowCrossNetworkUsage_returnsSetValue() {
         val options = DnsOptions.StaleDnsOptions.Builder()
-                .setAllowCrossNetworkUsageEnabled(DNS_OPTION_ENABLED).build()
+                .setAllowCrossNetworkUsage(DNS_OPTION_ENABLED).build()
 
-        assertEquals(DNS_OPTION_ENABLED, options.allowCrossNetworkUsageEnabled)
+        assertEquals(DNS_OPTION_ENABLED, options.allowCrossNetworkUsage)
     }
 
     @Test
@@ -133,10 +133,10 @@ class DnsOptionsTest {
     @Test
     fun testStaleDnsOptions_useStaleOnNameNotResolved_returnsSetValue() {
         val options = DnsOptions.StaleDnsOptions.Builder()
-                .setUseStaleOnNameNotResolvedEnabled(DNS_OPTION_ENABLED)
+                .setUseStaleOnNameNotResolved(DNS_OPTION_ENABLED)
                 .build()
 
-        assertEquals(DNS_OPTION_ENABLED, options.useStaleOnNameNotResolvedEnabled)
+        assertEquals(DNS_OPTION_ENABLED, options.useStaleOnNameNotResolved)
     }
 
     @Test
