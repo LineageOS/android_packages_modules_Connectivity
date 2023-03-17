@@ -191,6 +191,7 @@ class NetworkAgentTest {
         callbacksToCleanUp.forEach { mCM.unregisterNetworkCallback(it) }
         qosTestSocket?.close()
         mHandlerThread.quitSafely()
+        mHandlerThread.join()
         instrumentation.getUiAutomation().dropShellPermissionIdentity()
     }
 

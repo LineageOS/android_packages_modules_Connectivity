@@ -79,6 +79,7 @@ class MdnsRecordRepositoryTest {
     @After
     fun tearDown() {
         thread.quitSafely()
+        thread.join()
     }
 
     @Test
