@@ -86,8 +86,9 @@ public class EthernetTrackerTest {
     }
 
     @After
-    public void cleanUp() {
+    public void cleanUp() throws InterruptedException {
         mHandlerThread.quitSafely();
+        mHandlerThread.join();
     }
 
     private void initMockResources() {
