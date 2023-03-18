@@ -79,6 +79,7 @@ class NetworkProviderTest {
     @After
     fun tearDown() {
         mHandlerThread.quitSafely()
+        mHandlerThread.join()
         instrumentation.getUiAutomation().dropShellPermissionIdentity()
     }
 

@@ -63,6 +63,7 @@ class MdnsAnnouncerTest {
     @After
     fun tearDown() {
         thread.quitSafely()
+        thread.join()
     }
 
     private class TestAnnouncementInfo(
