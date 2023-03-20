@@ -10300,6 +10300,7 @@ cc_library_static {
 cc_defaults {
     name: "cronet_aml_defaults",
     cflags: [
+        "-DBORINGSSL_SHARED_LIBRARY",
         "-DGOOGLE_PROTOBUF_NO_RTTI",
         "-Wno-ambiguous-reversed-operator",
         "-Wno-c++11-narrowing",
@@ -10320,6 +10321,7 @@ cc_defaults {
         "com.android.tethering",
     ],
     min_sdk_version: "29",
+    c_std: "gnu11",
     target: {
         android: {
             shared_libs: [
