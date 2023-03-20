@@ -61,9 +61,13 @@ java_defaults {
         "modules-utils-build",
         "modules-utils-statemachine",
         "networkstack-client",
+        // AIDL tetheroffload implementation
+        "android.hardware.tetheroffload-V1-java",
+        // HIDL tetheroffload implementation
         "android.hardware.tetheroffload.config-V1.0-java",
         "android.hardware.tetheroffload.control-V1.0-java",
         "android.hardware.tetheroffload.control-V1.1-java",
+        "android.hidl.manager-V1.2-java",
         "net-utils-framework-common",
         "net-utils-device-common",
         "net-utils-device-common-bpf",
