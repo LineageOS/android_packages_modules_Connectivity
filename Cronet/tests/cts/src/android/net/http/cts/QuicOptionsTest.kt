@@ -71,4 +71,14 @@ class QuicOptionsTest {
         assertThat(quicOptions.inMemoryServerConfigsCacheSize)
                 .isEqualTo(42)
     }
+
+    @Test
+    fun testQuicOptions_handshakeUserAgent_returnsSetValue() {
+        val userAgent = "test"
+        val quicOptions = QuicOptions.Builder()
+            .setHandshakeUserAgent(userAgent)
+            .build()
+        assertThat(quicOptions.handshakeUserAgent)
+            .isEqualTo(userAgent)
+    }
 }
