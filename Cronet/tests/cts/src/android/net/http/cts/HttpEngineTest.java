@@ -370,4 +370,20 @@ public class HttpEngineTest {
         // This way, if the request were to fail, the test would just be skipped instead of failing.
         assumeOKStatusCode(mCallback.mResponseInfo);
     }
+
+    @Test
+    public void testHttpEngine_enableBrotli_brotliAdvertised() {
+        mEngine = mEngineBuilder.setEnableBrotli(true).build();
+        mRequest =
+                mEngine.newUrlRequestBuilder(
+                        mTestServer.getEchoHeadersUrl(), mCallback.getExecutor(), mCallback)
+                        .build();
+        mRequest.start();
+
+        mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertThat(info.getHeaders().getAsMap().get("x-request-header-Accept-Encoding").toString())
+                .contains("br");
+        assertOKStatusCode(info);
+    }
 }
