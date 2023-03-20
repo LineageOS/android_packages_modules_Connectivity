@@ -36,7 +36,7 @@ EOF
 COPYBARA_FOLDER_ORIGIN="/tmp/copybara-origin"
 
 #######################################
-# Create upstream-import branch in external/cronet.
+# Create local upstream-import branch in external/cronet.
 # Globals:
 #   ANDROID_BUILD_TOP
 # Arguments:
@@ -44,10 +44,8 @@ COPYBARA_FOLDER_ORIGIN="/tmp/copybara-origin"
 #######################################
 setup_upstream_import_branch() {
     local git_dir="${ANDROID_BUILD_TOP}/external/cronet"
-    local initial_empty_repo_sha="d1add53d6e90815f363c91d433735556ce79b0d2"
 
-    # Suppress error message if branch already exists.
-    (cd "${git_dir}" && git branch upstream-import "${initial_empty_repo_sha}") 2>/dev/null
+    (cd "${git_dir}" && git fetch aosp upstream-import:upstream-import)
 }
 
 #######################################
