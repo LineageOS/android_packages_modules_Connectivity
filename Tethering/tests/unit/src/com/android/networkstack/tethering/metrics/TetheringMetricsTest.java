@@ -16,6 +16,13 @@
 
 package com.android.networkstack.tethering.metrics;
 
+import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
+import static android.net.NetworkCapabilities.TRANSPORT_LOWPAN;
+import static android.net.NetworkCapabilities.TRANSPORT_VPN;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 import static android.net.TetheringManager.TETHERING_BLUETOOTH;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
 import static android.net.TetheringManager.TETHERING_NCM;
@@ -44,6 +51,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import android.net.NetworkCapabilities;
 import android.stats.connectivity.DownstreamType;
 import android.stats.connectivity.ErrorCode;
 import android.stats.connectivity.UpstreamType;
@@ -51,6 +59,8 @@ import android.stats.connectivity.UserType;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
+
+import com.android.networkstack.tethering.UpstreamNetworkState;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -64,46 +74,105 @@ public final class TetheringMetricsTest {
     private static final String SETTINGS_PKG = "com.android.settings";
     private static final String SYSTEMUI_PKG = "com.android.systemui";
     private static final String GMS_PKG = "com.google.android.gms";
-    private TetheringMetrics mTetheringMetrics;
+    private static final long TEST_START_TIME = 1670395936033L;
+    private static final long SECOND_IN_MILLIS = 1_000L;
 
+    private TetheringMetrics mTetheringMetrics;
     private final NetworkTetheringReported.Builder mStatsBuilder =
             NetworkTetheringReported.newBuilder();
 
+    private long mElapsedRealtime;
+
     private class MockTetheringMetrics extends TetheringMetrics {
         @Override
-        public void write(final NetworkTetheringReported reported) { }
+        public void write(final NetworkTetheringReported reported) {}
+        @Override
+        public long timeNow() {
+            return currentTimeMillis();
+        }
+    }
+
+    private long currentTimeMillis() {
+        return TEST_START_TIME + mElapsedRealtime;
+    }
+
+    private void incrementCurrentTime(final long duration) {
+        mElapsedRealtime += duration;
+        mTetheringMetrics.timeNow();
+    }
+
+    private long getElapsedRealtime() {
+        return mElapsedRealtime;
+    }
+
+    private void clearElapsedRealtime() {
+        mElapsedRealtime = 0;
     }
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mTetheringMetrics = spy(new MockTetheringMetrics());
+        mElapsedRealtime = 0L;
     }
 
-    private void verifyReport(DownstreamType downstream, ErrorCode error, UserType user)
+    private void verifyReport(final DownstreamType downstream, final ErrorCode error,
+            final UserType user, final UpstreamEvents.Builder upstreamEvents, final long duration)
             throws Exception {
         final NetworkTetheringReported expectedReport =
                 mStatsBuilder.setDownstreamType(downstream)
                 .setUserType(user)
                 .setUpstreamType(UpstreamType.UT_UNKNOWN)
                 .setErrorCode(error)
-                .setUpstreamEvents(UpstreamEvents.newBuilder())
-                .setDurationMillis(0)
+                .setUpstreamEvents(upstreamEvents)
+                .setDurationMillis(duration)
                 .build();
         verify(mTetheringMetrics).write(expectedReport);
     }
 
-    private void updateErrorAndSendReport(int downstream, int error) {
+    private void updateErrorAndSendReport(final int downstream, final int error) {
         mTetheringMetrics.updateErrorCode(downstream, error);
         mTetheringMetrics.sendReport(downstream);
+    }
+
+    private static NetworkCapabilities buildUpstreamCapabilities(final int[] transports) {
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        for (int type: transports) {
+            nc.addTransportType(type);
+        }
+        return nc;
+    }
+
+    private static UpstreamNetworkState buildUpstreamState(final int... transports) {
+        return new UpstreamNetworkState(
+                null,
+                buildUpstreamCapabilities(transports),
+                null);
+    }
+
+    private void addUpstreamEvent(UpstreamEvents.Builder upstreamEvents,
+            final UpstreamType expectedResult, final long duration) {
+        UpstreamEvent.Builder upstreamEvent = UpstreamEvent.newBuilder()
+                .setUpstreamType(expectedResult)
+                .setDurationMillis(duration);
+        upstreamEvents.addUpstreamEvent(upstreamEvent);
     }
 
     private void runDownstreamTypesTest(final int type, final DownstreamType expectedResult)
             throws Exception {
         mTetheringMetrics.createBuilder(type, TEST_CALLER_PKG);
+        final long duration = 2 * SECOND_IN_MILLIS;
+        incrementCurrentTime(duration);
+        UpstreamEvents.Builder upstreamEvents = UpstreamEvents.newBuilder();
+        // Set UpstreamType as NO_NETWORK because the upstream type has not been changed.
+        addUpstreamEvent(upstreamEvents, UpstreamType.UT_NO_NETWORK, duration);
         updateErrorAndSendReport(type, TETHER_ERROR_NO_ERROR);
-        verifyReport(expectedResult, ErrorCode.EC_NO_ERROR, UserType.USER_UNKNOWN);
+
+        verifyReport(expectedResult, ErrorCode.EC_NO_ERROR, UserType.USER_UNKNOWN,
+                upstreamEvents, getElapsedRealtime());
         reset(mTetheringMetrics);
+        clearElapsedRealtime();
+        mTetheringMetrics.cleanup();
     }
 
     @Test
@@ -119,8 +188,18 @@ public final class TetheringMetricsTest {
     private void runErrorCodesTest(final int errorCode, final ErrorCode expectedResult)
             throws Exception {
         mTetheringMetrics.createBuilder(TETHERING_WIFI, TEST_CALLER_PKG);
+        mTetheringMetrics.maybeUpdateUpstreamType(buildUpstreamState(TRANSPORT_WIFI));
+        final long duration = 2 * SECOND_IN_MILLIS;
+        incrementCurrentTime(duration);
         updateErrorAndSendReport(TETHERING_WIFI, errorCode);
-        verifyReport(DownstreamType.DS_TETHERING_WIFI, expectedResult, UserType.USER_UNKNOWN);
+
+        UpstreamEvents.Builder upstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(upstreamEvents, UpstreamType.UT_WIFI, duration);
+        verifyReport(DownstreamType.DS_TETHERING_WIFI, expectedResult, UserType.USER_UNKNOWN,
+                    upstreamEvents, getElapsedRealtime());
+        reset(mTetheringMetrics);
+        clearElapsedRealtime();
+        mTetheringMetrics.cleanup();
     }
 
     @Test
@@ -151,9 +230,18 @@ public final class TetheringMetricsTest {
     private void runUserTypesTest(final String callerPkg, final UserType expectedResult)
             throws Exception {
         mTetheringMetrics.createBuilder(TETHERING_WIFI, callerPkg);
+        final long duration = 1 * SECOND_IN_MILLIS;
+        incrementCurrentTime(duration);
         updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
-        verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR, expectedResult);
+
+        UpstreamEvents.Builder upstreamEvents = UpstreamEvents.newBuilder();
+        // Set UpstreamType as NO_NETWORK because the upstream type has not been changed.
+        addUpstreamEvent(upstreamEvents, UpstreamType.UT_NO_NETWORK, duration);
+        verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR, expectedResult,
+                    upstreamEvents, getElapsedRealtime());
         reset(mTetheringMetrics);
+        clearElapsedRealtime();
+        mTetheringMetrics.cleanup();
     }
 
     @Test
@@ -164,22 +252,113 @@ public final class TetheringMetricsTest {
         runUserTypesTest(GMS_PKG, UserType.USER_GMS);
     }
 
+    private void runUpstreamTypesTest(final UpstreamNetworkState ns,
+            final UpstreamType expectedResult) throws Exception {
+        mTetheringMetrics.createBuilder(TETHERING_WIFI, TEST_CALLER_PKG);
+        mTetheringMetrics.maybeUpdateUpstreamType(ns);
+        final long duration = 2 * SECOND_IN_MILLIS;
+        incrementCurrentTime(duration);
+        updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
+
+        UpstreamEvents.Builder upstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(upstreamEvents, expectedResult, duration);
+        verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR,
+                UserType.USER_UNKNOWN, upstreamEvents, getElapsedRealtime());
+        reset(mTetheringMetrics);
+        clearElapsedRealtime();
+        mTetheringMetrics.cleanup();
+    }
+
+    @Test
+    public void testUpstreamTypes() throws Exception {
+        runUpstreamTypesTest(null , UpstreamType.UT_NO_NETWORK);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR), UpstreamType.UT_CELLULAR);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_WIFI), UpstreamType.UT_WIFI);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_BLUETOOTH), UpstreamType.UT_BLUETOOTH);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_ETHERNET), UpstreamType.UT_ETHERNET);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_WIFI_AWARE), UpstreamType.UT_WIFI_AWARE);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_LOWPAN), UpstreamType.UT_LOWPAN);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_VPN),
+                UpstreamType.UT_CELLULAR_VPN);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_WIFI, TRANSPORT_VPN),
+                UpstreamType.UT_WIFI_VPN);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_BLUETOOTH, TRANSPORT_VPN),
+                UpstreamType.UT_BLUETOOTH_VPN);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_ETHERNET, TRANSPORT_VPN),
+                UpstreamType.UT_ETHERNET_VPN);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_WIFI, TRANSPORT_VPN),
+                UpstreamType.UT_WIFI_CELLULAR_VPN);
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_WIFI, TRANSPORT_VPN,
+                TRANSPORT_BLUETOOTH), UpstreamType.UT_UNKNOWN);
+    }
+
     @Test
     public void testMultiBuildersCreatedBeforeSendReport() throws Exception {
         mTetheringMetrics.createBuilder(TETHERING_WIFI, SETTINGS_PKG);
+        final long wifiTetheringStartTime = currentTimeMillis();
+        incrementCurrentTime(1 * SECOND_IN_MILLIS);
         mTetheringMetrics.createBuilder(TETHERING_USB, SYSTEMUI_PKG);
+        final long usbTetheringStartTime = currentTimeMillis();
+        incrementCurrentTime(2 * SECOND_IN_MILLIS);
         mTetheringMetrics.createBuilder(TETHERING_BLUETOOTH, GMS_PKG);
-
+        final long bluetoothTetheringStartTime = currentTimeMillis();
+        incrementCurrentTime(3 * SECOND_IN_MILLIS);
         updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_DHCPSERVER_ERROR);
+
+        UpstreamEvents.Builder wifiTetheringUpstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(wifiTetheringUpstreamEvents, UpstreamType.UT_NO_NETWORK,
+                currentTimeMillis() - wifiTetheringStartTime);
         verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_DHCPSERVER_ERROR,
-                UserType.USER_SETTINGS);
-
+                UserType.USER_SETTINGS, wifiTetheringUpstreamEvents,
+                currentTimeMillis() - wifiTetheringStartTime);
+        incrementCurrentTime(1 * SECOND_IN_MILLIS);
         updateErrorAndSendReport(TETHERING_USB, TETHER_ERROR_ENABLE_FORWARDING_ERROR);
-        verifyReport(DownstreamType.DS_TETHERING_USB, ErrorCode.EC_ENABLE_FORWARDING_ERROR,
-                UserType.USER_SYSTEMUI);
 
+        UpstreamEvents.Builder usbTetheringUpstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(usbTetheringUpstreamEvents, UpstreamType.UT_NO_NETWORK,
+                currentTimeMillis() - usbTetheringStartTime);
+
+        verifyReport(DownstreamType.DS_TETHERING_USB, ErrorCode.EC_ENABLE_FORWARDING_ERROR,
+                UserType.USER_SYSTEMUI, usbTetheringUpstreamEvents,
+                currentTimeMillis() - usbTetheringStartTime);
+        incrementCurrentTime(1 * SECOND_IN_MILLIS);
         updateErrorAndSendReport(TETHERING_BLUETOOTH, TETHER_ERROR_TETHER_IFACE_ERROR);
+
+        UpstreamEvents.Builder bluetoothTetheringUpstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(bluetoothTetheringUpstreamEvents, UpstreamType.UT_NO_NETWORK,
+                currentTimeMillis() - bluetoothTetheringStartTime);
         verifyReport(DownstreamType.DS_TETHERING_BLUETOOTH, ErrorCode.EC_TETHER_IFACE_ERROR,
-                UserType.USER_GMS);
+                UserType.USER_GMS, bluetoothTetheringUpstreamEvents,
+                currentTimeMillis() - bluetoothTetheringStartTime);
+    }
+
+    @Test
+    public void testUpstreamsWithMultipleDownstreams() throws Exception {
+        mTetheringMetrics.createBuilder(TETHERING_WIFI, SETTINGS_PKG);
+        final long wifiTetheringStartTime = currentTimeMillis();
+        incrementCurrentTime(1 * SECOND_IN_MILLIS);
+        mTetheringMetrics.maybeUpdateUpstreamType(buildUpstreamState(TRANSPORT_WIFI));
+        final long wifiUpstreamStartTime = currentTimeMillis();
+        incrementCurrentTime(5 * SECOND_IN_MILLIS);
+        mTetheringMetrics.createBuilder(TETHERING_USB, SYSTEMUI_PKG);
+        final long usbTetheringStartTime = currentTimeMillis();
+        incrementCurrentTime(5 * SECOND_IN_MILLIS);
+        updateErrorAndSendReport(TETHERING_USB, TETHER_ERROR_NO_ERROR);
+
+        UpstreamEvents.Builder usbTetheringUpstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(usbTetheringUpstreamEvents, UpstreamType.UT_WIFI,
+                currentTimeMillis() - usbTetheringStartTime);
+        verifyReport(DownstreamType.DS_TETHERING_USB, ErrorCode.EC_NO_ERROR,
+                UserType.USER_SYSTEMUI, usbTetheringUpstreamEvents,
+                currentTimeMillis() - usbTetheringStartTime);
+        incrementCurrentTime(7 * SECOND_IN_MILLIS);
+        updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
+
+        UpstreamEvents.Builder wifiTetheringUpstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(wifiTetheringUpstreamEvents, UpstreamType.UT_WIFI,
+                currentTimeMillis() - wifiUpstreamStartTime);
+        verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR,
+                UserType.USER_SETTINGS, wifiTetheringUpstreamEvents,
+                currentTimeMillis() - wifiTetheringStartTime);
     }
 }
