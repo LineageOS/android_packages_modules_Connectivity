@@ -91,6 +91,12 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
     if (ip6->version != 6) return TC_ACT_PIPE;
 
     // Maximum IPv6 payload length that can be translated to IPv4
+    // Note: technically this check is too strict for an IPv6 fragment,
+    // which by virtue of stripping the extra 8 byte fragment extension header,
+    // could thus be 8 bytes larger and still fit in an ipv4 packet post
+    // translation.  However... who ever heard of receiving ~64KB frags...
+    // fragments are kind of by definition smaller than ingress device mtu,
+    // and thus, on the internet, very very unlikely to exceed 1500 bytes.
     if (ntohs(ip6->payload_len) > 0xFFFF - sizeof(struct iphdr)) return TC_ACT_PIPE;
 
     ClatIngress6Key k = {
