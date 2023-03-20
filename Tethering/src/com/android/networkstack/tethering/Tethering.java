@@ -1861,6 +1861,7 @@ public class Tethering {
                 mNotificationUpdater.onUpstreamCapabilitiesChanged(
                         (ns != null) ? ns.networkCapabilities : null);
             }
+            mTetheringMetrics.maybeUpdateUpstreamType(ns);
         }
 
         protected void setUpstreamNetwork(UpstreamNetworkState ns) {
@@ -2090,6 +2091,7 @@ public class Tethering {
                     mNotificationUpdater.onUpstreamCapabilitiesChanged(null);
                 }
                 mBpfCoordinator.stopPolling();
+                mTetheringMetrics.cleanup();
             }
 
             private boolean updateUpstreamWanted() {

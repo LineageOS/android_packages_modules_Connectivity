@@ -2000,6 +2000,7 @@ public class TetheringTest {
         verify(mWifiManager).updateInterfaceIpState(
                 TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_CONFIGURATION_ERROR);
 
+        verify(mTetheringMetrics, times(0)).maybeUpdateUpstreamType(any());
         verify(mTetheringMetrics, times(2)).updateErrorCode(eq(TETHERING_WIFI),
                 eq(TETHER_ERROR_INTERNAL_ERROR));
         verify(mTetheringMetrics, times(2)).sendReport(eq(TETHERING_WIFI));
@@ -3365,6 +3366,7 @@ public class TetheringTest {
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
         verify(mTetheringMetrics).createBuilder(eq(TETHERING_NCM), anyString());
+        verify(mTetheringMetrics, times(1)).maybeUpdateUpstreamType(any());
 
         // Change the USB tethering function to NCM. Because the USB tethering function was set to
         // RNDIS (the default), tethering is stopped.
@@ -3381,6 +3383,7 @@ public class TetheringTest {
         mLooper.dispatchAll();
         ncmResult.assertHasResult();
         verify(mTetheringMetrics, times(2)).createBuilder(eq(TETHERING_NCM), anyString());
+        verify(mTetheringMetrics, times(1)).maybeUpdateUpstreamType(any());
         verify(mTetheringMetrics).updateErrorCode(eq(TETHERING_NCM),
                 eq(TETHER_ERROR_SERVICE_UNAVAIL));
         verify(mTetheringMetrics, times(2)).sendReport(eq(TETHERING_NCM));
