@@ -118,6 +118,38 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
         }
     }
 
+    @Override
+    public void onError(int errorCode) {
+        synchronized (mLock) {
+            AppOpsManager appOpsManager = Objects.requireNonNull(mInjector.getAppOpsManager());
+            for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
+                ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
+                if (record == null) {
+                    Log.w(TAG, "DiscoveryProviderManager cannot find the scan record.");
+                    continue;
+                }
+                CallerIdentity callerIdentity = record.getCallerIdentity();
+                if (!DiscoveryPermissions.noteDiscoveryResultDelivery(
+                        appOpsManager, callerIdentity)) {
+                    Log.w(TAG, "[DiscoveryProviderManager] scan permission revoked "
+                            + "- not forwarding results");
+                    try {
+                        record.getScanListener().onError(ScanCallback.ERROR_PERMISSION_DENIED);
+                    } catch (RemoteException e) {
+                        Log.w(TAG, "DiscoveryProviderManager failed to report error.", e);
+                    }
+                    return;
+                }
+
+                try {
+                    record.getScanListener().onError(errorCode);
+                } catch (RemoteException e) {
+                    Log.w(TAG, "DiscoveryProviderManager failed to report onError.", e);
+                }
+            }
+        }
+    }
+
     public DiscoveryProviderManager(Context context, Injector injector) {
         mContext = context;
         mBleDiscoveryProvider = new BleDiscoveryProvider(mContext, injector);
