@@ -6583,6 +6583,163 @@ cc_library_shared {
     },
 }
 
+// GN: //components/cronet/android:cronet__testing
+cc_library_shared {
+    name: "cronet_aml_components_cronet_android_cronet__testing",
+    srcs: [
+        ":cronet_aml_buildtools_third_party_libc___libc____testing",
+        ":cronet_aml_buildtools_third_party_libc__abi_libc__abi__testing",
+        ":cronet_aml_components_cronet_android_cronet_static__testing",
+        ":cronet_aml_components_cronet_cronet_common__testing",
+        ":cronet_aml_components_cronet_metrics_util__testing",
+        ":cronet_aml_components_metrics_library_support__testing",
+        "components/cronet/android/cronet_jni.cc",
+    ],
+    shared_libs: [
+        "libandroid",
+        "liblog",
+        "libz",
+    ],
+    static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc__testing",
+        "cronet_aml_base_base__testing",
+        "cronet_aml_base_base_static__testing",
+        "cronet_aml_base_third_party_double_conversion_double_conversion__testing",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations__testing",
+        "cronet_aml_components_prefs_prefs__testing",
+        "cronet_aml_crypto_crypto__testing",
+        "cronet_aml_net_net__testing",
+        "cronet_aml_net_preload_decoder__testing",
+        "cronet_aml_net_third_party_quiche_quiche__testing",
+        "cronet_aml_net_uri_template__testing",
+        "cronet_aml_third_party_boringssl_boringssl__testing",
+        "cronet_aml_third_party_brotli_common__testing",
+        "cronet_aml_third_party_brotli_dec__testing",
+        "cronet_aml_third_party_icu_icui18n__testing",
+        "cronet_aml_third_party_icu_icuuc_private__testing",
+        "cronet_aml_third_party_libevent_libevent__testing",
+        "cronet_aml_third_party_modp_b64_modp_b64__testing",
+        "cronet_aml_third_party_protobuf_protobuf_lite__testing",
+        "cronet_aml_url_url__testing",
+    ],
+    generated_headers: [
+        "cronet_aml_base_debugging_buildflags__testing",
+        "cronet_aml_base_logging_buildflags__testing",
+        "cronet_aml_build_chromeos_buildflags__testing",
+        "cronet_aml_components_cronet_android_buildflags__testing",
+        "cronet_aml_components_cronet_android_cronet_jni_headers__testing",
+        "cronet_aml_components_cronet_android_cronet_jni_registration__testing",
+        "cronet_aml_components_cronet_cronet_buildflags__testing",
+        "cronet_aml_components_cronet_cronet_version_header_action__testing",
+        "cronet_aml_third_party_metrics_proto_metrics_proto__testing_gen_headers",
+        "cronet_aml_url_buildflags__testing",
+    ],
+    export_generated_headers: [
+        "cronet_aml_base_debugging_buildflags__testing",
+        "cronet_aml_base_logging_buildflags__testing",
+        "cronet_aml_build_chromeos_buildflags__testing",
+        "cronet_aml_components_cronet_android_buildflags__testing",
+        "cronet_aml_components_cronet_android_cronet_jni_headers__testing",
+        "cronet_aml_components_cronet_android_cronet_jni_registration__testing",
+        "cronet_aml_components_cronet_cronet_buildflags__testing",
+        "cronet_aml_components_cronet_cronet_version_header_action__testing",
+        "cronet_aml_third_party_metrics_proto_metrics_proto__testing_gen_headers",
+        "cronet_aml_url_buildflags__testing",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
+        "-DGOOGLE_PROTOBUF_NO_RTTI",
+        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
+        "-DHAVE_PTHREAD",
+        "-DHAVE_SYS_UIO_H",
+        "-DNDEBUG",
+        "-DNO_UNWIND_TABLES",
+        "-DNVALGRIND",
+        "-DOFFICIAL_BUILD",
+        "-D_FORTIFY_SOURCE=2",
+        "-D_GNU_SOURCE",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D__STDC_CONSTANT_MACROS",
+        "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fno-asynchronous-unwind-tables",
+        "-fno-unwind-tables",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "net/third_party/quiche/overrides/",
+        "net/third_party/quiche/src/",
+        "net/third_party/quiche/src/quiche/common/platform/default/",
+        "third_party/abseil-cpp/",
+        "third_party/boringssl/src/include/",
+        "third_party/protobuf/src/",
+    ],
+    cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+        "-Wl,--script,external/cronet/base/android/library_loader/anchor_functions.lds",
+        "-Wl,-wrap,asprintf",
+        "-Wl,-wrap,calloc",
+        "-Wl,-wrap,free",
+        "-Wl,-wrap,getcwd",
+        "-Wl,-wrap,malloc",
+        "-Wl,-wrap,malloc_usable_size",
+        "-Wl,-wrap,memalign",
+        "-Wl,-wrap,posix_memalign",
+        "-Wl,-wrap,pvalloc",
+        "-Wl,-wrap,realloc",
+        "-Wl,-wrap,realpath",
+        "-Wl,-wrap,strdup",
+        "-Wl,-wrap,strndup",
+        "-Wl,-wrap,valloc",
+        "-Wl,-wrap,vasprintf",
+    ],
+    target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
+        android_x86: {
+            cflags: [
+                "-msse3",
+            ],
+        },
+        android_x86_64: {
+            cflags: [
+                "-fstack-protector",
+                "-msse3",
+            ],
+        },
+    },
+}
+
 // GN: //components/cronet/android:cronet_jni_headers
 cc_genrule {
     name: "cronet_aml_components_cronet_android_cronet_jni_headers",
@@ -7950,6 +8107,280 @@ cc_object {
     },
 }
 
+// GN: //components/cronet/android:cronet_tests__testing
+cc_library_shared {
+    name: "cronet_aml_components_cronet_android_cronet_tests__testing",
+    srcs: [
+        ":cronet_aml_buildtools_third_party_libc___libc____testing",
+        ":cronet_aml_buildtools_third_party_libc__abi_libc__abi__testing",
+        ":cronet_aml_components_cronet_cronet_common__testing",
+        ":cronet_aml_components_cronet_testing_test_support__testing",
+        ":cronet_aml_components_metrics_library_support__testing",
+        ":cronet_aml_net_simple_quic_tools__testing",
+        "components/cronet/android/test/cronet_test_jni.cc",
+        "components/cronet/android/test/cronet_test_util.cc",
+        "components/cronet/android/test/cronet_url_request_context_config_test.cc",
+        "components/cronet/android/test/cronet_url_request_test.cc",
+        "components/cronet/android/test/experimental_options_test.cc",
+        "components/cronet/android/test/mock_cert_verifier.cc",
+        "components/cronet/android/test/mock_url_request_job_factory.cc",
+        "components/cronet/android/test/native_test_server.cc",
+        "components/cronet/android/test/quic_test_server.cc",
+        "components/cronet/android/test/test_upload_data_stream_handler.cc",
+        "components/cronet/android/test/url_request_intercepting_job_factory.cc",
+    ],
+    shared_libs: [
+        "cronet_aml_components_cronet_android_cronet__testing",
+        "libandroid",
+        "liblog",
+        "libz",
+    ],
+    static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc__testing",
+        "cronet_aml_base_base__testing",
+        "cronet_aml_base_base_static__testing",
+        "cronet_aml_base_i18n__testing",
+        "cronet_aml_base_test_test_config__testing",
+        "cronet_aml_base_test_test_support__testing",
+        "cronet_aml_base_third_party_double_conversion_double_conversion__testing",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations__testing",
+        "cronet_aml_components_prefs_prefs__testing",
+        "cronet_aml_crypto_crypto__testing",
+        "cronet_aml_net_gtest_util__testing",
+        "cronet_aml_net_net__testing",
+        "cronet_aml_net_preload_decoder__testing",
+        "cronet_aml_net_test_support__testing",
+        "cronet_aml_net_third_party_quiche_quiche__testing",
+        "cronet_aml_net_third_party_quiche_quiche_tool_support__testing",
+        "cronet_aml_net_uri_template__testing",
+        "cronet_aml_testing_gtest_gtest__testing",
+        "cronet_aml_third_party_boringssl_boringssl__testing",
+        "cronet_aml_third_party_brotli_common__testing",
+        "cronet_aml_third_party_brotli_dec__testing",
+        "cronet_aml_third_party_ced_ced__testing",
+        "cronet_aml_third_party_icu_icui18n__testing",
+        "cronet_aml_third_party_icu_icuuc_private__testing",
+        "cronet_aml_third_party_libevent_libevent__testing",
+        "cronet_aml_third_party_libxml_libxml__testing",
+        "cronet_aml_third_party_libxml_libxml_utils__testing",
+        "cronet_aml_third_party_libxml_xml_reader__testing",
+        "cronet_aml_third_party_modp_b64_modp_b64__testing",
+        "cronet_aml_third_party_protobuf_protobuf_lite__testing",
+        "cronet_aml_url_url__testing",
+    ],
+    generated_headers: [
+        "cronet_aml_base_debugging_buildflags__testing",
+        "cronet_aml_base_logging_buildflags__testing",
+        "cronet_aml_build_chromeos_buildflags__testing",
+        "cronet_aml_components_cronet_android_cronet_tests_jni_headers__testing",
+        "cronet_aml_components_cronet_cronet_buildflags__testing",
+        "cronet_aml_components_cronet_cronet_version_header_action__testing",
+        "cronet_aml_third_party_metrics_proto_metrics_proto__testing_gen_headers",
+    ],
+    export_generated_headers: [
+        "cronet_aml_base_debugging_buildflags__testing",
+        "cronet_aml_base_logging_buildflags__testing",
+        "cronet_aml_build_chromeos_buildflags__testing",
+        "cronet_aml_components_cronet_android_cronet_tests_jni_headers__testing",
+        "cronet_aml_components_cronet_cronet_buildflags__testing",
+        "cronet_aml_components_cronet_cronet_version_header_action__testing",
+        "cronet_aml_third_party_metrics_proto_metrics_proto__testing_gen_headers",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
+        "-DGOOGLE_PROTOBUF_NO_RTTI",
+        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
+        "-DGTEST_API_=",
+        "-DGTEST_HAS_ABSL=1",
+        "-DGTEST_HAS_POSIX_RE=0",
+        "-DGTEST_HAS_TR1_TUPLE=0",
+        "-DGTEST_LANG_CXX11=1",
+        "-DHAVE_PTHREAD",
+        "-DHAVE_SYS_UIO_H",
+        "-DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE",
+        "-DNDEBUG",
+        "-DNO_UNWIND_TABLES",
+        "-DNVALGRIND",
+        "-DOFFICIAL_BUILD",
+        "-DUNIT_TEST",
+        "-DUSE_CHROMIUM_ICU=1",
+        "-DUSE_REMOTE_TEST_SERVER",
+        "-DU_ENABLE_DYLOAD=0",
+        "-DU_ENABLE_RESOURCE_TRACING=0",
+        "-DU_ENABLE_TRACING=1",
+        "-DU_STATIC_IMPLEMENTATION",
+        "-DU_USING_ICU_NAMESPACE=0",
+        "-D_FORTIFY_SOURCE=2",
+        "-D_GNU_SOURCE",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D__STDC_CONSTANT_MACROS",
+        "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fno-asynchronous-unwind-tables",
+        "-fno-unwind-tables",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "net/third_party/quiche/overrides/",
+        "net/third_party/quiche/src/",
+        "net/third_party/quiche/src/quiche/common/platform/default/",
+        "third_party/abseil-cpp/",
+        "third_party/boringssl/src/include/",
+        "third_party/ced/src/",
+        "third_party/googletest/custom/",
+        "third_party/googletest/src/googlemock/include/",
+        "third_party/googletest/src/googletest/include/",
+        "third_party/icu/source/common/",
+        "third_party/icu/source/i18n/",
+        "third_party/protobuf/src/",
+    ],
+    cpp_std: "c++17",
+    ldflags: [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-Wl,--icf=all",
+        "-Wl,--script,external/cronet/base/android/library_loader/anchor_functions.lds",
+        "-Wl,-wrap,asprintf",
+        "-Wl,-wrap,calloc",
+        "-Wl,-wrap,free",
+        "-Wl,-wrap,getcwd",
+        "-Wl,-wrap,malloc",
+        "-Wl,-wrap,malloc_usable_size",
+        "-Wl,-wrap,memalign",
+        "-Wl,-wrap,posix_memalign",
+        "-Wl,-wrap,pvalloc",
+        "-Wl,-wrap,realloc",
+        "-Wl,-wrap,realpath",
+        "-Wl,-wrap,strdup",
+        "-Wl,-wrap,strndup",
+        "-Wl,-wrap,valloc",
+        "-Wl,-wrap,vasprintf",
+    ],
+    stem: "libcronet_tests",
+    target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
+        android_x86: {
+            cflags: [
+                "-msse3",
+            ],
+        },
+        android_x86_64: {
+            cflags: [
+                "-fstack-protector",
+                "-msse3",
+            ],
+        },
+    },
+}
+
+// GN: //components/cronet/android:cronet_tests_jni_headers__testing
+cc_genrule {
+    name: "cronet_aml_components_cronet_android_cronet_tests_jni_headers__testing",
+    srcs: [
+        "components/cronet/android/test/javatests/src/org/chromium/net/CronetUrlRequestContextTest.java",
+        "components/cronet/android/test/javatests/src/org/chromium/net/CronetUrlRequestTest.java",
+        "components/cronet/android/test/javatests/src/org/chromium/net/ExperimentalOptionsTest.java",
+        "components/cronet/android/test/src/org/chromium/net/CronetTestUtil.java",
+        "components/cronet/android/test/src/org/chromium/net/MockCertVerifier.java",
+        "components/cronet/android/test/src/org/chromium/net/MockUrlRequestJobFactory.java",
+        "components/cronet/android/test/src/org/chromium/net/NativeTestServer.java",
+        "components/cronet/android/test/src/org/chromium/net/QuicTestServer.java",
+        "components/cronet/android/test/src/org/chromium/net/TestUploadDataStreamHandler.java",
+    ],
+    cmd: "$(location base/android/jni_generator/jni_generator.py) --ptr_type " +
+         "long " +
+         "--output_dir " +
+         "$(genDir)/components/cronet/android/cronet_tests_jni_headers " +
+         "--includes " +
+         "base/android/jni_generator/jni_generator_helper.h " +
+         "--use_proxy_hash " +
+         "--output_name " +
+         "CronetUrlRequestContextTest_jni.h " +
+         "--output_name " +
+         "CronetUrlRequestTest_jni.h " +
+         "--output_name " +
+         "ExperimentalOptionsTest_jni.h " +
+         "--output_name " +
+         "CronetTestUtil_jni.h " +
+         "--output_name " +
+         "MockCertVerifier_jni.h " +
+         "--output_name " +
+         "MockUrlRequestJobFactory_jni.h " +
+         "--output_name " +
+         "NativeTestServer_jni.h " +
+         "--output_name " +
+         "QuicTestServer_jni.h " +
+         "--output_name " +
+         "TestUploadDataStreamHandler_jni.h " +
+         "--input_file " +
+         "$(location components/cronet/android/test/javatests/src/org/chromium/net/CronetUrlRequestContextTest.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/javatests/src/org/chromium/net/CronetUrlRequestTest.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/javatests/src/org/chromium/net/ExperimentalOptionsTest.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/src/org/chromium/net/CronetTestUtil.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/src/org/chromium/net/MockCertVerifier.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/src/org/chromium/net/MockUrlRequestJobFactory.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/src/org/chromium/net/NativeTestServer.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/src/org/chromium/net/QuicTestServer.java) " +
+         "--input_file " +
+         "$(location components/cronet/android/test/src/org/chromium/net/TestUploadDataStreamHandler.java)",
+    out: [
+        "components/cronet/android/cronet_tests_jni_headers/CronetTestUtil_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/CronetUrlRequestContextTest_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/CronetUrlRequestTest_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/ExperimentalOptionsTest_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/MockCertVerifier_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/MockUrlRequestJobFactory_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/NativeTestServer_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/QuicTestServer_jni.h",
+        "components/cronet/android/cronet_tests_jni_headers/TestUploadDataStreamHandler_jni.h",
+    ],
+    tool_files: [
+        "base/android/jni_generator/android_jar.classes",
+        "base/android/jni_generator/jni_generator.py",
+        "build/android/gyp/util/__init__.py",
+        "build/android/gyp/util/build_utils.py",
+        "build/gn_helpers.py",
+    ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+}
+
 // GN: //components/cronet/android:cronet_unittests_android__library__testing
 cc_library_shared {
     name: "cronet_aml_components_cronet_android_cronet_unittests_android__library__testing",
@@ -9018,6 +9449,142 @@ cc_object {
         "buildtools/third_party/libc++abi/trunk/include",
         "third_party/abseil-cpp/",
         "third_party/boringssl/src/include/",
+    ],
+    cpp_std: "c++17",
+    target: {
+        android_arm: {
+            cflags: [
+                "-fstack-protector",
+            ],
+        },
+        android_arm64: {
+            cflags: [
+                "-fstack-protector",
+                "-mno-outline",
+                "-mno-outline-atomics",
+            ],
+        },
+        android_x86: {
+            cflags: [
+                "-msse3",
+            ],
+        },
+        android_x86_64: {
+            cflags: [
+                "-fstack-protector",
+                "-msse3",
+            ],
+        },
+    },
+}
+
+// GN: //components/cronet/testing:test_support__testing
+cc_object {
+    name: "cronet_aml_components_cronet_testing_test_support__testing",
+    srcs: [
+        "components/cronet/testing/test_server/test_server.cc",
+    ],
+    shared_libs: [
+        "libandroid",
+        "liblog",
+        "libz",
+    ],
+    static_libs: [
+        "cronet_aml_base_allocator_partition_allocator_partition_alloc__testing",
+        "cronet_aml_base_base__testing",
+        "cronet_aml_base_base_static__testing",
+        "cronet_aml_base_i18n__testing",
+        "cronet_aml_base_test_test_config__testing",
+        "cronet_aml_base_test_test_support__testing",
+        "cronet_aml_base_third_party_double_conversion_double_conversion__testing",
+        "cronet_aml_base_third_party_dynamic_annotations_dynamic_annotations__testing",
+        "cronet_aml_crypto_crypto__testing",
+        "cronet_aml_net_gtest_util__testing",
+        "cronet_aml_net_net__testing",
+        "cronet_aml_net_preload_decoder__testing",
+        "cronet_aml_net_test_support__testing",
+        "cronet_aml_net_third_party_quiche_quiche__testing",
+        "cronet_aml_net_third_party_quiche_quiche_tool_support__testing",
+        "cronet_aml_net_uri_template__testing",
+        "cronet_aml_testing_gtest_gtest__testing",
+        "cronet_aml_third_party_boringssl_boringssl__testing",
+        "cronet_aml_third_party_brotli_common__testing",
+        "cronet_aml_third_party_brotli_dec__testing",
+        "cronet_aml_third_party_ced_ced__testing",
+        "cronet_aml_third_party_icu_icui18n__testing",
+        "cronet_aml_third_party_icu_icuuc_private__testing",
+        "cronet_aml_third_party_libevent_libevent__testing",
+        "cronet_aml_third_party_libxml_libxml__testing",
+        "cronet_aml_third_party_libxml_libxml_utils__testing",
+        "cronet_aml_third_party_libxml_xml_reader__testing",
+        "cronet_aml_third_party_modp_b64_modp_b64__testing",
+        "cronet_aml_third_party_protobuf_protobuf_lite__testing",
+        "cronet_aml_url_url__testing",
+    ],
+    defaults: [
+        "cronet_aml_defaults",
+    ],
+    cflags: [
+        "-DANDROID",
+        "-DANDROID_NDK_VERSION_ROLL=r23_1",
+        "-DCR_CLANG_REVISION=\"llvmorg-16-init-6578-g0d30e92f-2\"",
+        "-DCR_LIBCXX_REVISION=64d36e572d3f9719c5d75011a718f33f11126851",
+        "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+        "-DGOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0",
+        "-DGOOGLE_PROTOBUF_NO_RTTI",
+        "-DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER",
+        "-DGTEST_API_=",
+        "-DGTEST_HAS_ABSL=1",
+        "-DGTEST_HAS_POSIX_RE=0",
+        "-DGTEST_HAS_TR1_TUPLE=0",
+        "-DGTEST_LANG_CXX11=1",
+        "-DHAVE_PTHREAD",
+        "-DHAVE_SYS_UIO_H",
+        "-DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE",
+        "-DNDEBUG",
+        "-DNO_UNWIND_TABLES",
+        "-DNVALGRIND",
+        "-DOFFICIAL_BUILD",
+        "-DUNIT_TEST",
+        "-DUSE_CHROMIUM_ICU=1",
+        "-DUSE_REMOTE_TEST_SERVER",
+        "-DU_ENABLE_DYLOAD=0",
+        "-DU_ENABLE_RESOURCE_TRACING=0",
+        "-DU_ENABLE_TRACING=1",
+        "-DU_STATIC_IMPLEMENTATION",
+        "-DU_USING_ICU_NAMESPACE=0",
+        "-D_FORTIFY_SOURCE=2",
+        "-D_GNU_SOURCE",
+        "-D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+        "-D__STDC_CONSTANT_MACROS",
+        "-D__STDC_FORMAT_MACROS",
+        "-Oz",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fno-asynchronous-unwind-tables",
+        "-fno-unwind-tables",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-g1",
+    ],
+    local_include_dirs: [
+        "./",
+        "buildtools/third_party/libc++/",
+        "buildtools/third_party/libc++/trunk/include",
+        "buildtools/third_party/libc++abi/trunk/include",
+        "net/third_party/quiche/overrides/",
+        "net/third_party/quiche/src/",
+        "net/third_party/quiche/src/quiche/common/platform/default/",
+        "third_party/abseil-cpp/",
+        "third_party/boringssl/src/include/",
+        "third_party/ced/src/",
+        "third_party/googletest/custom/",
+        "third_party/googletest/src/googlemock/include/",
+        "third_party/googletest/src/googletest/include/",
+        "third_party/icu/source/common/",
+        "third_party/icu/source/i18n/",
+        "third_party/protobuf/src/",
     ],
     cpp_std: "c++17",
     target: {
