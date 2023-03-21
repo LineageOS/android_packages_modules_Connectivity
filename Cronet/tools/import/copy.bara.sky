@@ -20,6 +20,7 @@ common_excludes = [
     # Exclude existing *OWNERS files
     "**/*OWNERS",
     "**/.git/**",
+    "**/.gitignore",
 ]
 
 cronet_origin_files = glob(
