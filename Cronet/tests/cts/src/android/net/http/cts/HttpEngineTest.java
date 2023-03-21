@@ -33,6 +33,7 @@ import android.net.Network;
 import android.net.http.ConnectionMigrationOptions;
 import android.net.http.DnsOptions;
 import android.net.http.HttpEngine;
+import android.net.http.QuicOptions;
 import android.net.http.UrlRequest;
 import android.net.http.UrlResponseInfo;
 import android.net.http.cts.util.HttpCtsTestServer;
@@ -111,8 +112,8 @@ public class HttpEngineTest {
         mEngine =
                 mEngineBuilder
                         .setStoragePath(mContext.getApplicationInfo().dataDir)
-                        .setEnableHttpCache(HttpEngine.Builder.HTTP_CACHE_DISK,
-                                            /* maxSize */ 100 * 1024)
+                        .setEnableHttpCache(
+                                HttpEngine.Builder.HTTP_CACHE_DISK, /* maxSize */ 100 * 1024)
                         .build();
 
         UrlRequest.Builder builder =
@@ -259,9 +260,7 @@ public class HttpEngineTest {
     private static String extractUserAgent(String userAgentResponseBody) {
         // If someone wants to be evil and have the title HTML tag a part of the user agent,
         // they'll have to fix this method :)
-        return userAgentResponseBody
-                .replaceFirst(".*<title>", "")
-                .replaceFirst("</title>.*", "");
+        return userAgentResponseBody.replaceFirst(".*<title>", "").replaceFirst("</title>.*", "");
     }
 
     @Test
@@ -338,5 +337,37 @@ public class HttpEngineTest {
     @Test
     public void getVersionString_notEmpty() {
         assertThat(HttpEngine.getVersionString()).isNotEmpty();
+    }
+
+    @Test
+    public void testHttpEngine_SetQuicOptions_RequestSucceedsWithQuic() throws Exception {
+        QuicOptions options = new QuicOptions.Builder().build();
+        mEngine = mEngineBuilder
+                .setEnableQuic(true)
+                .addQuicHint(HOST, 443, 443)
+                .setQuicOptions(options)
+                .build();
+
+        // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
+        // We send multiple requests to reduce the flakiness of the test.
+        boolean quicWasUsed = false;
+        for (int i = 0; i < 5; i++) {
+            mCallback = new TestUrlRequestCallback();
+            UrlRequest.Builder builder =
+                    mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
+            mRequest = builder.build();
+            mRequest.start();
+            mCallback.blockForDone();
+
+            quicWasUsed = isQuic(mCallback.mResponseInfo.getNegotiatedProtocol());
+            if (quicWasUsed) {
+                break;
+            }
+        }
+
+        assertTrue(quicWasUsed);
+        // This tests uses a non-hermetic server. Instead of asserting, assume the next callback.
+        // This way, if the request were to fail, the test would just be skipped instead of failing.
+        assumeOKStatusCode(mCallback.mResponseInfo);
     }
 }
