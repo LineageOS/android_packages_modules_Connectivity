@@ -60,8 +60,13 @@ setup_folder_origin() {
     mkdir -p "${COPYBARA_FOLDER_ORIGIN}"
     cd "${COPYBARA_FOLDER_ORIGIN}"
 
-    # For this to work _new_rev must be a branch or a tag.
-    git clone --depth=1 --branch "${_new_rev}" https://chromium.googlesource.com/chromium/src.git
+    if [ -d src ]; then
+        (cd src && git fetch --tags && git checkout "${_new_rev}")
+    else
+        # For this to work _new_rev must be a branch or a tag.
+        git clone --depth=1 --branch "${_new_rev}" https://chromium.googlesource.com/chromium/src.git
+    fi
+
 
     cat <<EOF >.gclient
 solutions = [
