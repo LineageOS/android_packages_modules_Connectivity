@@ -475,8 +475,7 @@ class Module(object):
     self.processor_class = None
     self.sdk_version = None
     self.javacflags = set()
-    self.license_kinds = set()
-    self.license_text = set()
+    self.c_std = None
     self.default_applicable_licenses = set()
 
   def to_string(self, output):
@@ -534,8 +533,7 @@ class Module(object):
     self._output_field(output, 'processor_class')
     self._output_field(output, 'sdk_version')
     self._output_field(output, 'javacflags')
-    self._output_field(output, 'license_kinds')
-    self._output_field(output, 'license_text')
+    self._output_field(output, 'c_std')
     self._output_field(output, 'default_applicable_licenses')
     if self.rtti:
       self._output_field(output, 'rtti')
@@ -1757,6 +1755,7 @@ def create_blueprint_for_targets(gn, targets, test_targets):
   defaults = Module('cc_defaults', defaults_module, '//gn:default_deps')
   defaults.cflags = [
       '-DGOOGLE_PROTOBUF_NO_RTTI',
+      '-DBORINGSSL_SHARED_LIBRARY',
       '-Wno-error=return-type',
       '-Wno-non-virtual-dtor',
       '-Wno-macro-redefined',
@@ -1770,6 +1769,7 @@ def create_blueprint_for_targets(gn, targets, test_targets):
       '-fPIC',
       '-Wno-c++11-narrowing',
   ]
+  defaults.c_std = 'gnu11'
   # Chromium builds do not add a dependency for headers found inside the
   # sysroot, so they are added globally via defaults.
   defaults.target['android'].header_libs = [
