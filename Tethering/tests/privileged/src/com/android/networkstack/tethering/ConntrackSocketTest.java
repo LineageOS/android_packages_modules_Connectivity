@@ -80,7 +80,7 @@ public class ConntrackSocketTest {
         // Looper must be prepared here since AndroidJUnitRunner runs tests on separate threads.
         if (Looper.myLooper() == null) Looper.prepare();
 
-        mDeps = new OffloadHardwareInterface.Dependencies(mLog);
+        mDeps = new OffloadHardwareInterface.Dependencies(mHandler, mLog);
         mOffloadHw = new OffloadHardwareInterface(mHandler, mLog, mDeps);
     }
 
