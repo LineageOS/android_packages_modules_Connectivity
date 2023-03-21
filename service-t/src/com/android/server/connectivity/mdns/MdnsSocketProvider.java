@@ -211,6 +211,12 @@ public class MdnsSocketProvider {
             tetheringManager.unregisterTetheringEventCallback(mTetheringEventCallback);
 
             mHandler.post(mNetlinkMonitor::stop);
+            // Clear all saved status.
+            mActiveNetworksLinkProperties.clear();
+            mNetworkSockets.clear();
+            mTetherInterfaceSockets.clear();
+            mLocalOnlyInterfaces.clear();
+            mTetheredInterfaces.clear();
             mMonitoringSockets = false;
         }
     }
