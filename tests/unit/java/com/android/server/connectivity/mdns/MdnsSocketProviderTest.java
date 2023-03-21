@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
@@ -101,7 +102,7 @@ public class MdnsSocketProviderTest {
             doCallRealMethod().when(mContext).getSystemService(TetheringManager.class);
         }
         doReturn(true).when(mDeps).canScanOnInterface(any());
-        doReturn(mTestNetworkIfaceWrapper).when(mDeps).getNetworkInterfaceByName(TEST_IFACE_NAME);
+        doReturn(mTestNetworkIfaceWrapper).when(mDeps).getNetworkInterfaceByName(anyString());
         doReturn(mLocalOnlyIfaceWrapper).when(mDeps)
                 .getNetworkInterfaceByName(LOCAL_ONLY_IFACE_NAME);
         doReturn(mTetheredIfaceWrapper).when(mDeps).getNetworkInterfaceByName(TETHERED_IFACE_NAME);
@@ -353,5 +354,56 @@ public class MdnsSocketProviderTest {
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         verify(mCm, times(2)).unregisterNetworkCallback(any(NetworkCallback.class));
         verify(mTm, times(2)).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
+    }
+
+    @Test
+    public void testLinkPropertiesAreClearedAfterStopMonitoringSockets() {
+        startMonitoringSockets();
+
+        // Request a socket with null network.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        mHandler.post(() -> mSocketProvider.requestSocket(null, testCallback));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        testCallback.expectedNoCallback();
+
+        // Notify a LinkPropertiesChanged with TEST_NETWORK.
+        final LinkProperties testLp = new LinkProperties();
+        testLp.setInterfaceName(TEST_IFACE_NAME);
+        testLp.setLinkAddresses(List.of(LINKADDRV4));
+        mHandler.post(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mTestNetworkIfaceWrapper, times(1)).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
+
+        // Try to stop monitoring and unrequest the socket.
+        mHandler.post(mSocketProvider::requestStopWhenInactive);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        mHandler.post(()-> mSocketProvider.unrequestSocket(testCallback));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        testCallback.expectedInterfaceDestroyedForNetwork(TEST_NETWORK);
+        verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
+        verify(mTm, times(1)).unregisterTetheringEventCallback(any());
+
+        // Start sockets monitoring and request a socket again. Expected no socket created callback
+        // because all saved LinkProperties has been cleared.
+        mHandler.post(mSocketProvider::startMonitoringSockets);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mCm, times(2)).registerNetworkCallback(any(), any(NetworkCallback.class), any());
+        verify(mTm, times(2)).registerTetheringEventCallback(
+                any(), any(TetheringEventCallback.class));
+        mHandler.post(() -> mSocketProvider.requestSocket(null, testCallback));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        testCallback.expectedNoCallback();
+
+        // Notify a LinkPropertiesChanged with another network.
+        final LinkProperties otherLp = new LinkProperties();
+        final LinkAddress otherAddress = new LinkAddress("192.0.2.1/24");
+        final Network otherNetwork = new Network(456);
+        otherLp.setInterfaceName("test2");
+        otherLp.setLinkAddresses(List.of(otherAddress));
+        mHandler.post(() -> mNetworkCallback.onLinkPropertiesChanged(otherNetwork, otherLp));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mTestNetworkIfaceWrapper, times(2)).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(otherNetwork, List.of(otherAddress));
     }
 }
