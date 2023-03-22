@@ -361,4 +361,30 @@ public final class TetheringMetricsTest {
                 UserType.USER_SETTINGS, wifiTetheringUpstreamEvents,
                 currentTimeMillis() - wifiTetheringStartTime);
     }
+
+    @Test
+    public void testSwitchingMultiUpstreams() throws Exception {
+        mTetheringMetrics.createBuilder(TETHERING_WIFI, SETTINGS_PKG);
+        final long wifiTetheringStartTime = currentTimeMillis();
+        incrementCurrentTime(1 * SECOND_IN_MILLIS);
+        mTetheringMetrics.maybeUpdateUpstreamType(buildUpstreamState(TRANSPORT_WIFI));
+        final long wifiDuration = 5 * SECOND_IN_MILLIS;
+        incrementCurrentTime(wifiDuration);
+        mTetheringMetrics.maybeUpdateUpstreamType(buildUpstreamState(TRANSPORT_BLUETOOTH));
+        final long bluetoothDuration = 15 * SECOND_IN_MILLIS;
+        incrementCurrentTime(bluetoothDuration);
+        mTetheringMetrics.maybeUpdateUpstreamType(buildUpstreamState(TRANSPORT_CELLULAR));
+        final long celltoothDuration = 20 * SECOND_IN_MILLIS;
+        incrementCurrentTime(celltoothDuration);
+        updateErrorAndSendReport(TETHERING_WIFI, TETHER_ERROR_NO_ERROR);
+
+        UpstreamEvents.Builder upstreamEvents = UpstreamEvents.newBuilder();
+        addUpstreamEvent(upstreamEvents, UpstreamType.UT_WIFI, wifiDuration);
+        addUpstreamEvent(upstreamEvents, UpstreamType.UT_BLUETOOTH, bluetoothDuration);
+        addUpstreamEvent(upstreamEvents, UpstreamType.UT_CELLULAR, celltoothDuration);
+
+        verifyReport(DownstreamType.DS_TETHERING_WIFI, ErrorCode.EC_NO_ERROR,
+                UserType.USER_SETTINGS, upstreamEvents,
+                currentTimeMillis() - wifiTetheringStartTime);
+    }
 }

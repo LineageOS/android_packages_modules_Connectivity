@@ -26,6 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -48,6 +49,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 public class HttpEngineTest {
@@ -180,6 +186,38 @@ public class HttpEngineTest {
         // The former doesn't make sense for a CTS test as it would depend on the underlying
         // implementation. The latter is something we should support once we write a proper test
         // server.
+    }
+
+    private byte[] generateSha256() {
+        byte[] sha256 = new byte[32];
+        Arrays.fill(sha256, (byte) 58);
+        return sha256;
+    }
+
+    private Instant instantInFuture(int secondsIntoFuture) {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.SECOND, secondsIntoFuture);
+        return cal.getTime().toInstant();
+    }
+
+    @Test
+    public void testHttpEngine_AddPublicKeyPins() {
+        // CtsTestServer, when set in SslMode.NO_CLIENT_AUTH (required to trigger
+        // certificate verification, needed by this test), uses a certificate that
+        // doesn't match the hostname. For this reason, CtsTestServer cannot be used
+        // by this test.
+        Instant expirationInstant = instantInFuture(/* secondsIntoFuture */ 100);
+        boolean includeSubdomains = true;
+        Set<byte[]> pinsSha256 = Set.of(generateSha256());
+        mEngine = mEngineBuilder.addPublicKeyPins(
+                HOST, pinsSha256, includeSubdomains, expirationInstant).build();
+
+        UrlRequest.Builder builder =
+                mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
+        mRequest = builder.build();
+        mRequest.start();
+        mCallback.expectCallback(ResponseStep.ON_FAILED);
+        assertNotNull("Expected an error", mCallback.mError);
     }
 
     @Test
@@ -369,5 +407,21 @@ public class HttpEngineTest {
         // This tests uses a non-hermetic server. Instead of asserting, assume the next callback.
         // This way, if the request were to fail, the test would just be skipped instead of failing.
         assumeOKStatusCode(mCallback.mResponseInfo);
+    }
+
+    @Test
+    public void testHttpEngine_enableBrotli_brotliAdvertised() {
+        mEngine = mEngineBuilder.setEnableBrotli(true).build();
+        mRequest =
+                mEngine.newUrlRequestBuilder(
+                        mTestServer.getEchoHeadersUrl(), mCallback.getExecutor(), mCallback)
+                        .build();
+        mRequest.start();
+
+        mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertThat(info.getHeaders().getAsMap().get("x-request-header-Accept-Encoding").toString())
+                .contains("br");
+        assertOKStatusCode(info);
     }
 }
