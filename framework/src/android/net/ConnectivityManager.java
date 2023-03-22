@@ -1438,6 +1438,24 @@ public class ConnectivityManager {
     }
 
     /**
+     * Returns whether the specified UID is blocked due to disallowed transports.
+     *
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    @SystemApi(client = MODULE_LIBRARIES)
+    public boolean isUidCurrentlyDisallowedByPolicy(int uid) {
+        try {
+            return mService.isUidCurrentlyDisallowedByPolicy(uid);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Informs ConnectivityService of whether the legacy lockdown VPN, as implemented by
      * LockdownVpnTracker, is in use. This is deprecated for new devices starting from Android 12
      * but is still supported for backwards compatibility.

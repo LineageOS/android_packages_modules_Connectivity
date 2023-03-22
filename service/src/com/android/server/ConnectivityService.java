@@ -2226,7 +2226,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     /** Check if UID is currently disallowed general network access based on policies. */
-    private boolean isUidCurrentlyDisallowedByPolicy(int uid) {
+    @Override
+    public boolean isUidCurrentlyDisallowedByPolicy(int uid) {
         return mLastDisallowedUidsDenylist.contains(uid);
     }
 
