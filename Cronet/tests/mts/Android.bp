@@ -40,9 +40,11 @@ android_test {
         "CronetTestJavaDefaults",
         "mts-target-sdk-version-current",
      ],
-     sdk_version: "test_current",
      static_libs: ["NetHttpTestsLibPreJarJar"],
      jarjar_rules: ":framework-tethering-jarjar-rules",
+     jni_libs: [
+        "//external/cronet:cronet_aml_components_cronet_android_cronet_tests__testing"
+     ],
      test_suites: [
          "general-tests",
          "mts-tethering",
