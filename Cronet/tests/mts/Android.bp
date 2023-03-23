@@ -36,7 +36,7 @@ java_genrule {
 
 android_library {
     name: "NetHttpTestsLibPreJarJar",
-    srcs: [":cronet_aml_javatests_sources"],
+    srcs: ["//external/cronet:cronet_aml_javatests_sources"],
     sdk_version: "module_current",
     min_sdk_version: "30",
     static_libs: [
@@ -61,7 +61,7 @@ android_test {
      static_libs: ["NetHttpTestsLibPreJarJar"],
      jarjar_rules: ":net-http-test-jarjar-rules",
      jni_libs: [
-        "cronet_aml_components_cronet_android_cronet_tests__testing"
+        "//external/cronet:cronet_aml_components_cronet_android_cronet_tests__testing"
      ],
      test_suites: [
          "general-tests",
