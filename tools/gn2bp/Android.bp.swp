@@ -23,6 +23,9 @@ package {
     default_applicable_licenses: [
         "external_cronet_license",
     ],
+    default_visibility: [
+        ":__subpackages__",
+    ],
 }
 
 // GN: //components/cronet/android:cronet_api_java
@@ -53,6 +56,9 @@ filegroup {
         "components/cronet/android/api/src/android/net/http/UploadDataSink.java",
         "components/cronet/android/api/src/android/net/http/UrlRequest.java",
         "components/cronet/android/api/src/android/net/http/UrlResponseInfo.java",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
     ],
 }
 
@@ -6556,6 +6562,9 @@ cc_library_shared {
         "-Wl,-wrap,vasprintf",
     ],
     stem: "libcronet.108.0.5359.128",
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
     target: {
         android_arm: {
             cflags: [
@@ -8274,6 +8283,9 @@ cc_library_shared {
         "-Wl,-wrap,vasprintf",
     ],
     stem: "libcronet_tests",
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
     target: {
         android_arm: {
             cflags: [
@@ -8549,6 +8561,9 @@ cc_library_shared {
         "-Wl,-wrap,vasprintf",
     ],
     stem: "libcronet_unittests_android__library",
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
     target: {
         android_arm: {
             cflags: [
@@ -11183,6 +11198,9 @@ java_library {
         "-Aorg.chromium.chrome.skipGenJni",
         "-Apackage_prefix=android.net.http.internal",
     ],
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
 }
 
 // GN: //gn:java
@@ -11459,6 +11477,9 @@ java_library {
     sdk_version: "module_current",
     javacflags: [
         "-Aorg.chromium.chrome.skipGenJni",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
     ],
 }
 
@@ -16147,6 +16168,9 @@ cc_library_shared {
         "-Wl,-wrap,vasprintf",
     ],
     stem: "libnet_unittests__library",
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
     target: {
         android_arm: {
             cflags: [
