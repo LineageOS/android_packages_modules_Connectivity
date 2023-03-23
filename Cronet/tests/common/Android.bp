@@ -38,6 +38,6 @@ android_test {
     jarjar_rules: ":net-http-test-jarjar-rules",
     compile_multilib: "both", // Include both the 32 and 64 bit versions
     jni_libs: [
-       "//external/cronet:cronet_aml_components_cronet_android_cronet_tests__testing"
+       "cronet_aml_components_cronet_android_cronet_tests__testing"
     ],
 }
