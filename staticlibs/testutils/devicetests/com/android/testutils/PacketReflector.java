@@ -20,6 +20,7 @@ import static android.system.OsConstants.ICMP6_ECHO_REPLY;
 import static android.system.OsConstants.ICMP6_ECHO_REQUEST;
 
 import android.annotation.NonNull;
+import android.net.TestNetworkInterface;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -28,6 +29,19 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.Objects;
 
+/**
+ * A class that echoes packets received on a {@link TestNetworkInterface} back to itself.
+ *
+ * For testing purposes, sometimes a mocked environment to simulate a simple echo from the
+ * server side is needed. This is particularly useful if the test, e.g. VpnTest, is
+ * heavily relying on the outside world.
+ *
+ * This class reads packets from the {@link FileDescriptor} of a {@link TestNetworkInterface}, and:
+ *   1. For TCP and UDP packets, simply swaps the source address and the destination
+ *      address, then send it back to the {@link FileDescriptor}.
+ *   2. For ICMP ping packets, composes a ping reply and sends it back to the sender.
+ *   3. Ignore all other packets.
+ */
 public class PacketReflector extends Thread {
 
     static final int IPV4_HEADER_LENGTH = 20;
@@ -60,6 +74,13 @@ public class PacketReflector extends Thread {
     @NonNull
     private final byte[] mBuf;
 
+    /**
+     * Construct a {@link PacketReflector} from the given {@code fd} of
+     * a {@link TestNetworkInterface}.
+     *
+     * @param fd {@link FileDescriptor} to read/write packets.
+     * @param mtu MTU of the test network.
+     */
     public PacketReflector(@NonNull FileDescriptor fd, int mtu) {
         super("PacketReflector");
         mFd = Objects.requireNonNull(fd);
