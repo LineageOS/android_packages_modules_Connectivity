@@ -1,0 +1,7 @@
+# Test file for excluded classes
+test\.jarj.rexcluded\.JarjarExcludedCla.s
+test\.jarjarexcluded\.JarjarExcludedClass\$TestInnerCl.ss
+
+# Exclude actual test files
+test\.utils\.TestUtilClassTest
+android\.net\.IpSecTransformTest
