@@ -24,6 +24,8 @@
 #   -n rev: The new revision to import.
 #   -f: Force copybara to ignore a failure to find the last imported revision.
 
+set -e -x
+
 OPTSTRING=fl:n:
 
 usage() {
