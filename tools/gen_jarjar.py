@@ -120,9 +120,11 @@ def make_jarjar_rules(args):
                         _get_toplevel_class(clazz) not in excluded_classes and
                         not any(r.fullmatch(clazz) for r in exclude_regexes)):
                     outfile.write(f'rule {clazz} {args.prefix}.@0\n')
-                    # Also include jarjar rules for unit tests of the class, so the package matches
-                    outfile.write(f'rule {clazz}Test {args.prefix}.@0\n')
-                    outfile.write(f'rule {clazz}Test$* {args.prefix}.@0\n')
+                    # Also include jarjar rules for unit tests of the class if it's not explicitly
+                    # excluded, so the package matches
+                    if not any(r.fullmatch(clazz + 'Test') for r in exclude_regexes):
+                        outfile.write(f'rule {clazz}Test {args.prefix}.@0\n')
+                        outfile.write(f'rule {clazz}Test$* {args.prefix}.@0\n')
 
 
 def _main():
