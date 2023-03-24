@@ -55,7 +55,7 @@ setup_upstream_import_branch() {
 # Arguments:
 #   new_rev, string
 #######################################
-setup_folder_origin() {
+setup_folder_origin() (
     local _new_rev=$1
     mkdir -p "${COPYBARA_FOLDER_ORIGIN}"
     cd "${COPYBARA_FOLDER_ORIGIN}"
@@ -83,9 +83,10 @@ EOF
     cd src
     # Set appropriate gclient flags to speed up syncing.
     gclient sync \
-        --no-history
-        --shallow
-}
+        --no-history \
+        --shallow \
+        --delete_unversioned_trees
+)
 
 #######################################
 # Runs the copybara import of Chromium
