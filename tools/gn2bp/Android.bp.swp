@@ -995,7 +995,6 @@ cc_library_static {
         "base/allocator/dispatcher/dispatcher.cc",
         "base/allocator/dispatcher/internal/dispatch_data.cc",
         "base/allocator/dispatcher/reentry_guard.cc",
-        "base/allocator/partition_allocator/shim/allocator_shim.cc",
         "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
         "base/android/android_hardware_buffer_compat.cc",
         "base/android/android_image_reader_compat.cc",
@@ -1567,6 +1566,11 @@ cc_library_static {
         "-Wl,-wrap,vasprintf",
     ],
     target: {
+        android: {
+            srcs: [
+                "base/allocator/partition_allocator/shim/allocator_shim.cc",
+            ],
+        },
         android_arm: {
             srcs: [
                 "base/android/reached_code_profiler.cc",
@@ -1604,6 +1608,11 @@ cc_library_static {
             cflags: [
                 "-fstack-protector",
                 "-msse3",
+            ],
+        },
+        glibc: {
+            srcs: [
+                "base/allocator/partition_allocator/shim/allocator_shim.cc",
             ],
         },
     },
@@ -1666,7 +1675,6 @@ cc_library_static {
         "base/allocator/dispatcher/dispatcher.cc",
         "base/allocator/dispatcher/internal/dispatch_data.cc",
         "base/allocator/dispatcher/reentry_guard.cc",
-        "base/allocator/partition_allocator/shim/allocator_shim.cc",
         "base/at_exit.cc",
         "base/barrier_closure.cc",
         "base/base64.cc",
@@ -2135,6 +2143,9 @@ cc_library_static {
     ],
     target: {
         android: {
+            srcs: [
+                "base/allocator/partition_allocator/shim/allocator_shim.cc",
+            ],
             shared_libs: [
                 "libandroid",
                 "liblog",
@@ -2615,9 +2626,14 @@ cc_library_static {
                 "-Wl,-wrap,vasprintf",
             ],
         },
+        glibc: {
+            srcs: [
+                "base/allocator/partition_allocator/shim/allocator_shim.cc",
+                "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_glibc.cc",
+            ],
+        },
         host: {
             srcs: [
-                "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_glibc.cc",
                 "base/base_paths_posix.cc",
                 "base/debug/stack_trace_posix.cc",
                 "base/files/file_util_linux.cc",
