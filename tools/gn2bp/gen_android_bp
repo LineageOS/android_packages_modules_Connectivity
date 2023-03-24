@@ -451,6 +451,7 @@ class Module(object):
     self.target['android_arm'] = Target('android_arm')
     self.target['android_arm64'] = Target('android_arm64')
     self.target['host'] = Target('host')
+    self.target['glibc'] = Target('glibc')
     self.stl = None
     self.cpp_std = None
     self.dist = dict()
@@ -1760,6 +1761,28 @@ def update_jni_registration_module(module, gn):
                       for source in get_non_api_java_sources(gn)
                       if source.endswith('.java')])
 
+
+def turn_off_allocator_shim_for_musl(module):
+  allocation_shim = "base/allocator/partition_allocator/shim/allocator_shim.cc"
+  allocator_shim_files = {
+    allocation_shim,
+    "base/allocator/partition_allocator/shim/allocator_shim_default_dispatch_to_glibc.cc",
+  }
+  module.srcs -= allocator_shim_files
+  for arch in module.target.values():
+    arch.srcs -= allocator_shim_files
+  module.target['android'].srcs.add(allocation_shim)
+  if gn_utils.TESTING_SUFFIX in module.name:
+    # allocator_shim_default_dispatch_to_glibc is only added to the __testing version of base
+    # since base_base__testing is compiled for host. When compiling for host. Soong compiles
+    # using glibc or musl(experimental). We currently only support compiling for glibc.
+    module.target['glibc'].srcs.update(allocator_shim_files)
+  else:
+    # allocator_shim_default_dispatch_to_glibc does not exist in the prod version of base
+    # `base_base` since this only compiles for android and bionic is used. Bionic is the equivalent
+    # of glibc but for android.
+    module.target['glibc'].srcs.add(allocation_shim)
+
 def create_blueprint_for_targets(gn, targets, test_targets):
   """Generate a blueprint for a list of GN targets."""
   blueprint = Blueprint()
@@ -1823,6 +1846,8 @@ def create_blueprint_for_targets(gn, targets, test_targets):
   for module in blueprint.modules.values():
     if 'cronet_jni_registration' in module.name:
       update_jni_registration_module(module, gn)
+    if module.name in ['cronet_aml_base_base', 'cronet_aml_base_base' + gn_utils.TESTING_SUFFIX]:
+      turn_off_allocator_shim_for_musl(module)
 
   # Merge in additional hardcoded arguments.
   for module in blueprint.modules.values():
