@@ -23,8 +23,8 @@ using aidl::android::net::connectivity::aidl::IConnectivityNative;
 
 
 static std::shared_ptr<IConnectivityNative> getBinder() {
-    static ndk::SpAIBinder sBinder = ndk::SpAIBinder(reinterpret_cast<AIBinder*>(
-        AServiceManager_getService("connectivity_native")));
+    ndk::SpAIBinder sBinder = ndk::SpAIBinder(reinterpret_cast<AIBinder*>(
+        AServiceManager_checkService("connectivity_native")));
     return aidl::android::net::connectivity::aidl::IConnectivityNative::fromBinder(sBinder);
 }
 
@@ -45,21 +45,33 @@ static int getErrno(const ::ndk::ScopedAStatus& status) {
 
 int AConnectivityNative_blockPortForBind(in_port_t port) {
     std::shared_ptr<IConnectivityNative> c = getBinder();
+    if (!c) {
+        return EAGAIN;
+    }
     return getErrno(c->blockPortForBind(port));
 }
 
 int AConnectivityNative_unblockPortForBind(in_port_t port) {
     std::shared_ptr<IConnectivityNative> c = getBinder();
+    if (!c) {
+        return EAGAIN;
+    }
     return getErrno(c->unblockPortForBind(port));
 }
 
 int AConnectivityNative_unblockAllPortsForBind() {
     std::shared_ptr<IConnectivityNative> c = getBinder();
+    if (!c) {
+        return EAGAIN;
+    }
     return getErrno(c->unblockAllPortsForBind());
 }
 
 int AConnectivityNative_getPortsBlockedForBind(in_port_t *ports, size_t *count) {
     std::shared_ptr<IConnectivityNative> c = getBinder();
+    if (!c) {
+        return EAGAIN;
+    }
     std::vector<int32_t> actualBlockedPorts;
     int err = getErrno(c->getPortsBlockedForBind(&actualBlockedPorts));
     if (err) {
