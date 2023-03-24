@@ -129,9 +129,6 @@ public class RouterAdvertisementDaemon {
         // Tethered traffic will have the hop limit properly decremented.
         // Consequently, set the hoplimit greater by one than the upstream
         // unicast hop limit.
-        //
-        // TODO: Dynamically pass down the IPV6_UNICAST_HOPS value from the
-        // upstream interface for more correct behaviour.
         static final byte DEFAULT_HOPLIMIT = 65;
 
         public boolean hasDefaultRoute;
