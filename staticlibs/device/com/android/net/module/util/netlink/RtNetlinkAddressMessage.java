@@ -17,6 +17,7 @@
 package com.android.net.module.util.netlink;
 
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_ACK;
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REPLACE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
 import android.system.OsConstants;
@@ -168,7 +169,7 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
 
         final StructNlMsgHdr nlmsghdr = new StructNlMsgHdr();
         nlmsghdr.nlmsg_type = NetlinkConstants.RTM_NEWADDR;
-        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_REPLACE | NLM_F_ACK;
         nlmsghdr.nlmsg_seq = seqNo;
 
         final RtNetlinkAddressMessage msg = new RtNetlinkAddressMessage(nlmsghdr);

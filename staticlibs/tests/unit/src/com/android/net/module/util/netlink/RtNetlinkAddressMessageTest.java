@@ -144,7 +144,7 @@ public class RtNetlinkAddressMessageTest {
                 // struct nlmsghdr
                 "48000000" +    // length = 72
                 "1400" +        // type = 20 (RTM_NEWADDR)
-                "0500" +        // flags = NLM_F_ACK | NLM_F_REQUEST
+                "0501" +        // flags = NLM_F_ACK | NLM_F_REQUEST | NLM_F_REPLACE
                 "01000000" +    // seqno = 1
                 "00000000" +    // pid = 0 (send to kernel)
                 // struct IfaddrMsg
@@ -195,7 +195,7 @@ public class RtNetlinkAddressMessageTest {
                 // struct nlmsghdr
                 "48000000" +    // length = 72
                 "1400" +        // type = 20 (RTM_NEWADDR)
-                "0500" +        // flags = NLM_F_ACK | NLM_F_REQUEST
+                "0501" +        // flags = NLM_F_ACK | NLM_F_REQUEST | NLM_F_REPLACE
                 "01000000" +    // seqno = 1
                 "00000000" +    // pid = 0 (send to kernel)
                 // struct IfaddrMsg
