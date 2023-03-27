@@ -18,6 +18,7 @@ package com.android.server.connectivity;
 
 import static android.net.NetworkAgent.CMD_START_SOCKET_KEEPALIVE;
 import static android.net.SocketKeepalive.ERROR_INVALID_SOCKET;
+import static android.net.SocketKeepalive.MIN_INTERVAL_SEC;
 import static android.net.SocketKeepalive.SUCCESS_PAUSED;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 import static android.system.OsConstants.AF_INET;
@@ -88,8 +89,8 @@ import java.util.Objects;
 public class AutomaticOnOffKeepaliveTracker {
     private static final String TAG = "AutomaticOnOffKeepaliveTracker";
     private static final int[] ADDRESS_FAMILIES = new int[] {AF_INET6, AF_INET};
-    private static final long DEFAULT_TCP_POLLING_INTERVAL_MS = 120_000L;
     private static final long LOW_TCP_POLLING_INTERVAL_MS = 1_000L;
+    private static final int ADJUST_TCP_POLLING_DELAY_MS = 2000;
     private static final String AUTOMATIC_ON_OFF_KEEPALIVE_VERSION =
             "automatic_on_off_keepalive_version";
     /**
@@ -280,12 +281,14 @@ public class AutomaticOnOffKeepaliveTracker {
         mAlarmManager = mDependencies.getAlarmManager(context);
     }
 
-    private void startTcpPollingAlarm(@NonNull final AlarmManager.OnAlarmListener listener) {
+    private void startTcpPollingAlarm(@NonNull AutomaticOnOffKeepalive ki) {
+        if (ki.mAlarmListener == null) return;
+
         final long triggerAtMillis =
-                SystemClock.elapsedRealtime() + getTcpPollingInterval();
+                mDependencies.getElapsedRealtime() + getTcpPollingIntervalMs(ki);
         // Setup a non-wake up alarm.
         mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME, triggerAtMillis, null /* tag */,
-                listener, mConnectivityServiceHandler);
+                ki.mAlarmListener, mConnectivityServiceHandler);
     }
 
     /**
@@ -322,7 +325,7 @@ public class AutomaticOnOffKeepaliveTracker {
             handleMaybeResumeKeepalive(ki);
         }
         // TODO: listen to socket status instead of periodically check.
-        startTcpPollingAlarm(ki.mAlarmListener);
+        startTcpPollingAlarm(ki);
     }
 
     /**
@@ -402,7 +405,7 @@ public class AutomaticOnOffKeepaliveTracker {
         }
         mAutomaticOnOffKeepalives.add(autoKi);
         if (STATE_ALWAYS_ON != autoKi.mAutomaticOnOffState) {
-            startTcpPollingAlarm(autoKi.mAlarmListener);
+            startTcpPollingAlarm(autoKi);
         }
     }
 
@@ -677,9 +680,15 @@ public class AutomaticOnOffKeepaliveTracker {
         }
     }
 
-    private long getTcpPollingInterval() {
+    private long getTcpPollingIntervalMs(@NonNull AutomaticOnOffKeepalive ki) {
         final boolean useLowTimer = mTestLowTcpPollingTimerUntilMs > System.currentTimeMillis();
-        return useLowTimer ? LOW_TCP_POLLING_INTERVAL_MS : DEFAULT_TCP_POLLING_INTERVAL_MS;
+        // Adjust the polling interval to be smaller than the keepalive delay to preserve
+        // some time for the system to restart the keepalive.
+        final int timer = ki.mKi.getKeepaliveIntervalSec() * 1000 - ADJUST_TCP_POLLING_DELAY_MS;
+        if (timer < MIN_INTERVAL_SEC) {
+            Log.wtf(TAG, "Unreasonably low keepalive delay: " + ki.mKi.getKeepaliveIntervalSec());
+        }
+        return useLowTimer ? LOW_TCP_POLLING_INTERVAL_MS : Math.max(timer, MIN_INTERVAL_SEC);
     }
 
     /**
@@ -785,6 +794,15 @@ public class AutomaticOnOffKeepaliveTracker {
         public boolean isFeatureEnabled(@NonNull final String name, final boolean defaultEnabled) {
             return DeviceConfigUtils.isFeatureEnabled(mContext, NAMESPACE_TETHERING, name,
                     defaultEnabled);
+        }
+
+        /**
+         * Returns milliseconds since boot, including time spent in sleep.
+         *
+         * @return elapsed milliseconds since boot.
+         */
+        public long getElapsedRealtime() {
+            return SystemClock.elapsedRealtime();
         }
     }
 }
