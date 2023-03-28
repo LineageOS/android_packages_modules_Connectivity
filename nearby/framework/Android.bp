@@ -45,6 +45,7 @@ java_library {
     srcs: [":framework-nearby-java-sources"],
     sdk_version: "module_current",
     libs: [
+        "androidx.annotation_annotation",
         "framework-annotations-lib",
         "framework-bluetooth",
     ],
