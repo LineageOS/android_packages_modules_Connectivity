@@ -52,7 +52,7 @@ static void throwIOException(JNIEnv* env, const char* msg, int error) {
 }
 
 jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv* env,
-                                                                          jobject clazz,
+                                                                          jclass clazz,
                                                                           jstring v4addr,
                                                                           jint prefixlen) {
     ScopedUtfChars address(env, v4addr);
@@ -84,7 +84,7 @@ jstring com_android_server_connectivity_ClatCoordinator_selectIpv4Address(JNIEnv
 
 // Picks a random interface ID that is checksum neutral with the IPv4 address and the NAT64 prefix.
 jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
-        JNIEnv* env, jobject clazz, jstring ifaceStr, jstring v4Str, jstring prefix64Str,
+        JNIEnv* env, jclass clazz, jstring ifaceStr, jstring v4Str, jstring prefix64Str,
         jint mark) {
     ScopedUtfChars iface(env, ifaceStr);
     ScopedUtfChars addr4(env, v4Str);
@@ -125,7 +125,7 @@ jstring com_android_server_connectivity_ClatCoordinator_generateIpv6Address(
 }
 
 static jint com_android_server_connectivity_ClatCoordinator_createTunInterface(JNIEnv* env,
-                                                                               jobject clazz,
+                                                                               jclass clazz,
                                                                                jstring tuniface) {
     ScopedUtfChars v4interface(env, tuniface);
 
@@ -152,7 +152,7 @@ static jint com_android_server_connectivity_ClatCoordinator_createTunInterface(J
     return fd;
 }
 
-static jint com_android_server_connectivity_ClatCoordinator_detectMtu(JNIEnv* env, jobject clazz,
+static jint com_android_server_connectivity_ClatCoordinator_detectMtu(JNIEnv* env, jclass clazz,
                                                                       jstring platSubnet,
                                                                       jint plat_suffix, jint mark) {
     ScopedUtfChars platSubnetStr(env, platSubnet);
@@ -174,7 +174,7 @@ static jint com_android_server_connectivity_ClatCoordinator_detectMtu(JNIEnv* en
 }
 
 static jint com_android_server_connectivity_ClatCoordinator_openPacketSocket(JNIEnv* env,
-                                                                              jobject clazz) {
+                                                                              jclass clazz) {
     // Will eventually be bound to htons(ETH_P_IPV6) protocol,
     // but only after appropriate bpf filter is attached.
     const int sock = socket(AF_PACKET, SOCK_RAW | SOCK_CLOEXEC, 0);
@@ -199,7 +199,7 @@ static jint com_android_server_connectivity_ClatCoordinator_openPacketSocket(JNI
 }
 
 static jint com_android_server_connectivity_ClatCoordinator_openRawSocket6(JNIEnv* env,
-                                                                           jobject clazz,
+                                                                           jclass clazz,
                                                                            jint mark) {
     int sock = socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_RAW);
     if (sock < 0) {
@@ -218,7 +218,7 @@ static jint com_android_server_connectivity_ClatCoordinator_openRawSocket6(JNIEn
 }
 
 static void com_android_server_connectivity_ClatCoordinator_addAnycastSetsockopt(
-        JNIEnv* env, jobject clazz, jobject javaFd, jstring addr6, jint ifindex) {
+        JNIEnv* env, jclass clazz, jobject javaFd, jstring addr6, jint ifindex) {
     int sock = netjniutils::GetNativeFileDescriptor(env, javaFd);
     if (sock < 0) {
         jniThrowExceptionFmt(env, "java/io/IOException", "Invalid file descriptor");
@@ -244,7 +244,7 @@ static void com_android_server_connectivity_ClatCoordinator_addAnycastSetsockopt
 }
 
 static void com_android_server_connectivity_ClatCoordinator_configurePacketSocket(
-        JNIEnv* env, jobject clazz, jobject javaFd, jstring addr6, jint ifindex) {
+        JNIEnv* env, jclass clazz, jobject javaFd, jstring addr6, jint ifindex) {
     ScopedUtfChars addrStr(env, addr6);
 
     int sock = netjniutils::GetNativeFileDescriptor(env, javaFd);
@@ -268,7 +268,7 @@ static void com_android_server_connectivity_ClatCoordinator_configurePacketSocke
 }
 
 static jint com_android_server_connectivity_ClatCoordinator_startClatd(
-        JNIEnv* env, jobject clazz, jobject tunJavaFd, jobject readSockJavaFd,
+        JNIEnv* env, jclass clazz, jobject tunJavaFd, jobject readSockJavaFd,
         jobject writeSockJavaFd, jstring iface, jstring pfx96, jstring v4, jstring v6) {
     ScopedUtfChars ifaceStr(env, iface);
     ScopedUtfChars pfx96Str(env, pfx96);
@@ -415,7 +415,7 @@ static void stopClatdProcess(int pid) {
     }
 }
 
-static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* env, jobject clazz,
+static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* env, jclass clazz,
                                                                       jstring iface, jstring pfx96,
                                                                       jstring v4, jstring v6,
                                                                       jint pid) {
@@ -433,7 +433,7 @@ static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* en
 }
 
 static jlong com_android_server_connectivity_ClatCoordinator_getSocketCookie(
-        JNIEnv* env, jobject clazz, jobject sockJavaFd) {
+        JNIEnv* env, jclass clazz, jobject sockJavaFd) {
     int sockFd = netjniutils::GetNativeFileDescriptor(env, sockJavaFd);
     if (sockFd < 0) {
         jniThrowExceptionFmt(env, "java/io/IOException", "Invalid socket file descriptor");
