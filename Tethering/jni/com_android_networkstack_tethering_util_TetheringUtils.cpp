@@ -67,17 +67,17 @@ static void com_android_networkstack_tethering_util_setupIcmpFilter(JNIEnv *env,
     }
 }
 
-static void com_android_networkstack_tethering_util_setupNaSocket(JNIEnv *env, jobject clazz,
+static void com_android_networkstack_tethering_util_setupNaSocket(JNIEnv *env, jclass clazz,
         jobject javaFd) {
     com_android_networkstack_tethering_util_setupIcmpFilter(env, javaFd, ND_NEIGHBOR_ADVERT);
 }
 
-static void com_android_networkstack_tethering_util_setupNsSocket(JNIEnv *env, jobject clazz,
+static void com_android_networkstack_tethering_util_setupNsSocket(JNIEnv *env, jclass clazz,
         jobject javaFd) {
     com_android_networkstack_tethering_util_setupIcmpFilter(env, javaFd, ND_NEIGHBOR_SOLICIT);
 }
 
-static void com_android_networkstack_tethering_util_setupRaSocket(JNIEnv *env, jobject clazz,
+static void com_android_networkstack_tethering_util_setupRaSocket(JNIEnv *env, jclass clazz,
         jobject javaFd, jint ifIndex) {
     static const int kLinkLocalHopLimit = 255;
 
