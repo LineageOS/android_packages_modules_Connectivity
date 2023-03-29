@@ -52,6 +52,8 @@ android_library {
         "framework-tethering.impl",
         // android.net.Network apis
         "framework-connectivity",
+        // android.net.TrafficStats apis
+        "framework-connectivity-t",
     ],
     lint: { test: true }
 }
