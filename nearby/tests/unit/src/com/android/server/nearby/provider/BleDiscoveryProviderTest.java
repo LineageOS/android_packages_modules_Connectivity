@@ -17,6 +17,7 @@
 package com.android.server.nearby.provider;
 
 import static android.bluetooth.le.ScanSettings.CALLBACK_TYPE_ALL_MATCHES;
+import static android.nearby.ScanCallback.ERROR_UNKNOWN;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -56,6 +57,8 @@ public final class BleDiscoveryProviderTest {
     private BleDiscoveryProvider mBleDiscoveryProvider;
     @Mock
     private AbstractDiscoveryProvider.Listener mListener;
+//    @Mock
+//    private BluetoothAdapter mBluetoothAdapter;
 
     @Before
     public void setup() {
@@ -68,7 +71,7 @@ public final class BleDiscoveryProviderTest {
     }
 
     @Test
-    public void test_callback() throws InterruptedException {
+    public void test_callback_found() throws InterruptedException {
         mBleDiscoveryProvider.getController().setListener(mListener);
         mBleDiscoveryProvider.onStart();
         mBleDiscoveryProvider.getScanCallback()
@@ -77,7 +80,18 @@ public final class BleDiscoveryProviderTest {
         // Wait for callback to be invoked
         Thread.sleep(500);
         verify(mListener, times(1)).onNearbyDeviceDiscovered(any());
+    }
+
+    @Test
+    public void test_callback_failed() throws InterruptedException {
+        mBleDiscoveryProvider.getController().setListener(mListener);
+        mBleDiscoveryProvider.onStart();
         mBleDiscoveryProvider.getScanCallback().onScanFailed(1);
+
+
+        // Wait for callback to be invoked
+        Thread.sleep(500);
+        verify(mListener, times(1)).onError(ERROR_UNKNOWN);
     }
 
     @Test
