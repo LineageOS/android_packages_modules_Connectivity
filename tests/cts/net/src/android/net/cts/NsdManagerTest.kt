@@ -314,6 +314,7 @@ class NsdManagerTest {
         }
 
         override fun onStopResolutionFailed(si: NsdServiceInfo, err: Int) {
+            super.onStopResolutionFailed(si, err)
             add(StopResolutionFailed(si, err))
         }
     }
@@ -983,6 +984,24 @@ class NsdManagerTest {
             nsdManager.stopServiceDiscovery(discoveryRecord)
             discoveryRecord.expectCallback<DiscoveryStopped>()
         }
+    }
+
+    @Test
+    fun testStopServiceResolutionFailedCallback() {
+        // This test requires shims supporting U+ APIs (NsdManager.stopServiceResolution)
+        assumeTrue(TestUtils.shouldTestUApis())
+
+        // It's not possible to make ResolutionListener#onStopResolutionFailed callback sending
+        // because it is only sent in very edge-case scenarios when the legacy implementation is
+        // used, and the legacy implementation is never used in the current AOSP builds. Considering
+        // that this callback isn't expected to be sent at all at the moment, and this is just an
+        // interface with no implementation. To verify this callback, just call
+        // onStopResolutionFailed on the record directly then verify it is received.
+        val resolveRecord = NsdResolveRecord()
+        resolveRecord.onStopResolutionFailed(
+                NsdServiceInfo(), NsdManager.FAILURE_OPERATION_NOT_RUNNING)
+        val failedCb = resolveRecord.expectCallback<StopResolutionFailed>()
+        assertEquals(NsdManager.FAILURE_OPERATION_NOT_RUNNING, failedCb.errorCode)
     }
 
     /**
