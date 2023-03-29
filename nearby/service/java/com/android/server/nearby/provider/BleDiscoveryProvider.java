@@ -16,6 +16,8 @@
 
 package com.android.server.nearby.provider;
 
+import static android.nearby.ScanCallback.ERROR_UNKNOWN;
+
 import static com.android.server.nearby.NearbyService.TAG;
 
 import android.annotation.Nullable;
@@ -115,6 +117,7 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                 @Override
                 public void onScanFailed(int errorCode) {
                     Log.w(TAG, "BLE 5.0 Scan failed with error code " + errorCode);
+                    mExecutor.execute(() -> mListener.onError(ERROR_UNKNOWN));
                 }
             };
 
