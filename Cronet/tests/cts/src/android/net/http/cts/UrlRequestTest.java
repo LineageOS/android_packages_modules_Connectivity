@@ -34,13 +34,11 @@ import android.net.http.HttpEngine;
 import android.net.http.HttpException;
 import android.net.http.InlineExecutionProhibitedException;
 import android.net.http.UploadDataProvider;
-import android.net.http.UploadDataSink;
 import android.net.http.UrlRequest;
 import android.net.http.UrlRequest.Status;
 import android.net.http.UrlResponseInfo;
 import android.net.http.cts.util.HttpCtsTestServer;
 import android.net.http.cts.util.TestStatusListener;
-import android.net.http.cts.util.TestUploadDataProvider;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 import android.net.http.cts.util.UploadDataProviders;
@@ -140,14 +138,11 @@ public class UrlRequestTest {
     }
 
     @Test
-    public void testUrlRequestPost_EchoRequestBody() throws Exception {
+    public void testUrlRequestPost_EchoRequestBody() {
         String testData = "test";
         UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getEchoBodyUrl());
 
-        TestUploadDataProvider dataProvider =
-                new TestUploadDataProvider(
-                        TestUploadDataProvider.SuccessCallbackMode.SYNC, mCallback.getExecutor());
-        dataProvider.addRead(testData.getBytes());
+        UploadDataProvider dataProvider = UploadDataProviders.create(testData);
         builder.setUploadDataProvider(dataProvider, mCallback.getExecutor());
         builder.addHeader("Content-Type", "text/html");
         builder.build().start();
@@ -155,7 +150,6 @@ public class UrlRequestTest {
 
         assertOKStatusCode(mCallback.mResponseInfo);
         assertEquals(testData, mCallback.mResponseAsString);
-        dataProvider.assertClosed();
     }
 
     @Test
@@ -170,7 +164,7 @@ public class UrlRequestTest {
         callback.setAllowDirectExecutor(true);
         UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
                 mTestServer.getEchoBodyUrl(), DIRECT_EXECUTOR, callback);
-        UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
+        UploadDataProvider dataProvider = UploadDataProviders.create("test");
         builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR);
         builder.addHeader("Content-Type", "text/plain;charset=UTF-8");
         builder.setDirectExecutorAllowed(true);
@@ -193,7 +187,7 @@ public class UrlRequestTest {
 
         UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
                 mTestServer.getEchoBodyUrl(), Executors.newSingleThreadExecutor(), callback);
-        UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
+        UploadDataProvider dataProvider = UploadDataProviders.create("test");
 
         builder.setUploadDataProvider(dataProvider, DIRECT_EXECUTOR)
                 .addHeader("Content-Type", "text/plain;charset=UTF-8")
@@ -213,7 +207,7 @@ public class UrlRequestTest {
 
         UrlRequest.Builder builder = mHttpEngine.newUrlRequestBuilder(
                 mTestServer.getEchoBodyUrl(), DIRECT_EXECUTOR, callback);
-        UploadDataProvider dataProvider = InMemoryUploadDataProvider.fromUtf8String("test");
+        UploadDataProvider dataProvider = UploadDataProviders.create("test");
 
         builder.setUploadDataProvider(dataProvider, Executors.newSingleThreadExecutor())
                 .addHeader("Content-Type", "text/plain;charset=UTF-8")
@@ -413,41 +407,6 @@ public class UrlRequestTest {
         @Override
         public void onCanceled(@NonNull UrlRequest request, @Nullable UrlResponseInfo info) {
             throw new UnsupportedOperationException();
-        }
-    }
-
-    private static class InMemoryUploadDataProvider extends UploadDataProvider {
-        private final byte[] mBody;
-        private int mNextChunkStartIndex = 0;
-
-        private InMemoryUploadDataProvider(byte[] body) {
-            this.mBody = body;
-        }
-
-        static InMemoryUploadDataProvider fromUtf8String(String body) {
-            return new InMemoryUploadDataProvider(body.getBytes(StandardCharsets.UTF_8));
-        }
-
-        @Override
-        public long getLength() {
-            return mBody.length;
-        }
-
-        @Override
-        public void read(UploadDataSink uploadDataSink, ByteBuffer byteBuffer) {
-            if (mNextChunkStartIndex >= getLength()) {
-                throw new IllegalStateException("Body of known length is exhausted");
-            }
-            int nextChunkSize =
-                    Math.min(mBody.length - mNextChunkStartIndex, byteBuffer.remaining());
-            byteBuffer.put(mBody, mNextChunkStartIndex, nextChunkSize);
-            mNextChunkStartIndex += nextChunkSize;
-            uploadDataSink.onReadSucceeded(false);
-        }
-
-        @Override
-        public void rewind(UploadDataSink uploadDataSink) {
-            mNextChunkStartIndex = 0;
         }
     }
 }
