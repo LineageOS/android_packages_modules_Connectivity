@@ -1387,6 +1387,9 @@ public class NetworkCapabilitiesTest {
             // If the test network is restricted, then the network may declare any transport, and
             // appended with TRANSPORT_TEST.
             expectedNcBuilder.addTransportType(TRANSPORT_CELLULAR);
+        } else {
+            // If the test network only has TRANSPORT_TEST, then it can keep the subscription IDs.
+            expectedNcBuilder.setSubscriptionIds(Set.of(TEST_SUBID1));
         }
         expectedNcBuilder.addTransportType(TRANSPORT_TEST);
 
