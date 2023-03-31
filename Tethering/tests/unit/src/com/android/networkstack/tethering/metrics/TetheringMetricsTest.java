@@ -20,7 +20,6 @@ import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_LOWPAN;
-import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 import static android.net.TetheringManager.TETHERING_BLUETOOTH;
@@ -278,17 +277,7 @@ public final class TetheringMetricsTest {
         runUpstreamTypesTest(buildUpstreamState(TRANSPORT_ETHERNET), UpstreamType.UT_ETHERNET);
         runUpstreamTypesTest(buildUpstreamState(TRANSPORT_WIFI_AWARE), UpstreamType.UT_WIFI_AWARE);
         runUpstreamTypesTest(buildUpstreamState(TRANSPORT_LOWPAN), UpstreamType.UT_LOWPAN);
-        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_VPN),
-                UpstreamType.UT_CELLULAR_VPN);
-        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_WIFI, TRANSPORT_VPN),
-                UpstreamType.UT_WIFI_VPN);
-        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_BLUETOOTH, TRANSPORT_VPN),
-                UpstreamType.UT_BLUETOOTH_VPN);
-        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_ETHERNET, TRANSPORT_VPN),
-                UpstreamType.UT_ETHERNET_VPN);
-        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_WIFI, TRANSPORT_VPN),
-                UpstreamType.UT_WIFI_CELLULAR_VPN);
-        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_WIFI, TRANSPORT_VPN,
+        runUpstreamTypesTest(buildUpstreamState(TRANSPORT_CELLULAR, TRANSPORT_WIFI,
                 TRANSPORT_BLUETOOTH), UpstreamType.UT_UNKNOWN);
     }
 
