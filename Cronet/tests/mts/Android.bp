@@ -48,8 +48,10 @@ android_library {
     libs: [
         "android.test.base",
         // Needed for direct access to tethering's hidden apis and to avoid `symbol not found`
-        //  errors on some builds.
+        // errors on some builds.
         "framework-tethering.impl",
+        // android.net.Network apis
+        "framework-connectivity",
     ],
     lint: { test: true }
 }
