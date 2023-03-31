@@ -8,3 +8,4 @@ org\.chromium\.base\..+
 # Do not jarjar the tests and its utils as they also do JNI with cronet_tests.so
 org\.chromium\.net\..*Test.*(\$.+)?
 org\.chromium\.net\.NativeTestServer(\$.+)?
+org\.chromium\.net\.MockUrlRequestJobFactory(\$.+)?
