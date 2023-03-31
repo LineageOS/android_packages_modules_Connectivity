@@ -364,7 +364,7 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
             // Enable Ethernet tethering and check that it starts.
             tetheringEventCallback = enableEthernetTethering(iface, null /* any upstream */);
         } finally {
-            maybeUnregisterTetheringEventCallback(tetheringEventCallback);
+            stopEthernetTethering(tetheringEventCallback);
         }
         // There is nothing more we can do on a physical interface without connecting an actual
         // client, which is not possible in this test.
