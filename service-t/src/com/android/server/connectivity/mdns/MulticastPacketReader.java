@@ -59,11 +59,12 @@ public class MulticastPacketReader extends FdEventsReader<MulticastPacketReader.
      * Create a new {@link MulticastPacketReader}.
      * @param socket Socket to read from. This will *not* be closed when the reader terminates.
      * @param buffer Buffer to read packets into. Will only be used from the handler thread.
+     * @param port the port number for the socket
      */
     protected MulticastPacketReader(@NonNull String interfaceTag,
             @NonNull ParcelFileDescriptor socket, @NonNull Handler handler,
-            @NonNull byte[] buffer) {
-        super(handler, new RecvBuffer(buffer, new InetSocketAddress()));
+            @NonNull byte[] buffer, int port) {
+        super(handler, new RecvBuffer(buffer, new InetSocketAddress(port)));
         mLogTag = MulticastPacketReader.class.getSimpleName() + "/" + interfaceTag;
         mSocket = socket;
         mHandler = handler;
