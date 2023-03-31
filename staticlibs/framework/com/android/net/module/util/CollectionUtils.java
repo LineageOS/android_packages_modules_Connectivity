@@ -101,7 +101,6 @@ public final class CollectionUtils {
     /**
      * @return The index of the first element that matches the predicate, or -1 if none.
      */
-    @Nullable
     public static <T> int indexOf(@NonNull final Collection<T> elem,
             @NonNull final Predicate<? super T> predicate) {
         int idx = 0;
