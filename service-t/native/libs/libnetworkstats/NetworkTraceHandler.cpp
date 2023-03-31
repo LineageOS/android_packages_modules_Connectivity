@@ -179,23 +179,24 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
     bundle.bytes += pkt.length;
   }
 
-  // If state was cleared, emit a separate packet to indicate it. This uses the
-  // overall minTs so it is sorted before any packets that follow.
   NetworkTraceState* incr_state = ctx.GetIncrementalState();
-  if (!bundles.empty() && mInternLimit && incr_state->cleared) {
-    auto clear = ctx.NewTracePacket();
-    clear->set_sequence_flags(TracePacket::SEQ_INCREMENTAL_STATE_CLEARED);
-    clear->set_timestamp(minTs);
-    incr_state->cleared = false;
-  }
-
   for (const auto& kv : bundles) {
     const BundleKey& key = kv.first;
     const BundleDetails& details = kv.second;
 
     auto dst = ctx.NewTracePacket();
-    dst->set_sequence_flags(TracePacket::SEQ_NEEDS_INCREMENTAL_STATE);
     dst->set_timestamp(details.minTs);
+
+    // Incremental state is only used when interning. Set the flag based on
+    // whether state was cleared. Leave the flag empty in non-intern configs.
+    if (mInternLimit > 0) {
+      if (incr_state->cleared) {
+        dst->set_sequence_flags(TracePacket::SEQ_INCREMENTAL_STATE_CLEARED);
+        incr_state->cleared = false;
+      } else {
+        dst->set_sequence_flags(TracePacket::SEQ_NEEDS_INCREMENTAL_STATE);
+      }
+    }
 
     auto* event = FillWithInterning(incr_state, key, dst.get());
 
