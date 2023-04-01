@@ -9,3 +9,5 @@ org\.chromium\.base\..+
 org\.chromium\.net\..*Test.*(\$.+)?
 org\.chromium\.net\.NativeTestServer(\$.+)?
 org\.chromium\.net\.MockUrlRequestJobFactory(\$.+)?
+org\.chromium\.net\.QuicTestServer(\$.+)?
+org\.chromium\.net\.MockCertVerifier(\$.+)?

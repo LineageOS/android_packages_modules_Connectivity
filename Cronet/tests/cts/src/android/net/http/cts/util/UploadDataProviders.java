@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Provides implementations of {@link UploadDataProvider} for common use cases. Corresponds to
@@ -89,6 +90,16 @@ public final class UploadDataProviders {
      */
     public static UploadDataProvider create(byte[] data) {
         return create(data, 0, data.length);
+    }
+
+    /**
+     * Uploads the UTF-8 representation of {@code data}
+     *
+     * @param data String containing data to upload
+     * @return A new UploadDataProvider for the given data
+     */
+    public static UploadDataProvider create(String data) {
+        return create(data.getBytes(StandardCharsets.UTF_8));
     }
 
     private interface FileChannelProvider {

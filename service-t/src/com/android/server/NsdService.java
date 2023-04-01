@@ -72,6 +72,7 @@ import com.android.server.connectivity.mdns.MdnsSocketProvider;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -1155,22 +1156,7 @@ public class NsdService extends INsdManager.Stub {
                                 Log.e(TAG, "Invalid attribute", e);
                             }
                         }
-                        final List<InetAddress> addresses = new ArrayList<>();
-                        for (String ipv4Address : serviceInfo.getIpv4Addresses()) {
-                            try {
-                                addresses.add(InetAddresses.parseNumericAddress(ipv4Address));
-                            } catch (IllegalArgumentException e) {
-                                Log.wtf(TAG, "Invalid ipv4 address", e);
-                            }
-                        }
-                        for (String ipv6Address : serviceInfo.getIpv6Addresses()) {
-                            try {
-                                addresses.add(InetAddresses.parseNumericAddress(ipv6Address));
-                            } catch (IllegalArgumentException e) {
-                                Log.wtf(TAG, "Invalid ipv6 address", e);
-                            }
-                        }
-
+                        final List<InetAddress> addresses = getInetAddresses(serviceInfo);
                         if (addresses.size() != 0) {
                             info.setHostAddresses(addresses);
                             clientInfo.onResolveServiceSucceeded(clientId, info);
@@ -1202,21 +1188,7 @@ public class NsdService extends INsdManager.Stub {
                             }
                         }
 
-                        final List<InetAddress> addresses = new ArrayList<>();
-                        for (String ipv4Address : serviceInfo.getIpv4Addresses()) {
-                            try {
-                                addresses.add(InetAddresses.parseNumericAddress(ipv4Address));
-                            } catch (IllegalArgumentException e) {
-                                Log.wtf(TAG, "Invalid ipv4 address", e);
-                            }
-                        }
-                        for (String ipv6Address : serviceInfo.getIpv6Addresses()) {
-                            try {
-                                addresses.add(InetAddresses.parseNumericAddress(ipv6Address));
-                            } catch (IllegalArgumentException e) {
-                                Log.wtf(TAG, "Invalid ipv6 address", e);
-                            }
-                        }
+                        final List<InetAddress> addresses = getInetAddresses(serviceInfo);
                         info.setHostAddresses(addresses);
                         clientInfo.onServiceUpdated(clientId, info);
                         break;
@@ -1230,6 +1202,36 @@ public class NsdService extends INsdManager.Stub {
                 return true;
             }
        }
+    }
+
+    @NonNull
+    private static List<InetAddress> getInetAddresses(@NonNull MdnsServiceInfo serviceInfo) {
+        final List<String> v4Addrs = serviceInfo.getIpv4Addresses();
+        final List<String> v6Addrs = serviceInfo.getIpv6Addresses();
+        final List<InetAddress> addresses = new ArrayList<>(v4Addrs.size() + v6Addrs.size());
+        for (String ipv4Address : v4Addrs) {
+            try {
+                addresses.add(InetAddresses.parseNumericAddress(ipv4Address));
+            } catch (IllegalArgumentException e) {
+                Log.wtf(TAG, "Invalid ipv4 address", e);
+            }
+        }
+        for (String ipv6Address : v6Addrs) {
+            try {
+                final InetAddress addr = InetAddresses.parseNumericAddress(ipv6Address);
+                if (addr.isLinkLocalAddress()) {
+                    final Inet6Address v6Addr = Inet6Address.getByAddress(
+                            null /* host */, addr.getAddress(),
+                            serviceInfo.getInterfaceIndex());
+                    addresses.add(v6Addr);
+                } else {
+                    addresses.add(addr);
+                }
+            } catch (IllegalArgumentException | UnknownHostException e) {
+                Log.wtf(TAG, "Invalid ipv6 address", e);
+            }
+        }
+        return addresses;
     }
 
     private static void setServiceNetworkForCallback(NsdServiceInfo info, int netId, int ifaceIdx) {
