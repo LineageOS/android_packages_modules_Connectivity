@@ -33,14 +33,6 @@ using ::perfetto::protos::Trace;
 using ::perfetto::protos::TracePacket;
 using ::perfetto::protos::TrafficDirection;
 
-// This handler makes OnStart and OnStop a no-op so that tracing is not really
-// started on the device.
-class HandlerForTest : public NetworkTraceHandler {
- public:
-  void OnStart(const StartArgs&) override {}
-  void OnStop(const StopArgs&) override {}
-};
-
 class NetworkTraceHandlerTest : public testing::Test {
  protected:
   // Starts a tracing session with the handler under test.
@@ -52,7 +44,7 @@ class NetworkTraceHandlerTest : public testing::Test {
 
     perfetto::DataSourceDescriptor dsd;
     dsd.set_name("test.network_packets");
-    HandlerForTest::Register(dsd);
+    NetworkTraceHandler::Register(dsd, /*isTest=*/true);
 
     perfetto::TraceConfig cfg;
     cfg.add_buffers()->set_size_kb(1024);
@@ -94,7 +86,7 @@ class NetworkTraceHandlerTest : public testing::Test {
                            std::vector<TracePacket>* output,
                            NetworkPacketTraceConfig config = {}) {
     auto session = StartTracing(config);
-    HandlerForTest::Trace([&](HandlerForTest::TraceContext ctx) {
+    NetworkTraceHandler::Trace([&](NetworkTraceHandler::TraceContext ctx) {
       ctx.GetDataSourceLocked()->Write(input, ctx);
       ctx.Flush();
     });
@@ -357,7 +349,7 @@ TEST_F(NetworkTraceHandlerTest, Interning) {
 
   auto session = StartTracing(config);
 
-  HandlerForTest::Trace([&](HandlerForTest::TraceContext ctx) {
+  NetworkTraceHandler::Trace([&](NetworkTraceHandler::TraceContext ctx) {
     ctx.GetDataSourceLocked()->Write(inputs[0], ctx);
     ctx.GetDataSourceLocked()->Write(inputs[1], ctx);
     ctx.GetDataSourceLocked()->Write(inputs[2], ctx);
