@@ -99,6 +99,10 @@ bool NetworkTracePoller::Stop() {
     ALOGW("Failed to disable tracing: %s", res.error().message().c_str());
   }
 
+  // make sure everything in the system has actually seen the 'false' we just wrote
+  synchronizeKernelRCU();
+  // things should now be well and truly disabled
+
   mTaskRunner.reset();
   mRingBuffer.reset();
 
