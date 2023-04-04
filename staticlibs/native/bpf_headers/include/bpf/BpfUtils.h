@@ -63,8 +63,9 @@ static inline int synchronizeKernelRCU() {
     // 4.9 kernels. The kernel code of socket release on pf_key socket will
     // explicitly call synchronize_rcu() which is exactly what we need.
     //
-    // Linux 4.14/4.19/5.4/5.10/5.15 (and 5.18) still have this same behaviour.
+    // Linux 4.14/4.19/5.4/5.10/5.15/6.1 (and 6.3-rc5) still have this same behaviour.
     // see net/key/af_key.c: pfkey_release() -> synchronize_rcu()
+    // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/net/key/af_key.c?h=v6.3-rc5#n185
     const int pfSocket = socket(AF_KEY, SOCK_RAW | SOCK_CLOEXEC, PF_KEY_V2);
 
     if (pfSocket < 0) {
