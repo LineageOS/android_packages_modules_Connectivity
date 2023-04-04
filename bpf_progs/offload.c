@@ -232,13 +232,13 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     // This would require a much newer kernel with newer ebpf accessors.
     // (This is also blindly assuming 12 bytes of tcp timestamp option in tcp header)
     uint64_t packets = 1;
-    uint64_t bytes = skb->len;
-    if (bytes > v->pmtu) {
-        const int tcp_overhead = sizeof(struct ipv6hdr) + sizeof(struct tcphdr) + 12;
-        const int mss = v->pmtu - tcp_overhead;
-        const uint64_t payload = bytes - tcp_overhead;
+    uint64_t L3_bytes = skb->len - l2_header_size;
+    if (L3_bytes > v->pmtu) {
+        const int tcp6_overhead = sizeof(struct ipv6hdr) + sizeof(struct tcphdr) + 12;
+        const int mss = v->pmtu - tcp6_overhead;
+        const uint64_t payload = L3_bytes - tcp6_overhead;
         packets = (payload + mss - 1) / mss;
-        bytes = tcp_overhead * packets + payload;
+        L3_bytes = tcp6_overhead * packets + payload;
     }
 
     // Are we past the limit?  If so, then abort...
@@ -247,7 +247,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     // a packet we let the core stack deal with things.
     // (The core stack needs to handle limits correctly anyway,
     // since we don't offload all traffic in both directions)
-    if (stat_v->rxBytes + stat_v->txBytes + bytes > *limit_v) TC_PUNT(LIMIT_REACHED);
+    if (stat_v->rxBytes + stat_v->txBytes + L3_bytes > *limit_v) TC_PUNT(LIMIT_REACHED);
 
     if (!is_ethernet) {
         // Try to inject an ethernet header, and simply return if we fail.
@@ -287,7 +287,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
     bpf_csum_update(skb, 0xFFFF - ntohs(old_hl) + ntohs(new_hl));
 
     __sync_fetch_and_add(downstream ? &stat_v->rxPackets : &stat_v->txPackets, packets);
-    __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, bytes);
+    __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
 
     // Overwrite any mac header with the new one
     // For a rawip tx interface it will simply be a bunch of zeroes and later stripped.
@@ -449,13 +449,13 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
     // This would require a much newer kernel with newer ebpf accessors.
     // (This is also blindly assuming 12 bytes of tcp timestamp option in tcp header)
     uint64_t packets = 1;
-    uint64_t bytes = skb->len;
-    if (bytes > v->pmtu) {
-        const int tcp_overhead = sizeof(struct iphdr) + sizeof(struct tcphdr) + 12;
-        const int mss = v->pmtu - tcp_overhead;
-        const uint64_t payload = bytes - tcp_overhead;
+    uint64_t L3_bytes = skb->len - l2_header_size;
+    if (L3_bytes > v->pmtu) {
+        const int tcp4_overhead = sizeof(struct iphdr) + sizeof(struct tcphdr) + 12;
+        const int mss = v->pmtu - tcp4_overhead;
+        const uint64_t payload = L3_bytes - tcp4_overhead;
         packets = (payload + mss - 1) / mss;
-        bytes = tcp_overhead * packets + payload;
+        L3_bytes = tcp4_overhead * packets + payload;
     }
 
     // Are we past the limit?  If so, then abort...
@@ -464,7 +464,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
     // a packet we let the core stack deal with things.
     // (The core stack needs to handle limits correctly anyway,
     // since we don't offload all traffic in both directions)
-    if (stat_v->rxBytes + stat_v->txBytes + bytes > *limit_v) TC_PUNT(LIMIT_REACHED);
+    if (stat_v->rxBytes + stat_v->txBytes + L3_bytes > *limit_v) TC_PUNT(LIMIT_REACHED);
 
     if (!is_ethernet) {
         // Try to inject an ethernet header, and simply return if we fail.
@@ -540,7 +540,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
     if (updatetime) v->last_used = bpf_ktime_get_boot_ns();
 
     __sync_fetch_and_add(downstream ? &stat_v->rxPackets : &stat_v->txPackets, packets);
-    __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, bytes);
+    __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
 
     // Redirect to forwarded interface.
     //
