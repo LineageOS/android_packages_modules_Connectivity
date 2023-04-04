@@ -51,7 +51,6 @@ public class PresenceScanFilterTest {
     private static final int KEY = 3;
     private static final byte[] VALUE = new byte[]{1, 1, 1, 1};
 
-
     private PublicCredential mPublicCredential =
             new PublicCredential.Builder(SECRETE_ID, AUTHENTICITY_KEY, PUBLIC_KEY,
                     ENCRYPTED_METADATA, METADATA_ENCRYPTION_KEY_TAG)
