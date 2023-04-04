@@ -136,10 +136,12 @@ void NetworkTraceHandler::OnSetup(const SetupArgs& args) {
 }
 
 void NetworkTraceHandler::OnStart(const StartArgs&) {
+  if (mIsTest) return;  // Don't touch non-hermetic bpf in test.
   mStarted = sPoller.Start(mPollMs);
 }
 
 void NetworkTraceHandler::OnStop(const StopArgs&) {
+  if (mIsTest) return;  // Don't touch non-hermetic bpf in test.
   if (mStarted) sPoller.Stop();
   mStarted = false;
 }
