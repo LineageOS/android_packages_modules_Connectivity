@@ -61,6 +61,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -194,8 +195,22 @@ public final class NetworkTemplate implements Parcelable {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.TIRAMISU,
             publicAlternatives = "Use {@code Builder} instead.")
     public static NetworkTemplate buildTemplateMobileAll(@NonNull String subscriberId) {
+        final Set<String> set;
+        // Prevent from crash for b/273963543, where the OEMs still call into this method
+        // with null subscriberId and get crashed.
+        final int firstSdk = Build.VERSION.DEVICE_INITIAL_SDK_INT;
+        if (firstSdk > Build.VERSION_CODES.TIRAMISU && subscriberId == null) {
+            throw new IllegalArgumentException("buildTemplateMobileAll does not accept null"
+                    + " subscriberId on Android U devices or above");
+        }
+        if (subscriberId == null) {
+            set = new HashSet<>();
+            set.add(null);
+        } else {
+            set = Set.of(subscriberId);
+        }
         return new NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES)
-                .setSubscriberIds(Set.of(subscriberId)).build();
+                .setSubscriberIds(set).build();
     }
 
     /**
@@ -410,12 +425,20 @@ public final class NetworkTemplate implements Parcelable {
             // subscriber ID.
             case MATCH_CARRIER:
                 if (matchSubscriberIds.length == 0) {
-                    throw new IllegalArgumentException("checkValidMatchSubscriberIds with empty"
-                            + " list of ids for rule" + getMatchRuleName(matchRule));
+                    throw new IllegalArgumentException("matchSubscriberIds may not contain"
+                            + " null for rule " + getMatchRuleName(matchRule));
                 }
-                // fall through
-            case MATCH_MOBILE:
                 if (CollectionUtils.contains(matchSubscriberIds, null)) {
+                    throw new IllegalArgumentException("matchSubscriberIds may not contain"
+                            + " null for rule " + getMatchRuleName(matchRule));
+                }
+                break;
+            case MATCH_MOBILE:
+                // Prevent from crash for b/273963543, where the OEMs still call into unsupported
+                // buildTemplateMobileAll with null subscriberId and get crashed.
+                final int firstSdk = Build.VERSION.DEVICE_INITIAL_SDK_INT;
+                if (firstSdk > Build.VERSION_CODES.TIRAMISU
+                        && CollectionUtils.contains(matchSubscriberIds, null)) {
                     throw new IllegalArgumentException("checkValidMatchSubscriberIds list of ids"
                             + " may not contain null for rule " + getMatchRuleName(matchRule));
                 }
