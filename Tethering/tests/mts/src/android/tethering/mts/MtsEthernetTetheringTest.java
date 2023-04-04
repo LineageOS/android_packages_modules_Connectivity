@@ -80,8 +80,8 @@ public class MtsEthernetTetheringTest extends EthernetTetheringTestBase {
     // Per RX UDP packet size: iphdr (20) + udphdr (8) + payload (2) = 30 bytes.
     private static final int RX_UDP_PACKET_SIZE = 30;
     private static final int RX_UDP_PACKET_COUNT = 456;
-    // Per TX UDP packet size: ethhdr (14) + iphdr (20) + udphdr (8) + payload (2) = 44 bytes.
-    private static final int TX_UDP_PACKET_SIZE = 44;
+    // Per TX UDP packet size: iphdr (20) + udphdr (8) + payload (2) = 30 bytes.
+    private static final int TX_UDP_PACKET_SIZE = 30;
     private static final int TX_UDP_PACKET_COUNT = 123;
 
     private static final String DUMPSYS_TETHERING_RAWMAP_ARG = "bpfRawMap";
