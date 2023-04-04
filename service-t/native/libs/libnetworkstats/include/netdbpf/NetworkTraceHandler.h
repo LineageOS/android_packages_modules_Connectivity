@@ -70,6 +70,9 @@ class NetworkTraceHandler
   // Connects to the system Perfetto daemon and registers the trace handler.
   static void InitPerfettoTracing();
 
+  // When isTest is true, skip non-hermetic code.
+  NetworkTraceHandler(bool isTest = false) : mIsTest(isTest) {}
+
   // perfetto::DataSource overrides:
   void OnSetup(const SetupArgs& args) override;
   void OnStart(const StartArgs&) override;
@@ -92,6 +95,7 @@ class NetworkTraceHandler
 
   static internal::NetworkTracePoller sPoller;
   bool mStarted;
+  bool mIsTest;
 
   // Values from config, see proto for details.
   uint32_t mPollMs;
