@@ -208,6 +208,9 @@ public final class NetworkStackConstants {
      */
     public static final int INFINITE_LEASE = 0xffffffff;
     public static final int DHCP4_CLIENT_PORT = 68;
+    // The maximum length of a DHCP packet that can be constructed.
+    public static final int DHCP_MAX_LENGTH = 1500;
+    public static final int DHCP_MAX_OPTION_LEN = 255;
 
     /**
      * DHCPv6 constants.
