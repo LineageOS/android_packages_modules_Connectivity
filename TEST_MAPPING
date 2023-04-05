@@ -97,7 +97,13 @@
     },
     // Runs both NetHttpTests and CtsNetHttpTestCases
     {
-      "name": "NetHttpCoverageTests"
+      "name": "NetHttpCoverageTests",
+      "options": [
+        {
+          // These sometimes take longer than 1 min which is the presubmit timeout
+          "exclude-annotation": "androidx.test.filters.LargeTest"
+        }
+      ]
     }
   ],
   "postsubmit": [
@@ -211,7 +217,13 @@
       "name": "libnetworkstats_test[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
     },
     {
-      "name": "NetHttpCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
+      "name": "NetHttpCoverageTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
+      "options": [
+        {
+          // These sometimes take longer than 1 min which is the presubmit timeout
+          "exclude-annotation": "androidx.test.filters.LargeTest"
+        }
+      ]
     }
   ],
   "mainline-postsubmit": [
