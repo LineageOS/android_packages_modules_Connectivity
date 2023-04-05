@@ -1106,9 +1106,12 @@ public class NsdService extends INsdManager.Stub {
                 final String serviceName = serviceInfo.getServiceInstanceName();
                 final NsdServiceInfo servInfo = new NsdServiceInfo(serviceName, serviceType);
                 final Network network = serviceInfo.getNetwork();
+                // In MdnsDiscoveryManagerEvent, the Network can be null which means it is a
+                // network for Tethering interface. In other words, the network == null means the
+                // network has netId = INetd.LOCAL_NET_ID.
                 setServiceNetworkForCallback(
                         servInfo,
-                        network == null ? NETID_UNSET : network.netId,
+                        network == null ? INetd.LOCAL_NET_ID : network.netId,
                         serviceInfo.getInterfaceIndex());
                 return servInfo;
             }
