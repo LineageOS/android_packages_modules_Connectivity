@@ -1274,6 +1274,31 @@ public class VpnTest {
     }
 
     @Test
+    public void testSocketClosed() throws Exception {
+        assumeTrue(supportedHardware());
+
+        final FileDescriptor localFd = openSocketFd(TEST_HOST, 80, TIMEOUT_MS);
+        final List<FileDescriptor> remoteFds = new ArrayList<>();
+
+        for (int i = 0; i < 30; i++) {
+            remoteFds.add(openSocketFdInOtherApp(TEST_HOST, 80, TIMEOUT_MS));
+        }
+
+        final String allowedApps = mRemoteSocketFactoryClient.getPackageName() + "," + mPackageName;
+        startVpn(new String[] {"192.0.2.2/32", "2001:db8:1:2::ffe/128"},
+                new String[] {"192.0.2.0/24", "2001:db8::/32"},
+                allowedApps, "", null, null /* underlyingNetworks */, false /* isAlwaysMetered */);
+
+        // Socket owned by VPN uid is not closed
+        assertSocketStillOpen(localFd, TEST_HOST);
+
+        // Sockets not owned by VPN uid are closed
+        for (final FileDescriptor remoteFd: remoteFds) {
+            assertSocketClosed(remoteFd, TEST_HOST);
+        }
+    }
+
+    @Test
     public void testExcludedRoutes() throws Exception {
         assumeTrue(supportedHardware());
         assumeTrue(SdkLevel.isAtLeastT());
