@@ -67,11 +67,8 @@ public class ChreDiscoveryProviderTest {
     private static final int DATA_TYPE_BLUETOOTH_ADDR_KEY = 101;
     private static final int DATA_TYPE_FP_ACCOUNT_KEY = 9;
     private static final int DATA_TYPE_BLE_SERVICE_DATA_KEY = 100;
-    private static final int DATA_TYPE_TEST_1_KEY = 256;
-    private static final int DATA_TYPE_TEST_2_KEY = 257;
-    private static final int DATA_TYPE_TEST_3_KEY = 258;
-    private static final int DATA_TYPE_TEST_4_KEY = 259;
-    private static final int DATA_TYPE_TEST_5_KEY = 260;
+    private static final int DATA_TYPE_TEST_DE_BEGIN_KEY = 2147483520;
+    private static final int DATA_TYPE_TEST_DE_END_KEY = 2147483647;
 
     private ChreDiscoveryProvider mChreDiscoveryProvider;
 
@@ -174,58 +171,27 @@ public class ChreDiscoveryProviderTest {
                         .setBleServiceData(ByteString.copyFrom(bleServiceData))
                         .setPublicCredential(credential)
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_CONNECTION_STATUS)
+                                .setKey(DATA_TYPE_CONNECTION_STATUS_KEY)
                                 .setValue(ByteString.copyFrom(connectionStatus))
                                 .setValueLength(connectionStatus.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_BATTERY_STATUS)
+                                .setKey(DATA_TYPE_BATTERY_KEY)
                                 .setValue(ByteString.copyFrom(batteryStatus))
                                 .setValueLength(batteryStatus.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_FAST_PAIR_ACCOUNT_KEY)
+                                .setKey(DATA_TYPE_FP_ACCOUNT_KEY)
                                 .setValue(ByteString.copyFrom(fastPairAccountKey))
                                 .setValueLength(fastPairAccountKey.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_1)
+                                .setKey(DATA_TYPE_TEST_DE_BEGIN_KEY)
                                 .setValue(ByteString.copyFrom(testData))
                                 .setValueLength(testData.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_2)
-                                .setValue(ByteString.copyFrom(testData))
-                                .setValueLength(testData.length)
-                        )
-                        .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_3)
-                                .setValue(ByteString.copyFrom(testData))
-                                .setValueLength(testData.length)
-                        )
-                        .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_4)
-                                .setValue(ByteString.copyFrom(testData))
-                                .setValueLength(testData.length)
-                        )
-                        .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_5)
+                                .setKey(DATA_TYPE_TEST_DE_END_KEY)
                                 .setValue(ByteString.copyFrom(testData))
                                 .setValueLength(testData.length)
                         )
@@ -286,15 +252,9 @@ public class ChreDiscoveryProviderTest {
         expectedExtendedProperties.add(
                 new DataElement(DATA_TYPE_BLE_SERVICE_DATA_KEY, new byte[] {1, 2, 3, 4, 5}));
         expectedExtendedProperties.add(
-                new DataElement(DATA_TYPE_TEST_1_KEY, testData));
+                new DataElement(DATA_TYPE_TEST_DE_BEGIN_KEY, testData));
         expectedExtendedProperties.add(
-                new DataElement(DATA_TYPE_TEST_2_KEY, testData));
-        expectedExtendedProperties.add(
-                new DataElement(DATA_TYPE_TEST_3_KEY, testData));
-        expectedExtendedProperties.add(
-                new DataElement(DATA_TYPE_TEST_4_KEY, testData));
-        expectedExtendedProperties.add(
-                new DataElement(DATA_TYPE_TEST_5_KEY, testData));
+                new DataElement(DATA_TYPE_TEST_DE_END_KEY, testData));
 
         Blefilter.PublicCredential credential =
                 Blefilter.PublicCredential.newBuilder()
@@ -312,58 +272,27 @@ public class ChreDiscoveryProviderTest {
                         .setBleServiceData(ByteString.copyFrom(bleServiceData))
                         .setPublicCredential(credential)
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_CONNECTION_STATUS)
+                                .setKey(DATA_TYPE_CONNECTION_STATUS_KEY)
                                 .setValue(ByteString.copyFrom(connectionStatus))
                                 .setValueLength(connectionStatus.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_BATTERY_STATUS)
+                                .setKey(DATA_TYPE_BATTERY_KEY)
                                 .setValue(ByteString.copyFrom(batteryStatus))
                                 .setValueLength(batteryStatus.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_FAST_PAIR_ACCOUNT_KEY)
+                                .setKey(DATA_TYPE_FP_ACCOUNT_KEY)
                                 .setValue(ByteString.copyFrom(fastPairAccountKey))
                                 .setValueLength(fastPairAccountKey.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_1)
+                                .setKey(DATA_TYPE_TEST_DE_BEGIN_KEY)
                                 .setValue(ByteString.copyFrom(testData))
                                 .setValueLength(testData.length)
                         )
                         .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_2)
-                                .setValue(ByteString.copyFrom(testData))
-                                .setValueLength(testData.length)
-                        )
-                        .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_3)
-                                .setValue(ByteString.copyFrom(testData))
-                                .setValueLength(testData.length)
-                        )
-                        .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_4)
-                                .setValue(ByteString.copyFrom(testData))
-                                .setValueLength(testData.length)
-                        )
-                        .addDataElement(Blefilter.DataElement.newBuilder()
-                                .setKey(
-                                        Blefilter.DataElement.ElementType
-                                                .DE_TEST_5)
+                                .setKey(DATA_TYPE_TEST_DE_END_KEY)
                                 .setValue(ByteString.copyFrom(testData))
                                 .setValueLength(testData.length)
                         )

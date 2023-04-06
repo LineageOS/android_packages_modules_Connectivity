@@ -78,8 +78,9 @@ public final class DataElement implements Parcelable {
         int BATTERY = 11;
         // Reserves test DE ranges from {@link DataElement.DataType#TEST_DE_BEGIN}
         // to {@link DataElement.DataType#TEST_DE_END}, inclusive.
-        int TEST_DE_BEGIN = 256;
-        int TEST_DE_END = 260;
+        // Reserves 128 Test DEs.
+        int TEST_DE_BEGIN = Integer.MAX_VALUE - 127; // 2147483520
+        int TEST_DE_END = Integer.MAX_VALUE; // 2147483647
     }
 
     /**
