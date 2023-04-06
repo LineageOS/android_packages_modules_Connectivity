@@ -29,16 +29,12 @@ import android.net.TetheringManager;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.os.Handler;
 import android.os.Looper;
-import android.system.OsConstants;
 import android.util.ArrayMap;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
-import com.android.net.module.util.ip.NetlinkMonitor;
-import com.android.net.module.util.netlink.NetlinkConstants;
-import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.IOException;
@@ -70,7 +66,7 @@ public class MdnsSocketProvider {
     @NonNull private final Dependencies mDependencies;
     @NonNull private final NetworkCallback mNetworkCallback;
     @NonNull private final TetheringEventCallback mTetheringEventCallback;
-    @NonNull private final NetlinkMonitor mNetlinkMonitor;
+    @NonNull private final ISocketNetLinkMonitor mSocketNetlinkMonitor;
     private final ArrayMap<Network, SocketInfo> mNetworkSockets = new ArrayMap<>();
     private final ArrayMap<String, SocketInfo> mTetherInterfaceSockets = new ArrayMap<>();
     private final ArrayMap<Network, LinkProperties> mActiveNetworksLinkProperties =
@@ -117,7 +113,8 @@ public class MdnsSocketProvider {
             }
         };
 
-        mNetlinkMonitor = new SocketNetlinkMonitor(mHandler);
+        mSocketNetlinkMonitor = SocketNetLinkMonitorFactory.createNetLinkMonitor(mHandler,
+                LOGGER.mLog);
     }
 
     /**
@@ -156,18 +153,6 @@ public class MdnsSocketProvider {
         }
     }
 
-    private static class SocketNetlinkMonitor extends NetlinkMonitor {
-        SocketNetlinkMonitor(Handler handler) {
-            super(handler, LOGGER.mLog, TAG, OsConstants.NETLINK_ROUTE,
-                    NetlinkConstants.RTMGRP_IPV4_IFADDR | NetlinkConstants.RTMGRP_IPV6_IFADDR);
-        }
-
-        @Override
-        public void processNetlinkMessage(NetlinkMessage nlMsg, long whenMs) {
-            // TODO: Handle netlink message.
-        }
-    }
-
     /*** Ensure that current running thread is same as given handler thread */
     public static void ensureRunningOnHandlerThread(Handler handler) {
         if (handler.getLooper().getThread() != Thread.currentThread()) {
@@ -192,7 +177,9 @@ public class MdnsSocketProvider {
         final TetheringManager tetheringManager = mContext.getSystemService(TetheringManager.class);
         tetheringManager.registerTetheringEventCallback(mHandler::post, mTetheringEventCallback);
 
-        mHandler.post(mNetlinkMonitor::start);
+        if (mSocketNetlinkMonitor.isSupported()) {
+            mHandler.post(mSocketNetlinkMonitor::startMonitoring);
+        }
         mMonitoringSockets = true;
     }
 
@@ -209,7 +196,9 @@ public class MdnsSocketProvider {
                     TetheringManager.class);
             tetheringManager.unregisterTetheringEventCallback(mTetheringEventCallback);
 
-            mHandler.post(mNetlinkMonitor::stop);
+            if (mSocketNetlinkMonitor.isSupported()) {
+                mHandler.post(mSocketNetlinkMonitor::stopMonitoring);
+            }
             // Clear all saved status.
             mActiveNetworksLinkProperties.clear();
             mNetworkSockets.clear();
