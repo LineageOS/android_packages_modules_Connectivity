@@ -41,7 +41,6 @@ import com.android.server.nearby.NearbyConfiguration;
 
 import com.google.protobuf.ByteString;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -194,10 +193,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
 
     private Blefilter.DataElement toProtoDataElement(DataElement dataElement) {
         return Blefilter.DataElement.newBuilder()
-                .setKey(Arrays.stream(Blefilter.DataElement.ElementType.values())
-                        .filter(p -> p.getNumber() == dataElement.getKey())
-                        .findFirst()
-                        .get())
+                .setKey(dataElement.getKey())
                 .setValue(ByteString.copyFrom(dataElement.getValue()))
                 .setValueLength(dataElement.getValue().length)
                 .build();
@@ -363,31 +359,20 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                 PresenceDevice.Builder presenceDeviceBuilder) {
             int endIndex = element.hasValueLength() ? element.getValueLength() :
                     element.getValue().size();
-            switch (element.getKey()) {
-                case DE_FAST_PAIR_ACCOUNT_KEY:
+            int key = element.getKey();
+            switch (key) {
+                case DataElement.DataType.ACCOUNT_KEY_DATA:
+                case DataElement.DataType.CONNECTION_STATUS:
+                case DataElement.DataType.BATTERY:
                     presenceDeviceBuilder.addExtendedProperty(
-                            new DataElement(DataElement.DataType.ACCOUNT_KEY_DATA,
-                                    element.getValue().substring(0, endIndex).toByteArray()));
-                    break;
-                case DE_CONNECTION_STATUS:
-                    presenceDeviceBuilder.addExtendedProperty(
-                            new DataElement(DataElement.DataType.CONNECTION_STATUS,
-                                    element.getValue().substring(0, endIndex).toByteArray()));
-                    break;
-                case DE_BATTERY_STATUS:
-                    presenceDeviceBuilder.addExtendedProperty(
-                            new DataElement(DataElement.DataType.BATTERY,
+                            new DataElement(key,
                                     element.getValue().substring(0, endIndex).toByteArray()));
                     break;
                 default:
                     if (mNearbyConfiguration.isTestAppSupported()
-                            && DataElement.isTestDeType(element.getKey().getNumber())) {
+                            && DataElement.isTestDeType(key)) {
                         presenceDeviceBuilder.addExtendedProperty(
-                                new DataElement(Arrays.stream(
-                                                Blefilter.DataElement.ElementType.values())
-                                        .filter(p -> p.getNumber() == element.getKey().getNumber())
-                                        .findFirst()
-                                        .get().getNumber(),
+                                new DataElement(key,
                                         element.getValue().substring(0, endIndex).toByteArray()));
                     }
                     break;
