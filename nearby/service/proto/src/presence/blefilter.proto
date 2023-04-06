@@ -58,23 +58,16 @@ message PublicCredential {
 
 message DataElement {
   enum ElementType {
-    option allow_alias = true;
-
     DE_NONE = 0;
     DE_FAST_PAIR_ACCOUNT_KEY = 9;
     DE_CONNECTION_STATUS = 10;
     DE_BATTERY_STATUS = 11;
-    // Reserves Test DEs.
-    DE_TEST_BEGIN = 256;
-    DE_TEST_1 = 256;
-    DE_TEST_2 = 257;
-    DE_TEST_3 = 258;
-    DE_TEST_4 = 259;
-    DE_TEST_5 = 260;
-    DE_TEST_END = 260;
+    // Reserves 128 Test DEs.
+    DE_TEST_BEGIN = 2147483520;  // INT_MAX - 127
+    DE_TEST_END = 2147483647;    // INT_MAX
   }
 
-  optional ElementType key = 1;
+  optional int32 key = 1;
   optional bytes value = 2;
   optional uint32 value_length = 3;
 }
