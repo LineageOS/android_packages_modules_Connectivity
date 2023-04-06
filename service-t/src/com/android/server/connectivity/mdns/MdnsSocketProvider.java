@@ -21,7 +21,6 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
-import android.net.INetd;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
@@ -98,7 +97,7 @@ public class MdnsSocketProvider {
             @Override
             public void onLost(Network network) {
                 mActiveNetworksLinkProperties.remove(network);
-                removeSocket(network, null /* interfaceName */);
+                removeNetworkSocket(network);
             }
 
             @Override
@@ -235,7 +234,7 @@ public class MdnsSocketProvider {
 
     /*** Check whether the target network is matched current network */
     public static boolean isNetworkMatched(@Nullable Network targetNetwork,
-            @NonNull Network currentNetwork) {
+            @Nullable Network currentNetwork) {
         return targetNetwork == null || targetNetwork.equals(currentNetwork);
     }
 
@@ -258,9 +257,10 @@ public class MdnsSocketProvider {
             return;
         }
 
+        final NetworkAsKey networkKey = new NetworkAsKey(network);
         final SocketInfo socketInfo = mNetworkSockets.get(network);
         if (socketInfo == null) {
-            createSocket(network, lp);
+            createSocket(networkKey, lp);
         } else {
             // Update the addresses of this socket.
             final List<LinkAddress> addresses = lp.getLinkAddresses();
@@ -295,16 +295,16 @@ public class MdnsSocketProvider {
         final CompareResult<String> interfaceDiff = new CompareResult<>(
                 current, updated);
         for (String name : interfaceDiff.added) {
-            createSocket(new Network(INetd.LOCAL_NET_ID), createLPForTetheredInterface(name));
+            createSocket(LOCAL_NET, createLPForTetheredInterface(name));
         }
         for (String name : interfaceDiff.removed) {
-            removeSocket(new Network(INetd.LOCAL_NET_ID), name);
+            removeTetherInterfaceSocket(name);
         }
         current.clear();
         current.addAll(updated);
     }
 
-    private void createSocket(Network network, LinkProperties lp) {
+    private void createSocket(NetworkKey networkKey, LinkProperties lp) {
         final String interfaceName = lp.getInterfaceName();
         if (interfaceName == null) {
             Log.e(TAG, "Can not create socket with null interface name.");
@@ -319,39 +319,50 @@ public class MdnsSocketProvider {
             }
 
             if (DBG) {
-                Log.d(TAG, "Create a socket on network:" + network
+                Log.d(TAG, "Create a socket on network:" + networkKey
                         + " with interfaceName:" + interfaceName);
             }
             final MdnsInterfaceSocket socket = mDependencies.createMdnsInterfaceSocket(
                     networkInterface.getNetworkInterface(), MdnsConstants.MDNS_PORT, mLooper,
                     mPacketReadBuffer);
             final List<LinkAddress> addresses;
-            if (network.netId == INetd.LOCAL_NET_ID) {
+            if (networkKey == LOCAL_NET) {
                 addresses = CollectionUtils.map(
-                        networkInterface.getInterfaceAddresses(), LinkAddress::new);
+                        networkInterface.getInterfaceAddresses(),
+                        i -> new LinkAddress(i.getAddress(), i.getNetworkPrefixLength()));
                 mTetherInterfaceSockets.put(interfaceName, new SocketInfo(socket, addresses));
             } else {
                 addresses = lp.getLinkAddresses();
-                mNetworkSockets.put(network, new SocketInfo(socket, addresses));
+                mNetworkSockets.put(((NetworkAsKey) networkKey).mNetwork,
+                        new SocketInfo(socket, addresses));
             }
             // Try to join IPv4/IPv6 group.
             socket.joinGroup(addresses);
 
             // Notify the listeners which need this socket.
-            notifySocketCreated(network, socket, addresses);
+            if (networkKey == LOCAL_NET) {
+                notifySocketCreated(null /* network */, socket, addresses);
+            } else {
+                notifySocketCreated(((NetworkAsKey) networkKey).mNetwork, socket, addresses);
+            }
         } catch (IOException e) {
             Log.e(TAG, "Create a socket failed with interface=" + interfaceName, e);
         }
     }
 
-    private void removeSocket(Network network, String interfaceName) {
-        final SocketInfo socketInfo = network.netId == INetd.LOCAL_NET_ID
-                ? mTetherInterfaceSockets.remove(interfaceName)
-                : mNetworkSockets.remove(network);
+    private void removeNetworkSocket(Network network) {
+        final SocketInfo socketInfo = mNetworkSockets.remove(network);
         if (socketInfo == null) return;
 
         socketInfo.mSocket.destroy();
         notifyInterfaceDestroyed(network, socketInfo.mSocket);
+    }
+
+    private void removeTetherInterfaceSocket(String interfaceName) {
+        final SocketInfo socketInfo = mTetherInterfaceSockets.remove(interfaceName);
+        if (socketInfo == null) return;
+        socketInfo.mSocket.destroy();
+        notifyInterfaceDestroyed(null /* network */, socketInfo.mSocket);
     }
 
     private void notifySocketCreated(Network network, MdnsInterfaceSocket socket,
@@ -393,7 +404,7 @@ public class MdnsSocketProvider {
                 if (DBG) Log.d(TAG, "There is no LinkProperties for this network:" + network);
                 return;
             }
-            createSocket(network, lp);
+            createSocket(new NetworkAsKey(network), lp);
         } else {
             // Notify the socket for requested network.
             cb.onSocketCreated(network, socketInfo.mSocket, socketInfo.mAddresses);
@@ -403,12 +414,11 @@ public class MdnsSocketProvider {
     private void retrieveAndNotifySocketFromInterface(String interfaceName, SocketCallback cb) {
         final SocketInfo socketInfo = mTetherInterfaceSockets.get(interfaceName);
         if (socketInfo == null) {
-            createSocket(
-                    new Network(INetd.LOCAL_NET_ID), createLPForTetheredInterface(interfaceName));
+            createSocket(LOCAL_NET, createLPForTetheredInterface(interfaceName));
         } else {
             // Notify the socket for requested network.
             cb.onSocketCreated(
-                    new Network(INetd.LOCAL_NET_ID), socketInfo.mSocket, socketInfo.mAddresses);
+                    null /* network */, socketInfo.mSocket, socketInfo.mAddresses);
         }
     }
 
@@ -467,7 +477,7 @@ public class MdnsSocketProvider {
             final SocketInfo info = mTetherInterfaceSockets.valueAt(i);
             info.mSocket.destroy();
             // Still notify to unrequester for socket destroy.
-            cb.onInterfaceDestroyed(new Network(INetd.LOCAL_NET_ID), info.mSocket);
+            cb.onInterfaceDestroyed(null /* network */, info.mSocket);
         }
         mTetherInterfaceSockets.clear();
 
@@ -478,13 +488,49 @@ public class MdnsSocketProvider {
     /*** Callbacks for listening socket changes */
     public interface SocketCallback {
         /*** Notify the socket is created */
-        default void onSocketCreated(@NonNull Network network, @NonNull MdnsInterfaceSocket socket,
+        default void onSocketCreated(@Nullable Network network, @NonNull MdnsInterfaceSocket socket,
                 @NonNull List<LinkAddress> addresses) {}
         /*** Notify the interface is destroyed */
-        default void onInterfaceDestroyed(@NonNull Network network,
+        default void onInterfaceDestroyed(@Nullable Network network,
                 @NonNull MdnsInterfaceSocket socket) {}
         /*** Notify the addresses is changed on the network */
-        default void onAddressesChanged(@NonNull Network network,
+        default void onAddressesChanged(@Nullable Network network,
                 @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> addresses) {}
+    }
+
+    private interface NetworkKey {
+    }
+
+    private static final NetworkKey LOCAL_NET = new NetworkKey() {
+        @Override
+        public String toString() {
+            return "NetworkKey:LOCAL_NET";
+        }
+    };
+
+    private static class NetworkAsKey implements NetworkKey {
+        private final Network mNetwork;
+
+        NetworkAsKey(Network network) {
+            this.mNetwork = network;
+        }
+
+        @Override
+        public int hashCode() {
+            return mNetwork.hashCode();
+        }
+
+        @Override
+        public boolean equals(@Nullable Object other) {
+            if (!(other instanceof NetworkAsKey)) {
+                return false;
+            }
+            return mNetwork.equals(((NetworkAsKey) other).mNetwork);
+        }
+
+        @Override
+        public String toString() {
+            return "NetworkAsKey{ network=" + mNetwork + " }";
+        }
     }
 }

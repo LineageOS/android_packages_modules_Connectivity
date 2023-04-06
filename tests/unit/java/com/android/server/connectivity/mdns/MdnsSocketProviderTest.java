@@ -35,7 +35,6 @@ import static org.mockito.Mockito.verify;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
-import android.net.INetd;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
@@ -74,8 +73,6 @@ public class MdnsSocketProviderTest {
     private static final LinkAddress LINKADDRV6 =
             new LinkAddress("2001:0db8:85a3:0000:0000:8a2e:0370:7334/64");
     private static final Network TEST_NETWORK = new Network(123);
-    private static final Network LOCAL_NETWORK = new Network(INetd.LOCAL_NET_ID);
-
     @Mock private Context mContext;
     @Mock private Dependencies mDeps;
     @Mock private ConnectivityManager mCm;
@@ -244,7 +241,7 @@ public class MdnsSocketProviderTest {
         verify(mLocalOnlyIfaceWrapper).getNetworkInterface();
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
-        testCallback3.expectedSocketCreatedForNetwork(LOCAL_NETWORK, List.of());
+        testCallback3.expectedSocketCreatedForNetwork(null /* network */, List.of());
 
         mHandler.post(() -> mTetheringEventCallback.onTetheredInterfacesChanged(
                 List.of(TETHERED_IFACE_NAME)));
@@ -252,7 +249,7 @@ public class MdnsSocketProviderTest {
         verify(mTetheredIfaceWrapper).getNetworkInterface();
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
-        testCallback3.expectedSocketCreatedForNetwork(LOCAL_NETWORK, List.of());
+        testCallback3.expectedSocketCreatedForNetwork(null /* network */, List.of());
 
         mHandler.post(() -> mSocketProvider.unrequestSocket(testCallback1));
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
@@ -270,14 +267,14 @@ public class MdnsSocketProviderTest {
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
-        testCallback3.expectedInterfaceDestroyedForNetwork(LOCAL_NETWORK);
+        testCallback3.expectedInterfaceDestroyedForNetwork(null /* network */);
 
         mHandler.post(() -> mSocketProvider.unrequestSocket(testCallback3));
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         // Expect the socket destroy for tethered interface.
-        testCallback3.expectedInterfaceDestroyedForNetwork(LOCAL_NETWORK);
+        testCallback3.expectedInterfaceDestroyedForNetwork(null /* network */);
     }
 
     @Test
