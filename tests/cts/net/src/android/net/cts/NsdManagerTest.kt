@@ -403,6 +403,13 @@ class NsdManagerTest {
         // Wait until the link-local address can be used. Address flags are not available without
         // elevated permissions, so check that bindSocket works.
         PollingCheck.check("No usable v6 address on interface after $TIMEOUT_MS ms", TIMEOUT_MS) {
+            // To avoid race condition between socket connection succeeding and interface returning
+            // a non-empty address list. Verify that interface returns a non-empty list, before
+            // trying the socket connection.
+            if (NetworkInterface.getByName(ifaceName).interfaceAddresses.isEmpty()) {
+                return@check false
+            }
+
             val sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
             tryTest {
                 network.bindSocket(sock)
