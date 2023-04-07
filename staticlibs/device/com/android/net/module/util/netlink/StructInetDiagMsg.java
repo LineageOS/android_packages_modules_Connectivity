@@ -43,14 +43,22 @@ import java.nio.ByteBuffer;
  */
 public class StructInetDiagMsg {
     public static final int STRUCT_SIZE = 4 + StructInetDiagSockId.STRUCT_SIZE + 20;
-    // Offset to the id field from the beginning of inet_diag_msg struct
-    private static final int IDIAG_SOCK_ID_OFFSET = 4;
-    // Offset to the idiag_uid field from the beginning of inet_diag_msg struct
-    private static final int IDIAG_UID_OFFSET =
-            IDIAG_SOCK_ID_OFFSET + StructInetDiagSockId.STRUCT_SIZE + 12;
-    public int idiag_uid;
+    public short idiag_family;
+    public short idiag_state;
+    public short idiag_timer;
+    public short idiag_retrans;
     @NonNull
     public StructInetDiagSockId id;
+    public long idiag_expires;
+    public long idiag_rqueue;
+    public long idiag_wqueue;
+    // Use int for uid since other code use int for uid and uid fits to int
+    public int idiag_uid;
+    public long idiag_inode;
+
+    private static short unsignedByte(byte b) {
+        return (short) (b & 0xFF);
+    }
 
     /**
      * Parse inet diag netlink message from buffer.
@@ -60,26 +68,36 @@ public class StructInetDiagMsg {
         if (byteBuffer.remaining() < STRUCT_SIZE) {
             return null;
         }
-        final int baseOffset = byteBuffer.position();
         StructInetDiagMsg struct = new StructInetDiagMsg();
-        final byte family = byteBuffer.get();
-        byteBuffer.position(baseOffset + IDIAG_SOCK_ID_OFFSET);
-        struct.id = StructInetDiagSockId.parse(byteBuffer, family);
+        struct.idiag_family = unsignedByte(byteBuffer.get());
+        struct.idiag_state = unsignedByte(byteBuffer.get());
+        struct.idiag_timer = unsignedByte(byteBuffer.get());
+        struct.idiag_retrans = unsignedByte(byteBuffer.get());
+        struct.id = StructInetDiagSockId.parse(byteBuffer, struct.idiag_family);
         if (struct.id == null) {
             return null;
         }
-        struct.idiag_uid = byteBuffer.getInt(baseOffset + IDIAG_UID_OFFSET);
-
-        // Move position to the end of the inet_diag_msg
-        byteBuffer.position(baseOffset + STRUCT_SIZE);
+        struct.idiag_expires = Integer.toUnsignedLong(byteBuffer.getInt());
+        struct.idiag_rqueue = Integer.toUnsignedLong(byteBuffer.getInt());
+        struct.idiag_wqueue = Integer.toUnsignedLong(byteBuffer.getInt());
+        struct.idiag_uid = byteBuffer.getInt();
+        struct.idiag_inode = Integer.toUnsignedLong(byteBuffer.getInt());
         return struct;
     }
 
     @Override
     public String toString() {
         return "StructInetDiagMsg{ "
-                + "idiag_uid{" + idiag_uid + "}, "
+                + "idiag_family{" + idiag_family + "}, "
+                + "idiag_state{" + idiag_state + "}, "
+                + "idiag_timer{" + idiag_timer + "}, "
+                + "idiag_retrans{" + idiag_retrans + "}, "
                 + "id{" + id + "}, "
+                + "idiag_expires{" + idiag_expires + "}, "
+                + "idiag_rqueue{" + idiag_rqueue + "}, "
+                + "idiag_wqueue{" + idiag_wqueue + "}, "
+                + "idiag_uid{" + idiag_uid + "}, "
+                + "idiag_inode{" + idiag_inode + "}, "
                 + "}";
     }
 }
