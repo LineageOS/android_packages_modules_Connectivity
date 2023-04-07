@@ -80,7 +80,7 @@ public class StructInetDiagSockId {
      * Parse inet diag socket id from buffer.
      */
     @Nullable
-    public static StructInetDiagSockId parse(final ByteBuffer byteBuffer, final byte family) {
+    public static StructInetDiagSockId parse(final ByteBuffer byteBuffer, final short family) {
         if (byteBuffer.remaining() < STRUCT_SIZE) {
             return null;
         }

@@ -248,9 +248,9 @@ public class InetDiagSocketTest {
             "f5220000" +     // pid
             // struct inet_diag_msg
             "0a" +           // family = AF_INET6
-            "01" +           // idiag_state
-            "00" +           // idiag_timer
-            "00" +           // idiag_retrans
+            "01" +           // idiag_state = 1
+            "02" +           // idiag_timer = 2
+            "ff" +           // idiag_retrans = 255
                 // inet_diag_sockid
                 "a817" +     // idiag_sport = 43031
                 "960f" +     // idiag_dport = 38415
@@ -258,11 +258,11 @@ public class InetDiagSocketTest {
                 "20010db8000000000000000000000002" + // idiag_dst = 2001:db8::2
                 "07000000" + // idiag_if = 7
                 "5800000000000000" + // idiag_cookie = 88
-            "00000000" +     // idiag_expires
-            "00000000" +     // idiag_rqueue
-            "00000000" +     // idiag_wqueue
+            "04000000" +     // idiag_expires = 4
+            "05000000" +     // idiag_rqueue = 5
+            "06000000" +     // idiag_wqueue = 6
             "a3270000" +     // idiag_uid = 10147
-            "A57E1900";      // idiag_inode
+            "a57e19f0";      // idiag_inode = 4028202661
 
     private void assertInetDiagMsg1(final NetlinkMessage msg) {
         assertNotNull(msg);
@@ -276,12 +276,20 @@ public class InetDiagSocketTest {
                 0    /* seq */,
                 8949 /* pid */);
 
-        assertEquals(10147, inetDiagMsg.inetDiagMsg.idiag_uid);
+        assertEquals(AF_INET6, inetDiagMsg.inetDiagMsg.idiag_family);
+        assertEquals(1, inetDiagMsg.inetDiagMsg.idiag_state);
+        assertEquals(2, inetDiagMsg.inetDiagMsg.idiag_timer);
+        assertEquals(255, inetDiagMsg.inetDiagMsg.idiag_retrans);
         assertInetDiagSockId(inetDiagMsg.inetDiagMsg.id,
                 new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::1"), 43031),
                 new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::2"), 38415),
                 7  /* ifIndex */,
                 88 /* cookie */);
+        assertEquals(4, inetDiagMsg.inetDiagMsg.idiag_expires);
+        assertEquals(5, inetDiagMsg.inetDiagMsg.idiag_rqueue);
+        assertEquals(6, inetDiagMsg.inetDiagMsg.idiag_wqueue);
+        assertEquals(10147, inetDiagMsg.inetDiagMsg.idiag_uid);
+        assertEquals(4028202661L, inetDiagMsg.inetDiagMsg.idiag_inode);
     }
 
     // Hexadecimal representation of InetDiagMessage
@@ -294,9 +302,9 @@ public class InetDiagSocketTest {
             "f5220000" +     // pid
             // struct inet_diag_msg
             "0a" +           // family = AF_INET6
-            "01" +           // idiag_state
-            "00" +           // idiag_timer
-            "00" +           // idiag_retrans
+            "02" +           // idiag_state = 2
+            "10" +           // idiag_timer = 16
+            "20" +           // idiag_retrans = 32
                 // inet_diag_sockid
                 "a845" +     // idiag_sport = 43077
                 "01bb" +     // idiag_dport = 443
@@ -304,11 +312,11 @@ public class InetDiagSocketTest {
                 "20010db8000000000000000000000004" + // idiag_dst = 2001:db8::4
                 "08000000" + // idiag_if = 8
                 "6300000000000000" + // idiag_cookie = 99
-            "00000000" +     // idiag_expires
-            "00000000" +     // idiag_rqueue
-            "00000000" +     // idiag_wqueue
+            "30000000" +     // idiag_expires = 48
+            "40000000" +     // idiag_rqueue = 64
+            "50000000" +     // idiag_wqueue = 80
             "39300000" +     // idiag_uid = 12345
-            "A57E1900";      // idiag_inode
+            "851a0000";      // idiag_inode = 6789
 
     private void assertInetDiagMsg2(final NetlinkMessage msg) {
         assertNotNull(msg);
@@ -322,12 +330,20 @@ public class InetDiagSocketTest {
                 0    /* seq */,
                 8949 /* pid */);
 
-        assertEquals(12345, inetDiagMsg.inetDiagMsg.idiag_uid);
+        assertEquals(AF_INET6, inetDiagMsg.inetDiagMsg.idiag_family);
+        assertEquals(2, inetDiagMsg.inetDiagMsg.idiag_state);
+        assertEquals(16, inetDiagMsg.inetDiagMsg.idiag_timer);
+        assertEquals(32, inetDiagMsg.inetDiagMsg.idiag_retrans);
         assertInetDiagSockId(inetDiagMsg.inetDiagMsg.id,
                 new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::3"), 43077),
                 new InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::4"), 443),
                 8  /* ifIndex */,
                 99 /* cookie */);
+        assertEquals(48, inetDiagMsg.inetDiagMsg.idiag_expires);
+        assertEquals(64, inetDiagMsg.inetDiagMsg.idiag_rqueue);
+        assertEquals(80, inetDiagMsg.inetDiagMsg.idiag_wqueue);
+        assertEquals(12345, inetDiagMsg.inetDiagMsg.idiag_uid);
+        assertEquals(6789, inetDiagMsg.inetDiagMsg.idiag_inode);
     }
 
     private static final byte[] INET_DIAG_MSG_BYTES =
