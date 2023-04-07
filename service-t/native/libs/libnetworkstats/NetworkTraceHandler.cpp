@@ -101,6 +101,11 @@ void NetworkTraceHandler::RegisterDataSource() {
 void NetworkTraceHandler::InitPerfettoTracing() {
   perfetto::TracingInitArgs args = {};
   args.backends |= perfetto::kSystemBackend;
+  // The following line disables the Perfetto system consumer. Perfetto inlines
+  // the call to `Initialize` which allows the compiler to see that the branch
+  // with the SystemConsumerTracingBackend is not used. With LTO enabled, this
+  // strips the Perfetto consumer code and reduces the size of this binary by
+  // around 270KB total. Be careful when changing this value.
   args.enable_system_consumer = false;
   perfetto::Tracing::Initialize(args);
   NetworkTraceHandler::RegisterDataSource();
