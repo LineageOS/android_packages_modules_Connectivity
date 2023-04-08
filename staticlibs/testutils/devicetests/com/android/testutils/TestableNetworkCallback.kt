@@ -408,13 +408,6 @@ open class TestableNetworkCallback private constructor(
         assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms")
     } as T
 
-    // TODO (b/157405399) remove this method when there are no longer any uses of it.
-    inline fun <reified T : CallbackEntry> eventuallyExpectOrNull(
-        timeoutMs: Long = defaultTimeoutMs,
-        from: Int = mark,
-        crossinline predicate: (T) -> Boolean = { true }
-    ) = history.poll(timeoutMs, from) { it is T && predicate(it) } as T?
-
     // Expects onAvailable and the callbacks that follow it. These are:
     // - onSuspended, iff the network was suspended when the callbacks fire.
     // - onCapabilitiesChanged.
