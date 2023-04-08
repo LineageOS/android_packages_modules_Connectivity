@@ -367,6 +367,12 @@ open class TestableNetworkCallback private constructor(
         test: (T) -> Boolean = { true }
     ) = expect(network.network, timeoutMs, errorMsg, test)
 
+    /*****
+     * assertNoCallback family of methods.
+     * These methods make sure that no callback that matches the predicate was received.
+     * If no predicate is given, they make sure that no callback at all was received.
+     * These methods run the waiter func given in the constructor if any.
+     */
     @JvmOverloads
     fun assertNoCallback(
         timeoutMs: Long = defaultNoCallbackTimeoutMs,
@@ -379,9 +385,12 @@ open class TestableNetworkCallback private constructor(
     fun assertNoCallback(valid: (CallbackEntry) -> Boolean) =
             assertNoCallback(defaultNoCallbackTimeoutMs, valid)
 
-    // Expects a callback of the specified type matching the predicate within the timeout.
-    // Any callback that doesn't match the predicate will be skipped. Fails only if
-    // no matching callback is received within the timeout.
+    /*****
+     * eventuallyExpect family of methods.
+     * These methods make sure a callback that matches the type/predicate is received eventually.
+     * Any callback of the wrong type, or doesn't match the optional predicate, is ignored.
+     * They fail if no callback matching the predicate is received within the timeout.
+     */
     inline fun <reified T : CallbackEntry> eventuallyExpect(
         timeoutMs: Long = defaultTimeoutMs,
         from: Int = mark,
