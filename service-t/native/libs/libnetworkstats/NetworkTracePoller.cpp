@@ -99,9 +99,14 @@ bool NetworkTracePoller::Stop() {
     ALOGW("Failed to disable tracing: %s", res.error().message().c_str());
   }
 
-  // make sure everything in the system has actually seen the 'false' we just wrote
+  // Make sure everything in the system has actually seen the 'false' we just
+  // wrote, things should now be well and truly disabled.
   synchronizeKernelRCU();
-  // things should now be well and truly disabled
+
+  // Drain remaining events from the ring buffer now that tracing is disabled.
+  // This prevents the next trace from seeing stale events and allows writing
+  // the last batch of events to Perfetto.
+  ConsumeAllLocked();
 
   mTaskRunner.reset();
   mRingBuffer.reset();
