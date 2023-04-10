@@ -366,18 +366,6 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
-    fun testPollOrThrow() {
-        assertFails { mCallback.pollOrThrow(SHORT_TIMEOUT_MS) }
-        TNCInterpreter.interpretTestSpec(initial = mCallback, lineShift = 1,
-                threadTransform = { cb -> cb.createLinkedCopy() }, spec = """
-            sleep; onAvailable(133)    | pollOrThrow(2) = Available(133) time 1..4
-                                       | pollOrThrow(1) fails
-            onCapabilitiesChanged(108) | pollOrThrow(1) = CapabilitiesChanged(108) time 0..3
-            onBlockedStatus(199)       | pollOrThrow(1) = BlockedStatus(199) time 0..3
-        """)
-    }
-
-    @Test
     fun testEventuallyExpect() {
         // TODO: Current test does not verify the inline one. Also verify the behavior after
         // aligning two eventuallyExpect()
@@ -455,7 +443,6 @@ private val interpretTable = listOf<InterpretMatcher<TestableNetworkCallback>>(
         }
     },
     Regex("""poll\((\d+)\)""") to { i, cb, t -> cb.poll(t.timeArg(1)) },
-    Regex("""pollOrThrow\((\d+)\)""") to { i, cb, t -> cb.pollOrThrow(t.timeArg(1)) },
     // Interpret "eventually(Available(xx), timeout)" as calling eventuallyExpect that expects
     // CallbackEntry.AVAILABLE with netId of xx within timeout*INTERPRET_TIME_UNIT timeout, and
     // likewise for all callback types.

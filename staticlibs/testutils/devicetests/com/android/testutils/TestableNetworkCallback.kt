@@ -223,18 +223,6 @@ open class TestableNetworkCallback private constructor(
     fun poll(timeoutMs: Long = defaultTimeoutMs, predicate: (CallbackEntry) -> Boolean = { true }) =
             history.poll(timeoutMs, predicate)
 
-    /**
-     * Get the next callback or throw if timeout.
-     *
-     * With no argument, this method waits out the default timeout. To wait forever, pass
-     * Long.MAX_VALUE.
-     */
-    @JvmOverloads
-    fun pollOrThrow(
-        timeoutMs: Long = defaultTimeoutMs,
-        errorMsg: String = "Did not receive callback after $timeoutMs"
-    ): CallbackEntry = poll(timeoutMs) ?: fail(errorMsg)
-
     /*****
      * expect family of methods.
      * These methods fetch the next callback and assert it matches the conditions : type,
@@ -350,15 +338,16 @@ open class TestableNetworkCallback private constructor(
         timeoutMs: Long = defaultTimeoutMs,
         errorMsg: String? = null,
         test: (T) -> Boolean = { true }
-    ) = pollOrThrow(timeoutMs, "Did not receive ${T::class.simpleName} after ${timeoutMs}ms").also {
-        if (it !is T) fail("Expected callback ${T::class.simpleName}, got $it")
-        if (ANY_NETWORK !== network && it.network != network) {
-            fail("Expected network $network for callback : $it")
-        }
-        if (!test(it)) {
-            fail("${errorMsg ?: "Callback doesn't match predicate"} : $it")
-        }
-    } as T
+    ) = (poll(timeoutMs) ?: fail("Did not receive ${T::class.simpleName} after ${timeoutMs}ms"))
+            .also {
+                if (it !is T) fail("Expected callback ${T::class.simpleName}, got $it")
+                if (ANY_NETWORK !== network && it.network != network) {
+                    fail("Expected network $network for callback : $it")
+                }
+                if (!test(it)) {
+                    fail("${errorMsg ?: "Callback doesn't match predicate"} : $it")
+                }
+            } as T
 
     inline fun <reified T : CallbackEntry> expect(
         network: HasNetwork,
