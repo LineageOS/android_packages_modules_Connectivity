@@ -308,7 +308,7 @@ public final class NetworkTemplate implements Parcelable {
     public static NetworkTemplate buildTemplateCarrierMetered(@NonNull String subscriberId) {
         throwAtLeastU();
         return new NetworkTemplate.Builder(MATCH_CARRIER)
-                // Set.of will throw if wifiNetworkKey is null, which is the historical
+                // Set.of will throw if subscriberId is null, which is the historical
                 // behavior and should be preserved.
                 .setSubscriberIds(Set.of(subscriberId))
                 .setMeteredness(METERED_YES)
