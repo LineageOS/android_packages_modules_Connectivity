@@ -170,23 +170,10 @@ static int statsLinesToNetworkStats(JNIEnv* env, jclass clazz, jobject stats,
     return 0;
 }
 
-static int readNetworkStatsDetail(JNIEnv* env, jclass clazz, jobject stats, jint limitUid,
-        jobjectArray limitIfacesObj, jint limitTag) {
-
-    std::vector<std::string> limitIfaces;
-    if (limitIfacesObj != NULL && env->GetArrayLength(limitIfacesObj) > 0) {
-        int num = env->GetArrayLength(limitIfacesObj);
-        for (int i = 0; i < num; i++) {
-            jstring string = (jstring)env->GetObjectArrayElement(limitIfacesObj, i);
-            ScopedUtfChars string8(env, string);
-            if (string8.c_str() != NULL) {
-                limitIfaces.push_back(std::string(string8.c_str()));
-            }
-        }
-    }
+static int readNetworkStatsDetail(JNIEnv* env, jclass clazz, jobject stats) {
     std::vector<stats_line> lines;
 
-    if (parseBpfNetworkStatsDetail(&lines, limitIfaces, limitTag, limitUid) < 0)
+    if (parseBpfNetworkStatsDetail(&lines) < 0)
         return -1;
 
     return statsLinesToNetworkStats(env, clazz, stats, lines);
@@ -202,8 +189,7 @@ static int readNetworkStatsDev(JNIEnv* env, jclass clazz, jobject stats) {
 }
 
 static const JNINativeMethod gMethods[] = {
-        { "nativeReadNetworkStatsDetail",
-                "(Landroid/net/NetworkStats;I[Ljava/lang/String;I)I",
+        { "nativeReadNetworkStatsDetail", "(Landroid/net/NetworkStats;)I",
                 (void*) readNetworkStatsDetail },
         { "nativeReadNetworkStatsDev", "(Landroid/net/NetworkStats;)I",
                 (void*) readNetworkStatsDev },
