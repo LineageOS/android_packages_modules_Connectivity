@@ -31,6 +31,7 @@ import android.nearby.PresenceScanFilter;
 import android.nearby.ScanCallback;
 import android.nearby.ScanFilter;
 import android.nearby.ScanRequest;
+import android.nearby.aidl.IOffloadCallback;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -275,6 +276,13 @@ public class DiscoveryProviderManager implements AbstractDiscoveryProvider.Liste
                 }
             }
         }
+    }
+
+    /**
+     * Query offload capability in a device.
+     */
+    public void queryOffloadCapability(IOffloadCallback callback) {
+        mChreDiscoveryProvider.queryOffloadCapability(callback);
     }
 
     /**
