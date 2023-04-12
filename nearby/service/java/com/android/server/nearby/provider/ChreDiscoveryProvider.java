@@ -223,9 +223,11 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
         NanoAppMessage message =
                 NanoAppMessage.createMessageToNanoApp(
                         NANOAPP_ID, NANOAPP_MESSAGE_TYPE_FILTER, filters.toByteArray());
-        if (!mChreCommunication.sendMessageToNanoApp(message)) {
-            Log.e(TAG, "Failed to send filters to CHRE.");
+        if (mChreCommunication.sendMessageToNanoApp(message)) {
+            Log.v(TAG, "Successfully sent filters to CHRE.");
+            return;
         }
+        Log.e(TAG, "Failed to send filters to CHRE.");
     }
 
     private void sendScreenUpdate(Boolean screenOn) {
@@ -233,9 +235,11 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
         NanoAppMessage message =
                 NanoAppMessage.createMessageToNanoApp(
                         NANOAPP_ID, NANOAPP_MESSAGE_TYPE_CONFIG, config.toByteArray());
-        if (!mChreCommunication.sendMessageToNanoApp(message)) {
-            Log.e(TAG, "Failed to send config to CHRE.");
+        if (mChreCommunication.sendMessageToNanoApp(message)) {
+            Log.v(TAG, "Successfully sent config to CHRE.");
+            return;
         }
+        Log.e(TAG, "Failed to send config to CHRE.");
     }
 
     private class ChreCallback implements ChreCommunication.ContextHubCommsCallback {
