@@ -20,11 +20,12 @@ package com.android.testutils
 
 import android.system.ErrnoException
 import android.system.Os
+import android.system.OsConstants
 import com.android.net.module.util.IpUtils
 import com.android.testutils.PacketReflector.IPV4_HEADER_LENGTH
 import com.android.testutils.PacketReflector.IPV6_HEADER_LENGTH
 import java.io.FileDescriptor
-import java.io.IOException
+import java.io.InterruptedIOException
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
@@ -32,8 +33,15 @@ fun readPacket(fd: FileDescriptor, buf: ByteArray): Int {
     return try {
         Os.read(fd, buf, 0, buf.size)
     } catch (e: ErrnoException) {
-        -1
-    } catch (e: IOException) {
+        // Ignore normal use cases such as the EAGAIN error indicates that the read operation
+        // cannot be completed immediately, or the EINTR error indicates that the read
+        // operation was interrupted by a signal.
+        if (e.errno == OsConstants.EAGAIN || e.errno == OsConstants.EINTR) {
+            -1
+        } else {
+            throw e
+        }
+    } catch (e: InterruptedIOException) {
         -1
     }
 }
