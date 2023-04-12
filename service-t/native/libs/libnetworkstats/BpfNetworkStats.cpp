@@ -110,29 +110,16 @@ stats_line populateStatsEntry(const StatsKey& statsKey, const StatsValue& statsE
 }
 
 int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
-                                       const std::vector<std::string>& limitIfaces, int limitTag,
-                                       int limitUid, const BpfMap<StatsKey, StatsValue>& statsMap,
+                                       const BpfMap<StatsKey, StatsValue>& statsMap,
                                        const BpfMap<uint32_t, IfaceValue>& ifaceMap) {
     int64_t unknownIfaceBytesTotal = 0;
     const auto processDetailUidStats =
-            [lines, &limitIfaces, &limitTag, &limitUid, &unknownIfaceBytesTotal, &ifaceMap](
+            [lines, &unknownIfaceBytesTotal, &ifaceMap](
                     const StatsKey& key,
                     const BpfMap<StatsKey, StatsValue>& statsMap) -> Result<void> {
         char ifname[IFNAMSIZ];
         if (getIfaceNameFromMap(ifaceMap, statsMap, key.ifaceIndex, ifname, key,
                                 &unknownIfaceBytesTotal)) {
-            return Result<void>();
-        }
-        std::string ifnameStr(ifname);
-        if (limitIfaces.size() > 0 &&
-            std::find(limitIfaces.begin(), limitIfaces.end(), ifnameStr) == limitIfaces.end()) {
-            // Nothing matched; skip this line.
-            return Result<void>();
-        }
-        if (limitTag != TAG_ALL && uint32_t(limitTag) != key.tag) {
-            return Result<void>();
-        }
-        if (limitUid != UID_ALL && uint32_t(limitUid) != key.uid) {
             return Result<void>();
         }
         Result<StatsValue> statsEntry = statsMap.readValue(key);
@@ -162,9 +149,7 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
     return 0;
 }
 
-int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines,
-                               const std::vector<std::string>& limitIfaces, int limitTag,
-                               int limitUid) {
+int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
     static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
     static BpfMapRO<uint32_t, uint32_t> configurationMap(CONFIGURATION_MAP_PATH);
     static BpfMap<StatsKey, StatsValue> statsMapA(STATS_MAP_A_PATH);
@@ -195,8 +180,7 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines,
     // TODO: the above comment feels like it may be obsolete / out of date,
     // since we no longer swap the map via netd binder rpc - though we do
     // still swap it.
-    int ret = parseBpfNetworkStatsDetailInternal(lines, limitIfaces, limitTag, limitUid,
-                                                 *inactiveStatsMap, ifaceIndexNameMap);
+    int ret = parseBpfNetworkStatsDetailInternal(lines, *inactiveStatsMap, ifaceIndexNameMap);
     if (ret) {
         ALOGE("parse detail network stats failed: %s", strerror(errno));
         return ret;

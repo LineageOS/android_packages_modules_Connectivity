@@ -225,18 +225,11 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetUidStatsTotal) {
     ASSERT_EQ(0, bpfGetUidStatsInternal(TEST_UID2, &result2, mFakeAppUidStatsMap));
     expectStatsEqual(value2, result2);
     std::vector<stats_line> lines;
-    std::vector<std::string> ifaces;
     populateFakeStats(TEST_UID1, 0, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID1, 0, IFACE_INDEX2, TEST_COUNTERSET1, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID2, 0, IFACE_INDEX3, TEST_COUNTERSET1, value1, mFakeStatsMap);
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, TEST_UID1,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)2, lines.size());
-    lines.clear();
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, TEST_UID2,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)1, lines.size());
-    expectStatsLineEqual(value1, IFACE_NAME3, TEST_UID2, TEST_COUNTERSET1, 0, lines.front());
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
+    ASSERT_EQ((unsigned long)3, lines.size());
 }
 
 TEST_F(BpfNetworkStatsHelperTest, TestGetIfaceStatsInternal) {
@@ -297,24 +290,8 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsDetail) {
                       mFakeStatsMap);
     populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     std::vector<stats_line> lines;
-    std::vector<std::string> ifaces;
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((unsigned long)4, lines.size());
-    lines.clear();
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, TEST_UID1,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)3, lines.size());
-    lines.clear();
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TEST_TAG, TEST_UID1,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)2, lines.size());
-    lines.clear();
-    ifaces.push_back(std::string(IFACE_NAME1));
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TEST_TAG, TEST_UID1,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)1, lines.size());
-    expectStatsLineEqual(value1, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, TEST_TAG, lines.front());
 }
 
 TEST_F(BpfNetworkStatsHelperTest, TestGetStatsWithSkippedIface) {
@@ -333,24 +310,8 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsWithSkippedIface) {
     populateFakeStats(TEST_UID1, 0, IFACE_INDEX1, TEST_COUNTERSET1, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID2, 0, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     std::vector<stats_line> lines;
-    std::vector<std::string> ifaces;
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((unsigned long)4, lines.size());
-    lines.clear();
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, TEST_UID1,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)3, lines.size());
-    lines.clear();
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, TEST_UID2,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)1, lines.size());
-    expectStatsLineEqual(value1, IFACE_NAME1, TEST_UID2, TEST_COUNTERSET0, 0, lines.front());
-    lines.clear();
-    ifaces.push_back(std::string(IFACE_NAME1));
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, TEST_UID1,
-                                                    mFakeStatsMap, mFakeIfaceIndexNameMap));
-    ASSERT_EQ((unsigned long)2, lines.size());
 }
 
 TEST_F(BpfNetworkStatsHelperTest, TestUnknownIfaceError) {
@@ -387,10 +348,8 @@ TEST_F(BpfNetworkStatsHelperTest, TestUnknownIfaceError) {
                                            ifname, curKey, &unknownIfaceBytesTotal));
     ASSERT_EQ(-1, unknownIfaceBytesTotal);
     std::vector<stats_line> lines;
-    std::vector<std::string> ifaces;
     // TODO: find a way to test the total of unknown Iface Bytes go above limit.
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((unsigned long)1, lines.size());
     expectStatsLineEqual(value1, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, 0, lines.front());
 }
@@ -458,18 +417,15 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsSortedAndGrouped) {
     };
 
     std::vector<stats_line> lines;
-    std::vector<std::string> ifaces;
 
     // Test empty stats.
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((size_t) 0, lines.size());
     lines.clear();
 
     // Test 1 line stats.
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((size_t) 1, lines.size());
     expectStatsLineEqual(value1, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, TEST_TAG, lines[0]);
     lines.clear();
@@ -480,8 +436,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsSortedAndGrouped) {
     populateFakeStats(TEST_UID1, TEST_TAG + 1, IFACE_INDEX1, TEST_COUNTERSET0, value2,
                       mFakeStatsMap);
     populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((size_t) 5, lines.size());
     lines.clear();
 
@@ -489,8 +444,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsSortedAndGrouped) {
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX3, TEST_COUNTERSET0, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX3, TEST_COUNTERSET0, value1, mFakeStatsMap);
 
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((size_t) 5, lines.size());
 
     // Verify Sorted & Grouped.
@@ -547,9 +501,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsSortAndOverflow) {
     // TODO: Mutate counterSet and enlarge TEST_MAP_SIZE if overflow on counterSet is possible.
 
     std::vector<stats_line> lines;
-    std::vector<std::string> ifaces;
-    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, ifaces, TAG_ALL, UID_ALL, mFakeStatsMap,
-                                                    mFakeIfaceIndexNameMap));
+    ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(&lines, mFakeStatsMap, mFakeIfaceIndexNameMap));
     ASSERT_EQ((size_t) 8, lines.size());
 
     // Uid 0 first
