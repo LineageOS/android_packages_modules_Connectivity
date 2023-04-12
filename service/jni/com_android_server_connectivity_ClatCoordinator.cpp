@@ -51,7 +51,7 @@
 
 namespace android {
 
-#define ALOGF(s ...) do { ALOGE(s); } while(0)
+#define ALOGF(s ...) do { ALOGE(s); abort(); } while(0)
 
 enum verify { VERIFY_DIR, VERIFY_BIN, VERIFY_PROG, VERIFY_MAP_RO, VERIFY_MAP_RW };
 
