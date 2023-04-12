@@ -472,8 +472,7 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
                         256L, 16L, 512L, 32L, 0L)
                 .insertEntry(TEST_IFACE, UID_GREEN, SET_DEFAULT, TAG_NONE, 64L, 3L, 1024L, 8L, 0L);
 
-        doReturn(stats).when(mDeps).getNetworkStatsDetail(anyInt(), any(),
-                anyInt());
+        doReturn(stats).when(mDeps).getNetworkStatsDetail();
 
         final String[] ifaces = new String[]{TEST_IFACE};
         final NetworkStats res = mFactory.readNetworkStatsDetail(UID_ALL, ifaces, TAG_ALL);
@@ -488,8 +487,7 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
         mFactory.removeUidsLocked(removedUids);
 
         // Return empty stats for reading the result of removing uids stats later.
-        doReturn(buildEmptyStats()).when(mDeps).getNetworkStatsDetail(anyInt(), any(),
-                anyInt());
+        doReturn(buildEmptyStats()).when(mDeps).getNetworkStatsDetail();
 
         final NetworkStats removedUidsStats =
                 mFactory.readNetworkStatsDetail(UID_ALL, ifaces, TAG_ALL);
@@ -574,8 +572,7 @@ public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
         final NetworkStats statsFromResource = parseNetworkStatsFromGoldenSample(resourceId,
                 24 /* initialSize */, true /* consumeHeader */, false /* checkActive */,
                 true /* isUidData */);
-        doReturn(statsFromResource).when(mDeps).getNetworkStatsDetail(anyInt(), any(),
-                anyInt());
+        doReturn(statsFromResource).when(mDeps).getNetworkStatsDetail();
         return mFactory.readNetworkStatsDetail();
     }
 
