@@ -148,7 +148,7 @@ public class MulticastNetworkInterfaceProvider {
     }
 
     /*** Check whether given network interface can support mdns */
-    public static boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface) {
+    private static boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface) {
         try {
             if ((networkInterface == null)
                     || networkInterface.isLoopback()

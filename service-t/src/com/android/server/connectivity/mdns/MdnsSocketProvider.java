@@ -16,6 +16,10 @@
 
 package com.android.server.connectivity.mdns;
 
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_VPN;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -24,6 +28,7 @@ import android.net.ConnectivityManager.NetworkCallback;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.TetheringManager;
 import android.net.TetheringManager.TetheringEventCallback;
@@ -71,6 +76,7 @@ public class MdnsSocketProvider {
     private final ArrayMap<String, SocketInfo> mTetherInterfaceSockets = new ArrayMap<>();
     private final ArrayMap<Network, LinkProperties> mActiveNetworksLinkProperties =
             new ArrayMap<>();
+    private final ArrayMap<Network, int[]> mActiveNetworksTransports = new ArrayMap<>();
     private final ArrayMap<SocketCallback, Network> mCallbacksToRequestedNetworks =
             new ArrayMap<>();
     private final List<String> mLocalOnlyInterfaces = new ArrayList<>();
@@ -93,7 +99,14 @@ public class MdnsSocketProvider {
             @Override
             public void onLost(Network network) {
                 mActiveNetworksLinkProperties.remove(network);
+                mActiveNetworksTransports.remove(network);
                 removeNetworkSocket(network);
+            }
+
+            @Override
+            public void onCapabilitiesChanged(@NonNull Network network,
+                    @NonNull NetworkCapabilities networkCapabilities) {
+                mActiveNetworksTransports.put(network, networkCapabilities.getTransportTypes());
             }
 
             @Override
@@ -127,11 +140,6 @@ public class MdnsSocketProvider {
                 throws SocketException {
             final NetworkInterface ni = NetworkInterface.getByName(interfaceName);
             return ni == null ? null : new NetworkInterfaceWrapper(ni);
-        }
-
-        /*** Check whether given network interface can support mdns */
-        public boolean canScanOnInterface(@NonNull NetworkInterfaceWrapper networkInterface) {
-            return MulticastNetworkInterfaceProvider.canScanOnInterface(networkInterface);
         }
 
         /*** Create a MdnsInterfaceSocket */
@@ -303,7 +311,17 @@ public class MdnsSocketProvider {
         try {
             final NetworkInterfaceWrapper networkInterface =
                     mDependencies.getNetworkInterfaceByName(interfaceName);
-            if (networkInterface == null || !mDependencies.canScanOnInterface(networkInterface)) {
+            // There are no transports for tethered interfaces. Other interfaces should always
+            // have transports since LinkProperties updates are always sent after
+            // NetworkCapabilities updates.
+            final int[] transports;
+            if (networkKey == LOCAL_NET) {
+                transports = new int[0];
+            } else {
+                transports = mActiveNetworksTransports.getOrDefault(
+                        ((NetworkAsKey) networkKey).mNetwork, new int[0]);
+            }
+            if (networkInterface == null || !isMdnsCapableInterface(networkInterface, transports)) {
                 return;
             }
 
@@ -336,6 +354,36 @@ public class MdnsSocketProvider {
             }
         } catch (IOException e) {
             Log.e(TAG, "Create a socket failed with interface=" + interfaceName, e);
+        }
+    }
+
+    private boolean isMdnsCapableInterface(
+            @NonNull NetworkInterfaceWrapper iface, @NonNull int[] transports) {
+        try {
+            // Never try mDNS on cellular, or on interfaces with incompatible flags
+            if (CollectionUtils.contains(transports, TRANSPORT_CELLULAR)
+                    || iface.isLoopback()
+                    || iface.isPointToPoint()
+                    || iface.isVirtual()
+                    || !iface.isUp()) {
+                return false;
+            }
+
+            // Otherwise, always try mDNS on non-VPN Wifi.
+            if (!CollectionUtils.contains(transports, TRANSPORT_VPN)
+                    && CollectionUtils.contains(transports, TRANSPORT_WIFI)) {
+                return true;
+            }
+
+            // For other transports, or no transports (tethering downstreams), do mDNS based on the
+            // interface flags. This is not always reliable (for example some Wifi interfaces may
+            // not have the MULTICAST flag even though they can do mDNS, and some cellular
+            // interfaces may have the BROADCAST or MULTICAST flags), so checks are done based on
+            // transports above in priority.
+            return iface.supportsMulticast();
+        } catch (SocketException e) {
+            Log.e(TAG, "Error checking interface flags", e);
+            return false;
         }
     }
 
