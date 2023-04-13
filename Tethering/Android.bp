@@ -250,6 +250,9 @@ sdk {
         // e.g. *classpath_fragments.
         "com.android.tethering",
     ],
+    native_shared_libs: [
+        "libnetd_updatable",
+    ],
 }
 
 java_library_static {
