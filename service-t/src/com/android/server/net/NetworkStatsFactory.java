@@ -84,12 +84,9 @@ public class NetworkStatsFactory {
          * are expected to monotonically increase since device boot.
          */
         @NonNull
-        public NetworkStats getNetworkStatsDetail(int limitUid, @Nullable String[] limitIfaces,
-                int limitTag) throws IOException {
+        public NetworkStats getNetworkStatsDetail() throws IOException {
             final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 0);
-            // TODO: remove both path and useBpfStats arguments.
-            // The path is never used if useBpfStats is true.
-            final int ret = nativeReadNetworkStatsDetail(stats, limitUid, limitIfaces, limitTag);
+            final int ret = nativeReadNetworkStatsDetail(stats);
             if (ret != 0) {
                 throw new IOException("Failed to parse network stats");
             }
@@ -213,8 +210,7 @@ public class NetworkStatsFactory {
             requestSwapActiveStatsMapLocked();
             // Stats are always read from the inactive map, so they must be read after the
             // swap
-            final NetworkStats stats = mDeps.getNetworkStatsDetail(
-                    UID_ALL, INTERFACES_ALL, TAG_ALL);
+            final NetworkStats stats = mDeps.getNetworkStatsDetail();
             // BPF stats are incremental; fold into mPersistSnapshot.
             mPersistSnapshot.setElapsedRealtime(stats.getElapsedRealtime());
             mPersistSnapshot.combineAllValues(stats);
@@ -301,8 +297,7 @@ public class NetworkStatsFactory {
      * are expected to monotonically increase since device boot.
      */
     @VisibleForTesting
-    public static native int nativeReadNetworkStatsDetail(NetworkStats stats, int limitUid,
-            String[] limitIfaces, int limitTag);
+    public static native int nativeReadNetworkStatsDetail(NetworkStats stats);
 
     @VisibleForTesting
     public static native int nativeReadNetworkStatsDev(NetworkStats stats);
