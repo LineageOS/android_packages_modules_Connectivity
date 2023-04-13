@@ -194,8 +194,12 @@ int main(int argc, char **argv) {
 
   if (running) {
     logmsg(ANDROID_LOG_INFO, "Clatd on %s waiting for SIGTERM", uplink_interface);
-    while (running) sleep(60);
-    logmsg(ANDROID_LOG_INFO, "Clatd on %s received SIGTERM", uplink_interface);
+    // let's give higher level java code 15 seconds to kill us,
+    // but eventually terminate anyway, in case system server forgets about us...
+    // sleep() should be interrupted by SIGTERM, the handler should clear running
+    sleep(15);
+    logmsg(ANDROID_LOG_INFO, "Clatd on %s %s SIGTERM", uplink_interface,
+           running ? "timed out waiting for" : "received");
   } else {
     logmsg(ANDROID_LOG_INFO, "Clatd on %s already received SIGTERM", uplink_interface);
   }
