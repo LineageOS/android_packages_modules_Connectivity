@@ -17,7 +17,6 @@
 package android.net;
 
 import static android.Manifest.permission.READ_NETWORK_USAGE_HISTORY;
-import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.NetworkStats.UID_ALL;
 import static android.net.TrafficStats.UID_REMOVED;
 import static android.net.TrafficStats.UID_TETHERING;
@@ -32,6 +31,8 @@ import android.os.Binder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
+
+import com.android.net.module.util.PermissionUtils;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -100,6 +101,7 @@ public final class NetworkStatsAccess {
          * <li>Device owners.
          * <li>Carrier-privileged applications.
          * <li>The system UID.
+         * <li>NetworkStack application.
          * </ul>
          */
         int DEVICE = 3;
@@ -125,9 +127,9 @@ public final class NetworkStatsAccess {
 
         final int appId = UserHandle.getAppId(callingUid);
 
-        final boolean isNetworkStack = context.checkPermission(
-                android.Manifest.permission.NETWORK_STACK, callingPid, callingUid)
-                == PERMISSION_GRANTED;
+        final boolean isNetworkStack = PermissionUtils.checkAnyPermissionOf(
+                context, callingPid, callingUid, android.Manifest.permission.NETWORK_STACK,
+                NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
 
         if (hasCarrierPrivileges || isDeviceOwner
                 || appId == Process.SYSTEM_UID || isNetworkStack) {
