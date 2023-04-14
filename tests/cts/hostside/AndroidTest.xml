@@ -32,6 +32,11 @@
         <option name="teardown-command" value="cmd netpolicy stop-watching" />
     </target_preparer>
 
+    <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
+        <option name="force-skip-system-props" value="true" />
+        <option name="set-global-setting" key="verifier_verify_adb_installs" value="0" />
+    </target_preparer>
+
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
         <option name="jar" value="CtsHostsideNetworkTests.jar" />
         <option name="runtime-hint" value="3m56s" />
