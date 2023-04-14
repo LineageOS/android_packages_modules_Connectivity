@@ -78,6 +78,7 @@ public class NetworkStatsAccessTest {
         setHasAppOpsPermission(AppOpsManager.MODE_DEFAULT, false);
         setHasReadHistoryPermission(false);
         setHasNetworkStackPermission(false);
+        setHasMainlineNetworkStackPermission(false);
     }
 
     @After
@@ -154,6 +155,10 @@ public class NetworkStatsAccessTest {
         setHasNetworkStackPermission(false);
         assertEquals(NetworkStatsAccess.Level.DEFAULT,
                 NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
+
+        setHasMainlineNetworkStackPermission(true);
+        assertEquals(NetworkStatsAccess.Level.DEVICE,
+                NetworkStatsAccess.checkAccessLevel(mContext, TEST_PID, TEST_UID, TEST_PKG));
     }
 
     private void setHasCarrierPrivileges(boolean hasPrivileges) {
@@ -186,6 +191,12 @@ public class NetworkStatsAccessTest {
 
     private void setHasNetworkStackPermission(boolean hasPermission) {
         when(mContext.checkPermission(android.Manifest.permission.NETWORK_STACK,
+                TEST_PID, TEST_UID)).thenReturn(hasPermission ? PackageManager.PERMISSION_GRANTED
+                : PackageManager.PERMISSION_DENIED);
+    }
+
+    private void setHasMainlineNetworkStackPermission(boolean hasPermission) {
+        when(mContext.checkPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
                 TEST_PID, TEST_UID)).thenReturn(hasPermission ? PackageManager.PERMISSION_GRANTED
                 : PackageManager.PERMISSION_DENIED);
     }
