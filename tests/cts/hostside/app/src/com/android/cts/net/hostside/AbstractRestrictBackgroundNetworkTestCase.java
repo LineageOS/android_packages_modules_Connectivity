@@ -54,14 +54,15 @@ import android.net.NetworkRequest;
 import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.RemoteCallback;
 import android.os.SystemClock;
-import android.os.PowerManager;
 import android.provider.DeviceConfig;
 import android.service.notification.NotificationListenerService;
 import android.util.Log;
 import android.util.Pair;
 
+import com.android.compatibility.common.util.AmUtils;
 import com.android.compatibility.common.util.BatteryUtils;
 import com.android.compatibility.common.util.DeviceConfigStateHelper;
 
@@ -723,6 +724,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             executeSilentShellCommand("cmd power set-mode 0");
             turnBatteryOff();
         }
+        AmUtils.waitForBroadcastBarrier();
     }
 
     protected void setDozeMode(boolean enabled) throws Exception {
