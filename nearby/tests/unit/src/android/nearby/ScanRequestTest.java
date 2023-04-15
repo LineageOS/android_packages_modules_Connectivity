@@ -120,16 +120,16 @@ public class ScanRequestTest {
 
         assertThat(request.toString()).isEqualTo(
                 "Request[scanType=1, scanMode=SCAN_MODE_BALANCED, "
-                        + "bleEnabled=true, offloadOnly=true, "
+                        + "bleEnabled=true, offloadOnly=false, "
                         + "workSource=WorkSource{" + UID + " " + APP_NAME + "}, scanFilters=[]]");
     }
 
     /** Verify toString works correctly with null WorkSource. */
     @Test
     @SdkSuppress(minSdkVersion = 34)
-    public void testToString_nullWorkSource() {
+    public void testToString_nullWorkSource_offloadOnly() {
         ScanRequest request = new ScanRequest.Builder().setScanType(
-                SCAN_TYPE_FAST_PAIR).setWorkSource(null).build();
+                SCAN_TYPE_FAST_PAIR).setWorkSource(null).setOffloadOnly(true).build();
 
         assertThat(request.toString()).isEqualTo("Request[scanType=1, "
                 + "scanMode=SCAN_MODE_LOW_POWER, bleEnabled=true, offloadOnly=true, "
