@@ -36,10 +36,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.ArrayMap;
 import android.util.Log;
+import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
+import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.IOException;
@@ -65,6 +67,7 @@ public class MdnsSocketProvider {
     // Note: mdnsresponder mDNSEmbeddedAPI.h uses 8940 for Ethernet jumbo frames.
     private static final int READ_BUFFER_SIZE = 2048;
     private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
+    private static final int IFACE_IDX_NOT_EXIST = -1;
     @NonNull private final Context mContext;
     @NonNull private final Looper mLooper;
     @NonNull private final Handler mHandler;
@@ -81,6 +84,9 @@ public class MdnsSocketProvider {
             new ArrayMap<>();
     private final List<String> mLocalOnlyInterfaces = new ArrayList<>();
     private final List<String> mTetheredInterfaces = new ArrayList<>();
+    // mIfaceIdxToLinkProperties should not be cleared in maybeStopMonitoringSockets() because
+    // the netlink monitor is never stop and the old states must be kept.
+    private final SparseArray<LinkProperties> mIfaceIdxToLinkProperties = new SparseArray<>();
     private final byte[] mPacketReadBuffer = new byte[READ_BUFFER_SIZE];
     private boolean mMonitoringSockets = false;
     private boolean mRequestStop = false;
@@ -126,8 +132,8 @@ public class MdnsSocketProvider {
             }
         };
 
-        mSocketNetlinkMonitor = SocketNetLinkMonitorFactory.createNetLinkMonitor(mHandler,
-                LOGGER.mLog);
+        mSocketNetlinkMonitor = mDependencies.createSocketNetlinkMonitor(mHandler, LOGGER.mLog,
+                new NetLinkMessageProcessor());
     }
 
     /**
@@ -148,8 +154,83 @@ public class MdnsSocketProvider {
                 @NonNull byte[] packetReadBuffer) throws IOException {
             return new MdnsInterfaceSocket(networkInterface, port, looper, packetReadBuffer);
         }
-    }
 
+        /*** Get network interface by given interface name */
+        public int getNetworkInterfaceIndexByName(@NonNull final String ifaceName) {
+            final NetworkInterface iface;
+            try {
+                iface = NetworkInterface.getByName(ifaceName);
+            } catch (SocketException e) {
+                Log.e(TAG, "Error querying interface", e);
+                return IFACE_IDX_NOT_EXIST;
+            }
+            if (iface == null) {
+                Log.e(TAG, "Interface not found: " + ifaceName);
+                return IFACE_IDX_NOT_EXIST;
+            }
+            return iface.getIndex();
+        }
+        /*** Creates a SocketNetlinkMonitor */
+        public ISocketNetLinkMonitor createSocketNetlinkMonitor(@NonNull final Handler handler,
+                @NonNull final SharedLog log,
+                @NonNull final NetLinkMonitorCallBack cb) {
+            return SocketNetLinkMonitorFactory.createNetLinkMonitor(handler, log, cb);
+        }
+    }
+    /**
+     * The callback interface for the netlink monitor messages.
+     */
+    public interface NetLinkMonitorCallBack {
+        /**
+         * Handles the interface address add or update.
+         */
+        void addOrUpdateInterfaceAddress(int ifaceIdx, @NonNull LinkAddress newAddress);
+
+
+        /**
+         * Handles the interface address delete.
+         */
+        void deleteInterfaceAddress(int ifaceIdx, @NonNull LinkAddress deleteAddress);
+    }
+    private class NetLinkMessageProcessor implements NetLinkMonitorCallBack {
+
+        @Override
+        public void addOrUpdateInterfaceAddress(int ifaceIdx,
+                @NonNull final LinkAddress newAddress) {
+
+            LinkProperties linkProperties;
+            linkProperties = mIfaceIdxToLinkProperties.get(ifaceIdx);
+            if (linkProperties == null) {
+                linkProperties = new LinkProperties();
+                mIfaceIdxToLinkProperties.put(ifaceIdx, linkProperties);
+            }
+            boolean updated = linkProperties.addLinkAddress(newAddress);
+
+            if (!updated) {
+                return;
+            }
+            maybeUpdateTetheringSocketAddress(ifaceIdx, linkProperties.getLinkAddresses());
+        }
+
+        @Override
+        public void deleteInterfaceAddress(int ifaceIdx, @NonNull LinkAddress deleteAddress) {
+            LinkProperties linkProperties;
+            boolean updated = false;
+            linkProperties = mIfaceIdxToLinkProperties.get(ifaceIdx);
+            if (linkProperties != null) {
+                updated = linkProperties.removeLinkAddress(deleteAddress);
+                if (linkProperties.getLinkAddresses().isEmpty()) {
+                    mIfaceIdxToLinkProperties.remove(ifaceIdx);
+                }
+            }
+
+            if (linkProperties == null || !updated) {
+                return;
+            }
+            maybeUpdateTetheringSocketAddress(ifaceIdx, linkProperties.getLinkAddresses());
+
+        }
+    }
     /*** Data class for storing socket related info  */
     private static class SocketInfo {
         final MdnsInterfaceSocket mSocket;
@@ -190,6 +271,15 @@ public class MdnsSocketProvider {
         }
         mMonitoringSockets = true;
     }
+    /**
+     * Start netlink monitor.
+     */
+    public void startNetLinkMonitor() {
+        ensureRunningOnHandlerThread(mHandler);
+        if (mSocketNetlinkMonitor.isSupported()) {
+            mSocketNetlinkMonitor.startMonitoring();
+        }
+    }
 
     private void maybeStopMonitoringSockets() {
         if (!mMonitoringSockets) return; // Already unregistered.
@@ -203,10 +293,6 @@ public class MdnsSocketProvider {
             final TetheringManager tetheringManager = mContext.getSystemService(
                     TetheringManager.class);
             tetheringManager.unregisterTetheringEventCallback(mTetheringEventCallback);
-
-            if (mSocketNetlinkMonitor.isSupported()) {
-                mHandler.post(mSocketNetlinkMonitor::stopMonitoring);
-            }
             // Clear all saved status.
             mActiveNetworksLinkProperties.clear();
             mNetworkSockets.clear();
@@ -215,6 +301,8 @@ public class MdnsSocketProvider {
             mTetheredInterfaces.clear();
             mMonitoringSockets = false;
         }
+        // The netlink monitor is not stopped here because the MdnsSocketProvider need to listen
+        // to all the netlink updates when the system is up and running.
     }
 
     /*** Request to stop monitoring sockets and unregister callbacks */
@@ -259,21 +347,38 @@ public class MdnsSocketProvider {
         if (socketInfo == null) {
             createSocket(networkKey, lp);
         } else {
-            // Update the addresses of this socket.
-            final List<LinkAddress> addresses = lp.getLinkAddresses();
-            socketInfo.mAddresses.clear();
-            socketInfo.mAddresses.addAll(addresses);
-            // Try to join the group again.
-            socketInfo.mSocket.joinGroup(addresses);
-
-            notifyAddressesChanged(network, socketInfo.mSocket, lp);
+            updateSocketInfoAddress(network, socketInfo, lp.getLinkAddresses());
+        }
+    }
+    private void maybeUpdateTetheringSocketAddress(int ifaceIndex,
+            @NonNull final List<LinkAddress> updatedAddresses) {
+        for (int i = 0; i < mTetherInterfaceSockets.size(); ++i) {
+            String tetheringInterfaceName = mTetherInterfaceSockets.keyAt(i);
+            if (mDependencies.getNetworkInterfaceIndexByName(tetheringInterfaceName)
+                    == ifaceIndex) {
+                updateSocketInfoAddress(null /* network */,
+                        mTetherInterfaceSockets.valueAt(i), updatedAddresses);
+                return;
+            }
         }
     }
 
-    private static LinkProperties createLPForTetheredInterface(String interfaceName) {
-        final LinkProperties linkProperties = new LinkProperties();
+    private void updateSocketInfoAddress(@Nullable final Network network,
+            @NonNull final SocketInfo socketInfo,
+            @NonNull final List<LinkAddress> addresses) {
+        // Update the addresses of this socket.
+        socketInfo.mAddresses.clear();
+        socketInfo.mAddresses.addAll(addresses);
+        // Try to join the group again.
+        socketInfo.mSocket.joinGroup(addresses);
+
+        notifyAddressesChanged(network, socketInfo.mSocket, addresses);
+    }
+    private LinkProperties createLPForTetheredInterface(@NonNull final String interfaceName,
+            int ifaceIndex) {
+        final LinkProperties linkProperties =
+                new LinkProperties(mIfaceIdxToLinkProperties.get(ifaceIndex));
         linkProperties.setInterfaceName(interfaceName);
-        // TODO: Use NetlinkMonitor to update addresses for tethering interfaces.
         return linkProperties;
     }
 
@@ -292,7 +397,8 @@ public class MdnsSocketProvider {
         final CompareResult<String> interfaceDiff = new CompareResult<>(
                 current, updated);
         for (String name : interfaceDiff.added) {
-            createSocket(LOCAL_NET, createLPForTetheredInterface(name));
+            int ifaceIndex = mDependencies.getNetworkInterfaceIndexByName(name);
+            createSocket(LOCAL_NET, createLPForTetheredInterface(name, ifaceIndex));
         }
         for (String name : interfaceDiff.removed) {
             removeTetherInterfaceSocket(name);
@@ -332,14 +438,10 @@ public class MdnsSocketProvider {
             final MdnsInterfaceSocket socket = mDependencies.createMdnsInterfaceSocket(
                     networkInterface.getNetworkInterface(), MdnsConstants.MDNS_PORT, mLooper,
                     mPacketReadBuffer);
-            final List<LinkAddress> addresses;
+            final List<LinkAddress> addresses = lp.getLinkAddresses();
             if (networkKey == LOCAL_NET) {
-                addresses = CollectionUtils.map(
-                        networkInterface.getInterfaceAddresses(),
-                        i -> new LinkAddress(i.getAddress(), i.getNetworkPrefixLength()));
                 mTetherInterfaceSockets.put(interfaceName, new SocketInfo(socket, addresses));
             } else {
-                addresses = lp.getLinkAddresses();
                 mNetworkSockets.put(((NetworkAsKey) networkKey).mNetwork,
                         new SocketInfo(socket, addresses));
             }
@@ -422,12 +524,12 @@ public class MdnsSocketProvider {
     }
 
     private void notifyAddressesChanged(Network network, MdnsInterfaceSocket socket,
-            LinkProperties lp) {
+            List<LinkAddress> addresses) {
         for (int i = 0; i < mCallbacksToRequestedNetworks.size(); i++) {
             final Network requestedNetwork = mCallbacksToRequestedNetworks.valueAt(i);
             if (isNetworkMatched(requestedNetwork, network)) {
                 mCallbacksToRequestedNetworks.keyAt(i)
-                        .onAddressesChanged(network, socket, lp.getLinkAddresses());
+                        .onAddressesChanged(network, socket, addresses);
             }
         }
     }
@@ -451,7 +553,10 @@ public class MdnsSocketProvider {
     private void retrieveAndNotifySocketFromInterface(String interfaceName, SocketCallback cb) {
         final SocketInfo socketInfo = mTetherInterfaceSockets.get(interfaceName);
         if (socketInfo == null) {
-            createSocket(LOCAL_NET, createLPForTetheredInterface(interfaceName));
+            int ifaceIndex = mDependencies.getNetworkInterfaceIndexByName(interfaceName);
+            createSocket(
+                    LOCAL_NET,
+                    createLPForTetheredInterface(interfaceName, ifaceIndex));
         } else {
             // Notify the socket for requested network.
             cb.onSocketCreated(
