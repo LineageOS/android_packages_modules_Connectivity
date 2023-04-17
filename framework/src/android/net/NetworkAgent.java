@@ -281,9 +281,8 @@ public abstract class NetworkAgent {
      *
      *   arg1 = the hardware slot number of the keepalive to start
      *   arg2 = interval in seconds
-     *   obj = AutomaticKeepaliveInfo object
+     *   obj = KeepalivePacketData object describing the data to be sent
      *
-     * Also used internally by ConnectivityService / KeepaliveTracker, with different semantics.
      * @hide
      */
     public static final int CMD_START_SOCKET_KEEPALIVE = BASE + 11;
@@ -436,6 +435,14 @@ public abstract class NetworkAgent {
     public static final int CMD_DSCP_POLICY_STATUS = BASE + 28;
 
     /**
+     * Sent by the NetworkAgent to ConnectivityService to notify that this network is expected to be
+     * replaced within the specified time by a similar network.
+     * arg1 = timeout in milliseconds
+     * @hide
+     */
+    public static final int EVENT_UNREGISTER_AFTER_REPLACEMENT = BASE + 29;
+
+    /**
      * DSCP policy was successfully added.
      */
     public static final int DSCP_POLICY_STATUS_SUCCESS = 0;
@@ -476,27 +483,6 @@ public abstract class NetworkAgent {
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface DscpPolicyStatus {}
-
-    /**
-     * Sent by the NetworkAgent to ConnectivityService to notify that this network is expected to be
-     * replaced within the specified time by a similar network.
-     * arg1 = timeout in milliseconds
-     * @hide
-     */
-    public static final int EVENT_UNREGISTER_AFTER_REPLACEMENT = BASE + 29;
-
-    /**
-     * Sent by AutomaticOnOffKeepaliveTracker periodically (when relevant) to trigger monitor
-     * automatic keepalive request.
-     *
-     * NATT keepalives have an automatic mode where the system only sends keepalive packets when
-     * TCP sockets are open over a VPN. The system will check periodically for presence of
-     * such open sockets, and this message is what triggers the re-evaluation.
-     *
-     * obj = A Binder object associated with the keepalive.
-     * @hide
-     */
-    public static final int CMD_MONITOR_AUTOMATIC_KEEPALIVE = BASE + 30;
 
     private static NetworkInfo getLegacyNetworkInfo(final NetworkAgentConfig config) {
         final NetworkInfo ni = new NetworkInfo(config.legacyType, config.legacySubType,
