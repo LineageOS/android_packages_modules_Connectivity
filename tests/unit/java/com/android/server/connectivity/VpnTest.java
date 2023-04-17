@@ -72,6 +72,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
@@ -279,6 +280,7 @@ public class VpnTest extends VpnTestBase {
     private static final String TEST_IFACE_NAME = "TEST_IFACE";
     private static final int TEST_TUNNEL_RESOURCE_ID = 0x2345;
     private static final long TEST_TIMEOUT_MS = 500L;
+    private static final long TIMEOUT_CROSSTHREAD_MS = 20_000L;
     private static final String PRIMARY_USER_APP_EXCLUDE_KEY =
             "VPNAPPEXCLUDED_27_com.testvpn.vpn";
     static final String PKGS_BYTES = getPackageByteString(List.of(PKGS));
@@ -308,7 +310,7 @@ public class VpnTest extends VpnTestBase {
     @Mock private SubscriptionManager mSubscriptionManager;
     @Mock private IpSecService mIpSecService;
     @Mock private VpnProfileStore mVpnProfileStore;
-    private final ScheduledThreadPoolExecutor mExecutor;
+    private final TestExecutor mExecutor;
     @Mock DeviceIdleInternal mDeviceIdleInternal;
     private final VpnProfile mVpnProfile;
 
@@ -316,16 +318,40 @@ public class VpnTest extends VpnTestBase {
     private TestDeps mTestDeps;
 
     public static class TestExecutor extends ScheduledThreadPoolExecutor {
+        public static final long REAL_DELAY = -1;
+
+        // For the purposes of the test, run all scheduled tasks after 10ms to save
+        // execution time, unless overridden by the specific test. Set to REAL_DELAY
+        // to actually wait for the delay specified by the real call to schedule().
+        public long delayMs = 10;
+        // If this is true, execute() will call the runnable inline. This is useful because
+        // super.execute() calls schedule(), which messes with checks that scheduled() is
+        // called a given number of times.
+        public boolean executeDirect = false;
+
         public TestExecutor() {
             super(1);
         }
 
-        // For the purposes of the test, run all scheduled tasks after 10ms to save
-        // execution time
+        @Override
+        public void execute(final Runnable command) {
+            // See |executeDirect| for why this is necessary.
+            if (executeDirect) {
+                command.run();
+            } else {
+                super.execute(command);
+            }
+        }
+
         @Override
         public ScheduledFuture<?> schedule(final Runnable command, final long delay,
-                final TimeUnit unit) {
-            return super.schedule(command, 10, TimeUnit.MILLISECONDS);
+                TimeUnit unit) {
+            if (0 == delay || delayMs == REAL_DELAY) {
+                // super.execute() calls schedule() with 0, so use the real delay if it's 0.
+                return super.schedule(command, delay, unit);
+            } else {
+                return super.schedule(command, delayMs, TimeUnit.MILLISECONDS);
+            }
         }
     }
 
@@ -2093,6 +2119,72 @@ public class VpnTest extends VpnTestBase {
         // Verify MOBIKE is triggered
         verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS)).setNetwork(TEST_NETWORK_2,
                 expectedIpVersion, expectedEncapType, expectedKeepalive);
+
+        vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
+    }
+
+    @Test
+    public void testLinkPropertiesUpdateTriggerReevaluation() throws Exception {
+        final boolean hasV6 = true;
+
+        mockCarrierConfig(TEST_SUB_ID, TelephonyManager.SIM_STATE_LOADED, TEST_KEEPALIVE_TIMER,
+                PREFERRED_IKE_PROTOCOL_IPV6_ESP);
+        final IkeSessionParams params = getTestIkeSessionParams(hasV6,
+                new IkeFqdnIdentification(TEST_IDENTITY), TEST_KEEPALIVE_TIMER);
+        final IkeTunnelConnectionParams tunnelParams =
+                new IkeTunnelConnectionParams(params, CHILD_PARAMS);
+        final Ikev2VpnProfile ikeProfile = new Ikev2VpnProfile.Builder(tunnelParams)
+                .setBypassable(true)
+                .setAutomaticNattKeepaliveTimerEnabled(false)
+                .setAutomaticIpVersionSelectionEnabled(true)
+                .build();
+        final PlatformVpnSnapshot vpnSnapShot =
+                verifySetupPlatformVpn(ikeProfile.toVpnProfile(),
+                        createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */),
+                        hasV6 /* mtuSupportsIpv6 */,
+                        false /* areLongLivedTcpConnectionsExpensive */);
+        reset(mExecutor);
+
+        // Simulate a new network coming up
+        final LinkProperties lp = new LinkProperties();
+        lp.addLinkAddress(new LinkAddress("192.0.2.2/32"));
+
+        // Have the executor use the real delay to make sure schedule() was called only
+        // once for all calls. Also, arrange for execute() not to call schedule() to avoid
+        // messing with the checks for schedule().
+        mExecutor.delayMs = TestExecutor.REAL_DELAY;
+        mExecutor.executeDirect = true;
+        vpnSnapShot.nwCb.onAvailable(TEST_NETWORK_2);
+        vpnSnapShot.nwCb.onCapabilitiesChanged(
+                TEST_NETWORK_2, new NetworkCapabilities.Builder().build());
+        vpnSnapShot.nwCb.onLinkPropertiesChanged(TEST_NETWORK_2, new LinkProperties(lp));
+        verify(mExecutor).schedule(any(Runnable.class), longThat(it -> it > 0), any());
+        reset(mExecutor);
+
+        final InOrder order = inOrder(mIkeSessionWrapper);
+
+        // Verify the network is started
+        order.verify(mIkeSessionWrapper, timeout(TIMEOUT_CROSSTHREAD_MS)).setNetwork(TEST_NETWORK_2,
+                ESP_IP_VERSION_AUTO, ESP_ENCAP_TYPE_AUTO, TEST_KEEPALIVE_TIMER);
+
+        // Send the same properties, check that no migration is scheduled
+        vpnSnapShot.nwCb.onLinkPropertiesChanged(TEST_NETWORK_2, new LinkProperties(lp));
+        verify(mExecutor, never()).schedule(any(Runnable.class), anyLong(), any());
+
+        // Add v6 address, verify MOBIKE is triggered
+        lp.addLinkAddress(new LinkAddress("2001:db8::1/64"));
+        vpnSnapShot.nwCb.onLinkPropertiesChanged(TEST_NETWORK_2, new LinkProperties(lp));
+        order.verify(mIkeSessionWrapper, timeout(TIMEOUT_CROSSTHREAD_MS)).setNetwork(TEST_NETWORK_2,
+                ESP_IP_VERSION_AUTO, ESP_ENCAP_TYPE_AUTO, TEST_KEEPALIVE_TIMER);
+
+        // Add another v4 address, verify MOBIKE is triggered
+        final LinkProperties stacked = new LinkProperties();
+        stacked.setInterfaceName("v4-" + lp.getInterfaceName());
+        stacked.addLinkAddress(new LinkAddress("192.168.0.1/32"));
+        lp.addStackedLink(stacked);
+        vpnSnapShot.nwCb.onLinkPropertiesChanged(TEST_NETWORK_2, new LinkProperties(lp));
+        order.verify(mIkeSessionWrapper, timeout(TIMEOUT_CROSSTHREAD_MS)).setNetwork(TEST_NETWORK_2,
+                ESP_IP_VERSION_AUTO, ESP_ENCAP_TYPE_AUTO, TEST_KEEPALIVE_TIMER);
 
         vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
     }
