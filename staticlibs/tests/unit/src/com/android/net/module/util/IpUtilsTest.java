@@ -74,6 +74,20 @@ public class IpUtilsTest {
     // print JavaPacketDefinition(str(packet))
 
     @Test
+    public void testEmptyAndZeroBufferChecksum() throws Exception {
+        ByteBuffer packet = ByteBuffer.wrap(new byte[] { (byte) 0x00, (byte) 0x00, });
+        // the following should *not* return 0xFFFF
+        assertEquals(0, IpUtils.checksum(packet, 0, 0, 0));
+        assertEquals(0, IpUtils.checksum(packet, 0, 0, 1));
+        assertEquals(0, IpUtils.checksum(packet, 0, 0, 2));
+        assertEquals(0, IpUtils.checksum(packet, 0, 1, 2));
+        assertEquals(0, IpUtils.checksum(packet, 0xFFFF, 0, 0));
+        assertEquals(0, IpUtils.checksum(packet, 0xFFFF, 0, 1));
+        assertEquals(0, IpUtils.checksum(packet, 0xFFFF, 0, 2));
+        assertEquals(0, IpUtils.checksum(packet, 0xFFFF, 1, 2));
+    }
+
+    @Test
     public void testIpv6TcpChecksum() throws Exception {
         // packet = (scapy.IPv6(src="2001:db8::1", dst="2001:db8::2", tc=0x80) /
         //           scapy.TCP(sport=12345, dport=7,
