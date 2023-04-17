@@ -233,7 +233,7 @@ static jint com_android_server_connectivity_ClatCoordinator_createTunInterface(J
     }
 
     struct ifreq ifr = {
-            .ifr_flags = IFF_TUN,
+            .ifr_flags = static_cast<short>(IFF_TUN | IFF_TUN_EXCL),
     };
     strlcpy(ifr.ifr_name, v4interface.c_str(), sizeof(ifr.ifr_name));
 
