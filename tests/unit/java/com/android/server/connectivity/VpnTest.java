@@ -285,8 +285,6 @@ public class VpnTest extends VpnTestBase {
             "VPNAPPEXCLUDED_27_com.testvpn.vpn";
     static final String PKGS_BYTES = getPackageByteString(List.of(PKGS));
     private static final Range<Integer> PRIMARY_USER_RANGE = uidRangeForUser(PRIMARY_USER.id);
-    // Same as IkeSessionParams#IKE_NATT_KEEPALIVE_DELAY_SEC_DEFAULT
-    private static final int IKE_NATT_KEEPALIVE_DELAY_SEC_DEFAULT = 10;
     private static final int TEST_KEEPALIVE_TIMER = 800;
     private static final int TEST_SUB_ID = 1234;
     private static final String TEST_MCCMNC = "12345";
@@ -792,7 +790,8 @@ public class VpnTest extends VpnTestBase {
     @Test
     public void testPrepare_throwSecurityExceptionWhenGivenPackageDoesNotBelongToTheCaller()
             throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        mTestDeps.mIgnoreCallingUidChecks = false;
+        final Vpn vpn = createVpn();
         assertThrows(SecurityException.class,
                 () -> vpn.prepare("com.not.vpn.owner", null, VpnManager.TYPE_VPN_SERVICE));
         assertThrows(SecurityException.class,
@@ -804,7 +803,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testPrepare_bothOldPackageAndNewPackageAreNull() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
         assertTrue(vpn.prepare(null, null, VpnManager.TYPE_VPN_SERVICE));
 
     }
@@ -887,16 +886,13 @@ public class VpnTest extends VpnTestBase {
         assertEquals(expected, vpn.getProfileNameForPackage(TEST_VPN_PKG));
     }
 
-    private Vpn createVpnAndSetupUidChecks(String... grantedOps) throws Exception {
-        return createVpnAndSetupUidChecks(PRIMARY_USER, grantedOps);
+    private Vpn createVpn(String... grantedOps) throws Exception {
+        return createVpn(PRIMARY_USER, grantedOps);
     }
 
-    private Vpn createVpnAndSetupUidChecks(UserInfo user, String... grantedOps) throws Exception {
+    private Vpn createVpn(UserInfo user, String... grantedOps) throws Exception {
         final Vpn vpn = createVpn(user.id);
         setMockedUsers(user);
-
-        when(mPackageManager.getPackageUidAsUser(eq(TEST_VPN_PKG), anyInt()))
-                .thenReturn(Process.myUid());
 
         for (final String opStr : grantedOps) {
             when(mAppOps.noteOpNoThrow(opStr, Process.myUid(), TEST_VPN_PKG,
@@ -926,7 +922,7 @@ public class VpnTest extends VpnTestBase {
     public void testProvisionVpnProfileNoIpsecTunnels() throws Exception {
         when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_IPSEC_TUNNELS))
                 .thenReturn(false);
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             checkProvisionVpnProfile(
@@ -937,7 +933,7 @@ public class VpnTest extends VpnTestBase {
     }
 
     private Vpn prepareVpnForVerifyAppExclusionList() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
         when(mVpnProfileStore.get(PRIMARY_USER_APP_EXCLUDE_KEY))
@@ -1053,7 +1049,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testProvisionVpnProfilePreconsented() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         checkProvisionVpnProfile(
                 vpn, true /* expectedResult */, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
@@ -1061,7 +1057,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testProvisionVpnProfileNotPreconsented() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         // Expect that both the ACTIVATE_VPN and ACTIVATE_PLATFORM_VPN were tried, but the caller
         // had neither.
@@ -1071,14 +1067,14 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testProvisionVpnProfileVpnServicePreconsented() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_VPN);
 
         checkProvisionVpnProfile(vpn, true /* expectedResult */, AppOpsManager.OPSTR_ACTIVATE_VPN);
     }
 
     @Test
     public void testProvisionVpnProfileTooLarge() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         final VpnProfile bigProfile = new VpnProfile("");
         bigProfile.name = new String(new byte[Vpn.MAX_VPN_PROFILE_SIZE_BYTES + 1]);
@@ -1093,7 +1089,7 @@ public class VpnTest extends VpnTestBase {
     @Test
     public void testProvisionVpnProfileRestrictedUser() throws Exception {
         final Vpn vpn =
-                createVpnAndSetupUidChecks(
+                createVpn(
                         RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
@@ -1105,7 +1101,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testDeleteVpnProfile() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         vpn.deleteVpnProfile(TEST_VPN_PKG);
 
@@ -1116,7 +1112,7 @@ public class VpnTest extends VpnTestBase {
     @Test
     public void testDeleteVpnProfileRestrictedUser() throws Exception {
         final Vpn vpn =
-                createVpnAndSetupUidChecks(
+                createVpn(
                         RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
@@ -1128,7 +1124,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testGetVpnProfilePrivileged() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(new VpnProfile("").encode());
@@ -1147,7 +1143,7 @@ public class VpnTest extends VpnTestBase {
                 eq(null) /* message */);
         verify(mAppOps).startOp(
                 eq(AppOpsManager.OPSTR_ESTABLISH_VPN_MANAGER),
-                eq(Process.myUid()),
+                eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                 eq(packageName),
                 eq(null) /* attributionTag */,
                 eq(null) /* message */);
@@ -1157,14 +1153,14 @@ public class VpnTest extends VpnTestBase {
         // Add a small delay to double confirm that finishOp is only called once.
         verify(mAppOps, after(100)).finishOp(
                 eq(AppOpsManager.OPSTR_ESTABLISH_VPN_MANAGER),
-                eq(Process.myUid()),
+                eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                 eq(packageName),
                 eq(null) /* attributionTag */);
     }
 
     @Test
     public void testStartVpnProfile() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
@@ -1177,7 +1173,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartVpnProfileVpnServicePreconsented() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_VPN);
 
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
@@ -1191,7 +1187,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartVpnProfileNotConsented() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         try {
             vpn.startVpnProfile(TEST_VPN_PKG);
@@ -1216,7 +1212,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartVpnProfileMissingProfile() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG))).thenReturn(null);
 
@@ -1238,9 +1234,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartVpnProfileRestrictedUser() throws Exception {
-        final Vpn vpn =
-                createVpnAndSetupUidChecks(
-                        RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             vpn.startVpnProfile(TEST_VPN_PKG);
@@ -1251,9 +1245,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStopVpnProfileRestrictedUser() throws Exception {
-        final Vpn vpn =
-                createVpnAndSetupUidChecks(
-                        RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(RESTRICTED_PROFILE_A, AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
 
         try {
             vpn.stopVpnProfile(TEST_VPN_PKG);
@@ -1264,7 +1256,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartOpAndFinishOpWillBeCalledWhenPlatformVpnIsOnAndOff() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
         vpn.startVpnProfile(TEST_VPN_PKG);
@@ -1272,14 +1264,14 @@ public class VpnTest extends VpnTestBase {
         // Add a small delay to make sure that startOp is only called once.
         verify(mAppOps, after(100).times(1)).startOp(
                 eq(AppOpsManager.OPSTR_ESTABLISH_VPN_MANAGER),
-                eq(Process.myUid()),
+                eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                 eq(TEST_VPN_PKG),
                 eq(null) /* attributionTag */,
                 eq(null) /* message */);
         // Check that the startOp is not called with OPSTR_ESTABLISH_VPN_SERVICE.
         verify(mAppOps, never()).startOp(
                 eq(AppOpsManager.OPSTR_ESTABLISH_VPN_SERVICE),
-                eq(Process.myUid()),
+                eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                 eq(TEST_VPN_PKG),
                 eq(null) /* attributionTag */,
                 eq(null) /* message */);
@@ -1289,7 +1281,9 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testStartOpWithSeamlessHandover() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_VPN);
+        // Create with SYSTEM_USER so that establish() will match the user ID when checking
+        // against Binder.getCallerUid
+        final Vpn vpn = createVpn(SYSTEM_USER, AppOpsManager.OPSTR_ACTIVATE_VPN);
         assertTrue(vpn.prepare(TEST_VPN_PKG, null, VpnManager.TYPE_VPN_SERVICE));
         final VpnConfig config = new VpnConfig();
         config.user = "VpnTest";
@@ -1387,7 +1381,7 @@ public class VpnTest extends VpnTestBase {
         // this is checked with CONTROL_VPN so simulate holding CONTROL_VPN in order to pass the
         // security checks.
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(CONTROL_VPN);
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
 
@@ -1479,7 +1473,7 @@ public class VpnTest extends VpnTestBase {
 
     @Test
     public void testReconnectVpnManagerVpnWithAlwaysOnEnabled() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
         vpn.startVpnProfile(TEST_VPN_PKG);
@@ -1503,46 +1497,73 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
+    public void testLockdown_enableDisableWhileConnected() throws Exception {
+        final PlatformVpnSnapshot vpnSnapShot = verifySetupPlatformVpn(
+                createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */));
+
+        final InOrder order = inOrder(mTestDeps);
+        order.verify(mTestDeps, timeout(TIMEOUT_CROSSTHREAD_MS))
+                .newNetworkAgent(any(), any(), any(), any(), any(), any(),
+                        argThat(config -> config.allowBypass), any(), any());
+
+        // Make VPN lockdown.
+        assertTrue(vpnSnapShot.vpn.setAlwaysOnPackage(TEST_VPN_PKG, true /* lockdown */,
+                null /* lockdownAllowlist */));
+
+        order.verify(mTestDeps, timeout(TIMEOUT_CROSSTHREAD_MS))
+                .newNetworkAgent(any(), any(), any(), any(), any(), any(),
+                argThat(config -> !config.allowBypass), any(), any());
+
+        // Disable lockdown.
+        assertTrue(vpnSnapShot.vpn.setAlwaysOnPackage(TEST_VPN_PKG, false /* lockdown */,
+                null /* lockdownAllowlist */));
+
+        order.verify(mTestDeps, timeout(TIMEOUT_CROSSTHREAD_MS))
+                .newNetworkAgent(any(), any(), any(), any(), any(), any(),
+                        argThat(config -> config.allowBypass), any(), any());
+    }
+
+    @Test
     public void testSetPackageAuthorizationVpnService() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         assertTrue(vpn.setPackageAuthorization(TEST_VPN_PKG, VpnManager.TYPE_VPN_SERVICE));
         verify(mAppOps)
                 .setMode(
                         eq(AppOpsManager.OPSTR_ACTIVATE_VPN),
-                        eq(Process.myUid()),
+                        eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                         eq(TEST_VPN_PKG),
                         eq(AppOpsManager.MODE_ALLOWED));
     }
 
     @Test
     public void testSetPackageAuthorizationPlatformVpn() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         assertTrue(vpn.setPackageAuthorization(TEST_VPN_PKG, TYPE_VPN_PLATFORM));
         verify(mAppOps)
                 .setMode(
                         eq(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN),
-                        eq(Process.myUid()),
+                        eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                         eq(TEST_VPN_PKG),
                         eq(AppOpsManager.MODE_ALLOWED));
     }
 
     @Test
     public void testSetPackageAuthorizationRevokeAuthorization() throws Exception {
-        final Vpn vpn = createVpnAndSetupUidChecks();
+        final Vpn vpn = createVpn();
 
         assertTrue(vpn.setPackageAuthorization(TEST_VPN_PKG, VpnManager.TYPE_VPN_NONE));
         verify(mAppOps)
                 .setMode(
                         eq(AppOpsManager.OPSTR_ACTIVATE_VPN),
-                        eq(Process.myUid()),
+                        eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                         eq(TEST_VPN_PKG),
                         eq(AppOpsManager.MODE_IGNORED));
         verify(mAppOps)
                 .setMode(
                         eq(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN),
-                        eq(Process.myUid()),
+                        eq(UserHandle.getUid(PRIMARY_USER.id, Process.myUid())),
                         eq(TEST_VPN_PKG),
                         eq(AppOpsManager.MODE_IGNORED));
     }
@@ -1580,7 +1601,7 @@ public class VpnTest extends VpnTestBase {
         final ArgumentCaptor<IkeSessionCallback> captor =
                 ArgumentCaptor.forClass(IkeSessionCallback.class);
 
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(mVpnProfile.encode());
 
@@ -1905,7 +1926,7 @@ public class VpnTest extends VpnTestBase {
                         any(), any(), anyString(), any(), any(), any(), any(), any(), any());
         doReturn(TEST_NETWORK).when(mMockNetworkAgent).getNetwork();
 
-        final Vpn vpn = createVpnAndSetupUidChecks(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
+        final Vpn vpn = createVpn(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN);
         when(mVpnProfileStore.get(vpn.getProfileNameForPackage(TEST_VPN_PKG)))
                 .thenReturn(vpnProfile.encode());
 
@@ -2953,6 +2974,14 @@ public class VpnTest extends VpnTestBase {
         @Override
         public ScheduledThreadPoolExecutor newScheduledThreadPoolExecutor() {
             return mExecutor;
+        }
+
+        public boolean mIgnoreCallingUidChecks = true;
+        @Override
+        public void verifyCallingUidAndPackage(Context context, String packageName, int userId) {
+            if (!mIgnoreCallingUidChecks) {
+                super.verifyCallingUidAndPackage(context, packageName, userId);
+            }
         }
     }
 
