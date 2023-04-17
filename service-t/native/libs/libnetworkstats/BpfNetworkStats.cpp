@@ -126,7 +126,13 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
         if (!statsEntry.ok()) {
             return base::ResultError(statsEntry.error().message(), statsEntry.error().code());
         }
-        lines->push_back(populateStatsEntry(key, statsEntry.value(), ifname));
+        stats_line newLine = populateStatsEntry(key, statsEntry.value(), ifname);
+        lines->push_back(newLine);
+        if (newLine.tag) {
+            // account tagged traffic in the untagged stats (for historical reasons?)
+            newLine.tag = 0;
+            lines->push_back(newLine);
+        }
         return Result<void>();
     };
     Result<void> res = statsMap.iterate(processDetailUidStats);
@@ -236,21 +242,20 @@ void groupNetworkStats(std::vector<stats_line>* lines) {
     std::sort(lines->begin(), lines->end());
 
     // Similar to std::unique(), but aggregates the duplicates rather than discarding them.
-    size_t nextOutput = 0;
+    size_t currentOutput = 0;
     for (size_t i = 1; i < lines->size(); i++) {
-        if (lines->at(nextOutput) == lines->at(i)) {
-            lines->at(nextOutput) += lines->at(i);
+        // note that == operator only compares the 'key' portion: iface/uid/tag/set
+        if (lines->at(currentOutput) == lines->at(i)) {
+            // while += operator only affects the 'data' portion: {rx,tx}{Bytes,Packets}
+            lines->at(currentOutput) += lines->at(i);
         } else {
-            nextOutput++;
-            if (nextOutput != i) {
-                lines->at(nextOutput) = lines->at(i);
-            }
+            // okay, we're done aggregating the current line, move to the next one
+            lines->at(++currentOutput) = lines->at(i);
         }
     }
 
-    if (lines->size() != nextOutput + 1) {
-        lines->resize(nextOutput + 1);
-    }
+    // possibly shrink the vector - currentOutput is the last line with valid data
+    lines->resize(currentOutput + 1);
 }
 
 // True if lhs equals to rhs, only compare iface, uid, tag and set.
