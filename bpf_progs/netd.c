@@ -446,11 +446,6 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
         return match;
     }
 
-    if (key.tag) {
-        update_stats_with_config(skb, egress, &key, *selectedMap);
-        key.tag = 0;
-    }
-
     do_packet_tracing(skb, egress, uid, tag, enable_tracing, kver);
     update_stats_with_config(skb, egress, &key, *selectedMap);
     update_app_uid_stats_map(skb, egress, &uid);
