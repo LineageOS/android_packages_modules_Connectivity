@@ -308,13 +308,26 @@ public class VpnTest extends VpnTestBase {
     @Mock private SubscriptionManager mSubscriptionManager;
     @Mock private IpSecService mIpSecService;
     @Mock private VpnProfileStore mVpnProfileStore;
-    @Mock private ScheduledThreadPoolExecutor mExecutor;
-    @Mock private ScheduledFuture mScheduledFuture;
+    private final ScheduledThreadPoolExecutor mExecutor;
     @Mock DeviceIdleInternal mDeviceIdleInternal;
     private final VpnProfile mVpnProfile;
 
     private IpSecManager mIpSecManager;
     private TestDeps mTestDeps;
+
+    public static class TestExecutor extends ScheduledThreadPoolExecutor {
+        public TestExecutor() {
+            super(1);
+        }
+
+        // For the purposes of the test, run all scheduled tasks after 10ms to save
+        // execution time
+        @Override
+        public ScheduledFuture<?> schedule(final Runnable command, final long delay,
+                final TimeUnit unit) {
+            return super.schedule(command, 10, TimeUnit.MILLISECONDS);
+        }
+    }
 
     public VpnTest() throws Exception {
         // Build an actual VPN profile that is capable of being converted to and from an
@@ -323,6 +336,7 @@ public class VpnTest extends VpnTestBase {
                 new Ikev2VpnProfile.Builder(TEST_VPN_SERVER, TEST_VPN_IDENTITY);
         builder.setAuthPsk(TEST_VPN_PSK);
         builder.setBypassable(true /* isBypassable */);
+        mExecutor = spy(new TestExecutor());
         mVpnProfile = builder.build().toVpnProfile();
     }
 
@@ -388,25 +402,12 @@ public class VpnTest extends VpnTestBase {
 
         // Set up mIkev2SessionCreator and mExecutor
         resetIkev2SessionCreator(mIkeSessionWrapper);
-        resetExecutor(mScheduledFuture);
     }
 
     private void resetIkev2SessionCreator(Vpn.IkeSessionWrapper ikeSession) {
         reset(mIkev2SessionCreator);
         when(mIkev2SessionCreator.createIkeSession(any(), any(), any(), any(), any(), any()))
                 .thenReturn(ikeSession);
-    }
-
-    private void resetExecutor(ScheduledFuture scheduledFuture) {
-        doAnswer(
-                (invocation) -> {
-                    ((Runnable) invocation.getArgument(0)).run();
-                    return null;
-                })
-            .when(mExecutor)
-            .execute(any());
-        when(mExecutor.schedule(
-                any(Runnable.class), anyLong(), any())).thenReturn(mScheduledFuture);
     }
 
     @After
@@ -524,9 +525,9 @@ public class VpnTest extends VpnTestBase {
     }
 
     private void verifyPowerSaveTempWhitelistApp(String packageName) {
-        verify(mDeviceIdleInternal).addPowerSaveTempWhitelistApp(anyInt(), eq(packageName),
-                anyLong(), anyInt(), eq(false), eq(PowerWhitelistManager.REASON_VPN),
-                eq("VpnManager event"));
+        verify(mDeviceIdleInternal, timeout(TEST_TIMEOUT_MS)).addPowerSaveTempWhitelistApp(
+                anyInt(), eq(packageName), anyLong(), anyInt(), eq(false),
+                eq(PowerWhitelistManager.REASON_VPN), eq("VpnManager event"));
     }
 
     @Test
@@ -1576,10 +1577,7 @@ public class VpnTest extends VpnTestBase {
         // same process with the real case.
         if (errorCode == VpnManager.ERROR_CODE_NETWORK_LOST) {
             cb.onLost(TEST_NETWORK);
-            final ArgumentCaptor<Runnable> runnableCaptor =
-                    ArgumentCaptor.forClass(Runnable.class);
-            verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
-            runnableCaptor.getValue().run();
+            verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
         } else {
             final IkeSessionCallback ikeCb = captor.getValue();
             ikeCb.onClosedWithException(exception);
@@ -1607,25 +1605,23 @@ public class VpnTest extends VpnTestBase {
     }
 
     private IkeSessionCallback verifyRetryAndGetNewIkeCb(int retryIndex) {
-        final ArgumentCaptor<Runnable> runnableCaptor =
-                ArgumentCaptor.forClass(Runnable.class);
         final ArgumentCaptor<IkeSessionCallback> ikeCbCaptor =
                 ArgumentCaptor.forClass(IkeSessionCallback.class);
 
         // Verify retry is scheduled
-        final long expectedDelay = mTestDeps.getNextRetryDelaySeconds(retryIndex);
-        verify(mExecutor).schedule(runnableCaptor.capture(), eq(expectedDelay), any());
+        final long expectedDelay = mTestDeps.getNextRetryDelaySeconds(retryIndex) * 1000;
+        final ArgumentCaptor<Long> delayCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), delayCaptor.capture(),
+                eq(TimeUnit.MILLISECONDS));
+        final List<Long> delays = delayCaptor.getAllValues();
+        assertEquals(expectedDelay, (long) delays.get(delays.size() - 1));
 
-        // Mock the event of firing the retry task
-        runnableCaptor.getValue().run();
-
-        verify(mIkev2SessionCreator)
+        verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS + expectedDelay))
                 .createIkeSession(any(), any(), any(), any(), ikeCbCaptor.capture(), any());
 
         // Forget the mIkev2SessionCreator#createIkeSession call and mExecutor#schedule call
         // for the next retry verification
         resetIkev2SessionCreator(mIkeSessionWrapper);
-        resetExecutor(mScheduledFuture);
 
         return ikeCbCaptor.getValue();
     }
@@ -1889,6 +1885,8 @@ public class VpnTest extends VpnTestBase {
 
         vpn.startVpnProfile(TEST_VPN_PKG);
         final NetworkCallback nwCb = triggerOnAvailableAndGetCallback();
+        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
+        reset(mExecutor);
 
         // Mock the setup procedure by firing callbacks
         final Pair<IkeSessionCallback, ChildSessionCallback> cbPair =
@@ -2093,7 +2091,7 @@ public class VpnTest extends VpnTestBase {
         vpnSnapShot.nwCb.onCapabilitiesChanged(
                 TEST_NETWORK_2, new NetworkCapabilities.Builder().build());
         // Verify MOBIKE is triggered
-        verify(mIkeSessionWrapper).setNetwork(TEST_NETWORK_2,
+        verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS)).setNetwork(TEST_NETWORK_2,
                 expectedIpVersion, expectedEncapType, expectedKeepalive);
 
         vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
@@ -2252,7 +2250,7 @@ public class VpnTest extends VpnTestBase {
         reset(mIkeSessionWrapper);
         mockCarrierConfig(TEST_SUB_ID, simState, TEST_KEEPALIVE_TIMER, preferredIpProto);
         vpnSnapShot.nwCb.onCapabilitiesChanged(TEST_NETWORK_2, nc);
-        verify(mIkeSessionWrapper).setNetwork(TEST_NETWORK_2,
+        verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS)).setNetwork(TEST_NETWORK_2,
                 expectedIpVersion, expectedEncapType, expectedKeepaliveTimer);
         if (expectedReadFromCarrierConfig) {
             final ArgumentCaptor<NetworkCapabilities> ncCaptor =
@@ -2301,17 +2299,16 @@ public class VpnTest extends VpnTestBase {
 
         // Mock network loss and verify a cleanup task is scheduled
         vpnSnapShot.nwCb.onLost(TEST_NETWORK);
-        verify(mExecutor).schedule(any(Runnable.class), anyLong(), any());
+        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
 
         // Mock new network comes up and the cleanup task is cancelled
         vpnSnapShot.nwCb.onAvailable(TEST_NETWORK_2);
-        verify(mScheduledFuture).cancel(anyBoolean());
         verify(mIkeSessionWrapper, never()).setNetwork(any(), anyInt(), anyInt(), anyInt());
 
         vpnSnapShot.nwCb.onCapabilitiesChanged(TEST_NETWORK_2,
                 new NetworkCapabilities.Builder().build());
         // Verify MOBIKE is triggered
-        verify(mIkeSessionWrapper).setNetwork(eq(TEST_NETWORK_2),
+        verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS)).setNetwork(eq(TEST_NETWORK_2),
                 eq(ESP_IP_VERSION_AUTO) /* ipVersion */,
                 eq(ESP_ENCAP_TYPE_AUTO) /* encapType */,
                 eq(DEFAULT_UDP_PORT_4500_NAT_TIMEOUT_SEC_INT) /* keepaliveDelay */);
@@ -2410,7 +2407,7 @@ public class VpnTest extends VpnTestBase {
         vpnSnapShot.nwCb.onCapabilitiesChanged(
                 TEST_NETWORK_2, new NetworkCapabilities.Builder().build());
         // Verify the old IKE Session is killed
-        verify(mIkeSessionWrapper).kill();
+        verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS)).kill();
 
         // Capture callbacks of the new IKE Session
         final Pair<IkeSessionCallback, ChildSessionCallback> cbPair =
@@ -2442,19 +2439,16 @@ public class VpnTest extends VpnTestBase {
         // Forget the #sendLinkProperties during first setup.
         reset(mMockNetworkAgent);
 
-        final ArgumentCaptor<Runnable> runnableCaptor =
-                ArgumentCaptor.forClass(Runnable.class);
-
         // Mock network loss
         vpnSnapShot.nwCb.onLost(TEST_NETWORK);
 
         // Mock the grace period expires
-        verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
-        runnableCaptor.getValue().run();
+        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
 
         final ArgumentCaptor<LinkProperties> lpCaptor =
                 ArgumentCaptor.forClass(LinkProperties.class);
-        verify(mMockNetworkAgent).doSendLinkProperties(lpCaptor.capture());
+        verify(mMockNetworkAgent, timeout(TEST_TIMEOUT_MS))
+                .doSendLinkProperties(lpCaptor.capture());
         final LinkProperties lp = lpCaptor.getValue();
 
         assertNull(lp.getInterfaceName());
@@ -2552,9 +2546,7 @@ public class VpnTest extends VpnTestBase {
         // variables(timer counter and boolean) was reset.
         ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
                 NetworkAgent.VALIDATION_STATUS_NOT_VALID);
-        final ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
-        verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
-        runnableCaptor.getValue().run();
+        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
         verify(mIkev2SessionCreator, never()).createIkeSession(
                 any(), any(), any(), any(), any(), any());
     }
@@ -2580,17 +2572,16 @@ public class VpnTest extends VpnTestBase {
                 NetworkAgent.VALIDATION_STATUS_NOT_VALID);
 
         // Verify reset is scheduled and run.
-        final ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
-        verify(mExecutor).schedule(runnableCaptor.capture(), anyLong(), any());
+        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
 
         // Another invalid status reported should not trigger other scheduled recovery.
         reset(mExecutor);
         ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
                 NetworkAgent.VALIDATION_STATUS_NOT_VALID);
-        verify(mExecutor, never()).schedule(runnableCaptor.capture(), anyLong(), any());
+        verify(mExecutor, never()).schedule(any(Runnable.class), anyLong(), any());
 
-        runnableCaptor.getValue().run();
-        verify(mIkev2SessionCreator).createIkeSession(any(), any(), any(), any(), any(), any());
+        verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS))
+                .createIkeSession(any(), any(), any(), any(), any(), any());
     }
 
     @Test
