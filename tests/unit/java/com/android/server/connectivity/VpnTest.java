@@ -1656,14 +1656,14 @@ public class VpnTest extends VpnTestBase {
                 ArgumentCaptor.forClass(IkeSessionCallback.class);
 
         // Verify retry is scheduled
-        final long expectedDelay = mTestDeps.getNextRetryDelaySeconds(retryIndex) * 1000;
+        final long expectedDelayMs = mTestDeps.getNextRetryDelayMs(retryIndex);
         final ArgumentCaptor<Long> delayCaptor = ArgumentCaptor.forClass(Long.class);
         verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), delayCaptor.capture(),
                 eq(TimeUnit.MILLISECONDS));
         final List<Long> delays = delayCaptor.getAllValues();
-        assertEquals(expectedDelay, (long) delays.get(delays.size() - 1));
+        assertEquals(expectedDelayMs, (long) delays.get(delays.size() - 1));
 
-        verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS + expectedDelay))
+        verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS + expectedDelayMs))
                 .createIkeSession(any(), any(), any(), any(), ikeCbCaptor.capture(), any());
 
         // Forget the mIkev2SessionCreator#createIkeSession call and mExecutor#schedule call
@@ -2966,9 +2966,9 @@ public class VpnTest extends VpnTestBase {
         }
 
         @Override
-        public long getNextRetryDelaySeconds(int retryCount) {
+        public long getNextRetryDelayMs(int retryCount) {
             // Simply return retryCount as the delay seconds for retrying.
-            return retryCount;
+            return retryCount * 1000;
         }
 
         @Override
