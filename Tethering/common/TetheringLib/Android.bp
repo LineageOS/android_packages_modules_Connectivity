@@ -54,7 +54,6 @@ java_sdk_library {
         "//packages/modules/CaptivePortalLogin/tests",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
-        "//packages/modules/Connectivity/Cronet/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
