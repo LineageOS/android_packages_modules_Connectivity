@@ -115,7 +115,7 @@ int bpfGetIfaceStats(const char* iface, Stats* stats);
 int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines);
 
 int parseBpfNetworkStatsDev(std::vector<stats_line>* lines);
-void groupNetworkStats(std::vector<stats_line>* lines);
+void groupNetworkStats(std::vector<stats_line>& lines);
 int cleanStatsMap();
 }  // namespace bpf
 }  // namespace android
