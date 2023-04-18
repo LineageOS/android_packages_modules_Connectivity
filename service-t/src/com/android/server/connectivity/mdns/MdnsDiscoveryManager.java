@@ -23,16 +23,16 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.net.Network;
-import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,7 +43,7 @@ import java.util.List;
 public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     private static final String TAG = MdnsDiscoveryManager.class.getSimpleName();
     public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
-    private static final MdnsLogger LOGGER = new MdnsLogger("MdnsDiscoveryManager");
+    private static final SharedLog LOGGER = new SharedLog(TAG);
 
     private final ExecutorProvider executorProvider;
     private final MdnsSocketClientBase socketClient;
@@ -120,9 +120,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             @NonNull String serviceType,
             @NonNull MdnsServiceBrowserListener listener,
             @NonNull MdnsSearchOptions searchOptions) {
-        LOGGER.log(
-                "Registering listener for subtypes: %s",
-                TextUtils.join(",", searchOptions.getSubtypes()));
+        LOGGER.i("Registering listener for serviceType: " + serviceType);
         if (perNetworkServiceTypeClients.isEmpty()) {
             // First listener. Starts the socket client.
             try {
@@ -157,8 +155,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     @RequiresPermission(permission.CHANGE_WIFI_MULTICAST_STATE)
     public synchronized void unregisterListener(
             @NonNull String serviceType, @NonNull MdnsServiceBrowserListener listener) {
-        LOGGER.log("Unregistering listener for service type: %s", serviceType);
-        if (DBG) Log.d(TAG, "Unregistering listener for serviceType:" + serviceType);
+        LOGGER.i("Unregistering listener for serviceType:" + serviceType);
         final List<MdnsServiceTypeClient> serviceTypeClients =
                 perNetworkServiceTypeClients.getByServiceType(serviceType);
         if (serviceTypeClients.isEmpty()) {
@@ -198,11 +195,19 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
         }
     }
 
+    /** Dump info to dumpsys */
+    public void dump(PrintWriter pw) {
+        LOGGER.reverseDump(pw);
+    }
+
     @VisibleForTesting
     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
             @Nullable Network network) {
+        LOGGER.log("createServiceTypeClient for serviceType:" + serviceType
+                + " network:" + network);
         return new MdnsServiceTypeClient(
                 serviceType, socketClient,
-                executorProvider.newServiceTypeClientSchedulerExecutor(), network);
+                executorProvider.newServiceTypeClientSchedulerExecutor(), network,
+                LOGGER.forSubComponent(serviceType + "-" + network));
     }
 }
