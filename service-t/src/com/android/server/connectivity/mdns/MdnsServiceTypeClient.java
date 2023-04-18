@@ -174,6 +174,7 @@ public class MdnsServiceTypeClient {
             this.searchOptions = searchOptions;
             if (listeners.put(listener, searchOptions) == null) {
                 for (MdnsResponse existingResponse : instanceNameToResponse.values()) {
+                    if (!responseMatchesOptions(existingResponse, searchOptions)) continue;
                     final MdnsServiceInfo info =
                             buildMdnsServiceInfoFromResponse(existingResponse, serviceTypeLabels);
                     listener.onServiceNameDiscovered(info);
@@ -197,6 +198,13 @@ public class MdnsServiceTypeClient {
                                             ++currentSessionId,
                                             searchOptions.getNetwork())));
         }
+    }
+
+    private boolean responseMatchesOptions(@NonNull MdnsResponse response,
+            @NonNull MdnsSearchOptions options) {
+        if (options.getResolveInstanceName() == null) return true;
+        // DNS is case-insensitive, so ignore case in the comparison
+        return options.getResolveInstanceName().equalsIgnoreCase(response.getServiceInstanceName());
     }
 
     /**
@@ -274,6 +282,7 @@ public class MdnsServiceTypeClient {
                 buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
 
         for (int i = 0; i < listeners.size(); i++) {
+            if (!responseMatchesOptions(response, listeners.valueAt(i))) continue;
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             if (newServiceFound) {
                 listener.onServiceNameDiscovered(serviceInfo);
@@ -295,6 +304,7 @@ public class MdnsServiceTypeClient {
             return;
         }
         for (int i = 0; i < listeners.size(); i++) {
+            if (!responseMatchesOptions(response, listeners.valueAt(i))) continue;
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             final MdnsServiceInfo serviceInfo =
                     buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
@@ -512,6 +522,10 @@ public class MdnsServiceTypeClient {
                                 == 0) {
                             iter.remove();
                             for (int i = 0; i < listeners.size(); i++) {
+                                if (!responseMatchesOptions(existingResponse,
+                                        listeners.valueAt(i)))  {
+                                    continue;
+                                }
                                 final MdnsServiceBrowserListener listener = listeners.keyAt(i);
                                 String serviceInstanceName =
                                         existingResponse.getServiceInstanceName();

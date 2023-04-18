@@ -464,7 +464,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private String mCurrentTcpBufferSizes;
 
     private static final SparseArray<String> sMagicDecoderRing = MessageUtils.findMessageNames(
-            new Class[] { ConnectivityService.class, NetworkAgent.class, NetworkAgentInfo.class });
+            new Class[] {
+                    ConnectivityService.class,
+                    NetworkAgent.class,
+                    NetworkAgentInfo.class,
+                    AutomaticOnOffKeepaliveTracker.class });
 
     private enum ReapUnvalidatedNetworks {
         // Tear down networks that have no chance (e.g. even if validated) of becoming
@@ -5598,12 +5602,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     handleConfigureAlwaysOnNetworks();
                     break;
                 }
-                // Sent by KeepaliveTracker to process an app request on the state machine thread.
-                case NetworkAgent.CMD_START_SOCKET_KEEPALIVE: {
+                // Sent by AutomaticOnOffKeepaliveTracker to process an app request on the
+                // handler thread.
+                case AutomaticOnOffKeepaliveTracker.CMD_REQUEST_START_KEEPALIVE: {
                     mKeepaliveTracker.handleStartKeepalive(msg);
                     break;
                 }
-                case NetworkAgent.CMD_MONITOR_AUTOMATIC_KEEPALIVE: {
+                case AutomaticOnOffKeepaliveTracker.CMD_MONITOR_AUTOMATIC_KEEPALIVE: {
                     final AutomaticOnOffKeepalive ki =
                             mKeepaliveTracker.getKeepaliveForBinder((IBinder) msg.obj);
                     if (null == ki) return; // The callback was unregistered before the alarm fired
