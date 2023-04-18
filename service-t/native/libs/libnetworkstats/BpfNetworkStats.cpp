@@ -151,7 +151,7 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
     // and set, which causes NetworkStats maps wrong item to subtract.
     //
     // Thus, the stats needs to be properly sorted and grouped before reported.
-    groupNetworkStats(lines);
+    groupNetworkStats(*lines);
     return 0;
 }
 
@@ -227,7 +227,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>* lines,
         return -res.error().code();
     }
 
-    groupNetworkStats(lines);
+    groupNetworkStats(*lines);
     return 0;
 }
 
@@ -237,25 +237,25 @@ int parseBpfNetworkStatsDev(std::vector<stats_line>* lines) {
     return parseBpfNetworkStatsDevInternal(lines, ifaceStatsMap, ifaceIndexNameMap);
 }
 
-void groupNetworkStats(std::vector<stats_line>* lines) {
-    if (lines->size() <= 1) return;
-    std::sort(lines->begin(), lines->end());
+void groupNetworkStats(std::vector<stats_line>& lines) {
+    if (lines.size() <= 1) return;
+    std::sort(lines.begin(), lines.end());
 
     // Similar to std::unique(), but aggregates the duplicates rather than discarding them.
     size_t currentOutput = 0;
-    for (size_t i = 1; i < lines->size(); i++) {
+    for (size_t i = 1; i < lines.size(); i++) {
         // note that == operator only compares the 'key' portion: iface/uid/tag/set
-        if (lines->at(currentOutput) == lines->at(i)) {
+        if (lines[currentOutput] == lines[i]) {
             // while += operator only affects the 'data' portion: {rx,tx}{Bytes,Packets}
-            lines->at(currentOutput) += lines->at(i);
+            lines[currentOutput] += lines[i];
         } else {
             // okay, we're done aggregating the current line, move to the next one
-            lines->at(++currentOutput) = lines->at(i);
+            lines[++currentOutput] = lines[i];
         }
     }
 
     // possibly shrink the vector - currentOutput is the last line with valid data
-    lines->resize(currentOutput + 1);
+    lines.resize(currentOutput + 1);
 }
 
 // True if lhs equals to rhs, only compare iface, uid, tag and set.
