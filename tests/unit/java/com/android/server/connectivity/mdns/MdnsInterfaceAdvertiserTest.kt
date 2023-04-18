@@ -22,7 +22,6 @@ import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.HandlerThread
 import com.android.net.module.util.HexDump
-import com.android.net.module.util.SharedLog
 import com.android.server.connectivity.mdns.MdnsAnnouncer.AnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsAnnouncer.BaseAnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsAnnouncer.ExitAnnouncementInfo
@@ -76,7 +75,6 @@ class MdnsInterfaceAdvertiserTest {
     private val replySender = mock(MdnsReplySender::class.java)
     private val announcer = mock(MdnsAnnouncer::class.java)
     private val prober = mock(MdnsProber::class.java)
-    private val sharedlog = mock(SharedLog::class.java)
     @Suppress("UNCHECKED_CAST")
     private val probeCbCaptor = ArgumentCaptor.forClass(PacketRepeaterCallback::class.java)
             as ArgumentCaptor<PacketRepeaterCallback<ProbingInfo>>
@@ -99,8 +97,7 @@ class MdnsInterfaceAdvertiserTest {
             TEST_BUFFER,
             cb,
             deps,
-            TEST_HOSTNAME,
-            sharedlog
+            TEST_HOSTNAME
         )
     }
 
