@@ -26,7 +26,6 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.HexDump;
-import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsAnnouncer.BaseAnnouncementInfo;
 import com.android.server.connectivity.mdns.MdnsPacketRepeater.PacketRepeaterCallback;
 
@@ -63,9 +62,6 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     @NonNull
     private final MdnsReplySender mReplySender;
 
-    @NonNull
-    private final SharedLog mSharedLog;
-
     /**
      * Callbacks called by {@link MdnsInterfaceAdvertiser} to report status updates.
      */
@@ -100,13 +96,15 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         @Override
         public void onFinished(MdnsProber.ProbingInfo info) {
             final MdnsAnnouncer.AnnouncementInfo announcementInfo;
-            mSharedLog.i("Probing finished for service " + info.getServiceId());
+            if (DBG) {
+                Log.v(mTag, "Probing finished for service " + info.getServiceId());
+            }
             mCbHandler.post(() -> mCb.onRegisterServiceSucceeded(
                     MdnsInterfaceAdvertiser.this, info.getServiceId()));
             try {
                 announcementInfo = mRecordRepository.onProbingSucceeded(info);
             } catch (IOException e) {
-                mSharedLog.e("Error building announcements", e);
+                Log.e(mTag, "Error building announcements", e);
                 return;
             }
 
@@ -173,16 +171,15 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     public MdnsInterfaceAdvertiser(@NonNull String logTag,
             @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
             @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb,
-            @NonNull String[] deviceHostName, @NonNull SharedLog sharedLog) {
+            @NonNull String[] deviceHostName) {
         this(logTag, socket, initialAddresses, looper, packetCreationBuffer, cb,
-                new Dependencies(), deviceHostName, sharedLog);
+                new Dependencies(), deviceHostName);
     }
 
     public MdnsInterfaceAdvertiser(@NonNull String logTag,
             @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> initialAddresses,
             @NonNull Looper looper, @NonNull byte[] packetCreationBuffer, @NonNull Callback cb,
-            @NonNull Dependencies deps, @NonNull String[] deviceHostName,
-            @NonNull SharedLog sharedLog) {
+            @NonNull Dependencies deps, @NonNull String[] deviceHostName) {
         mTag = MdnsInterfaceAdvertiser.class.getSimpleName() + "/" + logTag;
         mRecordRepository = deps.makeRecordRepository(looper, deviceHostName);
         mRecordRepository.updateAddresses(initialAddresses);
@@ -193,7 +190,6 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         mAnnouncer = deps.makeMdnsAnnouncer(logTag, looper, mReplySender,
                 mAnnouncingCallback);
         mProber = deps.makeMdnsProber(logTag, looper, mReplySender, mProbingCallback);
-        mSharedLog = sharedLog;
     }
 
     /**
@@ -217,8 +213,10 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         // Cancel announcements for the existing service. This only happens for exiting services
         // (so cancelling exiting announcements), as per RecordRepository.addService.
         if (replacedExitingService >= 0) {
-            mSharedLog.i("Service " + replacedExitingService
-                    + " getting re-added, cancelling exit announcements");
+            if (DBG) {
+                Log.d(mTag, "Service " + replacedExitingService
+                        + " getting re-added, cancelling exit announcements");
+            }
             mAnnouncer.stop(replacedExitingService);
         }
         mProber.startProbing(mRecordRepository.setServiceProbing(id));
