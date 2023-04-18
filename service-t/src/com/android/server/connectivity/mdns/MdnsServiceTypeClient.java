@@ -28,7 +28,7 @@ import android.util.Pair;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.net.module.util.SharedLog;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -49,8 +49,6 @@ import java.util.concurrent.ScheduledExecutorService;
 public class MdnsServiceTypeClient {
 
     private static final int DEFAULT_MTU = 1500;
-    private static final MdnsLogger LOGGER = new MdnsLogger("MdnsServiceTypeClient");
-
 
     private final String serviceType;
     private final String[] serviceTypeLabels;
@@ -58,6 +56,7 @@ public class MdnsServiceTypeClient {
     private final MdnsResponseDecoder responseDecoder;
     private final ScheduledExecutorService executor;
     @Nullable private final Network network;
+    @NonNull private final SharedLog sharedLog;
     private final Object lock = new Object();
     private final ArrayMap<MdnsServiceBrowserListener, MdnsSearchOptions> listeners =
             new ArrayMap<>();
@@ -90,8 +89,10 @@ public class MdnsServiceTypeClient {
             @NonNull String serviceType,
             @NonNull MdnsSocketClientBase socketClient,
             @NonNull ScheduledExecutorService executor,
-            @Nullable Network network) {
-        this(serviceType, socketClient, executor, new MdnsResponseDecoder.Clock(), network);
+            @Nullable Network network,
+            @NonNull SharedLog sharedLog) {
+        this(serviceType, socketClient, executor, new MdnsResponseDecoder.Clock(), network,
+                sharedLog);
     }
 
     @VisibleForTesting
@@ -100,7 +101,8 @@ public class MdnsServiceTypeClient {
             @NonNull MdnsSocketClientBase socketClient,
             @NonNull ScheduledExecutorService executor,
             @NonNull MdnsResponseDecoder.Clock clock,
-            @Nullable Network network) {
+            @Nullable Network network,
+            @NonNull SharedLog sharedLog) {
         this.serviceType = serviceType;
         this.socketClient = socketClient;
         this.executor = executor;
@@ -108,6 +110,7 @@ public class MdnsServiceTypeClient {
         this.responseDecoder = new MdnsResponseDecoder(clock, serviceTypeLabels);
         this.clock = clock;
         this.network = network;
+        this.sharedLog = sharedLog;
     }
 
     private static MdnsServiceInfo buildMdnsServiceInfoFromResponse(
@@ -261,20 +264,20 @@ public class MdnsServiceTypeClient {
     }
 
     private void onResponseModified(@NonNull MdnsResponse response) {
+        final String serviceInstanceName = response.getServiceInstanceName();
         final MdnsResponse currentResponse =
-                instanceNameToResponse.get(response.getServiceInstanceName());
+                instanceNameToResponse.get(serviceInstanceName);
 
         boolean newServiceFound = false;
         boolean serviceBecomesComplete = false;
         if (currentResponse == null) {
             newServiceFound = true;
-            String serviceInstanceName = response.getServiceInstanceName();
             if (serviceInstanceName != null) {
                 instanceNameToResponse.put(serviceInstanceName, response);
             }
         } else {
             boolean before = currentResponse.isComplete();
-            instanceNameToResponse.put(response.getServiceInstanceName(), response);
+            instanceNameToResponse.put(serviceInstanceName, response);
             boolean after = response.isComplete();
             serviceBecomesComplete = !before && after;
         }
@@ -285,13 +288,16 @@ public class MdnsServiceTypeClient {
             if (!responseMatchesOptions(response, listeners.valueAt(i))) continue;
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             if (newServiceFound) {
+                sharedLog.log("onServiceNameDiscovered: " + serviceInstanceName);
                 listener.onServiceNameDiscovered(serviceInfo);
             }
 
             if (response.isComplete()) {
                 if (newServiceFound || serviceBecomesComplete) {
+                    sharedLog.log("onServiceFound: " + serviceInstanceName);
                     listener.onServiceFound(serviceInfo);
                 } else {
+                    sharedLog.log("onServiceUpdated: " + serviceInstanceName);
                     listener.onServiceUpdated(serviceInfo);
                 }
             }
@@ -309,8 +315,10 @@ public class MdnsServiceTypeClient {
             final MdnsServiceInfo serviceInfo =
                     buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
             if (response.isComplete()) {
+                sharedLog.log("onServiceRemoved: " + serviceInstanceName);
                 listener.onServiceRemoved(serviceInfo);
             }
+            sharedLog.log("onServiceNameRemoved: " + serviceInstanceName);
             listener.onServiceNameRemoved(serviceInfo);
         }
     }
@@ -485,7 +493,7 @@ public class MdnsServiceTypeClient {
                                 servicesToResolve)
                                 .call();
             } catch (RuntimeException e) {
-                LOGGER.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
+                sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
                         TextUtils.join(",", config.subtypes)), e);
                 result = null;
             }
@@ -534,8 +542,12 @@ public class MdnsServiceTypeClient {
                                             buildMdnsServiceInfoFromResponse(
                                                     existingResponse, serviceTypeLabels);
                                     if (existingResponse.isComplete()) {
+                                        sharedLog.log("TTL expired. onServiceRemoved: "
+                                                + serviceInstanceName);
                                         listener.onServiceRemoved(serviceInfo);
                                     }
+                                    sharedLog.log("TTL expired. onServiceNameRemoved: "
+                                            + serviceInstanceName);
                                     listener.onServiceNameRemoved(serviceInfo);
                                 }
                             }
