@@ -41,7 +41,6 @@ import android.net.InetAddresses;
 import android.net.Network;
 import android.text.TextUtils;
 
-import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 import com.android.server.connectivity.mdns.MdnsServiceTypeClient.QueryTaskConfig;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -100,8 +99,6 @@ public class MdnsServiceTypeClientTests {
     private Network mockNetwork;
     @Mock
     private MdnsResponseDecoder.Clock mockDecoderClock;
-    @Mock
-    private SharedLog mockSharedLog;
     @Captor
     private ArgumentCaptor<MdnsServiceInfo> serviceInfoCaptor;
 
@@ -169,7 +166,7 @@ public class MdnsServiceTypeClientTests {
 
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork, mockSharedLog) {
+                        mockDecoderClock, mockNetwork) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -704,7 +701,7 @@ public class MdnsServiceTypeClientTests {
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork, mockSharedLog) {
+                        mockDecoderClock, mockNetwork) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -743,7 +740,7 @@ public class MdnsServiceTypeClientTests {
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork, mockSharedLog) {
+                        mockDecoderClock, mockNetwork) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -776,7 +773,7 @@ public class MdnsServiceTypeClientTests {
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork, mockSharedLog) {
+                        mockDecoderClock, mockNetwork) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -901,7 +898,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void testProcessResponse_Resolve() throws Exception {
         client = new MdnsServiceTypeClient(
-                SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork, mockSharedLog);
+                SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork);
 
         final String instanceName = "service-instance";
         final String[] hostname = new String[] { "testhost "};
