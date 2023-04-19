@@ -23,6 +23,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
+#include <bpf/BpfClassic.h>
 #include <DnsProxydProtocol.h> // NETID_USE_LOCAL_NAMESERVERS
 #include <nativehelper/JNIPlatformHelp.h>
 #include <utils/Log.h>
@@ -55,11 +56,10 @@ static inline T MakeGlobalRefOrDie(JNIEnv* env, T in) {
 
 static void android_net_utils_attachDropAllBPFFilter(JNIEnv *env, jclass clazz, jobject javaFd)
 {
-    struct sock_filter filter_code[] = {
-        // Reject all.
-        BPF_STMT(BPF_RET | BPF_K, 0)
+    static struct sock_filter filter_code[] = {
+        BPF_REJECT,
     };
-    struct sock_fprog filter = {
+    static const struct sock_fprog filter = {
         sizeof(filter_code) / sizeof(filter_code[0]),
         filter_code,
     };
