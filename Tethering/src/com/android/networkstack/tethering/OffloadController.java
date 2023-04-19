@@ -762,6 +762,16 @@ public class OffloadController {
         String upstream = (lp != null) ? lp.getInterfaceName() : null;
         pw.println("Current upstream: " + upstream);
         pw.println("Exempt prefixes: " + mLastLocalPrefixStrs);
+        pw.println("ForwardedStats:");
+        pw.increaseIndent();
+        if (mForwardedStats.isEmpty()) {
+            pw.println("<empty>");
+        } else {
+            for (final Map.Entry<String, ForwardedStats> kv : mForwardedStats.entrySet()) {
+                pw.println(kv.getKey() + ": " + kv.getValue());
+            }
+        }
+        pw.decreaseIndent();
         pw.println("NAT timeout update callbacks received during the "
                 + (isStarted ? "current" : "last")
                 + " offload session: "
