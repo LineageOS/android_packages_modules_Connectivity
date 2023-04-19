@@ -32,7 +32,6 @@ namespace android {
 namespace net {
 
 using base::unique_fd;
-using bpf::NONEXISTENT_COOKIE;
 using bpf::getSocketCookie;
 using bpf::retrieveProgram;
 using netdutils::Status;
@@ -185,7 +184,7 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
     }
 
     uint64_t sock_cookie = getSocketCookie(sockFd);
-    if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
+    if (!sock_cookie) return -errno;
 
     UidTagValue newKey = {.uid = (uint32_t)chargeUid, .tag = tag};
 
@@ -249,7 +248,7 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
 
 int BpfHandler::untagSocket(int sockFd) {
     uint64_t sock_cookie = getSocketCookie(sockFd);
-    if (sock_cookie == NONEXISTENT_COOKIE) return -errno;
+    if (!sock_cookie) return -errno;
 
     if (!mCookieTagMap.isValid()) return -EPERM;
     base::Result<void> res = mCookieTagMap.deleteValue(sock_cookie);
