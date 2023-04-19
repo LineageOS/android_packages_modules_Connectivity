@@ -100,14 +100,14 @@ DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_I
 DEFINE_BPF_MAP_EXT(packet_trace_enabled_map, ARRAY, uint32_t, bool, 1,
                    AID_ROOT, AID_SYSTEM, 0060, "fs_bpf_net_shared", "", false,
                    BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, LOAD_ON_ENG,
-                   /*ignore_on_user*/true, LOAD_ON_USERDEBUG)
+                   IGNORE_ON_USER, LOAD_ON_USERDEBUG)
 
 // A ring buffer on which packet information is pushed. This map will only be loaded
 // on eng and userdebug devices. User devices won't load this to save memory.
 DEFINE_BPF_RINGBUF_EXT(packet_trace_ringbuf, PacketTrace, PACKET_TRACE_BUF_SIZE,
                        AID_ROOT, AID_SYSTEM, 0060, "fs_bpf_net_shared", "", false,
                        BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, LOAD_ON_ENG,
-                       /*ignore_on_user*/true, LOAD_ON_USERDEBUG);
+                       IGNORE_ON_USER, LOAD_ON_USERDEBUG);
 
 // iptables xt_bpf programs need to be usable by both netd and netutils_wrappers
 // selinux contexts, because even non-xt_bpf iptables mutations are implemented as
