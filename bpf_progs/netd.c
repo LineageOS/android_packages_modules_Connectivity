@@ -300,7 +300,8 @@ static __always_inline inline void do_packet_tracing(
     bpf_packet_trace_ringbuf_submit(pkt);
 }
 
-static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, const unsigned kver) {
+static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool egress,
+                                                    const unsigned kver) {
     uint32_t flag = 0;
     if (skb->protocol == htons(ETH_P_IP)) {
         uint8_t proto;
@@ -330,7 +331,8 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, const
     } else {
         return false;
     }
-    return flag & TCP_FLAG_RST;  // false on read failure
+    // Always allow RST's, and additionally allow ingress FINs
+    return flag & (TCP_FLAG_RST | (egress ? 0 : TCP_FLAG_FIN));  // false on read failure
 }
 
 static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
@@ -352,7 +354,7 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
                                                   bool egress, const unsigned kver) {
     if (is_system_uid(uid)) return PASS;
 
-    if (skip_owner_match(skb, kver)) return PASS;
+    if (skip_owner_match(skb, egress, kver)) return PASS;
 
     BpfConfig enabledRules = getConfig(UID_RULES_CONFIGURATION_KEY);
 
