@@ -305,13 +305,13 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
 DEFINE_BPF_PROG("schedcls/tether_downstream6_ether", TETHERING_UID, TETHERING_GID,
                 sched_cls_tether_downstream6_ether)
 (struct __sk_buff* skb) {
-    return do_forward6(skb, /* is_ethernet */ true, DOWNSTREAM, KVER_NONE);
+    return do_forward6(skb, ETHER, DOWNSTREAM, KVER_NONE);
 }
 
 DEFINE_BPF_PROG("schedcls/tether_upstream6_ether", TETHERING_UID, TETHERING_GID,
                 sched_cls_tether_upstream6_ether)
 (struct __sk_buff* skb) {
-    return do_forward6(skb, /* is_ethernet */ true, UPSTREAM, KVER_NONE);
+    return do_forward6(skb, ETHER, UPSTREAM, KVER_NONE);
 }
 
 // Note: section names must be unique to prevent programs from appending to each other,
@@ -665,13 +665,13 @@ DEFINE_BPF_PROG_KVER("schedcls/tether_upstream4_rawip$5_8", TETHERING_UID, TETHE
 DEFINE_BPF_PROG_KVER("schedcls/tether_downstream4_ether$5_8", TETHERING_UID, TETHERING_GID,
                      sched_cls_tether_downstream4_ether_5_8, KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, DOWNSTREAM, /* updatetime */ true, KVER(5, 8, 0));
+    return do_forward4(skb, ETHER, DOWNSTREAM, /* updatetime */ true, KVER(5, 8, 0));
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/tether_upstream4_ether$5_8", TETHERING_UID, TETHERING_GID,
                      sched_cls_tether_upstream4_ether_5_8, KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, UPSTREAM, /* updatetime */ true, KVER(5, 8, 0));
+    return do_forward4(skb, ETHER, UPSTREAM, /* updatetime */ true, KVER(5, 8, 0));
 }
 
 // Full featured (optional) implementations for 4.14-S, 4.19-S & 5.4-S kernels
@@ -698,7 +698,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_ether$opt",
                                     sched_cls_tether_downstream4_ether_opt,
                                     KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, DOWNSTREAM, /* updatetime */ true, KVER(4, 14, 0));
+    return do_forward4(skb, ETHER, DOWNSTREAM, /* updatetime */ true, KVER(4, 14, 0));
 }
 
 DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$opt",
@@ -706,7 +706,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$opt",
                                     sched_cls_tether_upstream4_ether_opt,
                                     KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, UPSTREAM, /* updatetime */ true, KVER(4, 14, 0));
+    return do_forward4(skb, ETHER, UPSTREAM, /* updatetime */ true, KVER(4, 14, 0));
 }
 
 // Partial (TCP-only: will not update 'last_used' field) implementations for 4.14+ kernels.
@@ -759,13 +759,13 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$4_14",
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_ether$4_14", TETHERING_UID, TETHERING_GID,
                            sched_cls_tether_downstream4_ether_4_14, KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, DOWNSTREAM, /* updatetime */ false, KVER(4, 14, 0));
+    return do_forward4(skb, ETHER, DOWNSTREAM, /* updatetime */ false, KVER(4, 14, 0));
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$4_14", TETHERING_UID, TETHERING_GID,
                            sched_cls_tether_upstream4_ether_4_14, KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, UPSTREAM, /* updatetime */ false, KVER(4, 14, 0));
+    return do_forward4(skb, ETHER, UPSTREAM, /* updatetime */ false, KVER(4, 14, 0));
 }
 
 // Placeholder (no-op) implementations for older Q kernels
@@ -821,9 +821,9 @@ static inline __always_inline int do_xdp_forward_ether(struct xdp_md *ctx, const
     if ((void*)(eth + 1) > data_end) return XDP_PASS;
 
     if (eth->h_proto == htons(ETH_P_IPV6))
-        return do_xdp_forward6(ctx, /* is_ethernet */ true, downstream);
+        return do_xdp_forward6(ctx, ETHER, downstream);
     if (eth->h_proto == htons(ETH_P_IP))
-        return do_xdp_forward4(ctx, /* is_ethernet */ true, downstream);
+        return do_xdp_forward4(ctx, ETHER, downstream);
 
     // Anything else we don't know how to handle...
     return XDP_PASS;
