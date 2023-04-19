@@ -30,7 +30,7 @@ java_genrule {
     out: ["net_http_test_jarjar_rules.txt"],
     cmd: "$(location jarjar-rules-generator) " +
         "$(location :NetHttpTestsLibPreJarJar{.jar}) " +
-        "--prefix android.net.http.internal " +
+        "--prefix android.net.connectivity " +
         "--excludes $(location jarjar_excludes.txt) " +
         "--output $(out)",
 }
@@ -49,9 +49,7 @@ android_library {
     ],
     libs: [
         "android.test.base",
-        "framework-tethering-pre-jarjar",
-        // android.net.Network apis
-        "framework-connectivity",
+        "framework-connectivity-pre-jarjar",
         // android.net.TrafficStats apis
         "framework-connectivity-t",
     ],
