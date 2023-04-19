@@ -305,7 +305,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
 DEFINE_BPF_PROG("schedcls/tether_downstream6_ether", TETHERING_UID, TETHERING_GID,
                 sched_cls_tether_downstream6_ether)
 (struct __sk_buff* skb) {
-    return do_forward6(skb, /* is_ethernet */ true, /* downstream */ true, KVER_NONE);
+    return do_forward6(skb, /* is_ethernet */ true, DOWNSTREAM, KVER_NONE);
 }
 
 DEFINE_BPF_PROG("schedcls/tether_upstream6_ether", TETHERING_UID, TETHERING_GID,
@@ -331,7 +331,7 @@ DEFINE_BPF_PROG("schedcls/tether_upstream6_ether", TETHERING_UID, TETHERING_GID,
 DEFINE_BPF_PROG_KVER("schedcls/tether_downstream6_rawip$4_14", TETHERING_UID, TETHERING_GID,
                      sched_cls_tether_downstream6_rawip_4_14, KVER(4, 14, 0))
 (struct __sk_buff* skb) {
-    return do_forward6(skb, /* is_ethernet */ false, /* downstream */ true, KVER(4, 14, 0));
+    return do_forward6(skb, /* is_ethernet */ false, DOWNSTREAM, KVER(4, 14, 0));
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/tether_upstream6_rawip$4_14", TETHERING_UID, TETHERING_GID,
@@ -653,7 +653,7 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool 
 DEFINE_BPF_PROG_KVER("schedcls/tether_downstream4_rawip$5_8", TETHERING_UID, TETHERING_GID,
                      sched_cls_tether_downstream4_rawip_5_8, KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ false, /* downstream */ true, /* updatetime */ true, KVER(5, 8, 0));
+    return do_forward4(skb, /* is_ethernet */ false, DOWNSTREAM, /* updatetime */ true, KVER(5, 8, 0));
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/tether_upstream4_rawip$5_8", TETHERING_UID, TETHERING_GID,
@@ -665,7 +665,7 @@ DEFINE_BPF_PROG_KVER("schedcls/tether_upstream4_rawip$5_8", TETHERING_UID, TETHE
 DEFINE_BPF_PROG_KVER("schedcls/tether_downstream4_ether$5_8", TETHERING_UID, TETHERING_GID,
                      sched_cls_tether_downstream4_ether_5_8, KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, /* downstream */ true, /* updatetime */ true, KVER(5, 8, 0));
+    return do_forward4(skb, /* is_ethernet */ true, DOWNSTREAM, /* updatetime */ true, KVER(5, 8, 0));
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/tether_upstream4_ether$5_8", TETHERING_UID, TETHERING_GID,
@@ -682,7 +682,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_rawip$opt",
                                     sched_cls_tether_downstream4_rawip_opt,
                                     KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ false, /* downstream */ true, /* updatetime */ true, KVER(4, 14, 0));
+    return do_forward4(skb, /* is_ethernet */ false, DOWNSTREAM, /* updatetime */ true, KVER(4, 14, 0));
 }
 
 DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$opt",
@@ -698,7 +698,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_ether$opt",
                                     sched_cls_tether_downstream4_ether_opt,
                                     KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, /* downstream */ true, /* updatetime */ true, KVER(4, 14, 0));
+    return do_forward4(skb, /* is_ethernet */ true, DOWNSTREAM, /* updatetime */ true, KVER(4, 14, 0));
 }
 
 DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$opt",
@@ -726,7 +726,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$opt",
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_rawip$5_4", TETHERING_UID, TETHERING_GID,
                            sched_cls_tether_downstream4_rawip_5_4, KVER(5, 4, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ false, /* downstream */ true, /* updatetime */ false, KVER(5, 4, 0));
+    return do_forward4(skb, /* is_ethernet */ false, DOWNSTREAM, /* updatetime */ false, KVER(5, 4, 0));
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$5_4", TETHERING_UID, TETHERING_GID,
@@ -743,7 +743,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_rawip$4_14",
                                     sched_cls_tether_downstream4_rawip_4_14,
                                     KVER(4, 14, 0), KVER(5, 4, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ false, /* downstream */ true, /* updatetime */ false, KVER(4, 14, 0));
+    return do_forward4(skb, /* is_ethernet */ false, DOWNSTREAM, /* updatetime */ false, KVER(4, 14, 0));
 }
 
 DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$4_14",
@@ -759,7 +759,7 @@ DEFINE_OPTIONAL_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_rawip$4_14",
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_downstream4_ether$4_14", TETHERING_UID, TETHERING_GID,
                            sched_cls_tether_downstream4_ether_4_14, KVER(4, 14, 0), KVER(5, 8, 0))
 (struct __sk_buff* skb) {
-    return do_forward4(skb, /* is_ethernet */ true, /* downstream */ true, /* updatetime */ false, KVER(4, 14, 0));
+    return do_forward4(skb, /* is_ethernet */ true, DOWNSTREAM, /* updatetime */ false, KVER(4, 14, 0));
 }
 
 DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$4_14", TETHERING_UID, TETHERING_GID,
@@ -849,12 +849,12 @@ static inline __always_inline int do_xdp_forward_rawip(struct xdp_md *ctx, const
 
 DEFINE_XDP_PROG("xdp/tether_downstream_ether",
                  xdp_tether_downstream_ether) {
-    return do_xdp_forward_ether(ctx, /* downstream */ true);
+    return do_xdp_forward_ether(ctx, DOWNSTREAM);
 }
 
 DEFINE_XDP_PROG("xdp/tether_downstream_rawip",
                  xdp_tether_downstream_rawip) {
-    return do_xdp_forward_rawip(ctx, /* downstream */ true);
+    return do_xdp_forward_rawip(ctx, DOWNSTREAM);
 }
 
 DEFINE_XDP_PROG("xdp/tether_upstream_ether",
