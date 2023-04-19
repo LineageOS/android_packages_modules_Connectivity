@@ -42,10 +42,6 @@ static const int DROP_UNLESS_DNS = 2;  // internal to our program
 static const int BPF_NOMATCH = 0;
 static const int BPF_MATCH = 1;
 
-// Used for 'bool egress'
-static const bool INGRESS = false;
-static const bool EGRESS = true;
-
 // Used for 'bool enable_tracing'
 static const bool TRACE_ON = true;
 static const bool TRACE_OFF = false;
