@@ -328,6 +328,31 @@ java_library {
     lint: { strict_updatability_linting: true },
 }
 
+java_library {
+    name: "net-utils-device-common-wear",
+    srcs: [
+        "device/com/android/net/module/util/wear/*.java",
+    ],
+    sdk_version: "module_current",
+    min_sdk_version: "29",
+    visibility: [
+        "//frameworks/libs/net/common/tests:__subpackages__",
+        "//frameworks/libs/net/common/testutils:__subpackages__",
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
+    libs: [
+        "framework-annotations-lib",
+    ],
+    static_libs: [
+        "net-utils-device-common-async",
+    ],
+    apex_available: [
+        "com.android.tethering",
+        "//apex_available:platform",
+    ],
+    lint: { strict_updatability_linting: true },
+}
+
 // Limited set of utilities for use by service-connectivity-mdns-standalone-build-test, to make sure
 // the mDNS code can build with only system APIs.
 // The mDNS code is platform code so it should use framework-annotations-lib, contrary to apps that

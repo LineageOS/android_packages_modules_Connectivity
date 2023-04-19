@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.testutils;
+package com.android.testutils.async;
 
 import android.os.ParcelFileDescriptor;
 import android.system.StructPollfd;
