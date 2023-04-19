@@ -242,7 +242,6 @@ bootclasspath_fragment {
             "android.net.apf",
             "android.net.connectivity",
             "android.net.http.apihelpers",
-            "android.net.http.internal",
             "android.net.netstats.provider",
             "android.net.nsd",
             "android.net.wear",
