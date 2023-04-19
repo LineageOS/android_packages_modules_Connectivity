@@ -190,6 +190,7 @@ cc_library_shared {
         "libnativehelper",
     ],
     header_libs: [
+        "bpf_headers",
         "dnsproxyd_protocol_headers",
     ],
     stl: "none",
