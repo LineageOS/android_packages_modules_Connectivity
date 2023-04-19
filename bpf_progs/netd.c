@@ -176,36 +176,38 @@ static __always_inline int is_system_uid(uint32_t uid) {
  * Especially since the number of packets is important for any future clat offload correction.
  * (which adjusts upward by 20 bytes per packet to account for ipv4 -> ipv6 header conversion)
  */
-#define DEFINE_UPDATE_STATS(the_stats_map, TypeOfKey)                                          \
-    static __always_inline inline void update_##the_stats_map(struct __sk_buff* skb,           \
-                                                              bool egress, TypeOfKey* key) {   \
-        StatsValue* value = bpf_##the_stats_map##_lookup_elem(key);                            \
-        if (!value) {                                                                          \
-            StatsValue newValue = {};                                                          \
-            bpf_##the_stats_map##_update_elem(key, &newValue, BPF_NOEXIST);                    \
-            value = bpf_##the_stats_map##_lookup_elem(key);                                    \
-        }                                                                                      \
-        if (value) {                                                                           \
-            const int mtu = 1500;                                                              \
-            uint64_t packets = 1;                                                              \
-            uint64_t bytes = skb->len;                                                         \
-            if (bytes > mtu) {                                                                 \
-                bool is_ipv6 = (skb->protocol == htons(ETH_P_IPV6));                           \
-                int ip_overhead = (is_ipv6 ? sizeof(struct ipv6hdr) : sizeof(struct iphdr));   \
-                int tcp_overhead = ip_overhead + sizeof(struct tcphdr) + 12;                   \
-                int mss = mtu - tcp_overhead;                                                  \
-                uint64_t payload = bytes - tcp_overhead;                                       \
-                packets = (payload + mss - 1) / mss;                                           \
-                bytes = tcp_overhead * packets + payload;                                      \
-            }                                                                                  \
-            if (egress) {                                                                      \
-                __sync_fetch_and_add(&value->txPackets, packets);                              \
-                __sync_fetch_and_add(&value->txBytes, bytes);                                  \
-            } else {                                                                           \
-                __sync_fetch_and_add(&value->rxPackets, packets);                              \
-                __sync_fetch_and_add(&value->rxBytes, bytes);                                  \
-            }                                                                                  \
-        }                                                                                      \
+#define DEFINE_UPDATE_STATS(the_stats_map, TypeOfKey)                                            \
+    static __always_inline inline void update_##the_stats_map(const struct __sk_buff* const skb, \
+                                                              const TypeOfKey* const key,        \
+                                                              const bool egress,                 \
+                                                              const unsigned kver) {             \
+        StatsValue* value = bpf_##the_stats_map##_lookup_elem(key);                              \
+        if (!value) {                                                                            \
+            StatsValue newValue = {};                                                            \
+            bpf_##the_stats_map##_update_elem(key, &newValue, BPF_NOEXIST);                      \
+            value = bpf_##the_stats_map##_lookup_elem(key);                                      \
+        }                                                                                        \
+        if (value) {                                                                             \
+            const int mtu = 1500;                                                                \
+            uint64_t packets = 1;                                                                \
+            uint64_t bytes = skb->len;                                                           \
+            if (bytes > mtu) {                                                                   \
+                bool is_ipv6 = (skb->protocol == htons(ETH_P_IPV6));                             \
+                int ip_overhead = (is_ipv6 ? sizeof(struct ipv6hdr) : sizeof(struct iphdr));     \
+                int tcp_overhead = ip_overhead + sizeof(struct tcphdr) + 12;                     \
+                int mss = mtu - tcp_overhead;                                                    \
+                uint64_t payload = bytes - tcp_overhead;                                         \
+                packets = (payload + mss - 1) / mss;                                             \
+                bytes = tcp_overhead * packets + payload;                                        \
+            }                                                                                    \
+            if (egress) {                                                                        \
+                __sync_fetch_and_add(&value->txPackets, packets);                                \
+                __sync_fetch_and_add(&value->txBytes, bytes);                                    \
+            } else {                                                                             \
+                __sync_fetch_and_add(&value->rxPackets, packets);                                \
+                __sync_fetch_and_add(&value->rxBytes, bytes);                                    \
+            }                                                                                    \
+        }                                                                                        \
     }
 
 DEFINE_UPDATE_STATS(app_uid_stats_map, uint32_t)
@@ -385,12 +387,15 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
     return PASS;
 }
 
-static __always_inline inline void update_stats_with_config(struct __sk_buff* skb, bool egress,
-                                                            StatsKey* key, uint32_t selectedMap) {
+static __always_inline inline void update_stats_with_config(const uint32_t selectedMap,
+                                                            const struct __sk_buff* const skb,
+                                                            const StatsKey* const key,
+                                                            const bool egress,
+                                                            const unsigned kver) {
     if (selectedMap == SELECT_MAP_A) {
-        update_stats_map_A(skb, egress, key);
+        update_stats_map_A(skb, key, egress, kver);
     } else {
-        update_stats_map_B(skb, egress, key);
+        update_stats_map_B(skb, key, egress, kver);
     }
 }
 
@@ -449,8 +454,8 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     }
 
     do_packet_tracing(skb, egress, uid, tag, enable_tracing, kver);
-    update_stats_with_config(skb, egress, &key, *selectedMap);
-    update_app_uid_stats_map(skb, egress, &uid);
+    update_stats_with_config(*selectedMap, skb, &key, egress, kver);
+    update_app_uid_stats_map(skb, &uid, egress, kver);
     asm("%0 &= 1" : "+r"(match));
     return match;
 }
@@ -511,7 +516,7 @@ DEFINE_XTBPF_PROG("skfilter/egress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_egres
     }
 
     uint32_t key = skb->ifindex;
-    update_iface_stats_map(skb, EGRESS, &key);
+    update_iface_stats_map(skb, &key, EGRESS, KVER_NONE);
     return BPF_MATCH;
 }
 
@@ -524,7 +529,7 @@ DEFINE_XTBPF_PROG("skfilter/ingress/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_ingr
     // Keep that in mind when moving this out of iptables xt_bpf and into tc ingress (or xdp).
 
     uint32_t key = skb->ifindex;
-    update_iface_stats_map(skb, INGRESS, &key);
+    update_iface_stats_map(skb, &key, INGRESS, KVER_NONE);
     return BPF_MATCH;
 }
 
@@ -534,7 +539,7 @@ DEFINE_SYS_BPF_PROG("schedact/ingress/account", AID_ROOT, AID_NET_ADMIN,
     if (is_received_skb(skb)) {
         // Account for ingress traffic before tc drops it.
         uint32_t key = skb->ifindex;
-        update_iface_stats_map(skb, INGRESS, &key);
+        update_iface_stats_map(skb, &key, INGRESS, KVER_NONE);
     }
     return TC_ACT_UNSPEC;
 }
