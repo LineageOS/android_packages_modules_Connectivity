@@ -43,9 +43,9 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.common.locator.LocatorContextWrapper;
 import com.android.server.nearby.fastpair.FastPairManager;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.managers.BroadcastProviderManager;
+import com.android.server.nearby.managers.DiscoveryProviderManager;
 import com.android.server.nearby.presence.PresenceManager;
-import com.android.server.nearby.provider.BroadcastProviderManager;
-import com.android.server.nearby.provider.DiscoveryProviderManager;
 import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.identity.CallerIdentity;
 import com.android.server.nearby.util.permissions.BroadcastPermissions;
@@ -58,10 +58,10 @@ public class NearbyService extends INearbyManager.Stub {
     public static final Boolean MANUAL_TEST = false;
 
     private final Context mContext;
-    private Injector mInjector;
     private final FastPairManager mFastPairManager;
     private final PresenceManager mPresenceManager;
     private final NearbyConfiguration mNearbyConfiguration;
+    private Injector mInjector;
     private final BroadcastReceiver mBluetoothReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -79,8 +79,8 @@ public class NearbyService extends INearbyManager.Stub {
                     }
                 }
             };
-    private DiscoveryProviderManager mProviderManager;
-    private BroadcastProviderManager mBroadcastProviderManager;
+    private final DiscoveryProviderManager mProviderManager;
+    private final BroadcastProviderManager mBroadcastProviderManager;
 
     public NearbyService(Context context) {
         mContext = context;

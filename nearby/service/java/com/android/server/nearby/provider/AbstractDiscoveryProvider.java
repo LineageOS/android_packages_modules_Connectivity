@@ -41,14 +41,6 @@ public abstract class AbstractDiscoveryProvider {
     protected final Executor mExecutor;
     protected Listener mListener;
 
-    /** Interface for listening to discovery providers. */
-    public interface Listener {
-        /**
-         * Called when a provider has a new nearby device available. May be invoked from any thread.
-         */
-        void onNearbyDeviceDiscovered(NearbyDeviceParcelable nearbyDevice);
-    }
-
     protected AbstractDiscoveryProvider(Context context, Executor executor) {
         mContext = context;
         mExecutor = executor;
@@ -86,8 +78,16 @@ public abstract class AbstractDiscoveryProvider {
      * as a discovery provider should not be controlling itself. Using this method from subclasses
      * could also result in deadlock.
      */
-    protected DiscoveryProviderController getController() {
+    public DiscoveryProviderController getController() {
         return mController;
+    }
+
+    /** Interface for listening to discovery providers. */
+    public interface Listener {
+        /**
+         * Called when a provider has a new nearby device available. May be invoked from any thread.
+         */
+        void onNearbyDeviceDiscovered(NearbyDeviceParcelable nearbyDevice);
     }
 
     private class Controller implements DiscoveryProviderController {
@@ -104,7 +104,6 @@ public abstract class AbstractDiscoveryProvider {
         public boolean isStarted() {
             return mStarted;
         }
-
         @Override
         public void start() {
             if (mStarted) {
@@ -125,6 +124,12 @@ public abstract class AbstractDiscoveryProvider {
             mExecutor.execute(AbstractDiscoveryProvider.this::onStop);
         }
 
+        @ScanRequest.ScanMode
+        @Override
+        public int getProviderScanMode() {
+            return mScanMode;
+        }
+
         @Override
         public void setProviderScanMode(@ScanRequest.ScanMode int scanMode) {
             if (mScanMode == scanMode) {
@@ -133,12 +138,6 @@ public abstract class AbstractDiscoveryProvider {
             }
             mScanMode = scanMode;
             mExecutor.execute(AbstractDiscoveryProvider.this::invalidateScanMode);
-        }
-
-        @ScanRequest.ScanMode
-        @Override
-        public int getProviderScanMode() {
-            return mScanMode;
         }
 
         @Override
