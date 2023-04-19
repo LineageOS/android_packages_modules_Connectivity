@@ -538,7 +538,7 @@ static jlong com_android_server_connectivity_ClatCoordinator_getSocketCookie(
     }
 
     uint64_t sock_cookie = bpf::getSocketCookie(sockFd);
-    if (sock_cookie == bpf::NONEXISTENT_COOKIE) {
+    if (!sock_cookie) {
         throwIOException(env, "get socket cookie failed", errno);
         return -1;
     }
