@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.provider;
+package com.android.server.nearby.managers;
 
 import android.annotation.Nullable;
 import android.content.Context;
@@ -31,6 +31,7 @@ import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.Advertisement;
 import com.android.server.nearby.presence.ExtendedAdvertisement;
 import com.android.server.nearby.presence.FastAdvertisement;
+import com.android.server.nearby.provider.BleBroadcastProvider;
 import com.android.server.nearby.util.ForegroundThread;
 
 import java.util.concurrent.Executor;
