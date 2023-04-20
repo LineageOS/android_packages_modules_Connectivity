@@ -88,9 +88,9 @@ public class NearbyConfiguration {
 
     private class DeviceConfigListener implements DeviceConfig.OnPropertiesChangedListener {
         public void start() {
-            DeviceConfig.addOnPropertiesChangedListener(DeviceConfig.NAMESPACE_TETHERING,
+            DeviceConfig.addOnPropertiesChangedListener(DeviceConfig.NAMESPACE_NEARBY,
                     Executors.newSingleThreadExecutor(), this);
-            onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_TETHERING));
+            onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_NEARBY));
         }
 
         @Override
@@ -117,6 +117,6 @@ public class NearbyConfiguration {
     }
 
     private static String getDeviceConfigProperty(String name) {
-        return DeviceConfig.getProperty(DeviceConfig.NAMESPACE_TETHERING, name);
+        return DeviceConfig.getProperty(DeviceConfig.NAMESPACE_NEARBY, name);
     }
 }

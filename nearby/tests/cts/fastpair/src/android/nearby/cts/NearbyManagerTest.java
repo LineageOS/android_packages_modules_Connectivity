@@ -21,7 +21,7 @@ import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
 import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 import static android.nearby.ScanCallback.ERROR_UNSUPPORTED;
-import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
+import static android.provider.DeviceConfig.NAMESPACE_NEARBY;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -113,7 +113,7 @@ public class NearbyManagerTest {
     public void setUp() {
         mUiAutomation.adoptShellPermissionIdentity(READ_DEVICE_CONFIG, WRITE_DEVICE_CONFIG,
                 BLUETOOTH_PRIVILEGED);
-        DeviceConfig.setProperty(NAMESPACE_TETHERING,
+        DeviceConfig.setProperty(NAMESPACE_NEARBY,
                 "nearby_enable_presence_broadcast_legacy",
                 "true", false);
 

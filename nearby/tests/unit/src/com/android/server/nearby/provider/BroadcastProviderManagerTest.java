@@ -18,7 +18,7 @@ package com.android.server.nearby.provider;
 
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
-import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
+import static android.provider.DeviceConfig.NAMESPACE_NEARBY;
 
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY;
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_APP;
@@ -80,7 +80,7 @@ public class BroadcastProviderManagerTest {
     @Before
     public void setUp() {
         mUiAutomation.adoptShellPermissionIdentity(WRITE_DEVICE_CONFIG, READ_DEVICE_CONFIG);
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
+        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
                 "true", false);
 
         mContext = ApplicationProvider.getApplicationContext();
@@ -113,9 +113,9 @@ public class BroadcastProviderManagerTest {
 
     @Test
     public void testStartAdvertising_featureDisabled() throws Exception {
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
+        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY,
                 "false", false);
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP,
+        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_SUPPORT_TEST_APP,
                 "false", false);
 
         mBroadcastProviderManager = new BroadcastProviderManager(MoreExecutors.directExecutor(),
