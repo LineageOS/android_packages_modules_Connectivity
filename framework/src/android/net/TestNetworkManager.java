@@ -260,7 +260,7 @@ public class TestNetworkManager {
     /**
      * Create a tap interface with or without carrier for testing purposes.
      *
-     * Note: setting carrierUp = false is not supported until kernel version 5.0.
+     * Note: setting carrierUp = false is not supported until kernel version 6.0.
      *
      * @param carrierUp whether the created interface has a carrier or not.
      * @param bringUp whether to bring up the interface before returning it.
@@ -279,6 +279,8 @@ public class TestNetworkManager {
 
     /**
      * Create a tap interface for testing purposes.
+     *
+     * Note: setting carrierUp = false is not supported until kernel version 6.0.
      *
      * @param carrierUp whether the created interface has a carrier or not.
      * @param bringUp whether to bring up the interface before returning it.
