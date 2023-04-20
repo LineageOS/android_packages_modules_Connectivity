@@ -42,10 +42,6 @@ static const int DROP_UNLESS_DNS = 2;  // internal to our program
 static const int BPF_NOMATCH = 0;
 static const int BPF_MATCH = 1;
 
-// Used for 'bool egress'
-static const bool INGRESS = false;
-static const bool EGRESS = true;
-
 // Used for 'bool enable_tracing'
 static const bool TRACE_ON = true;
 static const bool TRACE_OFF = false;
@@ -64,15 +60,15 @@ static const bool TRACE_OFF = false;
 #define DEFINE_BPF_MAP_NO_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries)      \
     DEFINE_BPF_MAP_EXT(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries,              \
                        AID_ROOT, AID_NET_BW_ACCT, 0060, "fs_bpf_net_shared", "", false, \
-                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, /*ignore_on_eng*/false,       \
-                       /*ignore_on_user*/false, /*ignore_on_userdebug*/false)
+                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,       \
+                       LOAD_ON_USER, LOAD_ON_USERDEBUG)
 
 // For maps netd only needs read only access to
 #define DEFINE_BPF_MAP_RO_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries)         \
     DEFINE_BPF_MAP_EXT(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries,                 \
                        AID_ROOT, AID_NET_BW_ACCT, 0460, "fs_bpf_netd_readonly", "", false, \
-                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, /*ignore_on_eng*/false,       \
-                       /*ignore_on_user*/false, /*ignore_on_userdebug*/false)
+                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,       \
+                       LOAD_ON_USER, LOAD_ON_USERDEBUG)
 
 // For maps netd needs to be able to read and write
 #define DEFINE_BPF_MAP_RW_NETD(the_map, TYPE, TypeOfKey, TypeOfValue, num_entries) \
@@ -103,15 +99,15 @@ DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_I
 // A single-element configuration array, packet tracing is enabled when 'true'.
 DEFINE_BPF_MAP_EXT(packet_trace_enabled_map, ARRAY, uint32_t, bool, 1,
                    AID_ROOT, AID_SYSTEM, 0060, "fs_bpf_net_shared", "", false,
-                   BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, /*ignore_on_eng*/false,
-                   /*ignore_on_user*/true, /*ignore_on_userdebug*/false)
+                   BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, LOAD_ON_ENG,
+                   IGNORE_ON_USER, LOAD_ON_USERDEBUG)
 
 // A ring buffer on which packet information is pushed. This map will only be loaded
 // on eng and userdebug devices. User devices won't load this to save memory.
 DEFINE_BPF_RINGBUF_EXT(packet_trace_ringbuf, PacketTrace, PACKET_TRACE_BUF_SIZE,
                        AID_ROOT, AID_SYSTEM, 0060, "fs_bpf_net_shared", "", false,
-                       BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, /*ignore_on_eng*/false,
-                       /*ignore_on_user*/true, /*ignore_on_userdebug*/false);
+                       BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, LOAD_ON_ENG,
+                       IGNORE_ON_USER, LOAD_ON_USERDEBUG);
 
 // iptables xt_bpf programs need to be usable by both netd and netutils_wrappers
 // selinux contexts, because even non-xt_bpf iptables mutations are implemented as
