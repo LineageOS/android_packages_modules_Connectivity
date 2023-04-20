@@ -18,7 +18,7 @@ package com.android.server.nearby.provider;
 
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
-import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
+import static android.provider.DeviceConfig.NAMESPACE_NEARBY;
 
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_MAINLINE_NANO_APP_MIN_VERSION;
 import static com.android.server.nearby.provider.ChreCommunication.INVALID_NANO_APP_VERSION;
@@ -76,7 +76,7 @@ public class ChreCommunicationTest {
     public void setUp() {
         InstrumentationRegistry.getInstrumentation().getUiAutomation()
                 .adoptShellPermissionIdentity(WRITE_DEVICE_CONFIG, READ_DEVICE_CONFIG);
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
+        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
                 "1", false);
 
         MockitoAnnotations.initMocks(this);
@@ -119,7 +119,7 @@ public class ChreCommunicationTest {
 
     @Test
     public void testNotReachMinVersion() {
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
+        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
                 "3", false);
         mChreCommunication.start(
                 mChreCallback, Collections.singleton(ChreDiscoveryProvider.NANOAPP_ID));
