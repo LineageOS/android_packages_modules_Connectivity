@@ -23,3 +23,8 @@ android\.net\.util\.KeepaliveUtils(\$.+)?
 
 # TODO (b/217115866): add jarjar rules for Nearby
 android\.nearby\..+
+
+# Don't touch anything that's already under android.net.http (cronet)
+# This is required since android.net.http contains api classes and hidden classes.
+# TODO: Remove this after hidden classes are moved to different package
+android\.net\.http\..+
