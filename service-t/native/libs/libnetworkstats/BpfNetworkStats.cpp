@@ -109,12 +109,12 @@ stats_line populateStatsEntry(const StatsKey& statsKey, const StatsValue& statsE
     return newLine;
 }
 
-int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
+int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>& lines,
                                        const BpfMap<StatsKey, StatsValue>& statsMap,
                                        const BpfMap<uint32_t, IfaceValue>& ifaceMap) {
     int64_t unknownIfaceBytesTotal = 0;
     const auto processDetailUidStats =
-            [lines, &unknownIfaceBytesTotal, &ifaceMap](
+            [&lines, &unknownIfaceBytesTotal, &ifaceMap](
                     const StatsKey& key,
                     const BpfMap<StatsKey, StatsValue>& statsMap) -> Result<void> {
         char ifname[IFNAMSIZ];
@@ -127,11 +127,11 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
             return base::ResultError(statsEntry.error().message(), statsEntry.error().code());
         }
         stats_line newLine = populateStatsEntry(key, statsEntry.value(), ifname);
-        lines->push_back(newLine);
+        lines.push_back(newLine);
         if (newLine.tag) {
             // account tagged traffic in the untagged stats (for historical reasons?)
             newLine.tag = 0;
-            lines->push_back(newLine);
+            lines.push_back(newLine);
         }
         return Result<void>();
     };
@@ -151,7 +151,7 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>* lines,
     // and set, which causes NetworkStats maps wrong item to subtract.
     //
     // Thus, the stats needs to be properly sorted and grouped before reported.
-    groupNetworkStats(*lines);
+    groupNetworkStats(lines);
     return 0;
 }
 
@@ -186,7 +186,7 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
     // TODO: the above comment feels like it may be obsolete / out of date,
     // since we no longer swap the map via netd binder rpc - though we do
     // still swap it.
-    int ret = parseBpfNetworkStatsDetailInternal(lines, *inactiveStatsMap, ifaceIndexNameMap);
+    int ret = parseBpfNetworkStatsDetailInternal(*lines, *inactiveStatsMap, ifaceIndexNameMap);
     if (ret) {
         ALOGE("parse detail network stats failed: %s", strerror(errno));
         return ret;
@@ -201,11 +201,11 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
     return 0;
 }
 
-int parseBpfNetworkStatsDevInternal(std::vector<stats_line>* lines,
+int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
                                     const BpfMap<uint32_t, StatsValue>& statsMap,
                                     const BpfMap<uint32_t, IfaceValue>& ifaceMap) {
     int64_t unknownIfaceBytesTotal = 0;
-    const auto processDetailIfaceStats = [lines, &unknownIfaceBytesTotal, &ifaceMap, &statsMap](
+    const auto processDetailIfaceStats = [&lines, &unknownIfaceBytesTotal, &ifaceMap, &statsMap](
                                              const uint32_t& key, const StatsValue& value,
                                              const BpfMap<uint32_t, StatsValue>&) {
         char ifname[IFNAMSIZ];
@@ -217,7 +217,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>* lines,
                 .tag = (uint32_t)TAG_NONE,
                 .counterSet = (uint32_t)SET_ALL,
         };
-        lines->push_back(populateStatsEntry(fakeKey, value, ifname));
+        lines.push_back(populateStatsEntry(fakeKey, value, ifname));
         return Result<void>();
     };
     Result<void> res = statsMap.iterateWithValue(processDetailIfaceStats);
@@ -227,14 +227,14 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>* lines,
         return -res.error().code();
     }
 
-    groupNetworkStats(*lines);
+    groupNetworkStats(lines);
     return 0;
 }
 
 int parseBpfNetworkStatsDev(std::vector<stats_line>* lines) {
     static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
     static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
-    return parseBpfNetworkStatsDevInternal(lines, ifaceStatsMap, ifaceIndexNameMap);
+    return parseBpfNetworkStatsDevInternal(*lines, ifaceStatsMap, ifaceIndexNameMap);
 }
 
 void groupNetworkStats(std::vector<stats_line>& lines) {
