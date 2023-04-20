@@ -2552,6 +2552,14 @@ public class ConnectivityManagerTest {
                 tetherUtils.registerTetheringEventCallback();
         try {
             tetherEventCallback.assumeWifiTetheringSupported(mContext);
+            // To prevent WiFi-to-WiFi interruption while entering APM:
+            //  - If WiFi is retained while entering APM, hotspot will also remain enabled.
+            //  - If WiFi is off before APM or disabled while entering APM, hotspot will be
+            //    disabled.
+            //
+            // To ensure hotspot always be disabled after enabling APM, disable wifi before
+            // enabling the hotspot.
+            mCtsNetUtils.disableWifi();
 
             tetherUtils.startWifiTethering(tetherEventCallback);
             // Update setting to verify the behavior.
@@ -2585,6 +2593,7 @@ public class ConnectivityManagerTest {
             ConnectivitySettingsManager.setPrivateDnsMode(mContext, curPrivateDnsMode);
             tetherUtils.unregisterTetheringEventCallback(tetherEventCallback);
             tetherUtils.stopAllTethering();
+            mCtsNetUtils.ensureWifiConnected();
         }
     }
 
