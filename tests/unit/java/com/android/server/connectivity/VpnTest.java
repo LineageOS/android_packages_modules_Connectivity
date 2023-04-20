@@ -179,7 +179,6 @@ import com.android.server.vcn.util.PersistableBundleUtils;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -432,11 +431,6 @@ public class VpnTest extends VpnTestBase {
         reset(mIkev2SessionCreator);
         when(mIkev2SessionCreator.createIkeSession(any(), any(), any(), any(), any(), any()))
                 .thenReturn(ikeSession);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(any());
     }
 
     private <T> void mockService(Class<T> clazz, String name, T service) {
