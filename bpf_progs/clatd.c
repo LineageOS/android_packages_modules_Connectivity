@@ -52,12 +52,6 @@ struct frag_hdr {
     __be32 identification;
 };
 
-// constants for passing in to 'bool is_ethernet'
-static const bool RAWIP = false;
-static const bool ETHER = true;
-
-#define KVER_4_14 KVER(4, 14, 0)
-
 DEFINE_BPF_MAP_GRW(clat_ingress6_map, HASH, ClatIngress6Key, ClatIngress6Value, 16, AID_SYSTEM)
 
 static inline __always_inline int nat64(struct __sk_buff* skb,
