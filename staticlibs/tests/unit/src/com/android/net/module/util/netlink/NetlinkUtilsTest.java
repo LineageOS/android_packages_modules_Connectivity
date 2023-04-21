@@ -30,6 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 
 import android.content.Context;
 import android.system.ErrnoException;
@@ -51,6 +52,8 @@ import org.junit.runner.RunWith;
 import java.io.FileDescriptor;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -82,6 +85,8 @@ public class NetlinkUtilsTest {
 
         // Apps targeting an SDK version > S are not allowed to send RTM_GETNEIGH{TBL} messages
         if (SdkLevel.isAtLeastT() && targetSdk > 31) {
+            var ctxt = new String(Files.readAllBytes(Paths.get("/proc/thread-self/attr/current")));
+            assumeFalse("must not be platform app", ctxt.startsWith("u:r:platform_app:s0:"));
             try {
                 NetlinkUtils.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS);
                 fail("RTM_GETNEIGH is not allowed for apps targeting SDK > 31 on T+ platforms,"
