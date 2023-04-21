@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.provider;
+package com.android.server.nearby.managers;
 
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
@@ -40,6 +40,8 @@ import android.provider.DeviceConfig;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.server.nearby.provider.BleBroadcastProvider;
+
 import com.google.common.util.concurrent.MoreExecutors;
 
 import org.junit.Before;
@@ -52,7 +54,7 @@ import org.mockito.junit.MockitoRule;
 import java.util.Collections;
 
 /**
- * Unit test for {@link BroadcastProviderManager}.
+ * Unit test for {@link com.android.server.nearby.managers.BroadcastProviderManager}.
  */
 public class BroadcastProviderManagerTest {
     private static final byte[] IDENTITY = new byte[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -84,7 +86,8 @@ public class BroadcastProviderManagerTest {
                 "true", false);
 
         mContext = ApplicationProvider.getApplicationContext();
-        mBroadcastProviderManager = new BroadcastProviderManager(MoreExecutors.directExecutor(),
+        mBroadcastProviderManager = new BroadcastProviderManager(
+                MoreExecutors.directExecutor(),
                 mBleBroadcastProvider);
 
         PrivateCredential privateCredential =
