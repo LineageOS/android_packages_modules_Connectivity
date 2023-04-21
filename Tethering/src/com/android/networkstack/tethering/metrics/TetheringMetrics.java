@@ -166,10 +166,13 @@ public class TetheringMetrics {
      * @param upstream the type of upstream type (e.g. Wifi, Cellular, Bluetooth, ...)
      */
     private void addUpstreamEvent(final UpstreamEvents.Builder upstreamEventsBuilder,
-            final long start, final long stop, @Nullable final UpstreamType upstream) {
+            final long start, final long stop, @Nullable final UpstreamType upstream,
+            final long txBytes, final long rxBytes) {
         final UpstreamEvent.Builder upstreamEventBuilder = UpstreamEvent.newBuilder()
                 .setUpstreamType(upstream == null ? UpstreamType.UT_NO_NETWORK : upstream)
-                .setDurationMillis(stop - start);
+                .setDurationMillis(stop - start)
+                .setTxBytes(txBytes)
+                .setRxBytes(rxBytes);
         upstreamEventsBuilder.addUpstreamEvent(upstreamEventBuilder);
     }
 
@@ -193,18 +196,20 @@ public class TetheringMetrics {
     private void noteDownstreamStopped(final NetworkTetheringReported.Builder statsBuilder,
                     final long downstreamStartTime) {
         UpstreamEvents.Builder upstreamEventsBuilder = UpstreamEvents.newBuilder();
+
         for (RecordUpstreamEvent event : mUpstreamEventList) {
             if (downstreamStartTime > event.mStopTime) continue;
 
             final long startTime = Math.max(downstreamStartTime, event.mStartTime);
             // Handle completed upstream events.
             addUpstreamEvent(upstreamEventsBuilder, startTime, event.mStopTime,
-                    event.mUpstreamType);
+                    event.mUpstreamType, 0L /* txBytes */, 0L /* rxBytes */);
         }
         final long startTime = Math.max(downstreamStartTime, mCurrentUpStreamStartTime);
         final long stopTime = timeNow();
         // Handle the last upstream event.
-        addUpstreamEvent(upstreamEventsBuilder, startTime, stopTime, mCurrentUpstream);
+        addUpstreamEvent(upstreamEventsBuilder, startTime, stopTime, mCurrentUpstream,
+                0L /* txBytes */, 0L /* rxBytes */);
         statsBuilder.setUpstreamEvents(upstreamEventsBuilder);
         statsBuilder.setDurationMillis(stopTime - downstreamStartTime);
     }
