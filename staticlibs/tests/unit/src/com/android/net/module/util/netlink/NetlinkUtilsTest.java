@@ -55,7 +55,7 @@ import java.nio.ByteOrder;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class NetlinkUtilsTest {
-    private static final String TAG = "NetlinkUitlsTest";
+    private static final String TAG = "NetlinkUtilsTest";
     private static final int TEST_SEQNO = 5;
     private static final int TEST_TIMEOUT_MS = 500;
 
