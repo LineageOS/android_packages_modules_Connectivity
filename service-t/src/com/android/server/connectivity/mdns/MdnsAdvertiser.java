@@ -28,7 +28,9 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.SharedLog;
 
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -46,6 +48,7 @@ public class MdnsAdvertiser {
 
     // Top-level domain for link-local queries, as per RFC6762 3.
     private static final String LOCAL_TLD = "local";
+    private static final SharedLog LOGGER = new SharedLog(TAG);
 
     private final Looper mLooper;
     private final AdvertiserCallback mCb;
@@ -82,7 +85,7 @@ public class MdnsAdvertiser {
             // Note NetworkInterface is final and not mockable
             final String logTag = socket.getInterface().getName();
             return new MdnsInterfaceAdvertiser(logTag, socket, initialAddresses, looper,
-                    packetCreationBuffer, cb, deviceHostName);
+                    packetCreationBuffer, cb, deviceHostName, LOGGER.forSubComponent(logTag));
         }
 
         /**
@@ -129,9 +132,7 @@ public class MdnsAdvertiser {
 
         @Override
         public void onServiceConflict(@NonNull MdnsInterfaceAdvertiser advertiser, int serviceId) {
-            if (DBG) {
-                Log.v(TAG, "Found conflict, restarted probing for service " + serviceId);
-            }
+            LOGGER.i("Found conflict, restarted probing for service " + serviceId);
 
             final Registration registration = mRegistrations.get(serviceId);
             if (registration == null) return;
@@ -439,9 +440,7 @@ public class MdnsAdvertiser {
             return;
         }
 
-        if (DBG) {
-            Log.i(TAG, "Adding service " + service + " with ID " + id);
-        }
+        LOGGER.i("Adding service " + service + " with ID " + id);
 
         final Network network = service.getNetwork();
         final Registration registration = new Registration(service);
@@ -473,9 +472,7 @@ public class MdnsAdvertiser {
     public void removeService(int id) {
         checkThread();
         if (!mRegistrations.contains(id)) return;
-        if (DBG) {
-            Log.i(TAG, "Removing service with ID " + id);
-        }
+        LOGGER.i("Removing service with ID " + id);
         for (int i = mAdvertiserRequests.size() - 1; i >= 0; i--) {
             final InterfaceAdvertiserRequest advertiser = mAdvertiserRequests.valueAt(i);
             advertiser.removeService(id);
@@ -487,6 +484,10 @@ public class MdnsAdvertiser {
         }
     }
 
+    /** Dump info to dumpsys */
+    public void dump(PrintWriter pw) {
+        LOGGER.reverseDump(pw);
+    }
     private static <K, V> boolean any(@NonNull ArrayMap<K, V> map,
             @NonNull BiPredicate<K, V> predicate) {
         for (int i = 0; i < map.size(); i++) {
