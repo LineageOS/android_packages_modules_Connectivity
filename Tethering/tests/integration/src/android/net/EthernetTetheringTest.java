@@ -39,7 +39,6 @@ import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_
 import static com.android.net.module.util.NetworkStackConstants.IPV4_LENGTH_OFFSET;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -871,10 +870,10 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
         final ByteBuffer packet = ByteBuffer.wrap(ZeroLengthDhcpPacket);
         tester.sendUploadPacket(packet);
 
-        // Send DHCPDISCOVER packet from another downstream tethered device to verify that upstream
-        // DHCP server has closed the listening socket and stopped reading, then we will not receive
-        // any DHCPOFFER in this case.
+        // Send DHCPDISCOVER packet from another downstream tethered device to verify that
+        // upstream DHCP server doesn't close the listening socket and stop reading, then we
+        // can still receive the next DHCP packet from server.
         final MacAddress macAddress = MacAddress.fromString("11:22:33:44:55:66");
-        assertFalse(tester.testDhcpServerAlive(macAddress));
+        assertTrue(tester.testDhcpServerAlive(macAddress));
     }
 }
