@@ -45,7 +45,7 @@ public class BleBroadcastProvider extends AdvertiseCallback {
     /**
      * Listener for Broadcast status changes.
      */
-    interface BroadcastListener {
+    public interface BroadcastListener {
         void onStatusChanged(int status);
     }
 
@@ -56,13 +56,16 @@ public class BleBroadcastProvider extends AdvertiseCallback {
     private boolean mIsAdvertising;
     @VisibleForTesting
     AdvertisingSetCallback mAdvertisingSetCallback;
-    BleBroadcastProvider(Injector injector, Executor executor) {
+    public BleBroadcastProvider(Injector injector, Executor executor) {
         mInjector = injector;
         mExecutor = executor;
         mAdvertisingSetCallback = getAdvertisingSetCallback();
     }
 
-    void start(@BroadcastRequest.BroadcastVersion int version, byte[] advertisementPackets,
+    /**
+     * Starts to broadcast with given bytes.
+     */
+    public void start(@BroadcastRequest.BroadcastVersion int version, byte[] advertisementPackets,
             BroadcastListener listener) {
         if (mIsAdvertising) {
             stop();
@@ -113,7 +116,10 @@ public class BleBroadcastProvider extends AdvertiseCallback {
         }
     }
 
-    void stop() {
+    /**
+     * Stops current advertisement.
+     */
+    public void stop() {
         if (mIsAdvertising) {
             BluetoothAdapter adapter = mInjector.getBluetoothAdapter();
             if (adapter != null) {
