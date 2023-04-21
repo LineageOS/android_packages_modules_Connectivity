@@ -142,7 +142,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
     }
 
     @VisibleForTesting
-    List<ScanFilter> getFiltersLocked() {
+    public List<ScanFilter> getFiltersLocked() {
         synchronized (mLock) {
             return mScanFilters == null ? null : List.copyOf(mScanFilters);
         }
