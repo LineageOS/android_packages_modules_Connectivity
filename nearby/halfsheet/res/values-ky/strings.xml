@@ -25,5 +25,5 @@
     <string name="paring_action_save" msgid="6259357442067880136">"Сактоо"</string>
     <string name="paring_action_connect" msgid="4801102939608129181">"Туташуу"</string>
     <string name="paring_action_launch" msgid="8940808384126591230">"Жөндөө"</string>
-    <string name="paring_action_settings" msgid="424875657242864302">"Жөндөөлөр"</string>
+    <string name="paring_action_settings" msgid="424875657242864302">"Параметрлер"</string>
 </resources>
