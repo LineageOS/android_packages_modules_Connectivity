@@ -34,7 +34,8 @@
 
     <application android:requestLegacyExternalStorage="true">
         <uses-library android:name="android.test.runner"/>
-        <activity android:name=".MyActivity"/>
+        <activity android:name=".MyActivity"
+                  android:configChanges="density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"/>
         <service android:name=".MyVpnService"
              android:permission="android.permission.BIND_VPN_SERVICE"
              android:exported="true">
