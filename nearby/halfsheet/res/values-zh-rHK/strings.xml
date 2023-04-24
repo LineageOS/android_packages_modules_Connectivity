@@ -26,8 +26,8 @@
     <string name="fast_pair_unable_to_connect_description" msgid="3926830740860653891">"嘗試手動配對裝置"</string>
     <string name="fast_pair_turn_on_bt_device_pairing_mode" msgid="3197372738187738030">"嘗試讓裝置進入配對模式"</string>
     <string name="devices_within_reach_channel_name" msgid="876280551450910440">"附近的裝置"</string>
-    <string name="devices_with_your_account_channel_name" msgid="8120067812798598102">"已連結您帳戶的裝置"</string>
-    <string name="fast_pair_your_device" msgid="3662423897069320840">"您儲存的裝置已可使用"</string>
+    <string name="devices_with_your_account_channel_name" msgid="8120067812798598102">"已連結你帳戶的裝置"</string>
+    <string name="fast_pair_your_device" msgid="3662423897069320840">"你儲存的裝置已可使用"</string>
     <string name="common_nearby_title" msgid="5480324514713607015">"咫尺共享"</string>
     <string name="common_devices" msgid="2635603125608104442">"裝置"</string>
     <string name="common_connecting" msgid="160531481424245303">"正在連接…"</string>
