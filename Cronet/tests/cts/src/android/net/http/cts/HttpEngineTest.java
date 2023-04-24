@@ -222,29 +222,16 @@ public class HttpEngineTest {
 
     @Test
     public void testHttpEngine_EnableQuic() throws Exception {
+        String url = mTestServer.getSuccessUrl();
         mEngine = mEngineBuilder.setEnableQuic(true).addQuicHint(HOST, 443, 443).build();
-        // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
-        // We send multiple requests to reduce the flakiness of the test.
-        boolean quicWasUsed = false;
-        for (int i = 0; i < 5; i++) {
-            mCallback = new TestUrlRequestCallback();
-            UrlRequest.Builder builder =
-                    mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
-            mRequest = builder.build();
-            mRequest.start();
+        UrlRequest.Builder builder =
+                mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
+        mRequest = builder.build();
+        mRequest.start();
 
-            // This tests uses a non-hermetic server. Instead of asserting, assume the next
-            // callback. This way, if the request were to fail, the test would just be skipped
-            // instead of failing.
-            mCallback.assumeCallback(ResponseStep.ON_SUCCEEDED);
-            UrlResponseInfo info = mCallback.mResponseInfo;
-            assumeOKStatusCode(info);
-            quicWasUsed = isQuic(info.getNegotiatedProtocol());
-            if (quicWasUsed) {
-                break;
-            }
-        }
-        assertTrue(quicWasUsed);
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
     }
 
     @Test
@@ -379,34 +366,22 @@ public class HttpEngineTest {
 
     @Test
     public void testHttpEngine_SetQuicOptions_RequestSucceedsWithQuic() throws Exception {
+        String url = mTestServer.getSuccessUrl();
         QuicOptions options = new QuicOptions.Builder().build();
         mEngine = mEngineBuilder
                 .setEnableQuic(true)
                 .addQuicHint(HOST, 443, 443)
                 .setQuicOptions(options)
                 .build();
+        UrlRequest.Builder builder =
+                mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback);
+        mRequest = builder.build();
+        mRequest.start();
 
-        // The hint doesn't guarantee that QUIC will win the race, just that it will race TCP.
-        // We send multiple requests to reduce the flakiness of the test.
-        boolean quicWasUsed = false;
-        for (int i = 0; i < 5; i++) {
-            mCallback = new TestUrlRequestCallback();
-            UrlRequest.Builder builder =
-                    mEngine.newUrlRequestBuilder(URL, mCallback.getExecutor(), mCallback);
-            mRequest = builder.build();
-            mRequest.start();
-            mCallback.blockForDone();
+        mCallback.expectCallback(ResponseStep.ON_SUCCEEDED);
+        UrlResponseInfo info = mCallback.mResponseInfo;
+        assertOKStatusCode(info);
 
-            quicWasUsed = isQuic(mCallback.mResponseInfo.getNegotiatedProtocol());
-            if (quicWasUsed) {
-                break;
-            }
-        }
-
-        assertTrue(quicWasUsed);
-        // This tests uses a non-hermetic server. Instead of asserting, assume the next callback.
-        // This way, if the request were to fail, the test would just be skipped instead of failing.
-        assumeOKStatusCode(mCallback.mResponseInfo);
     }
 
     @Test
