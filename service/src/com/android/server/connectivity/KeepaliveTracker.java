@@ -271,6 +271,10 @@ public class KeepaliveTracker {
             return mInterval;
         }
 
+        public int getUid() {
+            return mUid;
+        }
+
         private int checkNetworkConnected() {
             if (!mNai.networkInfo.isConnectedOrConnecting()) {
                 return ERROR_INVALID_NETWORK;
