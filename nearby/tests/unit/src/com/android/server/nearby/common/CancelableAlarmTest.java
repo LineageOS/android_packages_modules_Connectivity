@@ -80,14 +80,14 @@ public class CancelableAlarmTest {
     @Test
     public void cancelOfRunAlarmReturnsFalse() throws InterruptedException {
         TestCountDownLatch latch = new TestCountDownLatch(1);
-        long delayMillis = 1000;
+        long delayMillis = 500;
         CancelableAlarm alarm =
                 CancelableAlarm.createSingleAlarm(
                         "cancelOfRunAlarmReturnsFalse",
                         new CountDownRunnable(latch),
                         delayMillis,
                         mExecutor);
-        latch.awaitAndExpectDelay(delayMillis);
+        latch.awaitAndExpectDelay(delayMillis - 1);
 
         assertThat(alarm.cancel()).isFalse();
     }
