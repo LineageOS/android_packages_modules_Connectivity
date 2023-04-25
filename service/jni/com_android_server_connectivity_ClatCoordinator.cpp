@@ -485,11 +485,15 @@ static jint com_android_server_connectivity_ClatCoordinator_startClatd(
 static constexpr int WAITPID_ATTEMPTS = 50;
 static constexpr int WAITPID_RETRY_INTERVAL_US = 100000;
 
-static void stopClatdProcess(int pid) {
-    int err = kill(pid, SIGTERM);
-    if (err) {
-        err = errno;
+static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* env, jclass clazz,
+                                                                      jint pid) {
+    if (pid <= 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid pid");
+        return;
     }
+
+    int err = kill(pid, SIGTERM);
+    if (err) err = errno;
     if (err == ESRCH) {
         ALOGE("clatd child process %d unexpectedly disappeared", pid);
         return;
@@ -516,23 +520,6 @@ static void stopClatdProcess(int pid) {
     } else {
         ALOGD("clatd process %d terminated status=%d", pid, status);
     }
-}
-
-static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* env, jclass clazz,
-                                                                      jstring iface, jstring pfx96,
-                                                                      jstring v4, jstring v6,
-                                                                      jint pid) {
-    ScopedUtfChars ifaceStr(env, iface);
-    ScopedUtfChars pfx96Str(env, pfx96);
-    ScopedUtfChars v4Str(env, v4);
-    ScopedUtfChars v6Str(env, v6);
-
-    if (pid <= 0) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid pid");
-        return;
-    }
-
-    stopClatdProcess(pid);
 }
 
 static jlong com_android_server_connectivity_ClatCoordinator_getSocketCookie(
@@ -579,8 +566,7 @@ static const JNINativeMethod gMethods[] = {
          "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;Ljava/lang/"
          "String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",
          (void*)com_android_server_connectivity_ClatCoordinator_startClatd},
-        {"native_stopClatd",
-         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V",
+        {"native_stopClatd", "(I)V",
          (void*)com_android_server_connectivity_ClatCoordinator_stopClatd},
         {"native_getSocketCookie", "(Ljava/io/FileDescriptor;)J",
          (void*)com_android_server_connectivity_ClatCoordinator_getSocketCookie},
