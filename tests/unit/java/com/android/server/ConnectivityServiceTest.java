@@ -502,7 +502,7 @@ public class ConnectivityServiceTest {
     // complete before callbacks are verified.
     private static final int TEST_REQUEST_TIMEOUT_MS = 150;
 
-    private static final int UNREASONABLY_LONG_ALARM_WAIT_MS = 1000;
+    private static final int UNREASONABLY_LONG_ALARM_WAIT_MS = 2_000;
 
     private static final long TIMESTAMP = 1234L;
 
@@ -3369,8 +3369,10 @@ public class ConnectivityServiceTest {
         // This test would be flaky with the default 120ms timer: that is short enough that
         // lingered networks are torn down before assertions can be run. We don't want to mock the
         // lingering timer to keep the WakeupMessage logic realistic: this has already proven useful
-        // in detecting races.
-        mService.mLingerDelayMs = 300;
+        // in detecting races. Furthermore, sometimes the test is running while Phenotype is running
+        // so hot that the test doesn't get the CPU for multiple hundreds of milliseconds, so this
+        // needs to be suitably long.
+        mService.mLingerDelayMs = 2_000;
 
         NetworkRequest request = new NetworkRequest.Builder()
                 .clearCapabilities().addCapability(NET_CAPABILITY_NOT_METERED)
