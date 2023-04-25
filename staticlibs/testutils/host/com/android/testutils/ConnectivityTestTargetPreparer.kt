@@ -17,6 +17,7 @@
 package com.android.testutils
 
 import com.android.ddmlib.testrunner.TestResult
+import com.android.tradefed.config.Option
 import com.android.tradefed.invoker.TestInformation
 import com.android.tradefed.result.CollectingTestListener
 import com.android.tradefed.result.ddmlib.DefaultRemoteAndroidTestRunner
@@ -24,19 +25,26 @@ import com.android.tradefed.targetprep.BaseTargetPreparer
 import com.android.tradefed.targetprep.TargetSetupError
 import com.android.tradefed.targetprep.suite.SuiteApkInstaller
 
-private const val CONNECTIVITY_CHECKER_APK = "ConnectivityChecker.apk"
-private const val CONNECTIVITY_PKG_NAME = "com.android.testutils.connectivitychecker"
+private const val CONNECTIVITY_CHECKER_APK = "ConnectivityTestPreparer.apk"
+private const val CONNECTIVITY_PKG_NAME = "com.android.testutils.connectivitypreparer"
+private const val CONNECTIVITY_CHECK_CLASS = "$CONNECTIVITY_PKG_NAME.ConnectivityCheckTest"
 // As per the <instrumentation> defined in the checker manifest
 private const val CONNECTIVITY_CHECK_RUNNER_NAME = "androidx.test.runner.AndroidJUnitRunner"
+private const val IGNORE_CONN_CHECK_OPTION = "ignore-connectivity-check"
 
 /**
- * A target preparer that verifies that the device was setup correctly for connectivity tests.
+ * A target preparer that sets up and verifies a device for connectivity tests.
  *
- * For quick and dirty local testing, can be disabled by running tests with
- * "atest -- --test-arg com.android.testutils.ConnectivityCheckTargetPreparer:disable:true".
+ * For quick and dirty local testing, the connectivity check can be disabled by running tests with
+ * "atest -- \
+ * --test-arg com.android.testutils.ConnectivityTestTargetPreparer:ignore-connectivity-check:true".
  */
-class ConnectivityCheckTargetPreparer : BaseTargetPreparer() {
-    val installer = SuiteApkInstaller()
+open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
+    private val installer = SuiteApkInstaller()
+
+    @Option(name = IGNORE_CONN_CHECK_OPTION,
+            description = "Disables the check for mobile data and wifi")
+    private var ignoreConnectivityCheck = false
 
     override fun setUp(testInformation: TestInformation) {
         if (isDisabled) return
@@ -63,11 +71,20 @@ class ConnectivityCheckTargetPreparer : BaseTargetPreparer() {
                     runResult.runFailureMessage, testInformation.device.deviceDescriptor)
         }
 
-        if (!runResult.hasFailedTests()) return
+        val ignoredTestClasses = mutableSetOf<String>()
+        if (ignoreConnectivityCheck) {
+            ignoredTestClasses.add(CONNECTIVITY_CHECK_CLASS)
+        }
+
         val errorMsg = runResult.testResults.mapNotNull { (testDescription, testResult) ->
-            if (TestResult.TestStatus.FAILURE != testResult.status) null
-            else "$testDescription: ${testResult.stackTrace}"
+            if (TestResult.TestStatus.FAILURE != testResult.status ||
+                    ignoredTestClasses.contains(testDescription.className)) {
+                null
+            } else {
+                "$testDescription: ${testResult.stackTrace}"
+            }
         }.joinToString("\n")
+        if (errorMsg.isBlank()) return
 
         throw TargetSetupError("Device setup checks failed. Check the test bench: \n$errorMsg",
                 testInformation.device.deviceDescriptor)

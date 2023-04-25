@@ -17,7 +17,7 @@ package {
 }
 
 android_test_helper_app {
-    name: "ConnectivityChecker",
+    name: "ConnectivityTestPreparer",
     srcs: ["src/**/*.kt"],
     sdk_version: "system_current",
     // Allow running the test on any device with SDK Q+, even when built from a branch that uses
