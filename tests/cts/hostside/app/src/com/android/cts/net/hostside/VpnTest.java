@@ -154,7 +154,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -809,26 +808,12 @@ public class VpnTest {
                 mOldPrivateDnsSpecifier);
     }
 
-    // TODO: replace with CtsNetUtils.awaitPrivateDnsSetting in Q or above.
     private void expectPrivateDnsHostname(final String hostname) throws Exception {
-        final NetworkRequest request = new NetworkRequest.Builder()
-                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                .build();
-        final CountDownLatch latch = new CountDownLatch(1);
-        final NetworkCallback callback = new NetworkCallback() {
-            @Override
-            public void onLinkPropertiesChanged(Network network, LinkProperties lp) {
-                if (network.equals(mNetwork) &&
-                        Objects.equals(lp.getPrivateDnsServerName(), hostname)) {
-                    latch.countDown();
-                }
-            }
-        };
-
-        registerNetworkCallback(request, callback);
-
-        assertTrue("Private DNS hostname was not " + hostname + " after " + TIMEOUT_MS + "ms",
-                latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+            // Wait for private DNS setting to propagate.
+            mCtsNetUtils.awaitPrivateDnsSetting("Test wait private DNS setting timeout",
+                    network, hostname, false);
+        }
     }
 
     private void setAndVerifyPrivateDns(boolean strictMode) throws Exception {
