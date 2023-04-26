@@ -56,7 +56,7 @@ public class NetlinkUtils {
     private static final int TCP_SYN_SENT = 2;
     private static final int TCP_SYN_RECV = 3;
 
-    public static final int TCP_MONITOR_STATE_FILTER =
+    public static final int TCP_ALIVE_STATE_FILTER =
             (1 << TCP_ESTABLISHED) | (1 << TCP_SYN_SENT) | (1 << TCP_SYN_RECV);
 
     public static final int UNKNOWN_MARK = 0xffffffff;
