@@ -237,9 +237,8 @@ public class ClatCoordinator {
         /**
          * Stop clatd.
          */
-        public void stopClatd(String iface, String pfx96, String v4, String v6, int pid)
-                throws IOException {
-            native_stopClatd(iface, pfx96, v4, v6, pid);
+        public void stopClatd(int pid) throws IOException {
+            native_stopClatd(pid);
         }
 
         /**
@@ -843,9 +842,7 @@ public class ClatCoordinator {
         Log.i(TAG, "Stopping clatd pid=" + mClatdTracker.pid + " on " + mClatdTracker.iface);
 
         maybeStopBpf(mClatdTracker);
-        mDeps.stopClatd(mClatdTracker.iface, mClatdTracker.pfx96.getHostAddress(),
-                mClatdTracker.v4.getHostAddress(), mClatdTracker.v6.getHostAddress(),
-                mClatdTracker.pid);
+        mDeps.stopClatd(mClatdTracker.pid);
         untagSocket(mClatdTracker.cookie);
 
         Log.i(TAG, "clatd on " + mClatdTracker.iface + " stopped");
@@ -944,7 +941,6 @@ public class ClatCoordinator {
     private static native int native_startClatd(FileDescriptor tunfd, FileDescriptor readsock6,
             FileDescriptor writesock6, String iface, String pfx96, String v4, String v6)
             throws IOException;
-    private static native void native_stopClatd(String iface, String pfx96, String v4, String v6,
-            int pid) throws IOException;
+    private static native void native_stopClatd(int pid) throws IOException;
     private static native long native_getSocketCookie(FileDescriptor sock) throws IOException;
 }
