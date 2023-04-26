@@ -2112,7 +2112,12 @@ public class ConnectivityManagerTest {
     @AppModeFull(reason = "NETWORK_AIRPLANE_MODE permission can't be granted to instant apps")
     @Test
     public void testSetAirplaneMode() throws Exception{
-        final boolean supportWifi = mPackageManager.hasSystemFeature(FEATURE_WIFI);
+        // Starting from T, wifi supports airplane mode enhancement which may not disconnect wifi
+        // when airplane mode is on. The actual behavior that the device will have could only be
+        // checked with hidden wifi APIs(see Settings.Secure.WIFI_APM_STATE). Thus, stop verifying
+        // wifi on T+ device.
+        final boolean verifyWifi = mPackageManager.hasSystemFeature(FEATURE_WIFI)
+                && !SdkLevel.isAtLeastT();
         final boolean supportTelephony = mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
         // store the current state of airplane mode
         final boolean isAirplaneModeEnabled = isAirplaneModeEnabled();
@@ -2123,7 +2128,7 @@ public class ConnectivityManagerTest {
         // Verify that networks are available as expected if wifi or cell is supported. Continue the
         // test if none of them are supported since test should still able to verify the permission
         // mechanism.
-        if (supportWifi) {
+        if (verifyWifi) {
             mCtsNetUtils.ensureWifiConnected();
             registerCallbackAndWaitForAvailable(makeWifiNetworkRequest(), wifiCb);
         }
@@ -2147,7 +2152,7 @@ public class ConnectivityManagerTest {
             // Verify that the enabling airplane mode takes effect as expected to prevent flakiness
             // caused by fast airplane mode switches. Ensure network lost before turning off
             // airplane mode.
-            if (supportWifi) waitForLost(wifiCb);
+            if (verifyWifi) waitForLost(wifiCb);
             if (supportTelephony) waitForLost(telephonyCb);
 
             // Verify we can disable Airplane Mode with correct permission:
@@ -2156,7 +2161,7 @@ public class ConnectivityManagerTest {
             // Verify that turning airplane mode off takes effect as expected.
             // connectToCell only registers a request, it cannot / does not need to be called twice
             mCtsNetUtils.ensureWifiConnected();
-            if (supportWifi) waitForAvailable(wifiCb);
+            if (verifyWifi) waitForAvailable(wifiCb);
             if (supportTelephony) waitForAvailable(telephonyCb);
         } finally {
             // Restore the previous state of airplane mode and permissions:
