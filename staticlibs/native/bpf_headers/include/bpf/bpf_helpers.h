@@ -27,13 +27,6 @@
 // Android S / 12 (api level 31) - added 'tethering' mainline eBPF support
 #define BPFLOADER_S_VERSION 2u
 
-// Android T / 13 Beta 3 (api level 33) - added support for 'netd_shared'
-#define BPFLOADER_T_BETA3_VERSION 13u
-
-// v0.18 added support for shared and pindir, but still ignores selinux_content
-// v0.19 added support for selinux_content along with the required selinux changes
-// and should be available starting with Android T Beta 4
-//
 // Android T / 13 (api level 33) - support for shared/selinux_context/pindir
 #define BPFLOADER_T_VERSION 19u
 
@@ -225,7 +218,7 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
 
 #ifdef THIS_BPF_PROGRAM_IS_FOR_TEST_PURPOSES_ONLY
 #define BPF_MAP_ASSERT_OK(type, entries, mode)
-#elif BPFLOADER_MIN_VER >= BPFLOADER_T_BETA3_VERSION
+#elif BPFLOADER_MIN_VER >= BPFLOADER_T_VERSION
 #define BPF_MAP_ASSERT_OK(type, entries, mode)
 #else
 #define BPF_MAP_ASSERT_OK(type, entries, mode) \
