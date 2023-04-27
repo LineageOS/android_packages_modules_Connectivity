@@ -154,6 +154,7 @@ import static com.android.server.ConnectivityService.PREFERENCE_ORDER_OEM;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_PROFILE;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_VPN;
 import static com.android.server.ConnectivityService.createDeliveryGroupKeyForConnectivityAction;
+import static com.android.server.ConnectivityService.makeNflogPrefix;
 import static com.android.server.ConnectivityServiceTestUtils.transportToLegacyType;
 import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackRegister;
 import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister;
@@ -533,6 +534,10 @@ public class ConnectivityServiceTest {
     private static final int TEST_PACKAGE_UID = 123;
     private static final int TEST_PACKAGE_UID2 = 321;
     private static final int TEST_PACKAGE_UID3 = 456;
+
+    private static final int PACKET_WAKEUP_MASK = 0xffff0000;
+    private static final int PACKET_WAKEUP_MARK = 0x88880000;
+
     private static final String ALWAYS_ON_PACKAGE = "com.android.test.alwaysonvpn";
 
     private static final String INTERFACE_NAME = "interface";
@@ -1910,6 +1915,10 @@ public class ConnectivityServiceTest {
         doReturn(0).when(mResources).getInteger(R.integer.config_activelyPreferBadWifi);
         doReturn(true).when(mResources)
                 .getBoolean(R.bool.config_cellular_radio_timesharing_capable);
+        doReturn(PACKET_WAKEUP_MASK).when(mResources).getInteger(
+                R.integer.config_networkWakeupPacketMask);
+        doReturn(PACKET_WAKEUP_MARK).when(mResources).getInteger(
+                R.integer.config_networkWakeupPacketMark);
     }
 
     class ConnectivityServiceDependencies extends ConnectivityService.Dependencies {
@@ -10386,6 +10395,16 @@ public class ConnectivityServiceTest {
         return event;
     }
 
+    private void verifyWakeupModifyInterface(String iface, boolean add) throws RemoteException {
+        if (add) {
+            verify(mMockNetd).wakeupAddInterface(eq(iface), anyString(), anyInt(),
+                    anyInt());
+        } else {
+            verify(mMockNetd).wakeupDelInterface(eq(iface), anyString(), anyInt(),
+                    anyInt());
+        }
+    }
+
     private <T> T verifyWithOrder(@Nullable InOrder inOrder, @NonNull T t) {
         if (inOrder != null) {
             return inOrder.verify(t);
@@ -10612,6 +10631,11 @@ public class ConnectivityServiceTest {
         clat.interfaceRemoved(CLAT_MOBILE_IFNAME);
         networkCallback.assertNoCallback();
         verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
+
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, false);
+        }
+
         verifyNoMoreInteractions(mMockNetd);
         verifyNoMoreInteractions(mClatCoordinator);
         verifyNoMoreInteractions(mMockDnsResolver);
@@ -10648,6 +10672,10 @@ public class ConnectivityServiceTest {
         assertRoutesAdded(cellNetId, stackedDefault);
         verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
 
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, true);
+        }
+
         // NAT64 prefix is removed. Expect that clat is stopped.
         mService.mResolverUnsolEventCallback.onNat64PrefixEvent(makeNat64PrefixEvent(
                 cellNetId, PREFIX_OPERATION_REMOVED, kNat64PrefixString, 96));
@@ -10662,6 +10690,11 @@ public class ConnectivityServiceTest {
                 cb -> cb.getLp().getStackedLinks().size() == 0);
         verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
         verify(mMockNetd, times(1)).interfaceGetCfg(CLAT_MOBILE_IFNAME);
+
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, false);
+        }
+
         // Clean up.
         mCellAgent.disconnect();
         networkCallback.expect(LOST, mCellAgent);
@@ -10674,6 +10707,11 @@ public class ConnectivityServiceTest {
         } else {
             verify(mMockNetd, never()).setNetworkAllowlist(any());
         }
+
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(MOBILE_IFNAME, false);
+        }
+
         verifyNoMoreInteractions(mMockNetd);
         verifyNoMoreInteractions(mClatCoordinator);
         reset(mMockNetd);
@@ -10703,6 +10741,11 @@ public class ConnectivityServiceTest {
         verify(mMockNetd).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
         // assertRoutesAdded sees all calls since last mMockNetd reset, so expect IPv6 routes again.
         assertRoutesAdded(cellNetId, ipv6Subnet, ipv6Default, stackedDefault);
+
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(MOBILE_IFNAME, true);
+        }
+
         reset(mMockNetd);
         reset(mClatCoordinator);
 
@@ -10711,6 +10754,11 @@ public class ConnectivityServiceTest {
         networkCallback.expect(LOST, mCellAgent);
         networkCallback.assertNoCallback();
         verifyClatdStop(null /* inOrder */, MOBILE_IFNAME);
+
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, false);
+        }
+
         verify(mMockNetd).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
                 eq(Integer.toString(TRANSPORT_CELLULAR)));
         verify(mMockNetd).networkDestroy(cellNetId);
@@ -10719,6 +10767,11 @@ public class ConnectivityServiceTest {
         } else {
             verify(mMockNetd, never()).setNetworkAllowlist(any());
         }
+
+        if (SdkLevel.isAtLeastU()) {
+            verifyWakeupModifyInterface(MOBILE_IFNAME, false);
+        }
+
         verifyNoMoreInteractions(mMockNetd);
         verifyNoMoreInteractions(mClatCoordinator);
 
@@ -17665,5 +17718,49 @@ public class ConnectivityServiceTest {
 
         info.setExtraInfo("test_info");
         assertEquals("0;2;test_info", createDeliveryGroupKeyForConnectivityAction(info));
+    }
+
+    @Test
+    public void testNetdWakeupAddInterfaceForWifiTransport() throws Exception {
+        final LinkProperties wifiLp = new LinkProperties();
+        wifiLp.setInterfaceName(WIFI_IFNAME);
+        mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp);
+        mWiFiAgent.connect(false /* validated */);
+
+        final String expectedPrefix = makeNflogPrefix(WIFI_IFNAME,
+                mWiFiAgent.getNetwork().getNetworkHandle());
+        verify(mMockNetd).wakeupAddInterface(WIFI_IFNAME, expectedPrefix, PACKET_WAKEUP_MARK,
+                PACKET_WAKEUP_MASK);
+    }
+
+    @Test
+    public void testNetdWakeupAddInterfaceForCellularTransport() throws Exception {
+        final LinkProperties cellLp = new LinkProperties();
+        cellLp.setInterfaceName(MOBILE_IFNAME);
+        mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
+        mCellAgent.connect(false /* validated */);
+
+        if (SdkLevel.isAtLeastU()) {
+            final String expectedPrefix = makeNflogPrefix(MOBILE_IFNAME,
+                    mCellAgent.getNetwork().getNetworkHandle());
+            verify(mMockNetd).wakeupAddInterface(MOBILE_IFNAME, expectedPrefix, PACKET_WAKEUP_MARK,
+                    PACKET_WAKEUP_MASK);
+        } else {
+            verify(mMockNetd, never()).wakeupAddInterface(eq(MOBILE_IFNAME), anyString(), anyInt(),
+                    anyInt());
+        }
+    }
+
+    @Test
+    public void testNetdWakeupAddInterfaceForEthernetTransport() throws Exception {
+        final String ethernetIface = "eth42";
+
+        final LinkProperties ethLp = new LinkProperties();
+        ethLp.setInterfaceName(ethernetIface);
+        mEthernetAgent = new TestNetworkAgentWrapper(TRANSPORT_ETHERNET, ethLp);
+        mEthernetAgent.connect(false /* validated */);
+
+        verify(mMockNetd, never()).wakeupAddInterface(eq(ethernetIface), anyString(), anyInt(),
+                anyInt());
     }
 }
