@@ -74,7 +74,7 @@ public class MdnsSocketProvider {
     @NonNull private final Dependencies mDependencies;
     @NonNull private final NetworkCallback mNetworkCallback;
     @NonNull private final TetheringEventCallback mTetheringEventCallback;
-    @NonNull private final ISocketNetLinkMonitor mSocketNetlinkMonitor;
+    @NonNull private final AbstractSocketNetlink mSocketNetlinkMonitor;
     private final ArrayMap<Network, SocketInfo> mNetworkSockets = new ArrayMap<>();
     private final ArrayMap<String, SocketInfo> mTetherInterfaceSockets = new ArrayMap<>();
     private final ArrayMap<Network, LinkProperties> mActiveNetworksLinkProperties =
@@ -171,7 +171,7 @@ public class MdnsSocketProvider {
             return iface.getIndex();
         }
         /*** Creates a SocketNetlinkMonitor */
-        public ISocketNetLinkMonitor createSocketNetlinkMonitor(@NonNull final Handler handler,
+        public AbstractSocketNetlink createSocketNetlinkMonitor(@NonNull final Handler handler,
                 @NonNull final SharedLog log,
                 @NonNull final NetLinkMonitorCallBack cb) {
             return SocketNetLinkMonitorFactory.createNetLinkMonitor(handler, log, cb);
