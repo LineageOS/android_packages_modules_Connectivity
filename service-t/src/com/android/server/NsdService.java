@@ -61,6 +61,7 @@ import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.net.module.util.DeviceConfigUtils;
+import com.android.net.module.util.InetAddressUtils;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.ExecutorProvider;
@@ -1240,16 +1241,10 @@ public class NsdService extends INsdManager.Stub {
         }
         for (String ipv6Address : v6Addrs) {
             try {
-                final InetAddress addr = InetAddresses.parseNumericAddress(ipv6Address);
-                if (addr.isLinkLocalAddress()) {
-                    final Inet6Address v6Addr = Inet6Address.getByAddress(
-                            null /* host */, addr.getAddress(),
-                            serviceInfo.getInterfaceIndex());
-                    addresses.add(v6Addr);
-                } else {
-                    addresses.add(addr);
-                }
-            } catch (IllegalArgumentException | UnknownHostException e) {
+                final Inet6Address addr = (Inet6Address) InetAddresses.parseNumericAddress(
+                        ipv6Address);
+                addresses.add(InetAddressUtils.withScopeId(addr, serviceInfo.getInterfaceIndex()));
+            } catch (IllegalArgumentException e) {
                 Log.wtf(TAG, "Invalid ipv6 address", e);
             }
         }
