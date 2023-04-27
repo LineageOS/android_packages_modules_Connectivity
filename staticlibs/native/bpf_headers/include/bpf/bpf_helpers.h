@@ -43,6 +43,9 @@
 // Bpfloader v0.33+ supports {map,prog}.ignore_on_{eng,user,userdebug}
 #define BPFLOADER_IGNORED_ON_VERSION 33u
 
+// Android U / 14 (api level 34) - various new program types added
+#define BPFLOADER_U_VERSION 37u
+
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
  * process the resulting .o file.
