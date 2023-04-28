@@ -135,7 +135,7 @@ public final class NetworkStackConstants {
      *     - https://tools.ietf.org/html/rfc792
      */
     public static final int ICMP_CHECKSUM_OFFSET = 2;
-
+    public static final int ICMP_HEADER_LEN = 8;
     /**
      * ICMPv6 constants.
      *
