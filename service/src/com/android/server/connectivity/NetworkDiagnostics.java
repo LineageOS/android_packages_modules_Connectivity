@@ -490,7 +490,7 @@ public class NetworkDiagnostics {
         private final int mProtocol;
         private final int mIcmpType;
 
-        public IcmpCheck(InetAddress source, InetAddress target, Measurement measurement) {
+        IcmpCheck(InetAddress source, InetAddress target, Measurement measurement) {
             super(source, target, measurement);
 
             if (mAddressFamily == AF_INET6) {
@@ -506,7 +506,7 @@ public class NetworkDiagnostics {
             mMeasurement.description += " dst{" + mTarget.getHostAddress() + "}";
         }
 
-        public IcmpCheck(InetAddress target, Measurement measurement) {
+        IcmpCheck(InetAddress target, Measurement measurement) {
             this(null, target, measurement);
         }
 
