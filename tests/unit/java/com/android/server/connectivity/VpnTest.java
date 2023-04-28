@@ -43,7 +43,6 @@ import static android.net.ipsec.ike.IkeSessionParams.ESP_ENCAP_TYPE_UDP;
 import static android.net.ipsec.ike.IkeSessionParams.ESP_IP_VERSION_AUTO;
 import static android.net.ipsec.ike.IkeSessionParams.ESP_IP_VERSION_IPV4;
 import static android.net.ipsec.ike.IkeSessionParams.ESP_IP_VERSION_IPV6;
-import static android.os.Build.VERSION_CODES.S_V2;
 import static android.os.UserHandle.PER_USER_RANGE;
 import static android.telephony.CarrierConfigManager.KEY_CARRIER_CONFIG_APPLIED_BOOL;
 import static android.telephony.CarrierConfigManager.KEY_MIN_UDP_PORT_4500_NAT_TIMEOUT_SEC_INT;
@@ -58,7 +57,6 @@ import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_IPV4_UD
 import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_IPV6_ESP;
 import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_IPV6_UDP;
 import static com.android.testutils.Cleanup.testAndCleanup;
-import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -169,6 +167,7 @@ import android.util.ArraySet;
 import android.util.Pair;
 import android.util.Range;
 
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
 import com.android.internal.R;
@@ -182,7 +181,6 @@ import com.android.server.IpSecService;
 import com.android.server.VpnTestBase;
 import com.android.server.vcn.util.PersistableBundleUtils;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -220,7 +218,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * Tests for {@link Vpn}.
@@ -228,9 +225,8 @@ import java.util.stream.Stream;
  * Build, install and run with:
  *  runtest frameworks-net -c com.android.server.connectivity.VpnTest
  */
-@RunWith(DevSdkIgnoreRunner.class)
+@RunWith(AndroidJUnit4.class)
 @SmallTest
-@IgnoreUpTo(S_V2)
 public class VpnTest extends VpnTestBase {
     private static final String TAG = "VpnTest";
 
@@ -3186,31 +3182,5 @@ public class VpnTest extends VpnTestBase {
             }).when(mPackageManager).getPackageUidAsUser(anyString(), anyInt());
         } catch (Exception e) {
         }
-    }
-
-    private void setMockedNetworks(final Map<Network, NetworkCapabilities> networks) {
-        doAnswer(invocation -> {
-            final Network network = (Network) invocation.getArguments()[0];
-            return networks.get(network);
-        }).when(mConnectivityManager).getNetworkCapabilities(any());
-    }
-
-    // Need multiple copies of this, but Java's Stream objects can't be reused or
-    // duplicated.
-    private Stream<String> publicIpV4Routes() {
-        return Stream.of(
-                "0.0.0.0/5", "8.0.0.0/7", "11.0.0.0/8", "12.0.0.0/6", "16.0.0.0/4",
-                "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/3", "160.0.0.0/5", "168.0.0.0/6",
-                "172.0.0.0/12", "172.32.0.0/11", "172.64.0.0/10", "172.128.0.0/9",
-                "173.0.0.0/8", "174.0.0.0/7", "176.0.0.0/4", "192.0.0.0/9", "192.128.0.0/11",
-                "192.160.0.0/13", "192.169.0.0/16", "192.170.0.0/15", "192.172.0.0/14",
-                "192.176.0.0/12", "192.192.0.0/10", "193.0.0.0/8", "194.0.0.0/7",
-                "196.0.0.0/6", "200.0.0.0/5", "208.0.0.0/4");
-    }
-
-    private Stream<String> publicIpV6Routes() {
-        return Stream.of(
-                "::/1", "8000::/2", "c000::/3", "e000::/4", "f000::/5", "f800::/6",
-                "fe00::/8", "2605:ef80:e:af1d::/64");
     }
 }
