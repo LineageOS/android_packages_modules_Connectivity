@@ -38,7 +38,6 @@ import static org.mockito.Mockito.verify;
 import android.app.AlarmManager;
 import android.content.Context;
 import android.content.res.Resources;
-import android.net.ConnectivityResources;
 import android.net.INetd;
 import android.net.ISocketKeepaliveCallback;
 import android.net.KeepalivePacketData;
@@ -63,6 +62,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.connectivity.resources.R;
 import com.android.server.connectivity.KeepaliveTracker.KeepaliveInfo;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -235,10 +235,8 @@ public class AutomaticOnOffKeepaliveTrackerTest {
                 anyInt() /* pid */, anyInt() /* uid */);
         ConnectivityResources.setResourcesContextForTest(mCtx);
         final Resources mockResources = mock(Resources.class);
-        doReturn(MOCK_RESOURCE_ID).when(mockResources).getIdentifier(any() /* name */,
-                any() /* defType */, any() /* defPackage */);
         doReturn(new String[] { "0,3", "3,3" }).when(mockResources)
-                .getStringArray(MOCK_RESOURCE_ID);
+                .getStringArray(R.array.config_networkSupportedKeepaliveCount);
         doReturn(mockResources).when(mCtx).getResources();
         doReturn(mNetd).when(mDependencies).getNetd();
         doReturn(mAlarmManager).when(mDependencies).getAlarmManager(any());
