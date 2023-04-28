@@ -78,7 +78,7 @@ public class MdnsInterfaceSocket {
         }
 
         mPacketReader = new MulticastPacketReader(networkInterface.getName(), mFileDescriptor,
-                new Handler(looper), packetReadBuffer, port);
+                new Handler(looper), packetReadBuffer);
         mPacketReader.start();
     }
 
