@@ -28,7 +28,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.database.ContentObserver;
-import android.net.ConnectivityResources;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
