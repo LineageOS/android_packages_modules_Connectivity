@@ -51,7 +51,6 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.net.ConnectivityResources;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;

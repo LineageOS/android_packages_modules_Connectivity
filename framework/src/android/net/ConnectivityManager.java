@@ -2535,6 +2535,26 @@ public class ConnectivityManager {
     }
 
     /**
+     * Get the supported keepalive count for each transport configured in resource overlays.
+     *
+     * @return An array of supported keepalive count for each transport type.
+     * @hide
+     */
+    @RequiresPermission(anyOf = { android.Manifest.permission.NETWORK_SETTINGS,
+            // CTS 13 used QUERY_ALL_PACKAGES to get the resource value, which was implemented
+            // as below in KeepaliveUtils. Also allow that permission so that KeepaliveUtils can
+            // use this method and avoid breaking released CTS. Apps that have this permission
+            // can query the resource themselves anyway.
+            android.Manifest.permission.QUERY_ALL_PACKAGES })
+    public int[] getSupportedKeepalives() {
+        try {
+            return mService.getSupportedKeepalives();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Ensure that a network route exists to deliver traffic to the specified
      * host via the specified network interface. An attempt to add a route that
      * already exists is ignored, but treated as successful.
