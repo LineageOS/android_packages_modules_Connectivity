@@ -63,8 +63,10 @@ public class MulticastPacketReader extends FdEventsReader<MulticastPacketReader.
      */
     protected MulticastPacketReader(@NonNull String interfaceTag,
             @NonNull ParcelFileDescriptor socket, @NonNull Handler handler,
-            @NonNull byte[] buffer, int port) {
-        super(handler, new RecvBuffer(buffer, new InetSocketAddress(port)));
+            @NonNull byte[] buffer) {
+        // Set the port to zero as placeholder as the recvfrom() call will fill the actual port
+        // value later.
+        super(handler, new RecvBuffer(buffer, new InetSocketAddress(0 /* port */)));
         mLogTag = MulticastPacketReader.class.getSimpleName() + "/" + interfaceTag;
         mSocket = socket;
         mHandler = handler;
