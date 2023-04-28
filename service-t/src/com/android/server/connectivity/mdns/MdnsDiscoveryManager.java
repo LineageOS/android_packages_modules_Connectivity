@@ -16,7 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.server.connectivity.mdns.MdnsSocketProvider.isNetworkMatched;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.isNetworkMatched;
 
 import android.Manifest.permission;
 import android.annotation.NonNull;
