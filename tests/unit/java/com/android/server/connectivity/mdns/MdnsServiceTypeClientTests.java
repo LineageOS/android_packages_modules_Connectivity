@@ -41,6 +41,7 @@ import android.net.InetAddresses;
 import android.net.Network;
 import android.text.TextUtils;
 
+import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 import com.android.server.connectivity.mdns.MdnsServiceTypeClient.QueryTaskConfig;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -99,6 +100,8 @@ public class MdnsServiceTypeClientTests {
     private Network mockNetwork;
     @Mock
     private MdnsResponseDecoder.Clock mockDecoderClock;
+    @Mock
+    private SharedLog mockSharedLog;
     @Captor
     private ArgumentCaptor<MdnsServiceInfo> serviceInfoCaptor;
 
@@ -166,7 +169,7 @@ public class MdnsServiceTypeClientTests {
 
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork) {
+                        mockDecoderClock, mockNetwork, mockSharedLog) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -701,7 +704,7 @@ public class MdnsServiceTypeClientTests {
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork) {
+                        mockDecoderClock, mockNetwork, mockSharedLog) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -740,7 +743,7 @@ public class MdnsServiceTypeClientTests {
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork) {
+                        mockDecoderClock, mockNetwork, mockSharedLog) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -773,7 +776,7 @@ public class MdnsServiceTypeClientTests {
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
-                        mockDecoderClock, mockNetwork) {
+                        mockDecoderClock, mockNetwork, mockSharedLog) {
                     @Override
                     MdnsPacketWriter createMdnsPacketWriter() {
                         return mockPacketWriter;
@@ -898,7 +901,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void testProcessResponse_Resolve() throws Exception {
         client = new MdnsServiceTypeClient(
-                SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork);
+                SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork, mockSharedLog);
 
         final String instanceName = "service-instance";
         final String[] hostname = new String[] { "testhost "};
@@ -990,6 +993,71 @@ public class MdnsServiceTypeClientTests {
                 Collections.emptyMap() /* attributes */,
                 INTERFACE_INDEX,
                 mockNetwork);
+    }
+
+    @Test
+    public void testProcessResponse_ResolveExcludesOtherServices() {
+        client = new MdnsServiceTypeClient(
+                SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork, mockSharedLog);
+
+        final String requestedInstance = "instance1";
+        final String otherInstance = "instance2";
+        final String ipV4Address = "192.0.2.0";
+        final String ipV6Address = "2001:db8::";
+
+        final MdnsSearchOptions resolveOptions = MdnsSearchOptions.newBuilder()
+                // Use different case in the options
+                .setResolveInstanceName("Instance1").build();
+
+        client.startSendAndReceive(mockListenerOne, resolveOptions);
+        client.startSendAndReceive(mockListenerTwo, MdnsSearchOptions.getDefaultOptions());
+
+        // Complete response from instanceName
+        client.processResponse(createResponse(
+                requestedInstance, ipV4Address, 5353, SERVICE_TYPE_LABELS,
+                        Collections.emptyMap() /* textAttributes */, TEST_TTL),
+                INTERFACE_INDEX, mockNetwork);
+
+        // Complete response from otherInstanceName
+        client.processResponse(createResponse(
+                otherInstance, ipV4Address, 5353, SERVICE_TYPE_LABELS,
+                        Collections.emptyMap() /* textAttributes */, TEST_TTL),
+                INTERFACE_INDEX, mockNetwork);
+
+        // Address update from otherInstanceName
+        client.processResponse(createResponse(
+                otherInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), INTERFACE_INDEX, mockNetwork);
+
+        // Goodbye from otherInstanceName
+        client.processResponse(createResponse(
+                otherInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), 0L /* ttl */), INTERFACE_INDEX, mockNetwork);
+
+        // mockListenerOne gets notified for the requested instance
+        verify(mockListenerOne).onServiceNameDiscovered(matchServiceName(requestedInstance));
+        verify(mockListenerOne).onServiceFound(matchServiceName(requestedInstance));
+
+        // ...but does not get any callback for the other instance
+        verify(mockListenerOne, never()).onServiceFound(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceNameDiscovered(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceUpdated(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceRemoved(matchServiceName(otherInstance));
+
+        // mockListenerTwo gets notified for both though
+        final InOrder inOrder = inOrder(mockListenerTwo);
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(
+                matchServiceName(requestedInstance));
+        inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(requestedInstance));
+
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceUpdated(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceRemoved(matchServiceName(otherInstance));
+    }
+
+    private static MdnsServiceInfo matchServiceName(String name) {
+        return argThat(info -> info.getServiceInstanceName().equals(name));
     }
 
     // verifies that the right query was enqueued with the right delay, and send query by executing

@@ -20,7 +20,6 @@ import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_LOWPAN;
-import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 import static android.net.TetheringManager.TETHERING_BLUETOOTH;
@@ -160,27 +159,20 @@ public class TetheringMetrics {
     }
 
     /**
-     * Returns the greater of two start times.
-     * @param first the first start time
-     * @param second the second start time
-     * @return the greater start time
-     */
-    private long getGreaterStartTime(long first, long second) {
-        return first > second ? first : second;
-    }
-
-    /**
      * Updates the upstream events builder with a new upstream event.
      * @param upstreamEventsBuilder the builder for the upstream events list
      * @param start the start time of the upstream event
      * @param stop the stop time of the upstream event
      * @param upstream the type of upstream type (e.g. Wifi, Cellular, Bluetooth, ...)
      */
-    private void updateUpstreamEvents(final UpstreamEvents.Builder upstreamEventsBuilder,
-            final long start, final long stop, @Nullable final UpstreamType upstream) {
+    private void addUpstreamEvent(final UpstreamEvents.Builder upstreamEventsBuilder,
+            final long start, final long stop, @Nullable final UpstreamType upstream,
+            final long txBytes, final long rxBytes) {
         final UpstreamEvent.Builder upstreamEventBuilder = UpstreamEvent.newBuilder()
                 .setUpstreamType(upstream == null ? UpstreamType.UT_NO_NETWORK : upstream)
-                .setDurationMillis(stop - start);
+                .setDurationMillis(stop - start)
+                .setTxBytes(txBytes)
+                .setRxBytes(rxBytes);
         upstreamEventsBuilder.addUpstreamEvent(upstreamEventBuilder);
     }
 
@@ -201,21 +193,23 @@ public class TetheringMetrics {
      * @param downstreamStartTime the start time of the downstream event to find relevant upstream
      * events for
      */
-    private void updateStatsBuilderToWrite(final NetworkTetheringReported.Builder statsBuilder,
+    private void noteDownstreamStopped(final NetworkTetheringReported.Builder statsBuilder,
                     final long downstreamStartTime) {
         UpstreamEvents.Builder upstreamEventsBuilder = UpstreamEvents.newBuilder();
+
         for (RecordUpstreamEvent event : mUpstreamEventList) {
             if (downstreamStartTime > event.mStopTime) continue;
 
-            final long startTime = getGreaterStartTime(downstreamStartTime, event.mStartTime);
+            final long startTime = Math.max(downstreamStartTime, event.mStartTime);
             // Handle completed upstream events.
-            updateUpstreamEvents(upstreamEventsBuilder, startTime, event.mStopTime,
-                    event.mUpstreamType);
+            addUpstreamEvent(upstreamEventsBuilder, startTime, event.mStopTime,
+                    event.mUpstreamType, 0L /* txBytes */, 0L /* rxBytes */);
         }
-        final long startTime = getGreaterStartTime(downstreamStartTime, mCurrentUpStreamStartTime);
+        final long startTime = Math.max(downstreamStartTime, mCurrentUpStreamStartTime);
         final long stopTime = timeNow();
         // Handle the last upstream event.
-        updateUpstreamEvents(upstreamEventsBuilder, startTime, stopTime, mCurrentUpstream);
+        addUpstreamEvent(upstreamEventsBuilder, startTime, stopTime, mCurrentUpstream,
+                0L /* txBytes */, 0L /* rxBytes */);
         statsBuilder.setUpstreamEvents(upstreamEventsBuilder);
         statsBuilder.setDurationMillis(stopTime - downstreamStartTime);
     }
@@ -237,7 +231,7 @@ public class TetheringMetrics {
             return;
         }
 
-        updateStatsBuilderToWrite(statsBuilder, mDownstreamStartTime.get(downstreamType));
+        noteDownstreamStopped(statsBuilder, mDownstreamStartTime.get(downstreamType));
         write(statsBuilder.build());
 
         mBuilderMap.remove(downstreamType);
@@ -365,34 +359,19 @@ public class TetheringMetrics {
         if (nc == null) return UpstreamType.UT_NO_NETWORK;
 
         final int typeCount = nc.getTransportTypes().length;
+        // It's possible for a VCN network to be mapped to UT_UNKNOWN, as it may consist of both
+        // Wi-Fi and cellular transport.
+        // TODO: It's necessary to define a new upstream type for VCN, which can be identified by
+        // NET_CAPABILITY_NOT_VCN_MANAGED.
+        if (typeCount > 1) return UpstreamType.UT_UNKNOWN;
 
-        boolean hasCellular = nc.hasTransport(TRANSPORT_CELLULAR);
-        boolean hasWifi = nc.hasTransport(TRANSPORT_WIFI);
-        boolean hasBT = nc.hasTransport(TRANSPORT_BLUETOOTH);
-        boolean hasEthernet = nc.hasTransport(TRANSPORT_ETHERNET);
-        boolean hasVpn = nc.hasTransport(TRANSPORT_VPN);
-        boolean hasWifiAware = nc.hasTransport(TRANSPORT_WIFI_AWARE);
-        boolean hasLopan = nc.hasTransport(TRANSPORT_LOWPAN);
+        if (nc.hasTransport(TRANSPORT_CELLULAR)) return UpstreamType.UT_CELLULAR;
+        if (nc.hasTransport(TRANSPORT_WIFI)) return UpstreamType.UT_WIFI;
+        if (nc.hasTransport(TRANSPORT_BLUETOOTH)) return UpstreamType.UT_BLUETOOTH;
+        if (nc.hasTransport(TRANSPORT_ETHERNET)) return UpstreamType.UT_ETHERNET;
+        if (nc.hasTransport(TRANSPORT_WIFI_AWARE)) return UpstreamType.UT_WIFI_AWARE;
+        if (nc.hasTransport(TRANSPORT_LOWPAN)) return UpstreamType.UT_LOWPAN;
 
-        if (typeCount == 3 && hasCellular && hasWifi && hasVpn) {
-            return UpstreamType.UT_WIFI_CELLULAR_VPN;
-        }
-
-        if (typeCount == 2 && hasVpn) {
-            if (hasCellular) return UpstreamType.UT_CELLULAR_VPN;
-            if (hasWifi) return UpstreamType.UT_WIFI_VPN;
-            if (hasBT) return UpstreamType.UT_BLUETOOTH_VPN;
-            if (hasEthernet) return UpstreamType.UT_ETHERNET_VPN;
-        }
-
-        if (typeCount == 1) {
-            if (hasCellular) return UpstreamType.UT_CELLULAR;
-            if (hasWifi) return UpstreamType.UT_WIFI;
-            if (hasBT) return UpstreamType.UT_BLUETOOTH;
-            if (hasEthernet) return UpstreamType.UT_ETHERNET;
-            if (hasWifiAware) return UpstreamType.UT_WIFI_AWARE;
-            if (hasLopan) return UpstreamType.UT_LOWPAN;
-        }
         return UpstreamType.UT_UNKNOWN;
     }
 }

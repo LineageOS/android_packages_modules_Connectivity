@@ -105,7 +105,10 @@ java_defaults {
 
 java_library {
     name: "framework-connectivity-pre-jarjar",
-    defaults: ["framework-connectivity-defaults"],
+    defaults: [
+        "framework-connectivity-defaults",
+        "CronetJavaPrejarjarDefaults",
+     ],
     libs: [
         // This cannot be in the defaults clause above because if it were, it would be used
         // to generate the connectivity stubs. That would create a circular dependency
@@ -119,7 +122,10 @@ java_library {
 
 java_sdk_library {
     name: "framework-connectivity",
-    defaults: ["framework-connectivity-defaults"],
+    defaults: [
+        "framework-connectivity-defaults",
+        "CronetJavaDefaults",
+    ],
     installable: true,
     jarjar_rules: ":framework-connectivity-jarjar-rules",
     permitted_packages: ["android.net"],
@@ -147,6 +153,7 @@ java_sdk_library {
         "//frameworks/opt/net/ethernet/tests:__subpackages__",
         "//frameworks/opt/telephony/tests/telephonytests",
         "//packages/modules/CaptivePortalLogin/tests",
+        "//packages/modules/Connectivity/Cronet/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
@@ -183,6 +190,7 @@ cc_library_shared {
         "libnativehelper",
     ],
     header_libs: [
+        "bpf_headers",
         "dnsproxyd_protocol_headers",
     ],
     stl: "none",

@@ -51,7 +51,9 @@
 
 namespace android {
 
-#define ALOGF(s ...) do { ALOGE(s); abort(); } while(0)
+static bool fatal = false;
+
+#define ALOGF(s ...) do { ALOGE(s); fatal = true; } while(0)
 
 enum verify { VERIFY_DIR, VERIFY_BIN, VERIFY_PROG, VERIFY_MAP_RO, VERIFY_MAP_RW };
 
@@ -115,11 +117,6 @@ static void verifyClatPerms() {
     // Clat BPF was only mainlined during T.
     if (!modules::sdklevel::IsAtLeastT()) return;
 
-    // HACK: some old vendor kernels lack ~5.10 backport of 'bpffs selinux genfscon' support.
-    // This is *NOT* supported, but let's allow, at least for now, U+ GSI to boot on them.
-    // (without this hack pixel5 R vendor + U gsi breaks)
-    if (isGsiImage() && !bpf::isAtLeastKernelVersion(5, 10, 0)) return;
-
     V("/sys/fs/bpf", S_IFDIR|S_ISVTX|0777, ROOT, ROOT, "fs_bpf", DIR);
     V("/sys/fs/bpf/net_shared", S_IFDIR|S_ISVTX|0777, ROOT, ROOT, "fs_bpf_net_shared", DIR);
 
@@ -138,6 +135,15 @@ static void verifyClatPerms() {
 
 #undef V2
 
+    // HACK: Some old vendor kernels lack ~5.10 backport of 'bpffs selinux genfscon' support.
+    // This is *NOT* supported, but let's allow, at least for now, U+ GSI to boot on them.
+    // (without this hack pixel5 R vendor + U gsi breaks)
+    if (isGsiImage() && !bpf::isAtLeastKernelVersion(5, 10, 0)) {
+        ALOGE("GSI with *BAD* pre-5.10 kernel lacking bpffs selinux genfscon support.");
+        return;
+    }
+
+    if (fatal) abort();
 }
 
 #undef V
@@ -233,7 +239,7 @@ static jint com_android_server_connectivity_ClatCoordinator_createTunInterface(J
     }
 
     struct ifreq ifr = {
-            .ifr_flags = IFF_TUN,
+            .ifr_flags = static_cast<short>(IFF_TUN | IFF_TUN_EXCL),
     };
     strlcpy(ifr.ifr_name, v4interface.c_str(), sizeof(ifr.ifr_name));
 
@@ -538,7 +544,7 @@ static jlong com_android_server_connectivity_ClatCoordinator_getSocketCookie(
     }
 
     uint64_t sock_cookie = bpf::getSocketCookie(sockFd);
-    if (sock_cookie == bpf::NONEXISTENT_COOKIE) {
+    if (!sock_cookie) {
         throwIOException(env, "get socket cookie failed", errno);
         return -1;
     }

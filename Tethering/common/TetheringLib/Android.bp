@@ -30,7 +30,6 @@ cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsEnabled"
 java_sdk_library {
     name: "framework-tethering",
     defaults: [
-        "CronetJavaDefaults",
         "framework-tethering-defaults",
     ],
     impl_library_visibility: [
@@ -54,7 +53,6 @@ java_sdk_library {
         "//packages/modules/CaptivePortalLogin/tests",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
-        "//packages/modules/Connectivity/Cronet/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
@@ -83,11 +81,11 @@ java_defaults {
     impl_only_static_libs: [
         "cronet_aml_java",
     ],
-    api_dir: "cronet_enabled/api",
 }
 
 java_defaults {
   name: "CronetJavaDefaultsDisabled",
+  api_dir: "cronet_disabled/api",
 }
 
 java_defaults {
@@ -111,7 +109,6 @@ java_library {
   name: "framework-tethering-pre-jarjar",
   defaults: [
     "framework-tethering-defaults",
-    "CronetJavaPrejarjarDefaults",
   ],
 }
 

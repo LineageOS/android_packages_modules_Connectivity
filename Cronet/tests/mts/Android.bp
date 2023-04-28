@@ -19,6 +19,7 @@ package {
 
 java_genrule {
     name: "net-http-test-jarjar-rules",
+    defaults: ["CronetTestJavaDefaults"],
     tool_files: [
         ":NetHttpTestsLibPreJarJar{.jar}",
         "jarjar_excludes.txt",
@@ -29,13 +30,14 @@ java_genrule {
     out: ["net_http_test_jarjar_rules.txt"],
     cmd: "$(location jarjar-rules-generator) " +
         "$(location :NetHttpTestsLibPreJarJar{.jar}) " +
-        "--prefix android.net.http.internal " +
+        "--prefix android.net.connectivity " +
         "--excludes $(location jarjar_excludes.txt) " +
         "--output $(out)",
 }
 
 android_library {
     name: "NetHttpTestsLibPreJarJar",
+    defaults: ["CronetTestJavaDefaults"],
     srcs: [":cronet_aml_javatests_sources"],
     sdk_version: "module_current",
     min_sdk_version: "30",
@@ -47,11 +49,7 @@ android_library {
     ],
     libs: [
         "android.test.base",
-        // Needed for direct access to tethering's hidden apis and to avoid `symbol not found`
-        // errors on some builds.
-        "framework-tethering.impl",
-        // android.net.Network apis
-        "framework-connectivity",
+        "framework-connectivity-pre-jarjar",
         // android.net.TrafficStats apis
         "framework-connectivity-t",
     ],

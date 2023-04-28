@@ -392,7 +392,15 @@ class EthernetManagerTest {
     }
 
     // Setting the carrier up / down relies on TUNSETCARRIER which was added in kernel version 5.0.
-    private fun assumeChangingCarrierSupported() = assumeTrue(isKernelVersionAtLeast("5.0.0"))
+    private fun assumeChangingCarrierSupported() {
+        assumeTrue(isKernelVersionAtLeast("5.0.0"))
+    }
+
+    // Configuring a tap interface without carrier relies on IFF_NO_CARRIER
+    // which was added in kernel version 6.0.
+    private fun assumeCreateInterfaceWithoutCarrierSupported() {
+        assumeTrue(isKernelVersionAtLeast("6.0.0"))
+    }
 
     private fun isAdbOverEthernet(): Boolean {
         // If no ethernet interface is available, adb is not connected over ethernet.
@@ -417,7 +425,7 @@ class EthernetManagerTest {
     }
 
     // WARNING: setting hasCarrier to false requires kernel support. Call
-    // assumeChangingCarrierSupported() at the top of your test.
+    // assumeCreateInterfaceWithoutCarrierSupported() at the top of your test.
     private fun createInterface(hasCarrier: Boolean = true): EthernetTestInterface {
         val iface = EthernetTestInterface(
             context,
@@ -791,15 +799,13 @@ class EthernetManagerTest {
 
     @Test
     fun testNetworkRequest_forInterfaceWhileTogglingCarrier() {
+        assumeCreateInterfaceWithoutCarrierSupported()
         assumeChangingCarrierSupported()
 
         val iface = createInterface(false /* hasCarrier */)
 
         val cb = requestNetwork(ETH_REQUEST)
-        // TUNSETCARRIER races with the bring up code, so the network *can* become available despite
-        // it being "created with no carrier".
-        // TODO(b/249611919): re-enable assertion once kernel supports IFF_NO_CARRIER.
-        // cb.assertNeverAvailable()
+        cb.assertNeverAvailable()
 
         iface.setCarrierEnabled(true)
         cb.expect<Available>()

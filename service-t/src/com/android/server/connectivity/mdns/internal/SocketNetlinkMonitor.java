@@ -17,28 +17,64 @@
 package com.android.server.connectivity.mdns.internal;
 
 import android.annotation.NonNull;
+import android.net.LinkAddress;
 import android.os.Handler;
 import android.system.OsConstants;
+import android.util.Log;
 
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.ip.NetlinkMonitor;
 import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkMessage;
+import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
+import com.android.net.module.util.netlink.StructIfaddrMsg;
 import com.android.server.connectivity.mdns.ISocketNetLinkMonitor;
+import com.android.server.connectivity.mdns.MdnsSocketProvider;
 
 /**
  * The netlink monitor for MdnsSocketProvider.
  */
 public class SocketNetlinkMonitor extends NetlinkMonitor implements ISocketNetLinkMonitor {
 
-    public SocketNetlinkMonitor(@NonNull final Handler handler, @NonNull SharedLog log) {
-        super(handler, log, SocketNetlinkMonitor.class.getSimpleName(), OsConstants.NETLINK_ROUTE,
-                NetlinkConstants.RTMGRP_IPV4_IFADDR | NetlinkConstants.RTMGRP_IPV6_IFADDR);
-    }
+    public static final String TAG = SocketNetlinkMonitor.class.getSimpleName();
 
+    @NonNull
+    private final MdnsSocketProvider.NetLinkMonitorCallBack mCb;
+    public SocketNetlinkMonitor(@NonNull final Handler handler,
+            @NonNull SharedLog log,
+            @NonNull final MdnsSocketProvider.NetLinkMonitorCallBack cb) {
+        super(handler, log, TAG, OsConstants.NETLINK_ROUTE,
+                NetlinkConstants.RTMGRP_IPV4_IFADDR | NetlinkConstants.RTMGRP_IPV6_IFADDR);
+        mCb = cb;
+    }
     @Override
     public void processNetlinkMessage(NetlinkMessage nlMsg, long whenMs) {
+        if (nlMsg instanceof RtNetlinkAddressMessage) {
+            processRtNetlinkAddressMessage((RtNetlinkAddressMessage) nlMsg);
+        }
+    }
 
+    /**
+     * Process the RTM_NEWADDR and RTM_DELADDR netlink message.
+     */
+    private void processRtNetlinkAddressMessage(RtNetlinkAddressMessage msg) {
+        final StructIfaddrMsg ifaddrMsg = msg.getIfaddrHeader();
+        final LinkAddress la = new LinkAddress(msg.getIpAddress(), ifaddrMsg.prefixLen,
+                msg.getFlags(), ifaddrMsg.scope);
+        if (!la.isPreferred()) {
+            // Skip the unusable ip address.
+            return;
+        }
+        switch (msg.getHeader().nlmsg_type) {
+            case NetlinkConstants.RTM_NEWADDR:
+                mCb.addOrUpdateInterfaceAddress(ifaddrMsg.index, la);
+                break;
+            case NetlinkConstants.RTM_DELADDR:
+                mCb.deleteInterfaceAddress(ifaddrMsg.index, la);
+                break;
+            default:
+                Log.e(TAG, "Unknown rtnetlink address msg type " + msg.getHeader().nlmsg_type);
+        }
     }
 
     @Override
