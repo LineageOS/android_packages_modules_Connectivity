@@ -28,7 +28,7 @@
     <string name="devices_within_reach_channel_name" msgid="876280551450910440">"কাছে রয়েছে এমন ডিভাইস"</string>
     <string name="devices_with_your_account_channel_name" msgid="8120067812798598102">"আপনার অ্যাকাউন্টের সাথে কানেক্ট থাকা ডিভাইস"</string>
     <string name="fast_pair_your_device" msgid="3662423897069320840">"আপনার সেভ করা ডিভাইস উপলভ্য আছে"</string>
-    <string name="common_nearby_title" msgid="5480324514713607015">"আশেপাশে"</string>
+    <string name="common_nearby_title" msgid="5480324514713607015">"নিয়ারবাই"</string>
     <string name="common_devices" msgid="2635603125608104442">"ডিভাইস"</string>
     <string name="common_connecting" msgid="160531481424245303">"কানেক্ট করা হচ্ছে…"</string>
     <string name="common_battery_level" msgid="8748495823047456645">"ব্যাটারি: %d%%"</string>
