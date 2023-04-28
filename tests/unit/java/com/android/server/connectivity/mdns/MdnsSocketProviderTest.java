@@ -112,7 +112,7 @@ public class MdnsSocketProviderTest {
     private NetworkCallback mNetworkCallback;
     private TetheringEventCallback mTetheringEventCallback;
 
-    private TestNetLinkMonitor mTestSocketNetLinkMonitor;
+    private TestNetlinkMonitor mTestSocketNetLinkMonitor;
     @Before
     public void setUp() throws IOException {
         MockitoAnnotations.initMocks(this);
@@ -147,7 +147,7 @@ public class MdnsSocketProviderTest {
         doReturn(mTestSocketNetLinkMonitor).when(mDeps).createSocketNetlinkMonitor(any(), any(),
                 any());
         doAnswer(inv -> {
-            mTestSocketNetLinkMonitor = new TestNetLinkMonitor(inv.getArgument(0),
+            mTestSocketNetLinkMonitor = new TestNetlinkMonitor(inv.getArgument(0),
                     inv.getArgument(1),
                     inv.getArgument(2));
             return mTestSocketNetLinkMonitor;
@@ -174,8 +174,8 @@ public class MdnsSocketProviderTest {
         HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
     }
 
-    private static class TestNetLinkMonitor extends SocketNetlinkMonitor {
-        TestNetLinkMonitor(@NonNull Handler handler,
+    private static class TestNetlinkMonitor extends SocketNetlinkMonitor {
+        TestNetlinkMonitor(@NonNull Handler handler,
                 @NonNull SharedLog log,
                 @Nullable MdnsSocketProvider.NetLinkMonitorCallBack cb) {
             super(handler, log, cb);
