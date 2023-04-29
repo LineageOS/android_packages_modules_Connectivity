@@ -946,7 +946,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @GuardedBy("mStatsLock")
     private void shutdownLocked() {
         final TetheringManager tetheringManager = mContext.getSystemService(TetheringManager.class);
-        tetheringManager.unregisterTetheringEventCallback(mTetherListener);
+        try {
+            tetheringManager.unregisterTetheringEventCallback(mTetherListener);
+        } catch (IllegalStateException e) {
+            Log.i(TAG, "shutdownLocked: error when unregister tethering, ignored. e=" + e);
+        }
         mContext.unregisterReceiver(mPollReceiver);
         mContext.unregisterReceiver(mRemovedReceiver);
         mContext.unregisterReceiver(mUserReceiver);

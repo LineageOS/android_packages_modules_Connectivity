@@ -7904,16 +7904,27 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return captivePortalBuilder.build();
     }
 
-    private String makeNflogPrefix(String iface, long networkHandle) {
+    @VisibleForTesting
+    static String makeNflogPrefix(String iface, long networkHandle) {
         // This needs to be kept in sync and backwards compatible with the decoding logic in
         // NetdEventListenerService, which is non-mainline code.
         return SdkLevel.isAtLeastU() ? (networkHandle + ":" + iface) : ("iface:" + iface);
     }
 
+    private static boolean isWakeupMarkingSupported(NetworkCapabilities capabilities) {
+        if (capabilities.hasTransport(TRANSPORT_WIFI)) {
+            return true;
+        }
+        if (SdkLevel.isAtLeastU() && capabilities.hasTransport(TRANSPORT_CELLULAR)) {
+            return true;
+        }
+        return false;
+    }
+
     private void wakeupModifyInterface(String iface, NetworkAgentInfo nai, boolean add) {
         // Marks are only available on WiFi interfaces. Checking for
         // marks on unsupported interfaces is harmless.
-        if (!nai.networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+        if (!isWakeupMarkingSupported(nai.networkCapabilities)) {
             return;
         }
 
