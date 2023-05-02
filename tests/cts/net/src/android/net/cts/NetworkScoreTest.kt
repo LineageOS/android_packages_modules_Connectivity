@@ -30,6 +30,7 @@ import android.net.VpnTransportInfo
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import androidx.test.InstrumentationRegistry
 import com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
@@ -41,6 +42,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.Collections
 
 // This test doesn't really have a constraint on how fast the methods should return. If it's
 // going to fail, it will simply wait forever, so setting a high timeout lowers the flake ratio
@@ -64,10 +66,11 @@ private fun score(exiting: Boolean = false, primary: Boolean = false) =
 @IgnoreUpTo(Build.VERSION_CODES.R)
 @RunWith(DevSdkIgnoreRunner::class)
 class NetworkScoreTest {
+    private val TAG = javaClass.simpleName
     private val mCm = testContext.getSystemService(ConnectivityManager::class.java)
-    private val mHandlerThread = HandlerThread("${javaClass.simpleName} handler thread")
+    private val mHandlerThread = HandlerThread("$TAG handler thread")
     private val mHandler by lazy { Handler(mHandlerThread.looper) }
-    private val agentsToCleanUp = mutableListOf<NetworkAgent>()
+    private val agentsToCleanUp = Collections.synchronizedList(mutableListOf<NetworkAgent>())
     private val callbacksToCleanUp = mutableListOf<TestableNetworkCallback>()
 
     @Before
@@ -83,15 +86,18 @@ class NetworkScoreTest {
                     .addTransportType(NetworkCapabilities.TRANSPORT_TEST).build(), cb, mHandler
             )
         }
+        Log.i(TAG, "Teardown on thread ${System.identityHashCode(Thread.currentThread())} " +
+                "cleaning up ${agentsToCleanUp.size} agents")
         agentsToCleanUp.forEach {
+            Log.i(TAG, "Unregister agent for net ${it.network}")
             it.unregister()
             agentCleanUpCb.eventuallyExpect<CallbackEntry.Lost> { cb -> cb.network == it.network }
         }
         mCm.unregisterNetworkCallback(agentCleanUpCb)
 
+        callbacksToCleanUp.forEach { mCm.unregisterNetworkCallback(it) }
         mHandlerThread.quitSafely()
         mHandlerThread.join()
-        callbacksToCleanUp.forEach { mCm.unregisterNetworkCallback(it) }
     }
 
     // Returns a networkCallback that sends onAvailable on the best network with TRANSPORT_TEST.
@@ -145,6 +151,8 @@ class NetworkScoreTest {
         val agent = object : NetworkAgent(context, looper, "NetworkScore test agent", nc,
                 LinkProperties(), score, config, NetworkProvider(context, looper,
                 "NetworkScore test provider")) {}.also {
+            Log.i(TAG, "Add on thread ${System.identityHashCode(Thread.currentThread())} " +
+                    "agent to clean up $it")
             agentsToCleanUp.add(it)
         }
         runWithShellPermissionIdentity({ agent.register() }, MANAGE_TEST_NETWORKS)
