@@ -36,7 +36,6 @@ java_library {
   srcs: [
       "device/com/android/net/module/util/DeviceConfigUtils.java",
       "device/com/android/net/module/util/FdEventsReader.java",
-      "device/com/android/net/module/util/HexDump.java",
       "device/com/android/net/module/util/NetworkMonitorUtils.java",
       "device/com/android/net/module/util/PacketReader.java",
       "device/com/android/net/module/util/SharedLog.java",
@@ -121,11 +120,11 @@ java_library {
         "device/com/android/net/module/util/BpfDump.java",
         "device/com/android/net/module/util/BpfMap.java",
         "device/com/android/net/module/util/BpfUtils.java",
-        "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/IBpfMap.java",
         "device/com/android/net/module/util/JniUtil.java",
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/TcUtils.java",
+        "framework/com/android/net/module/util/HexDump.java",
     ],
     sdk_version: "module_current",
     min_sdk_version: "29",
@@ -149,7 +148,6 @@ java_library {
 java_library {
     name: "net-utils-device-common-struct",
     srcs: [
-        "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/Ipv6Utils.java",
         "device/com/android/net/module/util/PacketBuilder.java",
         "device/com/android/net/module/util/Struct.java",
@@ -371,10 +369,10 @@ java_library {
     sdk_version: "core_platform",
     srcs: [
         "device/com/android/net/module/util/FdEventsReader.java",
-        "device/com/android/net/module/util/HexDump.java",
         "device/com/android/net/module/util/SharedLog.java",
         "framework/com/android/net/module/util/ByteUtils.java",
         "framework/com/android/net/module/util/CollectionUtils.java",
+        "framework/com/android/net/module/util/HexDump.java",
         "framework/com/android/net/module/util/LinkPropertiesUtils.java",
     ],
     libs: [
