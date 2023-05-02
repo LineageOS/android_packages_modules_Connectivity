@@ -38,11 +38,11 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
         return JNI_ERR;
     }
 
-    if (register_com_android_server_BpfNetMaps(env) < 0) {
-        return JNI_ERR;
-    }
-
     if (android::modules::sdklevel::IsAtLeastT()) {
+        if (register_com_android_server_BpfNetMaps(env) < 0) {
+            return JNI_ERR;
+        }
+
         if (register_com_android_server_connectivity_ClatCoordinator(env) < 0) {
             return JNI_ERR;
         }
