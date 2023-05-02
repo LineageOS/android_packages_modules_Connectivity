@@ -1348,6 +1348,18 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
+     * Gets the transports as an int. Internal callers only.
+     *
+     * Prefer getTransportTypes/hasTransportType if not immediately collapsing back into a scalar.
+     *
+     * @return a long integer representing the transport types.
+     * @hide
+     */
+    public long getTransportTypesInternal() {
+        return mTransportTypes;
+    }
+
+    /**
      * Sets all the transports set on this {@code NetworkCapability} instance.
      * This overwrites any existing transports.
      *
