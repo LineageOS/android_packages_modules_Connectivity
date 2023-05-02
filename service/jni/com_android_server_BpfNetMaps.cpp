@@ -54,6 +54,10 @@ static void native_init(JNIEnv* env, jclass clazz, jboolean startSkDestroyListen
   if (!isOk(status)) {
     uid_t uid = getuid();
     ALOGE("BpfNetMaps jni init failure as uid=%d", uid);
+    // We probably only ever get called from system_server (ie. AID_SYSTEM)
+    // or from tests, and never from network_stack (ie. AID_NETWORK_STACK).
+    // However, if we ever do add calls from production network_stack code
+    // we do want to make sure this initializes correctly.
     // TODO: Fix tests to not use this jni lib, so we can unconditionally abort()
     if (uid == AID_SYSTEM || uid == AID_NETWORK_STACK) abort();
   }
