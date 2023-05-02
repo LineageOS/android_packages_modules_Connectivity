@@ -21,6 +21,12 @@ import android.annotation.Nullable;
 import android.net.Network;
 import android.os.Handler;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
+
 /**
  * Mdns utility functions.
  */
@@ -72,5 +78,23 @@ public class MdnsUtils {
     public static boolean isNetworkMatched(@Nullable Network targetNetwork,
             @Nullable Network currentNetwork) {
         return targetNetwork == null || targetNetwork.equals(currentNetwork);
+    }
+
+    /**
+     * Truncate a service name to up to maxLength UTF-8 bytes.
+     */
+    public static String truncateServiceName(@NonNull String originalName, int maxLength) {
+        // UTF-8 is at most 4 bytes per character; return early in the common case where
+        // the name can't possibly be over the limit given its string length.
+        if (originalName.length() <= maxLength / 4) return originalName;
+
+        final Charset utf8 = StandardCharsets.UTF_8;
+        final CharsetEncoder encoder = utf8.newEncoder();
+        final ByteBuffer out = ByteBuffer.allocate(maxLength);
+        // encode will write as many characters as possible to the out buffer, and just
+        // return an overflow code if there were too many characters (no need to check the
+        // return code here, this method truncates the name on purpose).
+        encoder.encode(CharBuffer.wrap(originalName), out, true /* endOfInput */);
+        return new String(out.array(), 0, out.position(), utf8);
     }
 }
