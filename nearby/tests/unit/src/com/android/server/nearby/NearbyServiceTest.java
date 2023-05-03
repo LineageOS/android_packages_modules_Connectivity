@@ -36,6 +36,7 @@ import android.app.UiAutomation;
 import android.content.Context;
 import android.nearby.IScanListener;
 import android.nearby.ScanRequest;
+import android.os.IBinder;
 import android.provider.DeviceConfig;
 
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -61,10 +62,14 @@ public final class NearbyServiceTest {
     private IScanListener mScanListener;
     @Mock
     private AppOpsManager mMockAppOpsManager;
+    @Mock
+    private IBinder mIBinder;
 
     @Before
     public void setUp()  {
         initMocks(this);
+        when(mScanListener.asBinder()).thenReturn(mIBinder);
+
         mUiAutomation.adoptShellPermissionIdentity(
                 READ_DEVICE_CONFIG, WRITE_DEVICE_CONFIG, BLUETOOTH_PRIVILEGED);
         mContext = InstrumentationRegistry.getInstrumentation().getContext();
