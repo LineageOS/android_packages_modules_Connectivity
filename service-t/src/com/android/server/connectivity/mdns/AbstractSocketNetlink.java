@@ -19,7 +19,7 @@ package com.android.server.connectivity.mdns;
 /**
  * The interface for netlink monitor.
  */
-public interface ISocketNetLinkMonitor {
+public interface AbstractSocketNetlink {
 
     /**
      * Returns if the netlink monitor is supported or not. By default, it is not supported.

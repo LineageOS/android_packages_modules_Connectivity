@@ -28,13 +28,13 @@ import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
 import com.android.net.module.util.netlink.StructIfaddrMsg;
-import com.android.server.connectivity.mdns.ISocketNetLinkMonitor;
+import com.android.server.connectivity.mdns.AbstractSocketNetlink;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
 
 /**
  * The netlink monitor for MdnsSocketProvider.
  */
-public class SocketNetlinkMonitor extends NetlinkMonitor implements ISocketNetLinkMonitor {
+public class SocketNetlinkMonitor extends NetlinkMonitor implements AbstractSocketNetlink {
 
     public static final String TAG = SocketNetlinkMonitor.class.getSimpleName();
 
