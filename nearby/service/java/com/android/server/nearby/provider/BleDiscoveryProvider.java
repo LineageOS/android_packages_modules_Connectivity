@@ -44,12 +44,14 @@ import com.android.server.nearby.common.bluetooth.fastpair.Constants;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.ExtendedAdvertisement;
 import com.android.server.nearby.presence.PresenceConstants;
+import com.android.server.nearby.util.ArrayUtils;
 import com.android.server.nearby.util.ForegroundThread;
 import com.android.server.nearby.util.encryption.CryptorImpIdentityV1;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -86,10 +88,12 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                 @Override
                 public void onScanResult(int callbackType, ScanResult scanResult) {
                     NearbyDeviceParcelable.Builder builder = new NearbyDeviceParcelable.Builder();
-                    builder.setMedium(NearbyDevice.Medium.BLE)
+                    String bleAddress = scanResult.getDevice().getAddress();
+                    builder.setDeviceId(bleAddress.hashCode())
+                            .setMedium(NearbyDevice.Medium.BLE)
                             .setRssi(scanResult.getRssi())
                             .setTxPower(scanResult.getTxPower())
-                            .setBluetoothAddress(scanResult.getDevice().getAddress());
+                            .setBluetoothAddress(bleAddress);
 
                     ScanRecord record = scanResult.getScanRecord();
                     if (record != null) {
@@ -300,6 +304,9 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                             builder.setPresenceDevice(getPresenceDevice(advertisement, deviceName,
                                     rssi));
                             builder.setEncryptionKeyTag(credential.getEncryptedMetadataKeyTag());
+                            if (!ArrayUtils.isEmpty(credential.getSecretId())) {
+                                builder.setDeviceId(Arrays.hashCode(credential.getSecretId()));
+                            }
                             return;
                         }
                     }
