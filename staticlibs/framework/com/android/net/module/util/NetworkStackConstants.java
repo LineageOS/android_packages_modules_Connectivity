@@ -227,6 +227,14 @@ public final class NetworkStackConstants {
     public static final int DHCP6_OPTION_IAPREFIX = 26;
 
     /**
+     * DNS constants.
+     *
+     * See also:
+     *     - https://datatracker.ietf.org/doc/html/rfc7858#section-3.1
+     */
+    public static final short DNS_OVER_TLS_PORT = 853;
+
+    /**
      * IEEE802.11 standard constants.
      *
      * See also:
