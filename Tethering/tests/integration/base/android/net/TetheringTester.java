@@ -628,7 +628,7 @@ public final class TetheringTester {
         return false;
     }
 
-    private void sendUploadPacket(ByteBuffer packet) throws Exception {
+    public void sendUploadPacket(ByteBuffer packet) throws Exception {
         mDownstreamReader.sendResponse(packet);
     }
 
@@ -679,5 +679,13 @@ public final class TetheringTester {
         sendDownloadPacket(packet);
 
         return verifyPacketNotNull("Download fail", getDownloadPacket(filter));
+    }
+
+    // Send DHCPDISCOVER to DHCP server to see if DHCP server is still alive to handle
+    // the upcoming DHCP packets. This method should be only used when we know the DHCP
+    // server has been created successfully before.
+    public boolean testDhcpServerAlive(final MacAddress mac) throws Exception {
+        sendDhcpDiscover(mac.toByteArray());
+        return getNextDhcpPacket() != null;
     }
 }
