@@ -90,11 +90,6 @@ static void verifyPerms(const char * const path,
 
 #undef ALOGF
 
-bool isGsiImage() {
-    // this implementation matches 2 other places in the codebase (same function name too)
-    return !access("/system/system_ext/etc/init/init.gsi.rc", F_OK);
-}
-
 static const char* kClatdDir = "/apex/com.android.tethering/bin/for-system";
 static const char* kClatdBin = "/apex/com.android.tethering/bin/for-system/clatd";
 
@@ -134,14 +129,6 @@ static void verifyClatPerms() {
     V2("map_clatd_clat_ingress6_map",             S_IFREG|0660, MAP_RW);
 
 #undef V2
-
-    // HACK: Some old vendor kernels lack ~5.10 backport of 'bpffs selinux genfscon' support.
-    // This is *NOT* supported, but let's allow, at least for now, U+ GSI to boot on them.
-    // (without this hack pixel5 R vendor + U gsi breaks)
-    if (isGsiImage() && !bpf::isAtLeastKernelVersion(5, 10, 0)) {
-        ALOGE("GSI with *BAD* pre-5.10 kernel lacking bpffs selinux genfscon support.");
-        return;
-    }
 
     if (fatal) abort();
 }
