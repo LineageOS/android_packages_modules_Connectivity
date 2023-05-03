@@ -243,6 +243,11 @@ public class DiscoveryRegistration extends BinderListenerRegistration<IScanListe
 
     }
 
+    /** Reports an error to the client. */
+    public ListenerOperation<IScanListener> reportError(@ScanCallback.ErrorCode int errorCode) {
+        return listener -> listener.onError(errorCode);
+    }
+
     @Nullable
     ListenerOperation<IScanListener> reportResult(@DiscoveryResult int result,
             NearbyDeviceParcelable device, @Nullable Runnable successReportCallback) {
@@ -250,7 +255,7 @@ public class DiscoveryRegistration extends BinderListenerRegistration<IScanListe
         // NOTE: AppOps report has to be the last operation before delivering the result. Otherwise
         // we may over-report when the discovery result doesn't end up being delivered.
         if (!checkIdentity()) {
-            return listener -> listener.onError(ScanCallback.ERROR_PERMISSION_DENIED);
+            return reportError(ScanCallback.ERROR_PERMISSION_DENIED);
         }
 
         return new ListenerOperation<>() {
