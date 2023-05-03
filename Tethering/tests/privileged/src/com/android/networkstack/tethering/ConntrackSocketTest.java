@@ -106,6 +106,7 @@ public class ConntrackSocketTest {
                 ConntrackMessage.Tuple tuple = ctmsg.tupleOrig;
 
                 if (nlmsghdr.nlmsg_type == (NFNL_SUBSYS_CTNETLINK << 8 | IPCTNL_MSG_CT_NEW)
+                        && tuple != null
                         && tuple.protoNum == IPPROTO_TCP
                         && tuple.srcIp.equals(local.getAddress())
                         && tuple.dstIp.equals(remote.getAddress())
