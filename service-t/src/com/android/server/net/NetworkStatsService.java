@@ -46,6 +46,7 @@ import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
 import static android.net.NetworkStatsHistory.FIELD_ALL;
 import static android.net.NetworkTemplate.MATCH_MOBILE;
+import static android.net.NetworkTemplate.MATCH_TEST;
 import static android.net.NetworkTemplate.MATCH_WIFI;
 import static android.net.TrafficStats.KB_IN_BYTES;
 import static android.net.TrafficStats.MB_IN_BYTES;
@@ -1582,7 +1583,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         // For a template with wifi network keys, it is possible for a malicious
         // client to track the user locations via querying data usage. Thus, enforce
         // fine location permission check.
-        if (!template.getWifiNetworkKeys().isEmpty()) {
+        // For a template with MATCH_TEST, since the wifi network key is just a placeholder
+        // to identify a specific test network, it is not related to track user location.
+        if (!template.getWifiNetworkKeys().isEmpty() && template.getMatchRule() != MATCH_TEST) {
             final boolean canAccessFineLocation = mLocationPermissionChecker
                     .checkCallersLocationPermission(callingPackage,
                     null /* featureId */,
