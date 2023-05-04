@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns.util
 import android.os.Build
 import com.android.server.connectivity.mdns.util.MdnsUtils.equalsIgnoreDnsCase
 import com.android.server.connectivity.mdns.util.MdnsUtils.toDnsLowerCase
+import com.android.server.connectivity.mdns.util.MdnsUtils.truncateServiceName
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.Assert.assertEquals
@@ -64,5 +65,11 @@ class MdnsUtilsTest {
                 "\udc77\udb40\udc6c\udb40\udc73\udb40\udc7f<",
                 "Test: >\ud83c\udff4\udb40\udc67\udb40\udc62\udb40" +
                         "\udc77\udb40\udc6c\udb40\udc73\udb40\udc7f<"))
+    }
+
+    @Test
+    fun testTruncateServiceName() {
+        assertEquals(truncateServiceName("测试abcde", 7), "测试a")
+        assertEquals(truncateServiceName("测试abcde", 100), "测试abcde")
     }
 }
