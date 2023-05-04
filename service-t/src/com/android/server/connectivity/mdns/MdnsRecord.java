@@ -46,6 +46,8 @@ public abstract class MdnsRecord {
 
     public static final long RECEIPT_TIME_NOT_SENT = 0L;
     public static final int CLASS_ANY = 0x00ff;
+    /** Max label length as per RFC 1034/1035 */
+    public static final int MAX_LABEL_LENGTH = 63;
 
     /** Status indicating that the record is current. */
     public static final int STATUS_OK = 0;
