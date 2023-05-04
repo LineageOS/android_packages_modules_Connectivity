@@ -47,6 +47,8 @@ import org.mockito.Mockito.verify
 
 private const val SERVICE_ID_1 = 1
 private const val SERVICE_ID_2 = 2
+private const val LONG_SERVICE_ID_1 = 3
+private const val LONG_SERVICE_ID_2 = 4
 private const val TIMEOUT_MS = 10_000L
 private val TEST_ADDR = parseNumericAddress("2001:db8::123")
 private val TEST_LINKADDR = LinkAddress(TEST_ADDR, 64 /* prefixLength */)
@@ -56,15 +58,29 @@ private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 
 private val SERVICE_1 = NsdServiceInfo("TestServiceName", "_advertisertest._tcp").apply {
     port = 12345
-    host = TEST_ADDR
+    hostAddresses = listOf(TEST_ADDR)
     network = TEST_NETWORK_1
 }
 
+private val LONG_SERVICE_1 =
+    NsdServiceInfo("a".repeat(48) + "TestServiceName", "_longadvertisertest._tcp").apply {
+    port = 12345
+    hostAddresses = listOf(TEST_ADDR)
+    network = TEST_NETWORK_1
+    }
+
 private val ALL_NETWORKS_SERVICE = NsdServiceInfo("TestServiceName", "_advertisertest._tcp").apply {
     port = 12345
-    host = TEST_ADDR
+    hostAddresses = listOf(TEST_ADDR)
     network = null
 }
+
+private val LONG_ALL_NETWORKS_SERVICE =
+    NsdServiceInfo("a".repeat(48) + "TestServiceName", "_longadvertisertest._tcp").apply {
+        port = 12345
+        hostAddresses = listOf(TEST_ADDR)
+        network = null
+    }
 
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.S_V2)
@@ -191,6 +207,9 @@ class MdnsAdvertiserTest {
         verify(socketProvider).requestSocket(eq(null), allNetSocketCbCaptor.capture())
         val allNetSocketCb = allNetSocketCbCaptor.value
 
+        postSync { advertiser.addService(LONG_SERVICE_ID_1, LONG_SERVICE_1) }
+        postSync { advertiser.addService(LONG_SERVICE_ID_2, LONG_ALL_NETWORKS_SERVICE) }
+
         // Callbacks for matching network and all networks both get the socket
         postSync {
             oneNetSocketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR))
@@ -200,8 +219,16 @@ class MdnsAdvertiserTest {
         val expectedRenamed = NsdServiceInfo(
                 "${ALL_NETWORKS_SERVICE.serviceName} (2)", ALL_NETWORKS_SERVICE.serviceType).apply {
             port = ALL_NETWORKS_SERVICE.port
-            host = ALL_NETWORKS_SERVICE.host
+            hostAddresses = ALL_NETWORKS_SERVICE.hostAddresses
             network = ALL_NETWORKS_SERVICE.network
+        }
+
+        val expectedLongRenamed = NsdServiceInfo(
+            "${LONG_ALL_NETWORKS_SERVICE.serviceName.dropLast(4)} (2)",
+            LONG_ALL_NETWORKS_SERVICE.serviceType).apply {
+            port = LONG_ALL_NETWORKS_SERVICE.port
+            hostAddresses = LONG_ALL_NETWORKS_SERVICE.hostAddresses
+            network = LONG_ALL_NETWORKS_SERVICE.network
         }
 
         val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
@@ -212,6 +239,10 @@ class MdnsAdvertiserTest {
                 argThat { it.matches(SERVICE_1) })
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_2),
                 argThat { it.matches(expectedRenamed) })
+        verify(mockInterfaceAdvertiser1).addService(eq(LONG_SERVICE_ID_1),
+                argThat { it.matches(LONG_SERVICE_1) })
+        verify(mockInterfaceAdvertiser1).addService(eq(LONG_SERVICE_ID_2),
+            argThat { it.matches(expectedLongRenamed) })
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
         postSync { intAdvCbCaptor.value.onRegisterServiceSucceeded(
@@ -251,7 +282,7 @@ private fun NsdServiceInfo.matches(other: NsdServiceInfo): Boolean {
     return Objects.equals(serviceName, other.serviceName) &&
             Objects.equals(serviceType, other.serviceType) &&
             Objects.equals(attributes, other.attributes) &&
-            Objects.equals(host, other.host) &&
+            Objects.equals(hostAddresses, other.hostAddresses) &&
             port == other.port &&
             Objects.equals(network, other.network)
 }

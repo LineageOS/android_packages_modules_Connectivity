@@ -23,6 +23,7 @@ import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
+import static com.android.server.connectivity.mdns.MdnsRecord.MAX_LABEL_LENGTH;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -73,6 +74,7 @@ import com.android.server.connectivity.mdns.MdnsServiceBrowserListener;
 import com.android.server.connectivity.mdns.MdnsServiceInfo;
 import com.android.server.connectivity.mdns.MdnsSocketClientBase;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -81,11 +83,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -108,8 +105,6 @@ public class NsdService extends INsdManager.Stub {
      */
     private static final String MDNS_DISCOVERY_MANAGER_VERSION = "mdns_discovery_manager_version";
     private static final String LOCAL_DOMAIN_NAME = "local";
-    // Max label length as per RFC 1034/1035
-    private static final int MAX_LABEL_LENGTH = 63;
 
     /**
      * Enable advertising using the Java MdnsAdvertiser, instead of the legacy mdnsresponder
@@ -570,18 +565,7 @@ public class NsdService extends INsdManager.Stub {
              */
             @NonNull
             private String truncateServiceName(@NonNull String originalName) {
-                // UTF-8 is at most 4 bytes per character; return early in the common case where
-                // the name can't possibly be over the limit given its string length.
-                if (originalName.length() <= MAX_LABEL_LENGTH / 4) return originalName;
-
-                final Charset utf8 = StandardCharsets.UTF_8;
-                final CharsetEncoder encoder = utf8.newEncoder();
-                final ByteBuffer out = ByteBuffer.allocate(MAX_LABEL_LENGTH);
-                // encode will write as many characters as possible to the out buffer, and just
-                // return an overflow code if there were too many characters (no need to check the
-                // return code here, this method truncates the name on purpose).
-                encoder.encode(CharBuffer.wrap(originalName), out, true /* endOfInput */);
-                return new String(out.array(), 0, out.position(), utf8);
+                return MdnsUtils.truncateServiceName(originalName, MAX_LABEL_LENGTH);
             }
 
             private void stopDiscoveryManagerRequest(ClientRequest request, int clientId, int id,
