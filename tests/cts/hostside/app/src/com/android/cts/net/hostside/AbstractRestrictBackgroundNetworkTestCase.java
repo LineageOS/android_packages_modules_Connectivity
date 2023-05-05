@@ -719,12 +719,13 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         Log.i(TAG, "Setting Battery Saver Mode to " + enabled);
         if (enabled) {
             turnBatteryOn();
+            AmUtils.waitForBroadcastBarrier();
             executeSilentShellCommand("cmd power set-mode 1");
         } else {
             executeSilentShellCommand("cmd power set-mode 0");
             turnBatteryOff();
+            AmUtils.waitForBroadcastBarrier();
         }
-        AmUtils.waitForBroadcastBarrier();
     }
 
     protected void setDozeMode(boolean enabled) throws Exception {
