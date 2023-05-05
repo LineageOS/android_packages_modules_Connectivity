@@ -19,13 +19,6 @@ package {
 }
 
 prebuilt_etc {
-    name: "TetheringInProcessFlag",
-    src: "in-process",
-    filename_from_src: true,
-    sub_dir: "flag",
-}
-
-prebuilt_etc {
     name: "TetheringOutOfProcessFlag",
     src: "out-of-process",
     filename_from_src: true,
@@ -253,28 +246,4 @@ systemserverclasspath_fragment {
     name: "com.android.tethering-systemserverclasspath-fragment",
     standalone_contents: ["service-connectivity"],
     apex_available: ["com.android.tethering"],
-}
-
-override_apex {
-    name: "com.android.tethering.inprocess",
-    base: "com.android.tethering",
-    package_name: "com.android.tethering.inprocess",
-    enabled: enable_tethering_next_apex,
-    bpfs: [
-        "block.o",
-        "clatd.o",
-        "dscpPolicy.o",
-        "netd.o",
-        "offload@inprocess.o",
-        "test@inprocess.o",
-    ],
-    apps: [
-        "ServiceConnectivityResources",
-        "InProcessTethering",
-    ],
-    prebuilts: [
-        "current_sdkinfo",
-        "privapp_allowlist_com.android.tethering",
-        "TetheringInProcessFlag",
-    ],
 }
