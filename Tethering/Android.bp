@@ -119,7 +119,6 @@ cc_library {
     name: "libcom_android_networkstack_tethering_util_jni",
     sdk_version: "30",
     apex_available: [
-        "//apex_available:platform", // Used by InProcessTethering
         "com.android.tethering",
     ],
     min_sdk_version: "30",
@@ -185,24 +184,6 @@ java_defaults {
     optimize: {
         proguard_flags_files: ["proguard.flags"],
     },
-    lint: { strict_updatability_linting: true },
-}
-
-// Non-updatable tethering running in the system server process for devices not using the module
-android_app {
-    name: "InProcessTethering",
-    defaults: [
-        "TetheringAppDefaults",
-        "TetheringApiLevel",
-        "ConnectivityNextEnableDefaults",
-        "TetheringReleaseTargetSdk"
-    ],
-    static_libs: ["TetheringApiCurrentLib"],
-    certificate: "platform",
-    manifest: "AndroidManifest_InProcess.xml",
-    // InProcessTethering is a replacement for Tethering
-    overrides: ["Tethering"],
-    apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
 }
 
