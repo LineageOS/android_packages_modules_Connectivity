@@ -2960,13 +2960,13 @@ public class ConnectivityManagerTest {
 
         allowBadWifi();
 
-        final Network cellNetwork = mCtsNetUtils.connectToCell();
-        final Network wifiNetwork = prepareValidatedNetwork();
-
-        registerDefaultNetworkCallback(defaultCb);
-        registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
-
         try {
+            final Network cellNetwork = mCtsNetUtils.connectToCell();
+            final Network wifiNetwork = prepareValidatedNetwork();
+
+            registerDefaultNetworkCallback(defaultCb);
+            registerNetworkCallback(makeWifiNetworkRequest(), wifiCb);
+
             // Verify wifi is the default network.
             defaultCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
                     entry -> wifiNetwork.equals(entry.getNetwork()));
