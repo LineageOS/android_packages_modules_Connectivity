@@ -70,8 +70,11 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     private static ParcelFileDescriptor cachedBpfFdGet(String path, int mode,
                                                        int keySize, int valueSize)
             throws ErrnoException, NullPointerException {
-        // TODO: key should include keySize & valueSize, but really we should match specific types
-        Pair<String, Integer> key = Pair.create(path, mode);
+        // Supports up to 1023 byte key and 65535 byte values
+        // Creating a BpfMap with larger keys/values seems like a bad idea any way...
+        keySize &= 1023; // 10-bits
+        valueSize &= 65535; // 16-bits
+        var key = Pair.create(path, (mode << 26) ^ (keySize << 16) ^ valueSize);
         // unlocked fetch is safe: map is concurrent read capable, and only inserted into
         ParcelFileDescriptor fd = sFdCache.get(key);
         if (fd != null) return fd;
