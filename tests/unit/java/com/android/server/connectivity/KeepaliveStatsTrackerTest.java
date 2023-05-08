@@ -16,12 +16,17 @@
 
 package com.android.server.connectivity;
 
+import static com.android.testutils.HandlerUtils.visibleOnHandlerThread;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
 
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 
 import androidx.test.filters.SmallTest;
 
@@ -41,20 +46,82 @@ import org.mockito.MockitoAnnotations;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
 public class KeepaliveStatsTrackerTest {
-    private static final int TEST_UID = 1234;
+    private HandlerThread mHandlerThread;
+    private Handler mTestHandler;
 
     private KeepaliveStatsTracker mKeepaliveStatsTracker;
-    @Mock KeepaliveStatsTracker.Dependencies mDependencies;
+
+    @Mock private KeepaliveStatsTracker.Dependencies mDependencies;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
+
+        mHandlerThread = new HandlerThread("KeepaliveStatsTrackerTest");
+        mHandlerThread.start();
+        mTestHandler = new Handler(mHandlerThread.getLooper());
+
         setUptimeMillis(0);
-        mKeepaliveStatsTracker = new KeepaliveStatsTracker(mDependencies);
+        mKeepaliveStatsTracker = new KeepaliveStatsTracker(mTestHandler, mDependencies);
     }
 
     private void setUptimeMillis(long time) {
         doReturn(time).when(mDependencies).getUptimeMillis();
+    }
+
+    private DailykeepaliveInfoReported buildKeepaliveMetrics(long time) {
+        setUptimeMillis(time);
+
+        return visibleOnHandlerThread(
+                mTestHandler, () -> mKeepaliveStatsTracker.buildKeepaliveMetrics());
+    }
+
+    private DailykeepaliveInfoReported buildAndResetMetrics(long time) {
+        setUptimeMillis(time);
+
+        return visibleOnHandlerThread(
+                mTestHandler,
+                () -> {
+                    final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
+                            mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                    mKeepaliveStatsTracker.resetMetrics();
+                    return dailyKeepaliveInfoReported;
+                });
+    }
+
+    private void onStartKeepalive(long time) {
+        setUptimeMillis(time);
+        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.onStartKeepalive());
+    }
+
+    private void onPauseKeepalive(long time) {
+        setUptimeMillis(time);
+        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.onPauseKeepalive());
+    }
+
+    private void onResumeKeepalive(long time) {
+        setUptimeMillis(time);
+        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.onResumeKeepalive());
+    }
+
+    private void onStopKeepalive(long time, boolean wasActive) {
+        setUptimeMillis(time);
+        visibleOnHandlerThread(
+                mTestHandler, () -> mKeepaliveStatsTracker.onStopKeepalive(wasActive));
+    }
+
+    @Test
+    public void testEnsureRunningOnHandlerThread() {
+        // Not running on handler thread
+        assertThrows(IllegalStateException.class, () -> mKeepaliveStatsTracker.onStartKeepalive());
+        assertThrows(IllegalStateException.class, () -> mKeepaliveStatsTracker.onPauseKeepalive());
+        assertThrows(IllegalStateException.class, () -> mKeepaliveStatsTracker.onResumeKeepalive());
+        assertThrows(
+                IllegalStateException.class, () -> mKeepaliveStatsTracker.onStopKeepalive(true));
+        assertThrows(
+                IllegalStateException.class, () -> mKeepaliveStatsTracker.buildKeepaliveMetrics());
+        assertThrows(
+                IllegalStateException.class, () -> mKeepaliveStatsTracker.resetMetrics());
     }
 
     /**
@@ -111,9 +178,8 @@ public class KeepaliveStatsTrackerTest {
     public void testNoKeepalive() {
         final int writeTime = 5000;
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // Expect that the durations are all in numOfKeepalive = 0.
         final int[] expectRegisteredDurations = new int[] {writeTime};
@@ -137,12 +203,10 @@ public class KeepaliveStatsTrackerTest {
         final int startTime = 1000;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // The keepalive is never stopped, expect the duration for numberOfKeepalive of 1 to range
         // from startTime to writeTime.
@@ -167,15 +231,12 @@ public class KeepaliveStatsTrackerTest {
         final int pauseTime = 2030;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
-        setUptimeMillis(pauseTime);
-        mKeepaliveStatsTracker.onPauseKeepalive();
+        onPauseKeepalive(pauseTime);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // The keepalive is paused but not stopped, expect the registered duration for
         // numberOfKeepalive of 1 to still range from startTime to writeTime while the active
@@ -203,18 +264,14 @@ public class KeepaliveStatsTrackerTest {
         final int resumeTime = 3450;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
-        setUptimeMillis(pauseTime);
-        mKeepaliveStatsTracker.onPauseKeepalive();
+        onPauseKeepalive(pauseTime);
 
-        setUptimeMillis(resumeTime);
-        mKeepaliveStatsTracker.onResumeKeepalive();
+        onResumeKeepalive(resumeTime);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // The keepalive is paused and resumed but not stopped, expect the registered duration for
         // numberOfKeepalive of 1 to still range from startTime to writeTime while the active
@@ -246,21 +303,16 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 4157;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
-        setUptimeMillis(pauseTime);
-        mKeepaliveStatsTracker.onPauseKeepalive();
+        onPauseKeepalive(pauseTime);
 
-        setUptimeMillis(resumeTime);
-        mKeepaliveStatsTracker.onResumeKeepalive();
+        onResumeKeepalive(resumeTime);
 
-        setUptimeMillis(stopTime);
-        mKeepaliveStatsTracker.onStopKeepalive(/* wasActive= */ true);
+        onStopKeepalive(stopTime, /* wasActive= */ true);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // The keepalive is now stopped, expect the registered duration for numberOfKeepalive of 1
         // to now range from startTime to stopTime while the active duration stops at pauseTime but
@@ -292,18 +344,14 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 4157;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
-        setUptimeMillis(pauseTime);
-        mKeepaliveStatsTracker.onPauseKeepalive();
+        onPauseKeepalive(pauseTime);
 
-        setUptimeMillis(stopTime);
-        mKeepaliveStatsTracker.onStopKeepalive(/* wasActive= */ false);
+        onStopKeepalive(stopTime, /* wasActive= */ false);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // The keepalive is stopped while paused, expect the registered duration for
         // numberOfKeepalive of 1 to range from startTime to stopTime while the active duration
@@ -333,24 +381,20 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 4000;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
         for (int i = 0; i < pauseResumeTimes.length; i++) {
-            setUptimeMillis(pauseResumeTimes[i]);
             if (i % 2 == 0) {
-                mKeepaliveStatsTracker.onPauseKeepalive();
+                onPauseKeepalive(pauseResumeTimes[i]);
             } else {
-                mKeepaliveStatsTracker.onResumeKeepalive();
+                onResumeKeepalive(pauseResumeTimes[i]);
             }
         }
 
-        setUptimeMillis(stopTime);
-        mKeepaliveStatsTracker.onStopKeepalive(/* wasActive= */ true);
+        onStopKeepalive(stopTime, /* wasActive= */ true);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         final int[] expectRegisteredDurations =
                 new int[] {startTime + (writeTime - stopTime), stopTime - startTime};
@@ -387,30 +431,22 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime1 = 4157;
         final int writeTime = 5000;
 
-        setUptimeMillis(startTime1);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime1);
 
-        setUptimeMillis(pauseTime1);
-        mKeepaliveStatsTracker.onPauseKeepalive();
+        onPauseKeepalive(pauseTime1);
 
-        setUptimeMillis(startTime2);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime2);
 
-        setUptimeMillis(resumeTime1);
-        mKeepaliveStatsTracker.onResumeKeepalive();
+        onResumeKeepalive(resumeTime1);
 
-        setUptimeMillis(pauseTime2);
-        mKeepaliveStatsTracker.onPauseKeepalive();
+        onPauseKeepalive(pauseTime2);
 
-        setUptimeMillis(resumeTime2);
-        mKeepaliveStatsTracker.onResumeKeepalive();
+        onResumeKeepalive(resumeTime2);
 
-        setUptimeMillis(stopTime1);
-        mKeepaliveStatsTracker.onStopKeepalive(/* wasActive= */ true);
+        onStopKeepalive(stopTime1, /* wasActive= */ true);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
 
         // With two keepalives, the number of concurrent keepalives can vary from 0-2 depending on
         // both keepalive states.
@@ -458,12 +494,10 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 7000;
         final int writeTime2 = 10000;
 
-        setUptimeMillis(startTime);
-        mKeepaliveStatsTracker.onStartKeepalive();
+        onStartKeepalive(startTime);
 
-        setUptimeMillis(writeTime);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildAndResetMetrics(writeTime);
 
         // Same expect as testOneKeepalive_startOnly
         final int[] expectRegisteredDurations = new int[] {startTime, writeTime - startTime};
@@ -473,11 +507,9 @@ public class KeepaliveStatsTrackerTest {
                 expectRegisteredDurations,
                 expectActiveDurations);
 
-        // Reset metrics
-        mKeepaliveStatsTracker.resetMetrics();
-
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported2 =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime);
+
         // Expect the stored durations to be 0 but still contain the number of keepalive = 1.
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported2,
@@ -485,12 +517,10 @@ public class KeepaliveStatsTrackerTest {
                 /* expectActiveDurations= */ new int[] {0, 0});
 
         // Expect that the keepalive is still registered after resetting so it can be stopped.
-        setUptimeMillis(stopTime);
-        mKeepaliveStatsTracker.onStopKeepalive(/* wasActive= */ true);
+        onStopKeepalive(stopTime, /* wasActive= */ true);
 
-        setUptimeMillis(writeTime2);
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported3 =
-                mKeepaliveStatsTracker.buildKeepaliveMetrics();
+                buildKeepaliveMetrics(writeTime2);
 
         final int[] expectRegisteredDurations2 =
                 new int[] {writeTime2 - stopTime, stopTime - writeTime};
