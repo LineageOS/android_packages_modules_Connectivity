@@ -1901,6 +1901,9 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
+    // getSupportedKeepalives is available in updatable ConnectivityManager (S+)
+    // Also, this feature is not mainlined before S, and it's fine to skip on R- devices.
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
     @RequiresDevice // Keepalive is not supported on virtual hardware
     public void testSocketKeepaliveLimitWifi() throws Exception {
         assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
@@ -1951,6 +1954,9 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot request network in instant app mode")
     @Test
+    // getSupportedKeepalives is available in updatable ConnectivityManager (S+)
+    // Also, this feature is not mainlined before S, and it's fine to skip on R- devices.
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
     @RequiresDevice // Keepalive is not supported on virtual hardware
     public void testSocketKeepaliveLimitTelephony() throws Exception {
         if (!mPackageManager.hasSystemFeature(FEATURE_TELEPHONY)) {
@@ -1997,6 +2003,9 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
+    // getSupportedKeepalives is available in updatable ConnectivityManager (S+)
+    // Also, this feature is not mainlined before S, and it's fine to skip on R- devices.
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
     @RequiresDevice // Keepalive is not supported on virtual hardware
     public void testSocketKeepaliveUnprivileged() throws Exception {
         assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
