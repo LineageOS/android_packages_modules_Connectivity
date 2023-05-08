@@ -19,24 +19,25 @@ package com.android.testutils
 import java.net.Inet4Address
 import java.util.function.Predicate
 
-const val ETHER_TYPE_OFFSET = 12
-const val ETHER_HEADER_LENGTH = 14
-const val IPV4_PROTOCOL_OFFSET = ETHER_HEADER_LENGTH + 9
-const val IPV4_CHECKSUM_OFFSET = ETHER_HEADER_LENGTH + 10
-const val IPV4_DST_OFFSET = ETHER_HEADER_LENGTH + 16
-const val IPV4_HEADER_LENGTH = 20
-const val IPV4_UDP_OFFSET = ETHER_HEADER_LENGTH + IPV4_HEADER_LENGTH
-const val IPV4_UDP_SRCPORT_OFFSET = IPV4_UDP_OFFSET
-const val IPV4_UDP_DSTPORT_OFFSET = IPV4_UDP_OFFSET + 2
-const val UDP_HEADER_LENGTH = 8
-const val BOOTP_OFFSET = IPV4_UDP_OFFSET + UDP_HEADER_LENGTH
-const val BOOTP_TID_OFFSET = BOOTP_OFFSET + 4
-const val BOOTP_CLIENT_MAC_OFFSET = BOOTP_OFFSET + 28
-const val DHCP_OPTIONS_OFFSET = BOOTP_OFFSET + 240
-
-const val ARP_OPCODE_OFFSET = ETHER_HEADER_LENGTH + 6
-const val ARP_SENDER_MAC_OFFSET = ETHER_HEADER_LENGTH + 8
-const val ARP_TARGET_IPADDR_OFFSET = ETHER_HEADER_LENGTH + 24
+// Some of the below constants are duplicated with NetworkStackConstants, but this is a hostdevice
+// library usable for host-side tests, so device-side utils are not usable, and there is no
+// host-side non-test library to host common constants.
+private const val ETHER_TYPE_OFFSET = 12
+private const val ETHER_HEADER_LENGTH = 14
+private const val IPV4_PROTOCOL_OFFSET = ETHER_HEADER_LENGTH + 9
+private const val IPV6_PROTOCOL_OFFSET = ETHER_HEADER_LENGTH + 6
+private const val IPV4_CHECKSUM_OFFSET = ETHER_HEADER_LENGTH + 10
+private const val IPV4_DST_OFFSET = ETHER_HEADER_LENGTH + 16
+private const val IPV4_HEADER_LENGTH = 20
+private const val IPV6_HEADER_LENGTH = 40
+private const val IPV4_PAYLOAD_OFFSET = ETHER_HEADER_LENGTH + IPV4_HEADER_LENGTH
+private const val IPV6_PAYLOAD_OFFSET = ETHER_HEADER_LENGTH + IPV6_HEADER_LENGTH
+private const val UDP_HEADER_LENGTH = 8
+private const val BOOTP_OFFSET = IPV4_PAYLOAD_OFFSET + UDP_HEADER_LENGTH
+private const val BOOTP_TID_OFFSET = BOOTP_OFFSET + 4
+private const val BOOTP_CLIENT_MAC_OFFSET = BOOTP_OFFSET + 28
+private const val DHCP_OPTIONS_OFFSET = BOOTP_OFFSET + 240
+private const val ARP_OPCODE_OFFSET = ETHER_HEADER_LENGTH + 6
 
 /**
  * A [Predicate] that matches a [ByteArray] if it contains the specified [bytes] at the specified
@@ -47,12 +48,48 @@ class OffsetFilter(val offset: Int, vararg val bytes: Byte) : Predicate<ByteArra
             bytes.withIndex().all { it.value == packet[offset + it.index] }
 }
 
+private class UdpPortFilter(
+    private val udpOffset: Int,
+    private val src: Short?,
+    private val dst: Short?
+) : Predicate<ByteArray> {
+    override fun test(t: ByteArray): Boolean {
+        if (src != null && !OffsetFilter(udpOffset,
+                        src.toInt().ushr(8).toByte(), src.toByte()).test(t)) {
+            return false
+        }
+
+        if (dst != null && !OffsetFilter(udpOffset + 2,
+                        dst.toInt().ushr(8).toByte(), dst.toByte()).test(t)) {
+            return false
+        }
+        return true
+    }
+}
+
 /**
  * A [Predicate] that matches ethernet-encapped packets that contain an UDP over IPv4 datagram.
  */
-class IPv4UdpFilter : Predicate<ByteArray> {
+class IPv4UdpFilter @JvmOverloads constructor(
+    srcPort: Short? = null,
+    dstPort: Short? = null
+) : Predicate<ByteArray> {
     private val impl = OffsetFilter(ETHER_TYPE_OFFSET, 0x08, 0x00 /* IPv4 */).and(
-            OffsetFilter(IPV4_PROTOCOL_OFFSET, 17 /* UDP */))
+            OffsetFilter(IPV4_PROTOCOL_OFFSET, 17 /* UDP */)).and(
+            UdpPortFilter(IPV4_PAYLOAD_OFFSET, srcPort, dstPort))
+    override fun test(t: ByteArray) = impl.test(t)
+}
+
+/**
+ * A [Predicate] that matches ethernet-encapped packets that contain an UDP over IPv6 datagram.
+ */
+class IPv6UdpFilter @JvmOverloads constructor(
+    srcPort: Short? = null,
+    dstPort: Short? = null
+) : Predicate<ByteArray> {
+    private val impl = OffsetFilter(ETHER_TYPE_OFFSET, 0x86.toByte(), 0xdd.toByte() /* IPv6 */).and(
+            OffsetFilter(IPV6_PROTOCOL_OFFSET, 17 /* UDP */)).and(
+            UdpPortFilter(IPV6_PAYLOAD_OFFSET, srcPort, dstPort))
     override fun test(t: ByteArray) = impl.test(t)
 }
 
@@ -77,9 +114,7 @@ class ArpRequestFilter : Predicate<ByteArray> {
  * A [Predicate] that matches ethernet-encapped DHCP packets sent from a DHCP client.
  */
 class DhcpClientPacketFilter : Predicate<ByteArray> {
-    private val impl = IPv4UdpFilter()
-            .and(OffsetFilter(IPV4_UDP_SRCPORT_OFFSET, 0x00, 0x44 /* 68 */))
-            .and(OffsetFilter(IPV4_UDP_DSTPORT_OFFSET, 0x00, 0x43 /* 67 */))
+    private val impl = IPv4UdpFilter(srcPort = 68, dstPort = 67)
     override fun test(t: ByteArray) = impl.test(t)
 }
 
