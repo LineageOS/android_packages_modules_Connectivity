@@ -17,6 +17,9 @@
 package com.android.server.connectivity.mdns.util;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.net.Network;
+import android.os.Handler;
 
 /**
  * Mdns utility functions.
@@ -55,5 +58,19 @@ public class MdnsUtils {
 
     private static char toDnsLowerCase(char a) {
         return a >= 'A' && a <= 'Z' ? (char) (a + ('a' - 'A')) : a;
+    }
+
+    /*** Ensure that current running thread is same as given handler thread */
+    public static void ensureRunningOnHandlerThread(@NonNull Handler handler) {
+        if (handler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on Handler thread: " + Thread.currentThread().getName());
+        }
+    }
+
+    /*** Check whether the target network is matched current network */
+    public static boolean isNetworkMatched(@Nullable Network targetNetwork,
+            @Nullable Network currentNetwork) {
+        return targetNetwork == null || targetNetwork.equals(currentNetwork);
     }
 }
