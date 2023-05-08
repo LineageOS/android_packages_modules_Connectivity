@@ -16,7 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.server.connectivity.mdns.MdnsSocketProvider.ensureRunningOnHandlerThread;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningOnHandlerThread;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.equalsIgnoreDnsCase;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.toDnsLowerCase;
 
