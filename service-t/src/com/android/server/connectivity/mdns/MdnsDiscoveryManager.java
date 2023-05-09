@@ -82,7 +82,11 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             final List<MdnsServiceTypeClient> list = new ArrayList<>();
             for (int i = 0; i < clients.size(); i++) {
                 final Pair<String, Network> perNetworkServiceType = clients.keyAt(i);
-                if (isNetworkMatched(network, perNetworkServiceType.second)) {
+                final Network serviceTypeNetwork = perNetworkServiceType.second;
+                // The serviceTypeNetwork would be null if the MdnsSocketClient is being used. This
+                // is also the case if the socket is for a tethering interface. In either of these
+                // cases, the client is expected to process any responses.
+                if (serviceTypeNetwork == null || isNetworkMatched(network, serviceTypeNetwork)) {
                     list.add(clients.valueAt(i));
                 }
             }
@@ -167,11 +171,11 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
                 // No listener is registered for the service type anymore, remove it from the list
                 // of the service type clients.
                 perNetworkServiceTypeClients.remove(serviceTypeClient);
-                if (perNetworkServiceTypeClients.isEmpty()) {
-                    // No discovery request. Stops the socket client.
-                    socketClient.stopDiscovery();
-                }
             }
+        }
+        if (perNetworkServiceTypeClients.isEmpty()) {
+            // No discovery request. Stops the socket client.
+            socketClient.stopDiscovery();
         }
         // Unrequested the network.
         socketClient.notifyNetworkUnrequested(listener);
