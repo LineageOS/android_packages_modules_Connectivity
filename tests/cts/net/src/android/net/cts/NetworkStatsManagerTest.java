@@ -210,7 +210,6 @@ public class NetworkStatsManagerTest {
     private long mStartTime;
     private long mEndTime;
 
-    private long mBytesRead;
     private String mWriteSettingsMode;
     private String mUsageStatsMode;
 
@@ -229,6 +228,7 @@ public class NetworkStatsManagerTest {
             TrafficStats.setThreadStatsTag(NETWORK_TAG);
             urlc = (HttpURLConnection) network.openConnection(url);
             urlc.setConnectTimeout(TIMEOUT_MILLIS);
+            urlc.setReadTimeout(TIMEOUT_MILLIS);
             urlc.setUseCaches(false);
             // Disable compression so we generate enough traffic that assertWithinPercentage will
             // not be affected by the small amount of traffic (5-10kB) sent by the test harness.
@@ -236,11 +236,10 @@ public class NetworkStatsManagerTest {
             urlc.connect();
             boolean ping = urlc.getResponseCode() == 200;
             if (ping) {
-                in = new InputStreamReader(
-                        (InputStream) urlc.getContent());
-
-                mBytesRead = 0;
-                while (in.read() != -1) ++mBytesRead;
+                in = new InputStreamReader((InputStream) urlc.getContent());
+                // Since the test doesn't really care about the precise amount of data, instead
+                // of reading all contents, just read few bytes at the beginning.
+                in.read();
             }
         } catch (Exception e) {
             Log.i(LOG_TAG, "Badness during exercising remote server: " + e);
@@ -379,7 +378,7 @@ public class NetworkStatsManagerTest {
                 .build(), callback);
         synchronized (this) {
             try {
-                wait((int) (TIMEOUT_MILLIS * 1.2));
+                wait((int) (TIMEOUT_MILLIS * 2.4));
             } catch (InterruptedException e) {
             }
         }
@@ -394,7 +393,7 @@ public class NetworkStatsManagerTest {
         assertFalse(mNetworkInterfacesToTest[networkTypeIndex].getSystemFeature()
                 + " is a reported system feature, "
                 + "however no corresponding connected network interface was found or the attempt "
-                + "to connect has timed out (timeout = " + TIMEOUT_MILLIS + "ms)."
+                + "to connect and read has timed out (timeout = " + (TIMEOUT_MILLIS * 2) + "ms)."
                 + mNetworkInterfacesToTest[networkTypeIndex].getErrorMessage(), hasFeature);
         return false;
     }
