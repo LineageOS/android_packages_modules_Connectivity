@@ -17949,7 +17949,6 @@ public class ConnectivityServiceTest {
         mCellAgent.expectDisconnected();
         waitForIdle();
 
-        // TODO (aosp/2583410): update following check to verifyClatdStop
-        verifyNeverClatdStop(null /* inOrder */, MOBILE_IFNAME);
+        verifyClatdStop(null /* inOrder */, MOBILE_IFNAME);
     }
 }
