@@ -468,6 +468,23 @@ public class InetDiagMessage extends NetlinkMessage {
                         && !isAdbSocket(diagMsg));
     }
 
+    /**
+     * Close tcp sockets that match the following condition
+     *  1. TCP status is one of TCP_ESTABLISHED, TCP_SYN_SENT, and TCP_SYN_RECV
+     *  2. Owner uid of socket is in the targetUids
+     *  3. Socket is not loopback
+     *  4. Socket is not adb socket
+     *
+     * @param ownerUids target uids to close sockets
+     */
+    public static void destroyLiveTcpSocketsByOwnerUids(Set<Integer> ownerUids)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        destroySockets(IPPROTO_TCP, TCP_ALIVE_STATE_FILTER,
+                (diagMsg) -> ownerUids.contains(diagMsg.inetDiagMsg.idiag_uid)
+                        && !isLoopback(diagMsg)
+                        && !isAdbSocket(diagMsg));
+    }
+
     @Override
     public String toString() {
         return "InetDiagMessage{ "
