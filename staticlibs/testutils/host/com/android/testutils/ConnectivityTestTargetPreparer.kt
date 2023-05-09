@@ -48,6 +48,11 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
 
     override fun setUp(testInformation: TestInformation) {
         if (isDisabled) return
+        disableGmsUpdate(testInformation)
+        runPreparerApk(testInformation)
+    }
+
+    private fun runPreparerApk(testInformation: TestInformation) {
         installer.setCleanApk(true)
         installer.addTestFileName(CONNECTIVITY_CHECKER_APK)
         installer.setShouldGrantPermission(true)
@@ -90,8 +95,22 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
                 testInformation.device.deviceDescriptor)
     }
 
-    override fun tearDown(testInformation: TestInformation?, e: Throwable?) {
+    private fun disableGmsUpdate(testInformation: TestInformation) {
+        // This will be a no-op on devices without root (su) or not using gservices, but that's OK.
+        testInformation.device.executeShellCommand("su 0 am broadcast " +
+                "-a com.google.gservices.intent.action.GSERVICES_OVERRIDE " +
+                "-e finsky.play_services_auto_update_enabled false")
+    }
+
+    private fun clearGmsUpdateOverride(testInformation: TestInformation) {
+        testInformation.device.executeShellCommand("su 0 am broadcast " +
+                "-a com.google.gservices.intent.action.GSERVICES_OVERRIDE " +
+                "--esn finsky.play_services_auto_update_enabled")
+    }
+
+    override fun tearDown(testInformation: TestInformation, e: Throwable?) {
         if (isTearDownDisabled) return
         installer.tearDown(testInformation, e)
+        clearGmsUpdateOverride(testInformation)
     }
 }
