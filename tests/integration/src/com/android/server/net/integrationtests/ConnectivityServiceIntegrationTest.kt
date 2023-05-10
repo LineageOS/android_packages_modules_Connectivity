@@ -25,7 +25,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Resources
 import android.net.ConnectivityManager
-import android.net.ConnectivityResources
 import android.net.IDnsResolver
 import android.net.INetd
 import android.net.LinkProperties
@@ -50,11 +49,15 @@ import com.android.server.BpfNetMaps
 import com.android.server.ConnectivityService
 import com.android.server.NetworkAgentWrapper
 import com.android.server.TestNetIdManager
+import com.android.server.connectivity.ConnectivityResources
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.ProxyTracker
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.fail
 import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
@@ -73,9 +76,6 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
 import org.mockito.MockitoAnnotations
 import org.mockito.Spy
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.fail
 
 const val SERVICE_BIND_TIMEOUT_MS = 5_000L
 const val TEST_TIMEOUT_MS = 10_000L
@@ -215,8 +215,8 @@ class ConnectivityServiceIntegrationTest {
                     inv.getArgument(2),
                     object : MultinetworkPolicyTracker.Dependencies() {
                         override fun getResourcesForActiveSubId(
-                            connResources: ConnectivityResources,
-                            activeSubId: Int
+                                connResources: ConnectivityResources,
+                                activeSubId: Int
                         ) = resources
                     })
         }.`when`(deps).makeMultinetworkPolicyTracker(any(), any(), any())
