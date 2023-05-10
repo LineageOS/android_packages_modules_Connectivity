@@ -1,7 +1,6 @@
 package com.android.server.connectivity
 
 import android.content.res.Resources
-import android.net.ConnectivityResources
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import android.provider.DeviceConfig.OnPropertiesChangedListener

@@ -30,7 +30,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.drawable.Icon;
-import android.net.ConnectivityResources;
 import android.net.NetworkSpecifier;
 import android.net.TelephonyNetworkSpecifier;
 import android.net.wifi.WifiInfo;

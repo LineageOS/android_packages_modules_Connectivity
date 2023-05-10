@@ -25,7 +25,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
-import android.net.ConnectivityResources;
 import android.net.NetworkCapabilities;
 import android.os.SystemClock;
 import android.os.UserHandle;

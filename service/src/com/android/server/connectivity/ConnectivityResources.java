@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-package android.net;
-
-import static android.content.pm.PackageManager.MATCH_SYSTEM_ONLY;
+package com.android.server.connectivity;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
-import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-
-import java.util.List;
+import com.android.net.module.util.DeviceConfigUtils;
 
 /**
  * Utility to obtain the {@link com.android.server.ConnectivityService} {@link Resources}, in the
@@ -37,10 +31,6 @@ import java.util.List;
  * @hide
  */
 public class ConnectivityResources {
-    private static final String RESOURCES_APK_INTENT =
-            "com.android.server.connectivity.intent.action.SERVICE_CONNECTIVITY_RESOURCES_APK";
-    private static final String RES_PKG_DIR = "/apex/com.android.tethering/";
-
     @NonNull
     private final Context mContext;
 
@@ -76,21 +66,10 @@ public class ConnectivityResources {
             return mResourcesContext;
         }
 
-        final List<ResolveInfo> pkgs = mContext.getPackageManager()
-                .queryIntentActivities(new Intent(RESOURCES_APK_INTENT), MATCH_SYSTEM_ONLY);
-        pkgs.removeIf(pkg -> !pkg.activityInfo.applicationInfo.sourceDir.startsWith(RES_PKG_DIR));
-        if (pkgs.size() > 1) {
-            Log.wtf(ConnectivityResources.class.getSimpleName(),
-                    "More than one package found: " + pkgs);
-        }
-        if (pkgs.isEmpty()) {
-            throw new IllegalStateException("No connectivity resource package found");
-        }
-
+        final String resPkg = DeviceConfigUtils.getConnectivityResourcesPackageName(mContext);
         final Context pkgContext;
         try {
-            pkgContext = mContext.createPackageContext(
-                    pkgs.get(0).activityInfo.applicationInfo.packageName, 0 /* flags */);
+            pkgContext = mContext.createPackageContext(resPkg, 0 /* flags */);
         } catch (PackageManager.NameNotFoundException e) {
             throw new IllegalStateException("Resolved package not found", e);
         }
