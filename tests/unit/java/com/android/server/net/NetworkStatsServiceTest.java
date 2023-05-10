@@ -1926,12 +1926,17 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // Templates w/o wifi network keys can query stats as usual.
         assertNetworkTotal(sTemplateCarrierWifi1, 0L, 0L, 0L, 0L, 0);
         assertNetworkTotal(sTemplateImsi1, 0L, 0L, 0L, 0L, 0);
+        // Templates for test network does not need to enforce location permission.
+        final NetworkTemplate templateTestIface1 = new NetworkTemplate.Builder(MATCH_TEST)
+                .setWifiNetworkKeys(Set.of(TEST_IFACE)).build();
+        assertNetworkTotal(templateTestIface1, 0L, 0L, 0L, 0L, 0);
 
         doReturn(true).when(mLocationPermissionChecker)
                 .checkCallersLocationPermission(any(), any(), anyInt(), anyBoolean(), any());
         assertNetworkTotal(sTemplateCarrierWifi1, 0L, 0L, 0L, 0L, 0);
         assertNetworkTotal(sTemplateWifi, 0L, 0L, 0L, 0L, 0);
         assertNetworkTotal(sTemplateImsi1, 0L, 0L, 0L, 0L, 0);
+        assertNetworkTotal(templateTestIface1, 0L, 0L, 0L, 0L, 0);
     }
 
     /**
