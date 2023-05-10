@@ -37,7 +37,6 @@ import static android.net.SocketKeepalive.SUCCESS_PAUSED;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.net.ConnectivityResources;
 import android.net.ISocketKeepaliveCallback;
 import android.net.InetAddresses;
 import android.net.InvalidPacketException;
@@ -111,7 +110,7 @@ public class KeepaliveTracker {
         mTcpController = new TcpKeepaliveController(handler);
         mContext = context;
 
-        mSupportedKeepalives = KeepaliveUtils.getSupportedKeepalives(mContext);
+        mSupportedKeepalives = KeepaliveResourceUtil.getSupportedKeepalives(context);
 
         final ConnectivityResources res = new ConnectivityResources(mContext);
         mReservedPrivilegedSlots = res.get().getInteger(

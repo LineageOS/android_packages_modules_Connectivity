@@ -39,6 +39,8 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 
+import androidx.annotation.NonNull;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.DeviceConfigUtils;
@@ -158,6 +160,8 @@ public class TetheringConfiguration {
 
     public final int activeDataSubId;
 
+    private final Dependencies mDeps;
+
     private final boolean mEnableLegacyDhcpServer;
     private final int mOffloadPollInterval;
     // TODO: Add to TetheringConfigurationParcel if required.
@@ -170,7 +174,31 @@ public class TetheringConfiguration {
     private final int mUsbTetheringFunction;
     protected final ContentResolver mContentResolver;
 
-    public TetheringConfiguration(Context ctx, SharedLog log, int id) {
+    /**
+     * A class wrapping dependencies of {@link TetheringConfiguration}, useful for testing.
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
+                @NonNull String name, @NonNull String moduleName, boolean defaultEnabled) {
+            return DeviceConfigUtils.isFeatureEnabled(context, namespace, name,
+                    moduleName, defaultEnabled);
+        }
+
+        boolean getDeviceConfigBoolean(@NonNull String namespace, @NonNull String name,
+                boolean defaultValue) {
+            return DeviceConfig.getBoolean(namespace, name, defaultValue);
+        }
+    }
+
+    public TetheringConfiguration(@NonNull Context ctx, @NonNull SharedLog log, int id) {
+        this(ctx, log, id, new Dependencies());
+    }
+
+    @VisibleForTesting
+    public TetheringConfiguration(@NonNull Context ctx, @NonNull SharedLog log, int id,
+            @NonNull Dependencies deps) {
+        mDeps = deps;
         final SharedLog configLog = log.forSubComponent("config");
 
         activeDataSubId = id;
@@ -583,17 +611,7 @@ public class TetheringConfiguration {
     }
 
     private boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {
-        // Due to the limitation of static mock for testing, using #getDeviceConfigProperty instead
-        // of DeviceConfig#getBoolean. If using #getBoolean here, the test can't know that the
-        // returned boolean value comes from device config or default value (because of null
-        // property string). See the test case testBpfOffload{*} in TetheringConfigurationTest.java.
-        final String value = getDeviceConfigProperty(name);
-        return value != null ? Boolean.parseBoolean(value) : defaultValue;
-    }
-
-    @VisibleForTesting
-    protected String getDeviceConfigProperty(String name) {
-        return DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY, name);
+        return mDeps.getDeviceConfigBoolean(NAMESPACE_CONNECTIVITY, name, defaultValue);
     }
 
     /**
@@ -610,10 +628,9 @@ public class TetheringConfiguration {
         return isFeatureEnabled(ctx, NAMESPACE_TETHERING, featureVersionFlag);
     }
 
-    @VisibleForTesting
-    protected boolean isFeatureEnabled(Context ctx, String namespace, String featureVersionFlag) {
-        return DeviceConfigUtils.isFeatureEnabled(ctx, namespace, featureVersionFlag,
-                TETHERING_MODULE_NAME, false /* defaultEnabled */);
+    private boolean isFeatureEnabled(Context ctx, String namespace, String featureVersionFlag) {
+        return mDeps.isFeatureEnabled(ctx, namespace, featureVersionFlag, TETHERING_MODULE_NAME,
+                false /* defaultEnabled */);
     }
 
     private Resources getResources(Context ctx, int subId) {

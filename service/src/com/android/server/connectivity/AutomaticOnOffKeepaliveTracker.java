@@ -842,7 +842,7 @@ public class AutomaticOnOffKeepaliveTracker {
          */
         public boolean isFeatureEnabled(@NonNull final String name, final boolean defaultEnabled) {
             return DeviceConfigUtils.isFeatureEnabled(mContext, NAMESPACE_TETHERING, name,
-                    defaultEnabled);
+                    DeviceConfigUtils.TETHERING_MODULE_NAME, defaultEnabled);
         }
 
         /**
