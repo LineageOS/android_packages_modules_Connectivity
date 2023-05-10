@@ -908,7 +908,8 @@ public class NsdServiceTest {
         listener.onServiceNameDiscovered(foundInfo);
         verify(discListener, timeout(TIMEOUT_MS)).onServiceFound(argThat(info ->
                 info.getServiceName().equals(SERVICE_NAME)
-                        && info.getServiceType().equals(SERVICE_TYPE)
+                        // Service type in discovery callbacks has a dot at the end
+                        && info.getServiceType().equals(SERVICE_TYPE + ".")
                         && info.getNetwork().equals(network)));
 
         final MdnsServiceInfo removedInfo = new MdnsServiceInfo(
@@ -927,7 +928,8 @@ public class NsdServiceTest {
         listener.onServiceNameRemoved(removedInfo);
         verify(discListener, timeout(TIMEOUT_MS)).onServiceLost(argThat(info ->
                 info.getServiceName().equals(SERVICE_NAME)
-                        && info.getServiceType().equals(SERVICE_TYPE)
+                        // Service type in discovery callbacks has a dot at the end
+                        && info.getServiceType().equals(SERVICE_TYPE + ".")
                         && info.getNetwork().equals(network)));
 
         client.stopServiceDiscovery(discListener);
@@ -982,6 +984,8 @@ public class NsdServiceTest {
         client.resolveService(request, resolveListener);
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
+        // TODO(b/266167702): this is a bug, as registerListener should be done _service._tcp, and
+        // _sub should be in the list of subtypes in the options.
         verify(mDiscoveryManager).registerListener(eq(constructedServiceType),
                 listenerCaptor.capture(), argThat(options ->
                         network.equals(options.getNetwork())
@@ -1009,7 +1013,8 @@ public class NsdServiceTest {
         verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(infoCaptor.capture());
         final NsdServiceInfo info = infoCaptor.getValue();
         assertEquals(SERVICE_NAME, info.getServiceName());
-        assertEquals("." + serviceType, info.getServiceType());
+        // TODO(b/266167702): this should be ._service._tcp (as per legacy behavior)
+        assertEquals("._nsd._sub._service._tcp", info.getServiceType());
         assertEquals(PORT, info.getPort());
         assertTrue(info.getAttributes().containsKey("key"));
         assertEquals(1, info.getAttributes().size());
