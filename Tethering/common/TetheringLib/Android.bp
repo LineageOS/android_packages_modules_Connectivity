@@ -57,25 +57,6 @@ java_sdk_library {
     lint: { strict_updatability_linting: true },
 }
 
-java_defaults {
-    name: "CronetJavaDefaults",
-    srcs: [":cronet_aml_api_sources"],
-    libs: [
-        "androidx.annotation_annotation",
-    ],
-    impl_only_static_libs: [
-        "cronet_aml_java",
-    ],
-}
-
-java_defaults {
-  name: "CronetJavaPrejarjarDefaults",
-  static_libs: [
-    "cronet_aml_api_java",
-    "cronet_aml_java"
-  ],
-}
-
 java_library {
   name: "framework-tethering-pre-jarjar",
   defaults: [
