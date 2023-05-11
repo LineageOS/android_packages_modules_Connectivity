@@ -19,7 +19,6 @@ package {
 
 java_genrule {
     name: "net-http-test-jarjar-rules",
-    defaults: ["CronetTestJavaDefaults"],
     tool_files: [
         ":NetHttpTestsLibPreJarJar{.jar}",
         "jarjar_excludes.txt",
@@ -37,7 +36,6 @@ java_genrule {
 
 android_library {
     name: "NetHttpTestsLibPreJarJar",
-    defaults: ["CronetTestJavaDefaults"],
     srcs: [":cronet_aml_javatests_sources"],
     sdk_version: "module_current",
     min_sdk_version: "30",
@@ -46,6 +44,7 @@ android_library {
         "androidx.test.ext.junit",
         "androidx.test.rules",
         "junit",
+        "truth",
     ],
     libs: [
         "android.test.base",
@@ -59,7 +58,6 @@ android_library {
 android_test {
      name: "NetHttpTests",
      defaults: [
-        "CronetTestJavaDefaults",
         "mts-target-sdk-version-current",
      ],
      static_libs: ["NetHttpTestsLibPreJarJar"],
