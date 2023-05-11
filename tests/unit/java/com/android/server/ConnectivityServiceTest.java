@@ -30,6 +30,8 @@ import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_SETUP_WIZARD;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD;
+import static android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_FROZEN;
+import static android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_UNFROZEN;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Intent.ACTION_PACKAGE_ADDED;
 import static android.content.Intent.ACTION_PACKAGE_REMOVED;
@@ -148,6 +150,7 @@ import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.VALID
 import static android.os.Process.INVALID_UID;
 import static android.system.OsConstants.IPPROTO_TCP;
 
+import static com.android.server.ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION;
 import static com.android.server.ConnectivityService.MAX_NETWORK_REQUESTS_PER_SYSTEM_UID;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_OEM;
@@ -224,6 +227,8 @@ import static java.util.Arrays.asList;
 import android.Manifest;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.ActivityManager;
+import android.app.ActivityManager.UidFrozenStateChangedCallback;
 import android.app.AlarmManager;
 import android.app.AppOpsManager;
 import android.app.BroadcastOptions;
@@ -609,6 +614,7 @@ public class ConnectivityServiceTest {
     @Mock CarrierPrivilegeAuthenticator mCarrierPrivilegeAuthenticator;
     @Mock TetheringManager mTetheringManager;
     @Mock BroadcastOptionsShim mBroadcastOptionsShim;
+    @Mock ActivityManager mActivityManager;
 
     // BatteryStatsManager is final and cannot be mocked with regular mockito, so just mock the
     // underlying binder calls.
@@ -732,6 +738,7 @@ public class ConnectivityServiceTest {
             if (Context.BATTERY_STATS_SERVICE.equals(name)) return mBatteryStatsManager;
             if (Context.PAC_PROXY_SERVICE.equals(name)) return mPacProxyManager;
             if (Context.TETHERING_SERVICE.equals(name)) return mTetheringManager;
+            if (Context.ACTIVITY_SERVICE.equals(name)) return mActivityManager;
             return super.getSystemService(name);
         }
 
@@ -2080,6 +2087,8 @@ public class ConnectivityServiceTest {
         public boolean isFeatureEnabled(Context context, String name) {
             switch (name) {
                 case ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER:
+                    return true;
+                case KEY_DESTROY_FROZEN_SOCKETS_VERSION:
                     return true;
                 default:
                     return super.isFeatureEnabled(context, name);
@@ -17630,18 +17639,77 @@ public class ConnectivityServiceTest {
         });
     }
 
+    private void verifyMtuSetOnWifiInterface(int mtu) throws Exception {
+        verify(mMockNetd, times(1)).interfaceSetMtu(WIFI_IFNAME, mtu);
+    }
+
+    private void verifyMtuNeverSetOnWifiInterface() throws Exception {
+        verify(mMockNetd, never()).interfaceSetMtu(eq(WIFI_IFNAME), anyInt());
+    }
+
     @Test
-    public void testSendLinkPropertiesSetInterfaceMtu() throws Exception {
-        final int mtu = 1327;
+    public void testSendLinkPropertiesSetInterfaceMtuBeforeConnect() throws Exception {
+        final int mtu = 1281;
         LinkProperties lp = new LinkProperties();
         lp.setInterfaceName(WIFI_IFNAME);
         lp.setMtu(mtu);
 
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         mWiFiAgent.sendLinkProperties(lp);
-
         waitForIdle();
-        verify(mMockNetd).interfaceSetMtu(eq(WIFI_IFNAME), eq(mtu));
+        verifyMtuSetOnWifiInterface(mtu);
+        reset(mMockNetd);
+
+        mWiFiAgent.connect(false /* validated */);
+        // The MTU is always (re-)applied when the network connects.
+        verifyMtuSetOnWifiInterface(mtu);
+    }
+
+    @Test
+    public void testSendLinkPropertiesUpdateInterfaceMtuBeforeConnect() throws Exception {
+        final int mtu = 1327;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        // Registering an agent with an MTU doesn't set the MTU...
+        mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+        waitForIdle();
+        verifyMtuNeverSetOnWifiInterface();
+        reset(mMockNetd);
+
+        // ... but prevents future updates with the same MTU from setting the MTU.
+        mWiFiAgent.sendLinkProperties(lp);
+        waitForIdle();
+        verifyMtuNeverSetOnWifiInterface();
+
+        // Updating with a different MTU does work.
+        lp.setMtu(mtu + 1);
+        mWiFiAgent.sendLinkProperties(lp);
+        waitForIdle();
+        verifyMtuSetOnWifiInterface(mtu + 1);
+        reset(mMockNetd);
+
+        mWiFiAgent.connect(false /* validated */);
+        // The MTU is always (re-)applied when the network connects.
+        verifyMtuSetOnWifiInterface(mtu + 1);
+    }
+
+    @Test
+    public void testSendLinkPropertiesUpdateInterfaceMtuAfterConnect() throws Exception {
+        final int mtu = 1327;
+        LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(WIFI_IFNAME);
+        lp.setMtu(mtu);
+
+        mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+        mWiFiAgent.connect(false /* validated */);
+        verifyMtuNeverSetOnWifiInterface();
+
+        mWiFiAgent.sendLinkProperties(lp);
+        waitForIdle();
+        // The MTU is always (re-)applied when the network connects.
+        verifyMtuSetOnWifiInterface(mtu);
     }
 
     @Test
@@ -17652,14 +17720,15 @@ public class ConnectivityServiceTest {
         lp.setMtu(mtu);
 
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+        mWiFiAgent.connect(false /* validated */);
+        verifyMtuSetOnWifiInterface(mtu);
+        reset(mMockNetd);
 
         LinkProperties lp2 = new LinkProperties(lp);
         lp2.setMtu(mtu2);
-
         mWiFiAgent.sendLinkProperties(lp2);
-
         waitForIdle();
-        verify(mMockNetd).interfaceSetMtu(eq(WIFI_IFNAME), eq(mtu2));
+        verifyMtuSetOnWifiInterface(mtu2);
     }
 
     @Test
@@ -17670,10 +17739,13 @@ public class ConnectivityServiceTest {
         lp.setMtu(mtu);
 
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
-        mWiFiAgent.sendLinkProperties(new LinkProperties(lp));
+        mWiFiAgent.connect(false /* validated */);
+        verifyMtuSetOnWifiInterface(mtu);
+        reset(mMockNetd);
 
+        mWiFiAgent.sendLinkProperties(new LinkProperties(lp));
         waitForIdle();
-        verify(mMockNetd, never()).interfaceSetMtu(eq(WIFI_IFNAME), anyInt());
+        verifyMtuNeverSetOnWifiInterface();
     }
 
     @Test
@@ -17684,15 +17756,15 @@ public class ConnectivityServiceTest {
         lp.setMtu(mtu);
 
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+        mWiFiAgent.connect(false /* validated */);
+        verifyMtuSetOnWifiInterface(mtu);
+        reset(mMockNetd);
 
-        LinkProperties lp2 = new LinkProperties();
-        assertNull(lp2.getInterfaceName());
-        lp2.setMtu(mtu);
-
+        LinkProperties lp2 = new LinkProperties(lp);
+        lp2.setInterfaceName(null);
         mWiFiAgent.sendLinkProperties(new LinkProperties(lp2));
-
         waitForIdle();
-        verify(mMockNetd, never()).interfaceSetMtu(any(), anyInt());
+        verifyMtuNeverSetOnWifiInterface();
     }
 
     @Test
@@ -17703,16 +17775,18 @@ public class ConnectivityServiceTest {
         lp.setMtu(mtu);
 
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, lp);
+        mWiFiAgent.connect(false /* validated */);
+        verifyMtuSetOnWifiInterface(mtu);
+        reset(mMockNetd);
 
         final String ifaceName2 = WIFI_IFNAME + "_2";
-        LinkProperties lp2 = new LinkProperties();
+        LinkProperties lp2 = new LinkProperties(lp);
         lp2.setInterfaceName(ifaceName2);
-        lp2.setMtu(mtu);
 
         mWiFiAgent.sendLinkProperties(new LinkProperties(lp2));
-
         waitForIdle();
-        verify(mMockNetd).interfaceSetMtu(eq(ifaceName2), eq(mtu));
+        verify(mMockNetd, times(1)).interfaceSetMtu(eq(ifaceName2), eq(mtu));
+        verifyMtuNeverSetOnWifiInterface();
     }
 
     @Test
@@ -17767,5 +17841,36 @@ public class ConnectivityServiceTest {
 
         verify(mMockNetd, never()).wakeupAddInterface(eq(ethernetIface), anyString(), anyInt(),
                 anyInt());
+    }
+
+    private static final int TEST_FROZEN_UID = 1000;
+    private static final int TEST_UNFROZEN_UID = 2000;
+
+    /**
+     * Send a UidFrozenStateChanged message to ConnectivityService. Verify that only the frozen UID
+     * gets passed to socketDestroy().
+     */
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testFrozenUidSocketDestroy() throws Exception {
+        ArgumentCaptor<UidFrozenStateChangedCallback> callbackArg =
+                ArgumentCaptor.forClass(UidFrozenStateChangedCallback.class);
+
+        verify(mActivityManager).registerUidFrozenStateChangedCallback(any(),
+                callbackArg.capture());
+
+        final int[] uids = {TEST_FROZEN_UID, TEST_UNFROZEN_UID};
+        final int[] frozenStates = {UID_FROZEN_STATE_FROZEN, UID_FROZEN_STATE_UNFROZEN};
+
+        callbackArg.getValue().onUidFrozenStateChanged(uids, frozenStates);
+
+        waitForIdle();
+
+        final Set<Integer> exemptUids = new ArraySet();
+        final UidRange frozenUidRange = new UidRange(TEST_FROZEN_UID, TEST_FROZEN_UID);
+        final Set<UidRange> ranges = Collections.singleton(frozenUidRange);
+
+        verify(mDeps).destroyLiveTcpSockets(eq(UidRange.toIntRanges(ranges)),
+                eq(exemptUids));
     }
 }

@@ -142,6 +142,7 @@ public class NsdService extends INsdManager.Stub {
     public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     private static final long CLEANUP_DELAY_MS = 10000;
     private static final int IFACE_IDX_ANY = 0;
+    private static final SharedLog LOGGER = new SharedLog("serviceDiscovery");
 
     private final Context mContext;
     private final NsdStateMachine mNsdStateMachine;
@@ -157,7 +158,7 @@ public class NsdService extends INsdManager.Stub {
     private final MdnsSocketProvider mMdnsSocketProvider;
     @NonNull
     private final MdnsAdvertiser mAdvertiser;
-    private final SharedLog mServiceLogs = new SharedLog(TAG);
+    private final SharedLog mServiceLogs = LOGGER.forSubComponent(TAG);
     // WARNING : Accessing these values in any thread is not safe, it must only be changed in the
     // state machine thread. If change this outside state machine, it will need to introduce
     // synchronization.
@@ -1326,17 +1327,18 @@ public class NsdService extends INsdManager.Stub {
         mMDnsEventCallback = new MDnsEventCallback(mNsdStateMachine);
         mDeps = deps;
 
-        mMdnsSocketProvider = deps.makeMdnsSocketProvider(ctx, handler.getLooper());
+        mMdnsSocketProvider = deps.makeMdnsSocketProvider(ctx, handler.getLooper(),
+                LOGGER.forSubComponent("MdnsSocketProvider"));
         // Netlink monitor starts on boot, and intentionally never stopped, to ensure that all
         // address events are received.
         handler.post(mMdnsSocketProvider::startNetLinkMonitor);
         mMdnsSocketClient =
                 new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider);
-        mMdnsDiscoveryManager =
-                deps.makeMdnsDiscoveryManager(new ExecutorProvider(), mMdnsSocketClient);
+        mMdnsDiscoveryManager = deps.makeMdnsDiscoveryManager(new ExecutorProvider(),
+                mMdnsSocketClient, LOGGER.forSubComponent("MdnsDiscoveryManager"));
         handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));
         mAdvertiser = deps.makeMdnsAdvertiser(handler.getLooper(), mMdnsSocketProvider,
-                new AdvertiserCallback());
+                new AdvertiserCallback(), LOGGER.forSubComponent("MdnsAdvertiser"));
     }
 
     /**
@@ -1390,8 +1392,9 @@ public class NsdService extends INsdManager.Stub {
          * @see MdnsDiscoveryManager
          */
         public MdnsDiscoveryManager makeMdnsDiscoveryManager(
-                ExecutorProvider executorProvider, MdnsSocketClientBase socketClient) {
-            return new MdnsDiscoveryManager(executorProvider, socketClient);
+                @NonNull ExecutorProvider executorProvider,
+                @NonNull MdnsSocketClientBase socketClient, @NonNull SharedLog sharedLog) {
+            return new MdnsDiscoveryManager(executorProvider, socketClient, sharedLog);
         }
 
         /**
@@ -1399,15 +1402,16 @@ public class NsdService extends INsdManager.Stub {
          */
         public MdnsAdvertiser makeMdnsAdvertiser(
                 @NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
-                @NonNull MdnsAdvertiser.AdvertiserCallback cb) {
-            return new MdnsAdvertiser(looper, socketProvider, cb);
+                @NonNull MdnsAdvertiser.AdvertiserCallback cb, @NonNull SharedLog sharedLog) {
+            return new MdnsAdvertiser(looper, socketProvider, cb, sharedLog);
         }
 
         /**
          * @see MdnsSocketProvider
          */
-        public MdnsSocketProvider makeMdnsSocketProvider(Context context, Looper looper) {
-            return new MdnsSocketProvider(context, looper);
+        public MdnsSocketProvider makeMdnsSocketProvider(@NonNull Context context,
+                @NonNull Looper looper, @NonNull SharedLog sharedLog) {
+            return new MdnsSocketProvider(context, looper, sharedLog);
         }
     }
 
@@ -1769,29 +1773,9 @@ public class NsdService extends INsdManager.Stub {
 
         // Dump service and clients logs
         pw.println();
+        pw.println("Logs:");
         pw.increaseIndent();
         mServiceLogs.reverseDump(pw);
-        pw.decreaseIndent();
-
-        // Dump advertiser related logs
-        pw.println();
-        pw.println("Advertiser:");
-        pw.increaseIndent();
-        mAdvertiser.dump(pw);
-        pw.decreaseIndent();
-
-        // Dump discoverymanager related logs
-        pw.println();
-        pw.println("DiscoveryManager:");
-        pw.increaseIndent();
-        mMdnsDiscoveryManager.dump(pw);
-        pw.decreaseIndent();
-
-        // Dump socketprovider related logs
-        pw.println();
-        pw.println("SocketProvider:");
-        pw.increaseIndent();
-        mMdnsSocketProvider.dump(pw);
         pw.decreaseIndent();
     }
 
