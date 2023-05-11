@@ -135,18 +135,36 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             }
         }
         // Request the network for discovery.
-        socketClient.notifyNetworkRequested(listener, searchOptions.getNetwork(), network -> {
-            synchronized (this) {
-                // All listeners of the same service types shares the same MdnsServiceTypeClient.
-                MdnsServiceTypeClient serviceTypeClient =
-                        perNetworkServiceTypeClients.get(serviceType, network);
-                if (serviceTypeClient == null) {
-                    serviceTypeClient = createServiceTypeClient(serviceType, network);
-                    perNetworkServiceTypeClients.put(serviceType, network, serviceTypeClient);
-                }
-                serviceTypeClient.startSendAndReceive(listener, searchOptions);
-            }
-        });
+        socketClient.notifyNetworkRequested(listener, searchOptions.getNetwork(),
+                new MdnsSocketClientBase.SocketCreationCallback() {
+                    @Override
+                    public void onSocketCreated(@Nullable Network network) {
+                        synchronized (MdnsDiscoveryManager.this) {
+                            // All listeners of the same service types shares the same
+                            // MdnsServiceTypeClient.
+                            MdnsServiceTypeClient serviceTypeClient =
+                                    perNetworkServiceTypeClients.get(serviceType, network);
+                            if (serviceTypeClient == null) {
+                                serviceTypeClient = createServiceTypeClient(serviceType, network);
+                                perNetworkServiceTypeClients.put(serviceType, network,
+                                        serviceTypeClient);
+                            }
+                            serviceTypeClient.startSendAndReceive(listener, searchOptions);
+                        }
+                    }
+
+                    @Override
+                    public void onSocketDestroyed(@Nullable Network network) {
+                        synchronized (MdnsDiscoveryManager.this) {
+                            final MdnsServiceTypeClient serviceTypeClient =
+                                    perNetworkServiceTypeClients.get(serviceType, network);
+                            if (serviceTypeClient == null) return;
+                            // Notify all listeners that all services are removed from this socket.
+                            serviceTypeClient.notifyAllServicesRemoved();
+                            perNetworkServiceTypeClients.remove(serviceTypeClient);
+                        }
+                    }
+                });
     }
 
     /**
