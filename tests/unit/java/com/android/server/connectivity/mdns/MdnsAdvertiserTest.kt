@@ -23,11 +23,13 @@ import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import com.android.net.module.util.SharedLog
 import com.android.server.connectivity.mdns.MdnsAdvertiser.AdvertiserCallback
 import com.android.server.connectivity.mdns.MdnsSocketProvider.SocketCallback
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.waitForIdle
+import java.net.NetworkInterface
 import java.util.Objects
 import org.junit.After
 import org.junit.Before
@@ -89,6 +91,7 @@ class MdnsAdvertiserTest {
     private val handler by lazy { Handler(thread.looper) }
     private val socketProvider = mock(MdnsSocketProvider::class.java)
     private val cb = mock(AdvertiserCallback::class.java)
+    private val sharedlog = mock(SharedLog::class.java)
 
     private val mockSocket1 = mock(MdnsInterfaceSocket::class.java)
     private val mockSocket2 = mock(MdnsInterfaceSocket::class.java)
@@ -101,13 +104,15 @@ class MdnsAdvertiserTest {
         thread.start()
         doReturn(TEST_HOSTNAME).`when`(mockDeps).generateHostname()
         doReturn(mockInterfaceAdvertiser1).`when`(mockDeps).makeAdvertiser(eq(mockSocket1),
-                any(), any(), any(), any(), eq(TEST_HOSTNAME)
+                any(), any(), any(), any(), eq(TEST_HOSTNAME), any()
         )
         doReturn(mockInterfaceAdvertiser2).`when`(mockDeps).makeAdvertiser(eq(mockSocket2),
-                any(), any(), any(), any(), eq(TEST_HOSTNAME)
+                any(), any(), any(), any(), eq(TEST_HOSTNAME), any()
         )
         doReturn(true).`when`(mockInterfaceAdvertiser1).isProbing(anyInt())
         doReturn(true).`when`(mockInterfaceAdvertiser2).isProbing(anyInt())
+        doReturn(createEmptyNetworkInterface()).`when`(mockSocket1).getInterface()
+        doReturn(createEmptyNetworkInterface()).`when`(mockSocket2).getInterface()
     }
 
     @After
@@ -116,9 +121,15 @@ class MdnsAdvertiserTest {
         thread.join()
     }
 
+    private fun createEmptyNetworkInterface(): NetworkInterface {
+        val constructor = NetworkInterface::class.java.getDeclaredConstructor()
+        constructor.isAccessible = true
+        return constructor.newInstance()
+    }
+
     @Test
     fun testAddService_OneNetwork() {
-        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps)
+        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps, sharedlog)
         postSync { advertiser.addService(SERVICE_ID_1, SERVICE_1) }
 
         val socketCbCaptor = ArgumentCaptor.forClass(SocketCallback::class.java)
@@ -134,7 +145,8 @@ class MdnsAdvertiserTest {
             eq(thread.looper),
             any(),
             intAdvCbCaptor.capture(),
-            eq(TEST_HOSTNAME)
+            eq(TEST_HOSTNAME),
+            any()
         )
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
@@ -148,7 +160,7 @@ class MdnsAdvertiserTest {
 
     @Test
     fun testAddService_AllNetworks() {
-        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps)
+        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps, sharedlog)
         postSync { advertiser.addService(SERVICE_ID_1, ALL_NETWORKS_SERVICE) }
 
         val socketCbCaptor = ArgumentCaptor.forClass(SocketCallback::class.java)
@@ -162,10 +174,10 @@ class MdnsAdvertiserTest {
         val intAdvCbCaptor1 = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         val intAdvCbCaptor2 = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         verify(mockDeps).makeAdvertiser(eq(mockSocket1), eq(listOf(TEST_LINKADDR)),
-                eq(thread.looper), any(), intAdvCbCaptor1.capture(), eq(TEST_HOSTNAME)
+                eq(thread.looper), any(), intAdvCbCaptor1.capture(), eq(TEST_HOSTNAME), any()
         )
         verify(mockDeps).makeAdvertiser(eq(mockSocket2), eq(listOf(TEST_LINKADDR)),
-                eq(thread.looper), any(), intAdvCbCaptor2.capture(), eq(TEST_HOSTNAME)
+                eq(thread.looper), any(), intAdvCbCaptor2.capture(), eq(TEST_HOSTNAME), any()
         )
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
@@ -194,7 +206,7 @@ class MdnsAdvertiserTest {
 
     @Test
     fun testAddService_Conflicts() {
-        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps)
+        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps, sharedlog)
         postSync { advertiser.addService(SERVICE_ID_1, SERVICE_1) }
 
         val oneNetSocketCbCaptor = ArgumentCaptor.forClass(SocketCallback::class.java)
@@ -233,7 +245,7 @@ class MdnsAdvertiserTest {
 
         val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         verify(mockDeps).makeAdvertiser(eq(mockSocket1), eq(listOf(TEST_LINKADDR)),
-                eq(thread.looper), any(), intAdvCbCaptor.capture(), eq(TEST_HOSTNAME)
+                eq(thread.looper), any(), intAdvCbCaptor.capture(), eq(TEST_HOSTNAME), any()
         )
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_1),
                 argThat { it.matches(SERVICE_1) })
@@ -264,7 +276,7 @@ class MdnsAdvertiserTest {
 
     @Test
     fun testRemoveService_whenAllServiceRemoved_thenUpdateHostName() {
-        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps)
+        val advertiser = MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps, sharedlog)
         verify(mockDeps, times(1)).generateHostname()
         postSync { advertiser.addService(SERVICE_ID_1, SERVICE_1) }
         postSync { advertiser.removeService(SERVICE_ID_1) }

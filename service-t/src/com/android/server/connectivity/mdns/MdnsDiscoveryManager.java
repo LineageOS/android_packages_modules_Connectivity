@@ -32,7 +32,6 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,10 +42,10 @@ import java.util.List;
 public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     private static final String TAG = MdnsDiscoveryManager.class.getSimpleName();
     public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
-    private static final SharedLog LOGGER = new SharedLog(TAG);
 
     private final ExecutorProvider executorProvider;
     private final MdnsSocketClientBase socketClient;
+    @NonNull private final SharedLog sharedLog;
 
     @GuardedBy("this")
     @NonNull private final PerNetworkServiceTypeClients perNetworkServiceTypeClients;
@@ -104,9 +103,10 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     }
 
     public MdnsDiscoveryManager(@NonNull ExecutorProvider executorProvider,
-            @NonNull MdnsSocketClientBase socketClient) {
+            @NonNull MdnsSocketClientBase socketClient, @NonNull SharedLog sharedLog) {
         this.executorProvider = executorProvider;
         this.socketClient = socketClient;
+        this.sharedLog = sharedLog;
         perNetworkServiceTypeClients = new PerNetworkServiceTypeClients();
     }
 
@@ -124,13 +124,13 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             @NonNull String serviceType,
             @NonNull MdnsServiceBrowserListener listener,
             @NonNull MdnsSearchOptions searchOptions) {
-        LOGGER.i("Registering listener for serviceType: " + serviceType);
+        sharedLog.i("Registering listener for serviceType: " + serviceType);
         if (perNetworkServiceTypeClients.isEmpty()) {
             // First listener. Starts the socket client.
             try {
                 socketClient.startDiscovery();
             } catch (IOException e) {
-                LOGGER.e("Failed to start discover.", e);
+                sharedLog.e("Failed to start discover.", e);
                 return;
             }
         }
@@ -159,7 +159,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     @RequiresPermission(permission.CHANGE_WIFI_MULTICAST_STATE)
     public synchronized void unregisterListener(
             @NonNull String serviceType, @NonNull MdnsServiceBrowserListener listener) {
-        LOGGER.i("Unregistering listener for serviceType:" + serviceType);
+        sharedLog.i("Unregistering listener for serviceType:" + serviceType);
         final List<MdnsServiceTypeClient> serviceTypeClients =
                 perNetworkServiceTypeClients.getByServiceType(serviceType);
         if (serviceTypeClients.isEmpty()) {
@@ -199,19 +199,13 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
         }
     }
 
-    /** Dump info to dumpsys */
-    public void dump(PrintWriter pw) {
-        LOGGER.reverseDump(pw);
-    }
-
     @VisibleForTesting
     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
             @Nullable Network network) {
-        LOGGER.log("createServiceTypeClient for serviceType:" + serviceType
-                + " network:" + network);
+        sharedLog.log("createServiceTypeClient for type:" + serviceType + ", net:" + network);
         return new MdnsServiceTypeClient(
                 serviceType, socketClient,
                 executorProvider.newServiceTypeClientSchedulerExecutor(), network,
-                LOGGER.forSubComponent(serviceType + "-" + network));
+                sharedLog.forSubComponent(serviceType + "-" + network));
     }
 }
