@@ -29,6 +29,7 @@ import android.net.Network;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsSocketClientBase.SocketCreationCallback;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -74,13 +75,14 @@ public class MdnsDiscoveryManagerTests {
 
     @Mock MdnsServiceBrowserListener mockListenerOne;
     @Mock MdnsServiceBrowserListener mockListenerTwo;
+    @Mock SharedLog sharedLog;
     private MdnsDiscoveryManager discoveryManager;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
 
-        discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient) {
+        discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient, sharedLog) {
                     @Override
                     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
                             @Nullable Network network) {
