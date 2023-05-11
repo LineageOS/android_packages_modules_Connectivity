@@ -76,7 +76,7 @@ class MdnsInterfaceAdvertiserTest {
     private val replySender = mock(MdnsReplySender::class.java)
     private val announcer = mock(MdnsAnnouncer::class.java)
     private val prober = mock(MdnsProber::class.java)
-    private val sharedlog = mock(SharedLog::class.java)
+    private val sharedlog = SharedLog("MdnsInterfaceAdvertiserTest")
     @Suppress("UNCHECKED_CAST")
     private val probeCbCaptor = ArgumentCaptor.forClass(PacketRepeaterCallback::class.java)
             as ArgumentCaptor<PacketRepeaterCallback<ProbingInfo>>
@@ -92,7 +92,6 @@ class MdnsInterfaceAdvertiserTest {
 
     private val advertiser by lazy {
         MdnsInterfaceAdvertiser(
-            LOG_TAG,
             socket,
             TEST_ADDRS,
             thread.looper,
@@ -116,6 +115,7 @@ class MdnsInterfaceAdvertiserTest {
         val knownServices = mutableSetOf<Int>()
         doAnswer { inv ->
             knownServices.add(inv.getArgument(0))
+
             -1
         }.`when`(repository).addService(anyInt(), any())
         doAnswer { inv ->
