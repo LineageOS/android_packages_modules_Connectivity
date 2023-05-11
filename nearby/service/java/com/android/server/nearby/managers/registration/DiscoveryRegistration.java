@@ -300,7 +300,6 @@ public class DiscoveryRegistration extends BinderListenerRegistration<IScanListe
     private boolean checkIdentity() {
         boolean result = DiscoveryPermissions.noteDiscoveryResultDelivery(mAppOpsManager,
                 mCallerIdentity);
-        Log.v(TAG, "checkIdentity: result is " + result + " mAppOpsManager " + mAppOpsManager);
         if (!result) {
             Log.w(TAG, "[DiscoveryProviderManager] scan permission revoked "
                     + "- not forwarding results for the registration.");

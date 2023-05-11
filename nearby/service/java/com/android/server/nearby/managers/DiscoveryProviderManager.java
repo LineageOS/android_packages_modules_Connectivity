@@ -231,11 +231,8 @@ public class DiscoveryProviderManager extends
 
             if (mMerged.getScanTypes().contains(SCAN_TYPE_NEARBY_PRESENCE)) {
                 startChreProvider(scanFilters);
-                Log.d(TAG, "startProviders: heeey");
                 return true;
             }
-
-            Log.d(TAG, "startProviders: geagewage");
 
             startBleProvider(scanFilters);
             return true;
