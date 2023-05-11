@@ -91,7 +91,7 @@ import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY;
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.VPN_UID;
-import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
+import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 import static android.system.OsConstants.ETH_P_ALL;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
@@ -134,7 +134,6 @@ import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.BlockedReason;
 import android.net.ConnectivityManager.NetworkCallback;
 import android.net.ConnectivityManager.RestrictBackgroundStatus;
-import android.net.ConnectivityResources;
 import android.net.ConnectivitySettingsManager;
 import android.net.DataStallReportParcelable;
 import android.net.DnsResolverServiceManager;
@@ -244,6 +243,7 @@ import android.util.ArraySet;
 import android.util.LocalLog;
 import android.util.Log;
 import android.util.Pair;
+import android.util.Range;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
@@ -280,11 +280,13 @@ import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker.AutomaticO
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator;
 import com.android.server.connectivity.ClatCoordinator;
 import com.android.server.connectivity.ConnectivityFlags;
+import com.android.server.connectivity.ConnectivityResources;
 import com.android.server.connectivity.DnsManager;
 import com.android.server.connectivity.DnsManager.PrivateDnsValidationUpdate;
 import com.android.server.connectivity.DscpPolicyTracker;
 import com.android.server.connectivity.FullScore;
 import com.android.server.connectivity.InvalidTagException;
+import com.android.server.connectivity.KeepaliveResourceUtil;
 import com.android.server.connectivity.KeepaliveTracker;
 import com.android.server.connectivity.LingerMonitor;
 import com.android.server.connectivity.MockableSystemProperties;
@@ -310,11 +312,13 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1389,9 +1393,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         /**
          * @see DeviceConfigUtils#isFeatureEnabled
          */
-        public boolean isFeatureEnabled(Context context, String name, boolean defaultEnabled) {
-            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_CONNECTIVITY, name,
-                    TETHERING_MODULE_NAME, defaultEnabled);
+        public boolean isFeatureEnabled(Context context, String name) {
+            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_TETHERING, name,
+                    TETHERING_MODULE_NAME, false /* defaultValue */);
         }
 
         /**
@@ -1484,6 +1488,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public boolean isChangeEnabled(long changeId, @NonNull final String packageName,
                 @NonNull final UserHandle user) {
             return CompatChanges.isChangeEnabled(changeId, packageName, user);
+        }
+
+        /**
+         * Call {@link InetDiagMessage#destroyLiveTcpSockets(Set, Set)}
+         *
+         * @param ranges target uid ranges
+         * @param exemptUids uids to skip close socket
+         */
+        public void destroyLiveTcpSockets(@NonNull final Set<Range<Integer>> ranges,
+                @NonNull final Set<Integer> exemptUids)
+                throws SocketException, InterruptedIOException, ErrnoException {
+            InetDiagMessage.destroyLiveTcpSockets(ranges, exemptUids);
         }
     }
 
@@ -8459,11 +8475,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return stableRanges;
     }
 
-    private void maybeCloseSockets(NetworkAgentInfo nai, UidRangeParcel[] ranges,
-            int[] exemptUids) {
+    private void maybeCloseSockets(NetworkAgentInfo nai, Set<UidRange> ranges,
+            Set<Integer> exemptUids) {
         if (nai.isVPN() && !nai.networkAgentConfig.allowBypass) {
             try {
-                mNetd.socketDestroy(ranges, exemptUids);
+                mDeps.destroyLiveTcpSockets(UidRange.toIntRanges(ranges), exemptUids);
             } catch (Exception e) {
                 loge("Exception in socket destroy: ", e);
             }
@@ -8471,16 +8487,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void updateVpnUidRanges(boolean add, NetworkAgentInfo nai, Set<UidRange> uidRanges) {
-        int[] exemptUids = new int[2];
+        final Set<Integer> exemptUids = new ArraySet<>();
         // TODO: Excluding VPN_UID is necessary in order to not to kill the TCP connection used
         // by PPTP. Fix this by making Vpn set the owner UID to VPN_UID instead of system when
         // starting a legacy VPN, and remove VPN_UID here. (b/176542831)
-        exemptUids[0] = VPN_UID;
-        exemptUids[1] = nai.networkCapabilities.getOwnerUid();
+        exemptUids.add(VPN_UID);
+        exemptUids.add(nai.networkCapabilities.getOwnerUid());
         UidRangeParcel[] ranges = toUidRangeStableParcels(uidRanges);
 
         // Close sockets before modifying uid ranges so that RST packets can reach to the server.
-        maybeCloseSockets(nai, ranges, exemptUids);
+        maybeCloseSockets(nai, uidRanges, exemptUids);
         try {
             if (add) {
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
@@ -8494,7 +8510,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     " on netId " + nai.network.netId + ". " + e);
         }
         // Close sockets that established connection while requesting netd.
-        maybeCloseSockets(nai, ranges, exemptUids);
+        maybeCloseSockets(nai, uidRanges, exemptUids);
     }
 
     private boolean isProxySetOnAnyDefaultNetwork() {
@@ -10029,6 +10045,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mHandler.sendMessage(mHandler.obtainMessage(
                 NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE, 0, SocketKeepalive.SUCCESS,
                 Objects.requireNonNull(cb).asBinder()));
+    }
+
+    @Override
+    public int[] getSupportedKeepalives() {
+        enforceAnyPermissionOf(mContext, android.Manifest.permission.NETWORK_SETTINGS,
+                // Backwards compatibility with CTS 13
+                android.Manifest.permission.QUERY_ALL_PACKAGES);
+
+        return BinderUtils.withCleanCallingIdentity(() ->
+                KeepaliveResourceUtil.getSupportedKeepalives(mContext));
     }
 
     @Override
