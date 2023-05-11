@@ -20,6 +20,7 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -191,6 +192,60 @@ public class MdnsDiscoveryManagerTests {
         verify(mockServiceTypeClientOne1, never()).processResponse(
                 responseForSubtype, ifIndex, NETWORK_2);
         verify(mockServiceTypeClientTwo2).processResponse(responseForSubtype, ifIndex, NETWORK_2);
+    }
+
+    @Test
+    public void testSocketCreatedAndDestroyed() throws IOException {
+        // Create a ServiceTypeClient for SERVICE_TYPE_1 and NETWORK_1
+        final MdnsSearchOptions options1 =
+                MdnsSearchOptions.newBuilder().setNetwork(NETWORK_1).build();
+        final SocketCreationCallback callback = expectSocketCreationCallback(
+                SERVICE_TYPE_1, mockListenerOne, options1);
+        callback.onSocketCreated(NETWORK_1);
+        verify(mockServiceTypeClientOne1).startSendAndReceive(mockListenerOne, options1);
+
+        // Create a ServiceTypeClient for SERVICE_TYPE_2 and NETWORK_2
+        final MdnsSearchOptions options2 =
+                MdnsSearchOptions.newBuilder().setNetwork(NETWORK_2).build();
+        final SocketCreationCallback callback2 = expectSocketCreationCallback(
+                SERVICE_TYPE_2, mockListenerTwo, options2);
+        callback2.onSocketCreated(NETWORK_2);
+        verify(mockServiceTypeClientTwo2).startSendAndReceive(mockListenerTwo, options2);
+
+        // Receive a response, it should be processed on both clients.
+        final MdnsPacket response = createMdnsPacket(SERVICE_TYPE_1);
+        final int ifIndex = 1;
+        discoveryManager.onResponseReceived(response, ifIndex, null /* network */);
+        verify(mockServiceTypeClientOne1).processResponse(response, ifIndex, null /* network */);
+        verify(mockServiceTypeClientTwo2).processResponse(response, ifIndex, null /* network */);
+
+        // The client for NETWORK_1 receives the callback that the NETWORK_1 has been destroyed,
+        // mockServiceTypeClientOne1 should send service removed notifications and remove from the
+        // list of clients.
+        callback.onSocketDestroyed(NETWORK_1);
+        verify(mockServiceTypeClientOne1).notifyAllServicesRemoved();
+
+        // Receive a response again, it should be processed only on mockServiceTypeClientTwo2.
+        // Because the mockServiceTypeClientOne1 is removed from the list of clients, it is no
+        // longer able to process responses.
+        discoveryManager.onResponseReceived(response, ifIndex, null /* network */);
+        verify(mockServiceTypeClientOne1, times(1))
+                .processResponse(response, ifIndex, null /* network */);
+        verify(mockServiceTypeClientTwo2, times(2))
+                .processResponse(response, ifIndex, null /* network */);
+
+        // The client for NETWORK_2 receives the callback that the NETWORK_1 has been destroyed,
+        // mockServiceTypeClientTwo2 shouldn't send any notifications.
+        callback2.onSocketDestroyed(NETWORK_1);
+        verify(mockServiceTypeClientTwo2, never()).notifyAllServicesRemoved();
+
+        // Receive a response again, mockServiceTypeClientTwo2 is still in the list of clients, it's
+        // still able to process responses.
+        discoveryManager.onResponseReceived(response, ifIndex, null /* network */);
+        verify(mockServiceTypeClientOne1, times(1))
+                .processResponse(response, ifIndex, null /* network */);
+        verify(mockServiceTypeClientTwo2, times(3))
+                .processResponse(response, ifIndex, null /* network */);
     }
 
     private MdnsPacket createMdnsPacket(String serviceType) {
