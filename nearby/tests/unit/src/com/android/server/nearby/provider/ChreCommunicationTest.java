@@ -18,7 +18,6 @@ package com.android.server.nearby.provider;
 
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
-import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_MAINLINE_NANO_APP_MIN_VERSION;
 
@@ -40,6 +39,7 @@ import android.provider.DeviceConfig;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.server.nearby.NearbyConfiguration;
 import com.android.server.nearby.injector.Injector;
 
 import org.junit.Before;
@@ -54,6 +54,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 public class ChreCommunicationTest {
+    private static final String NAMESPACE = NearbyConfiguration.getNamespace();
+
     @Mock Injector mInjector;
     @Mock Context mContext;
     @Mock ContextHubManager mManager;
@@ -71,8 +73,8 @@ public class ChreCommunicationTest {
     public void setUp() {
         InstrumentationRegistry.getInstrumentation().getUiAutomation()
                 .adoptShellPermissionIdentity(WRITE_DEVICE_CONFIG, READ_DEVICE_CONFIG);
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
-                "1", false);
+        DeviceConfig.setProperty(
+                NAMESPACE, NEARBY_MAINLINE_NANO_APP_MIN_VERSION, "1", false);
 
         MockitoAnnotations.initMocks(this);
         when(mInjector.getContextHubManager()).thenReturn(mManager);
@@ -111,8 +113,7 @@ public class ChreCommunicationTest {
 
     @Test
     public void testNotReachMinVersion() {
-        DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_MAINLINE_NANO_APP_MIN_VERSION,
-                "3", false);
+        DeviceConfig.setProperty(NAMESPACE, NEARBY_MAINLINE_NANO_APP_MIN_VERSION, "3", false);
         mChreCommunication.start(
                 mChreCallback, Collections.singleton(ChreDiscoveryProvider.NANOAPP_ID));
         verify(mTransaction).setOnCompleteListener(mOnQueryCompleteListenerCaptor.capture(), any());
