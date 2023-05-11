@@ -19,7 +19,6 @@ package com.android.server.nearby;
 import static android.Manifest.permission.BLUETOOTH_PRIVILEGED;
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
-import static android.provider.DeviceConfig.NAMESPACE_NEARBY;
 
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_APP;
 
@@ -51,6 +50,7 @@ import org.mockito.Mock;
 
 public final class NearbyServiceTest {
 
+    private static final String NAMESPACE = NearbyConfiguration.getNamespace();
     private static final String PACKAGE_NAME = "android.nearby.test";
     private Context mContext;
     private NearbyService mService;
@@ -91,7 +91,7 @@ public final class NearbyServiceTest {
 
     @Test
     public void test_register_noPrivilegedPermission_throwsException() {
-        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_SUPPORT_TEST_APP,
+        DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP,
                 "false", false);
         mUiAutomation.dropShellPermissionIdentity();
         assertThrows(java.lang.SecurityException.class,
@@ -101,7 +101,7 @@ public final class NearbyServiceTest {
 
     @Test
     public void test_unregister_noPrivilegedPermission_throwsException() {
-        DeviceConfig.setProperty(NAMESPACE_NEARBY, NEARBY_SUPPORT_TEST_APP,
+        DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP,
                 "false", false);
         mUiAutomation.dropShellPermissionIdentity();
         assertThrows(java.lang.SecurityException.class,
