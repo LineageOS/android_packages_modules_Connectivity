@@ -583,12 +583,8 @@ public class AutomaticOnOffKeepaliveTracker {
      */
     public void dump(IndentingPrintWriter pw) {
         mKeepaliveTracker.dump(pw);
-        // Reading DeviceConfig will check if the calling uid and calling package name are the same.
-        // Clear calling identity to align the calling uid and package so that it won't fail if cts
-        // would like to do the dump()
-        final boolean featureEnabled = BinderUtils.withCleanCallingIdentity(
-                () -> mDependencies.isFeatureEnabled(AUTOMATIC_ON_OFF_KEEPALIVE_VERSION,
-                        true /* defaultEnabled */));
+        final boolean featureEnabled = mDependencies.isFeatureEnabled(
+                AUTOMATIC_ON_OFF_KEEPALIVE_VERSION, true /* defaultEnabled */);
         pw.println("AutomaticOnOff enabled: " + featureEnabled);
         pw.increaseIndent();
         for (AutomaticOnOffKeepalive autoKi : mAutomaticOnOffKeepalives) {
@@ -841,8 +837,12 @@ public class AutomaticOnOffKeepaliveTracker {
          * @return whether the feature is enabled
          */
         public boolean isFeatureEnabled(@NonNull final String name, final boolean defaultEnabled) {
-            return DeviceConfigUtils.isFeatureEnabled(mContext, NAMESPACE_TETHERING, name,
-                    DeviceConfigUtils.TETHERING_MODULE_NAME, defaultEnabled);
+            // Reading DeviceConfig will check if the calling uid and calling package name are the
+            // same. Clear calling identity to align the calling uid and package so that it won't
+            // fail if cts would like to do the dump()
+            return BinderUtils.withCleanCallingIdentity(() ->
+                    DeviceConfigUtils.isFeatureEnabled(mContext, NAMESPACE_TETHERING, name,
+                    DeviceConfigUtils.TETHERING_MODULE_NAME, defaultEnabled));
         }
 
         /**
