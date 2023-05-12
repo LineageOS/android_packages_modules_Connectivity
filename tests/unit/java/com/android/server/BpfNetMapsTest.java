@@ -66,6 +66,7 @@ import android.net.INetd;
 import android.os.Build;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
+import android.util.ArraySet;
 import android.util.IndentingPrintWriter;
 
 import androidx.test.filters.SmallTest;
@@ -1150,5 +1151,34 @@ public final class BpfNetMapsTest {
     public void testDumpCookieTagMap() throws Exception {
         mCookieTagMap.updateEntry(new CookieTagMapKey(123), new CookieTagMapValue(456, 0x789));
         assertDumpContains(getDump(), "cookie=123 tag=0x789 uid=456");
+    }
+
+    @Test
+    public void testGetUids() throws ErrnoException {
+        final int uid0 = TEST_UIDS[0];
+        final int uid1 = TEST_UIDS[1];
+        final long match0 = DOZABLE_MATCH | POWERSAVE_MATCH;
+        final long match1 = DOZABLE_MATCH | STANDBY_MATCH;
+        mUidOwnerMap.updateEntry(new S32(uid0), new UidOwnerValue(NULL_IIF, match0));
+        mUidOwnerMap.updateEntry(new S32(uid1), new UidOwnerValue(NULL_IIF, match1));
+
+        assertEquals(new ArraySet<>(List.of(uid0, uid1)),
+                mBpfNetMaps.getUidsWithAllowRuleOnAllowListChain(FIREWALL_CHAIN_DOZABLE));
+        assertEquals(new ArraySet<>(List.of(uid0)),
+                mBpfNetMaps.getUidsWithAllowRuleOnAllowListChain(FIREWALL_CHAIN_POWERSAVE));
+
+        assertEquals(new ArraySet<>(List.of(uid1)),
+                mBpfNetMaps.getUidsWithDenyRuleOnDenyListChain(FIREWALL_CHAIN_STANDBY));
+        assertEquals(new ArraySet<>(),
+                mBpfNetMaps.getUidsWithDenyRuleOnDenyListChain(FIREWALL_CHAIN_OEM_DENY_1));
+    }
+
+    @Test
+    public void testGetUidsIllegalArgument() {
+        final Class<IllegalArgumentException> expected = IllegalArgumentException.class;
+        assertThrows(expected,
+                () -> mBpfNetMaps.getUidsWithDenyRuleOnDenyListChain(FIREWALL_CHAIN_DOZABLE));
+        assertThrows(expected,
+                () -> mBpfNetMaps.getUidsWithAllowRuleOnAllowListChain(FIREWALL_CHAIN_OEM_DENY_1));
     }
 }
