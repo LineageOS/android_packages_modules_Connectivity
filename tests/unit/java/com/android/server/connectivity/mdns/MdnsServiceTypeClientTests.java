@@ -90,6 +90,7 @@ public class MdnsServiceTypeClientTests {
 
     private static final long TEST_TTL = 120000L;
     private static final long TEST_ELAPSED_REALTIME = 123L;
+    private static final long TEST_TIMEOUT_MS = 10_000L;
 
     @Mock
     private MdnsServiceBrowserListener mockListenerOne;
@@ -1169,7 +1170,7 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
-    public void testNotifyAllServicesRemoved() {
+    public void testNotifySocketDestroyed() throws Exception {
         client = new MdnsServiceTypeClient(
                 SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork, mockSharedLog);
 
@@ -1182,7 +1183,17 @@ public class MdnsServiceTypeClientTests {
                 .setResolveInstanceName("Instance1").build();
 
         client.startSendAndReceive(mockListenerOne, resolveOptions);
+        // Ensure the first task is executed so it schedules a future task
+        currentThreadExecutor.getAndClearSubmittedFuture().get(
+                TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         client.startSendAndReceive(mockListenerTwo, MdnsSearchOptions.getDefaultOptions());
+
+        // Filing the second request cancels the first future
+        verify(expectedSendFutures[0]).cancel(true);
+
+        // Ensure it gets executed too
+        currentThreadExecutor.getAndClearSubmittedFuture().get(
+                TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Complete response from instanceName
         client.processResponse(createResponse(
@@ -1196,7 +1207,9 @@ public class MdnsServiceTypeClientTests {
                         Collections.emptyMap() /* textAttributes */, TEST_TTL),
                 INTERFACE_INDEX, mockNetwork);
 
-        client.notifyAllServicesRemoved();
+        verify(expectedSendFutures[1], never()).cancel(true);
+        client.notifySocketDestroyed();
+        verify(expectedSendFutures[1]).cancel(true);
 
         // mockListenerOne gets notified for the requested instance
         final InOrder inOrder1 = inOrder(mockListenerOne);
@@ -1261,6 +1274,7 @@ public class MdnsServiceTypeClientTests {
         private long lastScheduledDelayInMs;
         private Runnable lastScheduledRunnable;
         private Runnable lastSubmittedRunnable;
+        private Future<?> lastSubmittedFuture;
         private int futureIndex;
 
         FakeExecutor() {
@@ -1272,6 +1286,7 @@ public class MdnsServiceTypeClientTests {
         public Future<?> submit(Runnable command) {
             Future<?> future = super.submit(command);
             lastSubmittedRunnable = command;
+            lastSubmittedFuture = future;
             return future;
         }
 
@@ -1301,6 +1316,12 @@ public class MdnsServiceTypeClientTests {
         Runnable getAndClearSubmittedRunnable() {
             Runnable val = lastSubmittedRunnable;
             lastSubmittedRunnable = null;
+            return val;
+        }
+
+        Future<?> getAndClearSubmittedFuture() {
+            Future<?> val = lastSubmittedFuture;
+            lastSubmittedFuture = null;
             return val;
         }
     }
