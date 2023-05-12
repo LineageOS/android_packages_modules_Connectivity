@@ -21,6 +21,7 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -420,6 +421,34 @@ public class MdnsServiceTypeClientTests {
 
         // Although it gets executes, no more task gets scheduled.
         assertNull(currentThreadExecutor.getAndClearLastScheduledRunnable());
+    }
+
+    @Test
+    public void testQueryScheduledWhenAnsweredFromCache() {
+        final MdnsSearchOptions searchOptions = MdnsSearchOptions.getDefaultOptions();
+        client.startSendAndReceive(mockListenerOne, searchOptions);
+        assertNotNull(currentThreadExecutor.getAndClearSubmittedRunnable());
+
+        client.processResponse(createResponse(
+                "service-instance-1", "192.0.2.123", 5353,
+                SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), /* interfaceIndex= */ 20, mockNetwork);
+
+        verify(mockListenerOne).onServiceNameDiscovered(any());
+        verify(mockListenerOne).onServiceFound(any());
+
+        // File another identical query
+        client.startSendAndReceive(mockListenerTwo, searchOptions);
+
+        verify(mockListenerTwo).onServiceNameDiscovered(any());
+        verify(mockListenerTwo).onServiceFound(any());
+
+        // This time no query is submitted, only scheduled
+        assertNull(currentThreadExecutor.getAndClearSubmittedRunnable());
+        assertNotNull(currentThreadExecutor.getAndClearLastScheduledRunnable());
+        // This just skips the first query of the first burst
+        assertEquals(MdnsConfigs.timeBetweenQueriesInBurstMs(),
+                currentThreadExecutor.getAndClearLastScheduledDelayInMs());
     }
 
     private static void verifyServiceInfo(MdnsServiceInfo serviceInfo, String serviceName,
