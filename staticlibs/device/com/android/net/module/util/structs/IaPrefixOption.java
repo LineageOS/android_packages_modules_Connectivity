@@ -62,13 +62,13 @@ public class IaPrefixOption extends Struct {
     public final long preferred;
     @Field(order = 3, type = Type.U32)
     public final long valid;
-    @Field(order = 4, type = Type.U8)
-    public final short prefixLen;
+    @Field(order = 4, type = Type.S8)
+    public final byte prefixLen;
     @Field(order = 5, type = Type.ByteArray, arraysize = 16)
     public final byte[] prefix;
 
     IaPrefixOption(final short code, final short length, final long preferred,
-            final long valid, final short prefixLen, final byte[] prefix) {
+            final long valid, final byte prefixLen, final byte[] prefix) {
         this.code = code;
         this.length = length;
         this.preferred = preferred;
@@ -81,7 +81,7 @@ public class IaPrefixOption extends Struct {
      * Build an IA_PD prefix option with given specific parameters.
      */
     public static ByteBuffer build(final short length, final long preferred, final long valid,
-            final short prefixLen, final byte[] prefix) {
+            final byte prefixLen, final byte[] prefix) {
         final IaPrefixOption option = new IaPrefixOption((byte) DHCP6_OPTION_IAPREFIX,
                 length /* 25 + IAPrefix options length */, preferred, valid, prefixLen, prefix);
         return ByteBuffer.wrap(option.writeToBytes(ByteOrder.BIG_ENDIAN));
