@@ -23,7 +23,7 @@ import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
 
-import static com.android.server.NsdService.constructServiceType;
+import static com.android.server.NsdService.parseTypeAndSubtype;
 import static com.android.testutils.ContextUtils.mockService;
 
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
@@ -77,6 +77,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.test.filters.SmallTest;
@@ -84,6 +85,7 @@ import androidx.test.filters.SmallTest;
 import com.android.server.NsdService.Dependencies;
 import com.android.server.connectivity.mdns.MdnsAdvertiser;
 import com.android.server.connectivity.mdns.MdnsDiscoveryManager;
+import com.android.server.connectivity.mdns.MdnsSearchOptions;
 import com.android.server.connectivity.mdns.MdnsServiceBrowserListener;
 import com.android.server.connectivity.mdns.MdnsServiceInfo;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
@@ -104,6 +106,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -969,6 +972,34 @@ public class NsdServiceTest {
     }
 
     @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    public void testDiscoveryWithMdnsDiscoveryManager_UsesSubtypes() {
+        final String typeWithSubtype = SERVICE_TYPE + ",_subtype";
+        final NsdManager client = connectClient(mService);
+        final NsdServiceInfo regInfo = new NsdServiceInfo("Instance", typeWithSubtype);
+        final Network network = new Network(999);
+        regInfo.setHostAddresses(List.of(parseNumericAddress("192.0.2.123")));
+        regInfo.setPort(12345);
+        regInfo.setNetwork(network);
+
+        final RegistrationListener regListener = mock(RegistrationListener.class);
+        client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
+        waitForIdle();
+        verify(mAdvertiser).addService(anyInt(), argThat(s ->
+                "Instance".equals(s.getServiceName())
+                        && SERVICE_TYPE.equals(s.getServiceType())), eq("_subtype"));
+
+        final DiscoveryListener discListener = mock(DiscoveryListener.class);
+        client.discoverServices(typeWithSubtype, PROTOCOL, network, Runnable::run, discListener);
+        waitForIdle();
+        final ArgumentCaptor<MdnsSearchOptions> optionsCaptor =
+                ArgumentCaptor.forClass(MdnsSearchOptions.class);
+        verify(mDiscoveryManager).registerListener(eq(SERVICE_TYPE + ".local"), any(),
+                optionsCaptor.capture());
+        assertEquals(Collections.singletonList("subtype"), optionsCaptor.getValue().getSubtypes());
+    }
+
+    @Test
     public void testResolutionWithMdnsDiscoveryManager() throws UnknownHostException {
         setMdnsDiscoveryManagerEnabled();
 
@@ -976,7 +1007,7 @@ public class NsdServiceTest {
         final ResolveListener resolveListener = mock(ResolveListener.class);
         final Network network = new Network(999);
         final String serviceType = "_nsd._service._tcp";
-        final String constructedServiceType = "_nsd._sub._service._tcp.local";
+        final String constructedServiceType = "_service._tcp.local";
         final ArgumentCaptor<MdnsServiceBrowserListener> listenerCaptor =
                 ArgumentCaptor.forClass(MdnsServiceBrowserListener.class);
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, serviceType);
@@ -984,12 +1015,14 @@ public class NsdServiceTest {
         client.resolveService(request, resolveListener);
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
-        // TODO(b/266167702): this is a bug, as registerListener should be done _service._tcp, and
-        // _sub should be in the list of subtypes in the options.
+        final ArgumentCaptor<MdnsSearchOptions> optionsCaptor =
+                ArgumentCaptor.forClass(MdnsSearchOptions.class);
         verify(mDiscoveryManager).registerListener(eq(constructedServiceType),
-                listenerCaptor.capture(), argThat(options ->
-                        network.equals(options.getNetwork())
-                                && SERVICE_NAME.equals(options.getResolveInstanceName())));
+                listenerCaptor.capture(),
+                optionsCaptor.capture());
+        assertEquals(network, optionsCaptor.getValue().getNetwork());
+        // Subtypes are not used for resolution, only for discovery
+        assertEquals(Collections.emptyList(), optionsCaptor.getValue().getSubtypes());
 
         final MdnsServiceBrowserListener listener = listenerCaptor.getValue();
         final MdnsServiceInfo mdnsServiceInfo = new MdnsServiceInfo(
@@ -1013,8 +1046,7 @@ public class NsdServiceTest {
         verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(infoCaptor.capture());
         final NsdServiceInfo info = infoCaptor.getValue();
         assertEquals(SERVICE_NAME, info.getServiceName());
-        // TODO(b/266167702): this should be ._service._tcp (as per legacy behavior)
-        assertEquals("._nsd._sub._service._tcp", info.getServiceType());
+        assertEquals("._service._tcp", info.getServiceType());
         assertEquals(PORT, info.getPort());
         assertTrue(info.getAttributes().containsKey("key"));
         assertEquals(1, info.getAttributes().size());
@@ -1057,7 +1089,7 @@ public class NsdServiceTest {
 
         final ArgumentCaptor<Integer> serviceIdCaptor = ArgumentCaptor.forClass(Integer.class);
         verify(mAdvertiser).addService(serviceIdCaptor.capture(),
-                argThat(info -> matches(info, regInfo)));
+                argThat(info -> matches(info, regInfo)), eq(null) /* subtype */);
 
         client.unregisterService(regListenerWithoutFeature);
         waitForIdle();
@@ -1114,8 +1146,10 @@ public class NsdServiceTest {
         waitForIdle();
 
         // The advertiser is enabled for _type2 but not _type1
-        verify(mAdvertiser, never()).addService(anyInt(), argThat(info -> matches(info, service1)));
-        verify(mAdvertiser).addService(anyInt(), argThat(info -> matches(info, service2)));
+        verify(mAdvertiser, never()).addService(
+                anyInt(), argThat(info -> matches(info, service1)), eq(null) /* subtype */);
+        verify(mAdvertiser).addService(
+                anyInt(), argThat(info -> matches(info, service2)), eq(null) /* subtype */);
     }
 
     @Test
@@ -1140,7 +1174,7 @@ public class NsdServiceTest {
         verify(mSocketProvider).startMonitoringSockets();
         final ArgumentCaptor<Integer> idCaptor = ArgumentCaptor.forClass(Integer.class);
         verify(mAdvertiser).addService(idCaptor.capture(), argThat(info ->
-                matches(info, regInfo)));
+                matches(info, regInfo)), eq(null) /* subtype */);
 
         // Verify onServiceRegistered callback
         final MdnsAdvertiser.AdvertiserCallback cb = cbCaptor.getValue();
@@ -1176,7 +1210,7 @@ public class NsdServiceTest {
 
         client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
         waitForIdle();
-        verify(mAdvertiser, never()).addService(anyInt(), any());
+        verify(mAdvertiser, never()).addService(anyInt(), any(), any());
 
         verify(regListener, timeout(TIMEOUT_MS)).onRegistrationFailed(
                 argThat(info -> matches(info, regInfo)), eq(FAILURE_INTERNAL_ERROR));
@@ -1204,7 +1238,8 @@ public class NsdServiceTest {
         final ArgumentCaptor<Integer> idCaptor = ArgumentCaptor.forClass(Integer.class);
         // Service name is truncated to 63 characters
         verify(mAdvertiser).addService(idCaptor.capture(),
-                argThat(info -> info.getServiceName().equals("a".repeat(63))));
+                argThat(info -> info.getServiceName().equals("a".repeat(63))),
+                eq(null) /* subtype */);
 
         // Verify onServiceRegistered callback
         final MdnsAdvertiser.AdvertiserCallback cb = cbCaptor.getValue();
@@ -1222,7 +1257,7 @@ public class NsdServiceTest {
         final ResolveListener resolveListener = mock(ResolveListener.class);
         final Network network = new Network(999);
         final String serviceType = "_nsd._service._tcp";
-        final String constructedServiceType = "_nsd._sub._service._tcp.local";
+        final String constructedServiceType = "_service._tcp.local";
         final ArgumentCaptor<MdnsServiceBrowserListener> listenerCaptor =
                 ArgumentCaptor.forClass(MdnsServiceBrowserListener.class);
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, serviceType);
@@ -1230,8 +1265,14 @@ public class NsdServiceTest {
         client.resolveService(request, resolveListener);
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
+        final ArgumentCaptor<MdnsSearchOptions> optionsCaptor =
+                ArgumentCaptor.forClass(MdnsSearchOptions.class);
         verify(mDiscoveryManager).registerListener(eq(constructedServiceType),
-                listenerCaptor.capture(), argThat(options -> network.equals(options.getNetwork())));
+                listenerCaptor.capture(),
+                optionsCaptor.capture());
+        assertEquals(network, optionsCaptor.getValue().getNetwork());
+        // Subtypes are not used for resolution, only for discovery
+        assertEquals(Collections.emptyList(), optionsCaptor.getValue().getSubtypes());
 
         client.stopServiceResolution(resolveListener);
         waitForIdle();
@@ -1246,16 +1287,22 @@ public class NsdServiceTest {
     }
 
     @Test
-    public void testConstructServiceType() {
+    public void testParseTypeAndSubtype() {
         final String serviceType1 = "test._tcp";
         final String serviceType2 = "_test._quic";
-        final String serviceType3 = "_123._udp.";
-        final String serviceType4 = "_TEST._999._tcp.";
+        final String serviceType3 = "_test._quic,_test1,_test2";
+        final String serviceType4 = "_123._udp.";
+        final String serviceType5 = "_TEST._999._tcp.";
+        final String serviceType6 = "_998._tcp.,_TEST";
+        final String serviceType7 = "_997._tcp,_TEST";
 
-        assertEquals(null, constructServiceType(serviceType1));
-        assertEquals(null, constructServiceType(serviceType2));
-        assertEquals("_123._udp", constructServiceType(serviceType3));
-        assertEquals("_TEST._sub._999._tcp", constructServiceType(serviceType4));
+        assertNull(parseTypeAndSubtype(serviceType1));
+        assertNull(parseTypeAndSubtype(serviceType2));
+        assertNull(parseTypeAndSubtype(serviceType3));
+        assertEquals(new Pair<>("_123._udp", null), parseTypeAndSubtype(serviceType4));
+        assertEquals(new Pair<>("_999._tcp", "_TEST"), parseTypeAndSubtype(serviceType5));
+        assertEquals(new Pair<>("_998._tcp", "_TEST"), parseTypeAndSubtype(serviceType6));
+        assertEquals(new Pair<>("_997._tcp", "_TEST"), parseTypeAndSubtype(serviceType7));
     }
 
     @Test
@@ -1274,7 +1321,7 @@ public class NsdServiceTest {
         client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
-        verify(mAdvertiser).addService(anyInt(), any());
+        verify(mAdvertiser).addService(anyInt(), any(), any());
 
         // Verify the discovery uses MdnsDiscoveryManager
         final DiscoveryListener discListener = mock(DiscoveryListener.class);
