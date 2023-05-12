@@ -107,8 +107,11 @@ java_library {
     name: "framework-connectivity-pre-jarjar",
     defaults: [
         "framework-connectivity-defaults",
-        "CronetJavaPrejarjarDefaults",
-     ],
+    ],
+    static_libs: [
+        "cronet_aml_api_java",
+        "cronet_aml_java",
+    ],
     libs: [
         // This cannot be in the defaults clause above because if it were, it would be used
         // to generate the connectivity stubs. That would create a circular dependency
@@ -118,6 +121,17 @@ java_library {
         "framework-wifi.stubs.module_lib",
     ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"]
+}
+
+java_defaults {
+    name: "CronetJavaDefaults",
+    srcs: [":cronet_aml_api_sources"],
+    libs: [
+        "androidx.annotation_annotation",
+    ],
+    impl_only_static_libs: [
+        "cronet_aml_java",
+    ],
 }
 
 java_sdk_library {
