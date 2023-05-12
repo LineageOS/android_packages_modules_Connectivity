@@ -17,16 +17,6 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-// Both cronet_java_defaults and cronet_java_prejarjar_defaults can be used to
-// specify a java_defaults target that either enables or disables Cronet. This
-// is used to disable Cronet on tm-mainline-prod.
-// Note: they must either both be enabled or disabled.
-cronet_java_defaults = "CronetJavaDefaultsEnabled"
-cronet_java_prejarjar_defaults = "CronetJavaPrejarjarDefaultsEnabled"
-// This is a placeholder comment to avoid merge conflicts
-// as cronet_defaults may have different values
-// depending on the branch
-
 java_sdk_library {
     name: "framework-tethering",
     defaults: [
@@ -65,44 +55,6 @@ java_sdk_library {
     hostdex: true, // for hiddenapi check
     permitted_packages: ["android.net"],
     lint: { strict_updatability_linting: true },
-}
-
-java_defaults {
-    name: "CronetJavaDefaults",
-    defaults: [cronet_java_defaults],
-}
-
-java_defaults {
-    name: "CronetJavaDefaultsEnabled",
-    srcs: [":cronet_aml_api_sources"],
-    libs: [
-        "androidx.annotation_annotation",
-    ],
-    impl_only_static_libs: [
-        "cronet_aml_java",
-    ],
-}
-
-java_defaults {
-  name: "CronetJavaDefaultsDisabled",
-  api_dir: "cronet_disabled/api",
-}
-
-java_defaults {
-  name: "CronetJavaPrejarjarDefaults",
-  defaults: [cronet_java_prejarjar_defaults],
-}
-
-java_defaults {
-  name: "CronetJavaPrejarjarDefaultsDisabled",
-}
-
-java_defaults {
-  name: "CronetJavaPrejarjarDefaultsEnabled",
-  static_libs: [
-    "cronet_aml_api_java",
-    "cronet_aml_java"
-  ],
 }
 
 java_library {

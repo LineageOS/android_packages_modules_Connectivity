@@ -50,22 +50,8 @@ enable_tethering_next_apex = true
 // as the above target may have different "enabled" values
 // depending on the branch
 
-// cronet_in_tethering_apex_defaults can be used to specify an apex_defaults target that either
-// enables or disables inclusion of Cronet in the Tethering apex. This is used to disable Cronet
-// on tm-mainline-prod. Note: in order for Cronet APIs to work Cronet must also be enabled
-// by the cronet_java_*_defaults in common/TetheringLib/Android.bp.
-cronet_in_tethering_apex_defaults = "CronetInTetheringApexDefaultsEnabled"
-// This is a placeholder comment to avoid merge conflicts
-// as cronet_apex_defaults may have different values
-// depending on the branch
-
 apex_defaults {
     name: "CronetInTetheringApexDefaults",
-    defaults: [cronet_in_tethering_apex_defaults],
-}
-
-apex_defaults {
-    name: "CronetInTetheringApexDefaultsEnabled",
     jni_libs: [
         "cronet_aml_components_cronet_android_cronet",
         "//external/cronet/third_party/boringssl:libcrypto",
@@ -81,10 +67,6 @@ apex_defaults {
             ],
         },
     },
-}
-
-apex_defaults {
-    name: "CronetInTetheringApexDefaultsDisabled",
 }
 
 apex {
