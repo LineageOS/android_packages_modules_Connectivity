@@ -111,6 +111,7 @@ public class MdnsSocketProviderTest {
     private MdnsSocketProvider mSocketProvider;
     private NetworkCallback mNetworkCallback;
     private TetheringEventCallback mTetheringEventCallback;
+    private SharedLog mLog = new SharedLog("MdnsSocketProviderTest");
 
     private TestNetlinkMonitor mTestSocketNetLinkMonitor;
     @Before
@@ -153,7 +154,7 @@ public class MdnsSocketProviderTest {
             return mTestSocketNetLinkMonitor;
         }).when(mDeps).createSocketNetlinkMonitor(any(), any(),
                 any());
-        mSocketProvider = new MdnsSocketProvider(mContext, thread.getLooper(), mDeps);
+        mSocketProvider = new MdnsSocketProvider(mContext, thread.getLooper(), mDeps, mLog);
     }
 
     private void startMonitoringSockets() {
