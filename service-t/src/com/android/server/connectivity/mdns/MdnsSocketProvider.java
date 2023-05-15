@@ -599,8 +599,6 @@ public class MdnsSocketProvider {
             if (matchRequestedNetwork(network)) continue;
             final SocketInfo info = mNetworkSockets.removeAt(i);
             info.mSocket.destroy();
-            // Still notify to unrequester for socket destroy.
-            cb.onInterfaceDestroyed(network, info.mSocket);
             mSharedLog.log("Remove socket on net:" + network + " after unrequestSocket");
         }
 
@@ -610,8 +608,6 @@ public class MdnsSocketProvider {
         for (int i = mTetherInterfaceSockets.size() - 1; i >= 0; i--) {
             final SocketInfo info = mTetherInterfaceSockets.valueAt(i);
             info.mSocket.destroy();
-            // Still notify to unrequester for socket destroy.
-            cb.onInterfaceDestroyed(null /* network */, info.mSocket);
             mSharedLog.log("Remove socket on ifName:" + mTetherInterfaceSockets.keyAt(i)
                     + " after unrequestSocket");
         }
