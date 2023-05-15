@@ -117,7 +117,7 @@ class MdnsInterfaceAdvertiserTest {
             knownServices.add(inv.getArgument(0))
 
             -1
-        }.`when`(repository).addService(anyInt(), any())
+        }.`when`(repository).addService(anyInt(), any(), any())
         doAnswer { inv ->
             knownServices.remove(inv.getArgument(0))
             null
@@ -278,8 +278,8 @@ class MdnsInterfaceAdvertiserTest {
         doReturn(serviceId).`when`(testProbingInfo).serviceId
         doReturn(testProbingInfo).`when`(repository).setServiceProbing(serviceId)
 
-        advertiser.addService(serviceId, serviceInfo)
-        verify(repository).addService(serviceId, serviceInfo)
+        advertiser.addService(serviceId, serviceInfo, null /* subtype */)
+        verify(repository).addService(serviceId, serviceInfo, null /* subtype */)
         verify(prober).startProbing(testProbingInfo)
 
         // Simulate probing success: continues to announcing
