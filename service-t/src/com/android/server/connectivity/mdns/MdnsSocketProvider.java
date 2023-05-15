@@ -414,8 +414,10 @@ public class MdnsSocketProvider {
             if (networkKey == LOCAL_NET) {
                 transports = new int[0];
             } else {
-                transports = mActiveNetworksTransports.getOrDefault(
-                        ((NetworkAsKey) networkKey).mNetwork, new int[0]);
+                transports = mActiveNetworksTransports.get(((NetworkAsKey) networkKey).mNetwork);
+                if (transports == null) {
+                    Log.wtf(TAG, "transports is missing for key: " + networkKey);
+                }
             }
             if (networkInterface == null || !isMdnsCapableInterface(networkInterface, transports)) {
                 return;
