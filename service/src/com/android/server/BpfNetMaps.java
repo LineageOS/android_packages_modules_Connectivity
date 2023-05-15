@@ -384,7 +384,6 @@ public class BpfNetMaps {
      * ALLOWLIST means the firewall denies all by default, uids must be explicitly allowed
      * DENYLIST means the firewall allows all by default, uids must be explicitly denyed
      */
-    @VisibleForTesting
     public boolean isFirewallAllowList(final int chain) {
         switch (chain) {
             case FIREWALL_CHAIN_DOZABLE:
@@ -743,6 +742,65 @@ public class BpfNetMaps {
             throw new ServiceSpecificException(e.errno,
                     "Unable to get uid rule status: " + Os.strerror(e.errno));
         }
+    }
+
+    private Set<Integer> getUidsMatchEnabled(final int childChain) throws ErrnoException {
+        final long match = getMatchByFirewallChain(childChain);
+        Set<Integer> uids = new ArraySet<>();
+        synchronized (sUidOwnerMap) {
+            sUidOwnerMap.forEach((uid, val) -> {
+                if (val == null) {
+                    Log.wtf(TAG, "sUidOwnerMap entry was deleted while holding a lock");
+                } else {
+                    if ((val.rule & match) != 0) {
+                        uids.add(uid.val);
+                    }
+                }
+            });
+        }
+        return uids;
+    }
+
+    /**
+     * Get uids that has FIREWALL_RULE_ALLOW on allowlist chain.
+     * Allowlist means the firewall denies all by default, uids must be explicitly allowed.
+     *
+     * Note that uids that has FIREWALL_RULE_DENY on allowlist chain can not be computed from the
+     * bpf map, since all the uids that does not have explicit FIREWALL_RULE_ALLOW rule in bpf map
+     * are determined to have FIREWALL_RULE_DENY.
+     *
+     * @param childChain target chain
+     * @return Set of uids
+     */
+    public Set<Integer> getUidsWithAllowRuleOnAllowListChain(final int childChain)
+            throws ErrnoException {
+        if (!isFirewallAllowList(childChain)) {
+            throw new IllegalArgumentException("getUidsWithAllowRuleOnAllowListChain is called with"
+                    + " denylist chain:" + childChain);
+        }
+        // Corresponding match is enabled for uids that has FIREWALL_RULE_ALLOW on allowlist chain.
+        return getUidsMatchEnabled(childChain);
+    }
+
+    /**
+     * Get uids that has FIREWALL_RULE_DENY on denylist chain.
+     * Denylist means the firewall allows all by default, uids must be explicitly denyed
+     *
+     * Note that uids that has FIREWALL_RULE_ALLOW on denylist chain can not be computed from the
+     * bpf map, since all the uids that does not have explicit FIREWALL_RULE_DENY rule in bpf map
+     * are determined to have the FIREWALL_RULE_ALLOW.
+     *
+     * @param childChain target chain
+     * @return Set of uids
+     */
+    public Set<Integer> getUidsWithDenyRuleOnDenyListChain(final int childChain)
+            throws ErrnoException {
+        if (isFirewallAllowList(childChain)) {
+            throw new IllegalArgumentException("getUidsWithDenyRuleOnDenyListChain is called with"
+                    + " allowlist chain:" + childChain);
+        }
+        // Corresponding match is enabled for uids that has FIREWALL_RULE_DENY on denylist chain.
+        return getUidsMatchEnabled(childChain);
     }
 
     /**
