@@ -20,6 +20,7 @@ import android.net.nsd.OffloadServiceInfo;
 
 /**
  * Callbacks from NsdService to inform providers of packet offload.
+ *
  * @hide
  */
 oneway interface IOffloadEngine {
