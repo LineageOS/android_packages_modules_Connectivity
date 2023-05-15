@@ -149,6 +149,18 @@ void NetworkTraceHandler::OnStop(const StopArgs&) {
   if (mIsTest) return;  // Don't touch non-hermetic bpf in test.
   if (mStarted) sPoller.Stop();
   mStarted = false;
+
+  // Although this shouldn't be required, there seems to be some cases when we
+  // don't fill enough of a Perfetto Chunk for Perfetto to automatically commit
+  // the traced data. This manually flushes OnStop so we commit at least once.
+  NetworkTraceHandler::Trace([&](NetworkTraceHandler::TraceContext ctx) {
+    perfetto::LockedHandle<NetworkTraceHandler> handle =
+        ctx.GetDataSourceLocked();
+    // Trace is called for all active handlers, only flush our context. Since
+    // handle doesn't have a `.get()`, use `*` and `&` to get what it points to.
+    if (&(*handle) != this) return;
+    ctx.Flush();
+  });
 }
 
 void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
