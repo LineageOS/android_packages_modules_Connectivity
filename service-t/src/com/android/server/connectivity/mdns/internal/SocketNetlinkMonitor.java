@@ -61,13 +61,11 @@ public class SocketNetlinkMonitor extends NetlinkMonitor implements AbstractSock
         final StructIfaddrMsg ifaddrMsg = msg.getIfaddrHeader();
         final LinkAddress la = new LinkAddress(msg.getIpAddress(), ifaddrMsg.prefixLen,
                 msg.getFlags(), ifaddrMsg.scope);
-        if (!la.isPreferred()) {
-            // Skip the unusable ip address.
-            return;
-        }
         switch (msg.getHeader().nlmsg_type) {
             case NetlinkConstants.RTM_NEWADDR:
-                mCb.addOrUpdateInterfaceAddress(ifaddrMsg.index, la);
+                if (la.isPreferred()) {
+                    mCb.addOrUpdateInterfaceAddress(ifaddrMsg.index, la);
+                }
                 break;
             case NetlinkConstants.RTM_DELADDR:
                 mCb.deleteInterfaceAddress(ifaddrMsg.index, la);
