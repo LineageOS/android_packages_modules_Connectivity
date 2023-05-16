@@ -43,6 +43,7 @@ import org.junit.runner.RunWith
 
 private const val TEST_SERVICE_ID_1 = 42
 private const val TEST_SERVICE_ID_2 = 43
+private const val TEST_SERVICE_ID_3 = 44
 private const val TEST_PORT = 12345
 private const val TEST_SUBTYPE = "_subtype"
 private val TEST_HOSTNAME = arrayOf("Android_000102030405060708090A0B0C0D0E0F", "local")
@@ -60,6 +61,12 @@ private val TEST_SERVICE_1 = NsdServiceInfo().apply {
 private val TEST_SERVICE_2 = NsdServiceInfo().apply {
     serviceType = "_testservice._tcp"
     serviceName = "MyOtherTestService"
+    port = TEST_PORT
+}
+
+private val TEST_SERVICE_3 = NsdServiceInfo().apply {
+    serviceType = "_TESTSERVICE._tcp"
+    serviceName = "MyTESTSERVICE"
     port = TEST_PORT
 }
 
@@ -123,6 +130,9 @@ class MdnsRecordRepositoryTest {
         repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* subtype */)
         assertFailsWith(NameConflictException::class) {
             repository.addService(TEST_SERVICE_ID_2, TEST_SERVICE_1, null /* subtype */)
+        }
+        assertFailsWith(NameConflictException::class) {
+            repository.addService(TEST_SERVICE_ID_3, TEST_SERVICE_3, null /* subtype */)
         }
     }
 
@@ -365,6 +375,27 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
+    fun testGetReplyCaseInsensitive() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME)
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+        val questionsCaseInSensitive =
+            listOf(MdnsPointerRecord(arrayOf("_TESTSERVICE", "_TCP", "local"),
+                0L /* receiptTimeMillis */,
+                false /* cacheFlush */,
+                // TTL and data is empty for a question
+                0L /* ttlMillis */,
+                null /* pointer */))
+        val queryCaseInsensitive = MdnsPacket(0 /* flags */, questionsCaseInSensitive,
+            listOf() /* answers */, listOf() /* authorityRecords */,
+            listOf() /* additionalRecords */)
+        val src = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
+        val replyCaseInsensitive = repository.getReply(queryCaseInsensitive, src)
+        assertNotNull(replyCaseInsensitive)
+        assertEquals(1, replyCaseInsensitive.answers.size)
+        assertEquals(7, replyCaseInsensitive.additionalAnswers.size)
+    }
+
+    @Test
     fun testGetReply() {
         doGetReplyTest(subtype = null)
     }
@@ -490,6 +521,34 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
+    fun testGetConflictingServicesCaseInsensitive() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME)
+        repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* subtype */)
+        repository.addService(TEST_SERVICE_ID_2, TEST_SERVICE_2, null /* subtype */)
+
+        val packet = MdnsPacket(
+            0 /* flags */,
+            emptyList() /* questions */,
+            listOf(
+                MdnsServiceRecord(
+                    arrayOf("MYTESTSERVICE", "_TESTSERVICE", "_tcp", "local"),
+                    0L /* receiptTimeMillis */, true /* cacheFlush */, 0L /* ttlMillis */,
+                    0 /* servicePriority */, 0 /* serviceWeight */,
+                    TEST_SERVICE_1.port + 1,
+                    TEST_HOSTNAME),
+                MdnsTextRecord(
+                    arrayOf("MYOTHERTESTSERVICE", "_TESTSERVICE", "_tcp", "local"),
+                    0L /* receiptTimeMillis */, true /* cacheFlush */, 0L /* ttlMillis */,
+                    listOf(TextEntry.fromString("somedifferent=entry"))),
+            ) /* answers */,
+            emptyList() /* authorityRecords */,
+            emptyList() /* additionalRecords */)
+
+        assertEquals(setOf(TEST_SERVICE_ID_1, TEST_SERVICE_ID_2),
+            repository.getConflictingServices(packet))
+    }
+
+    @Test
     fun testGetConflictingServices_IdenticalService() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME)
         repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* subtype */)
@@ -505,9 +564,38 @@ class MdnsRecordRepositoryTest {
                                 0L /* receiptTimeMillis */, true /* cacheFlush */,
                                 otherTtlMillis, 0 /* servicePriority */, 0 /* serviceWeight */,
                                 TEST_SERVICE_1.port,
-                                TEST_HOSTNAME),
+                                arrayOf("ANDROID_000102030405060708090A0B0C0D0E0F", "local")),
                         MdnsTextRecord(
                                 arrayOf("MyOtherTestService", "_testservice", "_tcp", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis, emptyList()),
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        // Above records are identical to the actual registrations: no conflict
+        assertEquals(emptySet(), repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServicesCaseInsensitive_IdenticalService() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME)
+        repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* subtype */)
+        repository.addService(TEST_SERVICE_ID_2, TEST_SERVICE_2, null /* subtype */)
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                        MdnsServiceRecord(
+                                arrayOf("MYTESTSERVICE", "_TESTSERVICE", "_tcp", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis, 0 /* servicePriority */, 0 /* serviceWeight */,
+                                TEST_SERVICE_1.port,
+                                TEST_HOSTNAME),
+                        MdnsTextRecord(
+                                arrayOf("MyOtherTestService", "_TESTSERVICE", "_tcp", "local"),
                                 0L /* receiptTimeMillis */, true /* cacheFlush */,
                                 otherTtlMillis, emptyList()),
                 ) /* answers */,
