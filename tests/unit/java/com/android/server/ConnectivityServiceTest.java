@@ -17987,4 +17987,34 @@ public class ConnectivityServiceTest {
         verify(mDeps).destroyLiveTcpSockets(eq(UidRange.toIntRanges(ranges)),
                 eq(exemptUids));
     }
+
+    @Test
+    public void testDisconnectSuspendedNetworkStopClatd() throws Exception {
+        final TestNetworkCallback networkCallback = new TestNetworkCallback();
+        final NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addCapability(NET_CAPABILITY_DUN)
+                .build();
+        mCm.requestNetwork(networkRequest, networkCallback);
+
+        final IpPrefix nat64Prefix = new IpPrefix(InetAddress.getByName("64:ff9b::"), 96);
+        NetworkCapabilities nc = new NetworkCapabilities().addCapability(NET_CAPABILITY_DUN);
+        final LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName(MOBILE_IFNAME);
+        lp.addLinkAddress(new LinkAddress("2001:db8:1::1/64"));
+        lp.setNat64Prefix(nat64Prefix);
+        mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, lp, nc);
+        mCellAgent.connect(true /* validated */, false /* hasInternet */,
+                false /* privateDnsProbeSent */);
+
+        verifyClatdStart(null /* inOrder */, MOBILE_IFNAME, mCellAgent.getNetwork().netId,
+                nat64Prefix.toString());
+
+        mCellAgent.suspend();
+        mCm.unregisterNetworkCallback(networkCallback);
+        mCellAgent.expectDisconnected();
+        waitForIdle();
+
+        // TODO (aosp/2583410): update following check to verifyClatdStop
+        verifyNeverClatdStop(null /* inOrder */, MOBILE_IFNAME);
+    }
 }
