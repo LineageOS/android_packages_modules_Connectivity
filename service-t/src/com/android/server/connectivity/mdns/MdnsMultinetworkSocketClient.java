@@ -34,7 +34,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The {@link MdnsMultinetworkSocketClient} manages the multinetwork socket for mDns
@@ -48,9 +47,8 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     @NonNull private final Handler mHandler;
     @NonNull private final MdnsSocketProvider mSocketProvider;
 
-    private final Map<MdnsServiceBrowserListener, InterfaceSocketCallback> mRequestedNetworks =
+    private final ArrayMap<MdnsServiceBrowserListener, InterfaceSocketCallback> mRequestedNetworks =
             new ArrayMap<>();
-    private final ArrayMap<MdnsInterfaceSocket, Network> mActiveNetworkSockets = new ArrayMap<>();
     private final ArrayMap<MdnsInterfaceSocket, ReadPacketHandler> mSocketPacketHandlers =
             new ArrayMap<>();
     private MdnsSocketClientBase.Callback mCallback = null;
@@ -63,7 +61,11 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     }
 
     private class InterfaceSocketCallback implements MdnsSocketProvider.SocketCallback {
+        @NonNull
         private final SocketCreationCallback mSocketCreationCallback;
+        @NonNull
+        private final ArrayMap<MdnsInterfaceSocket, Network> mActiveNetworkSockets =
+                new ArrayMap<>();
 
         InterfaceSocketCallback(SocketCreationCallback socketCreationCallback) {
             mSocketCreationCallback = socketCreationCallback;
@@ -88,10 +90,47 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         @Override
         public void onInterfaceDestroyed(@Nullable Network network,
                 @NonNull MdnsInterfaceSocket socket) {
-            mSocketPacketHandlers.remove(socket);
-            mActiveNetworkSockets.remove(socket);
+            notifySocketDestroyed(socket);
+            maybeCleanupPacketHandler(socket);
+        }
+
+        private void notifySocketDestroyed(@NonNull MdnsInterfaceSocket socket) {
+            final Network network = mActiveNetworkSockets.remove(socket);
             mSocketCreationCallback.onSocketDestroyed(network);
         }
+
+        void onNetworkUnrequested() {
+            for (int i = mActiveNetworkSockets.size() - 1; i >= 0; i--) {
+                // Iterate from the end so the socket can be removed
+                final MdnsInterfaceSocket socket = mActiveNetworkSockets.keyAt(i);
+                notifySocketDestroyed(socket);
+                maybeCleanupPacketHandler(socket);
+            }
+        }
+    }
+
+    private boolean isSocketActive(@NonNull MdnsInterfaceSocket socket) {
+        for (int i = 0; i < mRequestedNetworks.size(); i++) {
+            final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
+            if (isc.mActiveNetworkSockets.containsKey(socket)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ArrayMap<MdnsInterfaceSocket, Network> getActiveSockets() {
+        final ArrayMap<MdnsInterfaceSocket, Network> sockets = new ArrayMap<>();
+        for (int i = 0; i < mRequestedNetworks.size(); i++) {
+            final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
+            sockets.putAll(isc.mActiveNetworkSockets);
+        }
+        return sockets;
+    }
+
+    private void maybeCleanupPacketHandler(@NonNull MdnsInterfaceSocket socket) {
+        if (isSocketActive(socket)) return;
+        mSocketPacketHandlers.remove(socket);
     }
 
     private class ReadPacketHandler implements MulticastPacketReader.PacketHandler {
@@ -149,6 +188,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             return;
         }
         mSocketProvider.unrequestSocket(callback);
+        callback.onNetworkUnrequested();
     }
 
     private void sendMdnsPacket(@NonNull DatagramPacket packet, @Nullable Network targetNetwork) {
@@ -156,9 +196,10 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
                 instanceof Inet6Address;
         final boolean isIpv4 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
                 instanceof Inet4Address;
-        for (int i = 0; i < mActiveNetworkSockets.size(); i++) {
-            final MdnsInterfaceSocket socket = mActiveNetworkSockets.keyAt(i);
-            final Network network = mActiveNetworkSockets.valueAt(i);
+        final ArrayMap<MdnsInterfaceSocket, Network> activeSockets = getActiveSockets();
+        for (int i = 0; i < activeSockets.size(); i++) {
+            final MdnsInterfaceSocket socket = activeSockets.keyAt(i);
+            final Network network = activeSockets.valueAt(i);
             // Check ip capability and network before sending packet
             if (((isIpv6 && socket.hasJoinedIpv6()) || (isIpv4 && socket.hasJoinedIpv4()))
                     && isNetworkMatched(targetNetwork, network)) {
