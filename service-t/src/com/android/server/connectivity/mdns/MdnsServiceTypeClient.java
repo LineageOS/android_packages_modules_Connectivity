@@ -267,6 +267,28 @@ public class MdnsServiceTypeClient {
         }
     }
 
+    /** Notify all services are removed because the socket is destroyed. */
+    public void notifyAllServicesRemoved() {
+        synchronized (lock) {
+            for (MdnsResponse response : instanceNameToResponse.values()) {
+                final String name = response.getServiceInstanceName();
+                if (name == null) continue;
+                for (int i = 0; i < listeners.size(); i++) {
+                    if (!responseMatchesOptions(response, listeners.valueAt(i))) continue;
+                    final MdnsServiceBrowserListener listener = listeners.keyAt(i);
+                    final MdnsServiceInfo serviceInfo =
+                            buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
+                    if (response.isComplete()) {
+                        sharedLog.log("Socket destroyed. onServiceRemoved: " + name);
+                        listener.onServiceRemoved(serviceInfo);
+                    }
+                    sharedLog.log("Socket destroyed. onServiceNameRemoved: " + name);
+                    listener.onServiceNameRemoved(serviceInfo);
+                }
+            }
+        }
+    }
+
     private void onResponseModified(@NonNull MdnsResponse response) {
         final String serviceInstanceName = response.getServiceInstanceName();
         final MdnsResponse currentResponse =
