@@ -55,6 +55,7 @@ import android.os.RemoteException;
 import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -599,7 +600,10 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        final String serviceType = constructServiceType(info.getServiceType());
+                        final Pair<String, String> typeAndSubtype =
+                                parseTypeAndSubtype(info.getServiceType());
+                        final String serviceType = typeAndSubtype == null
+                                ? null : typeAndSubtype.first;
                         if (clientInfo.mUseJavaBackend
                                 || mDeps.isMdnsDiscoveryManagerEnabled(mContext)
                                 || useDiscoveryManagerForType(serviceType)) {
@@ -613,12 +617,17 @@ public class NsdService extends INsdManager.Stub {
                             maybeStartMonitoringSockets();
                             final MdnsListener listener =
                                     new DiscoveryListener(clientId, id, info, listenServiceType);
-                            final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
-                                    .setNetwork(info.getNetwork())
-                                    .setIsPassiveMode(true)
-                                    .build();
+                            final MdnsSearchOptions.Builder optionsBuilder =
+                                    MdnsSearchOptions.newBuilder()
+                                            .setNetwork(info.getNetwork())
+                                            .setIsPassiveMode(true);
+                            if (typeAndSubtype.second != null) {
+                                // The parsing ensures subtype starts with an underscore.
+                                // MdnsSearchOptions expects the underscore to not be present.
+                                optionsBuilder.addSubtype(typeAndSubtype.second.substring(1));
+                            }
                             mMdnsDiscoveryManager.registerListener(
-                                    listenServiceType, listener, options);
+                                    listenServiceType, listener, optionsBuilder.build());
                             storeDiscoveryManagerRequestMap(clientId, id, listener, clientInfo);
                             clientInfo.onDiscoverServicesStarted(clientId, info);
                             clientInfo.log("Register a DiscoveryListener " + id
@@ -697,7 +706,9 @@ public class NsdService extends INsdManager.Stub {
                         id = getUniqueId();
                         final NsdServiceInfo serviceInfo = args.serviceInfo;
                         final String serviceType = serviceInfo.getServiceType();
-                        final String registerServiceType = constructServiceType(serviceType);
+                        final Pair<String, String> typeSubtype = parseTypeAndSubtype(serviceType);
+                        final String registerServiceType = typeSubtype == null
+                                ? null : typeSubtype.first;
                         if (clientInfo.mUseJavaBackend
                                 || mDeps.isMdnsAdvertiserEnabled(mContext)
                                 || useAdvertiserForType(registerServiceType)) {
@@ -712,7 +723,11 @@ public class NsdService extends INsdManager.Stub {
                                     serviceInfo.getServiceName()));
 
                             maybeStartMonitoringSockets();
-                            mAdvertiser.addService(id, serviceInfo);
+                            // TODO: pass in the subtype as well. Including the subtype in the
+                            // service type would generate service instance names like
+                            // Name._subtype._sub._type._tcp, which is incorrect
+                            // (it should be Name._type._tcp).
+                            mAdvertiser.addService(id, serviceInfo, typeSubtype.second);
                             storeAdvertiserRequestMap(clientId, id, clientInfo);
                         } else {
                             maybeStartDaemon();
@@ -778,7 +793,10 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        final String serviceType = constructServiceType(info.getServiceType());
+                        final Pair<String, String> typeSubtype =
+                                parseTypeAndSubtype(info.getServiceType());
+                        final String serviceType = typeSubtype == null
+                                ? null : typeSubtype.first;
                         if (clientInfo.mUseJavaBackend
                                 ||  mDeps.isMdnsDiscoveryManagerEnabled(mContext)
                                 || useDiscoveryManagerForType(serviceType)) {
@@ -871,7 +889,10 @@ public class NsdService extends INsdManager.Stub {
 
                         final NsdServiceInfo info = args.serviceInfo;
                         id = getUniqueId();
-                        final String serviceType = constructServiceType(info.getServiceType());
+                        final Pair<String, String> typeAndSubtype =
+                                parseTypeAndSubtype(info.getServiceType());
+                        final String serviceType = typeAndSubtype == null
+                                ? null : typeAndSubtype.first;
                         if (serviceType == null) {
                             clientInfo.onServiceInfoCallbackRegistrationFailed(clientId,
                                     NsdManager.FAILURE_BAD_PARAMETERS);
@@ -1315,28 +1336,39 @@ public class NsdService extends INsdManager.Stub {
      * Check the given service type is valid and construct it to a service type
      * which can use for discovery / resolution service.
      *
-     * <p> The valid service type should be 2 labels, or 3 labels if the query is for a
+     * <p>The valid service type should be 2 labels, or 3 labels if the query is for a
      * subtype (see RFC6763 7.1). Each label is up to 63 characters and must start with an
      * underscore; they are alphanumerical characters or dashes or underscore, except the
      * last one that is just alphanumerical. The last label must be _tcp or _udp.
+     *
+     * <p>The subtype may also be specified with a comma after the service type, for example
+     * _type._tcp,_subtype.
      *
      * @param serviceType the request service type for discovery / resolution service
      * @return constructed service type or null if the given service type is invalid.
      */
     @Nullable
-    public static String constructServiceType(String serviceType) {
+    public static Pair<String, String> parseTypeAndSubtype(String serviceType) {
         if (TextUtils.isEmpty(serviceType)) return null;
 
+        final String typeOrSubtypePattern = "_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]";
         final Pattern serviceTypePattern = Pattern.compile(
-                "^(_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]\\.)?"
-                        + "(_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]\\._(?:tcp|udp))"
+                // Optional leading subtype (_subtype._type._tcp)
+                // (?: xxx) is a non-capturing parenthesis, don't capture the dot
+                "^(?:(" + typeOrSubtypePattern + ")\\.)?"
+                        // Actual type (_type._tcp.local)
+                        + "(" + typeOrSubtypePattern + "\\._(?:tcp|udp))"
                         // Drop '.' at the end of service type that is compatible with old backend.
-                        + "\\.?$");
+                        // e.g. allow "_type._tcp.local."
+                        + "\\.?"
+                        // Optional subtype after comma, for "_type._tcp,_subtype" format
+                        + "(?:,(" + typeOrSubtypePattern + "))?"
+                        + "$");
         final Matcher matcher = serviceTypePattern.matcher(serviceType);
         if (!matcher.matches()) return null;
-        return matcher.group(1) == null
-                ? matcher.group(2)
-                : matcher.group(1) + "_sub." + matcher.group(2);
+        // Use the subtype either at the beginning or after the comma
+        final String subtype = matcher.group(1) != null ? matcher.group(1) : matcher.group(3);
+        return new Pair<>(matcher.group(2), subtype);
     }
 
     @VisibleForTesting
