@@ -457,9 +457,8 @@ public class IpSecManagerTest extends IpSecBaseTest {
             long newUidRxPackets = TrafficStats.getUidRxPackets(Os.getuid());
 
             assertEquals(expectedTxByteDelta, newUidTxBytes - uidTxBytes);
-            assertTrue(
-                    newUidRxBytes - uidRxBytes >= minRxByteDelta
-                            && newUidRxBytes - uidRxBytes <= maxRxByteDelta);
+            assertTrue("Not enough bytes", newUidRxBytes - uidRxBytes >= minRxByteDelta);
+            assertTrue("Too many bytes", newUidRxBytes - uidRxBytes <= maxRxByteDelta);
             assertEquals(expectedTxPacketDelta, newUidTxPackets - uidTxPackets);
             assertEquals(expectedRxPacketDelta, newUidRxPackets - uidRxPackets);
         }
