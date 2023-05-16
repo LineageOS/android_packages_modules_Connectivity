@@ -117,7 +117,7 @@ public class ConnectivityDiagnosticsManagerTest {
     private static final int FAIL_RATE_PERCENTAGE = 100;
     private static final int UNKNOWN_DETECTION_METHOD = 4;
     private static final int FILTERED_UNKNOWN_DETECTION_METHOD = 0;
-    private static final int CARRIER_CONFIG_CHANGED_BROADCAST_TIMEOUT = 5000;
+    private static final int CARRIER_CONFIG_CHANGED_BROADCAST_TIMEOUT = 10000;
     private static final int DELAY_FOR_BROADCAST_IDLE = 30_000;
 
     private static final Executor INLINE_EXECUTOR = x -> x.run();
