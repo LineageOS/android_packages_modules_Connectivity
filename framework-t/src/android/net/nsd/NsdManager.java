@@ -429,6 +429,10 @@ public final class NsdManager {
             private final DiscoveryListener mWrapped;
             private final Executor mWrappedExecutor;
             private final ArraySet<TrackedNsdInfo> mFoundInfo = new ArraySet<>();
+            // When this flag is set to true, no further service found or lost callbacks should be
+            // handled. This flag indicates that the network for this DelegatingDiscoveryListener is
+            // lost, and any further callbacks would be redundant.
+            private boolean mAllServicesLost = false;
 
             private DelegatingDiscoveryListener(Network network, DiscoveryListener listener,
                     Executor executor) {
@@ -445,6 +449,7 @@ public final class NsdManager {
                     serviceInfo.setNetwork(mNetwork);
                     mWrappedExecutor.execute(() -> mWrapped.onServiceLost(serviceInfo));
                 }
+                mAllServicesLost = true;
             }
 
             @Override
@@ -486,12 +491,22 @@ public final class NsdManager {
 
             @Override
             public void onServiceFound(NsdServiceInfo serviceInfo) {
+                if (mAllServicesLost) {
+                    // This DelegatingDiscoveryListener no longer has a network connection. Ignore
+                    // the callback.
+                    return;
+                }
                 mFoundInfo.add(new TrackedNsdInfo(serviceInfo));
                 mWrappedExecutor.execute(() -> mWrapped.onServiceFound(serviceInfo));
             }
 
             @Override
             public void onServiceLost(NsdServiceInfo serviceInfo) {
+                if (mAllServicesLost) {
+                    // This DelegatingDiscoveryListener no longer has a network connection. Ignore
+                    // the callback.
+                    return;
+                }
                 mFoundInfo.remove(new TrackedNsdInfo(serviceInfo));
                 mWrappedExecutor.execute(() -> mWrapped.onServiceLost(serviceInfo));
             }
