@@ -48,6 +48,7 @@ private const val SHORT_TIMEOUT_MS = 200L
 
 private val TEST_SERVICE_NAME_1 = arrayOf("testservice", "_nmt", "_tcp", "local")
 private val TEST_SERVICE_NAME_2 = arrayOf("testservice2", "_nmt", "_tcp", "local")
+private val TEST_SERVICE_NAME_3 = arrayOf("Testservice", "_nmt", "_tcp", "local")
 
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.S_V2)
@@ -126,6 +127,15 @@ class MdnsProberTest {
         val expected = "0000000000010000000100000B7465737473657276696365045F6E6D74045F746370056C" +
                 "6F63616C0000FF0001C00C002100010000007800130000000094020A6D79686F73746E616D65C022"
         assertProbesSent(probeInfo, expected)
+    }
+
+    @Test
+    fun testCreateProberCaseInsensitive() {
+        val probeInfo = TestProbeInfo(
+            listOf(makeServiceRecord(TEST_SERVICE_NAME_1, 37890),
+                makeServiceRecord(TEST_SERVICE_NAME_2, 37890),
+                makeServiceRecord(TEST_SERVICE_NAME_3, 37890)))
+        assertEquals(2, probeInfo.getPacket(0).questions.size)
     }
 
     @Test
