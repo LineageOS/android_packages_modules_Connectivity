@@ -175,6 +175,7 @@ public class MdnsServiceTypeClient {
             @NonNull MdnsSearchOptions searchOptions) {
         synchronized (lock) {
             this.searchOptions = searchOptions;
+            boolean hadReply = false;
             if (listeners.put(listener, searchOptions) == null) {
                 for (MdnsResponse existingResponse : instanceNameToResponse.values()) {
                     if (!responseMatchesOptions(existingResponse, searchOptions)) continue;
@@ -183,6 +184,7 @@ public class MdnsServiceTypeClient {
                     listener.onServiceNameDiscovered(info);
                     if (existingResponse.isComplete()) {
                         listener.onServiceFound(info);
+                        hadReply = true;
                     }
                 }
             }
@@ -192,14 +194,16 @@ public class MdnsServiceTypeClient {
             }
             // Keep tracking the ScheduledFuture for the task so we can cancel it if caller is not
             // interested anymore.
-            requestTaskFuture =
-                    executor.submit(
-                            new QueryTask(
-                                    new QueryTaskConfig(
-                                            searchOptions.getSubtypes(),
-                                            searchOptions.isPassiveMode(),
-                                            ++currentSessionId,
-                                            searchOptions.getNetwork())));
+            final QueryTaskConfig taskConfig = new QueryTaskConfig(
+                    searchOptions.getSubtypes(),
+                    searchOptions.isPassiveMode(),
+                    ++currentSessionId,
+                    searchOptions.getNetwork());
+            if (hadReply) {
+                requestTaskFuture = scheduleNextRunLocked(taskConfig);
+            } else {
+                requestTaskFuture = executor.submit(new QueryTask(taskConfig));
+            }
         }
     }
 
@@ -552,11 +556,14 @@ public class MdnsServiceTypeClient {
                         }
                     }
                 }
-                QueryTaskConfig config = this.config.getConfigForNextRun();
-                requestTaskFuture =
-                        executor.schedule(
-                                new QueryTask(config), config.timeToRunNextTaskInMs, MILLISECONDS);
+                requestTaskFuture = scheduleNextRunLocked(this.config);
             }
         }
+    }
+
+    @NonNull
+    private Future<?> scheduleNextRunLocked(@NonNull QueryTaskConfig lastRunConfig) {
+        QueryTaskConfig config = lastRunConfig.getConfigForNextRun();
+        return executor.schedule(new QueryTask(config), config.timeToRunNextTaskInMs, MILLISECONDS);
     }
 }
