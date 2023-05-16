@@ -88,6 +88,6 @@ public interface MdnsSocketClientBase {
         void onSocketCreated(@Nullable Network network);
 
         /*** Notify requested socket is destroyed */
-        void onSocketDestroyed(@Nullable Network network);
+        void onAllSocketsDestroyed(@Nullable Network network);
     }
 }
