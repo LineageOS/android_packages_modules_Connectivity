@@ -228,6 +228,12 @@ public class MdnsResponseTests {
         final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS);
 
         assertFalse(response.addPointerRecord(response.getPointerRecords().get(0)));
+        final String[] serviceName = new String[] { "MYSERVICE", "_TYPE", "_tcp", "local" };
+        final String[] serviceType = new String[] { "_TYPE", "_tcp", "local" };
+        MdnsPointerRecord pointerRecordCaseInsensitive =
+                new MdnsPointerRecord(serviceType, 0L /* receiptTimeMillis */,
+                        false /* cacheFlush */, TEST_TTL_MS, serviceName);
+        assertFalse(response.addPointerRecord(pointerRecordCaseInsensitive));
         assertFalse(response.addInet6AddressRecord(response.getInet6AddressRecord()));
         assertFalse(response.addInet4AddressRecord(response.getInet4AddressRecord()));
         assertFalse(response.setServiceRecord(response.getServiceRecord()));
@@ -269,5 +275,31 @@ public class MdnsResponseTests {
 
         // All records were replaced, not added
         assertEquals(ttlZeroResponse.getRecords().size(), response.getRecords().size());
+    }
+
+    @Test
+    public void dropUnmatchedAddressRecords_caseInsensitive() {
+
+        final String[] hostname = new String[] { "MyHostname" };
+        final String[] upperCaseHostName = new String[] { "MYHOSTNAME" };
+        final String[] serviceName = new String[] { "MyService", "_type", "_tcp", "local" };
+        final String[] serviceType = new String[] { "_type", "_tcp", "local" };
+        final MdnsResponse response = new MdnsResponse(/* now= */ 0, serviceName, INTERFACE_INDEX,
+                mNetwork);
+        response.addPointerRecord(new MdnsPointerRecord(serviceType, 0L /* receiptTimeMillis */,
+                false /* cacheFlush */, TEST_TTL_MS, serviceName));
+        response.setServiceRecord(new MdnsServiceRecord(serviceName, 0L /* receiptTimeMillis */,
+                true /* cacheFlush */, TEST_TTL_MS, 0 /* servicePriority */,
+                0 /* serviceWeight */, 0 /* servicePort */, hostname));
+        response.setTextRecord(new MdnsTextRecord(serviceName, 0L /* receiptTimeMillis */,
+                true /* cacheFlush */, TEST_TTL_MS, emptyList() /* entries */));
+        response.addInet4AddressRecord(new MdnsInetAddressRecord(
+                upperCaseHostName , 0L /* receiptTimeMillis */, true /* cacheFlush */,
+                TEST_TTL_MS, parseNumericAddress("192.0.2.123")));
+        response.addInet6AddressRecord(new MdnsInetAddressRecord(
+                upperCaseHostName, 0L /* receiptTimeMillis */, true /* cacheFlush */,
+                TEST_TTL_MS, parseNumericAddress("2001:db8::123")));
+
+        assertFalse(response.dropUnmatchedAddressRecords());
     }
 }

@@ -253,8 +253,9 @@ public class MdnsAdvertiser {
         int getConflictingService(@NonNull NsdServiceInfo info) {
             for (int i = 0; i < mPendingRegistrations.size(); i++) {
                 final NsdServiceInfo other = mPendingRegistrations.valueAt(i).getServiceInfo();
-                if (info.getServiceName().equals(other.getServiceName())
-                        && info.getServiceType().equals(other.getServiceType())) {
+                if (MdnsUtils.equalsIgnoreDnsCase(info.getServiceName(), other.getServiceName())
+                        && MdnsUtils.equalsIgnoreDnsCase(info.getServiceType(),
+                        other.getServiceType())) {
                     return mPendingRegistrations.keyAt(i);
                 }
             }
