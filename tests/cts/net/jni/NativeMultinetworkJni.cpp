@@ -42,11 +42,14 @@
 
 // Since the tests in this file commonly pass expression statements as parameters to these macros,
 // get the returned value of the statements to avoid statement double-called.
+// By checking ExceptionCheck(), these macros don't throw another exception if an exception has
+// been thrown, because ART's JNI disallows to throw another exception while an exception is
+// pending (See CheckThread in check_jni.cc).
 #define EXPECT_GE(env, actual_stmt, expected_stmt, msg)              \
     do {                                                             \
         const auto expected = (expected_stmt);                       \
         const auto actual = (actual_stmt);                           \
-        if (actual < expected) {                                     \
+        if (actual < expected && !env->ExceptionCheck()) {           \
             jniThrowExceptionFmt(env, "java/lang/AssertionError",    \
                     "%s:%d: %s EXPECT_GE: expected %d, got %d",      \
                     __FILE__, __LINE__, msg, expected, actual);      \
@@ -57,7 +60,7 @@
     do {                                                             \
         const auto expected = (expected_stmt);                       \
         const auto actual = (actual_stmt);                           \
-        if (actual <= expected) {                                    \
+        if (actual <= expected && !env->ExceptionCheck()) {          \
             jniThrowExceptionFmt(env, "java/lang/AssertionError",    \
                     "%s:%d: %s EXPECT_GT: expected %d, got %d",      \
                     __FILE__, __LINE__, msg, expected, actual);      \
@@ -68,7 +71,7 @@
     do {                                                             \
         const auto expected = (expected_stmt);                       \
         const auto actual = (actual_stmt);                           \
-        if (actual != expected) {                                    \
+        if (actual != expected && !env->ExceptionCheck()) {          \
             jniThrowExceptionFmt(env, "java/lang/AssertionError",    \
                     "%s:%d: %s EXPECT_EQ: expected %d, got %d",      \
                     __FILE__, __LINE__, msg, expected, actual);      \
