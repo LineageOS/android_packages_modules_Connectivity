@@ -21,9 +21,9 @@ import android.os.Looper;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -113,7 +113,8 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
          */
         private static boolean containsName(@NonNull List<MdnsRecord> records,
                 @NonNull String[] name) {
-            return CollectionUtils.any(records, r -> Arrays.equals(name, r.getName()));
+            return CollectionUtils.any(records,
+                    r -> MdnsUtils.equalsDnsLabelIgnoreDnsCase(name, r.getName()));
         }
     }
 
