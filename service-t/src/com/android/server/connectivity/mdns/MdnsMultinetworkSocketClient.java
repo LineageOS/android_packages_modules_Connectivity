@@ -96,7 +96,9 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
 
         private void notifySocketDestroyed(@NonNull MdnsInterfaceSocket socket) {
             final Network network = mActiveNetworkSockets.remove(socket);
-            mSocketCreationCallback.onSocketDestroyed(network);
+            if (!isAnySocketActive(network)) {
+                mSocketCreationCallback.onAllSocketsDestroyed(network);
+            }
         }
 
         void onNetworkUnrequested() {
@@ -113,6 +115,16 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         for (int i = 0; i < mRequestedNetworks.size(); i++) {
             final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
             if (isc.mActiveNetworkSockets.containsKey(socket)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAnySocketActive(@Nullable Network network) {
+        for (int i = 0; i < mRequestedNetworks.size(); i++) {
+            final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
+            if (isc.mActiveNetworkSockets.containsValue(network)) {
                 return true;
             }
         }
@@ -182,13 +194,15 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     @Override
     public void notifyNetworkUnrequested(@NonNull MdnsServiceBrowserListener listener) {
         ensureRunningOnHandlerThread(mHandler);
-        final InterfaceSocketCallback callback = mRequestedNetworks.remove(listener);
+        final InterfaceSocketCallback callback = mRequestedNetworks.get(listener);
         if (callback == null) {
             Log.e(TAG, "Can not be unrequested with unknown listener=" + listener);
             return;
         }
-        mSocketProvider.unrequestSocket(callback);
         callback.onNetworkUnrequested();
+        // onNetworkUnrequested does cleanups based on mRequestedNetworks, only remove afterwards
+        mRequestedNetworks.remove(listener);
+        mSocketProvider.unrequestSocket(callback);
     }
 
     private void sendMdnsPacket(@NonNull DatagramPacket packet, @Nullable Network targetNetwork) {
