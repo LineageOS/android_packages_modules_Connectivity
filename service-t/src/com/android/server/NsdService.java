@@ -727,7 +727,7 @@ public class NsdService extends INsdManager.Stub {
                             // service type would generate service instance names like
                             // Name._subtype._sub._type._tcp, which is incorrect
                             // (it should be Name._type._tcp).
-                            mAdvertiser.addService(id, serviceInfo);
+                            mAdvertiser.addService(id, serviceInfo, typeSubtype.second);
                             storeAdvertiserRequestMap(clientId, id, clientInfo);
                         } else {
                             maybeStartDaemon();
