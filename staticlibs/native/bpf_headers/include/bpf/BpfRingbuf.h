@@ -23,6 +23,9 @@
 #include <utils/Log.h>
 
 #include "bpf/BpfUtils.h"
+#include "bpf/KernelUtils.h"
+
+#include <atomic>
 
 namespace android {
 namespace bpf {
@@ -80,8 +83,22 @@ class BpfRingbufBase {
   android::base::unique_fd mRingFd;
 
   void* mDataPos = nullptr;
-  unsigned long* mConsumerPos = nullptr;
-  unsigned long* mProducerPos = nullptr;
+  std::atomic_uint64_t* mConsumerPos = nullptr;
+  std::atomic_uint64_t* mProducerPos = nullptr;
+
+  // The kernel uses an "unsigned long" type for both consumer and producer position. Unsigned long
+  // is a 4 byte value on a 32 bit kernel, and an 8 byte value on a 64 bit kernel. While 32 bit
+  // kernels are slowly going away (and therefore will not be supported), we *must* still support 32
+  // bit userspace on a 64 bit kernel.
+  // In order to guarantee atomic access in a 32 bit userspace environment, atomic_uint64_t is used
+  // in addition to std::atomic<T>::is_always_lock_free that guarantees that read / write operations
+  // are indeed atomic.
+  // Since std::atomic does not support wrapping preallocated memory, an additional static assert on
+  // the size of the atomic and the underlying type is added to ensure a reinterpret_cast from type
+  // to its atomic version is safe (is_always_lock_free being true should provide additional
+  // confidence).
+  static_assert(std::atomic_uint64_t::is_always_lock_free);
+  static_assert(sizeof(std::atomic_uint64_t) == sizeof(uint64_t));
 };
 
 // This is a class wrapper for eBPF ring buffers. An eBPF ring buffer is a
@@ -121,33 +138,11 @@ class BpfRingbuf : public BpfRingbufBase {
   BpfRingbuf() : BpfRingbufBase(sizeof(Value)) {}
 };
 
-#define ACCESS_ONCE(x) (*(volatile typeof(x)*)&(x))
-
-#if defined(__i386__) || defined(__x86_64__)
-#define smp_sync() asm volatile("" ::: "memory")
-#elif defined(__aarch64__)
-#define smp_sync() asm volatile("dmb ish" ::: "memory")
-#else
-#define smp_sync() __sync_synchronize()
-#endif
-
-#define smp_store_release(p, v) \
-  do {                          \
-    smp_sync();                 \
-    ACCESS_ONCE(*(p)) = (v);    \
-  } while (0)
-
-#define smp_load_acquire(p)        \
-  ({                               \
-    auto ___p = ACCESS_ONCE(*(p)); \
-    smp_sync();                    \
-    ___p;                          \
-  })
 
 inline base::Result<void> BpfRingbufBase::Init(const char* path) {
-  if (sizeof(unsigned long) != 8) {
+  if (!isKernel64Bit()) {
     return android::base::Error()
-           << "BpfRingbuf does not support 32 bit architectures";
+           << "BpfRingbuf does not support 32 bit kernels.";
   }
   mRingFd.reset(mapRetrieveRW(path));
   if (!mRingFd.ok()) {
@@ -184,7 +179,7 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
       return android::base::ErrnoError()
              << "failed to mmap ringbuf consumer pages";
     }
-    mConsumerPos = reinterpret_cast<unsigned long*>(ptr);
+    mConsumerPos = reinterpret_cast<decltype(mConsumerPos)>(ptr);
   }
 
   {
@@ -194,7 +189,7 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
       return android::base::ErrnoError()
              << "failed to mmap ringbuf producer page";
     }
-    mProducerPos = reinterpret_cast<unsigned long*>(ptr);
+    mProducerPos = reinterpret_cast<decltype(mProducerPos)>(ptr);
   }
 
   mDataPos = pointerAddBytes<void*>(mProducerPos, getpagesize());
@@ -204,14 +199,18 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
 inline base::Result<int> BpfRingbufBase::ConsumeAll(
     const std::function<void(const void*)>& callback) {
   int64_t count = 0;
-  unsigned long cons_pos = smp_load_acquire(mConsumerPos);
-  unsigned long prod_pos = smp_load_acquire(mProducerPos);
+  auto cons_pos = mConsumerPos->load(std::memory_order_acquire);
+  auto prod_pos = mProducerPos->load(std::memory_order_acquire);
   while (cons_pos < prod_pos) {
     // Find the start of the entry for this read (wrapping is done here).
     void* start_ptr = pointerAddBytes<void*>(mDataPos, cons_pos & mPosMask);
 
     // The entry has an 8 byte header containing the sample length.
-    uint32_t length = smp_load_acquire(reinterpret_cast<uint32_t*>(start_ptr));
+    // struct bpf_ringbuf_hdr {
+    //   u32 len;
+    //   u32 pg_off;
+    // };
+    uint32_t length = *reinterpret_cast<uint32_t*>(start_ptr);
 
     // If the sample isn't committed, we're caught up with the producer.
     if (length & BPF_RINGBUF_BUSY_BIT) return count;
@@ -220,7 +219,7 @@ inline base::Result<int> BpfRingbufBase::ConsumeAll(
 
     if ((length & BPF_RINGBUF_DISCARD_BIT) == 0) {
       if (length != mValueSize) {
-        smp_store_release(mConsumerPos, cons_pos);
+        mConsumerPos->store(cons_pos, std::memory_order_release);
         errno = EMSGSIZE;
         return android::base::ErrnoError()
                << "BPF ring buffer message has unexpected size (want "
@@ -230,7 +229,7 @@ inline base::Result<int> BpfRingbufBase::ConsumeAll(
       count++;
     }
 
-    smp_store_release(mConsumerPos, cons_pos);
+    mConsumerPos->store(cons_pos, std::memory_order_release);
   }
 
   return count;
@@ -251,11 +250,6 @@ inline base::Result<int> BpfRingbuf<Value>::ConsumeAll(
     callback(*reinterpret_cast<const Value*>(value));
   });
 }
-
-#undef ACCESS_ONCE
-#undef smp_sync
-#undef smp_store_release
-#undef smp_load_acquire
 
 }  // namespace bpf
 }  // namespace android

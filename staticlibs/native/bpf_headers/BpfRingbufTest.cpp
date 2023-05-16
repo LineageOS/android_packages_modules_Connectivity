@@ -25,6 +25,7 @@
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfRingbuf.h"
 #include "bpf/BpfUtils.h"
+#include "bpf/KernelUtils.h"
 
 #define TEST_RINGBUF_MAGIC_NUM 12345
 
@@ -49,8 +50,8 @@ class BpfRingbufTest : public ::testing::Test {
       GTEST_SKIP() << "BPF ring buffers not supported below 5.8";
     }
 
-    if (sizeof(unsigned long) != 8) {
-      GTEST_SKIP() << "BPF ring buffers not supported on 32 bit arch";
+    if (!isKernel64Bit()) {
+      GTEST_SKIP() << "BPF ring buffers not supported on 32 bit kernel";
     }
 
     errno = 0;
