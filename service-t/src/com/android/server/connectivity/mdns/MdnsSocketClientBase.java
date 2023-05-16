@@ -86,5 +86,8 @@ public interface MdnsSocketClientBase {
     interface SocketCreationCallback {
         /*** Notify requested socket is created */
         void onSocketCreated(@Nullable Network network);
+
+        /*** Notify requested socket is destroyed */
+        void onSocketDestroyed(@Nullable Network network);
     }
 }
