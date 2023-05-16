@@ -269,14 +269,9 @@ public class MdnsResponseDecoderTests {
         assertEquals("st=0", textStrings.get(6));
     }
 
-    @Test
-    public void testDecodeIPv6AnswerPacket() throws IOException {
-        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
-        assertNotNull(data6);
-
-        responses = decode(decoder, data6);
-        assertEquals(1, responses.size());
-        MdnsResponse response = responses.valueAt(0);
+    private void verifyResponse(ArraySet<MdnsResponse> responseArraySet) {
+        assertEquals(1, responseArraySet.size());
+        MdnsResponse response = responseArraySet.valueAt(0);
         assertTrue(response.isComplete());
 
         MdnsInetAddressRecord inet6AddressRecord = response.getInet6AddressRecord();
@@ -287,6 +282,22 @@ public class MdnsResponseDecoderTests {
         Inet6Address inet6Addr = inet6AddressRecord.getInet6Address();
         assertNotNull(inet6Addr);
         assertEquals(inet6Addr.getHostAddress(), "2000:3333::da6c:63ff:fe7c:7483");
+    }
+
+    @Test
+    public void testDecodeIPv6AnswerPacket() throws IOException {
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
+        assertNotNull(data6);
+        verifyResponse(decode(decoder, data6));
+    }
+
+    @Test
+    public void testDecodeCaseInsensitiveMatch() throws IOException {
+        final String[] castServiceTypeUpperCase =
+                new String[] {"_GOOGLECAST", "_TCP", "LOCAL"};
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, castServiceTypeUpperCase);
+        assertNotNull(data6);
+        verifyResponse(decode(decoder, data6));
     }
 
     @Test

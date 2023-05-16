@@ -20,6 +20,7 @@ import android.net.DnsResolver;
 import android.text.TextUtils;
 
 import com.android.net.module.util.CollectionUtils;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -152,7 +153,8 @@ public class MdnsNsecRecord extends MdnsRecord {
     @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(),
-                Arrays.hashCode(mNextDomain), Arrays.hashCode(mTypes));
+                Arrays.hashCode(MdnsUtils.toDnsLabelsLowerCase(mNextDomain)),
+                Arrays.hashCode(mTypes));
     }
 
     @Override
@@ -165,7 +167,8 @@ public class MdnsNsecRecord extends MdnsRecord {
         }
 
         return super.equals(other)
-                && Arrays.equals(mNextDomain, ((MdnsNsecRecord) other).mNextDomain)
+                && MdnsUtils.equalsDnsLabelIgnoreDnsCase(mNextDomain,
+                ((MdnsNsecRecord) other).mNextDomain)
                 && Arrays.equals(mTypes, ((MdnsNsecRecord) other).mTypes);
     }
 }

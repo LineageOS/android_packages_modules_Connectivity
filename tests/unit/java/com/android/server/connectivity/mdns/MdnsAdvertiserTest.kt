@@ -51,6 +51,7 @@ private const val SERVICE_ID_1 = 1
 private const val SERVICE_ID_2 = 2
 private const val LONG_SERVICE_ID_1 = 3
 private const val LONG_SERVICE_ID_2 = 4
+private const val CASE_INSENSITIVE_TEST_SERVICE_ID = 5
 private const val TIMEOUT_MS = 10_000L
 private val TEST_ADDR = parseNumericAddress("2001:db8::123")
 private val TEST_LINKADDR = LinkAddress(TEST_ADDR, 64 /* prefixLength */)
@@ -77,6 +78,13 @@ private val ALL_NETWORKS_SERVICE = NsdServiceInfo("TestServiceName", "_advertise
     hostAddresses = listOf(TEST_ADDR)
     network = null
 }
+
+private val ALL_NETWORKS_SERVICE_2 =
+    NsdServiceInfo("TESTSERVICENAME", "_ADVERTISERTEST._tcp").apply {
+        port = 12345
+        hostAddresses = listOf(TEST_ADDR)
+        network = null
+    }
 
 private val LONG_ALL_NETWORKS_SERVICE =
     NsdServiceInfo("a".repeat(48) + "TestServiceName", "_longadvertisertest._tcp").apply {
@@ -228,6 +236,9 @@ class MdnsAdvertiserTest {
         postSync { advertiser.addService(LONG_SERVICE_ID_2, LONG_ALL_NETWORKS_SERVICE,
                 null /* subtype */) }
 
+        postSync { advertiser.addService(CASE_INSENSITIVE_TEST_SERVICE_ID, ALL_NETWORKS_SERVICE_2,
+                null /* subtype */) }
+
         // Callbacks for matching network and all networks both get the socket
         postSync {
             oneNetSocketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR))
@@ -249,6 +260,14 @@ class MdnsAdvertiserTest {
             network = LONG_ALL_NETWORKS_SERVICE.network
         }
 
+        val expectedCaseInsensitiveRenamed = NsdServiceInfo(
+            "${ALL_NETWORKS_SERVICE_2.serviceName} (3)", ALL_NETWORKS_SERVICE_2.serviceType
+        ).apply {
+            port = ALL_NETWORKS_SERVICE_2.port
+            hostAddresses = ALL_NETWORKS_SERVICE_2.hostAddresses
+            network = ALL_NETWORKS_SERVICE_2.network
+        }
+
         val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         verify(mockDeps).makeAdvertiser(eq(mockSocket1), eq(listOf(TEST_LINKADDR)),
                 eq(thread.looper), any(), intAdvCbCaptor.capture(), eq(TEST_HOSTNAME), any()
@@ -261,6 +280,8 @@ class MdnsAdvertiserTest {
                 argThat { it.matches(LONG_SERVICE_1) }, eq(null))
         verify(mockInterfaceAdvertiser1).addService(eq(LONG_SERVICE_ID_2),
             argThat { it.matches(expectedLongRenamed) }, eq(null))
+        verify(mockInterfaceAdvertiser1).addService(eq(CASE_INSENSITIVE_TEST_SERVICE_ID),
+            argThat { it.matches(expectedCaseInsensitiveRenamed) }, eq(null))
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
         postSync { intAdvCbCaptor.value.onRegisterServiceSucceeded(
