@@ -42,6 +42,7 @@ import android.net.InetAddresses;
 import android.net.Network;
 import android.text.TextUtils;
 
+import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 import com.android.server.connectivity.mdns.MdnsServiceTypeClient.QueryTaskConfig;
@@ -53,6 +54,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
@@ -1078,6 +1080,87 @@ public class MdnsServiceTypeClientTests {
         inOrder.verify(mockListenerTwo).onServiceNameDiscovered(
                 matchServiceName(requestedInstance));
         inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(requestedInstance));
+
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceUpdated(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceRemoved(matchServiceName(otherInstance));
+    }
+
+    @Test
+    public void testProcessResponse_SubtypeDiscoveryLimitedToSubtype() {
+        client = new MdnsServiceTypeClient(
+                SERVICE_TYPE, mockSocketClient, currentThreadExecutor, mockNetwork, mockSharedLog);
+
+        final String matchingInstance = "instance1";
+        final String subtype = "_subtype";
+        final String otherInstance = "instance2";
+        final String ipV4Address = "192.0.2.0";
+        final String ipV6Address = "2001:db8::";
+
+        final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
+                // Search with different case. Note MdnsSearchOptions subtype doesn't start with "_"
+                .addSubtype("Subtype").build();
+
+        client.startSendAndReceive(mockListenerOne, options);
+        client.startSendAndReceive(mockListenerTwo, MdnsSearchOptions.getDefaultOptions());
+
+        // Complete response from instanceName
+        final MdnsPacket packetWithoutSubtype = createResponse(
+                matchingInstance, ipV4Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap() /* textAttributes */, TEST_TTL);
+        final MdnsPointerRecord originalPtr = (MdnsPointerRecord) CollectionUtils.findFirst(
+                packetWithoutSubtype.answers, r -> r instanceof MdnsPointerRecord);
+
+        // Add a subtype PTR record
+        final ArrayList<MdnsRecord> newAnswers = new ArrayList<>(packetWithoutSubtype.answers);
+        newAnswers.add(new MdnsPointerRecord(
+                // PTR should be _subtype._sub._type._tcp.local -> instance1._type._tcp.local
+                Stream.concat(Stream.of(subtype, "_sub"), Arrays.stream(SERVICE_TYPE_LABELS))
+                        .toArray(String[]::new),
+                originalPtr.getReceiptTime(), originalPtr.getCacheFlush(), originalPtr.getTtl(),
+                originalPtr.getPointer()));
+        final MdnsPacket packetWithSubtype = new MdnsPacket(
+                packetWithoutSubtype.flags,
+                packetWithoutSubtype.questions,
+                newAnswers,
+                packetWithoutSubtype.authorityRecords,
+                packetWithoutSubtype.additionalRecords);
+        client.processResponse(packetWithSubtype, INTERFACE_INDEX, mockNetwork);
+
+        // Complete response from otherInstanceName, without subtype
+        client.processResponse(createResponse(
+                        otherInstance, ipV4Address, 5353, SERVICE_TYPE_LABELS,
+                        Collections.emptyMap() /* textAttributes */, TEST_TTL),
+                INTERFACE_INDEX, mockNetwork);
+
+        // Address update from otherInstanceName
+        client.processResponse(createResponse(
+                otherInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), INTERFACE_INDEX, mockNetwork);
+
+        // Goodbye from otherInstanceName
+        client.processResponse(createResponse(
+                otherInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), 0L /* ttl */), INTERFACE_INDEX, mockNetwork);
+
+        // mockListenerOne gets notified for the requested instance
+        final ArgumentMatcher<MdnsServiceInfo> subtypeInstanceMatcher = info ->
+                info.getServiceInstanceName().equals(matchingInstance)
+                        && info.getSubtypes().equals(Collections.singletonList(subtype));
+        verify(mockListenerOne).onServiceNameDiscovered(argThat(subtypeInstanceMatcher));
+        verify(mockListenerOne).onServiceFound(argThat(subtypeInstanceMatcher));
+
+        // ...but does not get any callback for the other instance
+        verify(mockListenerOne, never()).onServiceFound(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceNameDiscovered(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceUpdated(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceRemoved(matchServiceName(otherInstance));
+
+        // mockListenerTwo gets notified for both though
+        final InOrder inOrder = inOrder(mockListenerTwo);
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(argThat(subtypeInstanceMatcher));
+        inOrder.verify(mockListenerTwo).onServiceFound(argThat(subtypeInstanceMatcher));
 
         inOrder.verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
         inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
