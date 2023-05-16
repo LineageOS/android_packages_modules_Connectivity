@@ -16,16 +16,11 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- no translation found for tethered_notification_title (5350162111436634622) -->
-    <skip />
-    <!-- no translation found for tethered_notification_message (2338023450330652098) -->
-    <skip />
-    <!-- no translation found for disable_tether_notification_title (3183576627492925522) -->
-    <skip />
-    <!-- no translation found for disable_tether_notification_message (6655882039707534929) -->
-    <skip />
-    <!-- no translation found for notification_channel_tethering_status (7030733422705019001) -->
-    <skip />
+    <string name="tethered_notification_title" msgid="5350162111436634622">"Модем чи точка доступу активні"</string>
+    <string name="tethered_notification_message" msgid="2338023450330652098">"Натисніть, щоб налаштувати."</string>
+    <string name="disable_tether_notification_title" msgid="3183576627492925522">"Використання телефона як модема вимкнено"</string>
+    <string name="disable_tether_notification_message" msgid="6655882039707534929">"Щоб дізнатися більше, зверніться до адміністратора"</string>
+    <string name="notification_channel_tethering_status" msgid="7030733422705019001">"Статус точки доступу й модема"</string>
     <string name="no_upstream_notification_title" msgid="2052743091868702475"></string>
     <string name="no_upstream_notification_message" msgid="6932020551635470134"></string>
     <string name="no_upstream_notification_disable_button" msgid="8836277213343697023"></string>
