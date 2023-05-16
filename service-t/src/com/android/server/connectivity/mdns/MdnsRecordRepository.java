@@ -30,6 +30,7 @@ import android.util.SparseArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.HexDump;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -329,7 +330,8 @@ public class MdnsRecordRepository {
     private int getServiceByName(@NonNull String serviceName) {
         for (int i = 0; i < mServices.size(); i++) {
             final ServiceRegistration registration = mServices.valueAt(i);
-            if (serviceName.equals(registration.serviceInfo.getServiceName())) {
+            if (MdnsUtils.equalsIgnoreDnsCase(serviceName,
+                    registration.serviceInfo.getServiceName())) {
                 return mServices.keyAt(i);
             }
         }
@@ -545,7 +547,9 @@ public class MdnsRecordRepository {
              must match the question qtype unless the qtype is "ANY" (255) or the rrtype is
              "CNAME" (5), and the record rrclass must match the question qclass unless the
              qclass is "ANY" (255) */
-            if (!Arrays.equals(info.record.getName(), question.getName())) continue;
+            if (!MdnsUtils.equalsDnsLabelIgnoreDnsCase(info.record.getName(), question.getName())) {
+                continue;
+            }
             hasFullyOwnedNameMatch |= !info.isSharedName;
 
             // The repository does not store CNAME records
@@ -747,7 +751,10 @@ public class MdnsRecordRepository {
                 // happens. In fact probing is only done for the service name in the SRV record.
                 // This means only SRV and TXT records need to be checked.
                 final RecordInfo<MdnsServiceRecord> srvRecord = registration.srvRecord;
-                if (!Arrays.equals(record.getName(), srvRecord.record.getName())) continue;
+                if (!MdnsUtils.equalsDnsLabelIgnoreDnsCase(record.getName(),
+                        srvRecord.record.getName())) {
+                    continue;
+                }
 
                 // As per RFC6762 9., it's fine if the "conflict" is an identical record with same
                 // data.
