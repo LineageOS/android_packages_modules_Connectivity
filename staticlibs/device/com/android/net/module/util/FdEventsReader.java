@@ -180,6 +180,17 @@ public abstract class FdEventsReader<BufferType> {
     }
 
     /**
+     * Called by the subclasses of FdEventsReader, decide whether it should stop reading from the
+     * socket or process the packet and continue to read upon receiving a zero-length packet.
+     *
+     * @return {@code true} if this FdEventsReader should process the zero-length packet.
+     *         {@code false} if it should stop reading from the socket.
+     */
+    protected boolean shouldProcessZeroLengthPacket() {
+        return false; // by default, stop reading upon receiving zero-length packet.
+    }
+
+    /**
      * Called by the main loop to log errors.  In some cases |e| may be null.
      */
     protected void logError(@NonNull String msg, @Nullable Exception e) {}
@@ -235,7 +246,7 @@ public abstract class FdEventsReader<BufferType> {
 
             try {
                 bytesRead = readPacket(mFd, mBuffer);
-                if (bytesRead < 1) {
+                if (bytesRead == 0 && !shouldProcessZeroLengthPacket()) {
                     if (isRunning()) logError("Socket closed, exiting", null);
                     break;
                 }
