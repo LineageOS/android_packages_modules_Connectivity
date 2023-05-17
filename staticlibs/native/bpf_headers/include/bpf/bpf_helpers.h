@@ -99,6 +99,30 @@
 #define KVER(a, b, c) (((a) << 24) + ((b) << 16) + (c))
 #define KVER_INF 0xFFFFFFFFu
 
+/*
+ * BPFFS (ie. /sys/fs/bpf) labelling is as follows:
+ *   subdirectory   selinux context      mainline  usecase / usable by
+ *   /              fs_bpf               no [*]    core operating system (ie. platform)
+ *   /loader        fs_bpf_loader        no, U+    (as yet unused)
+ *   /net_private   fs_bpf_net_private   yes, T+   network_stack
+ *   /net_shared    fs_bpf_net_shared    yes, T+   network_stack & system_server
+ *   /netd_readonly fs_bpf_netd_readonly yes, T+   network_stack & system_server & r/o to netd
+ *   /netd_shared   fs_bpf_netd_shared   yes, T+   network_stack & system_server & netd [**]
+ *   /tethering     fs_bpf_tethering     yes, S+   network_stack
+ *   /vendor        fs_bpf_vendor        no, T+    vendor
+ *
+ * [*] initial support for bpf was added back in P,
+ *     but things worked differently back then with no bpfloader,
+ *     and instead netd doing stuff by hand,
+ *     bpfloader with pinning into /sys/fs/bpf was (I believe) added in Q
+ *     (and was definitely there in R).
+ *
+ * [**] additionally bpf programs are accessible to netutils_wrapper
+ *      for use by iptables xt_bpf extensions.
+ *
+ * See cs/p:aosp-master%20-file:prebuilts/%20file:genfs_contexts%20"genfscon%20bpf"
+ */
+
 /* generic functions */
 
 /*
