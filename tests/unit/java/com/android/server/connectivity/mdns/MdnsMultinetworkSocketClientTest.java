@@ -24,8 +24,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import android.net.InetAddresses;
 import android.net.Network;
@@ -77,12 +81,17 @@ public class MdnsMultinetworkSocketClientTest {
     }
 
     private SocketCallback expectSocketCallback() {
+        return expectSocketCallback(mListener, mNetwork);
+    }
+
+    private SocketCallback expectSocketCallback(MdnsServiceBrowserListener listener,
+            Network requestedNetwork) {
         final ArgumentCaptor<SocketCallback> callbackCaptor =
                 ArgumentCaptor.forClass(SocketCallback.class);
         mHandler.post(() -> mSocketClient.notifyNetworkRequested(
-                mListener, mNetwork, mSocketCreationCallback));
+                listener, requestedNetwork, mSocketCreationCallback));
         verify(mProvider, timeout(DEFAULT_TIMEOUT))
-                .requestSocket(eq(mNetwork), callbackCaptor.capture());
+                .requestSocket(eq(requestedNetwork), callbackCaptor.capture());
         return callbackCaptor.getValue();
     }
 
@@ -168,5 +177,104 @@ public class MdnsMultinetworkSocketClientTest {
                         0 /* serviceWeight */, 31234 /* servicePort */,
                         new String[] { "Android", "local" } /* serviceHost */)
         ), response.answers);
+    }
+
+    @Test
+    public void testSocketRemovedAfterNetworkUnrequested() throws IOException {
+        // Request a socket
+        final SocketCallback callback = expectSocketCallback(mListener, mNetwork);
+        final DatagramPacket ipv4Packet = new DatagramPacket(BUFFER, 0 /* offset */, BUFFER.length,
+                InetAddresses.parseNumericAddress("192.0.2.1"), 0 /* port */);
+        doReturn(true).when(mSocket).hasJoinedIpv4();
+        doReturn(true).when(mSocket).hasJoinedIpv6();
+        doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
+        // Notify socket created
+        callback.onSocketCreated(mNetwork, mSocket, List.of());
+        verify(mSocketCreationCallback).onSocketCreated(mNetwork);
+
+        // Send IPv4 packet and verify sending has been called.
+        mSocketClient.sendMulticastPacket(ipv4Packet);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mSocket).send(ipv4Packet);
+
+        // Request another socket with null network
+        final MdnsServiceBrowserListener listener2 = mock(MdnsServiceBrowserListener.class);
+        final Network network2 = mock(Network.class);
+        final MdnsInterfaceSocket socket2 = mock(MdnsInterfaceSocket.class);
+        final SocketCallback callback2 = expectSocketCallback(listener2, null);
+        doReturn(true).when(socket2).hasJoinedIpv4();
+        doReturn(true).when(socket2).hasJoinedIpv6();
+        doReturn(createEmptyNetworkInterface()).when(socket2).getInterface();
+        // Notify socket created for two networks.
+        callback2.onSocketCreated(mNetwork, mSocket, List.of());
+        callback2.onSocketCreated(network2, socket2, List.of());
+        verify(mSocketCreationCallback, times(2)).onSocketCreated(mNetwork);
+        verify(mSocketCreationCallback).onSocketCreated(network2);
+
+        // Send IPv4 packet and verify sending to two sockets.
+        mSocketClient.sendMulticastPacket(ipv4Packet);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mSocket, times(2)).send(ipv4Packet);
+        verify(socket2).send(ipv4Packet);
+
+        // Unrequest another socket
+        mHandler.post(() -> mSocketClient.notifyNetworkUnrequested(listener2));
+        verify(mProvider, timeout(DEFAULT_TIMEOUT)).unrequestSocket(callback2);
+
+        // Send IPv4 packet again and verify only sending via mSocket
+        mSocketClient.sendMulticastPacket(ipv4Packet);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mSocket, times(3)).send(ipv4Packet);
+        verify(socket2).send(ipv4Packet);
+
+        // Unrequest remaining socket
+        mHandler.post(() -> mSocketClient.notifyNetworkUnrequested(mListener));
+        verify(mProvider, timeout(DEFAULT_TIMEOUT)).unrequestSocket(callback);
+
+        // Send IPv4 packet and verify no more sending.
+        mSocketClient.sendMulticastPacket(ipv4Packet);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        verify(mSocket, times(3)).send(ipv4Packet);
+        verify(socket2).send(ipv4Packet);
+    }
+
+    @Test
+    public void testNotifyNetworkUnrequested_SocketsOnNullNetwork() {
+        final MdnsInterfaceSocket otherSocket = mock(MdnsInterfaceSocket.class);
+        final SocketCallback callback = expectSocketCallback(
+                mListener, null /* requestedNetwork */);
+        doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
+        doReturn(createEmptyNetworkInterface()).when(otherSocket).getInterface();
+
+        callback.onSocketCreated(null /* network */, mSocket, List.of());
+        verify(mSocketCreationCallback).onSocketCreated(null);
+        callback.onSocketCreated(null /* network */, otherSocket, List.of());
+        verify(mSocketCreationCallback, times(2)).onSocketCreated(null);
+
+        verify(mSocketCreationCallback, never()).onAllSocketsDestroyed(null /* network */);
+        mHandler.post(() -> mSocketClient.notifyNetworkUnrequested(mListener));
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+
+        verify(mProvider).unrequestSocket(callback);
+        verify(mSocketCreationCallback).onAllSocketsDestroyed(null /* network */);
+    }
+
+    @Test
+    public void testSocketCreatedAndDestroyed_NullNetwork() throws IOException {
+        final MdnsInterfaceSocket otherSocket = mock(MdnsInterfaceSocket.class);
+        final SocketCallback callback = expectSocketCallback(mListener, null /* network */);
+        doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
+        doReturn(createEmptyNetworkInterface()).when(otherSocket).getInterface();
+
+        callback.onSocketCreated(null /* network */, mSocket, List.of());
+        verify(mSocketCreationCallback).onSocketCreated(null);
+        callback.onSocketCreated(null /* network */, otherSocket, List.of());
+        verify(mSocketCreationCallback, times(2)).onSocketCreated(null);
+
+        // Notify socket destroyed
+        callback.onInterfaceDestroyed(null /* network */, mSocket);
+        verifyNoMoreInteractions(mSocketCreationCallback);
+        callback.onInterfaceDestroyed(null /* network */, otherSocket);
+        verify(mSocketCreationCallback).onAllSocketsDestroyed(null /* network */);
     }
 }

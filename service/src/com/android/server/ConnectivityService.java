@@ -2663,7 +2663,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final ArrayList<NetworkStateSnapshot> result = new ArrayList<>();
         for (Network network : getAllNetworks()) {
             final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
-            if (nai != null && nai.everConnected()) {
+            final boolean includeNetwork = (nai != null) && nai.isCreated();
+            if (includeNetwork) {
                 // TODO (b/73321673) : NetworkStateSnapshot contains a copy of the
                 // NetworkCapabilities, which may contain UIDs of apps to which the
                 // network applies. Should the UIDs be cleared so as not to leak or
@@ -3889,9 +3890,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     break;
                 }
                 case NetworkAgent.EVENT_UNREGISTER_AFTER_REPLACEMENT: {
-                    if (!nai.isCreated()) {
-                        Log.d(TAG, "unregisterAfterReplacement on uncreated " + nai.toShortString()
-                                + ", tearing down instead");
+                    if (!nai.everConnected()) {
+                        Log.d(TAG, "unregisterAfterReplacement on never-connected "
+                                + nai.toShortString() + ", tearing down instead");
                         teardownUnneededNetwork(nai);
                         break;
                     }
@@ -4476,6 +4477,25 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    @VisibleForTesting
+    protected static boolean shouldCreateNetworksImmediately() {
+        // Before U, physical networks are only created when the agent advances to CONNECTED.
+        // In U and above, all networks are immediately created when the agent is registered.
+        return SdkLevel.isAtLeastU();
+    }
+
+    private static boolean shouldCreateNativeNetwork(@NonNull NetworkAgentInfo nai,
+            @NonNull NetworkInfo.State state) {
+        if (nai.isCreated()) return false;
+        if (state == NetworkInfo.State.CONNECTED) return true;
+        if (state != NetworkInfo.State.CONNECTING) {
+            // TODO: throw if no WTFs are observed in the field.
+            Log.wtf(TAG, "Uncreated network in invalid state: " + state);
+            return false;
+        }
+        return nai.isVPN() || shouldCreateNetworksImmediately();
+    }
+
     private static boolean shouldDestroyNativeNetwork(@NonNull NetworkAgentInfo nai) {
         return nai.isCreated() && !nai.isDestroyed();
     }
@@ -4526,7 +4546,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // because they lost all their requests or because their score isn't good)
         // then they would disconnect organically, report their new state and then
         // disconnect the channel.
-        if (nai.networkInfo.isConnected()) {
+        if (nai.networkInfo.isConnected() || nai.networkInfo.isSuspended()) {
             nai.networkInfo.setDetailedState(NetworkInfo.DetailedState.DISCONNECTED,
                     null, null);
         }
@@ -7918,7 +7938,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         if (isDefaultNetwork(networkAgent)) {
             handleApplyDefaultProxy(newLp.getHttpProxy());
-        } else {
+        } else if (networkAgent.everConnected()) {
             updateProxy(newLp, oldLp);
         }
 
@@ -7950,6 +7970,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         mKeepaliveTracker.handleCheckKeepalivesStillValid(networkAgent);
+    }
+
+    private void applyInitialLinkProperties(@NonNull NetworkAgentInfo nai) {
+        updateLinkProperties(nai, new LinkProperties(nai.linkProperties), null);
     }
 
     /**
@@ -9714,21 +9738,32 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + oldInfo.getState() + " to " + state);
         }
 
-        if (!networkAgent.isCreated()
-                && (state == NetworkInfo.State.CONNECTED
-                || (state == NetworkInfo.State.CONNECTING && networkAgent.isVPN()))) {
-
+        if (shouldCreateNativeNetwork(networkAgent, state)) {
             // A network that has just connected has zero requests and is thus a foreground network.
             networkAgent.networkCapabilities.addCapability(NET_CAPABILITY_FOREGROUND);
 
             if (!createNativeNetwork(networkAgent)) return;
+
+            networkAgent.setCreated();
+
+            // If the network is created immediately on register, then apply the LinkProperties now.
+            // Otherwise, this is done further down when the network goes into connected state.
+            // Applying the LinkProperties means that the network is ready to carry traffic -
+            // interfaces and routing rules have been added, DNS servers programmed, etc.
+            // For VPNs, this must be done before the capabilities are updated, because as soon as
+            // that happens, UIDs are routed to the network.
+            if (shouldCreateNetworksImmediately()) {
+                applyInitialLinkProperties(networkAgent);
+            }
+
+            // TODO: should this move earlier? It doesn't seem to have anything to do with whether
+            // a network is created or not.
             if (networkAgent.propagateUnderlyingCapabilities()) {
                 // Initialize the network's capabilities to their starting values according to the
                 // underlying networks. This ensures that the capabilities are correct before
                 // anything happens to the network.
                 updateCapabilitiesForNetwork(networkAgent);
             }
-            networkAgent.setCreated();
             networkAgent.onNetworkCreated();
             updateAllowedUids(networkAgent, null, networkAgent.networkCapabilities);
             updateProfileAllowedNetworks();
@@ -9742,8 +9777,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
             networkAgent.getAndSetNetworkCapabilities(networkAgent.networkCapabilities);
 
             handlePerNetworkPrivateDnsConfig(networkAgent, mDnsManager.getPrivateDnsConfig());
-            updateLinkProperties(networkAgent, new LinkProperties(networkAgent.linkProperties),
-                    null);
+            if (!shouldCreateNetworksImmediately()) {
+                applyInitialLinkProperties(networkAgent);
+            } else {
+                // The network was created when the agent registered, and the LinkProperties are
+                // already up-to-date. However, updateLinkProperties also makes some changes only
+                // when the network connects. Apply those changes here. On T and below these are
+                // handled by the applyInitialLinkProperties call just above.
+                // TODO: stop relying on updateLinkProperties(..., null) to do this.
+                // If something depends on both LinkProperties and connected state, it should be in
+                // this method as well.
+                networkAgent.clatd.update();
+                updateProxy(networkAgent.linkProperties, null);
+            }
 
             // If a rate limit has been configured and is applicable to this network (network
             // provides internet connectivity), apply it. The tc police filter cannot be attached
