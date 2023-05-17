@@ -1509,6 +1509,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 throws SocketException, InterruptedIOException, ErrnoException {
             InetDiagMessage.destroyLiveTcpSockets(ranges, exemptUids);
         }
+
+        /**
+         * Call {@link InetDiagMessage#destroyLiveTcpSocketsByOwnerUids(Set)}
+         *
+         * @param ownerUids target uids to close sockets
+         */
+        public void destroyLiveTcpSocketsByOwnerUids(final Set<Integer> ownerUids)
+                throws SocketException, InterruptedIOException, ErrnoException {
+            InetDiagMessage.destroyLiveTcpSocketsByOwnerUids(ownerUids);
+        }
     }
 
     public ConnectivityService(Context context) {
@@ -12002,6 +12012,23 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return rule;
     }
 
+    private void closeSocketsForFirewallChainLocked(final int chain)
+            throws ErrnoException, SocketException, InterruptedIOException {
+        if (mBpfNetMaps.isFirewallAllowList(chain)) {
+            // Allowlist means the firewall denies all by default, uids must be explicitly allowed
+            // So, close all non-system socket owned by uids that are not explicitly allowed
+            Set<Range<Integer>> ranges = new ArraySet<>();
+            ranges.add(new Range<>(Process.FIRST_APPLICATION_UID, Integer.MAX_VALUE));
+            final Set<Integer> exemptUids = mBpfNetMaps.getUidsWithAllowRuleOnAllowListChain(chain);
+            mDeps.destroyLiveTcpSockets(ranges, exemptUids);
+        } else {
+            // Denylist means the firewall allows all by default, uids must be explicitly denied
+            // So, close socket owned by uids that are explicitly denied
+            final Set<Integer> ownerUids = mBpfNetMaps.getUidsWithDenyRuleOnDenyListChain(chain);
+            mDeps.destroyLiveTcpSocketsByOwnerUids(ownerUids);
+        }
+    }
+
     @Override
     public void setFirewallChainEnabled(final int chain, final boolean enable) {
         enforceNetworkStackOrSettingsPermission();
@@ -12010,6 +12037,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mBpfNetMaps.setChildChain(chain, enable);
         } catch (ServiceSpecificException e) {
             throw new IllegalStateException(e);
+        }
+
+        if (SdkLevel.isAtLeastU() && enable) {
+            try {
+                closeSocketsForFirewallChainLocked(chain);
+            } catch (ErrnoException | SocketException | InterruptedIOException e) {
+                Log.e(TAG, "Failed to close sockets after enabling chain (" + chain + "): " + e);
+            }
         }
     }
 
