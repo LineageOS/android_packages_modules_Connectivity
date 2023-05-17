@@ -222,8 +222,8 @@ public class MdnsDiscoveryManagerTests {
         // The client for NETWORK_1 receives the callback that the NETWORK_1 has been destroyed,
         // mockServiceTypeClientOne1 should send service removed notifications and remove from the
         // list of clients.
-        callback.onSocketDestroyed(NETWORK_1);
-        verify(mockServiceTypeClientOne1).notifyAllServicesRemoved();
+        callback.onAllSocketsDestroyed(NETWORK_1);
+        verify(mockServiceTypeClientOne1).notifySocketDestroyed();
 
         // Receive a response again, it should be processed only on mockServiceTypeClientTwo2.
         // Because the mockServiceTypeClientOne1 is removed from the list of clients, it is no
@@ -236,8 +236,8 @@ public class MdnsDiscoveryManagerTests {
 
         // The client for NETWORK_2 receives the callback that the NETWORK_1 has been destroyed,
         // mockServiceTypeClientTwo2 shouldn't send any notifications.
-        callback2.onSocketDestroyed(NETWORK_1);
-        verify(mockServiceTypeClientTwo2, never()).notifyAllServicesRemoved();
+        callback2.onAllSocketsDestroyed(NETWORK_1);
+        verify(mockServiceTypeClientTwo2, never()).notifySocketDestroyed();
 
         // Receive a response again, mockServiceTypeClientTwo2 is still in the list of clients, it's
         // still able to process responses.

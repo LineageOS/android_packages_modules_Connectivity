@@ -284,7 +284,7 @@ public class MdnsServiceTypeClient {
     }
 
     /** Notify all services are removed because the socket is destroyed. */
-    public void notifyAllServicesRemoved() {
+    public void notifySocketDestroyed() {
         synchronized (lock) {
             for (MdnsResponse response : instanceNameToResponse.values()) {
                 final String name = response.getServiceInstanceName();
@@ -301,6 +301,11 @@ public class MdnsServiceTypeClient {
                     sharedLog.log("Socket destroyed. onServiceNameRemoved: " + name);
                     listener.onServiceNameRemoved(serviceInfo);
                 }
+            }
+
+            if (requestTaskFuture != null) {
+                requestTaskFuture.cancel(true);
+                requestTaskFuture = null;
             }
         }
     }
