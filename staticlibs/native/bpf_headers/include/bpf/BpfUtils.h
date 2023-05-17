@@ -28,7 +28,7 @@
 
 #include <log/log.h>
 
-#include "KernelVersion.h"
+#include "KernelUtils.h"
 
 namespace android {
 namespace bpf {

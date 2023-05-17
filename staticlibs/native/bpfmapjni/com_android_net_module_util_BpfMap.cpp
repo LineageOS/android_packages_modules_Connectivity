@@ -25,7 +25,7 @@
 #define BPF_FD_JUST_USE_INT
 #include "BpfSyscallWrappers.h"
 
-#include "bpf/KernelVersion.h"
+#include "bpf/KernelUtils.h"
 
 namespace android {
 
