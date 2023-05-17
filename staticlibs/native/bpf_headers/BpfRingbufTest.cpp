@@ -50,10 +50,6 @@ class BpfRingbufTest : public ::testing::Test {
       GTEST_SKIP() << "BPF ring buffers not supported below 5.8";
     }
 
-    if (!isKernel64Bit()) {
-      GTEST_SKIP() << "BPF ring buffers not supported on 32 bit kernel";
-    }
-
     errno = 0;
     mProgram.reset(retrieveProgram(mProgPath.c_str()));
     EXPECT_EQ(errno, 0);
