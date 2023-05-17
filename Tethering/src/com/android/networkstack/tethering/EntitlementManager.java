@@ -459,8 +459,9 @@ public class EntitlementManager {
     }
 
     @VisibleForTesting
-    PendingIntent createRecheckAlarmIntent() {
+    PendingIntent createRecheckAlarmIntent(final String pkgName) {
         final Intent intent = new Intent(ACTION_PROVISIONING_ALARM);
+        intent.setPackage(pkgName);
         return PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_IMMUTABLE);
     }
 
@@ -470,7 +471,7 @@ public class EntitlementManager {
             final int period = config.provisioningCheckPeriod;
             if (period <= 0) return;
 
-            mProvisioningRecheckAlarm = createRecheckAlarmIntent();
+            mProvisioningRecheckAlarm = createRecheckAlarmIntent(mContext.getPackageName());
             AlarmManager alarmManager = (AlarmManager) mContext.getSystemService(
                     Context.ALARM_SERVICE);
             long triggerAtMillis = SystemClock.elapsedRealtime() + (period * MS_PER_HOUR);
