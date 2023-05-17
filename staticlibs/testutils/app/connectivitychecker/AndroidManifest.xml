@@ -15,7 +15,7 @@
   ~ limitations under the License.
   -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.android.testutils.connectivitychecker">
+          package="com.android.testutils.connectivitypreparer">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -27,6 +27,6 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
-                     android:targetPackage="com.android.testutils.connectivitychecker"
-                     android:label="Connectivity checker target preparer" />
+                     android:targetPackage="com.android.testutils.connectivitypreparer"
+                     android:label="Connectivity test target preparer" />
 </manifest>
