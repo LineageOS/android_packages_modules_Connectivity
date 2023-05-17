@@ -154,13 +154,13 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
                     }
 
                     @Override
-                    public void onSocketDestroyed(@Nullable Network network) {
+                    public void onAllSocketsDestroyed(@Nullable Network network) {
                         synchronized (MdnsDiscoveryManager.this) {
                             final MdnsServiceTypeClient serviceTypeClient =
                                     perNetworkServiceTypeClients.get(serviceType, network);
                             if (serviceTypeClient == null) return;
                             // Notify all listeners that all services are removed from this socket.
-                            serviceTypeClient.notifyAllServicesRemoved();
+                            serviceTypeClient.notifySocketDestroyed();
                             perNetworkServiceTypeClients.remove(serviceTypeClient);
                         }
                     }
