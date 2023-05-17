@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include "bpf/KernelVersion.h"
+#include "bpf/KernelUtils.h"
 #include <tcutils/tcutils.h>
 
 #include <BpfSyscallWrappers.h>

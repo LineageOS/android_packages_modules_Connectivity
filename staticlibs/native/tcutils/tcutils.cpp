@@ -19,7 +19,7 @@
 #include "tcutils/tcutils.h"
 
 #include "logging.h"
-#include "bpf/KernelVersion.h"
+#include "bpf/KernelUtils.h"
 #include "scopeguard.h"
 
 #include <arpa/inet.h>
