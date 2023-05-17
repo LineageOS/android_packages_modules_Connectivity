@@ -4546,7 +4546,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // because they lost all their requests or because their score isn't good)
         // then they would disconnect organically, report their new state and then
         // disconnect the channel.
-        if (nai.networkInfo.isConnected()) {
+        if (nai.networkInfo.isConnected() || nai.networkInfo.isSuspended()) {
             nai.networkInfo.setDetailedState(NetworkInfo.DetailedState.DISCONNECTED,
                     null, null);
         }
