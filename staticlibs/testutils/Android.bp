@@ -83,5 +83,5 @@ java_test_host {
     ],
     libs: ["tradefed"],
     test_suites: ["ats", "device-tests", "general-tests", "cts", "mts-networking"],
-    data: [":ConnectivityChecker"],
+    data: [":ConnectivityTestPreparer"],
 }

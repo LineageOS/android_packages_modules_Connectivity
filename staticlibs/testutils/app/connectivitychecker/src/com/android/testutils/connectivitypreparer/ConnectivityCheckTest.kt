@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.testutils.connectivitychecker
+package com.android.testutils.connectivitypreparer
 
 import android.content.pm.PackageManager.FEATURE_TELEPHONY
 import android.content.pm.PackageManager.FEATURE_WIFI
@@ -40,7 +40,7 @@ class ConnectivityCheckTest {
     val pm by lazy { context.packageManager }
 
     @Test
-    fun testCheckDeviceSetup() {
+    fun testCheckConnectivity() {
         checkWifiSetup()
         checkTelephonySetup()
     }
@@ -57,10 +57,11 @@ class ConnectivityCheckTest {
 
         val commonError = "Check the test bench. To run the tests anyway for quick & dirty local " +
                 "testing, you can use atest X -- " +
-                "--test-arg com.android.testutils.ConnectivityCheckTargetPreparer:disable:true"
+                "--test-arg com.android.testutils.ConnectivityTestTargetPreparer" +
+                ":ignore-connectivity-check:true"
         // Do not use assertEquals: it outputs "expected X, was Y", which looks like a test failure
         if (tm.simState == TelephonyManager.SIM_STATE_ABSENT) {
-            fail("The device has no SIM card inserted. " + commonError)
+            fail("The device has no SIM card inserted. $commonError")
         } else if (tm.simState != TelephonyManager.SIM_STATE_READY) {
             fail("The device is not setup with a usable SIM card. Sim state was ${tm.simState}. " +
                     commonError)
