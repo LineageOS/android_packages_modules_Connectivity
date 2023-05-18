@@ -17,6 +17,8 @@
 #pragma once
 
 #include <stdio.h>
+#include <string.h>
+#include <sys/personality.h>
 #include <sys/utsname.h>
 
 namespace android {
@@ -40,8 +42,62 @@ static inline unsigned kernelVersion() {
     return kver;
 }
 
-static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
+static inline __unused bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
     return kernelVersion() >= KVER(major, minor, sub);
+}
+
+// Figure out the bitness of userspace.
+// Trivial and known at compile time.
+static constexpr bool isUserspace64bit() {
+    return sizeof(long) == 8;
+}
+
+// Figure out the bitness of the kernel.
+static inline __unused bool isKernel64Bit() {
+    // a 64-bit userspace requires a 64-bit kernel
+    if (isUserspace64bit()) return true;
+
+    static bool init = false;
+    static bool cache = false;
+    if (init) return cache;
+
+    // Retrieve current personality - on Linux this system call *cannot* fail.
+    int p = personality(0xffffffff);
+    // But if it does just assume kernel and userspace (which is 32-bit) match...
+    if (p == -1) return false;
+
+    // This will effectively mask out the bottom 8 bits, and switch to 'native'
+    // personality, and then return the previous personality of this thread
+    // (likely PER_LINUX or PER_LINUX32) with any extra options unmodified.
+    int q = personality((p & ~PER_MASK) | PER_LINUX);
+    // Per man page this theoretically could error out with EINVAL,
+    // but kernel code analysis suggests setting PER_LINUX cannot fail.
+    // Either way, assume kernel and userspace (which is 32-bit) match...
+    if (q != p) return false;
+
+    struct utsname u;
+    (void)uname(&u);  // only possible failure is EFAULT, but u is on stack.
+
+    // Switch back to previous personality.
+    // Theoretically could fail with EINVAL on arm64 with no 32-bit support,
+    // but then we wouldn't have fetched 'p' from the kernel in the first place.
+    // Either way there's nothing meaningful we can do in case of error.
+    // Since PER_LINUX32 vs PER_LINUX only affects uname.machine it doesn't
+    // really hurt us either.  We're really just switching back to be 'clean'.
+    (void)personality(p);
+
+    // Possible values of utsname.machine observed on x86_64 desktop (arm via qemu):
+    //   x86_64 i686 aarch64 armv7l
+    // additionally observed on arm device:
+    //   armv8l
+    // presumably also might just be possible:
+    //   i386 i486 i586
+    // and there might be other weird arm32 cases.
+    // We note that the 64 is present in both 64-bit archs,
+    // and in general is likely to be present in only 64-bit archs.
+    cache = !!strstr(u.machine, "64");
+    init = true;
+    return cache;
 }
 
 }  // namespace bpf
