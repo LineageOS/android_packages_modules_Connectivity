@@ -1456,8 +1456,13 @@ public final class LinkProperties implements Parcelable {
      * @hide
      */
     public boolean isIdenticalPcscfs(@NonNull LinkProperties target) {
-        // list order is important, compare one by one
-        return target.getPcscfServers().equals(mPcscfs);
+        // Per 3GPP TS 24.229, B.2.2.1 PDP context activation and P-CSCF discovery
+        // list order is important, so on U+ compare one by one
+        if (SdkLevel.isAtLeastU()) return target.getPcscfServers().equals(mPcscfs);
+        // but for safety old behaviour on pre-U:
+        Collection<InetAddress> targetPcscfs = target.getPcscfServers();
+        return (mPcscfs.size() == targetPcscfs.size()) ?
+                    mPcscfs.containsAll(targetPcscfs) : false;
     }
 
     /**
