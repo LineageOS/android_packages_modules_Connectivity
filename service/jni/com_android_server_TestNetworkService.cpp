@@ -38,7 +38,7 @@
 #include "jni.h"
 #include <android-base/stringprintf.h>
 #include <android-base/unique_fd.h>
-#include <bpf/KernelVersion.h>
+#include <bpf/KernelUtils.h>
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedUtfChars.h>
 
