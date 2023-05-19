@@ -23,7 +23,6 @@
 #include <utils/Log.h>
 
 #include "bpf/BpfUtils.h"
-#include "bpf/KernelUtils.h"
 
 #include <atomic>
 
@@ -83,13 +82,17 @@ class BpfRingbufBase {
   android::base::unique_fd mRingFd;
 
   void* mDataPos = nullptr;
+  // The kernel uses an "unsigned long" type for both consumer and producer position.
+  // Unsigned long is a 4 byte value on a 32-bit kernel, and an 8 byte value on a 64-bit kernel.
+  // To support 32-bit kernels, producer pos is capped at 4 bytes (despite it being 8 bytes on
+  // 64-bit kernels) and all comparisons of consumer and producer pos only compare the low-order 4
+  // bytes (an inequality comparison is performed to support overflow).
+  // This solution is bitness agnostic. The consumer only increments the 8 byte consumer pos, which,
+  // in a little-endian architecture, is safe since the entire page is mapped into memory and a
+  // 32-bit kernel will just ignore the high-order bits.
   std::atomic_uint64_t* mConsumerPos = nullptr;
-  std::atomic_uint64_t* mProducerPos = nullptr;
+  std::atomic_uint32_t* mProducerPos = nullptr;
 
-  // The kernel uses an "unsigned long" type for both consumer and producer position. Unsigned long
-  // is a 4 byte value on a 32 bit kernel, and an 8 byte value on a 64 bit kernel. While 32 bit
-  // kernels are slowly going away (and therefore will not be supported), we *must* still support 32
-  // bit userspace on a 64 bit kernel.
   // In order to guarantee atomic access in a 32 bit userspace environment, atomic_uint64_t is used
   // in addition to std::atomic<T>::is_always_lock_free that guarantees that read / write operations
   // are indeed atomic.
@@ -98,7 +101,9 @@ class BpfRingbufBase {
   // to its atomic version is safe (is_always_lock_free being true should provide additional
   // confidence).
   static_assert(std::atomic_uint64_t::is_always_lock_free);
+  static_assert(std::atomic_uint32_t::is_always_lock_free);
   static_assert(sizeof(std::atomic_uint64_t) == sizeof(uint64_t));
+  static_assert(sizeof(std::atomic_uint32_t) == sizeof(uint32_t));
 };
 
 // This is a class wrapper for eBPF ring buffers. An eBPF ring buffer is a
@@ -140,10 +145,6 @@ class BpfRingbuf : public BpfRingbufBase {
 
 
 inline base::Result<void> BpfRingbufBase::Init(const char* path) {
-  if (!isKernel64Bit()) {
-    return android::base::Error()
-           << "BpfRingbuf does not support 32 bit kernels.";
-  }
   mRingFd.reset(mapRetrieveRW(path));
   if (!mRingFd.ok()) {
     return android::base::ErrnoError()
@@ -199,9 +200,9 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
 inline base::Result<int> BpfRingbufBase::ConsumeAll(
     const std::function<void(const void*)>& callback) {
   int64_t count = 0;
-  auto cons_pos = mConsumerPos->load(std::memory_order_acquire);
-  auto prod_pos = mProducerPos->load(std::memory_order_acquire);
-  while (cons_pos < prod_pos) {
+  uint64_t cons_pos = mConsumerPos->load(std::memory_order_acquire);
+  uint32_t prod_pos = mProducerPos->load(std::memory_order_acquire);
+  while ((cons_pos & 0xFFFFFFFF) != prod_pos) {
     // Find the start of the entry for this read (wrapping is done here).
     void* start_ptr = pointerAddBytes<void*>(mDataPos, cons_pos & mPosMask);
 
