@@ -118,7 +118,7 @@ static inline __unused bool isKernel32Bit() {
     return !isKernel64Bit();
 }
 
-static __unused constexpr bool isArm() {
+static constexpr bool isArm() {
 #if defined(__arm__) || defined(__aarch64__)
     return true;
 #else
@@ -126,7 +126,7 @@ static __unused constexpr bool isArm() {
 #endif
 }
 
-static __unused constexpr bool isX86() {
+static constexpr bool isX86() {
 #if defined(__i386__) || defined(__x86_64__)
     return true;
 #else
@@ -134,7 +134,7 @@ static __unused constexpr bool isX86() {
 #endif
 }
 
-static __unused constexpr bool isRiscV() {
+static constexpr bool isRiscV() {
 #if defined(__riscv)
     static_assert(isUserspace64bit(), "riscv must be 64 bit");
     return true;
@@ -145,6 +145,21 @@ static __unused constexpr bool isRiscV() {
 
 static_assert(isArm() || isX86() || isRiscV(), "Unknown architecture");
 
+static __unused const char * describeArch() {
+    // ordered so as to make it easier to compile time optimize,
+    // only thing not known at compile time is isKernel64Bit()
+    if (isUserspace64bit()) {
+        if (isArm()) return "64-on-aarch64";
+        if (isX86()) return "64-on-x86-64";
+        if (isRiscV()) return "64-on-riscv64";
+    } else if (isKernel64Bit()) {
+        if (isArm()) return "32-on-aarch64";
+        if (isX86()) return "32-on-x86-64";
+    } else {
+        if (isArm()) return "32-on-arm32";
+        if (isX86()) return "32-on-x86-32";
+    }
+}
 
 }  // namespace bpf
 }  // namespace android
