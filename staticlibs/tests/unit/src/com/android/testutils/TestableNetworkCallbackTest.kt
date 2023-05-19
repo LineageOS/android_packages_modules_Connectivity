@@ -354,6 +354,13 @@ class TestableNetworkCallbackTest {
     }
 
     @Test
+    fun testExpectClass() {
+        val net = Network(1)
+        mCallback.onAvailable(net)
+        assertFails { mCallback.expect(LOST, net) }
+    }
+
+    @Test
     fun testPoll() {
         assertNull(mCallback.poll(SHORT_TIMEOUT_MS))
         TNCInterpreter.interpretTestSpec(initial = mCallback, lineShift = 1,
