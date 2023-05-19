@@ -48,12 +48,26 @@ static inline __unused bool isAtLeastKernelVersion(unsigned major, unsigned mino
 
 // Figure out the bitness of userspace.
 // Trivial and known at compile time.
-static constexpr bool isUserspace64bit() {
-    return sizeof(long) == 8;
+static constexpr bool isUserspace32bit() {
+    return sizeof(void*) == 4;
 }
 
+static constexpr bool isUserspace64bit() {
+    return sizeof(void*) == 8;
+}
+
+#if defined(__LP64__)
+static_assert(isUserspace64bit(), "huh?");
+#elif defined(__ILP32__)
+static_assert(isUserspace32bit(), "huh?");
+#else
+#error "huh?"
+#endif
+
+static_assert(isUserspace32bit() || isUserspace64bit(), "must be either 32 or 64 bit");
+
 // Figure out the bitness of the kernel.
-static inline __unused bool isKernel64Bit() {
+static inline bool isKernel64Bit() {
     // a 64-bit userspace requires a 64-bit kernel
     if (isUserspace64bit()) return true;
 
@@ -99,6 +113,38 @@ static inline __unused bool isKernel64Bit() {
     init = true;
     return cache;
 }
+
+static inline __unused bool isKernel32Bit() {
+    return !isKernel64Bit();
+}
+
+static __unused constexpr bool isArm() {
+#if defined(__arm__) || defined(__aarch64__)
+    return true;
+#else
+    return false;
+#endif
+}
+
+static __unused constexpr bool isX86() {
+#if defined(__i386__) || defined(__x86_64__)
+    return true;
+#else
+    return false;
+#endif
+}
+
+static __unused constexpr bool isRiscV() {
+#if defined(__riscv)
+    static_assert(isUserspace64bit(), "riscv must be 64 bit");
+    return true;
+#else
+    return false;
+#endif
+}
+
+static_assert(isArm() || isX86() || isRiscV(), "Unknown architecture");
+
 
 }  // namespace bpf
 }  // namespace android
