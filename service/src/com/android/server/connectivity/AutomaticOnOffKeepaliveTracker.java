@@ -429,6 +429,9 @@ public class AutomaticOnOffKeepaliveTracker {
         final List<AutomaticOnOffKeepalive> matches =
                 CollectionUtils.filter(mAutomaticOnOffKeepalives, it -> it.mKi.getNai() == nai);
         for (final AutomaticOnOffKeepalive ki : matches) {
+            if (ki.mAutomaticOnOffState == STATE_SUSPENDED) {
+                mKeepaliveTracker.finalizePausedKeepalive(ki.mKi, reason);
+            }
             cleanupAutoOnOffKeepalive(ki);
         }
     }
@@ -499,7 +502,7 @@ public class AutomaticOnOffKeepaliveTracker {
             final KeepaliveTracker.KeepaliveInfo ki = autoKi.mKi;
             mKeepaliveTracker.handleStopKeepalive(ki.getNai(), ki.getSlot(), reason);
         } else {
-            mKeepaliveTracker.finalizePausedKeepalive(autoKi.mKi);
+            mKeepaliveTracker.finalizePausedKeepalive(autoKi.mKi, reason);
         }
 
         cleanupAutoOnOffKeepalive(autoKi);

@@ -609,19 +609,23 @@ public class KeepaliveTracker {
     /**
      * Finalize a paused keepalive.
      *
-     * This will simply send the onStopped() callback after checking that this keepalive is
-     * indeed paused.
+     * This will send the appropriate callback after checking that this keepalive is indeed paused.
      *
      * @param ki the keepalive to finalize
+     * @param reason the reason the keepalive is stopped
      */
-    public void finalizePausedKeepalive(@NonNull final KeepaliveInfo ki) {
+    public void finalizePausedKeepalive(@NonNull final KeepaliveInfo ki, int reason) {
         if (SUCCESS_PAUSED != ki.mStopReason) {
             throw new IllegalStateException("Keepalive is not paused");
         }
-        try {
-            ki.mCallback.onStopped();
-        } catch (RemoteException e) {
-            Log.w(TAG, "Discarded onStopped callback while finalizing paused keepalive");
+        if (reason == SUCCESS) {
+            try {
+                ki.mCallback.onStopped();
+            } catch (RemoteException e) {
+                Log.w(TAG, "Discarded onStopped callback while finalizing paused keepalive");
+            }
+        } else {
+            notifyErrorCallback(ki.mCallback, reason);
         }
     }
 
