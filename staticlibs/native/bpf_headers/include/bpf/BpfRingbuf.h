@@ -200,8 +200,9 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
 inline base::Result<int> BpfRingbufBase::ConsumeAll(
     const std::function<void(const void*)>& callback) {
   int64_t count = 0;
-  uint64_t cons_pos = mConsumerPos->load(std::memory_order_acquire);
   uint32_t prod_pos = mProducerPos->load(std::memory_order_acquire);
+  // Only userspace writes to mConsumerPos, so no need to use std::memory_order_acquire
+  uint64_t cons_pos = mConsumerPos->load(std::memory_order_relaxed);
   while ((cons_pos & 0xFFFFFFFF) != prod_pos) {
     // Find the start of the entry for this read (wrapping is done here).
     void* start_ptr = pointerAddBytes<void*>(mDataPos, cons_pos & mPosMask);
@@ -211,7 +212,7 @@ inline base::Result<int> BpfRingbufBase::ConsumeAll(
     //   u32 len;
     //   u32 pg_off;
     // };
-    uint32_t length = *reinterpret_cast<uint32_t*>(start_ptr);
+    uint32_t length = *reinterpret_cast<volatile uint32_t*>(start_ptr);
 
     // If the sample isn't committed, we're caught up with the producer.
     if (length & BPF_RINGBUF_BUSY_BIT) return count;
