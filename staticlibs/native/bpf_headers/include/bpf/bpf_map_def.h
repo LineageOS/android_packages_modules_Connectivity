@@ -179,6 +179,14 @@ struct bpf_map_def {
     bool ignore_on_eng:1;
     bool ignore_on_user:1;
     bool ignore_on_userdebug:1;
+    // The following 5 ignore_on_* fields were added in version 0.38 (U). These are ignored in
+    // older bpfloader versions, and zero in programs compiled before 0.38.
+    // These are tests on the kernel architecture, ie. they ignore userspace bit-ness.
+    bool ignore_on_arm32:1;
+    bool ignore_on_aarch64:1;
+    bool ignore_on_x86_32:1;
+    bool ignore_on_x86_64:1;
+    bool ignore_on_riscv64:1;
 
     char pad0[2];  // manually pad up to 4 byte alignment, may be used for extensions in the future
 
@@ -208,6 +216,14 @@ struct bpf_prog_def {
     bool ignore_on_eng:1;
     bool ignore_on_user:1;
     bool ignore_on_userdebug:1;
+    // The following 5 ignore_on_* fields were added in version 0.38 (U). These are ignored in
+    // older bpfloader versions, and zero in programs compiled before 0.38.
+    // These are tests on the kernel architecture, ie. they ignore userspace bit-ness.
+    bool ignore_on_arm32:1;
+    bool ignore_on_aarch64:1;
+    bool ignore_on_x86_32:1;
+    bool ignore_on_x86_64:1;
+    bool ignore_on_riscv64:1;
 
     char pad0[2];  // manually pad up to 4 byte alignment, may be used for extensions in the future
 
