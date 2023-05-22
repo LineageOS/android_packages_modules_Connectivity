@@ -119,7 +119,11 @@ static inline __unused bool isKernel32Bit() {
 }
 
 static constexpr bool isArm() {
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(__arm__)
+    static_assert(isUserspace32bit(), "huh? arm must be 32 bit");
+    return true;
+#elif defined(__aarch64__)
+    static_assert(isUserspace64bit(), "aarch64 must be LP64 - no support for ILP32");
     return true;
 #else
     return false;
@@ -127,7 +131,11 @@ static constexpr bool isArm() {
 }
 
 static constexpr bool isX86() {
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__)
+    static_assert(isUserspace32bit(), "huh? i386 must be 32 bit");
+    return true;
+#elif defined(__x86_64__)
+    static_assert(isUserspace64bit(), "x86_64 must be LP64 - no support for ILP32 (x32)");
     return true;
 #else
     return false;
