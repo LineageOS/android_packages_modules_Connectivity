@@ -236,7 +236,11 @@ open class TestableNetworkCallback private constructor(
         errorMsg: String? = null,
         test: (T) -> Boolean = { true }
     ) = expect<CallbackEntry>(network, timeoutMs, errorMsg) {
-        test(it as? T ?: fail("Expected callback ${type.simpleName}, got $it"))
+        if (type.isInstance(it)) {
+            test(it as T) // Cast can't fail since type.isInstance(it) and type: KClass<T>
+        } else {
+            fail("Expected callback ${type.simpleName}, got $it")
+        }
     } as T
 
     @JvmOverloads
