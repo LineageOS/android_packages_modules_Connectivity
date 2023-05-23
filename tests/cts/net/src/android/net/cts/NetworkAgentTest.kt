@@ -172,6 +172,7 @@ private fun Message(what: Int, arg1: Int, arg2: Int, obj: Any?) = Message.obtain
 // for modules other than Connectivity does not provide much value. Only run them in connectivity
 // module MTS, so the tests only need to cover the case of an updated NetworkAgent.
 @ConnectivityModuleTest
+@AppModeFull(reason = "Instant apps can't use NetworkAgent because it needs NETWORK_FACTORY'.")
 class NetworkAgentTest {
     private val LOCAL_IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1")
     private val REMOTE_IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.2")
@@ -982,13 +983,11 @@ class NetworkAgentTest {
             .also { assertNotNull(agent.network?.bindSocket(it)) }
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackRegisterAndUnregister() {
         validateQosCallbackRegisterAndUnregister(IPPROTO_TCP)
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackRegisterAndUnregisterWithDatagramSocket() {
         validateQosCallbackRegisterAndUnregister(IPPROTO_UDP)
@@ -1025,13 +1024,11 @@ class NetworkAgentTest {
         }
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackOnQosSession() {
         validateQosCallbackOnQosSession(IPPROTO_TCP)
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackOnQosSessionWithDatagramSocket() {
         validateQosCallbackOnQosSession(IPPROTO_UDP)
@@ -1090,7 +1087,6 @@ class NetworkAgentTest {
         }
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackOnError() {
         val (agent, qosTestSocket) = setupForQosSocket()
@@ -1129,7 +1125,6 @@ class NetworkAgentTest {
         }
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackIdsAreMappedCorrectly() {
         val (agent, qosTestSocket) = setupForQosSocket()
@@ -1170,7 +1165,6 @@ class NetworkAgentTest {
         }
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testQosCallbackWhenNetworkReleased() {
         val (agent, qosTestSocket) = setupForQosSocket()
@@ -1212,7 +1206,6 @@ class NetworkAgentTest {
         )
     }
 
-    @AppModeFull(reason = "Instant apps don't have permission to bind sockets.")
     @Test
     fun testUnregisterAfterReplacement() {
         // Keeps an eye on all test networks.
