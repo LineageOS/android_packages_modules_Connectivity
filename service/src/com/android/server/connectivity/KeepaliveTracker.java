@@ -569,7 +569,20 @@ public class KeepaliveTracker {
         } else if (reason == ERROR_STOP_REASON_UNINITIALIZED) {
             throw new IllegalStateException("Unexpected stop reason: " + reason);
         } else if (reason == ERROR_NO_SUCH_SLOT) {
-            throw new IllegalStateException("No such slot: " + reason);
+            // There are multiple independent reasons a keepalive can stop. Some
+            // are software (e.g. the app stops the keepalive) and some are hardware
+            // (e.g. the SIM card gets removed). Therefore, there is a very low
+            // probability that both of these happen at the same time, which would
+            // result in the first stop attempt returning SUCCESS and the second
+            // stop attempt returning NO_SUCH_SLOT. Such a race condition can be
+            // ignored with a log.
+            // This should still be reported because if it happens with any frequency
+            // it probably means there is a bug where the system server is trying
+            // to use a non-existing hardware slot.
+            // TODO : separate the non-existing hardware slot from the case where
+            // there is no keepalive running on this slot.
+            Log.wtf(TAG, "Keepalive on slot " + slot + " can't be stopped : " + reason);
+            notifyErrorCallback(ki.mCallback, reason);
         } else {
             notifyErrorCallback(ki.mCallback, reason);
         }
