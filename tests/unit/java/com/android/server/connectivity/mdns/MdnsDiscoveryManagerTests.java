@@ -20,6 +20,7 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -97,8 +98,9 @@ public class MdnsDiscoveryManagerTests {
         thread = new HandlerThread("MdnsDiscoveryManagerTests");
         thread.start();
         handler = new Handler(thread.getLooper());
-        discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient, sharedLog,
-                    thread.getLooper()) {
+        doReturn(thread.getLooper()).when(socketClient).getLooper();
+        discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient,
+                sharedLog) {
                     @Override
                     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
                             @Nullable Network network) {
