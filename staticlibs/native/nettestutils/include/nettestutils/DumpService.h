@@ -15,9 +15,15 @@
  */
 
 #include <binder/Binder.h>
+#include <android/binder_auto_utils.h>
 
 #include <vector>
 
 android::status_t dumpService(const android::sp<android::IBinder>& binder,
                               const std::vector<std::string>& args,
+                              std::vector<std::string>& outputLines);
+
+android::status_t dumpService(const ndk::SpAIBinder& binder,
+                              const char** args,
+                              uint32_t num_args,
                               std::vector<std::string>& outputLines);

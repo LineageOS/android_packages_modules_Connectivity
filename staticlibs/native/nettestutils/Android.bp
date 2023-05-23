@@ -21,9 +21,15 @@ cc_library_static {
     export_include_dirs: ["include"],
     srcs: ["DumpService.cpp"],
 
+    // Don't depend on libbinder, because some users of this library may not want to link to it.
+    // CtsNativeNetPlatformTestCases is one such user. See r.android.com/2599405 .
+    header_libs: [
+        "libbinder_headers",
+    ],
+
     shared_libs: [
-        "libbinder",
         "libutils",
+        "libbinder_ndk",
     ],
     cflags: [
         "-Werror",
