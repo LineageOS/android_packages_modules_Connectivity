@@ -475,7 +475,7 @@ static constexpr int WAITPID_RETRY_INTERVAL_US = 100000;
 static void com_android_server_connectivity_ClatCoordinator_stopClatd(JNIEnv* env, jclass clazz,
                                                                       jint pid) {
     if (pid <= 0) {
-        jniThrowExceptionFmt(env, "java/io/IOException", "Invalid pid");
+        jniThrowExceptionFmt(env, "java/lang/IllegalArgumentException", "Invalid pid");
         return;
     }
 
