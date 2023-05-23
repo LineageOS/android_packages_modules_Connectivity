@@ -39,6 +39,7 @@ import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
 import android.net.util.SocketUtils;
 import android.os.Process;
+import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.util.Log;
 import android.util.Range;
@@ -461,11 +462,15 @@ public class InetDiagMessage extends NetlinkMessage {
      */
     public static void destroyLiveTcpSockets(Set<Range<Integer>> ranges, Set<Integer> exemptUids)
             throws SocketException, InterruptedIOException, ErrnoException {
+        final long startTimeMs = SystemClock.elapsedRealtime();
         destroySockets(IPPROTO_TCP, TCP_ALIVE_STATE_FILTER,
                 (diagMsg) -> !exemptUids.contains(diagMsg.inetDiagMsg.idiag_uid)
                         && containsUid(diagMsg, ranges)
                         && !isLoopback(diagMsg)
                         && !isAdbSocket(diagMsg));
+        final long durationMs = SystemClock.elapsedRealtime() - startTimeMs;
+        Log.d(TAG, "Destroyed live tcp sockets for uids=" + ranges + " exemptUids=" + exemptUids
+                + " in " + durationMs + "ms");
     }
 
     /**
@@ -479,10 +484,13 @@ public class InetDiagMessage extends NetlinkMessage {
      */
     public static void destroyLiveTcpSocketsByOwnerUids(Set<Integer> ownerUids)
             throws SocketException, InterruptedIOException, ErrnoException {
+        final long startTimeMs = SystemClock.elapsedRealtime();
         destroySockets(IPPROTO_TCP, TCP_ALIVE_STATE_FILTER,
                 (diagMsg) -> ownerUids.contains(diagMsg.inetDiagMsg.idiag_uid)
                         && !isLoopback(diagMsg)
                         && !isAdbSocket(diagMsg));
+        final long durationMs = SystemClock.elapsedRealtime() - startTimeMs;
+        Log.d(TAG, "Destroyed live tcp sockets for uids=" + ownerUids + " in " + durationMs + "ms");
     }
 
     @Override
