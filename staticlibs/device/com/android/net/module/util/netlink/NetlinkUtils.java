@@ -93,6 +93,15 @@ public class NetlinkUtils {
         if (nlmsghdr == null || nlmsghdr.nlmsg_type != NetlinkConstants.NLMSG_ERROR) {
             return null;
         }
+
+        final int messageLength = NetlinkConstants.alignedLengthOf(nlmsghdr.nlmsg_len);
+        final int payloadLength = messageLength - StructNlMsgHdr.STRUCT_SIZE;
+        if (payloadLength < 0 || payloadLength > bytes.remaining()) {
+            // Malformed message or runt buffer.  Pretend the buffer was consumed.
+            bytes.position(bytes.limit());
+            return null;
+        }
+
         return NetlinkErrorMessage.parse(nlmsghdr, bytes);
     }
 
