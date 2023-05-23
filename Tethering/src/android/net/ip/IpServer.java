@@ -65,6 +65,7 @@ import android.util.SparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
@@ -89,6 +90,7 @@ import java.net.Inet6Address;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -290,6 +292,8 @@ public class IpServer extends StateMachine {
 
     private int mLastIPv6UpstreamIfindex = 0;
     private boolean mUpstreamSupportsBpf = false;
+    @NonNull
+    private Set<IpPrefix> mLastIPv6UpstreamPrefixes = Collections.emptySet();
 
     private class MyNeighborEventConsumer implements IpNeighborMonitor.NeighborEventConsumer {
         public void accept(NeighborEvent e) {
@@ -761,13 +765,8 @@ public class IpServer extends StateMachine {
 
             if (params.hasDefaultRoute) params.hopLimit = getHopLimit(upstreamIface, ttlAdjustment);
 
-            for (LinkAddress linkAddr : v6only.getLinkAddresses()) {
-                if (linkAddr.getPrefixLength() != RFC7421_PREFIX_LENGTH) continue;
-
-                final IpPrefix prefix = new IpPrefix(
-                        linkAddr.getAddress(), linkAddr.getPrefixLength());
-                params.prefixes.add(prefix);
-
+            params.prefixes = getTetherableIpv6Prefixes(v6only);
+            for (IpPrefix prefix : params.prefixes) {
                 final Inet6Address dnsServer = getLocalDnsIpFor(prefix);
                 if (dnsServer != null) {
                     params.dnses.add(dnsServer);
@@ -787,9 +786,12 @@ public class IpServer extends StateMachine {
 
         // Not support BPF on virtual upstream interface
         final boolean upstreamSupportsBpf = upstreamIface != null && !isVcnInterface(upstreamIface);
-        updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, upstreamIfIndex, upstreamSupportsBpf);
+        final Set<IpPrefix> upstreamPrefixes = params != null ? params.prefixes : Set.of();
+        updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, mLastIPv6UpstreamPrefixes,
+                upstreamIfIndex, upstreamPrefixes, upstreamSupportsBpf);
         mLastIPv6LinkProperties = v6only;
         mLastIPv6UpstreamIfindex = upstreamIfIndex;
+        mLastIPv6UpstreamPrefixes = upstreamPrefixes;
         mUpstreamSupportsBpf = upstreamSupportsBpf;
         if (mDadProxy != null) {
             mDadProxy.setUpstreamIface(upstreamIfaceParams);
@@ -897,14 +899,17 @@ public class IpServer extends StateMachine {
         return supportsBpf ? ifindex : NO_UPSTREAM;
     }
 
-    // Handles updates to IPv6 forwarding rules if the upstream changes.
-    private void updateIpv6ForwardingRules(int prevUpstreamIfindex, int upstreamIfindex,
-            boolean upstreamSupportsBpf) {
+    // Handles updates to IPv6 forwarding rules if the upstream or its prefixes change.
+    private void updateIpv6ForwardingRules(int prevUpstreamIfindex,
+            @NonNull Set<IpPrefix> prevUpstreamPrefixes, int upstreamIfindex,
+            @NonNull Set<IpPrefix> upstreamPrefixes, boolean upstreamSupportsBpf) {
         // If the upstream interface has changed, remove all rules and re-add them with the new
         // upstream interface. If upstream is a virtual network, treated as no upstream.
-        if (prevUpstreamIfindex != upstreamIfindex) {
+        if (prevUpstreamIfindex != upstreamIfindex
+                || !prevUpstreamPrefixes.equals(upstreamPrefixes)) {
             mBpfCoordinator.updateAllIpv6Rules(this, this.mInterfaceParams,
-                    getInterfaceIndexForRule(upstreamIfindex, upstreamSupportsBpf));
+                    getInterfaceIndexForRule(upstreamIfindex, upstreamSupportsBpf),
+                    upstreamPrefixes);
         }
     }
 
@@ -1309,7 +1314,7 @@ public class IpServer extends StateMachine {
             for (String ifname : mUpstreamIfaceSet.ifnames) cleanupUpstreamInterface(ifname);
             mUpstreamIfaceSet = null;
             mBpfCoordinator.updateAllIpv6Rules(
-                    IpServer.this, IpServer.this.mInterfaceParams, NO_UPSTREAM);
+                    IpServer.this, IpServer.this.mInterfaceParams, NO_UPSTREAM, Set.of());
         }
 
         private void cleanupUpstreamInterface(String upstreamIface) {
@@ -1495,5 +1500,22 @@ public class IpServer extends StateMachine {
             if (random == value) return dflt;
         }
         return random;
+    }
+
+    /** Get IPv6 prefixes from LinkProperties */
+    @NonNull
+    @VisibleForTesting
+    static HashSet<IpPrefix> getTetherableIpv6Prefixes(@NonNull Collection<LinkAddress> addrs) {
+        final HashSet<IpPrefix> prefixes = new HashSet<>();
+        for (LinkAddress linkAddr : addrs) {
+            if (linkAddr.getPrefixLength() != RFC7421_PREFIX_LENGTH) continue;
+            prefixes.add(new IpPrefix(linkAddr.getAddress(), RFC7421_PREFIX_LENGTH));
+        }
+        return prefixes;
+    }
+
+    @NonNull
+    private HashSet<IpPrefix> getTetherableIpv6Prefixes(@NonNull LinkProperties lp) {
+        return getTetherableIpv6Prefixes(lp.getLinkAddresses());
     }
 }
