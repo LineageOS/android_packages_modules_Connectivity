@@ -112,10 +112,7 @@ apex {
         "ServiceConnectivityResources",
         "HalfSheetUX",
     ],
-    prebuilts: [
-        "current_sdkinfo",
-        "privapp_allowlist_com.android.tethering",
-    ],
+    prebuilts: ["current_sdkinfo"],
     manifest: "manifest.json",
     key: "com.android.tethering.key",
     // Indicates that pre-installed version of this apex can be compressed.
