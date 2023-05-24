@@ -31,7 +31,7 @@ package {
 //   (currently, CTS 10, 11, and 12).
 java_defaults {
     name: "ConnectivityTestsLatestSdkDefaults",
-    target_sdk_version: "33",
+    target_sdk_version: "34",
 }
 
 java_library {
