@@ -18,8 +18,10 @@ package com.android.testutils
 
 import android.os.Handler
 import android.os.HandlerThread
+import com.android.testutils.FunctionalUtils.ThrowingSupplier
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -69,13 +71,18 @@ class HandlerUtilsTest {
 
         repeat(ATTEMPTS) { attempt ->
             var x = -10
-            visibleOnHandlerThread(handler) { x = attempt }
+            var y = -11
+            y = visibleOnHandlerThread(handler, ThrowingSupplier<Int> { x = attempt; attempt })
             assertEquals(attempt, x)
+            assertEquals(attempt, y)
             handler.post { assertEquals(attempt, x) }
         }
 
         assertFailsWith<IllegalArgumentException> {
             visibleOnHandlerThread(handler) { throw IllegalArgumentException() }
         }
+
+        // Null values may be returned by the supplier
+        assertNull(visibleOnHandlerThread(handler, ThrowingSupplier<Nothing?> { null }))
     }
 }
