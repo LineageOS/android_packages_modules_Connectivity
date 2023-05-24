@@ -23,6 +23,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import com.android.testutils.FunctionalUtils.ThrowingRunnable
+import com.android.testutils.FunctionalUtils.ThrowingSupplier
 import java.lang.Exception
 import java.util.concurrent.Executor
 import kotlin.test.fail
@@ -55,7 +56,8 @@ fun waitForIdleSerialExecutor(executor: Executor, timeoutMs: Long) {
 }
 
 /**
- * Executes a block of code, making its side effects visible on the caller and the handler thread
+ * Executes a block of code that returns a value, making its side effects visible on the caller and
+ * the handler thread.
  *
  * After this function returns, the side effects of the passed block of code are guaranteed to be
  * observed both on the thread running the handler and on the thread running this method.
@@ -63,15 +65,15 @@ fun waitForIdleSerialExecutor(executor: Executor, timeoutMs: Long) {
  * until it's executed, so keep in mind this method will block, (including, if the handler isn't
  * running, blocking forever).
  */
-fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable) {
+fun <T> visibleOnHandlerThread(handler: Handler, supplier: ThrowingSupplier<T>): T {
     val cv = ConditionVariable()
-    var e: Exception? = null
+    var rv: Result<T> = Result.failure(RuntimeException("Not run"))
     handler.post {
         try {
-            r.run()
+            rv = Result.success(supplier.get())
         } catch (exception: Exception) {
             Log.e(TAG, "visibleOnHandlerThread caught exception", exception)
-            e = exception
+            rv = Result.failure(exception)
         }
         cv.open()
     }
@@ -79,5 +81,10 @@ fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable) {
     // and this thread also has seen the change (since cv.open() happens-before cv.block()
     // returns).
     cv.block()
-    e?.let { throw it }
+    return rv.getOrThrow()
+}
+
+/** Overload of visibleOnHandlerThread but executes a block of code that does not return a value. */
+inline fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable){
+    visibleOnHandlerThread(handler, ThrowingSupplier<Unit> { r.run() })
 }
