@@ -1677,7 +1677,10 @@ public class NsdService extends INsdManager.Stub {
         mMdnsSocketProvider = deps.makeMdnsSocketProvider(ctx, handler.getLooper(),
                 LOGGER.forSubComponent("MdnsSocketProvider"), new SocketRequestMonitor());
         // Netlink monitor starts on boot, and intentionally never stopped, to ensure that all
-        // address events are received.
+        // address events are received. When the netlink monitor starts, any IP addresses already
+        // on the interfaces will not be seen. In practice, the network will not connect at boot
+        // time As a result, all the netlink message should be observed if the netlink monitor
+        // starts here.
         handler.post(mMdnsSocketProvider::startNetLinkMonitor);
 
         // NsdService is started after ActivityManager (startOtherServices in SystemServer, vs.
