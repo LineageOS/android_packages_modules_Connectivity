@@ -58,6 +58,7 @@ import static android.net.wifi.WifiManager.IFACE_IP_MODE_CONFIGURATION_ERROR;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_LOCAL_ONLY;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_TETHERED;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_UNSPECIFIED;
+import static android.net.wifi.WifiManager.SoftApCallback;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLED;
 import static android.telephony.CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
@@ -479,15 +480,15 @@ public class Tethering {
                 mStateReceiver, noUpstreamFilter, PERMISSION_MAINLINE_NETWORK_STACK, mHandler);
 
         final WifiManager wifiManager = getWifiManager();
-        TetheringSoftApCallback softApCallback = new TetheringSoftApCallback();
         if (wifiManager != null) {
-            wifiManager.registerSoftApCallback(mExecutor, softApCallback);
-        }
-        if (SdkLevel.isAtLeastT() && wifiManager != null) {
-            // Although WifiManager#registerLocalOnlyHotspotSoftApCallback document that it need
-            // NEARBY_WIFI_DEVICES permission, but actually a caller who have NETWORK_STACK
-            // or MAINLINE_NETWORK_STACK permission would also able to use this API.
-            wifiManager.registerLocalOnlyHotspotSoftApCallback(mExecutor, softApCallback);
+            wifiManager.registerSoftApCallback(mExecutor, new TetheringSoftApCallback());
+            if (SdkLevel.isAtLeastT()) {
+                // Although WifiManager#registerLocalOnlyHotspotSoftApCallback document that it need
+                // NEARBY_WIFI_DEVICES permission, but actually a caller who have NETWORK_STACK
+                // or MAINLINE_NETWORK_STACK permission can also use this API.
+                wifiManager.registerLocalOnlyHotspotSoftApCallback(mExecutor,
+                        new LocalOnlyHotspotCallback());
+            }
         }
 
         startTrackDefaultNetwork();
@@ -573,26 +574,17 @@ public class Tethering {
         }
     }
 
-    private class TetheringSoftApCallback implements WifiManager.SoftApCallback {
-        // TODO: Remove onStateChanged override when this method has default on
-        // WifiManager#SoftApCallback interface.
-        // Wifi listener for state change of the soft AP
-        @Override
-        public void onStateChanged(final int state, final int failureReason) {
-            // Nothing
-        }
-
-        // Called by wifi when the number of soft AP clients changed.
-        // Currently multiple softAp would not behave well in PrivateAddressCoordinator
-        // (where it gets the address from cache), it ensure tethering only support one ipServer for
-        // TETHERING_WIFI. Once tethering support multiple softAp enabled simultaneously,
-        // onConnectedClientsChanged should also be updated to support tracking different softAp's
-        // clients individually.
-        // TODO: Add wtf log and have check to reject request duplicated type with different
-        // interface.
+    private class TetheringSoftApCallback implements SoftApCallback {
         @Override
         public void onConnectedClientsChanged(final List<WifiClient> clients) {
-            updateConnectedClients(clients);
+            updateConnectedClients(clients, null);
+        }
+    }
+
+    private class LocalOnlyHotspotCallback implements SoftApCallback {
+        @Override
+        public void onConnectedClientsChanged(final List<WifiClient> clients) {
+            updateConnectedClients(null, clients);
         }
     }
 
@@ -1968,7 +1960,7 @@ public class Tethering {
             mIPv6TetheringCoordinator.removeActiveDownstream(who);
             mOffload.excludeDownstreamInterface(who.interfaceName());
             mForwardedDownstreams.remove(who);
-            updateConnectedClients(null /* wifiClients */);
+            maybeDhcpLeasesChanged();
 
             // If this is a Wi-Fi interface, tell WifiManager of any errors
             // or the inactive serving state.
@@ -2710,9 +2702,15 @@ public class Tethering {
         if (e != null) throw e;
     }
 
-    private void updateConnectedClients(final List<WifiClient> wifiClients) {
+    private void maybeDhcpLeasesChanged() {
+        // null means wifi clients did not change.
+        updateConnectedClients(null, null);
+    }
+
+    private void updateConnectedClients(final List<WifiClient> wifiClients,
+            final List<WifiClient> localOnlyClients) {
         if (mConnectedClientsTracker.updateConnectedClients(mTetherMainSM.getAllDownstreams(),
-                wifiClients)) {
+                wifiClients, localOnlyClients)) {
             reportTetherClientsChanged(mConnectedClientsTracker.getLastTetheredClients());
         }
     }
@@ -2731,7 +2729,7 @@ public class Tethering {
 
             @Override
             public void dhcpLeasesChanged() {
-                updateConnectedClients(null /* wifiClients */);
+                maybeDhcpLeasesChanged();
             }
 
             @Override
