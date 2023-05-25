@@ -17,6 +17,8 @@
 package android.net.ip;
 
 import static android.net.RouteInfo.RTN_UNICAST;
+import static android.net.TetheringManager.CONNECTIVITY_SCOPE_GLOBAL;
+import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHER_ERROR_DHCPSERVER_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_ENABLE_FORWARDING_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_IFACE_CFG_ERROR;
@@ -405,8 +407,8 @@ public class IpServer extends StateMachine {
 
     /** Internals. */
 
-    private boolean startIPv4() {
-        return configureIPv4(true);
+    private boolean startIPv4(int scope) {
+        return configureIPv4(true, scope);
     }
 
     /**
@@ -616,7 +618,7 @@ public class IpServer extends StateMachine {
     }
 
     private void stopIPv4() {
-        configureIPv4(false);
+        configureIPv4(false /* enabled */, CONNECTIVITY_SCOPE_GLOBAL /* not used */);
         // NOTE: All of configureIPv4() will be refactored out of existence
         // into calls to InterfaceController, shared with startIPv4().
         mInterfaceCtrl.clearIPv4Address();
@@ -627,11 +629,11 @@ public class IpServer extends StateMachine {
         mStaticIpv4ClientAddr = null;
     }
 
-    private boolean configureIPv4(boolean enabled) {
+    private boolean configureIPv4(boolean enabled, int scope) {
         if (VDBG) Log.d(TAG, "configureIPv4(" + enabled + ")");
 
         if (enabled) {
-            mIpv4Address = requestIpv4Address(true /* useLastAddress */);
+            mIpv4Address = requestIpv4Address(scope, true /* useLastAddress */);
         }
 
         if (mIpv4Address == null) {
@@ -679,12 +681,12 @@ public class IpServer extends StateMachine {
         return (mInterfaceType == TetheringManager.TETHERING_BLUETOOTH) && !SdkLevel.isAtLeastT();
     }
 
-    private LinkAddress requestIpv4Address(final boolean useLastAddress) {
+    private LinkAddress requestIpv4Address(final int scope, final boolean useLastAddress) {
         if (mStaticIpv4ServerAddr != null) return mStaticIpv4ServerAddr;
 
         if (shouldNotConfigureBluetoothInterface()) return new LinkAddress(BLUETOOTH_IFACE_ADDR);
 
-        return mPrivateAddressCoordinator.requestDownstreamAddress(this, useLastAddress);
+        return mPrivateAddressCoordinator.requestDownstreamAddress(this, scope, useLastAddress);
     }
 
     private boolean startIPv6() {
@@ -1133,8 +1135,16 @@ public class IpServer extends StateMachine {
             sendInterfaceState(mDesiredInterfaceState);
         }
 
+        private int getScope() {
+            if (mDesiredInterfaceState == STATE_TETHERED) {
+                return CONNECTIVITY_SCOPE_GLOBAL;
+            }
+
+            return CONNECTIVITY_SCOPE_LOCAL;
+        }
+
         private void startServingInterface() {
-            if (!startIPv4()) {
+            if (!startIPv4(getScope())) {
                 mLastError = TETHER_ERROR_IFACE_CFG_ERROR;
                 return;
             }
@@ -1222,7 +1232,7 @@ public class IpServer extends StateMachine {
             }
 
             final LinkAddress deprecatedLinkAddress = mIpv4Address;
-            mIpv4Address = requestIpv4Address(false);
+            mIpv4Address = requestIpv4Address(getScope(), false);
             if (mIpv4Address == null) {
                 mLog.e("Fail to request a new downstream prefix");
                 return;
