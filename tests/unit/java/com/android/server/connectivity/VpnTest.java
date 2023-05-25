@@ -25,6 +25,9 @@ import static android.net.ConnectivityDiagnosticsManager.DataStallReport;
 import static android.net.ConnectivityManager.NetworkCallback;
 import static android.net.INetd.IF_STATE_DOWN;
 import static android.net.INetd.IF_STATE_UP;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.RouteInfo.RTN_UNREACHABLE;
@@ -173,6 +176,7 @@ import com.android.internal.net.LegacyVpnInfo;
 import com.android.internal.net.VpnConfig;
 import com.android.internal.net.VpnProfile;
 import com.android.internal.util.HexDump;
+import com.android.internal.util.IndentingPrintWriter;
 import com.android.server.DeviceIdleInternal;
 import com.android.server.IpSecService;
 import com.android.server.VpnTestBase;
@@ -196,6 +200,7 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -213,6 +218,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -2607,6 +2614,81 @@ public class VpnTest extends VpnTestBase {
 
         vpnSnapShot.vpn.mVpnRunner.exitVpnRunner();
     }
+
+    private String getDump(@NonNull final Vpn vpn) {
+        final StringWriter sw = new StringWriter();
+        final IndentingPrintWriter writer = new IndentingPrintWriter(sw, "");
+        vpn.dump(writer);
+        writer.flush();
+        return sw.toString();
+    }
+
+    private int countMatches(@NonNull final Pattern regexp, @NonNull final String string) {
+        final Matcher m = regexp.matcher(string);
+        int i = 0;
+        while (m.find()) ++i;
+        return i;
+    }
+
+    @Test
+    public void testNCEventChanges() throws Exception {
+        final NetworkCapabilities.Builder ncBuilder = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_CELLULAR)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .setLinkDownstreamBandwidthKbps(1000)
+                .setLinkUpstreamBandwidthKbps(500);
+
+        final Ikev2VpnProfile ikeProfile =
+                new Ikev2VpnProfile.Builder(TEST_VPN_SERVER, TEST_VPN_IDENTITY)
+                        .setAuthPsk(TEST_VPN_PSK)
+                        .setBypassable(true /* isBypassable */)
+                        .setAutomaticNattKeepaliveTimerEnabled(true)
+                        .setAutomaticIpVersionSelectionEnabled(true)
+                        .build();
+
+        final PlatformVpnSnapshot vpnSnapShot =
+                verifySetupPlatformVpn(ikeProfile.toVpnProfile(),
+                        createIkeConfig(createIkeConnectInfo(), true /* isMobikeEnabled */),
+                        ncBuilder.build(), false /* mtuSupportsIpv6 */,
+                        true /* areLongLivedTcpConnectionsExpensive */);
+
+        // Calls to onCapabilitiesChanged will be thrown to the executor for execution ; by
+        // default this will incur a 10ms delay before it's executed, messing with the timing
+        // of the log and having the checks for counts in equals() below flake.
+        mExecutor.executeDirect = true;
+
+        // First nc changed triggered by verifySetupPlatformVpn
+        final Pattern pattern = Pattern.compile("Cap changed from", Pattern.MULTILINE);
+        final String stage1 = getDump(vpnSnapShot.vpn);
+        assertEquals(1, countMatches(pattern, stage1));
+
+        vpnSnapShot.nwCb.onCapabilitiesChanged(TEST_NETWORK, ncBuilder.build());
+        final String stage2 = getDump(vpnSnapShot.vpn);
+        // Was the same caps, there should still be only 1 match
+        assertEquals(1, countMatches(pattern, stage2));
+
+        ncBuilder.setLinkDownstreamBandwidthKbps(1200)
+                .setLinkUpstreamBandwidthKbps(300);
+        vpnSnapShot.nwCb.onCapabilitiesChanged(TEST_NETWORK, ncBuilder.build());
+        final String stage3 = getDump(vpnSnapShot.vpn);
+        // Was not an important change, should not be logged, still only 1 match
+        assertEquals(1, countMatches(pattern, stage3));
+
+        ncBuilder.addCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED);
+        vpnSnapShot.nwCb.onCapabilitiesChanged(TEST_NETWORK, ncBuilder.build());
+        final String stage4 = getDump(vpnSnapShot.vpn);
+        // Change to caps is important, should cause a new match
+        assertEquals(2, countMatches(pattern, stage4));
+
+        ncBuilder.removeCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED);
+        ncBuilder.setLinkDownstreamBandwidthKbps(600);
+        vpnSnapShot.nwCb.onCapabilitiesChanged(TEST_NETWORK, ncBuilder.build());
+        final String stage5 = getDump(vpnSnapShot.vpn);
+        // Change to caps is important, should cause a new match even with the unimportant change
+        assertEquals(3, countMatches(pattern, stage5));
+    }
+    // TODO : beef up event logs tests
 
     private void verifyHandlingNetworkLoss(PlatformVpnSnapshot vpnSnapShot) throws Exception {
         // Forget the #sendLinkProperties during first setup.
