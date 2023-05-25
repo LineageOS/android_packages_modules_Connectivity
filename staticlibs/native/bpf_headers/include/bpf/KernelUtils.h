@@ -57,11 +57,11 @@ static constexpr bool isUserspace64bit() {
 }
 
 #if defined(__LP64__)
-static_assert(isUserspace64bit(), "huh?");
+static_assert(isUserspace64bit(), "huh? LP64 must have 64-bit userspace");
 #elif defined(__ILP32__)
-static_assert(isUserspace32bit(), "huh?");
+static_assert(isUserspace32bit(), "huh? ILP32 must have 32-bit userspace");
 #else
-#error "huh?"
+#error "huh? must be either LP64 (64-bit userspace) or ILP32 (32-bit userspace)"
 #endif
 
 static_assert(isUserspace32bit() || isUserspace64bit(), "must be either 32 or 64 bit");
