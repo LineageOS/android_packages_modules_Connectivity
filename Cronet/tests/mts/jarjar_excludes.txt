@@ -5,6 +5,8 @@ android\.net\..+
 # cronet_tests.so is not jarjared and uses base classes. We can remove this when there's a
 # separate java base target to depend on.
 org\.chromium\.base\..+
+J\.cronet_tests_N(\$.+)?
+
 # Do not jarjar the tests and its utils as they also do JNI with cronet_tests.so
 org\.chromium\.net\..*Test.*(\$.+)?
 org\.chromium\.net\.NativeTestServer(\$.+)?
