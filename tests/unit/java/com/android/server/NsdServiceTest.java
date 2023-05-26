@@ -16,13 +16,21 @@
 
 package com.android.server;
 
+import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED;
+import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
+import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_GONE;
+import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE;
 import static android.net.InetAddresses.parseNumericAddress;
+import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
+import static android.net.NetworkCapabilities.TRANSPORT_VPN;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_PLATFORM_MDNS_BACKEND;
 import static android.net.connectivity.ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER;
 import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
 
+import static com.android.server.NsdService.DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF;
 import static com.android.server.NsdService.parseTypeAndSubtype;
 import static com.android.testutils.ContextUtils.mockService;
 
@@ -42,6 +50,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -51,6 +60,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import android.app.ActivityManager;
+import android.app.ActivityManager.OnUidImportanceListener;
 import android.compat.testing.PlatformCompatChangeRule;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -68,7 +79,9 @@ import android.net.nsd.NsdManager;
 import android.net.nsd.NsdManager.DiscoveryListener;
 import android.net.nsd.NsdManager.RegistrationListener;
 import android.net.nsd.NsdManager.ResolveListener;
+import android.net.nsd.NsdManager.ServiceInfoCallback;
 import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -85,10 +98,12 @@ import androidx.test.filters.SmallTest;
 import com.android.server.NsdService.Dependencies;
 import com.android.server.connectivity.mdns.MdnsAdvertiser;
 import com.android.server.connectivity.mdns.MdnsDiscoveryManager;
+import com.android.server.connectivity.mdns.MdnsInterfaceSocket;
 import com.android.server.connectivity.mdns.MdnsSearchOptions;
 import com.android.server.connectivity.mdns.MdnsServiceBrowserListener;
 import com.android.server.connectivity.mdns.MdnsServiceInfo;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
+import com.android.server.connectivity.mdns.MdnsSocketProvider.SocketRequestMonitor;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
@@ -101,6 +116,7 @@ import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -145,6 +161,11 @@ public class NsdServiceTest {
     @Mock MdnsDiscoveryManager mDiscoveryManager;
     @Mock MdnsAdvertiser mAdvertiser;
     @Mock MdnsSocketProvider mSocketProvider;
+    @Mock WifiManager mWifiManager;
+    @Mock WifiManager.MulticastLock mMulticastLock;
+    @Mock ActivityManager mActivityManager;
+    SocketRequestMonitor mSocketRequestMonitor;
+    OnUidImportanceListener mUidImportanceListener;
     HandlerThread mThread;
     TestHandler mHandler;
     NsdService mService;
@@ -167,9 +188,13 @@ public class NsdServiceTest {
         mHandler = new TestHandler(mThread.getLooper());
         when(mContext.getContentResolver()).thenReturn(mResolver);
         mockService(mContext, MDnsManager.class, MDnsManager.MDNS_SERVICE, mMockMDnsM);
+        mockService(mContext, WifiManager.class, Context.WIFI_SERVICE, mWifiManager);
+        mockService(mContext, ActivityManager.class, Context.ACTIVITY_SERVICE, mActivityManager);
         if (mContext.getSystemService(MDnsManager.class) == null) {
             // Test is using mockito-extended
             doCallRealMethod().when(mContext).getSystemService(MDnsManager.class);
+            doCallRealMethod().when(mContext).getSystemService(WifiManager.class);
+            doCallRealMethod().when(mContext).getSystemService(ActivityManager.class);
         }
         doReturn(true).when(mMockMDnsM).registerService(
                 anyInt(), anyString(), anyString(), anyInt(), any(), anyInt());
@@ -180,9 +205,21 @@ public class NsdServiceTest {
         doReturn(false).when(mDeps).isMdnsDiscoveryManagerEnabled(any(Context.class));
         doReturn(mDiscoveryManager).when(mDeps)
                 .makeMdnsDiscoveryManager(any(), any(), any());
-        doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any());
+        doReturn(mMulticastLock).when(mWifiManager).createMulticastLock(any());
+        doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any(), any());
+        doReturn(DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF).when(mDeps).getDeviceConfigInt(
+                eq(NsdService.MDNS_CONFIG_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF), anyInt());
         doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any());
         mService = makeService();
+        final ArgumentCaptor<SocketRequestMonitor> cbMonitorCaptor =
+                ArgumentCaptor.forClass(SocketRequestMonitor.class);
+        verify(mDeps).makeMdnsSocketProvider(any(), any(), any(), cbMonitorCaptor.capture());
+        mSocketRequestMonitor = cbMonitorCaptor.getValue();
+
+        final ArgumentCaptor<OnUidImportanceListener> uidListenerCaptor =
+                ArgumentCaptor.forClass(OnUidImportanceListener.class);
+        verify(mActivityManager).addOnUidImportanceListener(uidListenerCaptor.capture(), anyInt());
+        mUidImportanceListener = uidListenerCaptor.getValue();
     }
 
     @After
@@ -738,8 +775,8 @@ public class NsdServiceTest {
     public void testRegisterAndUnregisterServiceInfoCallback() {
         final NsdManager client = connectClient(mService);
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
-        final NsdManager.ServiceInfoCallback serviceInfoCallback = mock(
-                NsdManager.ServiceInfoCallback.class);
+        final ServiceInfoCallback serviceInfoCallback = mock(
+                ServiceInfoCallback.class);
         final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final Network network = new Network(999);
         request.setNetwork(network);
@@ -813,8 +850,8 @@ public class NsdServiceTest {
         final NsdManager client = connectClient(mService);
         final String invalidServiceType = "a_service";
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, invalidServiceType);
-        final NsdManager.ServiceInfoCallback serviceInfoCallback = mock(
-                NsdManager.ServiceInfoCallback.class);
+        final ServiceInfoCallback serviceInfoCallback = mock(
+                ServiceInfoCallback.class);
         client.registerServiceInfoCallback(request, Runnable::run, serviceInfoCallback);
         waitForIdle();
 
@@ -826,8 +863,8 @@ public class NsdServiceTest {
     @Test
     public void testUnregisterNotRegisteredCallback() {
         final NsdManager client = connectClient(mService);
-        final NsdManager.ServiceInfoCallback serviceInfoCallback = mock(
-                NsdManager.ServiceInfoCallback.class);
+        final ServiceInfoCallback serviceInfoCallback = mock(
+                ServiceInfoCallback.class);
 
         assertThrows(IllegalArgumentException.class, () ->
                 client.unregisterServiceInfoCallback(serviceInfoCallback));
@@ -1334,6 +1371,194 @@ public class NsdServiceTest {
         client.resolveService(regInfo, r -> r.run(), resolveListener);
         waitForIdle();
         verify(mDiscoveryManager, times(2)).registerListener(anyString(), any(), any());
+    }
+
+    @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    public void testTakeMulticastLockOnBehalfOfClient_ForWifiNetworksOnly() {
+        // Test on one client in the foreground
+        mUidImportanceListener.onUidImportance(123, IMPORTANCE_FOREGROUND);
+        doReturn(123).when(mDeps).getCallingUid();
+        final NsdManager client = connectClient(mService);
+
+        final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        regInfo.setHostAddresses(List.of(parseNumericAddress("192.0.2.123")));
+        regInfo.setPort(12345);
+        // File a request for all networks
+        regInfo.setNetwork(null);
+
+        final RegistrationListener regListener = mock(RegistrationListener.class);
+        client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
+        waitForIdle();
+        verify(mSocketProvider).startMonitoringSockets();
+        verify(mAdvertiser).addService(anyInt(), any(), any());
+
+        final Network wifiNetwork1 = new Network(123);
+        final Network wifiNetwork2 = new Network(124);
+        final Network ethernetNetwork = new Network(125);
+
+        final MdnsInterfaceSocket wifiNetworkSocket1 = mock(MdnsInterfaceSocket.class);
+        final MdnsInterfaceSocket wifiNetworkSocket2 = mock(MdnsInterfaceSocket.class);
+        final MdnsInterfaceSocket ethernetNetworkSocket = mock(MdnsInterfaceSocket.class);
+
+        // Nothing happens for networks with no transports, no Wi-Fi transport, or VPN transport
+        mHandler.post(() -> {
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    new Network(125), mock(MdnsInterfaceSocket.class), new int[0]);
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    ethernetNetwork, ethernetNetworkSocket,
+                    new int[] { TRANSPORT_ETHERNET });
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    new Network(127), mock(MdnsInterfaceSocket.class),
+                    new int[] { TRANSPORT_WIFI, TRANSPORT_VPN });
+        });
+        waitForIdle();
+        verify(mWifiManager, never()).createMulticastLock(any());
+
+        // First Wi-Fi network
+        mHandler.post(() -> mSocketRequestMonitor.onSocketRequestFulfilled(
+                wifiNetwork1, wifiNetworkSocket1, new int[] { TRANSPORT_WIFI }));
+        waitForIdle();
+        verify(mWifiManager).createMulticastLock(any());
+        verify(mMulticastLock).acquire();
+
+        // Second Wi-Fi network
+        mHandler.post(() -> mSocketRequestMonitor.onSocketRequestFulfilled(
+                wifiNetwork2, wifiNetworkSocket2, new int[] { TRANSPORT_WIFI }));
+        waitForIdle();
+        verifyNoMoreInteractions(mMulticastLock);
+
+        // One Wi-Fi network becomes unused, nothing happens
+        mHandler.post(() -> mSocketRequestMonitor.onSocketDestroyed(
+                wifiNetwork1, wifiNetworkSocket1));
+        waitForIdle();
+        verifyNoMoreInteractions(mMulticastLock);
+
+        // Ethernet network becomes unused, still nothing
+        mHandler.post(() -> mSocketRequestMonitor.onSocketDestroyed(
+                ethernetNetwork, ethernetNetworkSocket));
+        waitForIdle();
+        verifyNoMoreInteractions(mMulticastLock);
+
+        // The second Wi-Fi network becomes unused, the lock is released
+        mHandler.post(() -> mSocketRequestMonitor.onSocketDestroyed(
+                wifiNetwork2, wifiNetworkSocket2));
+        waitForIdle();
+        verify(mMulticastLock).release();
+    }
+
+    @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    public void testTakeMulticastLockOnBehalfOfClient_ForForegroundAppsOnly() {
+        final int uid1 = 12;
+        final int uid2 = 34;
+        final int uid3 = 56;
+        final int uid4 = 78;
+        final InOrder lockOrder = inOrder(mMulticastLock);
+        // Connect one client without any foreground info
+        doReturn(uid1).when(mDeps).getCallingUid();
+        final NsdManager client1 = connectClient(mService);
+
+        // Connect client2 as visible, but not foreground
+        mUidImportanceListener.onUidImportance(uid2, IMPORTANCE_VISIBLE);
+        waitForIdle();
+        doReturn(uid2).when(mDeps).getCallingUid();
+        final NsdManager client2 = connectClient(mService);
+
+        // Connect client3, client4 as foreground
+        mUidImportanceListener.onUidImportance(uid3, IMPORTANCE_FOREGROUND);
+        waitForIdle();
+        doReturn(uid3).when(mDeps).getCallingUid();
+        final NsdManager client3 = connectClient(mService);
+
+        mUidImportanceListener.onUidImportance(uid4, IMPORTANCE_FOREGROUND);
+        waitForIdle();
+        doReturn(uid4).when(mDeps).getCallingUid();
+        final NsdManager client4 = connectClient(mService);
+
+        // First client advertises on any network
+        final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        regInfo.setHostAddresses(List.of(parseNumericAddress("192.0.2.123")));
+        regInfo.setPort(12345);
+        regInfo.setNetwork(null);
+        final RegistrationListener regListener = mock(RegistrationListener.class);
+        client1.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
+        waitForIdle();
+
+        final MdnsInterfaceSocket wifiSocket = mock(MdnsInterfaceSocket.class);
+        final Network wifiNetwork = new Network(123);
+
+        final MdnsInterfaceSocket ethSocket = mock(MdnsInterfaceSocket.class);
+        final Network ethNetwork = new Network(234);
+
+        mHandler.post(() -> {
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    wifiNetwork, wifiSocket, new int[] { TRANSPORT_WIFI });
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    ethNetwork, ethSocket, new int[] { TRANSPORT_ETHERNET });
+        });
+        waitForIdle();
+
+        // No multicast lock since client1 has no foreground info
+        lockOrder.verifyNoMoreInteractions();
+
+        // Second client discovers specifically on the Wi-Fi network
+        final DiscoveryListener discListener = mock(DiscoveryListener.class);
+        client2.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, wifiNetwork,
+                Runnable::run, discListener);
+        waitForIdle();
+        mHandler.post(() -> mSocketRequestMonitor.onSocketRequestFulfilled(
+                wifiNetwork, wifiSocket, new int[] { TRANSPORT_WIFI }));
+        waitForIdle();
+        // No multicast lock since client2 is not visible enough
+        lockOrder.verifyNoMoreInteractions();
+
+        // Third client registers a callback on all networks
+        final NsdServiceInfo cbInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        cbInfo.setNetwork(null);
+        final ServiceInfoCallback infoCb = mock(ServiceInfoCallback.class);
+        client3.registerServiceInfoCallback(cbInfo, Runnable::run, infoCb);
+        waitForIdle();
+        mHandler.post(() -> {
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    wifiNetwork, wifiSocket, new int[] { TRANSPORT_WIFI });
+            mSocketRequestMonitor.onSocketRequestFulfilled(
+                    ethNetwork, ethSocket, new int[] { TRANSPORT_ETHERNET });
+        });
+        waitForIdle();
+
+        // Multicast lock is taken for third client
+        lockOrder.verify(mMulticastLock).acquire();
+
+        // Client3 goes to the background
+        mUidImportanceListener.onUidImportance(uid3, IMPORTANCE_CACHED);
+        waitForIdle();
+        lockOrder.verify(mMulticastLock).release();
+
+        // client4 resolves on a different network
+        final ResolveListener resolveListener = mock(ResolveListener.class);
+        final NsdServiceInfo resolveInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
+        resolveInfo.setNetwork(ethNetwork);
+        client4.resolveService(resolveInfo, Runnable::run, resolveListener);
+        waitForIdle();
+        mHandler.post(() -> mSocketRequestMonitor.onSocketRequestFulfilled(
+                ethNetwork, ethSocket, new int[] { TRANSPORT_ETHERNET }));
+        waitForIdle();
+
+        // client4 is foreground, but not Wi-Fi
+        lockOrder.verifyNoMoreInteractions();
+
+        // Second client becomes foreground
+        mUidImportanceListener.onUidImportance(uid2, IMPORTANCE_FOREGROUND);
+        waitForIdle();
+
+        lockOrder.verify(mMulticastLock).acquire();
+
+        // Second client is lost
+        mUidImportanceListener.onUidImportance(uid2, IMPORTANCE_GONE);
+        waitForIdle();
+
+        lockOrder.verify(mMulticastLock).release();
     }
 
     private void waitForIdle() {
