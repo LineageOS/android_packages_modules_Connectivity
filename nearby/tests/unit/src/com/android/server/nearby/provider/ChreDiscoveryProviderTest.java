@@ -18,7 +18,6 @@ package com.android.server.nearby.provider;
 
 import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
-import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_APP;
 
@@ -61,6 +60,7 @@ public class ChreDiscoveryProviderTest {
     @Captor ArgumentCaptor<ChreCommunication.ContextHubCommsCallback> mChreCallbackCaptor;
     @Captor ArgumentCaptor<NearbyDeviceParcelable> mNearbyDevice;
 
+    private static final String NAMESPACE = NearbyConfiguration.getNamespace();
     private static final int DATA_TYPE_CONNECTION_STATUS_KEY = 10;
     private static final int DATA_TYPE_BATTERY_KEY = 11;
     private static final int DATA_TYPE_TX_POWER_KEY = 5;
@@ -130,7 +130,7 @@ public class ChreDiscoveryProviderTest {
         boolean isSupportedTestApp = getDeviceConfigBoolean(
                 NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
         if (isSupportedTestApp) {
-            DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP, "false", false);
+            DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP, "false", false);
         }
         assertThat(new NearbyConfiguration().isTestAppSupported()).isFalse();
 
@@ -215,7 +215,7 @@ public class ChreDiscoveryProviderTest {
         assertThat(extendedProperties).containsExactlyElementsIn(expectedExtendedProperties);
         // Reverts the setting of test app support
         if (isSupportedTestApp) {
-            DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP, "true", false);
+            DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP, "true", false);
             assertThat(new NearbyConfiguration().isTestAppSupported()).isTrue();
         }
     }
@@ -227,7 +227,7 @@ public class ChreDiscoveryProviderTest {
         boolean isSupportedTestApp = getDeviceConfigBoolean(
                 NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
         if (!isSupportedTestApp) {
-            DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP, "true", false);
+            DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP, "true", false);
         }
         assertThat(new NearbyConfiguration().isTestAppSupported()).isTrue();
 
@@ -316,7 +316,7 @@ public class ChreDiscoveryProviderTest {
         assertThat(extendedProperties).containsExactlyElementsIn(expectedExtendedProperties);
         // Reverts the setting of test app support
         if (!isSupportedTestApp) {
-            DeviceConfig.setProperty(NAMESPACE_TETHERING, NEARBY_SUPPORT_TEST_APP, "false", false);
+            DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP, "false", false);
             assertThat(new NearbyConfiguration().isTestAppSupported()).isFalse();
         }
     }
@@ -327,7 +327,7 @@ public class ChreDiscoveryProviderTest {
     }
 
     private String getDeviceConfigProperty(String name) {
-        return DeviceConfig.getProperty(DeviceConfig.NAMESPACE_TETHERING, name);
+        return DeviceConfig.getProperty(NAMESPACE, name);
     }
 
     private static class InLineExecutor implements Executor {

@@ -22,6 +22,8 @@ import android.provider.DeviceConfig;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.modules.utils.build.SdkLevel;
+import com.android.server.nearby.managers.DiscoveryProviderManager;
 
 import java.util.concurrent.Executors;
 
@@ -46,6 +48,12 @@ public class NearbyConfiguration {
      */
     public static final String NEARBY_SUPPORT_TEST_APP = "nearby_support_test_app";
 
+    /**
+     * Flag to control which version of DiscoveryProviderManager should be used.
+     */
+    public static final String NEARBY_REFACTOR_DISCOVERY_MANAGER =
+            "nearby_refactor_discovery_manager";
+
     private static final boolean IS_USER_BUILD = "user".equals(Build.TYPE);
 
     private final DeviceConfigListener mDeviceConfigListener = new DeviceConfigListener();
@@ -57,9 +65,37 @@ public class NearbyConfiguration {
     private int mNanoAppMinVersion;
     @GuardedBy("mDeviceConfigLock")
     private boolean mSupportTestApp;
+    @GuardedBy("mDeviceConfigLock")
+    private boolean mRefactorDiscoveryManager;
 
     public NearbyConfiguration() {
         mDeviceConfigListener.start();
+    }
+
+    /**
+     * Returns the DeviceConfig namespace for Nearby. The DeviceConfig#NAMESPACE_NEARBY was
+     * added in UpsideDownCake, in Tiramisu, we use {@link DeviceConfig#NAMESPACE_TETHERING}.
+     */
+    public static String getNamespace() {
+        if (SdkLevel.isAtLeastU()) {
+            // DeviceConfig.NAMESPACE_NEARBY
+            return "nearby";
+        }
+        return DeviceConfig.NAMESPACE_TETHERING;
+    }
+
+    private static boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {
+        final String value = getDeviceConfigProperty(name);
+        return value != null ? Boolean.parseBoolean(value) : defaultValue;
+    }
+
+    private static int getDeviceConfigInt(final String name, final int defaultValue) {
+        final String value = getDeviceConfigProperty(name);
+        return value != null ? Integer.parseInt(value) : defaultValue;
+    }
+
+    private static String getDeviceConfigProperty(String name) {
+        return DeviceConfig.getProperty(getNamespace(), name);
     }
 
     /**
@@ -86,11 +122,21 @@ public class NearbyConfiguration {
         }
     }
 
+    /**
+     * @return {@code true} if use {@link DiscoveryProviderManager} or use
+     * DiscoveryProviderManagerLegacy if {@code false}.
+     */
+    public boolean refactorDiscoveryManager() {
+        synchronized (mDeviceConfigLock) {
+            return mRefactorDiscoveryManager;
+        }
+    }
+
     private class DeviceConfigListener implements DeviceConfig.OnPropertiesChangedListener {
         public void start() {
-            DeviceConfig.addOnPropertiesChangedListener(DeviceConfig.NAMESPACE_TETHERING,
+            DeviceConfig.addOnPropertiesChangedListener(getNamespace(),
                     Executors.newSingleThreadExecutor(), this);
-            onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_TETHERING));
+            onPropertiesChanged(DeviceConfig.getProperties(getNamespace()));
         }
 
         @Override
@@ -102,21 +148,9 @@ public class NearbyConfiguration {
                         NEARBY_MAINLINE_NANO_APP_MIN_VERSION, 0 /* defaultValue */);
                 mSupportTestApp = !IS_USER_BUILD && getDeviceConfigBoolean(
                         NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
+                mRefactorDiscoveryManager = getDeviceConfigBoolean(
+                        NEARBY_REFACTOR_DISCOVERY_MANAGER, false /* defaultValue */);
             }
         }
-    }
-
-    private static boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {
-        final String value = getDeviceConfigProperty(name);
-        return value != null ? Boolean.parseBoolean(value) : defaultValue;
-    }
-
-    private static int getDeviceConfigInt(final String name, final int defaultValue) {
-        final String value = getDeviceConfigProperty(name);
-        return value != null ? Integer.parseInt(value) : defaultValue;
-    }
-
-    private static String getDeviceConfigProperty(String name) {
-        return DeviceConfig.getProperty(DeviceConfig.NAMESPACE_TETHERING, name);
     }
 }
