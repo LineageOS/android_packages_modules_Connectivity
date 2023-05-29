@@ -38,35 +38,25 @@ public interface MdnsSocketClientBase {
     /*** Set callback for receiving mDns response */
     void setCallback(@Nullable Callback callback);
 
-    /*** Sends a mDNS request packet that asks for multicast response. */
-    void sendMulticastPacket(@NonNull DatagramPacket packet);
+    /**
+     * Send a mDNS request packet via given network that asks for multicast response.
+     *
+     * <p>The socket client may use a null network to identify some or all interfaces, in which case
+     * passing null sends the packet to these.
+     */
+    void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network);
 
     /**
-     * Sends a mDNS request packet via given network that asks for multicast response. Null network
-     * means sending packet via all networks.
+     * Send a mDNS request packet via given network that asks for unicast response.
+     *
+     * <p>The socket client may use a null network to identify some or all interfaces, in which case
+     * passing null sends the packet to these.
      */
-    default void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
-        throw new UnsupportedOperationException(
-                "This socket client doesn't support per-network sending");
-    }
-
-    /*** Sends a mDNS request packet that asks for unicast response. */
-    void sendUnicastPacket(@NonNull DatagramPacket packet);
-
-    /**
-     * Sends a mDNS request packet via given network that asks for unicast response. Null network
-     * means sending packet via all networks.
-     */
-    default void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
-        throw new UnsupportedOperationException(
-                "This socket client doesn't support per-network sending");
-    }
+    void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network);
 
     /*** Notify that the given network is requested for mdns discovery / resolution */
-    default void notifyNetworkRequested(@NonNull MdnsServiceBrowserListener listener,
-            @Nullable Network network, @NonNull SocketCreationCallback socketCreationCallback) {
-        socketCreationCallback.onSocketCreated(network);
-    }
+    void notifyNetworkRequested(@NonNull MdnsServiceBrowserListener listener,
+            @Nullable Network network, @NonNull SocketCreationCallback socketCreationCallback);
 
     /*** Notify that the network is unrequested */
     default void notifyNetworkUnrequested(@NonNull MdnsServiceBrowserListener listener) { }
