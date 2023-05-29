@@ -97,12 +97,14 @@ import static android.os.Process.VPN_UID;
 import static android.system.OsConstants.ETH_P_ALL;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
+
 import static com.android.net.module.util.NetworkMonitorUtils.isPrivateDnsValidationRequired;
 import static com.android.net.module.util.PermissionUtils.checkAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermission;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermissionOr;
 import static com.android.server.ConnectivityStatsLog.CONNECTIVITY_STATE_SAMPLE;
+
 import static java.util.Map.Entry;
 
 import android.Manifest;
@@ -11457,7 +11459,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // If there is no default network, default network is considered active to keep the existing
         // behavior. Initial value is used until first connect to the default network.
         private volatile boolean mIsDefaultNetworkActive = true;
-        private final ArrayMap<String, IdleTimerParams> mActiveIdleTimers = new ArrayMap<>();
+        // Key is netId. Value is configured idle timer information.
+        private final SparseArray<IdleTimerParams> mActiveIdleTimers = new SparseArray<>();
 
         private static class IdleTimerParams {
             public final int timeout;
@@ -11485,7 +11488,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         public void handleReportNetworkActivity(NetworkActivityParams activityParams) {
             ensureRunningOnConnectivityServiceThread();
-            if (mActiveIdleTimers.isEmpty()) {
+            if (mActiveIdleTimers.size() == 0) {
                 // This activity change is not for the current default network.
                 // This can happen if netd callback post activity change event message but
                 // the default network is lost before processing this message.
@@ -11561,6 +11564,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
          */
         private boolean setupDataActivityTracking(NetworkAgentInfo networkAgent) {
             final String iface = networkAgent.linkProperties.getInterfaceName();
+            final int netId = networkAgent.network().netId;
 
             final int timeout;
             final int type;
@@ -11585,7 +11589,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
             if (timeout > 0 && iface != null) {
                 try {
-                    mActiveIdleTimers.put(iface, new IdleTimerParams(timeout, type));
+                    mActiveIdleTimers.put(netId, new IdleTimerParams(timeout, type));
                     mNetd.idletimerAddInterface(iface, timeout, Integer.toString(type));
                     return true;
                 } catch (Exception e) {
@@ -11601,6 +11605,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
          */
         private void removeDataActivityTracking(NetworkAgentInfo networkAgent) {
             final String iface = networkAgent.linkProperties.getInterfaceName();
+            final int netId = networkAgent.network().netId;
             final NetworkCapabilities caps = networkAgent.networkCapabilities;
 
             if (iface == null) return;
@@ -11616,11 +11621,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
             try {
                 updateRadioPowerState(false /* isActive */, type);
-                final IdleTimerParams params = mActiveIdleTimers.remove(iface);
+                final IdleTimerParams params = mActiveIdleTimers.get(netId);
                 if (params == null) {
                     // IdleTimer is not added if the configured timeout is 0 or negative value
                     return;
                 }
+                mActiveIdleTimers.remove(netId);
                 // The call fails silently if no idle timer setup for this interface
                 mNetd.idletimerRemoveInterface(iface, params.timeout,
                         Integer.toString(params.transportType));
@@ -11691,9 +11697,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             pw.print("mIsDefaultNetworkActive="); pw.println(mIsDefaultNetworkActive);
             pw.println("Idle timers:");
             try {
-                for (Map.Entry<String, IdleTimerParams> ent : mActiveIdleTimers.entrySet()) {
-                    pw.print("  "); pw.print(ent.getKey()); pw.println(":");
-                    final IdleTimerParams params = ent.getValue();
+                for (int i = 0; i < mActiveIdleTimers.size(); i++) {
+                    pw.print("  "); pw.print(mActiveIdleTimers.keyAt(i)); pw.println(":");
+                    final IdleTimerParams params = mActiveIdleTimers.valueAt(i);
                     pw.print("    timeout="); pw.print(params.timeout);
                     pw.print(" type="); pw.println(params.transportType);
                 }
