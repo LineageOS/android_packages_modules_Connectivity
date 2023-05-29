@@ -211,7 +211,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
                         | (expectUnicastResponse ? MdnsConstants.QCLASS_UNICAST : 0));
     }
 
-    private void sendPacketTo(MdnsSocketClientBase requestSender, InetSocketAddress address)
+    private void sendPacketTo(MdnsSocketClient requestSender, InetSocketAddress address)
             throws IOException {
         DatagramPacket packet = packetWriter.getPacket(address);
         if (expectUnicastResponse) {
