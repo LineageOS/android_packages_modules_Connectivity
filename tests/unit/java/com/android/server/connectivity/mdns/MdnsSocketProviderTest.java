@@ -745,4 +745,21 @@ public class MdnsSocketProviderTest {
                 List.of(WIFI_P2P_IFACE_NAME)));
         testCallback.expectedNoCallback();
     }
+
+    @Test
+    public void testTetherInterfacesChangedBeforeGetAllNetworksRequest() {
+        startMonitoringSockets();
+
+        // Receive an interface added change for the wifi p2p interface. Expect a socket creation
+        // callback.
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(
+                List.of(TETHERED_IFACE_NAME)));
+        verify(mTetheredIfaceWrapper, never()).getNetworkInterface();
+
+        // Request a socket with null network.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallback));
+        verify(mTetheredIfaceWrapper).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
+    }
 }

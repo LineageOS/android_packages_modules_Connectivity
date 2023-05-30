@@ -449,11 +449,13 @@ public class MdnsSocketProvider {
         if (!hasAllNetworksRequest()) {
             // Currently, the network for tethering can not be requested, so the sockets for
             // tethering are only created if there is a request for all networks (interfaces).
-            // Therefore, this change can skip if there is no such request.
+            // Therefore, only update the interface list and skip this change if no such request.
             if (DBG) {
                 Log.d(TAG, "Ignore tether interfaces change. There is no request for all"
                         + " networks.");
             }
+            current.clear();
+            current.addAll(updated);
             return;
         }
 
