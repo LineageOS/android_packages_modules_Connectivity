@@ -179,7 +179,7 @@ public class NsdServiceTest {
                 anyInt(), anyString(), anyString(), anyString(), anyInt());
         doReturn(false).when(mDeps).isMdnsDiscoveryManagerEnabled(any(Context.class));
         doReturn(mDiscoveryManager).when(mDeps)
-                .makeMdnsDiscoveryManager(any(), any(), any(), any());
+                .makeMdnsDiscoveryManager(any(), any(), any());
         doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any());
         doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any());
         mService = makeService();
