@@ -17,7 +17,6 @@
 package com.android.server.connectivity.mdns;
 
 import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningOnHandlerThread;
-import static com.android.server.connectivity.mdns.util.MdnsUtils.isRunningOnHandlerThread;
 
 import android.Manifest.permission;
 import android.annotation.NonNull;
@@ -25,7 +24,7 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.net.Network;
 import android.os.Handler;
-import android.os.Looper;
+import android.os.HandlerThread;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
@@ -52,6 +51,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
 
     @NonNull private final PerNetworkServiceTypeClients perNetworkServiceTypeClients;
     @NonNull private final Handler handler;
+    @Nullable private final HandlerThread handlerThread;
 
     private static class PerNetworkServiceTypeClients {
         private final ArrayMap<Pair<String, Network>, MdnsServiceTypeClient> clients =
@@ -103,20 +103,35 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     }
 
     public MdnsDiscoveryManager(@NonNull ExecutorProvider executorProvider,
-            @NonNull MdnsSocketClientBase socketClient, @NonNull SharedLog sharedLog,
-            @NonNull Looper looper) {
+            @NonNull MdnsSocketClientBase socketClient, @NonNull SharedLog sharedLog) {
         this.executorProvider = executorProvider;
         this.socketClient = socketClient;
         this.sharedLog = sharedLog;
-        perNetworkServiceTypeClients = new PerNetworkServiceTypeClients();
-        handler = new Handler(looper);
+        this.perNetworkServiceTypeClients = new PerNetworkServiceTypeClients();
+        if (socketClient.getLooper() != null) {
+            this.handlerThread = null;
+            this.handler = new Handler(socketClient.getLooper());
+        } else {
+            this.handlerThread = new HandlerThread(MdnsDiscoveryManager.class.getSimpleName());
+            this.handlerThread.start();
+            this.handler = new Handler(handlerThread.getLooper());
+        }
     }
 
     private void checkAndRunOnHandlerThread(@NonNull Runnable function) {
-        if (isRunningOnHandlerThread(handler)) {
+        if (this.handlerThread == null) {
             function.run();
         } else {
             handler.post(function);
+        }
+    }
+
+    /**
+     * Do the cleanup of the MdnsDiscoveryManager
+     */
+    public void shutDown() {
+        if (this.handlerThread != null) {
+            this.handlerThread.quitSafely();
         }
     }
 
