@@ -11280,6 +11280,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 updateRadioPowerState(false /* isActive */, type);
                 synchronized (mActiveIdleTimers) {
                     final IdleTimerParams params = mActiveIdleTimers.remove(iface);
+                    if (params == null) {
+                        // IdleTimer is not added if the configured timeout is 0 or negative value
+                        return;
+                    }
                     // The call fails silently if no idle timer setup for this interface
                     mNetd.idletimerRemoveInterface(iface, params.timeout,
                             Integer.toString(params.transportType));
