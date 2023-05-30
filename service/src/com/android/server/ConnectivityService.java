@@ -1278,6 +1278,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return Binder.getCallingUid();
         }
 
+        public boolean isAtLeastS() {
+            return SdkLevel.isAtLeastS();
+        }
+
+        public boolean isAtLeastT() {
+            return SdkLevel.isAtLeastT();
+        }
+
+        public boolean isAtLeastU() {
+            return SdkLevel.isAtLeastU();
+        }
+
         /**
          * Get system properties to use in ConnectivityService.
          */
@@ -1390,7 +1402,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         @Nullable
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context, @NonNull final TelephonyManager tm) {
-            if (SdkLevel.isAtLeastT()) {
+            if (isAtLeastT()) {
                 return new CarrierPrivilegeAuthenticator(context, tm);
             } else {
                 return null;
@@ -1495,6 +1507,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public boolean isChangeEnabled(long changeId, @NonNull final String packageName,
                 @NonNull final UserHandle user) {
             return CompatChanges.isChangeEnabled(changeId, packageName, user);
+        }
+
+        /**
+         * As above but with a UID.
+         * @see CompatChanges#isChangeEnabled(long, int)
+         */
+        public boolean isChangeEnabled(final long changeId, final int uid) {
+            return CompatChanges.isChangeEnabled(changeId, uid);
         }
 
         /**
@@ -1710,7 +1730,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // Even if it could, running on S would at least require mocking out the BPF map,
             // otherwise the unit tests will fail on pre-T devices where the seccomp filter blocks
             // the bpf syscall. http://aosp/1907693
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 mDscpPolicyTracker = new DscpPolicyTracker();
             }
         } catch (ErrnoException e) {
@@ -1720,13 +1740,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
                 mContext);
 
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mCdmps = new CompanionDeviceManagerProxyService(context);
         } else {
             mCdmps = null;
         }
 
-        if (SdkLevel.isAtLeastU()
+        if (mDeps.isAtLeastU()
                 && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION)) {
             final UidFrozenStateChangedCallback frozenStateChangedCallback =
                     new UidFrozenStateChangedCallback() {
@@ -3229,7 +3249,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void applyMostRecentPolicyForConnectivityAction(BroadcastOptions options,
             NetworkInfo info) {
         // Delivery group policy APIs are only available on U+.
-        if (!SdkLevel.isAtLeastU()) return;
+        if (!mDeps.isAtLeastU()) return;
 
         final BroadcastOptionsShim optsShim = mDeps.makeBroadcastOptionsShim(options);
         try {
@@ -3307,7 +3327,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         // On T+ devices, register callback for statsd to pull NETWORK_BPF_MAP_INFO atom
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mBpfNetMaps.setPullAtomCallback(mContext);
         }
         // Wait PermissionMonitor to finish the permission update. Then MultipathPolicyTracker won't
@@ -4517,7 +4537,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     boolean shouldIgnoreValidationFailureAfterRoam(NetworkAgentInfo nai) {
         // T+ devices should use unregisterAfterReplacement.
-        if (SdkLevel.isAtLeastT()) return false;
+        if (mDeps.isAtLeastT()) return false;
 
         // If the network never roamed, return false. The check below is not sufficient if time
         // since boot is less than blockTimeOut, though that's extremely unlikely to happen.
@@ -4656,7 +4676,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // for an unnecessarily long time.
             destroyNativeNetwork(nai);
         }
-        if (!nai.isCreated() && !SdkLevel.isAtLeastT()) {
+        if (!nai.isCreated() && !mDeps.isAtLeastT()) {
             // Backwards compatibility: send onNetworkDestroyed even if network was never created.
             // This can never run if the code above runs because shouldDestroyNativeNetwork is
             // false if the network was never created.
@@ -4740,7 +4760,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void checkNrisConsistency(final NetworkRequestInfo nri) {
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             for (final NetworkRequestInfo n : mNetworkRequests.values()) {
                 if (n.mBinder != null && n.mBinder == nri.mBinder) {
                     // Temporary help to debug b/194394697 ; TODO : remove this function when the
@@ -6330,7 +6350,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + Arrays.toString(ranges) + "): netd command failed: " + e);
         }
 
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mPermissionMonitor.updateVpnLockdownUidRanges(requireVpn, ranges);
         }
 
@@ -7124,7 +7144,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final NetworkCapabilities networkCapabilities) {
         // This check is added to fix the linter error for "current min is 30", which is not going
         // to happen because Connectivity service always run in S+.
-        if (!SdkLevel.isAtLeastS()) {
+        if (!mDeps.isAtLeastS()) {
             Log.wtf(TAG, "Connectivity service should always run in at least SDK S");
             return;
         }
@@ -8561,7 +8581,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // On T and above, allow rules are needed for all VPNs. Allow rule with null iface is a
         // wildcard to allow apps to receive packets on all interfaces. This is required to accept
         // incoming traffic in Lockdown mode by overriding the Lockdown blocking rule.
-        return SdkLevel.isAtLeastT() && nai.isVPN() && lp != null && lp.getInterfaceName() != null;
+        return mDeps.isAtLeastT() && nai.isVPN() && lp != null && lp.getInterfaceName() != null;
     }
 
     private static UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
@@ -8809,14 +8829,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             if (DBG) log("Sending " + pendingIntent);
             final BroadcastOptions options = BroadcastOptions.makeBasic();
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 // Explicitly disallow the receiver from starting activities, to prevent apps from
                 // utilizing the PendingIntent as a backdoor to do this.
                 options.setPendingIntentBackgroundActivityLaunchAllowed(false);
             }
             pendingIntent.send(mContext, 0, intent, this /* onFinished */, null /* Handler */,
                     null /* requiredPermission */,
-                    SdkLevel.isAtLeastT() ? options.toBundle() : null);
+                    mDeps.isAtLeastT() ? options.toBundle() : null);
         } catch (PendingIntent.CanceledException e) {
             if (DBG) log(pendingIntent + " was not sent, it had been canceled.");
             mPendingIntentWakeLock.release();
@@ -9095,7 +9115,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void updateProfileAllowedNetworks() {
         // Netd command is not implemented before U.
-        if (!SdkLevel.isAtLeastU()) return;
+        if (!mDeps.isAtLeastU()) return;
 
         ensureRunningOnConnectivityServiceThread();
         final ArrayList<NativeUidRangeConfig> configs = new ArrayList<>();
@@ -9831,7 +9851,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // in the absence of a satisfactory, scalable solution which follows an easy/standard
             // process to check the interface version, just use an SDK check. NetworkStack will
             // always be new enough when running on T+.
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 networkAgent.networkMonitor().notifyNetworkConnected(params);
             } else {
                 networkAgent.networkMonitor().notifyNetworkConnected(params.linkProperties,
@@ -11307,7 +11327,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (um.isManagedProfile(profile.getIdentifier())) {
             return true;
         }
-        if (SdkLevel.isAtLeastT() && dpm.getDeviceOwner() != null) return true;
+        if (mDeps.isAtLeastT() && dpm.getDeviceOwner() != null) return true;
         return false;
     }
 
@@ -11589,7 +11609,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private boolean canNetworkBeRateLimited(@NonNull final NetworkAgentInfo networkAgent) {
         // Rate-limiting cannot run correctly before T because the BPF program is not loaded.
-        if (!SdkLevel.isAtLeastT()) return false;
+        if (!mDeps.isAtLeastT()) return false;
 
         final NetworkCapabilities agentCaps = networkAgent.networkCapabilities;
         // Only test networks (they cannot hold NET_CAPABILITY_INTERNET) and networks that provide
@@ -12096,7 +12116,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalStateException(e);
         }
 
-        if (SdkLevel.isAtLeastU() && enable) {
+        if (mDeps.isAtLeastU() && enable) {
             try {
                 closeSocketsForFirewallChainLocked(chain);
             } catch (ErrnoException | SocketException | InterruptedIOException e) {
