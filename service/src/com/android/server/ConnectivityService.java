@@ -1703,7 +1703,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mUserAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
                 null /* broadcastPermission */, mHandler);
 
-        mNetworkActivityTracker = new LegacyNetworkActivityTracker(mContext, mNetd);
+        mNetworkActivityTracker = new LegacyNetworkActivityTracker(mContext, mNetd, mHandler);
 
         final NetdCallback netdCallback = new NetdCallback();
         try {
@@ -11115,6 +11115,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         private static final int NO_UID = -1;
         private final Context mContext;
         private final INetd mNetd;
+        private final Handler mHandler;
         private final RemoteCallbackList<INetworkActivityListener> mNetworkActivityListeners =
                 new RemoteCallbackList<>();
         // Indicate the current system default network activity is active or not.
@@ -11133,12 +11134,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
-        LegacyNetworkActivityTracker(@NonNull Context context, @NonNull INetd netd) {
+        LegacyNetworkActivityTracker(@NonNull Context context, @NonNull INetd netd,
+                @NonNull Handler handler) {
             mContext = context;
             mNetd = netd;
+            mHandler = handler;
+        }
+
+        private void ensureRunningOnConnectivityServiceThread() {
+            if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+                throw new IllegalStateException("Not running on ConnectivityService thread: "
+                                + Thread.currentThread().getName());
+            }
         }
 
         public void handleReportNetworkActivity(NetworkActivityParams activityParams) {
+            ensureRunningOnConnectivityServiceThread();
             sendDataActivityBroadcast(transportTypeToLegacyType(activityParams.label),
                     activityParams.isActive, activityParams.timestampNs);
             synchronized (mActiveIdleTimers) {
@@ -11299,6 +11310,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
          */
         public void updateDataActivityTracking(NetworkAgentInfo newNetwork,
                 NetworkAgentInfo oldNetwork) {
+            ensureRunningOnConnectivityServiceThread();
             if (newNetwork != null) {
                 setupDataActivityTracking(newNetwork);
             }
