@@ -99,6 +99,7 @@ public class MdnsDiscoveryManagerTests {
         thread.start();
         handler = new Handler(thread.getLooper());
         doReturn(thread.getLooper()).when(socketClient).getLooper();
+        doReturn(true).when(socketClient).supportsRequestingSpecificNetworks();
         discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient,
                 sharedLog) {
                     @Override
