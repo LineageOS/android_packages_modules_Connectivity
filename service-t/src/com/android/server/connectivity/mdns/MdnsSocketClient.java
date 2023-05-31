@@ -238,6 +238,11 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         socketCreationCallback.onSocketCreated(null);
     }
 
+    @Override
+    public boolean supportsRequestingSpecificNetworks() {
+        return false;
+    }
+
     private void sendMdnsPacket(DatagramPacket packet, Queue<DatagramPacket> packetQueueToUse) {
         if (shouldStopSocketLoop && !MdnsConfigs.allowAddMdnsPacketAfterDiscoveryStops()) {
             LOGGER.w("sendMdnsPacket() is called after discovery already stopped");
