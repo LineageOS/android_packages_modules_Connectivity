@@ -251,8 +251,16 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     private void handleOnResponseReceived(@NonNull MdnsPacket packet, int interfaceIndex,
             @Nullable Network network) {
         for (MdnsServiceTypeClient serviceTypeClient
-                : perNetworkServiceTypeClients.getByNetwork(network)) {
+                : getMdnsServiceTypeClient(network)) {
             serviceTypeClient.processResponse(packet, interfaceIndex, network);
+        }
+    }
+
+    private List<MdnsServiceTypeClient> getMdnsServiceTypeClient(@Nullable Network network) {
+        if (socketClient.supportsRequestingSpecificNetworks()) {
+            return perNetworkServiceTypeClients.getByNetwork(network);
+        } else {
+            return perNetworkServiceTypeClients.getByNetwork(null);
         }
     }
 
@@ -266,7 +274,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     private void handleOnFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode,
             @Nullable Network network) {
         for (MdnsServiceTypeClient serviceTypeClient
-                : perNetworkServiceTypeClients.getByNetwork(network)) {
+                : getMdnsServiceTypeClient(network)) {
             serviceTypeClient.onFailedToParseMdnsResponse(receivedPacketNumber, errorCode);
         }
     }
