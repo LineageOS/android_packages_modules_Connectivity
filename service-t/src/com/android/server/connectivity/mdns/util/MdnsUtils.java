@@ -68,10 +68,18 @@ public class MdnsUtils {
 
     /*** Ensure that current running thread is same as given handler thread */
     public static void ensureRunningOnHandlerThread(@NonNull Handler handler) {
-        if (handler.getLooper().getThread() != Thread.currentThread()) {
+        if (!isRunningOnHandlerThread(handler)) {
             throw new IllegalStateException(
                     "Not running on Handler thread: " + Thread.currentThread().getName());
         }
+    }
+
+    /*** Check that current running thread is same as given handler thread */
+    public static boolean isRunningOnHandlerThread(@NonNull Handler handler) {
+        if (handler.getLooper().getThread() == Thread.currentThread()) {
+            return true;
+        }
+        return false;
     }
 
     /*** Check whether the target network is matched current network */
