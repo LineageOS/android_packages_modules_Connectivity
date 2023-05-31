@@ -210,6 +210,11 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         return mHandler.getLooper();
     }
 
+    @Override
+    public boolean supportsRequestingSpecificNetworks() {
+        return true;
+    }
+
     private void sendMdnsPacket(@NonNull DatagramPacket packet, @Nullable Network targetNetwork) {
         final boolean isIpv6 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
                 instanceof Inet6Address;
