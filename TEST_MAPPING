@@ -224,6 +224,9 @@
           "exclude-annotation": "androidx.test.filters.LargeTest"
         }
       ]
+    },
+    {
+        "name": "CtsTetheringTestLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]"
     }
   ],
   "mainline-postsubmit": [
@@ -231,6 +234,10 @@
     {
       "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
       "keywords": ["sim"]
+    },
+    {
+        "name": "CtsTetheringTestLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
+        "keywords": ["sim"]
     }
   ],
   "imports": [
