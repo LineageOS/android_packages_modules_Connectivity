@@ -67,6 +67,9 @@ public interface MdnsSocketClientBase {
         return null;
     }
 
+    /** Returns whether the socket client support requesting per network */
+    boolean supportsRequestingSpecificNetworks();
+
     /*** Callback for mdns response  */
     interface Callback {
         /*** Receive a mdns response */
