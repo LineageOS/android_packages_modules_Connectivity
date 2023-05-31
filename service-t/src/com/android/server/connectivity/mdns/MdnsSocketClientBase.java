@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
+import android.os.Looper;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -60,6 +61,11 @@ public interface MdnsSocketClientBase {
 
     /*** Notify that the network is unrequested */
     default void notifyNetworkUnrequested(@NonNull MdnsServiceBrowserListener listener) { }
+
+    /*** Gets looper that used by the socket client */
+    default Looper getLooper() {
+        return null;
+    }
 
     /*** Callback for mdns response  */
     interface Callback {
