@@ -27,6 +27,7 @@ cc_library_shared {
     min_sdk_version: "30",
     static_libs: [
         "connectivity_native_aidl_interface-V1-ndk",
+        "libmodules-utils-build",
     ],
     export_include_dirs: ["include"],
     cflags: [
