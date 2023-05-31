@@ -952,7 +952,7 @@ public class MdnsServiceTypeClientTests {
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         // Send twice for IPv4 and IPv6
         inOrder.verify(mockSocketClient, times(2)).sendUnicastPacket(srvTxtQueryCaptor.capture(),
-                eq(null) /* network */);
+                eq(mockNetwork));
 
         final MdnsPacket srvTxtQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(srvTxtQueryCaptor.getValue()));
@@ -987,7 +987,7 @@ public class MdnsServiceTypeClientTests {
                 ArgumentCaptor.forClass(DatagramPacket.class);
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         inOrder.verify(mockSocketClient, times(2)).sendMulticastPacket(addressQueryCaptor.capture(),
-                eq(null) /* network */);
+                eq(mockNetwork));
 
         final MdnsPacket addressQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(addressQueryCaptor.getValue()));
@@ -1253,17 +1253,17 @@ public class MdnsServiceTypeClientTests {
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         if (expectsUnicastResponse) {
             verify(mockSocketClient).sendUnicastPacket(
-                    expectedIPv4Packets[index], null /* network */);
+                    expectedIPv4Packets[index], mockNetwork);
             if (multipleSocketDiscovery) {
                 verify(mockSocketClient).sendUnicastPacket(
-                        expectedIPv6Packets[index], null /* network */);
+                        expectedIPv6Packets[index], mockNetwork);
             }
         } else {
             verify(mockSocketClient).sendMulticastPacket(
-                    expectedIPv4Packets[index], null /* network */);
+                    expectedIPv4Packets[index], mockNetwork);
             if (multipleSocketDiscovery) {
                 verify(mockSocketClient).sendMulticastPacket(
-                        expectedIPv6Packets[index], null /* network */);
+                        expectedIPv6Packets[index], mockNetwork);
             }
         }
     }
