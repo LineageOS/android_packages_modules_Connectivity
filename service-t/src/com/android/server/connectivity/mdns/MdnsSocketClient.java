@@ -195,19 +195,47 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     }
 
     /** Sends a mDNS request packet that asks for multicast response. */
-    @Override
     public void sendMulticastPacket(@NonNull DatagramPacket packet) {
         sendMdnsPacket(packet, multicastPacketQueue);
     }
 
     /** Sends a mDNS request packet that asks for unicast response. */
-    @Override
     public void sendUnicastPacket(DatagramPacket packet) {
         if (useSeparateSocketForUnicast) {
             sendMdnsPacket(packet, unicastPacketQueue);
         } else {
             sendMdnsPacket(packet, multicastPacketQueue);
         }
+    }
+
+    @Override
+    public void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
+        if (network != null) {
+            throw new IllegalArgumentException("This socket client does not support sending to "
+                    + "specific networks");
+        }
+        sendMulticastPacket(packet);
+    }
+
+    @Override
+    public void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
+        if (network != null) {
+            throw new IllegalArgumentException("This socket client does not support sending to "
+                    + "specific networks");
+        }
+        sendUnicastPacket(packet);
+    }
+
+    @Override
+    public void notifyNetworkRequested(
+            @NonNull MdnsServiceBrowserListener listener,
+            @Nullable Network network,
+            @NonNull SocketCreationCallback socketCreationCallback) {
+        if (network != null) {
+            throw new IllegalArgumentException("This socket client does not support requesting "
+                    + "specific networks");
+        }
+        socketCreationCallback.onSocketCreated(null);
     }
 
     private void sendMdnsPacket(DatagramPacket packet, Queue<DatagramPacket> packetQueueToUse) {
