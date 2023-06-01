@@ -158,7 +158,8 @@ open class CSTest {
     val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
     val alarmManager = makeMockAlarmManager()
     val systemConfigManager = makeMockSystemConfigManager()
-    val batteryManager = BatteryStatsManager(mock<IBatteryStats>())
+    val batteryStats = mock<IBatteryStats>()
+    val batteryManager = BatteryStatsManager(batteryStats)
     val telephonyManager = mock<TelephonyManager>().also {
         doReturn(true).`when`(it).isDataCapable()
     }

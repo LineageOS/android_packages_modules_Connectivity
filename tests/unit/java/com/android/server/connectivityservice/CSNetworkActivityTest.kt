@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.android.server
 
 import android.net.ConnectivityManager
@@ -31,6 +32,8 @@ import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
 import android.os.Build
 import android.os.ConditionVariable
+import android.telephony.DataConnectionRealTimeInfo.DC_POWER_STATE_HIGH
+import android.telephony.DataConnectionRealTimeInfo.DC_POWER_STATE_LOW
 import androidx.test.filters.SmallTest
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener
 import com.android.server.CSTest.CSContext
@@ -46,7 +49,10 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.anyInt
+import org.mockito.Mockito.anyLong
+import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.never
+import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 
 private const val DATA_CELL_IFNAME = "rmnet_data"
@@ -55,7 +61,7 @@ private const val WIFI_IFNAME = "wlan0"
 private const val TIMESTAMP = 1234L
 private const val NETWORK_ACTIVITY_NO_UID = -1
 private const val PACKAGE_UID = 123
-private const val CALLBACK_TIMEOUT_MS = 250L
+private const val TIMEOUT_MS = 250L
 
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
@@ -71,6 +77,7 @@ class CSNetworkActivityTest : CSTest() {
     @Test
     fun testInterfaceClassActivityChanged_NonDefaultNetwork() {
         val netdUnsolicitedEventListener = getRegisteredNetdUnsolicitedEventListener()
+        val batteryStatsInorder = inOrder(batteryStats)
 
         val cellNr = NetworkRequest.Builder()
                 .clearCapabilities()
@@ -110,6 +117,8 @@ class CSNetworkActivityTest : CSTest() {
         val wifiAgent = Agent(nc = wifiNc, lp = wifiLp)
         wifiAgent.connect()
         defaultCb.expectAvailableCallbacks(wifiAgent.network, validated = false)
+        batteryStatsInorder.verify(batteryStats).noteWifiRadioPowerState(eq(DC_POWER_STATE_HIGH),
+                anyLong() /* timestampNs */, eq(NETWORK_ACTIVITY_NO_UID))
 
         val onNetworkActiveCv = ConditionVariable()
         val listener = ConnectivityManager.OnNetworkActiveListener { onNetworkActiveCv::open }
@@ -119,17 +128,23 @@ class CSNetworkActivityTest : CSTest() {
         netdUnsolicitedEventListener.onInterfaceClassActivityChanged(false /* isActive */,
                 cellAgent.network.netId, TIMESTAMP, NETWORK_ACTIVITY_NO_UID)
         // Non-default network activity change does not change default network activity
-        assertFalse(onNetworkActiveCv.block(CALLBACK_TIMEOUT_MS))
+        // But cellular radio power state is updated
+        assertFalse(onNetworkActiveCv.block(TIMEOUT_MS))
         context.expectNoDataActivityBroadcast(0 /* timeoutMs */)
         assertTrue(cm.isDefaultNetworkActive)
+        batteryStatsInorder.verify(batteryStats).noteMobileRadioPowerState(eq(DC_POWER_STATE_LOW),
+                anyLong() /* timestampNs */, eq(NETWORK_ACTIVITY_NO_UID))
 
         // Cellular network (non default network) goes to active state.
         netdUnsolicitedEventListener.onInterfaceClassActivityChanged(true /* isActive */,
                 cellAgent.network.netId, TIMESTAMP, PACKAGE_UID)
         // Non-default network activity change does not change default network activity
-        assertFalse(onNetworkActiveCv.block(CALLBACK_TIMEOUT_MS))
+        // But cellular radio power state is updated
+        assertFalse(onNetworkActiveCv.block(TIMEOUT_MS))
         context.expectNoDataActivityBroadcast(0 /* timeoutMs */)
         assertTrue(cm.isDefaultNetworkActive)
+        batteryStatsInorder.verify(batteryStats).noteMobileRadioPowerState(eq(DC_POWER_STATE_HIGH),
+                anyLong() /* timestampNs */, eq(PACKAGE_UID))
 
         cm.unregisterNetworkCallback(cellCb)
         cm.unregisterNetworkCallback(defaultCb)
@@ -138,6 +153,9 @@ class CSNetworkActivityTest : CSTest() {
 
     @Test
     fun testDataActivityTracking_MultiCellNetwork() {
+        val netdUnsolicitedEventListener = getRegisteredNetdUnsolicitedEventListener()
+        val batteryStatsInorder = inOrder(batteryStats)
+
         val dataNetworkNc = NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
                 .addCapability(NET_CAPABILITY_INTERNET)
@@ -187,6 +205,40 @@ class CSNetworkActivityTest : CSTest() {
                 eq(dataNetworkNetId))
         verify(netd, never()).idletimerRemoveInterface(eq(IMS_CELL_IFNAME), anyInt(),
                 eq(imsNetworkNetId))
+
+        // Both cell networks go to inactive state
+        netdUnsolicitedEventListener.onInterfaceClassActivityChanged(false /* isActive */,
+                imsNetworkAgent.network.netId, TIMESTAMP, NETWORK_ACTIVITY_NO_UID)
+        netdUnsolicitedEventListener.onInterfaceClassActivityChanged(false /* isActive */,
+                dataNetworkAgent.network.netId, TIMESTAMP, NETWORK_ACTIVITY_NO_UID)
+
+        // Data cell network goes to active state. This should update the cellular radio power state
+        netdUnsolicitedEventListener.onInterfaceClassActivityChanged(true /* isActive */,
+                dataNetworkAgent.network.netId, TIMESTAMP, PACKAGE_UID)
+        batteryStatsInorder.verify(batteryStats, timeout(TIMEOUT_MS)).noteMobileRadioPowerState(
+                eq(DC_POWER_STATE_HIGH), anyLong() /* timestampNs */, eq(PACKAGE_UID))
+        // Ims cell network goes to active state. But this should not update the cellular radio
+        // power state since cellular radio power state is already high
+        netdUnsolicitedEventListener.onInterfaceClassActivityChanged(true /* isActive */,
+                imsNetworkAgent.network.netId, TIMESTAMP, PACKAGE_UID)
+        waitForIdle()
+        batteryStatsInorder.verify(batteryStats, never()).noteMobileRadioPowerState(anyInt(),
+                anyLong() /* timestampNs */, anyInt())
+
+        // Data cell network goes to inactive state. But this should not update the cellular radio
+        // power state ims cell network is still active state
+        netdUnsolicitedEventListener.onInterfaceClassActivityChanged(false /* isActive */,
+                dataNetworkAgent.network.netId, TIMESTAMP, NETWORK_ACTIVITY_NO_UID)
+        waitForIdle()
+        batteryStatsInorder.verify(batteryStats, never()).noteMobileRadioPowerState(anyInt(),
+                anyLong() /* timestampNs */, anyInt())
+
+        // Ims cell network goes to inactive state.
+        // This should update the cellular radio power state
+        netdUnsolicitedEventListener.onInterfaceClassActivityChanged(false /* isActive */,
+                imsNetworkAgent.network.netId, TIMESTAMP, NETWORK_ACTIVITY_NO_UID)
+        batteryStatsInorder.verify(batteryStats, timeout(TIMEOUT_MS)).noteMobileRadioPowerState(
+                eq(DC_POWER_STATE_LOW), anyLong() /* timestampNs */, eq(NETWORK_ACTIVITY_NO_UID))
 
         dataNetworkAgent.disconnect()
         dataNetworkCb.expect<Lost>(dataNetworkAgent.network)
