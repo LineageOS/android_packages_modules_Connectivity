@@ -22,6 +22,7 @@ import static android.system.OsConstants.EIO;
 import static android.system.OsConstants.EPROTO;
 import static android.system.OsConstants.ETIMEDOUT;
 import static android.system.OsConstants.NETLINK_INET_DIAG;
+import static android.system.OsConstants.NETLINK_ROUTE;
 import static android.system.OsConstants.SOCK_CLOEXEC;
 import static android.system.OsConstants.SOCK_DGRAM;
 import static android.system.OsConstants.SOL_SOCKET;
@@ -41,9 +42,11 @@ import androidx.annotation.Nullable;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.Inet6Address;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * Utilities for netlink related class that may not be able to fit into a specific class.
@@ -164,6 +167,31 @@ public class NetlinkUtils {
             } catch (IOException e) {
                 // Nothing we can do here
             }
+        }
+    }
+
+    /**
+     * Send an RTM_NEWADDR message to kernel to add or update an IPv6 address.
+     *
+     * @param ifIndex interface index.
+     * @param ip IPv6 address to be added.
+     * @param prefixlen IPv6 address prefix length.
+     * @param flags IPv6 address flags.
+     * @param scope IPv6 address scope.
+     * @param preferred The preferred lifetime of IPv6 address.
+     * @param valid The valid lifetime of IPv6 address.
+     */
+    public static boolean sendRtmNewAddressRequest(int ifIndex, @NonNull final Inet6Address ip,
+            short prefixlen, int flags, byte scope, long preferred, long valid) {
+        Objects.requireNonNull(ip, "IPv6 address to be added should not be null.");
+        final byte[] msg = RtNetlinkAddressMessage.newRtmNewAddressMessage(1 /* seqNo*/, ip,
+                prefixlen, flags, scope, ifIndex, preferred, valid);
+        try {
+            NetlinkUtils.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
+            return true;
+        } catch (ErrnoException e) {
+            Log.e(TAG, "Fail to send RTM_NEWADDR to add " + ip.getHostAddress(), e);
+            return false;
         }
     }
 
