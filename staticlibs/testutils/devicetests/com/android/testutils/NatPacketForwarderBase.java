@@ -151,7 +151,8 @@ public abstract class NatPacketForwarderBase extends Thread {
     private void processPacket() {
         final int len = PacketReflectorUtil.readPacket(mSrcFd, mBuf);
         if (len < 1) {
-            throw new IllegalStateException("Unexpected buffer length: " + len);
+            // Usually happens when socket read is being interrupted, e.g. stopping PacketForwarder.
+            return;
         }
 
         final int version = mBuf[0] >>> 4;
