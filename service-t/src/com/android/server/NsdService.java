@@ -73,7 +73,6 @@ import com.android.server.connectivity.mdns.MdnsMultinetworkSocketClient;
 import com.android.server.connectivity.mdns.MdnsSearchOptions;
 import com.android.server.connectivity.mdns.MdnsServiceBrowserListener;
 import com.android.server.connectivity.mdns.MdnsServiceInfo;
-import com.android.server.connectivity.mdns.MdnsSocketClientBase;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
@@ -1452,7 +1451,7 @@ public class NsdService extends INsdManager.Stub {
          */
         public MdnsDiscoveryManager makeMdnsDiscoveryManager(
                 @NonNull ExecutorProvider executorProvider,
-                @NonNull MdnsSocketClientBase socketClient, @NonNull SharedLog sharedLog) {
+                @NonNull MdnsMultinetworkSocketClient socketClient, @NonNull SharedLog sharedLog) {
             return new MdnsDiscoveryManager(executorProvider, socketClient, sharedLog);
         }
 

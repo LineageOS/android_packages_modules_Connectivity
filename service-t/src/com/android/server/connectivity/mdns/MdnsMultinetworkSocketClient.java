@@ -17,7 +17,6 @@
 package com.android.server.connectivity.mdns;
 
 import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningOnHandlerThread;
-import static com.android.server.connectivity.mdns.util.MdnsUtils.isNetworkMatched;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -34,6 +33,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The {@link MdnsMultinetworkSocketClient} manages the multinetwork socket for mDns
@@ -205,6 +205,11 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         mSocketProvider.unrequestSocket(callback);
     }
 
+    @Override
+    public Looper getLooper() {
+        return mHandler.getLooper();
+    }
+
     private void sendMdnsPacket(@NonNull DatagramPacket packet, @Nullable Network targetNetwork) {
         final boolean isIpv6 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
                 instanceof Inet6Address;
@@ -216,7 +221,10 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             final Network network = activeSockets.valueAt(i);
             // Check ip capability and network before sending packet
             if (((isIpv6 && socket.hasJoinedIpv6()) || (isIpv4 && socket.hasJoinedIpv4()))
-                    && isNetworkMatched(targetNetwork, network)) {
+                    // Contrary to MdnsUtils.isNetworkMatched, only send packets targeting
+                    // the null network to interfaces that have the null network (tethering
+                    // downstream interfaces).
+                    && Objects.equals(network, targetNetwork)) {
                 try {
                     socket.send(packet);
                 } catch (IOException e) {
@@ -248,12 +256,6 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         }
     }
 
-    /** Sends a mDNS request packet that asks for multicast response. */
-    @Override
-    public void sendMulticastPacket(@NonNull DatagramPacket packet) {
-        sendMulticastPacket(packet, null /* network */);
-    }
-
     /**
      * Sends a mDNS request packet via given network that asks for multicast response. Null network
      * means sending packet via all networks.
@@ -261,12 +263,6 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     @Override
     public void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
         mHandler.post(() -> sendMdnsPacket(packet, network));
-    }
-
-    /** Sends a mDNS request packet that asks for unicast response. */
-    @Override
-    public void sendUnicastPacket(@NonNull DatagramPacket packet) {
-        sendUnicastPacket(packet, null /* network */);
     }
 
     /**
