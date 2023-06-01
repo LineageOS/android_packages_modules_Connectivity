@@ -20,7 +20,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.net.Network;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
@@ -262,15 +261,13 @@ public class MdnsServiceTypeClient {
     /**
      * Process an incoming response packet.
      */
-    public synchronized void processResponse(@NonNull MdnsPacket packet, int interfaceIndex,
-            Network network) {
+    public synchronized void processResponse(@NonNull MdnsPacket packet,
+            @NonNull SocketKey socketKey) {
         synchronized (lock) {
             // Augment the list of current known responses, and generated responses for resolve
             // requests if there is no known response
             final List<MdnsResponse> currentList = new ArrayList<>(instanceNameToResponse.values());
-
-            List<MdnsResponse> additionalResponses = makeResponsesForResolve(interfaceIndex,
-                    network);
+            List<MdnsResponse> additionalResponses = makeResponsesForResolve(socketKey);
             for (MdnsResponse additionalResponse : additionalResponses) {
                 if (!instanceNameToResponse.containsKey(
                         additionalResponse.getServiceInstanceName())) {
@@ -278,7 +275,8 @@ public class MdnsServiceTypeClient {
                 }
             }
             final Pair<ArraySet<MdnsResponse>, ArrayList<MdnsResponse>> augmentedResult =
-                    responseDecoder.augmentResponses(packet, currentList, interfaceIndex, network);
+                    responseDecoder.augmentResponses(packet, currentList,
+                            socketKey.getInterfaceIndex(), socketKey.getNetwork());
 
             final ArraySet<MdnsResponse> modifiedResponse = augmentedResult.first;
             final ArrayList<MdnsResponse> allResponses = augmentedResult.second;
@@ -508,8 +506,7 @@ public class MdnsServiceTypeClient {
         }
     }
 
-    private List<MdnsResponse> makeResponsesForResolve(int interfaceIndex,
-            @NonNull Network network) {
+    private List<MdnsResponse> makeResponsesForResolve(@NonNull SocketKey socketKey) {
         final List<MdnsResponse> resolveResponses = new ArrayList<>();
         for (int i = 0; i < listeners.size(); i++) {
             final String resolveName = listeners.valueAt(i).getResolveInstanceName();
@@ -524,7 +521,7 @@ public class MdnsServiceTypeClient {
                 instanceFullName.addAll(Arrays.asList(serviceTypeLabels));
                 knownResponse = new MdnsResponse(
                         0L /* lastUpdateTime */, instanceFullName.toArray(new String[0]),
-                        interfaceIndex, network);
+                        socketKey.getInterfaceIndex(), socketKey.getNetwork());
             }
             resolveResponses.add(knownResponse);
         }
@@ -548,10 +545,7 @@ public class MdnsServiceTypeClient {
                 // The listener is requesting to resolve a service that has no info in
                 // cache. Use the provided name to generate a minimal response, so other records are
                 // queried to complete it.
-                // Only the names are used to know which queries to send, other parameters like
-                // interfaceIndex do not matter.
-                servicesToResolve = makeResponsesForResolve(
-                        0 /* interfaceIndex */, config.socketKey.getNetwork());
+                servicesToResolve = makeResponsesForResolve(config.socketKey);
                 sendDiscoveryQueries = servicesToResolve.size() < listeners.size();
             }
             Pair<Integer, List<String>> result;
@@ -564,7 +558,7 @@ public class MdnsServiceTypeClient {
                                 config.subtypes,
                                 config.expectUnicastResponse,
                                 config.transactionId,
-                                config.socketKey.getNetwork(),
+                                config.socketKey,
                                 config.onlyUseIpv6OnIpv6OnlyNetworks,
                                 sendDiscoveryQueries,
                                 servicesToResolve,
