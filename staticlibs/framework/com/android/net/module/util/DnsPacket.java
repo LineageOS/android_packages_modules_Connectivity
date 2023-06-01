@@ -252,7 +252,7 @@ public abstract class DnsPacket {
         // Refer to RFC 1035 section 2.3.4 for MAXNAMESIZE.
         // NAME_NORMAL and NAME_COMPRESSION are used for checking name compression,
         // refer to rfc 1035 section 4.1.4.
-        private static final int MAXNAMESIZE = 255;
+        public static final int MAXNAMESIZE = 255;
         public static final int NAME_NORMAL = 0;
         public static final int NAME_COMPRESSION = 0xC0;
 
