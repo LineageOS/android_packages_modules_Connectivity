@@ -619,6 +619,7 @@ public class NsdService extends INsdManager.Stub {
                             final MdnsSearchOptions.Builder optionsBuilder =
                                     MdnsSearchOptions.newBuilder()
                                             .setNetwork(info.getNetwork())
+                                            .setRemoveExpiredService(true)
                                             .setIsPassiveMode(true);
                             if (typeAndSubtype.second != null) {
                                 // The parsing ensures subtype starts with an underscore.
@@ -813,6 +814,7 @@ public class NsdService extends INsdManager.Stub {
                                     .setNetwork(info.getNetwork())
                                     .setIsPassiveMode(true)
                                     .setResolveInstanceName(info.getServiceName())
+                                    .setRemoveExpiredService(true)
                                     .build();
                             mMdnsDiscoveryManager.registerListener(
                                     resolveServiceType, listener, options);
@@ -906,6 +908,7 @@ public class NsdService extends INsdManager.Stub {
                                 .setNetwork(info.getNetwork())
                                 .setIsPassiveMode(true)
                                 .setResolveInstanceName(info.getServiceName())
+                                .setRemoveExpiredService(true)
                                 .build();
                         mMdnsDiscoveryManager.registerListener(
                                 resolveServiceType, listener, options);
