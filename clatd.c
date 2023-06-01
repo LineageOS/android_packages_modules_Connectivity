@@ -88,15 +88,26 @@ void process_packet_6_to_4(struct tun_data *tunnel) {
     return;
   }
 
+  bool ok = false;
   __u32 tp_status = 0;
   __u16 tp_net = 0;
 
   for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msgh); cmsg != NULL; cmsg = CMSG_NXTHDR(&msgh,cmsg)) {
     if (cmsg->cmsg_level == SOL_PACKET && cmsg->cmsg_type == PACKET_AUXDATA) {
       struct tpacket_auxdata *aux = (struct tpacket_auxdata *)CMSG_DATA(cmsg);
+      ok = true;
       tp_status = aux->tp_status;
       tp_net = aux->tp_net;
       break;
+    }
+  }
+
+  if (!ok) {
+    // theoretically this should not happen...
+    static bool logged = false;
+    if (!logged) {
+      logmsg(ANDROID_LOG_ERROR, "%s: failed to fetch tpacket_auxdata cmsg", __func__);
+      logged = true;
     }
   }
 
