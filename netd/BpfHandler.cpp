@@ -21,6 +21,7 @@
 #include <linux/bpf.h>
 
 #include <android-base/unique_fd.h>
+#include <android-modules-utils/sdk_level.h>
 #include <bpf/WaitForProgsLoaded.h>
 #include <log/log.h>
 #include <netdutils/UidConstants.h>
@@ -74,9 +75,11 @@ static Status checkProgramAccessible(const char* programPath) {
 }
 
 static Status initPrograms(const char* cg2_path) {
+    if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) abort();
+
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
     if (cg_fd == -1) {
-        int ret = errno;
+        const int ret = errno;
         ALOGE("Failed to open the cgroup directory: %s", strerror(ret));
         return statusFromErrno(ret, "Open the cgroup directory failed");
     }
