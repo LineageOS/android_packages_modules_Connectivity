@@ -548,8 +548,9 @@ class NsdManagerTest {
         assertTrue(resolvedService.attributes.containsKey("nullBinaryDataAttr"))
         assertNull(resolvedService.attributes["nullBinaryDataAttr"])
         assertTrue(resolvedService.attributes.containsKey("emptyBinaryDataAttr"))
-        // TODO: change the check to target SDK U when this is what the code implements
-        if (isAtLeastU()) {
+        if (isAtLeastU() || CompatChanges.isChangeEnabled(
+                ConnectivityCompatChanges.ENABLE_PLATFORM_MDNS_BACKEND
+            )) {
             assertArrayEquals(byteArrayOf(), resolvedService.attributes["emptyBinaryDataAttr"])
         } else {
             assertNull(resolvedService.attributes["emptyBinaryDataAttr"])
