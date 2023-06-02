@@ -66,9 +66,6 @@ public class MdnsServiceTypeClient {
     private final Map<String, MdnsResponse> instanceNameToResponse = new HashMap<>();
     private final boolean removeServiceAfterTtlExpires =
             MdnsConfigs.removeServiceAfterTtlExpires();
-    private final boolean allowSearchOptionsToRemoveExpiredService =
-            MdnsConfigs.allowSearchOptionsToRemoveExpiredService();
-
     private final MdnsResponseDecoder.Clock clock;
 
     @Nullable private MdnsSearchOptions searchOptions;
@@ -374,9 +371,7 @@ public class MdnsServiceTypeClient {
         if (removeServiceAfterTtlExpires) {
             return true;
         }
-        return allowSearchOptionsToRemoveExpiredService
-                && searchOptions != null
-                && searchOptions.removeExpiredService();
+        return searchOptions != null && searchOptions.removeExpiredService();
     }
 
     @VisibleForTesting
@@ -537,7 +532,8 @@ public class MdnsServiceTypeClient {
                                 config.transactionId,
                                 config.network,
                                 sendDiscoveryQueries,
-                                servicesToResolve)
+                                servicesToResolve,
+                                clock)
                                 .call();
             } catch (RuntimeException e) {
                 sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
