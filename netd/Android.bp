@@ -35,6 +35,9 @@ cc_library {
         "BpfHandler.cpp",
         "NetdUpdatable.cpp",
     ],
+    static_libs: [
+        "libmodules-utils-build",
+    ],
     shared_libs: [
         "libbase",
         "liblog",
