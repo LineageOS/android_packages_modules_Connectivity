@@ -22,6 +22,7 @@ import android.provider.DeviceConfig;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.nearby.managers.DiscoveryProviderManager;
 
 import java.util.concurrent.Executors;
@@ -71,6 +72,17 @@ public class NearbyConfiguration {
         mDeviceConfigListener.start();
     }
 
+    /**
+     * Returns the DeviceConfig namespace for Nearby. The {@link DeviceConfig#NAMESPACE_NEARBY} was
+     * added in UpsideDownCake, in Tiramisu, we use {@link DeviceConfig#NAMESPACE_TETHERING}.
+     */
+    public static String getNamespace() {
+        if (SdkLevel.isAtLeastU()) {
+            return DeviceConfig.NAMESPACE_NEARBY;
+        }
+        return DeviceConfig.NAMESPACE_TETHERING;
+    }
+
     private static boolean getDeviceConfigBoolean(final String name, final boolean defaultValue) {
         final String value = getDeviceConfigProperty(name);
         return value != null ? Boolean.parseBoolean(value) : defaultValue;
@@ -82,7 +94,7 @@ public class NearbyConfiguration {
     }
 
     private static String getDeviceConfigProperty(String name) {
-        return DeviceConfig.getProperty(DeviceConfig.NAMESPACE_NEARBY, name);
+        return DeviceConfig.getProperty(getNamespace(), name);
     }
 
     /**
@@ -121,9 +133,9 @@ public class NearbyConfiguration {
 
     private class DeviceConfigListener implements DeviceConfig.OnPropertiesChangedListener {
         public void start() {
-            DeviceConfig.addOnPropertiesChangedListener(DeviceConfig.NAMESPACE_NEARBY,
+            DeviceConfig.addOnPropertiesChangedListener(getNamespace(),
                     Executors.newSingleThreadExecutor(), this);
-            onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_NEARBY));
+            onPropertiesChanged(DeviceConfig.getProperties(getNamespace()));
         }
 
         @Override
