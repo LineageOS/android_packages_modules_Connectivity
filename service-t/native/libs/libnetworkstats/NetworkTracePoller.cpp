@@ -15,10 +15,12 @@
  */
 
 #define LOG_TAG "NetworkTrace"
+#define ATRACE_TAG ATRACE_TAG_NETWORK
 
 #include "netdbpf/NetworkTracePoller.h"
 
 #include <bpf/BpfUtils.h>
+#include <cutils/trace.h>
 #include <log/log.h>
 #include <perfetto/tracing/platform.h>
 #include <perfetto/tracing/tracing.h>
@@ -132,6 +134,8 @@ bool NetworkTracePoller::ConsumeAllLocked() {
     ALOGW("Failed to poll ringbuf: %s", ret.error().message().c_str());
     return false;
   }
+
+  ATRACE_INT("NetworkTracePackets", packets.size());
 
   mCallback(packets);
 

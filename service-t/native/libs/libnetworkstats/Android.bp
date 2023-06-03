@@ -30,6 +30,7 @@ cc_library {
     ],
     shared_libs: [
         "libbase",
+        "libcutils",
         "liblog",
     ],
     static_libs: [
@@ -81,6 +82,7 @@ cc_test {
     shared_libs: [
         "libbase",
         "liblog",
+        "libcutils",
         "libandroid_net",
     ],
     compile_multilib: "both",
