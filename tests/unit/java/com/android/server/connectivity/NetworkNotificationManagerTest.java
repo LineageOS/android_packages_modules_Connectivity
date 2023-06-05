@@ -62,6 +62,7 @@ import android.testing.PollingCheck;
 import android.util.DisplayMetrics;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.test.filters.SmallTest;
@@ -73,6 +74,7 @@ import androidx.test.uiautomator.UiSelector;
 import androidx.test.uiautomator.Until;
 
 import com.android.connectivity.resources.R;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.connectivity.NetworkNotificationManager.NotificationType;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -385,15 +387,75 @@ public class NetworkNotificationManagerTest {
         verify(mNotificationManager, never()).cancel(eq(tag), eq(PARTIAL_CONNECTIVITY.eventId));
     }
 
+    private static final int EXPECT_DIALOG = 0;
+    private static final int EXPECT_NOTIFICATION = 1;
     @Test
-    public void testNotifyNoInternetAsDialogWhenHighPriority() throws Exception {
-        doReturn(true).when(mResources).getBoolean(
+    public void testNotifyNoInternet_asNotification_ActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
+                true /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_NOTIFICATION);
+    }
+
+    @Test
+    public void testNotifyNoInternet_asNotification_NotActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
+                false /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_NOTIFICATION);
+    }
+
+    @Test
+    public void testNotifyNoInternet_asDialog_ActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
+                true /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_DIALOG);
+    }
+
+    @Test
+    public void testNotifyNoInternet_asDialog_NotActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
+                false /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_DIALOG);
+    }
+
+    @Test
+    public void testNotifyLostInternet_asNotification_ActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
+                true /* activelyPreferBadWifi */, LOST_INTERNET, EXPECT_NOTIFICATION);
+    }
+
+    @Test
+    public void testNotifyLostInternet_asNotification_NotActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
+                false /* activelyPreferBadWifi */, LOST_INTERNET, EXPECT_NOTIFICATION);
+    }
+
+    @Test
+    public void testNotifyLostInternet_asDialog_ActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
+                true /* activelyPreferBadWifi */, LOST_INTERNET,
+                SdkLevel.isAtLeastT() ? EXPECT_DIALOG : EXPECT_NOTIFICATION);
+    }
+
+    @Test
+    public void testNotifyLostInternet_asDialog_NotActivelyPrefer() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
+                false /* activelyPreferBadWifi */, LOST_INTERNET,
+                SdkLevel.isAtLeastU() ? EXPECT_DIALOG : EXPECT_NOTIFICATION);
+    }
+
+    // Pass EXPECT_DIALOG or EXPECT_NOTIFICATION to |expectBehavior|
+    public void doTestNotifyNotificationAsDialogWhenHighPriority(
+            final boolean notifyAsDialog, final boolean activelyPreferBadWifi,
+            @NonNull final NotificationType notifType, final int expectBehavior) throws Exception {
+        doReturn(notifyAsDialog).when(mResources).getBoolean(
                 R.bool.config_notifyNoInternetAsDialogWhenHighPriority);
+        doReturn(activelyPreferBadWifi ? 1 : 0).when(mResources).getInteger(
+                R.integer.config_activelyPreferBadWifi);
 
         final Instrumentation instr = InstrumentationRegistry.getInstrumentation();
         final UiDevice uiDevice =  UiDevice.getInstance(instr);
         final Context ctx = instr.getContext();
         final PowerManager pm = ctx.getSystemService(PowerManager.class);
+        // If the prio of this notif is < that of NETWORK_SWITCH, it's the lowest prio and
+        // therefore it can't be tested whether it cancels other lower-prio notifs.
+        final boolean isLowestPrioNotif = NetworkNotificationManager.priority(notifType)
+                < NetworkNotificationManager.priority(NETWORK_SWITCH);
 
         // Wake up the device (it has no effect if the device is already awake).
         uiDevice.executeShellCommand("input keyevent KEYCODE_WAKEUP");
@@ -409,9 +471,13 @@ public class NetworkNotificationManagerTest {
                 uiDevice.wait(Until.hasObject(By.pkg(launcherPackageName)),
                         UI_AUTOMATOR_WAIT_TIME_MILLIS));
 
-        mManager.showNotification(TEST_NOTIF_ID, NETWORK_SWITCH, mWifiNai, mCellNai, null, false);
-        // Non-"no internet" notifications are not affected
-        verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(NETWORK_SWITCH.eventId), any());
+        if (!isLowestPrioNotif) {
+            mManager.showNotification(TEST_NOTIF_ID, NETWORK_SWITCH, mWifiNai, mCellNai,
+                    null, false);
+            // Non-"no internet" notifications are not affected
+            verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(NETWORK_SWITCH.eventId),
+                    any());
+        }
 
         final String testAction = "com.android.connectivity.coverage.TEST_DIALOG";
         final Intent intent = new Intent(testAction)
@@ -420,22 +486,30 @@ public class NetworkNotificationManagerTest {
         final PendingIntent pendingIntent = PendingIntent.getActivity(ctx, 0 /* requestCode */,
                 intent, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        mManager.showNotification(TEST_NOTIF_ID, NO_INTERNET, mWifiNai, null /* switchToNai */,
+        mManager.showNotification(TEST_NOTIF_ID, notifType, mWifiNai, null /* switchToNai */,
                 pendingIntent, true /* highPriority */);
 
-        // Previous notifications are still dismissed
-        verify(mNotificationManager).cancel(TEST_NOTIF_TAG, NETWORK_SWITCH.eventId);
+        if (!isLowestPrioNotif) {
+            // Previous notifications are still dismissed
+            verify(mNotificationManager).cancel(TEST_NOTIF_TAG, NETWORK_SWITCH.eventId);
+        }
 
-        // Verify that the activity is shown (the activity shows the action on screen)
-        final UiObject actionText = uiDevice.findObject(new UiSelector().text(testAction));
-        assertTrue("Activity not shown", actionText.waitForExists(TEST_TIMEOUT_MS));
+        if (expectBehavior == EXPECT_DIALOG) {
+            // Verify that the activity is shown (the activity shows the action on screen)
+            final UiObject actionText = uiDevice.findObject(new UiSelector().text(testAction));
+            assertTrue("Activity not shown", actionText.waitForExists(TEST_TIMEOUT_MS));
 
-        // Tapping the text should dismiss the dialog
-        actionText.click();
-        assertTrue("Activity not dismissed", actionText.waitUntilGone(TEST_TIMEOUT_MS));
+            // Tapping the text should dismiss the dialog
+            actionText.click();
+            assertTrue("Activity not dismissed", actionText.waitUntilGone(TEST_TIMEOUT_MS));
 
-        // Verify no NO_INTERNET notification was posted
-        verify(mNotificationManager, never()).notify(any(), eq(NO_INTERNET.eventId), any());
+            // Verify that the notification was not posted
+            verify(mNotificationManager, never()).notify(any(), eq(notifType.eventId), any());
+        } else {
+            // Notification should have been posted, and will have overridden the previous
+            // one because it has the same id (hence no cancel).
+            verify(mNotificationManager).notify(eq(TEST_NOTIF_TAG), eq(notifType.eventId), any());
+        }
     }
 
     private void doNotificationTextTest(NotificationType type, @StringRes int expectedTitleRes,
