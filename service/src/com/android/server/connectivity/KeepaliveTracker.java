@@ -54,7 +54,6 @@ import android.os.RemoteException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
-import android.util.Pair;
 
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
@@ -337,7 +336,12 @@ public class KeepaliveTracker {
             return SUCCESS;
         }
 
-        private int isValid() {
+        /**
+         * Checks if the keepalive info is valid to start.
+         *
+         * @return SUCCESS if the keepalive is valid and the error reason otherwise.
+         */
+        public int isValid() {
             synchronized (mNai) {
                 int error = checkInterval();
                 if (error == SUCCESS) error = checkLimit();
@@ -348,11 +352,17 @@ public class KeepaliveTracker {
             }
         }
 
-        void start(int slot) {
+        /**
+         * Attempt to start the keepalive on the given slot.
+         *
+         * @param slot the slot to start the keepalive on.
+         * @return SUCCESS if the keepalive is successfully starting and the error reason otherwise.
+         */
+        int start(int slot) {
             // BINDER_DIED can happen if the binder died before the KeepaliveInfo was created and
             // the constructor set the state to BINDER_DIED. If that's the case, the KI is already
             // cleaned up.
-            if (BINDER_DIED == mStartedState) return;
+            if (BINDER_DIED == mStartedState) return BINDER_DIED;
             mSlot = slot;
             int error = isValid();
             if (error == SUCCESS) {
@@ -368,7 +378,7 @@ public class KeepaliveTracker {
                             mTcpController.startSocketMonitor(mFd, this, mSlot);
                         } catch (InvalidSocketException e) {
                             handleStopKeepalive(mNai, mSlot, ERROR_INVALID_SOCKET);
-                            return;
+                            return ERROR_INVALID_SOCKET;
                         }
                         final TcpKeepalivePacketData tcpData = (TcpKeepalivePacketData) mPacket;
                         mNai.onAddTcpKeepalivePacketFilter(slot, tcpData);
@@ -377,13 +387,14 @@ public class KeepaliveTracker {
                         break;
                     default:
                         Log.wtf(TAG, "Starting keepalive with unknown type: " + mType);
-                        handleStopKeepalive(mNai, mSlot, error);
-                        return;
+                        handleStopKeepalive(mNai, mSlot, ERROR_UNSUPPORTED);
+                        return ERROR_UNSUPPORTED;
                 }
                 mStartedState = STARTING;
+                return SUCCESS;
             } else {
                 handleStopKeepalive(mNai, mSlot, error);
-                return;
+                return error;
             }
         }
 
@@ -444,6 +455,8 @@ public class KeepaliveTracker {
             }
         }
 
+        // TODO: This does not clean up the autoKi in AutomaticOnOffKeepaliveTracker and it is not
+        // possible without a big refactor.
         void onFileDescriptorInitiatedStop(final int socketKeepaliveReason) {
             handleStopKeepalive(mNai, mSlot, socketKeepaliveReason);
         }
@@ -486,12 +499,15 @@ public class KeepaliveTracker {
 
     /**
      * Handle start keepalives with the message.
+     *
+     * @param ki the keepalive to start.
+     * @return SUCCESS if the keepalive is successfully starting and the error reason otherwise.
      */
-    public void handleStartKeepalive(KeepaliveInfo ki) {
+    public int handleStartKeepalive(KeepaliveInfo ki) {
         NetworkAgentInfo nai = ki.getNai();
         int slot = findFirstFreeSlot(nai);
         mKeepalives.get(nai).put(slot, ki);
-        ki.start(slot);
+        return ki.start(slot);
     }
 
     public void handleStopAllKeepalives(NetworkAgentInfo nai, int reason) {
@@ -593,40 +609,33 @@ public class KeepaliveTracker {
     /**
      * Finalize a paused keepalive.
      *
-     * This will simply send the onStopped() callback after checking that this keepalive is
-     * indeed paused.
+     * This will send the appropriate callback after checking that this keepalive is indeed paused.
      *
      * @param ki the keepalive to finalize
+     * @param reason the reason the keepalive is stopped
      */
-    public void finalizePausedKeepalive(@NonNull final KeepaliveInfo ki) {
+    public void finalizePausedKeepalive(@NonNull final KeepaliveInfo ki, int reason) {
         if (SUCCESS_PAUSED != ki.mStopReason) {
             throw new IllegalStateException("Keepalive is not paused");
         }
-        try {
-            ki.mCallback.onStopped();
-        } catch (RemoteException e) {
-            Log.w(TAG, "Discarded onStopped callback while finalizing paused keepalive");
+        if (reason == SUCCESS) {
+            try {
+                ki.mCallback.onStopped();
+            } catch (RemoteException e) {
+                Log.w(TAG, "Discarded onStopped callback while finalizing paused keepalive");
+            }
+        } else {
+            notifyErrorCallback(ki.mCallback, reason);
         }
     }
 
-    public void handleCheckKeepalivesStillValid(NetworkAgentInfo nai) {
-        HashMap <Integer, KeepaliveInfo> networkKeepalives = mKeepalives.get(nai);
-        if (networkKeepalives != null) {
-            ArrayList<Pair<Integer, Integer>> invalidKeepalives = new ArrayList<>();
-            for (int slot : networkKeepalives.keySet()) {
-                int error = networkKeepalives.get(slot).isValid();
-                if (error != SUCCESS) {
-                    invalidKeepalives.add(Pair.create(slot, error));
-                }
-            }
-            for (Pair<Integer, Integer> slotAndError: invalidKeepalives) {
-                handleStopKeepalive(nai, slotAndError.first, slotAndError.second);
-            }
-        }
-    }
-
-    /** Handle keepalive events from lower layer. */
-    public void handleEventSocketKeepalive(@NonNull NetworkAgentInfo nai, int slot, int reason) {
+    /**
+     * Handle keepalive events from lower layer.
+     *
+     * @return false if the event caused handleStopKeepalive to be called, i.e. the keepalive is
+     *     forced to stop. Otherwise, return true.
+     */
+    public boolean handleEventSocketKeepalive(@NonNull NetworkAgentInfo nai, int slot, int reason) {
         KeepaliveInfo ki = null;
         try {
             ki = mKeepalives.get(nai).get(slot);
@@ -634,7 +643,7 @@ public class KeepaliveTracker {
         if (ki == null) {
             Log.e(TAG, "Event " + NetworkAgent.EVENT_SOCKET_KEEPALIVE + "," + slot + "," + reason
                     + " for unknown keepalive " + slot + " on " + nai.toShortString());
-            return;
+            return true;
         }
 
         // This can be called in a number of situations :
@@ -667,11 +676,13 @@ public class KeepaliveTracker {
                     Log.w(TAG, "Discarded " + (ki.mResumed ? "onResumed" : "onStarted")
                             + " callback for slot " + slot);
                 }
+                return true;
             } else {
                 Log.d(TAG, "Failed to start keepalive " + slot + " on " + nai.toShortString()
                         + ": " + reason);
                 // The message indicated some error trying to start: do call handleStopKeepalive.
                 handleStopKeepalive(nai, slot, reason);
+                return false;
             }
         } else if (KeepaliveInfo.STOPPING == ki.mStartedState) {
             // The message indicated result of stopping : clean up keepalive slots.
@@ -679,9 +690,12 @@ public class KeepaliveTracker {
                     + " stopped: " + reason);
             ki.mStartedState = KeepaliveInfo.NOT_STARTED;
             cleanupStoppedKeepalive(nai, slot);
+            return true;
         } else {
             Log.wtf(TAG, "Event " + NetworkAgent.EVENT_SOCKET_KEEPALIVE + "," + slot + "," + reason
                     + " for keepalive in wrong state: " + ki.toString());
+            // Although this is an unexpected event, the keepalive is not stopped here.
+            return true;
         }
     }
 
