@@ -2187,6 +2187,15 @@ public class ConnectivityServiceTest {
             // Call mocked destroyLiveTcpSocketsByOwnerUids so that test can verify this method call
             mDestroySocketsWrapper.destroyLiveTcpSocketsByOwnerUids(ownerUids);
         }
+
+        final ArrayTrackRecord<Long>.ReadHead mScheduledEvaluationTimeouts =
+                new ArrayTrackRecord<Long>().newReadHead();
+        @Override
+        public void scheduleEvaluationTimeout(@NonNull Handler handler,
+                @NonNull final Network network, final long delayMs) {
+            mScheduledEvaluationTimeouts.add(delayMs);
+            super.scheduleEvaluationTimeout(handler, network, delayMs);
+        }
     }
 
     private class AutomaticOnOffKeepaliveTrackerDependencies
@@ -6051,10 +6060,13 @@ public class ConnectivityServiceTest {
         wifiCallback.assertNoCallback();
     }
 
-    public void doTestPreferBadWifi(final boolean preferBadWifi) throws Exception {
+    public void doTestPreferBadWifi(final boolean avoidBadWifi,
+            final boolean preferBadWifi,
+            @NonNull Predicate<Long> checkUnvalidationTimeout) throws Exception {
         // Pretend we're on a carrier that restricts switching away from bad wifi, and
         // depending on the parameter one that may indeed prefer bad wifi.
-        doReturn(0).when(mResources).getInteger(R.integer.config_networkAvoidBadWifi);
+        doReturn(avoidBadWifi ? 1 : 0).when(mResources)
+                .getInteger(R.integer.config_networkAvoidBadWifi);
         doReturn(preferBadWifi ? 1 : 0).when(mResources)
                 .getInteger(R.integer.config_activelyPreferBadWifi);
         mPolicyTracker.reevaluate();
@@ -6076,7 +6088,9 @@ public class ConnectivityServiceTest {
         mWiFiAgent.connect(false);
         wifiCallback.expectAvailableCallbacksUnvalidated(mWiFiAgent);
 
-        if (preferBadWifi) {
+        mDeps.mScheduledEvaluationTimeouts.poll(TIMEOUT_MS, t -> checkUnvalidationTimeout.test(t));
+
+        if (!avoidBadWifi && preferBadWifi) {
             expectUnvalidationCheckWillNotify(mWiFiAgent, NotificationType.LOST_INTERNET);
             mDefaultNetworkCallback.expectAvailableCallbacksUnvalidated(mWiFiAgent);
         } else {
@@ -6086,15 +6100,31 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testPreferBadWifi_doNotPrefer() throws Exception {
+    public void testPreferBadWifi_doNotAvoid_doNotPrefer() throws Exception {
         // Starting with U this mode is no longer supported and can't actually be tested
         assumeFalse(SdkLevel.isAtLeastU());
-        doTestPreferBadWifi(false /* preferBadWifi */);
+        doTestPreferBadWifi(false /* avoidBadWifi */, false /* preferBadWifi */,
+                timeout -> timeout < 14_000);
     }
 
     @Test
-    public void testPreferBadWifi_doPrefer() throws Exception {
-        doTestPreferBadWifi(true /* preferBadWifi */);
+    public void testPreferBadWifi_doNotAvoid_doPrefer() throws Exception {
+        doTestPreferBadWifi(false /* avoidBadWifi */, true /* preferBadWifi */,
+                timeout -> timeout > 14_000);
+    }
+
+    @Test
+    public void testPreferBadWifi_doAvoid_doNotPrefer() throws Exception {
+        // If avoidBadWifi=true, then preferBadWifi should be irrelevant. Test anyway.
+        doTestPreferBadWifi(true /* avoidBadWifi */, false /* preferBadWifi */,
+                timeout -> timeout < 14_000);
+    }
+
+    @Test
+    public void testPreferBadWifi_doAvoid_doPrefer() throws Exception {
+        // If avoidBadWifi=true, then preferBadWifi should be irrelevant. Test anyway.
+        doTestPreferBadWifi(true /* avoidBadWifi */, true /* preferBadWifi */,
+                timeout -> timeout < 14_000);
     }
 
     @Test
