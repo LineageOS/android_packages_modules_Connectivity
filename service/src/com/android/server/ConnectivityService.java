@@ -8604,10 +8604,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void maybeCloseSockets(NetworkAgentInfo nai, Set<UidRange> ranges,
-            Set<Integer> exemptUids) {
+            UidRangeParcel[] uidRangeParcels, int[] exemptUids) {
         if (nai.isVPN() && !nai.networkAgentConfig.allowBypass) {
             try {
-                mDeps.destroyLiveTcpSockets(UidRange.toIntRanges(ranges), exemptUids);
+                if (mDeps.isAtLeastU()) {
+                    final Set<Integer> exemptUidSet = new ArraySet<>();
+                    for (final int uid: exemptUids) {
+                        exemptUidSet.add(uid);
+                    }
+                    mDeps.destroyLiveTcpSockets(UidRange.toIntRanges(ranges), exemptUidSet);
+                } else {
+                    mNetd.socketDestroy(uidRangeParcels, exemptUids);
+                }
             } catch (Exception e) {
                 loge("Exception in socket destroy: ", e);
             }
@@ -8615,16 +8623,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void updateVpnUidRanges(boolean add, NetworkAgentInfo nai, Set<UidRange> uidRanges) {
-        final Set<Integer> exemptUids = new ArraySet<>();
+        int[] exemptUids = new int[2];
         // TODO: Excluding VPN_UID is necessary in order to not to kill the TCP connection used
         // by PPTP. Fix this by making Vpn set the owner UID to VPN_UID instead of system when
         // starting a legacy VPN, and remove VPN_UID here. (b/176542831)
-        exemptUids.add(VPN_UID);
-        exemptUids.add(nai.networkCapabilities.getOwnerUid());
+        exemptUids[0] = VPN_UID;
+        exemptUids[1] = nai.networkCapabilities.getOwnerUid();
         UidRangeParcel[] ranges = toUidRangeStableParcels(uidRanges);
 
         // Close sockets before modifying uid ranges so that RST packets can reach to the server.
-        maybeCloseSockets(nai, uidRanges, exemptUids);
+        maybeCloseSockets(nai, uidRanges, ranges, exemptUids);
         try {
             if (add) {
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
@@ -8638,7 +8646,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     " on netId " + nai.network.netId + ". " + e);
         }
         // Close sockets that established connection while requesting netd.
-        maybeCloseSockets(nai, uidRanges, exemptUids);
+        maybeCloseSockets(nai, uidRanges, ranges, exemptUids);
     }
 
     private boolean isProxySetOnAnyDefaultNetwork() {
