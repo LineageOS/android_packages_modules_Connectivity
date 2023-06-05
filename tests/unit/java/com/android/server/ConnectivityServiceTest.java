@@ -167,6 +167,7 @@ import static com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.FunctionalUtils.ignoreExceptions;
+import static com.android.testutils.HandlerUtils.visibleOnHandlerThread;
 import static com.android.testutils.HandlerUtils.waitForIdleSerialExecutor;
 import static com.android.testutils.MiscAsserts.assertContainsAll;
 import static com.android.testutils.MiscAsserts.assertContainsExactly;
@@ -376,7 +377,6 @@ import com.android.internal.net.VpnProfile;
 import com.android.internal.util.WakeupMessage;
 import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.internal.util.test.FakeSettingsProvider;
-import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.LocationPermissionChecker;
@@ -868,7 +868,7 @@ public class ConnectivityServiceTest {
         @Override
         public void sendStickyBroadcast(Intent intent, Bundle options) {
             // Verify that delivery group policy APIs were used on U.
-            if (SdkLevel.isAtLeastU() && CONNECTIVITY_ACTION.equals(intent.getAction())) {
+            if (mDeps.isAtLeastU() && CONNECTIVITY_ACTION.equals(intent.getAction())) {
                 final NetworkInfo ni = intent.getParcelableExtra(EXTRA_NETWORK_INFO,
                         NetworkInfo.class);
                 try {
@@ -1084,7 +1084,7 @@ public class ConnectivityServiceTest {
         }
 
         private void onValidationRequested() throws Exception {
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 verify(mNetworkMonitor).notifyNetworkConnectedParcel(any());
             } else {
                 verify(mNetworkMonitor).notifyNetworkConnected(any(), any());
@@ -1931,6 +1931,7 @@ public class ConnectivityServiceTest {
 
     class ConnectivityServiceDependencies extends ConnectivityService.Dependencies {
         final ConnectivityResources mConnRes;
+        final ArraySet<Pair<Long, Integer>> mEnabledChangeIds = new ArraySet<>();
 
         ConnectivityServiceDependencies(final Context mockResContext) {
             mConnRes = new ConnectivityResources(mockResContext);
@@ -1996,7 +1997,7 @@ public class ConnectivityServiceTest {
         @Override
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context, @NonNull final TelephonyManager tm) {
-            return SdkLevel.isAtLeastT() ? mCarrierPrivilegeAuthenticator : null;
+            return mDeps.isAtLeastT() ? mCarrierPrivilegeAuthenticator : null;
         }
 
         @Override
@@ -2093,6 +2094,61 @@ public class ConnectivityServiceTest {
                 default:
                     return super.isFeatureEnabled(context, name);
             }
+        }
+
+        public void setChangeIdEnabled(final boolean enabled, final long changeId, final int uid) {
+            final Pair<Long, Integer> data = new Pair<>(changeId, uid);
+            // mEnabledChangeIds is read on the handler thread and maybe the test thread, so
+            // make sure both threads see it before continuing.
+            visibleOnHandlerThread(mCsHandlerThread.getThreadHandler(), () -> {
+                if (enabled) {
+                    mEnabledChangeIds.add(data);
+                } else {
+                    mEnabledChangeIds.remove(data);
+                }
+            });
+        }
+
+        @Override
+        public boolean isChangeEnabled(final long changeId, final int uid) {
+            return mEnabledChangeIds.contains(new Pair<>(changeId, uid));
+        }
+
+        // In AOSP, build version codes are all over the place (e.g. at the time of this writing
+        // U == V). Define custom ones.
+        private static final int VERSION_UNMOCKED = -1;
+        private static final int VERSION_R = 1;
+        private static final int VERSION_S = 2;
+        private static final int VERSION_T = 3;
+        private static final int VERSION_U = 4;
+        private static final int VERSION_V = 5;
+        private static final int VERSION_MAX = VERSION_V;
+        private int mSdkLevel = VERSION_UNMOCKED;
+
+        private void setBuildSdk(final int sdkLevel) {
+            if (sdkLevel > VERSION_MAX) {
+                throw new IllegalArgumentException("setBuildSdk must not be called with"
+                        + " Build.VERSION constants but Dependencies.VERSION_* constants");
+            }
+            visibleOnHandlerThread(mCsHandlerThread.getThreadHandler(), () -> mSdkLevel = sdkLevel);
+        }
+
+        @Override
+        public boolean isAtLeastS() {
+            return mSdkLevel == VERSION_UNMOCKED ? super.isAtLeastS()
+                    : mSdkLevel >= VERSION_S;
+        }
+
+        @Override
+        public boolean isAtLeastT() {
+            return mSdkLevel == VERSION_UNMOCKED ? super.isAtLeastT()
+                    : mSdkLevel >= VERSION_T;
+        }
+
+        @Override
+        public boolean isAtLeastU() {
+            return mSdkLevel == VERSION_UNMOCKED ? super.isAtLeastU()
+                    : mSdkLevel >= VERSION_U;
         }
 
         @Override
@@ -5932,7 +5988,7 @@ public class ConnectivityServiceTest {
         doReturn(0).when(mResources).getInteger(R.integer.config_activelyPreferBadWifi);
         mPolicyTracker.reevaluate();
         waitForIdle();
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             // U+ ignore the setting and always actively prefers bad wifi
             assertTrue(mService.mNetworkRanker.getConfiguration().activelyPreferBadWifi());
         } else {
@@ -6102,7 +6158,7 @@ public class ConnectivityServiceTest {
     @Test
     public void testPreferBadWifi_doNotAvoid_doNotPrefer() throws Exception {
         // Starting with U this mode is no longer supported and can't actually be tested
-        assumeFalse(SdkLevel.isAtLeastU());
+        assumeFalse(mDeps.isAtLeastU());
         doTestPreferBadWifi(false /* avoidBadWifi */, false /* preferBadWifi */,
                 timeout -> timeout < 14_000);
     }
@@ -9771,7 +9827,7 @@ public class ConnectivityServiceTest {
 
         final Set<Integer> excludedUids = new ArraySet<Integer>();
         excludedUids.add(VPN_UID);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             // On T onwards, the corresponding SDK sandbox UID should also be excluded
             excludedUids.add(toSdkSandboxUid(VPN_UID));
         }
@@ -9819,7 +9875,7 @@ public class ConnectivityServiceTest {
         vpnDefaultCallbackAsUid.assertNoCallback();
 
         excludedUids.add(uid);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             // On T onwards, the corresponding SDK sandbox UID should also be excluded
             excludedUids.add(toSdkSandboxUid(uid));
         }
@@ -10553,7 +10609,7 @@ public class ConnectivityServiceTest {
 
     private void verifyClatdStart(@Nullable InOrder inOrder, @NonNull String iface, int netId,
             @NonNull String nat64Prefix) throws Exception {
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             verifyWithOrder(inOrder, mClatCoordinator)
                 .clatStart(eq(iface), eq(netId), eq(new IpPrefix(nat64Prefix)));
         } else {
@@ -10563,7 +10619,7 @@ public class ConnectivityServiceTest {
 
     private void verifyNeverClatdStart(@Nullable InOrder inOrder, @NonNull String iface)
             throws Exception {
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             verifyNeverWithOrder(inOrder, mClatCoordinator).clatStart(eq(iface), anyInt(), any());
         } else {
             verifyNeverWithOrder(inOrder, mMockNetd).clatdStart(eq(iface), anyString());
@@ -10572,7 +10628,7 @@ public class ConnectivityServiceTest {
 
     private void verifyClatdStop(@Nullable InOrder inOrder, @NonNull String iface)
             throws Exception {
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             verifyWithOrder(inOrder, mClatCoordinator).clatStop();
         } else {
             verifyWithOrder(inOrder, mMockNetd).clatdStop(eq(iface));
@@ -10581,7 +10637,7 @@ public class ConnectivityServiceTest {
 
     private void verifyNeverClatdStop(@Nullable InOrder inOrder, @NonNull String iface)
             throws Exception {
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             verifyNeverWithOrder(inOrder, mClatCoordinator).clatStop();
         } else {
             verifyNeverWithOrder(inOrder, mMockNetd).clatdStop(eq(iface));
@@ -10774,7 +10830,7 @@ public class ConnectivityServiceTest {
         networkCallback.assertNoCallback();
         verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, false);
         }
 
@@ -10814,7 +10870,7 @@ public class ConnectivityServiceTest {
         assertRoutesAdded(cellNetId, stackedDefault);
         verify(mMockNetd, times(1)).networkAddInterface(cellNetId, CLAT_MOBILE_IFNAME);
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, true);
         }
 
@@ -10833,7 +10889,7 @@ public class ConnectivityServiceTest {
         verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
         verify(mMockNetd, times(1)).interfaceGetCfg(CLAT_MOBILE_IFNAME);
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, false);
         }
 
@@ -10844,13 +10900,13 @@ public class ConnectivityServiceTest {
         verify(mMockNetd, times(1)).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
                 eq(Integer.toString(TRANSPORT_CELLULAR)));
         verify(mMockNetd).networkDestroy(cellNetId);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verify(mMockNetd).setNetworkAllowlist(any());
         } else {
             verify(mMockNetd, never()).setNetworkAllowlist(any());
         }
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(MOBILE_IFNAME, false);
         }
 
@@ -10884,7 +10940,7 @@ public class ConnectivityServiceTest {
         // assertRoutesAdded sees all calls since last mMockNetd reset, so expect IPv6 routes again.
         assertRoutesAdded(cellNetId, ipv6Subnet, ipv6Default, stackedDefault);
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(MOBILE_IFNAME, true);
         }
 
@@ -10897,20 +10953,20 @@ public class ConnectivityServiceTest {
         networkCallback.assertNoCallback();
         verifyClatdStop(null /* inOrder */, MOBILE_IFNAME);
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(CLAT_MOBILE_IFNAME, false);
         }
 
         verify(mMockNetd).idletimerRemoveInterface(eq(MOBILE_IFNAME), anyInt(),
                 eq(Integer.toString(TRANSPORT_CELLULAR)));
         verify(mMockNetd).networkDestroy(cellNetId);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verify(mMockNetd).setNetworkAllowlist(any());
         } else {
             verify(mMockNetd, never()).setNetworkAllowlist(any());
         }
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             verifyWakeupModifyInterface(MOBILE_IFNAME, false);
         }
 
@@ -11351,7 +11407,7 @@ public class ConnectivityServiceTest {
         mMockVpn.establish(lp, uid, vpnRange);
         assertVpnUidRangesUpdated(true, vpnRange, uid);
 
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             // On T and above, VPN should have rules for null interface. Null Interface is a
             // wildcard and this accepts traffic from all the interfaces.
             // There are two expected invocations, one during the VPN initial
@@ -12340,7 +12396,7 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testUnderlyingNetworksWillBeSetInNetworkAgentInfoConstructor() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastT());
+        assumeTrue(mDeps.isAtLeastT());
         final Network network1 = new Network(100);
         final Network network2 = new Network(101);
         final List<Network> underlyingNetworks = new ArrayList<>();
@@ -16246,7 +16302,7 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 toUidRangeStableParcels(allowedRanges),
                 0 /* subPriority */);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{config1User});
         } else {
             inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
@@ -16264,7 +16320,7 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 toUidRangeStableParcels(allowedRanges),
                 0 /* subPriority */);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{config2Users});
         } else {
             inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
@@ -16295,7 +16351,7 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 allowAllUidRangesParcel,
                 0 /* subPriority */);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(
                     new NativeUidRangeConfig[]{cellAllAllowedConfig});
         } else {
@@ -16314,7 +16370,7 @@ public class ConnectivityServiceTest {
         // making the order of the list undeterministic. Thus, verify this in order insensitive way.
         final ArgumentCaptor<NativeUidRangeConfig[]> configsCaptor = ArgumentCaptor.forClass(
                 NativeUidRangeConfig[].class);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
             assertContainsAll(List.of(configsCaptor.getValue()),
                     List.of(cellAllAllowedConfig, enterpriseAllAllowedConfig));
@@ -16348,7 +16404,7 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 excludeAppRangesParcel,
                 0 /* subPriority */);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
             assertContainsAll(List.of(configsCaptor.getValue()),
                     List.of(cellExcludeAppConfig, enterpriseAllAllowedConfig));
@@ -16360,7 +16416,7 @@ public class ConnectivityServiceTest {
         mCm.setProfileNetworkPreference(testHandle, PROFILE_NETWORK_PREFERENCE_ENTERPRISE,
                 r -> r.run(), listener);
         listener.expectOnComplete();
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
             assertContainsAll(List.of(configsCaptor.getValue()),
                     List.of(cellAllAllowedConfig, enterpriseAllAllowedConfig));
@@ -16372,7 +16428,7 @@ public class ConnectivityServiceTest {
         // disconnects.
         enterpriseAgent.disconnect();
         waitForIdle();
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(
                     new NativeUidRangeConfig[]{cellAllAllowedConfig});
         } else {
@@ -16397,7 +16453,7 @@ public class ConnectivityServiceTest {
                 List.of(prefBuilder.build()),
                 r -> r.run(), listener);
         listener.expectOnComplete();
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{});
         } else {
             inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
@@ -16425,7 +16481,7 @@ public class ConnectivityServiceTest {
                 mCellAgent.getNetwork().netId,
                 excludeAppRangesParcel,
                 0 /* subPriority */);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(
                     new NativeUidRangeConfig[]{cellExcludeAppConfig});
         } else {
@@ -16449,7 +16505,7 @@ public class ConnectivityServiceTest {
         // making the order of the list undeterministic. Thus, verify this in order insensitive way.
         final ArgumentCaptor<NativeUidRangeConfig[]> configsCaptor = ArgumentCaptor.forClass(
                 NativeUidRangeConfig[].class);
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(configsCaptor.capture());
             assertContainsAll(List.of(configsCaptor.getValue()),
                     List.of(enterpriseAllAllowedConfig, cellExcludeAppConfig));
@@ -16460,7 +16516,7 @@ public class ConnectivityServiceTest {
         // Verify issuing with cellular set only when enterprise network disconnects.
         enterpriseAgent.disconnect();
         waitForIdle();
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(
                     new NativeUidRangeConfig[]{cellExcludeAppConfig});
         } else {
@@ -16469,7 +16525,7 @@ public class ConnectivityServiceTest {
 
         mCellAgent.disconnect();
         waitForIdle();
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             inOrder.verify(mMockNetd).setNetworkAllowlist(new NativeUidRangeConfig[]{});
         } else {
             inOrder.verify(mMockNetd, never()).setNetworkAllowlist(any());
@@ -16525,7 +16581,7 @@ public class ConnectivityServiceTest {
         profileNetworkPreferenceBuilder.setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE);
         profileNetworkPreferenceBuilder.setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1);
         final TestOnCompleteListener listener = new TestOnCompleteListener();
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mCm.setProfileNetworkPreferences(testHandle,
                     List.of(profileNetworkPreferenceBuilder.build()),
                     r -> r.run(), listener);
@@ -16633,7 +16689,7 @@ public class ConnectivityServiceTest {
                 agent.getNetwork().getNetId(),
                 intToUidRangeStableParcels(uids),
                 preferenceOrder);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids200Parcel);
         }
 
@@ -16641,7 +16697,7 @@ public class ConnectivityServiceTest {
         uids.add(400);
         nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             cb.expectCaps(agent, c -> c.getAllowedUids().equals(uids));
         } else {
             cb.assertNoCallback();
@@ -16652,13 +16708,13 @@ public class ConnectivityServiceTest {
                 agent.getNetwork().getNetId(),
                 intToUidRangeStableParcels(uids),
                 preferenceOrder);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids300400Parcel);
         }
 
         nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             cb.expectCaps(agent, c -> c.getAllowedUids().equals(uids));
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids200Parcel);
         } else {
@@ -16669,7 +16725,7 @@ public class ConnectivityServiceTest {
         uids.add(600);
         nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             cb.expectCaps(agent, c -> c.getAllowedUids().equals(uids));
         } else {
             cb.assertNoCallback();
@@ -16678,7 +16734,7 @@ public class ConnectivityServiceTest {
                 agent.getNetwork().getNetId(),
                 intToUidRangeStableParcels(uids),
                 preferenceOrder);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             inOrder.verify(mMockNetd, times(1)).networkAddUidRangesParcel(uids600Parcel);
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids300400Parcel);
         }
@@ -16686,7 +16742,7 @@ public class ConnectivityServiceTest {
         uids.clear();
         nc.setAllowedUids(uids);
         agent.setNetworkCapabilities(nc, true /* sendToConnectivityService */);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             cb.expectCaps(agent, c -> c.getAllowedUids().isEmpty());
             inOrder.verify(mMockNetd, times(1)).networkRemoveUidRangesParcel(uids600Parcel);
         } else {
@@ -16739,7 +16795,7 @@ public class ConnectivityServiceTest {
         // Cell gets to set the service UID as access UID
         ncb.setAllowedUids(serviceUidSet);
         mEthernetAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
-        if (SdkLevel.isAtLeastT() && hasAutomotiveFeature) {
+        if (mDeps.isAtLeastT() && hasAutomotiveFeature) {
             cb.expectCaps(mEthernetAgent, c -> c.getAllowedUids().equals(serviceUidSet));
         } else {
             // S and no automotive feature must ignore access UIDs.
@@ -16792,7 +16848,7 @@ public class ConnectivityServiceTest {
         cb.expectAvailableThenValidatedCallbacks(mCellAgent);
         ncb.setAllowedUids(serviceUidSet);
         mCellAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             cb.expectCaps(mCellAgent, c -> c.getAllowedUids().equals(serviceUidSet));
         } else {
             // S must ignore access UIDs.
@@ -16802,7 +16858,7 @@ public class ConnectivityServiceTest {
         // ...but not to some other UID. Rejection sets UIDs to the empty set
         ncb.setAllowedUids(nonServiceUidSet);
         mCellAgent.setNetworkCapabilities(ncb.build(), true /* sendToCS */);
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             cb.expectCaps(mCellAgent, c -> c.getAllowedUids().isEmpty());
         } else {
             // S must ignore access UIDs.
@@ -17724,14 +17780,14 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testIgnoreValidationAfterRoamEnabled() throws Exception {
-        final boolean enabled = !SdkLevel.isAtLeastT();
+        final boolean enabled = !mDeps.isAtLeastT();
         doTestIgnoreValidationAfterRoam(5_000, enabled);
     }
 
     @Test
     public void testShouldIgnoreValidationFailureAfterRoam() {
         // Always disabled on T+.
-        assumeFalse(SdkLevel.isAtLeastT());
+        assumeFalse(mDeps.isAtLeastT());
 
         NetworkAgentInfo nai = fakeWifiNai(new NetworkCapabilities());
 
@@ -17985,7 +18041,7 @@ public class ConnectivityServiceTest {
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
         mCellAgent.connect(false /* validated */);
 
-        if (SdkLevel.isAtLeastU()) {
+        if (mDeps.isAtLeastU()) {
             final String expectedPrefix = makeNflogPrefix(MOBILE_IFNAME,
                     mCellAgent.getNetwork().getNetworkHandle());
             verify(mMockNetd).wakeupAddInterface(MOBILE_IFNAME, expectedPrefix,
