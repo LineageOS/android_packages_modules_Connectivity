@@ -37,6 +37,7 @@ android_library {
         "junit",
         "kotlin-test",
         "mockito-target",
+        "net-tests-utils",
         "truth",
     ],
     libs: [
