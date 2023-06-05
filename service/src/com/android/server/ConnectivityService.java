@@ -318,6 +318,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.IllegalArgumentException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -442,6 +443,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private final Context mContext;
     private final ConnectivityResources mResources;
+    private final int mWakeUpMark;
+    private final int mWakeUpMask;
     // The Context is created for UserHandle.ALL.
     private final Context mUserAllContext;
     private final Dependencies mDeps;
@@ -1574,6 +1577,29 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mNascentDelayMs = DEFAULT_NASCENT_DELAY_MS;
         mCellularRadioTimesharingCapable =
                 mResources.get().getBoolean(R.bool.config_cellular_radio_timesharing_capable);
+
+        int mark = mResources.get().getInteger(R.integer.config_networkWakeupPacketMark);
+        int mask = mResources.get().getInteger(R.integer.config_networkWakeupPacketMask);
+
+        if (SdkLevel.isAtLeastU()) {
+            // U+ default value of both mark & mask, this is the top bit of the skb->mark,
+            // see //system/netd/include/FwMark.h union Fwmark, field ingress_cpu_wakeup
+            final int defaultUMarkMask = 0x80000000;  // u32
+
+            if ((mark == 0) || (mask == 0)) {
+                // simply treat unset/disabled as the default U value
+                mark = defaultUMarkMask;
+                mask = defaultUMarkMask;
+            }
+            if ((mark != defaultUMarkMask) || (mask != defaultUMarkMask)) {
+                // invalid device overlay settings
+                throw new IllegalArgumentException(
+                        "Bad config_networkWakeupPacketMark/Mask " + mark + "/" + mask);
+            }
+        }
+
+        mWakeUpMark = mark;
+        mWakeUpMask = mask;
 
         mNetd = netd;
         mBpfNetMaps = mDeps.getBpfNetMaps(mContext, netd);
@@ -8049,21 +8075,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
 
-        int mark = mResources.get().getInteger(R.integer.config_networkWakeupPacketMark);
-        int mask = mResources.get().getInteger(R.integer.config_networkWakeupPacketMask);
-
         // Mask/mark of zero will not detect anything interesting.
         // Don't install rules unless both values are nonzero.
-        if (mark == 0 || mask == 0) {
+        if (mWakeUpMark == 0 || mWakeUpMask == 0) {
             return;
         }
 
         final String prefix = makeNflogPrefix(iface, nai.network.getNetworkHandle());
         try {
             if (add) {
-                mNetd.wakeupAddInterface(iface, prefix, mark, mask);
+                mNetd.wakeupAddInterface(iface, prefix, mWakeUpMark, mWakeUpMask);
             } else {
-                mNetd.wakeupDelInterface(iface, prefix, mark, mask);
+                mNetd.wakeupDelInterface(iface, prefix, mWakeUpMark, mWakeUpMask);
             }
         } catch (Exception e) {
             loge("Exception modifying wakeup packet monitoring: " + e);
