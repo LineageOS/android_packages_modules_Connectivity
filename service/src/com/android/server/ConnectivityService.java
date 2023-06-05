@@ -1522,6 +1522,23 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 throws SocketException, InterruptedIOException, ErrnoException {
             InetDiagMessage.destroyLiveTcpSocketsByOwnerUids(ownerUids);
         }
+
+        /**
+         * Schedule the evaluation timeout.
+         *
+         * When a network connects, it's "not evaluated" yet. Detection events cause the network
+         * to be "evaluated" (typically, validation or detection of a captive portal). If none
+         * of these events happen, this time will run out, after which the network is considered
+         * "evaluated" even if nothing happened to it. Notionally that means the system gave up
+         * on this network and considers it won't provide connectivity. In particular, that means
+         * it's when the system prefers it to cell if it's wifi and configuration says it should
+         * prefer bad wifi to cell.
+         */
+        public void scheduleEvaluationTimeout(@NonNull Handler handler,
+                @NonNull final Network network, final long delayMs) {
+            handler.sendMessageDelayed(
+                    handler.obtainMessage(EVENT_INITIAL_EVALUATION_TIMEOUT, network), delayMs);
+        }
     }
 
     public ConnectivityService(Context context) {
@@ -5299,8 +5316,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     /** Schedule evaluation timeout */
     @VisibleForTesting
     public void scheduleEvaluationTimeout(@NonNull final Network network, final long delayMs) {
-        mHandler.sendMessageDelayed(
-                mHandler.obtainMessage(EVENT_INITIAL_EVALUATION_TIMEOUT, network), delayMs);
+        mDeps.scheduleEvaluationTimeout(mHandler, network, delayMs);
     }
 
     @Override
@@ -9857,7 +9873,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 networkAgent.networkMonitor().notifyNetworkConnected(params.linkProperties,
                         params.networkCapabilities);
             }
-            final long delay = activelyPreferBadWifi()
+            final long delay = !avoidBadWifi() && activelyPreferBadWifi()
                     ? ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS
                     : DONT_ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS;
             scheduleEvaluationTimeout(networkAgent.network, delay);
