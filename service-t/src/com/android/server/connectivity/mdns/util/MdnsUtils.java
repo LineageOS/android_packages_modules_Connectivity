@@ -20,6 +20,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 import android.os.Handler;
+import android.util.ArraySet;
 
 import com.android.server.connectivity.mdns.MdnsConstants;
 import com.android.server.connectivity.mdns.MdnsRecord;
@@ -129,10 +130,19 @@ public class MdnsUtils {
         return false;
     }
 
-    /*** Check whether the target network is matched current network */
+    /*** Check whether the target network matches the current network */
     public static boolean isNetworkMatched(@Nullable Network targetNetwork,
             @Nullable Network currentNetwork) {
         return targetNetwork == null || targetNetwork.equals(currentNetwork);
+    }
+
+    /*** Check whether the target network matches any of the current networks */
+    public static boolean isAnyNetworkMatched(@Nullable Network targetNetwork,
+            ArraySet<Network> currentNetworks) {
+        if (targetNetwork == null) {
+            return !currentNetworks.isEmpty();
+        }
+        return currentNetworks.contains(targetNetwork);
     }
 
     /**
