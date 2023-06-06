@@ -31,6 +31,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -40,7 +41,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
 import android.net.LinkAddress;
@@ -49,6 +52,9 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.TetheringManager;
 import android.net.TetheringManager.TetheringEventCallback;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -88,6 +94,7 @@ public class MdnsSocketProviderTest {
     private static final String TAG = MdnsSocketProviderTest.class.getSimpleName();
     private static final String TEST_IFACE_NAME = "test";
     private static final String LOCAL_ONLY_IFACE_NAME = "local_only";
+    private static final String WIFI_P2P_IFACE_NAME = "p2p_wifi";
     private static final String TETHERED_IFACE_NAME = "tethered";
     private static final int TETHERED_IFACE_IDX = 32;
     private static final long DEFAULT_TIMEOUT = 2000L;
@@ -136,11 +143,15 @@ public class MdnsSocketProviderTest {
         doReturn(true).when(mTetheredIfaceWrapper).supportsMulticast();
         doReturn(mLocalOnlyIfaceWrapper).when(mDeps)
                 .getNetworkInterfaceByName(LOCAL_ONLY_IFACE_NAME);
+        doReturn(mLocalOnlyIfaceWrapper).when(mDeps)
+                .getNetworkInterfaceByName(WIFI_P2P_IFACE_NAME);
         doReturn(mTetheredIfaceWrapper).when(mDeps).getNetworkInterfaceByName(TETHERED_IFACE_NAME);
         doReturn(mock(MdnsInterfaceSocket.class))
                 .when(mDeps).createMdnsInterfaceSocket(any(), anyInt(), any(), any());
         doReturn(TETHERED_IFACE_IDX).when(mDeps).getNetworkInterfaceIndexByName(
                 TETHERED_IFACE_NAME);
+        doReturn(789).when(mDeps).getNetworkInterfaceIndexByName(
+                WIFI_P2P_IFACE_NAME);
         final HandlerThread thread = new HandlerThread("MdnsSocketProviderTest");
         thread.start();
         mHandler = new Handler(thread.getLooper());
@@ -157,22 +168,41 @@ public class MdnsSocketProviderTest {
         mSocketProvider = new MdnsSocketProvider(mContext, thread.getLooper(), mDeps, mLog);
     }
 
+    private void runOnHandler(Runnable r) {
+        mHandler.post(r);
+        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+    }
+
+    private BroadcastReceiver expectWifiP2PChangeBroadcastReceiver() {
+        final ArgumentCaptor<BroadcastReceiver> receiverCaptor =
+                ArgumentCaptor.forClass(BroadcastReceiver.class);
+        verify(mContext, times(1)).registerReceiver(receiverCaptor.capture(),
+                argThat(filter -> filter.hasAction(
+                        WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)),
+                any(), any());
+        final BroadcastReceiver originalReceiver = receiverCaptor.getValue();
+        return new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                runOnHandler(() -> originalReceiver.onReceive(context, intent));
+            }
+        };
+    }
+
     private void startMonitoringSockets() {
         final ArgumentCaptor<NetworkCallback> nwCallbackCaptor =
                 ArgumentCaptor.forClass(NetworkCallback.class);
         final ArgumentCaptor<TetheringEventCallback> teCallbackCaptor =
                 ArgumentCaptor.forClass(TetheringEventCallback.class);
 
-        mHandler.post(mSocketProvider::startMonitoringSockets);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::startMonitoringSockets);
         verify(mCm).registerNetworkCallback(any(), nwCallbackCaptor.capture(), any());
         verify(mTm).registerTetheringEventCallback(any(), teCallbackCaptor.capture());
 
         mNetworkCallback = nwCallbackCaptor.getValue();
         mTetheringEventCallback = teCallbackCaptor.getValue();
 
-        mHandler.post(mSocketProvider::startNetLinkMonitor);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::startNetLinkMonitor);
     }
 
     private static class TestNetlinkMonitor extends SocketNetlinkMonitor {
@@ -281,9 +311,8 @@ public class MdnsSocketProviderTest {
         testLp.setInterfaceName(TEST_IFACE_NAME);
         testLp.setLinkAddresses(List.of(LINKADDRV4));
         final NetworkCapabilities testNc = makeCapabilities(transports);
-        mHandler.post(() -> mNetworkCallback.onCapabilitiesChanged(TEST_NETWORK, testNc));
-        mHandler.post(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mNetworkCallback.onCapabilitiesChanged(TEST_NETWORK, testNc));
+        runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
     }
 
     @Test
@@ -291,62 +320,53 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback1 = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback1));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback1));
         testCallback1.expectedNoCallback();
 
         postNetworkAvailable(TRANSPORT_WIFI);
         testCallback1.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
 
         final TestSocketCallback testCallback2 = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback2));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback2));
         testCallback1.expectedNoCallback();
         testCallback2.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
 
         final TestSocketCallback testCallback3 = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(null /* network */, testCallback3));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallback3));
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         testCallback3.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
 
-        mHandler.post(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(
                 List.of(LOCAL_ONLY_IFACE_NAME)));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         verify(mLocalOnlyIfaceWrapper).getNetworkInterface();
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         testCallback3.expectedSocketCreatedForNetwork(null /* network */, List.of());
 
-        mHandler.post(() -> mTetheringEventCallback.onTetheredInterfacesChanged(
+        runOnHandler(() -> mTetheringEventCallback.onTetheredInterfacesChanged(
                 List.of(TETHERED_IFACE_NAME)));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         verify(mTetheredIfaceWrapper).getNetworkInterface();
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         testCallback3.expectedSocketCreatedForNetwork(null /* network */, List.of());
 
-        mHandler.post(() -> mSocketProvider.unrequestSocket(testCallback1));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.unrequestSocket(testCallback1));
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         testCallback3.expectedNoCallback();
 
-        mHandler.post(() -> mNetworkCallback.onLost(TEST_NETWORK));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mNetworkCallback.onLost(TEST_NETWORK));
         testCallback1.expectedNoCallback();
         testCallback2.expectedInterfaceDestroyedForNetwork(TEST_NETWORK);
         testCallback3.expectedInterfaceDestroyedForNetwork(TEST_NETWORK);
 
-        mHandler.post(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(List.of()));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(List.of()));
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         testCallback3.expectedInterfaceDestroyedForNetwork(null /* network */);
 
-        mHandler.post(() -> mSocketProvider.unrequestSocket(testCallback3));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.unrequestSocket(testCallback3));
         testCallback1.expectedNoCallback();
         testCallback2.expectedNoCallback();
         // There was still a tethered interface, but no callback should be sent once unregistered
@@ -376,8 +396,7 @@ public class MdnsSocketProviderTest {
     public void testDownstreamNetworkAddressUpdateFromNetlink() {
         startMonitoringSockets();
         final TestSocketCallback testCallbackAll = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(null /* network */, testCallbackAll));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallbackAll));
 
         // Address add message arrived before the interface is created.
         RtNetlinkAddressMessage addIpv4AddrMsg = createNetworkAddressUpdateNetLink(
@@ -385,15 +404,13 @@ public class MdnsSocketProviderTest {
                 LINKADDRV4,
                 TETHERED_IFACE_IDX,
                 0 /* flags */);
-        mHandler.post(
+        runOnHandler(
                 () -> mTestSocketNetLinkMonitor.processNetlinkMessage(addIpv4AddrMsg,
                         0 /* whenMs */));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
 
         // Interface is created.
-        mHandler.post(() -> mTetheringEventCallback.onTetheredInterfacesChanged(
+        runOnHandler(() -> mTetheringEventCallback.onTetheredInterfacesChanged(
                 List.of(TETHERED_IFACE_NAME)));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         verify(mTetheredIfaceWrapper).getNetworkInterface();
         testCallbackAll.expectedSocketCreatedForNetwork(null /* network */, List.of(LINKADDRV4));
 
@@ -403,10 +420,9 @@ public class MdnsSocketProviderTest {
                 LINKADDRV4,
                 TETHERED_IFACE_IDX,
                 0 /* flags */);
-        mHandler.post(
+        runOnHandler(
                 () -> mTestSocketNetLinkMonitor.processNetlinkMessage(removeIpv4AddrMsg,
                         0 /* whenMs */));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         testCallbackAll.expectedAddressesChangedForNetwork(null /* network */, List.of());
 
         // New address added.
@@ -415,9 +431,8 @@ public class MdnsSocketProviderTest {
                 LINKADDRV6,
                 TETHERED_IFACE_IDX,
                 0 /* flags */);
-        mHandler.post(() -> mTestSocketNetLinkMonitor.processNetlinkMessage(addIpv6AddrMsg,
+        runOnHandler(() -> mTestSocketNetLinkMonitor.processNetlinkMessage(addIpv6AddrMsg,
                 0 /* whenMs */));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         testCallbackAll.expectedAddressesChangedForNetwork(null /* network */, List.of(LINKADDRV6));
 
         // Address updated
@@ -426,10 +441,9 @@ public class MdnsSocketProviderTest {
                 LINKADDRV6,
                 TETHERED_IFACE_IDX,
                 1 /* flags */);
-        mHandler.post(
+        runOnHandler(
                 () -> mTestSocketNetLinkMonitor.processNetlinkMessage(updateIpv6AddrMsg,
                         0 /* whenMs */));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
         testCallbackAll.expectedAddressesChangedForNetwork(null /* network */,
                 List.of(LINKADDRV6_FLAG_CHANGE));
     }
@@ -439,8 +453,7 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
         testCallback.expectedNoCallback();
 
         postNetworkAvailable(TRANSPORT_WIFI);
@@ -449,8 +462,7 @@ public class MdnsSocketProviderTest {
         final LinkProperties newTestLp = new LinkProperties();
         newTestLp.setInterfaceName(TEST_IFACE_NAME);
         newTestLp.setLinkAddresses(List.of(LINKADDRV4, LINKADDRV6));
-        mHandler.post(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, newTestLp));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, newTestLp));
         testCallback.expectedAddressesChangedForNetwork(
                 TEST_NETWORK, List.of(LINKADDRV4, LINKADDRV6));
     }
@@ -458,8 +470,7 @@ public class MdnsSocketProviderTest {
     @Test
     public void testStartAndStopMonitoringSockets() {
         // Stop monitoring sockets before start. Should not unregister any network callback.
-        mHandler.post(mSocketProvider::requestStopWhenInactive);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::requestStopWhenInactive);
         verify(mCm, never()).unregisterNetworkCallback(any(NetworkCallback.class));
         verify(mTm, never()).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
 
@@ -467,39 +478,32 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
         // Request a socket then unrequest it. Expect no network callback unregistration.
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
         testCallback.expectedNoCallback();
-        mHandler.post(()-> mSocketProvider.unrequestSocket(testCallback));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(()-> mSocketProvider.unrequestSocket(testCallback));
         verify(mCm, never()).unregisterNetworkCallback(any(NetworkCallback.class));
         verify(mTm, never()).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
         // Request stop and it should unregister network callback immediately because there is no
         // socket request.
-        mHandler.post(mSocketProvider::requestStopWhenInactive);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::requestStopWhenInactive);
         verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
         verify(mTm, times(1)).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
 
         // Start sockets monitoring and request a socket again.
-        mHandler.post(mSocketProvider::startMonitoringSockets);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::startMonitoringSockets);
         verify(mCm, times(2)).registerNetworkCallback(any(), any(NetworkCallback.class), any());
         verify(mTm, times(2)).registerTetheringEventCallback(
                 any(), any(TetheringEventCallback.class));
         final TestSocketCallback testCallback2 = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback2));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback2));
         testCallback2.expectedNoCallback();
         // Try to stop monitoring sockets but should be ignored and wait until all socket are
         // unrequested.
-        mHandler.post(mSocketProvider::requestStopWhenInactive);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::requestStopWhenInactive);
         verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
         verify(mTm, times(1)).unregisterTetheringEventCallback(any());
         // Unrequest the socket then network callbacks should be unregistered.
-        mHandler.post(()-> mSocketProvider.unrequestSocket(testCallback2));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(()-> mSocketProvider.unrequestSocket(testCallback2));
         verify(mCm, times(2)).unregisterNetworkCallback(any(NetworkCallback.class));
         verify(mTm, times(2)).unregisterTetheringEventCallback(any(TetheringEventCallback.class));
     }
@@ -510,24 +514,20 @@ public class MdnsSocketProviderTest {
 
         // Request a socket with null network.
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(null, testCallback));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(null, testCallback));
         testCallback.expectedNoCallback();
 
         // Notify a LinkPropertiesChanged with TEST_NETWORK.
         final LinkProperties testLp = new LinkProperties();
         testLp.setInterfaceName(TEST_IFACE_NAME);
         testLp.setLinkAddresses(List.of(LINKADDRV4));
-        mHandler.post(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
         verify(mTestNetworkIfaceWrapper, times(1)).getNetworkInterface();
         testCallback.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
 
         // Try to stop monitoring and unrequest the socket.
-        mHandler.post(mSocketProvider::requestStopWhenInactive);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
-        mHandler.post(()-> mSocketProvider.unrequestSocket(testCallback));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::requestStopWhenInactive);
+        runOnHandler(()-> mSocketProvider.unrequestSocket(testCallback));
         // No callback sent when unregistered
         testCallback.expectedNoCallback();
         verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
@@ -535,13 +535,11 @@ public class MdnsSocketProviderTest {
 
         // Start sockets monitoring and request a socket again. Expected no socket created callback
         // because all saved LinkProperties has been cleared.
-        mHandler.post(mSocketProvider::startMonitoringSockets);
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(mSocketProvider::startMonitoringSockets);
         verify(mCm, times(2)).registerNetworkCallback(any(), any(NetworkCallback.class), any());
         verify(mTm, times(2)).registerTetheringEventCallback(
                 any(), any(TetheringEventCallback.class));
-        mHandler.post(() -> mSocketProvider.requestSocket(null, testCallback));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mSocketProvider.requestSocket(null, testCallback));
         testCallback.expectedNoCallback();
 
         // Notify a LinkPropertiesChanged with another network.
@@ -550,8 +548,7 @@ public class MdnsSocketProviderTest {
         final Network otherNetwork = new Network(456);
         otherLp.setInterfaceName("test2");
         otherLp.setLinkAddresses(List.of(otherAddress));
-        mHandler.post(() -> mNetworkCallback.onLinkPropertiesChanged(otherNetwork, otherLp));
-        HandlerUtils.waitForIdle(mHandler, DEFAULT_TIMEOUT);
+        runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(otherNetwork, otherLp));
         verify(mTestNetworkIfaceWrapper, times(2)).getNetworkInterface();
         testCallback.expectedSocketCreatedForNetwork(otherNetwork, List.of(otherAddress));
     }
@@ -561,7 +558,7 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_CELLULAR);
         testCallback.expectedNoCallback();
@@ -573,7 +570,7 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_BLUETOOTH);
         testCallback.expectedNoCallback();
@@ -585,7 +582,7 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_BLUETOOTH);
         testCallback.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
@@ -597,7 +594,7 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_BLUETOOTH);
         testCallback.expectedNoCallback();
@@ -611,7 +608,7 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_VPN, TRANSPORT_WIFI);
         testCallback.expectedNoCallback();
@@ -623,9 +620,146 @@ public class MdnsSocketProviderTest {
         startMonitoringSockets();
 
         final TestSocketCallback testCallback = new TestSocketCallback();
-        mHandler.post(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_WIFI);
         testCallback.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
+    }
+
+    private Intent buildWifiP2PConnectionChangedIntent(boolean groupFormed) {
+        final Intent intent = new Intent(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        final WifiP2pInfo formedInfo = new WifiP2pInfo();
+        formedInfo.groupFormed = groupFormed;
+        final WifiP2pGroup group;
+        if (groupFormed) {
+            group = mock(WifiP2pGroup.class);
+            doReturn(WIFI_P2P_IFACE_NAME).when(group).getInterface();
+        } else {
+            group = null;
+        }
+        intent.putExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, formedInfo);
+        intent.putExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, group);
+        return intent;
+    }
+
+    @Test
+    public void testWifiP2PInterfaceChange() {
+        final BroadcastReceiver receiver = expectWifiP2PChangeBroadcastReceiver();
+        startMonitoringSockets();
+
+        // Request a socket with null network.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallback));
+
+        // Wifi p2p is connected and the interface is up. Get a wifi p2p change intent then expect
+        // a socket creation.
+        final Intent formedIntent = buildWifiP2PConnectionChangedIntent(true /* groupFormed */);
+        receiver.onReceive(mContext, formedIntent);
+        verify(mLocalOnlyIfaceWrapper).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
+
+        // Wifi p2p is disconnected. Get a wifi p2p change intent then expect the socket destroy.
+        final Intent unformedIntent = buildWifiP2PConnectionChangedIntent(false /* groupFormed */);
+        receiver.onReceive(mContext, unformedIntent);
+        testCallback.expectedInterfaceDestroyedForNetwork(null /* network */);
+    }
+
+    @Test
+    public void testWifiP2PInterfaceChangeBeforeStartMonitoringSockets() {
+        final BroadcastReceiver receiver = expectWifiP2PChangeBroadcastReceiver();
+
+        // Get a wifi p2p change intent before start monitoring sockets.
+        final Intent formedIntent = buildWifiP2PConnectionChangedIntent(true /* groupFormed */);
+        receiver.onReceive(mContext, formedIntent);
+
+        // Start monitoring sockets and request a socket with null network.
+        startMonitoringSockets();
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallback));
+        verify(mLocalOnlyIfaceWrapper).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
+    }
+
+    @Test
+    public void testWifiP2PInterfaceChangeBeforeGetAllNetworksRequest() {
+        final BroadcastReceiver receiver = expectWifiP2PChangeBroadcastReceiver();
+        startMonitoringSockets();
+
+        // Get a wifi p2p change intent before request socket for all networks.
+        final Intent formedIntent = buildWifiP2PConnectionChangedIntent(true /* groupFormed */);
+        receiver.onReceive(mContext, formedIntent);
+
+        // Request a socket with null network.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallback));
+        verify(mLocalOnlyIfaceWrapper).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
+    }
+
+    @Test
+    public void testNoDuplicatedSocketCreation() {
+        final BroadcastReceiver receiver = expectWifiP2PChangeBroadcastReceiver();
+        startMonitoringSockets();
+
+        // Request a socket with null network.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null, testCallback));
+        testCallback.expectedNoCallback();
+
+        // Receive an interface added change for the wifi p2p interface. Expect a socket creation
+        // callback.
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(
+                List.of(WIFI_P2P_IFACE_NAME)));
+        verify(mLocalOnlyIfaceWrapper, times(1)).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
+
+        // Receive a wifi p2p connected intent. Expect no callback because the socket is created.
+        final Intent formedIntent = buildWifiP2PConnectionChangedIntent(true /* groupFormed */);
+        receiver.onReceive(mContext, formedIntent);
+        testCallback.expectedNoCallback();
+
+        // Request other socket with null network. Should receive socket created callback once.
+        final TestSocketCallback testCallback2 = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null, testCallback2));
+        testCallback2.expectedSocketCreatedForNetwork(null /* network */, List.of());
+        testCallback2.expectedNoCallback();
+
+        // Receive a wifi p2p disconnected intent. Expect a socket destroy callback.
+        final Intent unformedIntent = buildWifiP2PConnectionChangedIntent(false /* groupFormed */);
+        receiver.onReceive(mContext, unformedIntent);
+        testCallback.expectedInterfaceDestroyedForNetwork(null /* network */);
+
+        // Receive an interface removed change for the wifi p2p interface. Expect no callback
+        // because the socket is destroyed.
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(List.of()));
+        testCallback.expectedNoCallback();
+
+        // Receive a wifi p2p connected intent again. Expect a socket creation callback.
+        receiver.onReceive(mContext, formedIntent);
+        verify(mLocalOnlyIfaceWrapper, times(2)).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
+
+        // Receive an interface added change for the wifi p2p interface again. Expect no callback
+        // because the socket is created.
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(
+                List.of(WIFI_P2P_IFACE_NAME)));
+        testCallback.expectedNoCallback();
+    }
+
+    @Test
+    public void testTetherInterfacesChangedBeforeGetAllNetworksRequest() {
+        startMonitoringSockets();
+
+        // Receive an interface added change for the wifi p2p interface. Expect a socket creation
+        // callback.
+        runOnHandler(() -> mTetheringEventCallback.onLocalOnlyInterfacesChanged(
+                List.of(TETHERED_IFACE_NAME)));
+        verify(mTetheredIfaceWrapper, never()).getNetworkInterface();
+
+        // Request a socket with null network.
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(null /* network */, testCallback));
+        verify(mTetheredIfaceWrapper).getNetworkInterface();
+        testCallback.expectedSocketCreatedForNetwork(null /* network */, List.of());
     }
 }

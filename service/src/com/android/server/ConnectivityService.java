@@ -318,6 +318,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.IllegalArgumentException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -442,6 +443,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private final Context mContext;
     private final ConnectivityResources mResources;
+    private final int mWakeUpMark;
+    private final int mWakeUpMask;
     // The Context is created for UserHandle.ALL.
     private final Context mUserAllContext;
     private final Dependencies mDeps;
@@ -1279,6 +1282,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return Binder.getCallingUid();
         }
 
+        public boolean isAtLeastS() {
+            return SdkLevel.isAtLeastS();
+        }
+
+        public boolean isAtLeastT() {
+            return SdkLevel.isAtLeastT();
+        }
+
+        public boolean isAtLeastU() {
+            return SdkLevel.isAtLeastU();
+        }
+
         /**
          * Get system properties to use in ConnectivityService.
          */
@@ -1391,7 +1406,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         @Nullable
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context, @NonNull final TelephonyManager tm) {
-            if (SdkLevel.isAtLeastT()) {
+            if (isAtLeastT()) {
                 return new CarrierPrivilegeAuthenticator(context, tm);
             } else {
                 return null;
@@ -1499,6 +1514,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         /**
+         * As above but with a UID.
+         * @see CompatChanges#isChangeEnabled(long, int)
+         */
+        public boolean isChangeEnabled(final long changeId, final int uid) {
+            return CompatChanges.isChangeEnabled(changeId, uid);
+        }
+
+        /**
          * Call {@link InetDiagMessage#destroyLiveTcpSockets(Set, Set)}
          *
          * @param ranges target uid ranges
@@ -1518,6 +1541,23 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public void destroyLiveTcpSocketsByOwnerUids(final Set<Integer> ownerUids)
                 throws SocketException, InterruptedIOException, ErrnoException {
             InetDiagMessage.destroyLiveTcpSocketsByOwnerUids(ownerUids);
+        }
+
+        /**
+         * Schedule the evaluation timeout.
+         *
+         * When a network connects, it's "not evaluated" yet. Detection events cause the network
+         * to be "evaluated" (typically, validation or detection of a captive portal). If none
+         * of these events happen, this time will run out, after which the network is considered
+         * "evaluated" even if nothing happened to it. Notionally that means the system gave up
+         * on this network and considers it won't provide connectivity. In particular, that means
+         * it's when the system prefers it to cell if it's wifi and configuration says it should
+         * prefer bad wifi to cell.
+         */
+        public void scheduleEvaluationTimeout(@NonNull Handler handler,
+                @NonNull final Network network, final long delayMs) {
+            handler.sendMessageDelayed(
+                    handler.obtainMessage(EVENT_INITIAL_EVALUATION_TIMEOUT, network), delayMs);
         }
     }
 
@@ -1574,6 +1614,29 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mNascentDelayMs = DEFAULT_NASCENT_DELAY_MS;
         mCellularRadioTimesharingCapable =
                 mResources.get().getBoolean(R.bool.config_cellular_radio_timesharing_capable);
+
+        int mark = mResources.get().getInteger(R.integer.config_networkWakeupPacketMark);
+        int mask = mResources.get().getInteger(R.integer.config_networkWakeupPacketMask);
+
+        if (SdkLevel.isAtLeastU()) {
+            // U+ default value of both mark & mask, this is the top bit of the skb->mark,
+            // see //system/netd/include/FwMark.h union Fwmark, field ingress_cpu_wakeup
+            final int defaultUMarkMask = 0x80000000;  // u32
+
+            if ((mark == 0) || (mask == 0)) {
+                // simply treat unset/disabled as the default U value
+                mark = defaultUMarkMask;
+                mask = defaultUMarkMask;
+            }
+            if ((mark != defaultUMarkMask) || (mask != defaultUMarkMask)) {
+                // invalid device overlay settings
+                throw new IllegalArgumentException(
+                        "Bad config_networkWakeupPacketMark/Mask " + mark + "/" + mask);
+            }
+        }
+
+        mWakeUpMark = mark;
+        mWakeUpMask = mask;
 
         mNetd = netd;
         mBpfNetMaps = mDeps.getBpfNetMaps(mContext, netd);
@@ -1694,7 +1757,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // Even if it could, running on S would at least require mocking out the BPF map,
             // otherwise the unit tests will fail on pre-T devices where the seccomp filter blocks
             // the bpf syscall. http://aosp/1907693
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 mDscpPolicyTracker = new DscpPolicyTracker();
             }
         } catch (ErrnoException e) {
@@ -1704,13 +1767,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mIngressRateLimit = ConnectivitySettingsManager.getIngressRateLimitInBytesPerSecond(
                 mContext);
 
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mCdmps = new CompanionDeviceManagerProxyService(context);
         } else {
             mCdmps = null;
         }
 
-        if (SdkLevel.isAtLeastU()
+        if (mDeps.isAtLeastU()
                 && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION)) {
             final UidFrozenStateChangedCallback frozenStateChangedCallback =
                     new UidFrozenStateChangedCallback() {
@@ -3215,7 +3278,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void applyMostRecentPolicyForConnectivityAction(BroadcastOptions options,
             NetworkInfo info) {
         // Delivery group policy APIs are only available on U+.
-        if (!SdkLevel.isAtLeastU()) return;
+        if (!mDeps.isAtLeastU()) return;
 
         final BroadcastOptionsShim optsShim = mDeps.makeBroadcastOptionsShim(options);
         try {
@@ -3293,7 +3356,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         // On T+ devices, register callback for statsd to pull NETWORK_BPF_MAP_INFO atom
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mBpfNetMaps.setPullAtomCallback(mContext);
         }
         // Wait PermissionMonitor to finish the permission update. Then MultipathPolicyTracker won't
@@ -4503,7 +4566,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     boolean shouldIgnoreValidationFailureAfterRoam(NetworkAgentInfo nai) {
         // T+ devices should use unregisterAfterReplacement.
-        if (SdkLevel.isAtLeastT()) return false;
+        if (mDeps.isAtLeastT()) return false;
 
         // If the network never roamed, return false. The check below is not sufficient if time
         // since boot is less than blockTimeOut, though that's extremely unlikely to happen.
@@ -4642,7 +4705,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // for an unnecessarily long time.
             destroyNativeNetwork(nai);
         }
-        if (!nai.isCreated() && !SdkLevel.isAtLeastT()) {
+        if (!nai.isCreated() && !mDeps.isAtLeastT()) {
             // Backwards compatibility: send onNetworkDestroyed even if network was never created.
             // This can never run if the code above runs because shouldDestroyNativeNetwork is
             // false if the network was never created.
@@ -4726,7 +4789,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void checkNrisConsistency(final NetworkRequestInfo nri) {
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             for (final NetworkRequestInfo n : mNetworkRequests.values()) {
                 if (n.mBinder != null && n.mBinder == nri.mBinder) {
                     // Temporary help to debug b/194394697 ; TODO : remove this function when the
@@ -5273,8 +5336,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     /** Schedule evaluation timeout */
     @VisibleForTesting
     public void scheduleEvaluationTimeout(@NonNull final Network network, final long delayMs) {
-        mHandler.sendMessageDelayed(
-                mHandler.obtainMessage(EVENT_INITIAL_EVALUATION_TIMEOUT, network), delayMs);
+        mDeps.scheduleEvaluationTimeout(mHandler, network, delayMs);
     }
 
     @Override
@@ -6317,7 +6379,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + Arrays.toString(ranges) + "): netd command failed: " + e);
         }
 
-        if (SdkLevel.isAtLeastT()) {
+        if (mDeps.isAtLeastT()) {
             mPermissionMonitor.updateVpnLockdownUidRanges(requireVpn, ranges);
         }
 
@@ -7111,7 +7173,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             @NonNull final NetworkCapabilities networkCapabilities) {
         // This check is added to fix the linter error for "current min is 30", which is not going
         // to happen because Connectivity service always run in S+.
-        if (!SdkLevel.isAtLeastS()) {
+        if (!mDeps.isAtLeastS()) {
             Log.wtf(TAG, "Connectivity service should always run in at least SDK S");
             return;
         }
@@ -8049,21 +8111,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
 
-        int mark = mResources.get().getInteger(R.integer.config_networkWakeupPacketMark);
-        int mask = mResources.get().getInteger(R.integer.config_networkWakeupPacketMask);
-
         // Mask/mark of zero will not detect anything interesting.
         // Don't install rules unless both values are nonzero.
-        if (mark == 0 || mask == 0) {
+        if (mWakeUpMark == 0 || mWakeUpMask == 0) {
             return;
         }
 
         final String prefix = makeNflogPrefix(iface, nai.network.getNetworkHandle());
         try {
             if (add) {
-                mNetd.wakeupAddInterface(iface, prefix, mark, mask);
+                mNetd.wakeupAddInterface(iface, prefix, mWakeUpMark, mWakeUpMask);
             } else {
-                mNetd.wakeupDelInterface(iface, prefix, mark, mask);
+                mNetd.wakeupDelInterface(iface, prefix, mWakeUpMark, mWakeUpMask);
             }
         } catch (Exception e) {
             loge("Exception modifying wakeup packet monitoring: " + e);
@@ -8548,7 +8607,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // On T and above, allow rules are needed for all VPNs. Allow rule with null iface is a
         // wildcard to allow apps to receive packets on all interfaces. This is required to accept
         // incoming traffic in Lockdown mode by overriding the Lockdown blocking rule.
-        return SdkLevel.isAtLeastT() && nai.isVPN() && lp != null && lp.getInterfaceName() != null;
+        return mDeps.isAtLeastT() && nai.isVPN() && lp != null && lp.getInterfaceName() != null;
     }
 
     private static UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
@@ -8581,10 +8640,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void maybeCloseSockets(NetworkAgentInfo nai, Set<UidRange> ranges,
-            Set<Integer> exemptUids) {
+            UidRangeParcel[] uidRangeParcels, int[] exemptUids) {
         if (nai.isVPN() && !nai.networkAgentConfig.allowBypass) {
             try {
-                mDeps.destroyLiveTcpSockets(UidRange.toIntRanges(ranges), exemptUids);
+                if (mDeps.isAtLeastU()) {
+                    final Set<Integer> exemptUidSet = new ArraySet<>();
+                    for (final int uid: exemptUids) {
+                        exemptUidSet.add(uid);
+                    }
+                    mDeps.destroyLiveTcpSockets(UidRange.toIntRanges(ranges), exemptUidSet);
+                } else {
+                    mNetd.socketDestroy(uidRangeParcels, exemptUids);
+                }
             } catch (Exception e) {
                 loge("Exception in socket destroy: ", e);
             }
@@ -8592,16 +8659,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void updateVpnUidRanges(boolean add, NetworkAgentInfo nai, Set<UidRange> uidRanges) {
-        final Set<Integer> exemptUids = new ArraySet<>();
+        int[] exemptUids = new int[2];
         // TODO: Excluding VPN_UID is necessary in order to not to kill the TCP connection used
         // by PPTP. Fix this by making Vpn set the owner UID to VPN_UID instead of system when
         // starting a legacy VPN, and remove VPN_UID here. (b/176542831)
-        exemptUids.add(VPN_UID);
-        exemptUids.add(nai.networkCapabilities.getOwnerUid());
+        exemptUids[0] = VPN_UID;
+        exemptUids[1] = nai.networkCapabilities.getOwnerUid();
         UidRangeParcel[] ranges = toUidRangeStableParcels(uidRanges);
 
         // Close sockets before modifying uid ranges so that RST packets can reach to the server.
-        maybeCloseSockets(nai, uidRanges, exemptUids);
+        maybeCloseSockets(nai, uidRanges, ranges, exemptUids);
         try {
             if (add) {
                 mNetd.networkAddUidRangesParcel(new NativeUidRangeConfig(
@@ -8615,7 +8682,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     " on netId " + nai.network.netId + ". " + e);
         }
         // Close sockets that established connection while requesting netd.
-        maybeCloseSockets(nai, uidRanges, exemptUids);
+        maybeCloseSockets(nai, uidRanges, ranges, exemptUids);
     }
 
     private boolean isProxySetOnAnyDefaultNetwork() {
@@ -8798,14 +8865,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             if (DBG) log("Sending " + pendingIntent);
             final BroadcastOptions options = BroadcastOptions.makeBasic();
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 // Explicitly disallow the receiver from starting activities, to prevent apps from
                 // utilizing the PendingIntent as a backdoor to do this.
                 options.setPendingIntentBackgroundActivityLaunchAllowed(false);
             }
             pendingIntent.send(mContext, 0, intent, this /* onFinished */, null /* Handler */,
                     null /* requiredPermission */,
-                    SdkLevel.isAtLeastT() ? options.toBundle() : null);
+                    mDeps.isAtLeastT() ? options.toBundle() : null);
         } catch (PendingIntent.CanceledException e) {
             if (DBG) log(pendingIntent + " was not sent, it had been canceled.");
             mPendingIntentWakeLock.release();
@@ -9084,7 +9151,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void updateProfileAllowedNetworks() {
         // Netd command is not implemented before U.
-        if (!SdkLevel.isAtLeastU()) return;
+        if (!mDeps.isAtLeastU()) return;
 
         ensureRunningOnConnectivityServiceThread();
         final ArrayList<NativeUidRangeConfig> configs = new ArrayList<>();
@@ -9820,13 +9887,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // in the absence of a satisfactory, scalable solution which follows an easy/standard
             // process to check the interface version, just use an SDK check. NetworkStack will
             // always be new enough when running on T+.
-            if (SdkLevel.isAtLeastT()) {
+            if (mDeps.isAtLeastT()) {
                 networkAgent.networkMonitor().notifyNetworkConnected(params);
             } else {
                 networkAgent.networkMonitor().notifyNetworkConnected(params.linkProperties,
                         params.networkCapabilities);
             }
-            final long delay = activelyPreferBadWifi()
+            final long delay = !avoidBadWifi() && activelyPreferBadWifi()
                     ? ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS
                     : DONT_ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS;
             scheduleEvaluationTimeout(networkAgent.network, delay);
@@ -11296,7 +11363,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (um.isManagedProfile(profile.getIdentifier())) {
             return true;
         }
-        if (SdkLevel.isAtLeastT() && dpm.getDeviceOwner() != null) return true;
+        if (mDeps.isAtLeastT() && dpm.getDeviceOwner() != null) return true;
         return false;
     }
 
@@ -11578,7 +11645,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private boolean canNetworkBeRateLimited(@NonNull final NetworkAgentInfo networkAgent) {
         // Rate-limiting cannot run correctly before T because the BPF program is not loaded.
-        if (!SdkLevel.isAtLeastT()) return false;
+        if (!mDeps.isAtLeastT()) return false;
 
         final NetworkCapabilities agentCaps = networkAgent.networkCapabilities;
         // Only test networks (they cannot hold NET_CAPABILITY_INTERNET) and networks that provide
@@ -12085,7 +12152,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalStateException(e);
         }
 
-        if (SdkLevel.isAtLeastU() && enable) {
+        if (mDeps.isAtLeastU() && enable) {
             try {
                 closeSocketsForFirewallChainLocked(chain);
             } catch (ErrnoException | SocketException | InterruptedIOException e) {
