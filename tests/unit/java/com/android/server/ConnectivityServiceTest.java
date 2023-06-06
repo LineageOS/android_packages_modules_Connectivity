@@ -2505,10 +2505,14 @@ public class ConnectivityServiceTest {
     }
 
     private ExpectedBroadcast expectProxyChangeAction(ProxyInfo proxy) {
+        return expectProxyChangeAction(actualProxy -> proxy.equals(actualProxy));
+    }
+
+    private ExpectedBroadcast expectProxyChangeAction(Predicate<ProxyInfo> tester) {
         return registerBroadcastReceiverThat(PROXY_CHANGE_ACTION, 1, intent -> {
             final ProxyInfo actualProxy = (ProxyInfo) intent.getExtra(Proxy.EXTRA_PROXY_INFO,
                     ProxyInfo.buildPacProxy(Uri.EMPTY));
-            return proxy.equals(actualProxy);
+            return tester.test(actualProxy);
         });
     }
 
@@ -11397,8 +11401,16 @@ public class ConnectivityServiceTest {
     @Test
     public void testPacProxy() throws Exception {
         final Uri pacUrl = Uri.parse("https://pac-url");
+
+        final TestNetworkCallback cellCallback = new TestNetworkCallback();
+        final NetworkRequest cellRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_CELLULAR).build();
+        // Request cell to make sure it doesn't disconnect at an arbitrary point in the test,
+        // which would make testing the callbacks on it difficult.
+        mCm.requestNetwork(cellRequest, cellCallback);
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR);
         mCellAgent.connect(true);
+        cellCallback.expectAvailableThenValidatedCallbacks(mCellAgent);
 
         final TestNetworkCallback wifiCallback = new TestNetworkCallback();
         final NetworkRequest wifiRequest = new NetworkRequest.Builder()
@@ -11408,12 +11420,14 @@ public class ConnectivityServiceTest {
         mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
         mWiFiAgent.connect(true);
         wifiCallback.expectAvailableThenValidatedCallbacks(mWiFiAgent);
+        cellCallback.assertNoCallback();
 
         final ProxyInfo initialProxyInfo = ProxyInfo.buildPacProxy(pacUrl);
         final LinkProperties testLinkProperties = new LinkProperties();
         testLinkProperties.setHttpProxy(initialProxyInfo);
         mWiFiAgent.sendLinkProperties(testLinkProperties);
         wifiCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiAgent);
+        cellCallback.assertNoCallback();
 
         // At first the local PAC proxy server is unstarted (see the description of what the local
         // server is in the comment at the top of this method). It will contain the PAC URL and a
@@ -11443,98 +11457,154 @@ public class ConnectivityServiceTest {
 
         // Simulate PacManager sending the notification that the local server has started
         final ProxyInfo servingProxyInfo = new ProxyInfo(pacUrl, 2097);
-        final ExpectedBroadcast b1 = expectProxyChangeAction(servingProxyInfo);
+        final ExpectedBroadcast servingProxyBroadcast = expectProxyChangeAction(servingProxyInfo);
         mService.simulateUpdateProxyInfo(mWiFiAgent.getNetwork(), servingProxyInfo);
-//      wifiCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiAgent);
-        b1.expectBroadcast();
+        wifiCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiAgent);
+        cellCallback.assertNoCallback();
+        servingProxyBroadcast.expectBroadcast();
 
         final ProxyInfo startedDefaultProxyInfo = mService.getProxyForNetwork(null);
         final ProxyInfo startedWifiProxyInfo = mService.getProxyForNetwork(
                 mWiFiAgent.getNetwork());
         final LinkProperties startedLp = mService.getLinkProperties(mWiFiAgent.getNetwork());
-        // TODO : activate these tests when b/138810051 is fixed.
-//      assertEquals(servingProxyInfo, startedDefaultProxyInfo);
-//      assertEquals(servingProxyInfo, startedWifiProxyInfo);
-//      assertEquals(servingProxyInfo, startedLp.getHttpProxy());
-//      // Make sure the cell network is still unaffected
-//      assertNull(mService.getLinkProperties(mCellAgent.getNetwork()).getHttpProxy());
-//      assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
-//
-//      final Uri ethPacUrl = Uri.parse("https://ethernet-pac-url");
-//      final TestableNetworkCallback ethernetCallback = new TestableNetworkCallback();
-//      final NetworkRequest ethernetRequest = new NetworkRequest.Builder()
-//              .addTransportType(TRANSPORT_ETHERNET).build();
-//      mEthernetAgent = new TestNetworkAgentWrapper(TRANSPORT_ETHERNET);
-//      mCm.registerNetworkCallback(ethernetRequest, ethernetCallback);
-//      mEthernetAgent.connect(true);
-//      ethernetCallback.expectAvailableThenValidatedCallbacks(mEthernetAgent);
-//      // Wifi is no longer the default, so it should get a callback to LP changed with a PAC
-//      // proxy but a port of -1 (since the local proxy doesn't serve wifi now)
-//      wifiCallback.expect(LINK_PROPERTIES_CHANGED, mWiFiAgent,
-//              lp -> lp.getLp().getHttpProxy().getPort() == -1
-//                      && lp.getLp().getHttpProxy().isPacProxy());
-//      wifiCallback.expect(CallbackEntry.LOSING, mWiFiAgent);
-//
-//      final ProxyInfo ethProxy = ProxyInfo.buildPacProxy(ethPacUrl);
-//      final LinkProperties ethLinkProperties = new LinkProperties();
-//      ethLinkProperties.setHttpProxy(ethProxy);
-//      mEthernetAgent.sendLinkProperties(ethLinkProperties);
-//      ethernetCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mEthernetAgent);
-//      // Default network is Ethernet
-//      assertEquals(ethProxy, mService.getProxyForNetwork(null));
-//      assertEquals(ethProxy, mService.getProxyForNetwork(mEthernetAgent.getNetwork()));
-//      // Proxy info for WiFi ideally should be the old one with the old server still running,
-//      // but as the PAC code only handles one server at any given time, this can't work. Wifi
-//      // having null as a proxy also won't work (apps using WiFi will try to access the network
-//      // without proxy) but is not as bad as having the new proxy (that would send requests
-//      // over the default network).
-//      assertEquals(initialProxyInfo, mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
-//      assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
-//
-//      final ProxyInfo servingEthProxy = new ProxyInfo(pacUrl, 2099);
-//      final ExpectedBroadcast b2 = expectProxyChangeAction(servingEthProxy);
-//      final ExpectedBroadcast b3 = expectProxyChangeAction(servingProxyInfo);
-//
-//      mService.simulateUpdateProxyInfo(mEthernetAgent.getNetwork(), servingEthProxy);
-//      ethernetCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mEthernetAgent);
-//      assertEquals(servingEthProxy, mService.getProxyForNetwork(null));
-//      assertEquals(servingEthProxy, mService.getProxyForNetwork(
-//              mEthernetAgent.getNetwork()));
-//      assertEquals(initialProxyInfo,
-//              mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
-//      assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
-//      b2.expectBroadcast();
-//
-//      // Ethernet disconnects, back to WiFi
-//      mEthernetAgent.disconnect();
-//      ethernetCallback.expect(CallbackEntry.LOST, mEthernetAgent);
-//      wifiCallback.assertNoCallback();
-//
-//      assertEquals(initialProxyInfo, mService.getProxyForNetwork(null));
-//      assertEquals(initialProxyInfo,
-//              mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
-//      assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
-//
-//      // After a while the PAC file for wifi is resolved again
-//      mService.simulateUpdateProxyInfo(mWiFiAgent.getNetwork(), servingProxyInfo);
-//      wifiCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiAgent);
-//      assertEquals(servingProxyInfo, mService.getProxyForNetwork(null));
-//      assertEquals(servingProxyInfo,
-//              mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
-//      assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
-//      b3.expectBroadcast();
-//
-//      // Expect a broadcast after wifi disconnected. The proxy might be default proxy or an
-//      // empty proxy built by buildDirectProxy. See {@link ProxyTracker.sendProxyBroadcast}.
-//      // Thus here expects a broadcast will be received but does not verify the content of the
-//      // proxy.
-//      final ExpectedBroadcast b4 = expectProxyChangeAction();
-//      mWiFiAgent.disconnect();
-//      b4.expectBroadcast();
-//      wifiCallback.expect(CallbackEntry.LOST, mWiFiAgent);
-//      assertNull(mService.getProxyForNetwork(null));
+        assertEquals(servingProxyInfo, startedDefaultProxyInfo);
+        assertEquals(servingProxyInfo, startedWifiProxyInfo);
+        assertEquals(servingProxyInfo, startedLp.getHttpProxy());
+        // Make sure the cell network is still unaffected
+        assertNull(mService.getLinkProperties(mCellAgent.getNetwork()).getHttpProxy());
+        assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
+
+        // Start an ethernet network which will become the default, in order to test what happens
+        // to the proxy of wifi while manipulating the proxy of ethernet.
+        final Uri ethPacUrl = Uri.parse("https://ethernet-pac-url");
+        final TestableNetworkCallback ethernetCallback = new TestableNetworkCallback();
+        final NetworkRequest ethernetRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_ETHERNET).build();
+        mEthernetAgent = new TestNetworkAgentWrapper(TRANSPORT_ETHERNET);
+        mCm.registerNetworkCallback(ethernetRequest, ethernetCallback);
+        mEthernetAgent.connect(true);
+        ethernetCallback.expectAvailableThenValidatedCallbacks(mEthernetAgent);
+
+        // Wifi is no longer the default, so it should get a callback to LP changed with a PAC
+        // proxy but a port of -1 (since the local proxy doesn't serve wifi now)
+        wifiCallback.expect(LINK_PROPERTIES_CHANGED, mWiFiAgent,
+                lp -> lp.getLp().getHttpProxy().getPort() == -1
+                        && lp.getLp().getHttpProxy().isPacProxy());
+        // Wifi is lingered as it was the default but is no longer serving any request.
+        wifiCallback.expect(CallbackEntry.LOSING, mWiFiAgent);
+
+        // Now arrange for Ethernet to have a PAC proxy.
+        final ProxyInfo ethProxy = ProxyInfo.buildPacProxy(ethPacUrl);
+        final LinkProperties ethLinkProperties = new LinkProperties();
+        ethLinkProperties.setHttpProxy(ethProxy);
+        mEthernetAgent.sendLinkProperties(ethLinkProperties);
+        ethernetCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mEthernetAgent);
+        // Default network is Ethernet
+        assertEquals(ethProxy, mService.getProxyForNetwork(null));
+        assertEquals(ethProxy, mService.getProxyForNetwork(mEthernetAgent.getNetwork()));
+        // Proxy info for WiFi ideally should be the old one with the old server still running,
+        // but as the PAC code only handles one server at any given time, this can't work. Wifi
+        // having null as a proxy also won't work (apps using WiFi will try to access the network
+        // without proxy) but is not as bad as having the new proxy (that would send requests
+        // over the default network).
+        assertEquals(initialProxyInfo, mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
+        assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
+
+        // Expect the local PAC proxy server starts to serve the proxy on Ethernet. Use
+        // simulateUpdateProxyInfo to simulate this, and check that the callback is called to
+        // inform apps of the port and that the various networks have the expected proxies in
+        // their link properties.
+        final ProxyInfo servingEthProxy = new ProxyInfo(ethPacUrl, 2099);
+        final ExpectedBroadcast servingEthProxyBroadcast = expectProxyChangeAction(servingEthProxy);
+        final ExpectedBroadcast servingProxyBroadcast2 = expectProxyChangeAction(servingProxyInfo);
+        mService.simulateUpdateProxyInfo(mEthernetAgent.getNetwork(), servingEthProxy);
+        ethernetCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mEthernetAgent);
+        assertEquals(servingEthProxy, mService.getProxyForNetwork(null));
+        assertEquals(servingEthProxy, mService.getProxyForNetwork(mEthernetAgent.getNetwork()));
+        assertEquals(initialProxyInfo, mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
+        assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
+        servingEthProxyBroadcast.expectBroadcast();
+
+        // Ethernet disconnects, back to WiFi
+        mEthernetAgent.disconnect();
+        ethernetCallback.expect(CallbackEntry.LOST, mEthernetAgent);
+
+        // WiFi is now the default network again. However, the local proxy server does not serve
+        // WiFi at this time, so at this time a proxy with port -1 is still the correct value.
+        // In time, the local proxy server for ethernet will be downed and the local proxy server
+        // for WiFi will be restarted, and WiFi will see an update to its LP with the new port,
+        // but in this test this won't happen until the test simulates the local proxy starting
+        // up for WiFi (which is done just a few lines below). This is therefore the perfect place
+        // to check that WiFi is unaffected until the new local proxy starts up.
+        wifiCallback.assertNoCallback();
+        assertEquals(initialProxyInfo, mService.getProxyForNetwork(null));
+        assertEquals(initialProxyInfo, mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
+        assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
+        // Note : strictly speaking, for correctness here apps should expect a broadcast with a
+        // port of -1, since that's the current default proxy. The code does not send this
+        // broadcast. In practice though, not sending it is more useful since the new proxy will
+        // start momentarily, so broadcasting and getting all apps to update and retry once now
+        // and again in 250ms is kind of counter-productive, so don't fix this bug.
+
+        // After a while the PAC file for wifi is resolved again and the local proxy server
+        // starts up. This should cause a LP event to inform clients of the port to access the
+        // proxy server for wifi.
+        mService.simulateUpdateProxyInfo(mWiFiAgent.getNetwork(), servingProxyInfo);
+        wifiCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiAgent);
+        assertEquals(servingProxyInfo, mService.getProxyForNetwork(null));
+        assertEquals(servingProxyInfo, mService.getProxyForNetwork(mWiFiAgent.getNetwork()));
+        assertNull(mService.getProxyForNetwork(mCellAgent.getNetwork()));
+        servingProxyBroadcast2.expectBroadcast();
+
+        // Expect a broadcast for an empty proxy after wifi disconnected, because cell is now
+        // the default network and it doesn't have a proxy. Whether "no proxy" is a null pointer
+        // or a ProxyInfo with an empty host doesn't matter because both are correct, so this test
+        // accepts both.
+        final ExpectedBroadcast emptyProxyBroadcast = expectProxyChangeAction(
+                proxy -> proxy == null || TextUtils.isEmpty(proxy.getHost()));
+        mWiFiAgent.disconnect();
+        emptyProxyBroadcast.expectBroadcast();
+        wifiCallback.expect(CallbackEntry.LOST, mWiFiAgent);
+        assertNull(mService.getProxyForNetwork(null));
         assertNull(mService.getLinkProperties(mCellAgent.getNetwork()).getHttpProxy());
         assertNull(mService.getGlobalProxy());
+
+        mCm.unregisterNetworkCallback(cellCallback);
+    }
+
+    @Test
+    public void testPacProxy_NetworkDisconnects_BroadcastSent() throws Exception {
+        // Make a WiFi network with a PAC URI.
+        final Uri pacUrl = Uri.parse("https://pac-url");
+        final ProxyInfo initialProxyInfo = ProxyInfo.buildPacProxy(pacUrl);
+        final LinkProperties testLinkProperties = new LinkProperties();
+        testLinkProperties.setHttpProxy(initialProxyInfo);
+
+        final TestNetworkCallback wifiCallback = new TestNetworkCallback();
+        final NetworkRequest wifiRequest = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_WIFI).build();
+        mCm.registerNetworkCallback(wifiRequest, wifiCallback);
+
+        mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, testLinkProperties);
+        mWiFiAgent.connect(true);
+        // Wifi is up, but the local proxy server hasn't started yet.
+        wifiCallback.expectAvailableThenValidatedCallbacks(mWiFiAgent);
+
+        // Simulate PacManager sending the notification that the local server has started
+        final ProxyInfo servingProxyInfo = new ProxyInfo(pacUrl, 2097);
+        final ExpectedBroadcast servingProxyBroadcast = expectProxyChangeAction(servingProxyInfo);
+        mService.simulateUpdateProxyInfo(mWiFiAgent.getNetwork(), servingProxyInfo);
+        wifiCallback.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, mWiFiAgent);
+        servingProxyBroadcast.expectBroadcast();
+
+        // Now disconnect Wi-Fi and make sure there is a broadcast for some empty proxy. Whether
+        // the "empty" proxy is a null pointer or a ProxyInfo with an empty host doesn't matter
+        // because both are correct, so this test accepts both.
+        final ExpectedBroadcast emptyProxyBroadcast = expectProxyChangeAction(
+                proxy -> proxy == null || TextUtils.isEmpty(proxy.getHost()));
+        mWiFiAgent.disconnect();
+        wifiCallback.expect(CallbackEntry.LOST, mWiFiAgent);
+        emptyProxyBroadcast.expectBroadcast();
     }
 
     @Test
