@@ -19,7 +19,9 @@ package android.net.http.cts
 import android.net.http.DnsOptions
 import android.net.http.DnsOptions.DNS_OPTION_ENABLED
 import android.net.http.DnsOptions.DNS_OPTION_UNSPECIFIED
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import android.os.Build
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,7 +29,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import org.junit.runner.RunWith
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class DnsOptionsTest {
 
     @Test
