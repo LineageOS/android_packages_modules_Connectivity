@@ -16,7 +16,9 @@
 package android.net.http.cts
 
 import android.net.http.QuicOptions
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import android.os.Build
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import com.google.common.truth.Truth.assertThat
 import java.time.Duration
 import kotlin.test.assertFailsWith
@@ -25,7 +27,8 @@ import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class QuicOptionsTest {
     @Test
     fun testQuicOptions_defaultValues() {
