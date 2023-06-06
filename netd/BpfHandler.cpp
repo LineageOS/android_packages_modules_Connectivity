@@ -19,6 +19,7 @@
 #include "BpfHandler.h"
 
 #include <linux/bpf.h>
+#include <inttypes.h>
 
 #include <android-base/unique_fd.h>
 #include <android-modules-utils/sdk_level.h>
@@ -246,6 +247,8 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
               mCookieTagMap.getMap().get());
         return -res.error().code();
     }
+    ALOGD("Socket with cookie %" PRIu64 " tagged successfully with tag %" PRIu32 " uid %u "
+              "and real uid %u", sock_cookie, tag, chargeUid, realUid);
     return 0;
 }
 
@@ -259,6 +262,7 @@ int BpfHandler::untagSocket(int sockFd) {
         ALOGE("Failed to untag socket: %s", strerror(res.error().code()));
         return -res.error().code();
     }
+    ALOGD("Socket with cookie %" PRIu64 " untagged successfully.", sock_cookie);
     return 0;
 }
 
