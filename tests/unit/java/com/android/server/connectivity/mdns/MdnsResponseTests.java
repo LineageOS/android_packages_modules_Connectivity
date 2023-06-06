@@ -95,24 +95,24 @@ public class MdnsResponseTests {
         }
     }
 
-    private MdnsResponse makeCompleteResponse(int recordsTtlMillis) {
+    private MdnsResponse makeCompleteResponse(int recordsTtlMillis, int receiptTimeMillis) {
         final String[] hostname = new String[] { "MyHostname" };
         final String[] serviceName = new String[] { "MyService", "_type", "_tcp", "local" };
         final String[] serviceType = new String[] { "_type", "_tcp", "local" };
         final MdnsResponse response = new MdnsResponse(/* now= */ 0, serviceName, INTERFACE_INDEX,
                 mNetwork);
-        response.addPointerRecord(new MdnsPointerRecord(serviceType, 0L /* receiptTimeMillis */,
+        response.addPointerRecord(new MdnsPointerRecord(serviceType, receiptTimeMillis,
                 false /* cacheFlush */, recordsTtlMillis, serviceName));
-        response.setServiceRecord(new MdnsServiceRecord(serviceName, 0L /* receiptTimeMillis */,
+        response.setServiceRecord(new MdnsServiceRecord(serviceName, receiptTimeMillis,
                 true /* cacheFlush */, recordsTtlMillis, 0 /* servicePriority */,
                 0 /* serviceWeight */, 0 /* servicePort */, hostname));
-        response.setTextRecord(new MdnsTextRecord(serviceName, 0L /* receiptTimeMillis */,
+        response.setTextRecord(new MdnsTextRecord(serviceName, receiptTimeMillis,
                 true /* cacheFlush */, recordsTtlMillis, emptyList() /* entries */));
         response.addInet4AddressRecord(new MdnsInetAddressRecord(
-                hostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
+                hostname, receiptTimeMillis, true /* cacheFlush */,
                 recordsTtlMillis, parseNumericAddress("192.0.2.123")));
         response.addInet6AddressRecord(new MdnsInetAddressRecord(
-                hostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
+                hostname, receiptTimeMillis, true /* cacheFlush */,
                 recordsTtlMillis, parseNumericAddress("2001:db8::123")));
         return response;
     }
@@ -210,7 +210,7 @@ public class MdnsResponseTests {
 
     @Test
     public void copyConstructor() {
-        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS);
+        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS, 0 /* receiptTimeMillis */);
         final MdnsResponse copy = new MdnsResponse(response);
 
         assertEquals(response.getInet6AddressRecord(), copy.getInet6AddressRecord());
@@ -225,7 +225,7 @@ public class MdnsResponseTests {
 
     @Test
     public void addRecords_noChange() {
-        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS);
+        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS, 0 /* receiptTimeMillis */);
 
         assertFalse(response.addPointerRecord(response.getPointerRecords().get(0)));
         final String[] serviceName = new String[] { "MYSERVICE", "_TYPE", "_tcp", "local" };
@@ -242,8 +242,8 @@ public class MdnsResponseTests {
 
     @Test
     public void addRecords_ttlChange() {
-        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS);
-        final MdnsResponse ttlZeroResponse = makeCompleteResponse(0);
+        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS, 0 /* receiptTimeMillis */);
+        final MdnsResponse ttlZeroResponse = makeCompleteResponse(0, 0 /* receiptTimeMillis */);
 
         assertTrue(response.addPointerRecord(ttlZeroResponse.getPointerRecords().get(0)));
         assertEquals(1, response.getPointerRecords().size());
@@ -275,6 +275,46 @@ public class MdnsResponseTests {
 
         // All records were replaced, not added
         assertEquals(ttlZeroResponse.getRecords().size(), response.getRecords().size());
+    }
+
+    @Test
+    public void addRecords_receiptTimeChange() {
+        final MdnsResponse response = makeCompleteResponse(TEST_TTL_MS, 0 /* receiptTimeMillis */);
+        final MdnsResponse receiptTimeChangedResponse = makeCompleteResponse(TEST_TTL_MS,
+                1 /* receiptTimeMillis */);
+
+        assertFalse(
+                response.addPointerRecord(receiptTimeChangedResponse.getPointerRecords().get(0)));
+        assertEquals(1, response.getPointerRecords().get(0).getReceiptTime());
+        assertTrue(response.getRecords().stream().anyMatch(r ->
+                r == response.getPointerRecords().get(0)));
+
+        assertFalse(
+                response.addInet6AddressRecord(receiptTimeChangedResponse.getInet6AddressRecord()));
+        assertEquals(1, response.getInet6AddressRecords().size());
+        assertEquals(1, response.getInet6AddressRecord().getReceiptTime());
+        assertTrue(response.getRecords().stream().anyMatch(r ->
+                r == response.getInet6AddressRecord()));
+
+        assertFalse(
+                response.addInet4AddressRecord(receiptTimeChangedResponse.getInet4AddressRecord()));
+        assertEquals(1, response.getInet4AddressRecords().size());
+        assertEquals(1, response.getInet4AddressRecord().getReceiptTime());
+        assertTrue(response.getRecords().stream().anyMatch(r ->
+                r == response.getInet4AddressRecord()));
+
+        assertFalse(response.setServiceRecord(receiptTimeChangedResponse.getServiceRecord()));
+        assertEquals(1, response.getServiceRecord().getReceiptTime());
+        assertTrue(response.getRecords().stream().anyMatch(r ->
+                r == response.getServiceRecord()));
+
+        assertFalse(response.setTextRecord(receiptTimeChangedResponse.getTextRecord()));
+        assertEquals(1, response.getTextRecord().getReceiptTime());
+        assertTrue(response.getRecords().stream().anyMatch(r ->
+                r == response.getTextRecord()));
+
+        // All records were replaced, not added
+        assertEquals(receiptTimeChangedResponse.getRecords().size(), response.getRecords().size());
     }
 
     @Test
