@@ -40,9 +40,12 @@ import android.net.http.UrlResponseInfo;
 import android.net.http.cts.util.HttpCtsTestServer;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
+import android.os.Build;
 
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.After;
 import org.junit.Before;
@@ -55,7 +58,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Set;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class HttpEngineTest {
     private static final String HOST = "source.android.com";
     private static final String URL = "https://" + HOST;
