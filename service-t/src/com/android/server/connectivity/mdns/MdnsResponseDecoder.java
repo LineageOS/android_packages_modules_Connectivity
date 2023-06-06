@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 import android.net.Network;
 import android.os.SystemClock;
 import android.util.ArraySet;
+import android.util.Pair;
 
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
@@ -120,9 +121,14 @@ public class MdnsResponseDecoder {
      * @param interfaceIndex the network interface index (or
      * {@link MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
      * @param network the network at which the packet was received, or null if it is unknown.
-     * @return The set of response instances that were modified or newly added.
+     * @return The pair of 1) set of response instances that were modified or newly added. *not*
+     *                      including those which records were only updated with newer receive
+     *                      timestamps.
+     *                     2) A copy of the original responses with some of them have records
+     *                     update or only contains receive time updated.
      */
-    public ArraySet<MdnsResponse> augmentResponses(@NonNull MdnsPacket mdnsPacket,
+    public Pair<ArraySet<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
+            @NonNull MdnsPacket mdnsPacket,
             @NonNull Collection<MdnsResponse> existingResponses, int interfaceIndex,
             @Nullable Network network) {
         final ArrayList<MdnsRecord> records = new ArrayList<>(
@@ -177,7 +183,6 @@ public class MdnsResponseDecoder {
                                 network);
                         responses.add(response);
                     }
-
                     if (response.addPointerRecord((MdnsPointerRecord) record)) {
                         modified.add(response);
                     }
@@ -269,7 +274,7 @@ public class MdnsResponseDecoder {
             }
         }
 
-        return modified;
+        return Pair.create(modified, responses);
     }
 
     private static boolean assignInetRecord(
