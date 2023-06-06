@@ -84,16 +84,15 @@ public class MdnsResponse {
     private <T extends MdnsRecord> boolean addOrReplaceRecord(@NonNull T record,
             @NonNull List<T> recordsList) {
         final int existing = recordsList.indexOf(record);
+        boolean isSame = false;
         if (existing >= 0) {
-            if (recordsAreSame(record, recordsList.get(existing))) {
-                return false;
-            }
+            isSame = recordsAreSame(record, recordsList.get(existing));
             final MdnsRecord existedRecord = recordsList.remove(existing);
             records.remove(existedRecord);
         }
         recordsList.add(record);
         records.add(record);
-        return true;
+        return !isSame;
     }
 
     /**
@@ -163,9 +162,7 @@ public class MdnsResponse {
 
     /** Sets the service record. */
     public synchronized boolean setServiceRecord(MdnsServiceRecord serviceRecord) {
-        if (recordsAreSame(this.serviceRecord, serviceRecord)) {
-            return false;
-        }
+        boolean isSame = recordsAreSame(this.serviceRecord, serviceRecord);
         if (this.serviceRecord != null) {
             records.remove(this.serviceRecord);
         }
@@ -173,7 +170,7 @@ public class MdnsResponse {
         if (this.serviceRecord != null) {
             records.add(this.serviceRecord);
         }
-        return true;
+        return !isSame;
     }
 
     /** Gets the service record. */
@@ -187,9 +184,7 @@ public class MdnsResponse {
 
     /** Sets the text record. */
     public synchronized boolean setTextRecord(MdnsTextRecord textRecord) {
-        if (recordsAreSame(this.textRecord, textRecord)) {
-            return false;
-        }
+        boolean isSame = recordsAreSame(this.textRecord, textRecord);
         if (this.textRecord != null) {
             records.remove(this.textRecord);
         }
@@ -197,7 +192,7 @@ public class MdnsResponse {
         if (this.textRecord != null) {
             records.add(this.textRecord);
         }
-        return true;
+        return !isSame;
     }
 
     /** Gets the text record. */
