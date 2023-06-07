@@ -55,15 +55,22 @@ public final class NattKeepalivePacketData extends KeepalivePacketData implement
     public static NattKeepalivePacketData nattKeepalivePacket(
             InetAddress srcAddress, int srcPort, InetAddress dstAddress, int dstPort)
             throws InvalidPacketException {
+        if (dstPort != NattSocketKeepalive.NATT_PORT) {
+            throw new InvalidPacketException(ERROR_INVALID_PORT);
+        }
 
         if (!(srcAddress instanceof Inet4Address) || !(dstAddress instanceof Inet4Address)) {
             throw new InvalidPacketException(ERROR_INVALID_IP_ADDRESS);
         }
 
-        if (dstPort != NattSocketKeepalive.NATT_PORT) {
-            throw new InvalidPacketException(ERROR_INVALID_PORT);
-        }
+        return nattKeepalivePacketv4(
+                (Inet4Address) srcAddress, srcPort,
+                (Inet4Address) dstAddress, dstPort);
+    }
 
+    private static NattKeepalivePacketData nattKeepalivePacketv4(
+            Inet4Address srcAddress, int srcPort, Inet4Address dstAddress, int dstPort)
+            throws InvalidPacketException {
         int length = IPV4_HEADER_LENGTH + UDP_HEADER_LENGTH + 1;
         ByteBuffer buf = ByteBuffer.allocate(length);
         buf.order(ByteOrder.BIG_ENDIAN);
