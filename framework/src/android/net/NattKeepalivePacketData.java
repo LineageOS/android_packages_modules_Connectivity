@@ -72,23 +72,26 @@ public final class NattKeepalivePacketData extends KeepalivePacketData implement
             Inet4Address srcAddress, int srcPort, Inet4Address dstAddress, int dstPort)
             throws InvalidPacketException {
         int length = IPV4_HEADER_LENGTH + UDP_HEADER_LENGTH + 1;
-        ByteBuffer buf = ByteBuffer.allocate(length);
+        final ByteBuffer buf = ByteBuffer.allocate(length);
         buf.order(ByteOrder.BIG_ENDIAN);
-        buf.putShort((short) 0x4500);             // IP version and TOS
+        buf.putShort((short) 0x4500);                       // IP version and TOS
         buf.putShort((short) length);
-        buf.putInt(0);                            // ID, flags, offset
-        buf.put((byte) 64);                       // TTL
+        buf.putShort((short) 0);                            // ID
+        buf.putShort((short) 0x4000);                       // Flags(DF), offset
+        // Technically speaking, this should be reading/using the v4 sysctl
+        // /proc/sys/net/ipv4/ip_default_ttl. Use hard-coded 64 for simplicity.
+        buf.put((byte) 64);                                 // TTL
         buf.put((byte) OsConstants.IPPROTO_UDP);
         int ipChecksumOffset = buf.position();
-        buf.putShort((short) 0);                  // IP checksum
+        buf.putShort((short) 0);                            // IP checksum
         buf.put(srcAddress.getAddress());
         buf.put(dstAddress.getAddress());
         buf.putShort((short) srcPort);
         buf.putShort((short) dstPort);
-        buf.putShort((short) (length - 20));      // UDP length
+        buf.putShort((short) (UDP_HEADER_LENGTH + 1));      // UDP length
         int udpChecksumOffset = buf.position();
-        buf.putShort((short) 0);                  // UDP checksum
-        buf.put((byte) 0xff);                     // NAT-T keepalive
+        buf.putShort((short) 0);                            // UDP checksum
+        buf.put((byte) 0xff);                               // NAT-T keepalive
         buf.putShort(ipChecksumOffset, IpUtils.ipChecksum(buf, 0));
         buf.putShort(udpChecksumOffset, IpUtils.udpChecksum(buf, 0, IPV4_HEADER_LENGTH));
 
