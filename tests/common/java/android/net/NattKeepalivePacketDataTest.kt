@@ -22,9 +22,9 @@ import android.net.NattSocketKeepalive.NATT_PORT
 import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
-import com.android.testutils.assertEqualBothWays
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
+import com.android.testutils.assertEqualBothWays
 import com.android.testutils.assertParcelingIsLossless
 import com.android.testutils.parcelingRoundTrip
 import java.net.InetAddress
@@ -40,10 +40,6 @@ import org.junit.runner.RunWith
 class NattKeepalivePacketDataTest {
     @Rule @JvmField
     val ignoreRule: DevSdkIgnoreRule = DevSdkIgnoreRule()
-
-    /* Refer to the definition in {@code NattKeepalivePacketData} */
-    private val IPV4_HEADER_LENGTH = 20
-    private val UDP_HEADER_LENGTH = 8
 
     private val TEST_PORT = 4243
     private val TEST_PORT2 = 4244
