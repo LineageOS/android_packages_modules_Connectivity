@@ -262,6 +262,8 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
                       KVER_NONE, KVER_INF, min_loader, max_loader,                               \
                       ignore_eng, ignore_user, ignore_userdebug);                                \
     BPF_MAP_ASSERT_OK(BPF_MAP_TYPE_##TYPE, (num_entries), (md));                                 \
+    _Static_assert(sizeof(KeyType) < 1024, "aosp/2370288 requires < 1024 byte keys");            \
+    _Static_assert(sizeof(ValueType) < 65536, "aosp/2370288 requires < 65536 byte values");      \
     BPF_ANNOTATE_KV_PAIR(the_map, KeyType, ValueType);                                           \
                                                                                                  \
     static inline __always_inline __unused ValueType* bpf_##the_map##_lookup_elem(               \
