@@ -1078,21 +1078,17 @@ public class MdnsServiceTypeClientTests {
                 0 /* flags */,
                 Collections.emptyList() /* questions */,
                 List.of(
-                        // TODO: cacheFlush will cause addresses to be cleared and re-added every
-                        //  time, which is considered a change and triggers extra
-                        //  onServiceChanged callbacks. Sets cacheFlush bit to false until the
-                        //  issue is fixed.
                         new MdnsServiceRecord(serviceName, updatedReceiptTime,
-                                false /* cacheFlush */, TEST_TTL, 0 /* servicePriority */,
+                                true /* cacheFlush */, TEST_TTL, 0 /* servicePriority */,
                                 0 /* serviceWeight */, 1234 /* servicePort */, hostname),
                         new MdnsTextRecord(serviceName, updatedReceiptTime,
-                                false /* cacheFlush */, TEST_TTL,
+                                true /* cacheFlush */, TEST_TTL,
                                 Collections.emptyList() /* entries */),
                         new MdnsInetAddressRecord(hostname, updatedReceiptTime,
-                                false /* cacheFlush */, TEST_TTL,
+                                true /* cacheFlush */, TEST_TTL,
                                 InetAddresses.parseNumericAddress(ipV4Address)),
                         new MdnsInetAddressRecord(hostname, updatedReceiptTime,
-                                false /* cacheFlush */, TEST_TTL,
+                                true /* cacheFlush */, TEST_TTL,
                                 InetAddresses.parseNumericAddress(ipV6Address))),
                 Collections.emptyList() /* authorityRecords */,
                 Collections.emptyList() /* additionalRecords */);
