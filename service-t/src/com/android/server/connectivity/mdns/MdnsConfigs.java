@@ -51,7 +51,7 @@ public class MdnsConfigs {
     }
 
     public static boolean useSessionIdToScheduleMdnsTask() {
-        return false;
+        return true;
     }
 
     public static boolean shouldCancelScanTaskWhenFutureIsNull() {
