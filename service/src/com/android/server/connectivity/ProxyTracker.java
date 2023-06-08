@@ -330,7 +330,7 @@ public class ProxyTracker {
     public void setDefaultProxy(@Nullable ProxyInfo proxyInfo) {
         synchronized (mProxyLock) {
             if (Objects.equals(mDefaultProxy, proxyInfo)) return;
-            if (proxyInfo != null &&  !proxyInfo.isValid()) {
+            if (proxyInfo != null && !proxyInfo.isValid()) {
                 if (DBG) Log.d(TAG, "Invalid proxy properties, ignoring: " + proxyInfo);
                 return;
             }
