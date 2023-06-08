@@ -379,9 +379,7 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
-    @Ignore("MdnsConfigs is not configurable currently.")
     public void testIfPreviousTaskIsCanceledWhenNewSessionStarts() {
-        //MdnsConfigsFlagsImpl.useSessionIdToScheduleMdnsTask.override(true);
         MdnsSearchOptions searchOptions =
                 MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(true).build();
         client.startSendAndReceive(mockListenerOne, searchOptions);
