@@ -220,6 +220,9 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
 
     private void handleUnregisterListener(
             @NonNull String serviceType, @NonNull MdnsServiceBrowserListener listener) {
+        // Unrequested the network.
+        socketClient.notifyNetworkUnrequested(listener);
+
         final List<MdnsServiceTypeClient> serviceTypeClients =
                 perNetworkServiceTypeClients.getByServiceType(serviceType);
         if (serviceTypeClients.isEmpty()) {
@@ -237,8 +240,6 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             // No discovery request. Stops the socket client.
             socketClient.stopDiscovery();
         }
-        // Unrequested the network.
-        socketClient.notifyNetworkUnrequested(listener);
     }
 
     @Override
