@@ -19,7 +19,10 @@ package com.android.server.connectivity;
 import static android.telephony.SubscriptionManager.OnSubscriptionsChangedListener;
 
 import android.annotation.NonNull;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkSpecifier;
@@ -69,9 +72,7 @@ public class KeepaliveStatsTracker {
     // Mapping of subId to carrierId. Updates are received from OnSubscriptionsChangedListener
     private final SparseIntArray mCachedCarrierIdPerSubId = new SparseIntArray();
     // The default subscription id obtained from SubscriptionManager.getDefaultSubscriptionId.
-    // Updates are done from the OnSubscriptionsChangedListener. Note that there is no callback done
-    // to OnSubscriptionsChangedListener when the default sub id changes.
-    // TODO: Register a listener for the default subId when it is possible.
+    // Updates are received from the ACTION_DEFAULT_SUBSCRIPTION_CHANGED broadcast.
     private int mCachedDefaultSubscriptionId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
     // Class to store network information, lifetime durations and active state of a keepalive.
@@ -269,6 +270,19 @@ public class KeepaliveStatsTracker {
                 Objects.requireNonNull(context.getSystemService(SubscriptionManager.class));
 
         mLastUpdateDurationsTimestamp = mDependencies.getElapsedRealtime();
+        context.registerReceiver(
+                new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        mCachedDefaultSubscriptionId =
+                                intent.getIntExtra(
+                                        SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX,
+                                        SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+                    }
+                },
+                new IntentFilter(SubscriptionManager.ACTION_DEFAULT_SUBSCRIPTION_CHANGED),
+                /* broadcastPermission= */ null,
+                mConnectivityServiceHandler);
 
         // The default constructor for OnSubscriptionsChangedListener will always implicitly grab
         // the looper of the current thread. In the case the current thread does not have a looper,
@@ -286,11 +300,8 @@ public class KeepaliveStatsTracker {
                                 // but not necessarily empty, simply ignore it. Another call to the
                                 // listener will be invoked in the future.
                                 if (activeSubInfoList == null) return;
-                                final int defaultSubId =
-                                        subscriptionManager.getDefaultSubscriptionId();
                                 mConnectivityServiceHandler.post(() -> {
                                     mCachedCarrierIdPerSubId.clear();
-                                    mCachedDefaultSubscriptionId = defaultSubId;
 
                                     for (final SubscriptionInfo subInfo : activeSubInfoList) {
                                         mCachedCarrierIdPerSubId.put(subInfo.getSubscriptionId(),
