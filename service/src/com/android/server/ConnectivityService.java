@@ -865,8 +865,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     // A helper object to track the current default HTTP proxy. ConnectivityService needs to tell
     // the world when it changes.
-    @VisibleForTesting
-    protected final ProxyTracker mProxyTracker;
+    private final ProxyTracker mProxyTracker;
 
     final private SettingsObserver mSettingsObserver;
 
@@ -1891,6 +1890,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     void updateIngressRateLimit() {
         mHandler.sendEmptyMessage(EVENT_INGRESS_RATE_LIMIT_CHANGED);
+    }
+
+    @VisibleForTesting
+    void simulateUpdateProxyInfo(@Nullable final Network network,
+            @NonNull final ProxyInfo proxyInfo) {
+        Message.obtain(mHandler, EVENT_PROXY_HAS_CHANGED,
+                new Pair<>(network, proxyInfo)).sendToTarget();
     }
 
     private void handleAlwaysOnNetworkRequest(
