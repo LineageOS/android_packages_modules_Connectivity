@@ -1432,6 +1432,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         /**
          * @see ClatCoordinator
          */
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public ClatCoordinator getClatCoordinator(INetd netd) {
             return new ClatCoordinator(
                 new ClatCoordinator.Dependencies() {

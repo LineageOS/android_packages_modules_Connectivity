@@ -101,9 +101,9 @@ public class Nat464Xlat {
     private String mIface;
     private Inet6Address mIPv6Address;
     private State mState = State.IDLE;
-    private ClatCoordinator mClatCoordinator;
+    private final ClatCoordinator mClatCoordinator;  // non-null iff T+
 
-    private boolean mEnableClatOnCellular;
+    private final boolean mEnableClatOnCellular;
     private boolean mPrefixDiscoveryRunning;
 
     public Nat464Xlat(NetworkAgentInfo nai, INetd netd, IDnsResolver dnsResolver,
@@ -112,7 +112,11 @@ public class Nat464Xlat {
         mNetd = netd;
         mNetwork = nai;
         mEnableClatOnCellular = deps.getCellular464XlatEnabled();
-        mClatCoordinator = deps.getClatCoordinator(mNetd);
+        if (SdkLevel.isAtLeastT()) {
+            mClatCoordinator = deps.getClatCoordinator(mNetd);
+        } else {
+            mClatCoordinator = null;
+        }
     }
 
     /**
