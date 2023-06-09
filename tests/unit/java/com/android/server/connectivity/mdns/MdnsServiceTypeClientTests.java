@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -1065,10 +1066,43 @@ public class MdnsServiceTypeClientTests {
         // Second and later sends are sent as "expect multicast response" queries
         inOrder.verify(mockSocketClient, times(2)).sendMulticastPacket(renewalQueryCaptor.capture(),
                 eq(mockNetwork));
+        inOrder.verify(mockListenerOne).onDiscoveryQuerySent(any(), anyInt());
         final MdnsPacket renewalPacket = MdnsPacket.parse(
                 new MdnsPacketReader(renewalQueryCaptor.getValue()));
         assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_SRV, serviceName));
         assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_TXT, serviceName));
+        inOrder.verifyNoMoreInteractions();
+
+        long updatedReceiptTime =  TEST_ELAPSED_REALTIME + TEST_TTL;
+        final MdnsPacket refreshedSrvTxtResponse = new MdnsPacket(
+                0 /* flags */,
+                Collections.emptyList() /* questions */,
+                List.of(
+                        // TODO: cacheFlush will cause addresses to be cleared and re-added every
+                        //  time, which is considered a change and triggers extra
+                        //  onServiceChanged callbacks. Sets cacheFlush bit to false until the
+                        //  issue is fixed.
+                        new MdnsServiceRecord(serviceName, updatedReceiptTime,
+                                false /* cacheFlush */, TEST_TTL, 0 /* servicePriority */,
+                                0 /* serviceWeight */, 1234 /* servicePort */, hostname),
+                        new MdnsTextRecord(serviceName, updatedReceiptTime,
+                                false /* cacheFlush */, TEST_TTL,
+                                Collections.emptyList() /* entries */),
+                        new MdnsInetAddressRecord(hostname, updatedReceiptTime,
+                                false /* cacheFlush */, TEST_TTL,
+                                InetAddresses.parseNumericAddress(ipV4Address)),
+                        new MdnsInetAddressRecord(hostname, updatedReceiptTime,
+                                false /* cacheFlush */, TEST_TTL,
+                                InetAddresses.parseNumericAddress(ipV6Address))),
+                Collections.emptyList() /* authorityRecords */,
+                Collections.emptyList() /* additionalRecords */);
+        client.processResponse(refreshedSrvTxtResponse, INTERFACE_INDEX, mockNetwork);
+
+        // Advance time to updatedReceiptTime + 1, expected no refresh query because the cache
+        // should contain the record that have update last receipt time.
+        doReturn(updatedReceiptTime + 1).when(mockDecoderClock).elapsedRealtime();
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
+        inOrder.verifyNoMoreInteractions();
     }
 
     @Test
