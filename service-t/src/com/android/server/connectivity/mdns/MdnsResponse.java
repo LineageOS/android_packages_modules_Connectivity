@@ -96,6 +96,14 @@ public class MdnsResponse {
     }
 
     /**
+     * @return True if this response contains an identical (original TTL included) record.
+     */
+    public boolean hasIdenticalRecord(@NonNull MdnsRecord record) {
+        final int existing = records.indexOf(record);
+        return existing >= 0 && recordsAreSame(record, records.get(existing));
+    }
+
+    /**
      * Adds a pointer record.
      *
      * @return <code>true</code> if the record was added, or <code>false</code> if a matching
