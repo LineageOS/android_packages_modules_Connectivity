@@ -23,8 +23,10 @@ import android.net.http.cts.util.TestBidirectionalStreamCallback
 import android.net.http.cts.util.TestBidirectionalStreamCallback.ResponseStep
 import android.net.http.cts.util.assumeOKStatusCode
 import android.net.http.cts.util.skipIfNoInternetConnection
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.hamcrest.MatcherAssert
@@ -39,7 +41,8 @@ private const val URL = "https://source.android.com"
  * This tests uses a non-hermetic server. Instead of asserting, assume the next callback. This way,
  * if the request were to fail, the test would just be skipped instead of failing.
  */
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class BidirectionalStreamTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val callback = TestBidirectionalStreamCallback()

@@ -42,12 +42,15 @@ import android.net.http.cts.util.TestStatusListener;
 import android.net.http.cts.util.TestUrlRequestCallback;
 import android.net.http.cts.util.TestUrlRequestCallback.ResponseStep;
 import android.net.http.cts.util.UploadDataProviders;
+import android.os.Build;
 import android.webkit.cts.CtsTestServer;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRunner;
 
 import com.google.common.base.Strings;
 
@@ -70,7 +73,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(DevSdkIgnoreRunner.class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class UrlRequestTest {
     private static final Executor DIRECT_EXECUTOR = Runnable::run;
 
