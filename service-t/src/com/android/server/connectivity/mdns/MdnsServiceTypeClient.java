@@ -532,7 +532,8 @@ public class MdnsServiceTypeClient {
                                 config.transactionId,
                                 config.network,
                                 sendDiscoveryQueries,
-                                servicesToResolve)
+                                servicesToResolve,
+                                clock)
                                 .call();
             } catch (RuntimeException e) {
                 sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",

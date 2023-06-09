@@ -108,4 +108,15 @@ public class MdnsUtils {
         encoder.encode(CharBuffer.wrap(originalName), out, true /* endOfInput */);
         return new String(out.array(), 0, out.position(), utf8);
     }
+
+    /**
+     * Checks if the MdnsRecord needs to be renewed or not.
+     *
+     * <p>As per RFC6762 7.1 no need to query if remaining TTL is more than half the original one,
+     * so send the queries if half the TTL has passed.
+     */
+    public static boolean isRecordRenewalNeeded(@NonNull MdnsRecord mdnsRecord, final long now) {
+        return mdnsRecord.getTtl() > 0
+                && mdnsRecord.getRemainingTTL(now) <= mdnsRecord.getTtl() / 2;
+    }
 }
