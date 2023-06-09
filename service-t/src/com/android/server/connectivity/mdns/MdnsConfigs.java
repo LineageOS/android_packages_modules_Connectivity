@@ -94,10 +94,6 @@ public class MdnsConfigs {
         return false;
     }
 
-    public static boolean allowSearchOptionsToRemoveExpiredService() {
-        return false;
-    }
-
     public static boolean allowNetworkInterfaceIndexPropagation() {
         return true;
     }
