@@ -28,9 +28,9 @@ import com.android.testutils.assertEqualBothWays
 import com.android.testutils.assertParcelingIsLossless
 import com.android.testutils.parcelingRoundTrip
 import java.net.InetAddress
+import kotlin.test.assertFailsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,33 +57,30 @@ class NattKeepalivePacketDataTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testConstructor() {
-        try {
+        assertFailsWith<InvalidPacketException>(
+            "Dst port is not NATT port should cause exception") {
             nattKeepalivePacket(dstPort = TEST_PORT)
-            fail("Dst port is not NATT port should cause exception")
-        } catch (e: InvalidPacketException) {
-            assertEquals(e.error, ERROR_INVALID_PORT)
+        }.let {
+            assertEquals(it.error, ERROR_INVALID_PORT)
         }
 
-        try {
+        assertFailsWith<InvalidPacketException>("A v6 srcAddress should cause exception") {
             nattKeepalivePacket(srcAddress = TEST_ADDRV6)
-            fail("A v6 srcAddress should cause exception")
-        } catch (e: InvalidPacketException) {
-            assertEquals(e.error, ERROR_INVALID_IP_ADDRESS)
+        }.let {
+            assertEquals(it.error, ERROR_INVALID_IP_ADDRESS)
         }
 
-        try {
+        assertFailsWith<InvalidPacketException>("A v6 dstAddress should cause exception") {
             nattKeepalivePacket(dstAddress = TEST_ADDRV6)
-            fail("A v6 dstAddress should cause exception")
-        } catch (e: InvalidPacketException) {
-            assertEquals(e.error, ERROR_INVALID_IP_ADDRESS)
+        }.let {
+            assertEquals(it.error, ERROR_INVALID_IP_ADDRESS)
         }
 
-        try {
+        assertFailsWith<IllegalArgumentException>("Invalid data should cause exception") {
             parcelingRoundTrip(
-                    NattKeepalivePacketData(TEST_SRC_ADDRV4, TEST_PORT, TEST_DST_ADDRV4, TEST_PORT,
+                NattKeepalivePacketData(TEST_SRC_ADDRV4, TEST_PORT, TEST_DST_ADDRV4, TEST_PORT,
                     byteArrayOf(12, 31, 22, 44)))
-            fail("Invalid data should cause exception")
-        } catch (e: IllegalArgumentException) { }
+        }
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
