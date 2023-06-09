@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity;
 
+import android.annotation.NonNull;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -26,6 +28,7 @@ import com.android.metrics.DurationPerNumOfKeepalive;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 // TODO(b/273451360): Also track KeepaliveLifetimeForCarrier and DailykeepaliveInfoReported
 /**
@@ -38,7 +41,9 @@ import java.util.List;
 public class KeepaliveStatsTracker {
     private static final String TAG = KeepaliveStatsTracker.class.getSimpleName();
 
-    private final Dependencies mDependencies;
+    @NonNull private final Handler mConnectivityServiceHandler;
+    @NonNull private final Dependencies mDependencies;
+
     // List of duration stats metric where the index is the number of concurrent keepalives.
     // Each DurationForNumOfKeepalive message stores a registered duration and an active duration.
     // Registered duration is the total time spent with mNumRegisteredKeepalive == index.
@@ -50,7 +55,7 @@ public class KeepaliveStatsTracker {
     private int mNumActiveKeepalive = 0;
 
     // A timestamp of the most recent time the duration metrics was updated.
-    private long mTimestampSinceLastUpdateDurations;
+    private long mLastUpdateDurationsTimestamp;
 
     /** Dependency class */
     @VisibleForTesting
@@ -62,14 +67,16 @@ public class KeepaliveStatsTracker {
         }
     }
 
-    public KeepaliveStatsTracker() {
-        this(new Dependencies());
+    public KeepaliveStatsTracker(@NonNull Handler handler) {
+        this(handler, new Dependencies());
     }
 
     @VisibleForTesting
-    public KeepaliveStatsTracker(Dependencies dependencies) {
-        mDependencies = dependencies;
-        mTimestampSinceLastUpdateDurations = mDependencies.getUptimeMillis();
+    public KeepaliveStatsTracker(@NonNull Handler handler, @NonNull Dependencies dependencies) {
+        mDependencies = Objects.requireNonNull(dependencies);
+        mConnectivityServiceHandler = Objects.requireNonNull(handler);
+
+        mLastUpdateDurationsTimestamp = mDependencies.getUptimeMillis();
     }
 
     /** Ensures the list of duration metrics is large enough for number of registered keepalives. */
@@ -107,7 +114,7 @@ public class KeepaliveStatsTracker {
         }
         ensureDurationPerNumOfKeepaliveSize();
 
-        final int durationIncrease = (int) (timeNow - mTimestampSinceLastUpdateDurations);
+        final int durationIncrease = (int) (timeNow - mLastUpdateDurationsTimestamp);
         final DurationForNumOfKeepalive.Builder durationForNumOfRegisteredKeepalive =
                 mDurationPerNumOfKeepalive.get(mNumRegisteredKeepalive);
 
@@ -122,11 +129,13 @@ public class KeepaliveStatsTracker {
                 durationForNumOfActiveKeepalive.getKeepaliveActiveDurationsMsec()
                         + durationIncrease);
 
-        mTimestampSinceLastUpdateDurations = timeNow;
+        mLastUpdateDurationsTimestamp = timeNow;
     }
 
     /** Inform the KeepaliveStatsTracker a keepalive has just started and is active. */
     public void onStartKeepalive() {
+        ensureRunningOnHandlerThread();
+
         final long timeNow = mDependencies.getUptimeMillis();
         updateDurationsPerNumOfKeepalive(timeNow);
 
@@ -136,6 +145,8 @@ public class KeepaliveStatsTracker {
 
     /** Inform the KeepaliveStatsTracker a keepalive has just been paused. */
     public void onPauseKeepalive() {
+        ensureRunningOnHandlerThread();
+
         final long timeNow = mDependencies.getUptimeMillis();
         updateDurationsPerNumOfKeepalive(timeNow);
 
@@ -144,6 +155,8 @@ public class KeepaliveStatsTracker {
 
     /** Inform the KeepaliveStatsTracker a keepalive has just been resumed. */
     public void onResumeKeepalive() {
+        ensureRunningOnHandlerThread();
+
         final long timeNow = mDependencies.getUptimeMillis();
         updateDurationsPerNumOfKeepalive(timeNow);
 
@@ -152,6 +165,8 @@ public class KeepaliveStatsTracker {
 
     /** Inform the KeepaliveStatsTracker a keepalive has just been stopped. */
     public void onStopKeepalive(boolean wasActive) {
+        ensureRunningOnHandlerThread();
+
         final long timeNow = mDependencies.getUptimeMillis();
         updateDurationsPerNumOfKeepalive(timeNow);
 
@@ -163,6 +178,8 @@ public class KeepaliveStatsTracker {
      * Builds and returns DailykeepaliveInfoReported proto.
      */
     public DailykeepaliveInfoReported buildKeepaliveMetrics() {
+        ensureRunningOnHandlerThread();
+
         final long timeNow = mDependencies.getUptimeMillis();
         updateDurationsPerNumOfKeepalive(timeNow);
 
@@ -185,7 +202,16 @@ public class KeepaliveStatsTracker {
 
     /** Resets the stored metrics but maintains the state of keepalives */
     public void resetMetrics() {
+        ensureRunningOnHandlerThread();
+
         mDurationPerNumOfKeepalive.clear();
         ensureDurationPerNumOfKeepaliveSize();
+    }
+
+    private void ensureRunningOnHandlerThread() {
+        if (mConnectivityServiceHandler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on handler thread: " + Thread.currentThread().getName());
+        }
     }
 }
