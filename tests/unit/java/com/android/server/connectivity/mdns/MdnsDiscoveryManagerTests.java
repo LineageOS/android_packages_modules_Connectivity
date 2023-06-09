@@ -293,6 +293,47 @@ public class MdnsDiscoveryManagerTests {
                 .processResponse(response, ifIndex, NETWORK_1);
     }
 
+    @Test
+    public void testUnregisterListenerAfterSocketDestroyed() throws IOException {
+        // Create a ServiceTypeClient for SERVICE_TYPE_1
+        final MdnsSearchOptions network1Options =
+                MdnsSearchOptions.newBuilder().setNetwork(null /* network */).build();
+        final SocketCreationCallback callback = expectSocketCreationCallback(
+                SERVICE_TYPE_1, mockListenerOne, network1Options);
+        runOnHandler(() -> callback.onSocketCreated(null /* network */));
+        verify(mockServiceTypeClientType1NullNetwork).startSendAndReceive(
+                mockListenerOne, network1Options);
+
+        // Receive a response, it should be processed on the client.
+        final MdnsPacket response = createMdnsPacket(SERVICE_TYPE_1);
+        final int ifIndex = 1;
+        runOnHandler(() -> discoveryManager.onResponseReceived(
+                response, ifIndex, null /* network */));
+        verify(mockServiceTypeClientType1NullNetwork).processResponse(
+                response, ifIndex, null /* network */);
+
+        runOnHandler(() -> callback.onAllSocketsDestroyed(null /* network */));
+        verify(mockServiceTypeClientType1NullNetwork).notifySocketDestroyed();
+
+        // Receive a response again, it should not be processed.
+        runOnHandler(() -> discoveryManager.onResponseReceived(
+                response, ifIndex, null /* network */));
+        // Still times(1) as a response was received once previously
+        verify(mockServiceTypeClientType1NullNetwork, times(1))
+                .processResponse(response, ifIndex, null /* network */);
+
+        // Unregister the listener, notifyNetworkUnrequested should be called but other stop methods
+        // won't be call because the service type client was unregistered and destroyed. But those
+        // cleanups were done in notifySocketDestroyed when the socket was destroyed.
+        runOnHandler(() -> discoveryManager.unregisterListener(SERVICE_TYPE_1, mockListenerOne));
+        verify(socketClient).notifyNetworkUnrequested(mockListenerOne);
+        verify(mockServiceTypeClientType1NullNetwork, never()).stopSendAndReceive(any());
+        // The stopDiscovery() is only used by MdnsSocketClient, which doesn't send
+        // onAllSocketsDestroyed(). So the socket clients that send onAllSocketsDestroyed() do not
+        // need to call stopDiscovery().
+        verify(socketClient, never()).stopDiscovery();
+    }
+
     private MdnsPacket createMdnsPacket(String serviceType) {
         final String[] type = TextUtils.split(serviceType, "\\.");
         final ArrayList<String> name = new ArrayList<>(type.length + 1);
