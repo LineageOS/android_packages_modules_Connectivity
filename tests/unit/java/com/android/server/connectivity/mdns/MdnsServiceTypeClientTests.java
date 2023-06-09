@@ -932,15 +932,11 @@ public class MdnsServiceTypeClientTests {
 
         final MdnsPacket srvTxtQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(srvTxtQueryCaptor.getValue()));
-        final List<MdnsRecord> srvTxtQuestions = srvTxtQueryPacket.questions;
 
-        final String[] serviceName = Stream.concat(Stream.of(instanceName),
-                Arrays.stream(SERVICE_TYPE_LABELS)).toArray(String[]::new);
-        assertFalse(srvTxtQuestions.stream().anyMatch(q -> q.getType() == MdnsRecord.TYPE_PTR));
-        assertTrue(srvTxtQuestions.stream().anyMatch(q ->
-                q.getType() == MdnsRecord.TYPE_SRV && Arrays.equals(q.name, serviceName)));
-        assertTrue(srvTxtQuestions.stream().anyMatch(q ->
-                q.getType() == MdnsRecord.TYPE_TXT && Arrays.equals(q.name, serviceName)));
+        final String[] serviceName = getTestServiceName(instanceName);
+        assertFalse(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_PTR));
+        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_SRV, serviceName));
+        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_TXT, serviceName));
 
         // Process a response with SRV+TXT
         final MdnsPacket srvTxtResponse = new MdnsPacket(
@@ -967,11 +963,8 @@ public class MdnsServiceTypeClientTests {
 
         final MdnsPacket addressQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(addressQueryCaptor.getValue()));
-        final List<MdnsRecord> addressQueryQuestions = addressQueryPacket.questions;
-        assertTrue(addressQueryQuestions.stream().anyMatch(q ->
-                q.getType() == MdnsRecord.TYPE_A && Arrays.equals(q.name, hostname)));
-        assertTrue(addressQueryQuestions.stream().anyMatch(q ->
-                q.getType() == MdnsRecord.TYPE_AAAA && Arrays.equals(q.name, hostname)));
+        assertTrue(hasQuestion(addressQueryPacket, MdnsRecord.TYPE_A, hostname));
+        assertTrue(hasQuestion(addressQueryPacket, MdnsRecord.TYPE_AAAA, hostname));
 
         // Process a response with address records
         final MdnsPacket addressResponse = new MdnsPacket(
@@ -1001,6 +994,81 @@ public class MdnsServiceTypeClientTests {
                 Collections.emptyMap() /* attributes */,
                 INTERFACE_INDEX,
                 mockNetwork);
+    }
+
+    @Test
+    public void testRenewTxtSrvInResolve() throws Exception {
+        client = new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
+                mockDecoderClock, mockNetwork, mockSharedLog);
+
+        final String instanceName = "service-instance";
+        final String[] hostname = new String[] { "testhost "};
+        final String ipV4Address = "192.0.2.0";
+        final String ipV6Address = "2001:db8::";
+
+        final MdnsSearchOptions resolveOptions = MdnsSearchOptions.newBuilder()
+                .setResolveInstanceName(instanceName).build();
+
+        client.startSendAndReceive(mockListenerOne, resolveOptions);
+        InOrder inOrder = inOrder(mockListenerOne, mockSocketClient);
+
+        // Get the query for SRV/TXT
+        final ArgumentCaptor<DatagramPacket> srvTxtQueryCaptor =
+                ArgumentCaptor.forClass(DatagramPacket.class);
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
+        // Send twice for IPv4 and IPv6
+        inOrder.verify(mockSocketClient, times(2)).sendUnicastPacket(srvTxtQueryCaptor.capture(),
+                eq(mockNetwork));
+
+        final MdnsPacket srvTxtQueryPacket = MdnsPacket.parse(
+                new MdnsPacketReader(srvTxtQueryCaptor.getValue()));
+
+        final String[] serviceName = getTestServiceName(instanceName);
+        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_SRV, serviceName));
+        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_TXT, serviceName));
+
+        // Process a response with all records
+        final MdnsPacket srvTxtResponse = new MdnsPacket(
+                0 /* flags */,
+                Collections.emptyList() /* questions */,
+                List.of(
+                        new MdnsServiceRecord(serviceName, TEST_ELAPSED_REALTIME,
+                                true /* cacheFlush */, TEST_TTL, 0 /* servicePriority */,
+                                0 /* serviceWeight */, 1234 /* servicePort */, hostname),
+                        new MdnsTextRecord(serviceName, TEST_ELAPSED_REALTIME,
+                                true /* cacheFlush */, TEST_TTL,
+                                Collections.emptyList() /* entries */),
+                        new MdnsInetAddressRecord(hostname, TEST_ELAPSED_REALTIME,
+                                true /* cacheFlush */, TEST_TTL,
+                                InetAddresses.parseNumericAddress(ipV4Address)),
+                        new MdnsInetAddressRecord(hostname, TEST_ELAPSED_REALTIME,
+                                true /* cacheFlush */, TEST_TTL,
+                                InetAddresses.parseNumericAddress(ipV6Address))),
+                Collections.emptyList() /* authorityRecords */,
+                Collections.emptyList() /* additionalRecords */);
+        client.processResponse(srvTxtResponse, INTERFACE_INDEX, mockNetwork);
+        inOrder.verify(mockListenerOne).onServiceNameDiscovered(any());
+        inOrder.verify(mockListenerOne).onServiceFound(any());
+
+        // Expect no query on the next run
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
+        inOrder.verifyNoMoreInteractions();
+
+        // Advance time so 75% of TTL passes and re-execute
+        doReturn(TEST_ELAPSED_REALTIME + (long) (TEST_TTL * 0.75))
+                .when(mockDecoderClock).elapsedRealtime();
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
+
+        // Expect a renewal query
+        final ArgumentCaptor<DatagramPacket> renewalQueryCaptor =
+                ArgumentCaptor.forClass(DatagramPacket.class);
+        // Second and later sends are sent as "expect multicast response" queries
+        inOrder.verify(mockSocketClient, times(2)).sendMulticastPacket(renewalQueryCaptor.capture(),
+                eq(mockNetwork));
+        final MdnsPacket renewalPacket = MdnsPacket.parse(
+                new MdnsPacketReader(renewalQueryCaptor.getValue()));
+        assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_SRV, serviceName));
+        assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_TXT, serviceName));
     }
 
     @Test
@@ -1242,6 +1310,20 @@ public class MdnsServiceTypeClientTests {
                         expectedIPv6Packets[index], mockNetwork);
             }
         }
+    }
+
+    private static String[] getTestServiceName(String instanceName) {
+        return Stream.concat(Stream.of(instanceName),
+                Arrays.stream(SERVICE_TYPE_LABELS)).toArray(String[]::new);
+    }
+
+    private static boolean hasQuestion(MdnsPacket packet, int type) {
+        return hasQuestion(packet, type, null);
+    }
+
+    private static boolean hasQuestion(MdnsPacket packet, int type, @Nullable String[] name) {
+        return packet.questions.stream().anyMatch(q -> q.getType() == type
+                && (name == null || Arrays.equals(q.name, name)));
     }
 
     // A fake ScheduledExecutorService that keeps tracking the last scheduled Runnable and its delay

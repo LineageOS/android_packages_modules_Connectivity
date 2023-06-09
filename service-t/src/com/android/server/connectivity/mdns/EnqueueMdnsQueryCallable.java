@@ -24,6 +24,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -75,6 +76,8 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
     private final boolean sendDiscoveryQueries;
     @NonNull
     private final List<MdnsResponse> servicesToResolve;
+    @NonNull
+    private final MdnsResponseDecoder.Clock clock;
 
     EnqueueMdnsQueryCallable(
             @NonNull MdnsSocketClientBase requestSender,
@@ -85,7 +88,8 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             int transactionId,
             @Nullable Network network,
             boolean sendDiscoveryQueries,
-            @NonNull Collection<MdnsResponse> servicesToResolve) {
+            @NonNull Collection<MdnsResponse> servicesToResolve,
+            @NonNull MdnsResponseDecoder.Clock clock) {
         weakRequestSender = new WeakReference<>(requestSender);
         this.packetWriter = packetWriter;
         serviceTypeLabels = TextUtils.split(serviceType, "\\.");
@@ -95,6 +99,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         this.network = network;
         this.sendDiscoveryQueries = sendDiscoveryQueries;
         this.servicesToResolve = new ArrayList<>(servicesToResolve);
+        this.clock = clock;
     }
 
     // Incompatible return type for override of Callable#call().
@@ -119,22 +124,24 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
 
             // List of (name, type) to query
             final ArrayList<Pair<String[], Integer>> missingKnownAnswerRecords = new ArrayList<>();
+            final long now = clock.elapsedRealtime();
             for (MdnsResponse response : servicesToResolve) {
-                // TODO: also send queries to renew record TTL (as per RFC6762 7.1 no need to query
-                // if remaining TTL is more than half the original one, so send the queries if half
-                // the TTL has passed).
-                if (response.isComplete()) continue;
                 final String[] serviceName = response.getServiceName();
                 if (serviceName == null) continue;
-                if (!response.hasTextRecord()) {
+                if (!response.hasTextRecord() || MdnsUtils.isRecordRenewalNeeded(
+                        response.getTextRecord(), now)) {
                     missingKnownAnswerRecords.add(new Pair<>(serviceName, MdnsRecord.TYPE_TXT));
                 }
-                if (!response.hasServiceRecord()) {
+                if (!response.hasServiceRecord() || MdnsUtils.isRecordRenewalNeeded(
+                        response.getServiceRecord(), now)) {
                     missingKnownAnswerRecords.add(new Pair<>(serviceName, MdnsRecord.TYPE_SRV));
                     // The hostname is not yet known, so queries for address records will be sent
                     // the next time the EnqueueMdnsQueryCallable is enqueued if the reply does not
                     // contain them. In practice, advertisers should include the address records
                     // when queried for SRV, although it's not a MUST requirement (RFC6763 12.2).
+                    // TODO: Figure out how to renew the A/AAAA record. Usually A/AAAA record will
+                    //  be included in the response to the SRV record so in high chances there is
+                    //  no need to renew them individually.
                 } else if (!response.hasInet4AddressRecord() && !response.hasInet6AddressRecord()) {
                     final String[] host = response.getServiceRecord().getServiceHost();
                     missingKnownAnswerRecords.add(new Pair<>(host, MdnsRecord.TYPE_A));
