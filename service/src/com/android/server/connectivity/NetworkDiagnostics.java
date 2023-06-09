@@ -19,6 +19,7 @@ package com.android.server.connectivity;
 import static android.system.OsConstants.*;
 
 import static com.android.net.module.util.NetworkStackConstants.DNS_OVER_TLS_PORT;
+import static com.android.net.module.util.NetworkStackConstants.ETHER_MTU;
 import static com.android.net.module.util.NetworkStackConstants.ICMP_HEADER_LEN;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_LEN;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_HEADER_LEN;
@@ -212,7 +213,8 @@ public class NetworkDiagnostics {
             mLinkProperties.addDnsServer(TEST_DNS6);
         }
 
-        final int mtu = mLinkProperties.getMtu();
+        final int lpMtu = mLinkProperties.getMtu();
+        final int mtu = lpMtu > 0 ? lpMtu : ETHER_MTU;
         for (RouteInfo route : mLinkProperties.getRoutes()) {
             if (route.getType() == RouteInfo.RTN_UNICAST && route.hasGateway()) {
                 InetAddress gateway = route.getGateway();
