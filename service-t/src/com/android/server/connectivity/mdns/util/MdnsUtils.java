@@ -21,6 +21,9 @@ import android.annotation.Nullable;
 import android.net.Network;
 import android.os.Handler;
 
+import com.android.server.connectivity.mdns.MdnsConstants;
+import com.android.server.connectivity.mdns.MdnsRecord;
+
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
