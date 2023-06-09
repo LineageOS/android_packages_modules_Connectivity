@@ -705,34 +705,8 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
-    public void processResponse_notAllowRemoveSearch_shouldNotRemove() throws Exception {
-        final String serviceInstanceName = "service-instance-1";
-        client.startSendAndReceive(
-                mockListenerOne,
-                MdnsSearchOptions.newBuilder().build());
-        Runnable firstMdnsTask = currentThreadExecutor.getAndClearSubmittedRunnable();
-
-        // Process the initial response.
-        client.processResponse(createResponse(
-                serviceInstanceName, "192.168.1.1", 5353, /* subtype= */ "ABCDE",
-                Collections.emptyMap(), TEST_TTL), INTERFACE_INDEX, mockNetwork);
-
-        // Clear the scheduled runnable.
-        currentThreadExecutor.getAndClearLastScheduledRunnable();
-
-        // Simulate the case where the response is after TTL.
-        doReturn(TEST_ELAPSED_REALTIME + TEST_TTL + 1L).when(mockDecoderClock).elapsedRealtime();
-        firstMdnsTask.run();
-
-        // Verify removed callback was not called.
-        verifyServiceRemovedNoCallback(mockListenerOne);
-    }
-
-    @Test
-    @Ignore("MdnsConfigs is not configurable currently.")
-    public void processResponse_allowSearchOptionsToRemoveExpiredService_shouldRemove()
+    public void processResponse_searchOptionsEnableServiceRemoval_shouldRemove()
             throws Exception {
-        //MdnsConfigsFlagsImpl.allowSearchOptionsToRemoveExpiredService.override(true);
         final String serviceInstanceName = "service-instance-1";
         client =
                 new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
@@ -742,7 +716,9 @@ public class MdnsServiceTypeClientTests {
                         return mockPacketWriter;
                     }
                 };
-        client.startSendAndReceive(mockListenerOne, MdnsSearchOptions.getDefaultOptions());
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder().setRemoveExpiredService(
+                true).build();
+        client.startSendAndReceive(mockListenerOne, searchOptions);
         Runnable firstMdnsTask = currentThreadExecutor.getAndClearSubmittedRunnable();
 
         // Process the initial response.
