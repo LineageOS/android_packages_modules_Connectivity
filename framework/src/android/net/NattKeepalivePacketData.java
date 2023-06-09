@@ -29,7 +29,9 @@ import android.system.OsConstants;
 import com.android.net.module.util.IpUtils;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Objects;
@@ -38,6 +40,7 @@ import java.util.Objects;
 @SystemApi
 public final class NattKeepalivePacketData extends KeepalivePacketData implements Parcelable {
     private static final int IPV4_HEADER_LENGTH = 20;
+    private static final int IPV6_HEADER_LENGTH = 40;
     private static final int UDP_HEADER_LENGTH = 8;
 
     // This should only be constructed via static factory methods, such as
@@ -59,13 +62,25 @@ public final class NattKeepalivePacketData extends KeepalivePacketData implement
             throw new InvalidPacketException(ERROR_INVALID_PORT);
         }
 
-        if (!(srcAddress instanceof Inet4Address) || !(dstAddress instanceof Inet4Address)) {
+        // Convert IPv4 mapped v6 address to v4 if any.
+        final InetAddress srcAddr, dstAddr;
+        try {
+            srcAddr = InetAddress.getByAddress(srcAddress.getAddress());
+            dstAddr = InetAddress.getByAddress(dstAddress.getAddress());
+        } catch (UnknownHostException e) {
             throw new InvalidPacketException(ERROR_INVALID_IP_ADDRESS);
         }
 
-        return nattKeepalivePacketv4(
-                (Inet4Address) srcAddress, srcPort,
-                (Inet4Address) dstAddress, dstPort);
+        if (srcAddr instanceof Inet4Address && dstAddr instanceof Inet4Address) {
+            return nattKeepalivePacketv4(
+                    (Inet4Address) srcAddr, srcPort, (Inet4Address) dstAddr, dstPort);
+        } else if (srcAddr instanceof Inet6Address && dstAddress instanceof Inet6Address) {
+            return nattKeepalivePacketv6(
+                    (Inet6Address) srcAddr, srcPort, (Inet6Address) dstAddr, dstPort);
+        } else {
+            // Destination address and source address should be the same IP family.
+            throw new InvalidPacketException(ERROR_INVALID_IP_ADDRESS);
+        }
     }
 
     private static NattKeepalivePacketData nattKeepalivePacketv4(
@@ -82,14 +97,14 @@ public final class NattKeepalivePacketData extends KeepalivePacketData implement
         // /proc/sys/net/ipv4/ip_default_ttl. Use hard-coded 64 for simplicity.
         buf.put((byte) 64);                                 // TTL
         buf.put((byte) OsConstants.IPPROTO_UDP);
-        int ipChecksumOffset = buf.position();
+        final int ipChecksumOffset = buf.position();
         buf.putShort((short) 0);                            // IP checksum
         buf.put(srcAddress.getAddress());
         buf.put(dstAddress.getAddress());
         buf.putShort((short) srcPort);
         buf.putShort((short) dstPort);
         buf.putShort((short) (UDP_HEADER_LENGTH + 1));      // UDP length
-        int udpChecksumOffset = buf.position();
+        final int udpChecksumOffset = buf.position();
         buf.putShort((short) 0);                            // UDP checksum
         buf.put((byte) 0xff);                               // NAT-T keepalive
         buf.putShort(ipChecksumOffset, IpUtils.ipChecksum(buf, 0));
@@ -98,6 +113,30 @@ public final class NattKeepalivePacketData extends KeepalivePacketData implement
         return new NattKeepalivePacketData(srcAddress, srcPort, dstAddress, dstPort, buf.array());
     }
 
+    private static NattKeepalivePacketData nattKeepalivePacketv6(
+            Inet6Address srcAddress, int srcPort, Inet6Address dstAddress, int dstPort)
+            throws InvalidPacketException {
+        final ByteBuffer buf = ByteBuffer.allocate(IPV6_HEADER_LENGTH + UDP_HEADER_LENGTH + 1);
+        buf.order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(0x60000000);                         // IP version, traffic class and flow label
+        buf.putShort((short) (UDP_HEADER_LENGTH + 1));  // Payload length
+        buf.put((byte) OsConstants.IPPROTO_UDP);        // Next header
+        // For native ipv6, this hop limit value should use the per interface v6 hoplimit sysctl.
+        // For 464xlat, this value should use the v4 ttl sysctl.
+        // Either way, for simplicity, just hard code 64.
+        buf.put((byte) 64);                             // Hop limit
+        buf.put(srcAddress.getAddress());
+        buf.put(dstAddress.getAddress());
+        // UDP
+        buf.putShort((short) srcPort);
+        buf.putShort((short) dstPort);
+        buf.putShort((short) (UDP_HEADER_LENGTH + 1));  // UDP length = Payload length
+        final int udpChecksumOffset = buf.position();
+        buf.putShort((short) 0);                        // UDP checksum
+        buf.put((byte) 0xff);                           // NAT-T keepalive. 1 byte of data
+        buf.putShort(udpChecksumOffset, IpUtils.udpChecksum(buf, 0, IPV6_HEADER_LENGTH));
+        return new NattKeepalivePacketData(srcAddress, srcPort, dstAddress, dstPort, buf.array());
+    }
     /** Parcelable Implementation */
     public int describeContents() {
         return 0;
