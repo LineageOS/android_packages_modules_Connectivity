@@ -106,7 +106,12 @@ public class KeepaliveTracker {
     private final int mAllowedUnprivilegedSlotsForUid;
 
     public KeepaliveTracker(Context context, Handler handler) {
-        mTcpController = new TcpKeepaliveController(handler);
+        this(context, handler, new TcpKeepaliveController(handler));
+    }
+
+    @VisibleForTesting
+    KeepaliveTracker(Context context, Handler handler, TcpKeepaliveController tcpController) {
+        mTcpController = tcpController;
         mContext = context;
 
         mSupportedKeepalives = KeepaliveResourceUtil.getSupportedKeepalives(context);
@@ -375,7 +380,7 @@ public class KeepaliveTracker {
                         break;
                     case TYPE_TCP:
                         try {
-                            mTcpController.startSocketMonitor(mFd, this, mSlot);
+                            mTcpController.startSocketMonitor(mFd, mCallback, mSlot);
                         } catch (InvalidSocketException e) {
                             handleStopKeepalive(mNai, mSlot, ERROR_INVALID_SOCKET);
                             return ERROR_INVALID_SOCKET;
@@ -453,12 +458,6 @@ public class KeepaliveTracker {
                     Log.wtf(TAG, "Error closing fd for keepalive " + mSlot + ": " + e);
                 }
             }
-        }
-
-        // TODO: This does not clean up the autoKi in AutomaticOnOffKeepaliveTracker and it is not
-        // possible without a big refactor.
-        void onFileDescriptorInitiatedStop(final int socketKeepaliveReason) {
-            handleStopKeepalive(mNai, mSlot, socketKeepaliveReason);
         }
 
         /**
