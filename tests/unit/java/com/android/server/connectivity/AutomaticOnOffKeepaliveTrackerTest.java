@@ -18,6 +18,7 @@ package com.android.server.connectivity;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.ConnectivityManager.TYPE_MOBILE;
+import static android.net.NetworkAgent.CMD_STOP_SOCKET_KEEPALIVE;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 
 import static com.android.testutils.HandlerUtils.visibleOnHandlerThread;
@@ -28,6 +29,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -47,6 +49,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.net.INetd;
 import android.net.ISocketKeepaliveCallback;
+import android.net.KeepalivePacketData;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.MarkMaskParcel;
@@ -55,6 +58,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.SocketKeepalive;
+import android.net.TcpKeepalivePacketData;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -120,6 +124,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
     TestKeepaliveTracker mKeepaliveTracker;
     AOOTestHandler mTestHandler;
+    TestTcpKeepaliveController mTcpController;
 
     // Hexadecimal representation of a SOCK_DIAG response with tcp info.
     private static final String SOCK_DIAG_TCP_INET_HEX =
@@ -233,9 +238,9 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         public final FileDescriptor fd;
         public final ISocketKeepaliveCallback socketKeepaliveCallback;
         public final Network underpinnedNetwork;
-        public final NattKeepalivePacketData kpd;
+        public final KeepalivePacketData kpd;
 
-        TestKeepaliveInfo(NattKeepalivePacketData kpd) throws Exception {
+        TestKeepaliveInfo(KeepalivePacketData kpd) throws Exception {
             this.kpd = kpd;
             socket = new Socket();
             socket.bind(null);
@@ -252,8 +257,9 @@ public class AutomaticOnOffKeepaliveTrackerTest {
     private class TestKeepaliveTracker extends KeepaliveTracker {
         private KeepaliveInfo mKi;
 
-        TestKeepaliveTracker(@NonNull final Context context, @NonNull final Handler handler) {
-            super(context, handler);
+        TestKeepaliveTracker(@NonNull final Context context, @NonNull final Handler handler,
+                @NonNull final TcpKeepaliveController tcpController) {
+            super(context, handler, tcpController);
         }
 
         public void setReturnedKeepaliveInfo(@NonNull final KeepaliveInfo ki) {
@@ -271,6 +277,24 @@ public class AutomaticOnOffKeepaliveTrackerTest {
                 throw new IllegalStateException("Must call setReturnedKeepaliveInfo");
             }
             return mKi;
+        }
+
+        @NonNull
+        @Override
+        public KeepaliveInfo makeTcpKeepaliveInfo(@Nullable final NetworkAgentInfo nai,
+                @Nullable final FileDescriptor fd, final int intervalSeconds,
+                @NonNull final ISocketKeepaliveCallback cb) {
+            if (null == mKi) {
+                throw new IllegalStateException("Please call `setReturnedKeepaliveInfo`"
+                        + " before makeTcpKeepaliveInfo is called");
+            }
+            return mKi;
+        }
+    }
+
+    private static class TestTcpKeepaliveController extends TcpKeepaliveController {
+        TestTcpKeepaliveController(final Handler connectivityServiceHandler) {
+            super(connectivityServiceHandler);
         }
     }
 
@@ -303,7 +327,8 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         mHandlerThread = new HandlerThread("KeepaliveTrackerTest");
         mHandlerThread.start();
         mTestHandler = new AOOTestHandler(mHandlerThread.getLooper());
-        mKeepaliveTracker = new TestKeepaliveTracker(mCtx, mTestHandler);
+        mTcpController = new TestTcpKeepaliveController(mTestHandler);
+        mKeepaliveTracker = new TestKeepaliveTracker(mCtx, mTestHandler, mTcpController);
         doReturn(mKeepaliveTracker).when(mDependencies).newKeepaliveTracker(mCtx, mTestHandler);
         doReturn(true).when(mDependencies).isFeatureEnabled(any(), anyBoolean());
         mAOOKeepaliveTracker =
@@ -332,6 +357,14 @@ public class AutomaticOnOffKeepaliveTrackerTest {
                 case AutomaticOnOffKeepaliveTracker.CMD_MONITOR_AUTOMATIC_KEEPALIVE:
                     Log.d(TAG, "Test handler received CMD_MONITOR_AUTOMATIC_KEEPALIVE : " + msg);
                     mLastAutoKi = mAOOKeepaliveTracker.getKeepaliveForBinder((IBinder) msg.obj);
+                    break;
+                case CMD_STOP_SOCKET_KEEPALIVE:
+                    Log.d(TAG, "Test handler received CMD_STOP_SOCKET_KEEPALIVE : " + msg);
+                    mLastAutoKi = mAOOKeepaliveTracker.getKeepaliveForBinder((IBinder) msg.obj);
+                    if (mLastAutoKi == null) {
+                        fail("Attempt to stop an already stopped keepalive");
+                    }
+                    mAOOKeepaliveTracker.handleStopKeepalive(mLastAutoKi, msg.arg2);
                     break;
             }
         }
@@ -481,14 +514,15 @@ public class AutomaticOnOffKeepaliveTrackerTest {
                 mTestHandler, () -> mAOOKeepaliveTracker.getKeepaliveForBinder(binder));
     }
 
-    private void checkAndProcessKeepaliveStart(final NattKeepalivePacketData kpd) throws Exception {
+    private void checkAndProcessKeepaliveStart(final KeepalivePacketData kpd) throws Exception {
         checkAndProcessKeepaliveStart(TEST_SLOT, kpd);
     }
 
     private void checkAndProcessKeepaliveStart(
-            int slot, final NattKeepalivePacketData kpd) throws Exception {
-        verify(mNai).onStartNattSocketKeepalive(slot, TEST_KEEPALIVE_INTERVAL_SEC, kpd);
-        verify(mNai).onAddNattKeepalivePacketFilter(slot, kpd);
+            int slot, final KeepalivePacketData kpd) throws Exception {
+        verify(mNai).onStartNattSocketKeepalive(
+                slot, TEST_KEEPALIVE_INTERVAL_SEC, (NattKeepalivePacketData) kpd);
+        verify(mNai).onAddNattKeepalivePacketFilter(slot, (NattKeepalivePacketData) kpd);
         triggerEventKeepalive(slot, SocketKeepalive.SUCCESS);
     }
 
@@ -531,9 +565,10 @@ public class AutomaticOnOffKeepaliveTrackerTest {
     public void testHandleEventSocketKeepalive_startingFailureHardwareError() throws Exception {
         final TestKeepaliveInfo testInfo = doStartNattKeepalive();
 
-        verify(mNai)
-                .onStartNattSocketKeepalive(TEST_SLOT, TEST_KEEPALIVE_INTERVAL_SEC, testInfo.kpd);
-        verify(mNai).onAddNattKeepalivePacketFilter(TEST_SLOT, testInfo.kpd);
+        verify(mNai).onStartNattSocketKeepalive(
+                TEST_SLOT, TEST_KEEPALIVE_INTERVAL_SEC, (NattKeepalivePacketData) testInfo.kpd);
+        verify(mNai).onAddNattKeepalivePacketFilter(
+                TEST_SLOT, (NattKeepalivePacketData) testInfo.kpd);
         // Network agent returns an error, fails to start the keepalive.
         triggerEventKeepalive(TEST_SLOT, SocketKeepalive.ERROR_HARDWARE_ERROR);
 
@@ -674,9 +709,10 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         clearInvocations(mNai);
         doResumeKeepalive(getAutoKiForBinder(testInfo.binder));
 
-        verify(mNai)
-                .onStartNattSocketKeepalive(TEST_SLOT, TEST_KEEPALIVE_INTERVAL_SEC, testInfo.kpd);
-        verify(mNai).onAddNattKeepalivePacketFilter(TEST_SLOT, testInfo.kpd);
+        verify(mNai).onStartNattSocketKeepalive(
+                TEST_SLOT, TEST_KEEPALIVE_INTERVAL_SEC, (NattKeepalivePacketData) testInfo.kpd);
+        verify(mNai).onAddNattKeepalivePacketFilter(
+                TEST_SLOT, (NattKeepalivePacketData) testInfo.kpd);
         // Network agent returns error on starting the keepalive.
         triggerEventKeepalive(TEST_SLOT, SocketKeepalive.ERROR_HARDWARE_ERROR);
 
@@ -771,5 +807,39 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         verifyNoMoreInteractions(ignoreStubs(testInfo1.socketKeepaliveCallback));
         verifyNoMoreInteractions(ignoreStubs(testInfo2.socketKeepaliveCallback));
+    }
+
+    @Test
+    public void testStartTcpKeepalive_fdInitiatedStop() throws Exception {
+        final InetAddress srcAddress = InetAddress.getByAddress(
+                new byte[] { (byte) 192, 0, 0, (byte) 129 });
+        mNai.linkProperties.addLinkAddress(new LinkAddress(srcAddress, 24));
+
+        final KeepalivePacketData kpd = new TcpKeepalivePacketData(
+                InetAddress.getByAddress(new byte[] { (byte) 192, 0, 0, (byte) 129 }) /* srcAddr */,
+                12345 /* srcPort */,
+                InetAddress.getByAddress(new byte[] { 8, 8, 8, 8}) /* dstAddr */,
+                12345 /* dstPort */, new byte[] {1},  111 /* tcpSeq */,
+                222 /* tcpAck */, 800 /* tcpWindow */, 2 /* tcpWindowScale */,
+                4 /* ipTos */, 64 /* ipTtl */);
+        final TestKeepaliveInfo testInfo = new TestKeepaliveInfo(kpd);
+
+        final KeepaliveInfo ki = mKeepaliveTracker.new KeepaliveInfo(
+                testInfo.socketKeepaliveCallback, mNai, kpd,
+                TEST_KEEPALIVE_INTERVAL_SEC, KeepaliveInfo.TYPE_TCP, testInfo.fd);
+        mKeepaliveTracker.setReturnedKeepaliveInfo(ki);
+
+        // Setup TCP keepalive.
+        mAOOKeepaliveTracker.startTcpKeepalive(mNai, testInfo.fd, TEST_KEEPALIVE_INTERVAL_SEC,
+                testInfo.socketKeepaliveCallback);
+        HandlerUtils.waitForIdle(mTestHandler, TIMEOUT_MS);
+
+        // A closed socket will result in EVENT_HANGUP and trigger error to
+        // FileDescriptorEventListener.
+        testInfo.socket.close();
+        HandlerUtils.waitForIdle(mTestHandler, TIMEOUT_MS);
+
+        // The keepalive should be removed in AutomaticOnOffKeepaliveTracker.
+        getAutoKiForBinder(testInfo.binder);
     }
 }
