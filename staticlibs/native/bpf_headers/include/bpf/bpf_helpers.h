@@ -84,6 +84,16 @@
     size_t _size_of_bpf_prog_def SECTION("size_of_bpf_prog_def") = sizeof(struct bpf_prog_def); \
     char _license[] SECTION("license") = (NAME)
 
+/* This macro disables loading BTF map debug information on Android <=U *and* all user builds.
+ *
+ * Note: Bpfloader v0.39+ honours 'btf_user_min_bpfloader_ver' on user builds,
+ * and 'btf_min_bpfloader_ver' on non-user builds.
+ * Older BTF capable versions unconditionally honour 'btf_min_bpfloader_ver'
+ */
+#define DISABLE_BTF_ON_USER_BUILDS() \
+    unsigned _btf_min_bpfloader_ver SECTION("btf_min_bpfloader_ver") = 39u; \
+    unsigned _btf_user_min_bpfloader_ver SECTION("btf_user_min_bpfloader_ver") = 0xFFFFFFFFu
+
 /* flag the resulting bpf .o file as critical to system functionality,
  * loading all kernel version appropriate programs in it must succeed
  * for bpfloader success
