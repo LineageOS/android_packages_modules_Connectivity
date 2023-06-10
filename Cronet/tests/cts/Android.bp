@@ -37,6 +37,7 @@ android_library {
         "junit",
         "kotlin-test",
         "mockito-target",
+        "net-tests-utils",
         "truth",
     ],
     libs: [
@@ -53,7 +54,9 @@ android_test {
     defaults: [
         "cts_defaults",
     ],
+    enforce_default_target_sdk_version: true,
     sdk_version: "test_current",
+    min_sdk_version: "30",
     static_libs: ["CtsNetHttpTestsLib"],
     // Tag this as a cts test artifact
     test_suites: [
