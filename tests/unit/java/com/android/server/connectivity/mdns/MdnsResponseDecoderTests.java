@@ -28,6 +28,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 import android.net.Network;
@@ -333,7 +334,7 @@ public class MdnsResponseDecoderTests {
         final Network network = mock(Network.class);
         responses = decoder.augmentResponses(parsedPacket,
                 /* existingResponses= */ Collections.emptyList(),
-                /* interfaceIndex= */ 10, network /* expireOnExit= */);
+                /* interfaceIndex= */ 10, network /* expireOnExit= */).first;
 
         assertEquals(responses.size(), 1);
         assertEquals(responses.valueAt(0).getInterfaceIndex(), 10);
@@ -407,6 +408,31 @@ public class MdnsResponseDecoderTests {
     }
 
     @Test
+    public void testDecodeWithIpv4AddressRemove() throws IOException {
+        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
+                new PacketAndRecordClass(DATAIN_PTR_1,
+                        MdnsPointerRecord.class),
+                new PacketAndRecordClass(DATAIN_SERVICE_1,
+                        MdnsServiceRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV4_1,
+                        MdnsInet4AddressRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV4_2,
+                        MdnsInet4AddressRecord.class)));
+        // Now update the response removing the second v4 address
+        final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
+
+        final byte[] removedAddrResponse = makeResponsePacket(
+                List.of(DATAIN_PTR_1, DATAIN_SERVICE_1, DATAIN_IPV4_1));
+        final ArraySet<MdnsResponse> changes = decode(
+                decoder, removedAddrResponse, List.of(response));
+
+        assertEquals(1, changes.size());
+        assertEquals(1, changes.valueAt(0).getInet4AddressRecords().size());
+        assertEquals(parseNumericAddress("10.1.2.3"),
+                changes.valueAt(0).getInet4AddressRecords().get(0).getInet4Address());
+    }
+
+    @Test
     public void testDecodeWithIpv6AddressChange() throws IOException {
         MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
                 new PacketAndRecordClass(DATAIN_PTR_1,
@@ -424,6 +450,29 @@ public class MdnsResponseDecoderTests {
                 updatedResponses.valueAt(0).getInet6AddressRecord().getInet6Address());
         assertEquals(parseNumericAddress("aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040"),
                 response.getInet6AddressRecord().getInet6Address());
+    }
+
+    @Test
+    public void testDecodeWithIpv6AddressRemoved() throws IOException {
+        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
+                new PacketAndRecordClass(DATAIN_PTR_1,
+                        MdnsPointerRecord.class),
+                new PacketAndRecordClass(DATAIN_SERVICE_1,
+                        MdnsServiceRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV6_1,
+                        MdnsInet6AddressRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV6_2,
+                        MdnsInet6AddressRecord.class)));
+        // Now update the response adding an address
+        final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
+        final byte[] removedAddrResponse = makeResponsePacket(
+                List.of(DATAIN_PTR_1, DATAIN_SERVICE_1, DATAIN_IPV6_1));
+        final ArraySet<MdnsResponse> updatedResponses = decode(
+                decoder, removedAddrResponse, List.of(response));
+        assertEquals(1, updatedResponses.size());
+        assertEquals(1, updatedResponses.valueAt(0).getInet6AddressRecords().size());
+        assertEquals(parseNumericAddress("aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040"),
+                updatedResponses.valueAt(0).getInet6AddressRecords().get(0).getInet6Address());
     }
 
     @Test
@@ -493,11 +542,12 @@ public class MdnsResponseDecoderTests {
                         new PacketAndRecordClass(DATAIN_IPV4_1, MdnsInet4AddressRecord.class),
                         new PacketAndRecordClass(DATAIN_IPV6_1, MdnsInet6AddressRecord.class),
                         new PacketAndRecordClass(DATAIN_PTR_1, MdnsPointerRecord.class),
-                        new PacketAndRecordClass(DATAIN_SERVICE_2, MdnsServiceRecord.class),
+                        new PacketAndRecordClass(DATAIN_SERVICE_1, MdnsServiceRecord.class),
                         new PacketAndRecordClass(DATAIN_TEXT_1, MdnsTextRecord.class));
         // Create a two identical responses.
-        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, recordList);
+        MdnsResponse response = makeMdnsResponse(12L /* time */, DATAIN_SERVICE_NAME_1, recordList);
 
+        doReturn(34L).when(mClock).elapsedRealtime();
         final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
         final byte[] identicalResponse = makeResponsePacket(
                 recordList.stream().map(p -> p.packetData).collect(Collectors.toList()));
@@ -582,6 +632,6 @@ public class MdnsResponseDecoderTests {
 
         return decoder.augmentResponses(parsedPacket,
                 existingResponses,
-                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class));
+                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class)).first;
     }
 }
