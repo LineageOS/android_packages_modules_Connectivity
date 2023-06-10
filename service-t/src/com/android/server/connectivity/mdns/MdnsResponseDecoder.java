@@ -20,7 +20,9 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 import android.os.SystemClock;
+import android.util.ArrayMap;
 import android.util.ArraySet;
+import android.util.Pair;
 
 import com.android.server.connectivity.mdns.util.MdnsLogger;
 
@@ -119,9 +121,14 @@ public class MdnsResponseDecoder {
      * @param interfaceIndex the network interface index (or
      * {@link MdnsSocket#INTERFACE_INDEX_UNSPECIFIED} if not known) at which the packet was received
      * @param network the network at which the packet was received, or null if it is unknown.
-     * @return The set of response instances that were modified or newly added.
+     * @return The pair of 1) set of response instances that were modified or newly added. *not*
+     *                      including those which records were only updated with newer receive
+     *                      timestamps.
+     *                     2) A copy of the original responses with some of them have records
+     *                     update or only contains receive time updated.
      */
-    public ArraySet<MdnsResponse> augmentResponses(@NonNull MdnsPacket mdnsPacket,
+    public Pair<ArraySet<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
+            @NonNull MdnsPacket mdnsPacket,
             @NonNull Collection<MdnsResponse> existingResponses, int interfaceIndex,
             @Nullable Network network) {
         final ArrayList<MdnsRecord> records = new ArrayList<>(
@@ -133,8 +140,11 @@ public class MdnsResponseDecoder {
 
         final ArraySet<MdnsResponse> modified = new ArraySet<>();
         final ArrayList<MdnsResponse> responses = new ArrayList<>(existingResponses.size());
+        final ArrayMap<MdnsResponse, MdnsResponse> augmentedToOriginal = new ArrayMap<>();
         for (MdnsResponse existing : existingResponses) {
-            responses.add(new MdnsResponse(existing));
+            final MdnsResponse copy = new MdnsResponse(existing);
+            responses.add(copy);
+            augmentedToOriginal.put(copy, existing);
         }
         // The response records are structured in a hierarchy, where some records reference
         // others, as follows:
@@ -160,7 +170,7 @@ public class MdnsResponseDecoder {
         // A: host name -> IP address
 
         // Loop 1: find PTR records, which identify distinct service instances.
-        long now = SystemClock.elapsedRealtime();
+        long now = clock.elapsedRealtime();
         for (MdnsRecord record : records) {
             if (record instanceof MdnsPointerRecord) {
                 String[] name = record.getName();
@@ -179,7 +189,6 @@ public class MdnsResponseDecoder {
                                 network);
                         responses.add(response);
                     }
-
                     if (response.addPointerRecord((MdnsPointerRecord) record)) {
                         modified.add(response);
                     }
@@ -257,7 +266,11 @@ public class MdnsResponseDecoder {
                         findResponsesWithHostName(responses, inetRecord.getName());
                 for (MdnsResponse response : matchingResponses) {
                     if (assignInetRecord(response, inetRecord)) {
-                        modified.add(response);
+                        final MdnsResponse originalResponse = augmentedToOriginal.get(response);
+                        if (originalResponse == null
+                                || !originalResponse.hasIdenticalRecord(inetRecord)) {
+                            modified.add(response);
+                        }
                     }
                 }
             } else {
@@ -265,13 +278,27 @@ public class MdnsResponseDecoder {
                         findResponseWithHostName(responses, inetRecord.getName());
                 if (response != null) {
                     if (assignInetRecord(response, inetRecord)) {
-                        modified.add(response);
+                        final MdnsResponse originalResponse = augmentedToOriginal.get(response);
+                        if (originalResponse == null
+                                || !originalResponse.hasIdenticalRecord(inetRecord)) {
+                            modified.add(response);
+                        }
                     }
                 }
             }
         }
 
-        return modified;
+        // Only responses that have new or modified address records were added to the modified set.
+        // Make sure responses that have lost address records are added to the set too.
+        for (int i = 0; i < augmentedToOriginal.size(); i++) {
+            final MdnsResponse augmented = augmentedToOriginal.keyAt(i);
+            final MdnsResponse original = augmentedToOriginal.valueAt(i);
+            if (augmented.getRecords().size() != original.getRecords().size()) {
+                modified.add(augmented);
+            }
+        }
+
+        return Pair.create(modified, responses);
     }
 
     private static boolean assignInetRecord(

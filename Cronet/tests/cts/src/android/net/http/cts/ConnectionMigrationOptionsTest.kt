@@ -19,12 +19,15 @@ package android.net.http.cts
 import android.net.http.ConnectionMigrationOptions
 import android.net.http.ConnectionMigrationOptions.MIGRATION_OPTION_ENABLED
 import android.net.http.ConnectionMigrationOptions.MIGRATION_OPTION_UNSPECIFIED
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import android.os.Build
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.runner.RunWith
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class ConnectionMigrationOptionsTest {
 
     @Test
