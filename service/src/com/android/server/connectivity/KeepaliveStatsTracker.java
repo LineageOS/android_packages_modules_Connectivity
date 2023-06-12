@@ -16,14 +16,24 @@
 
 package com.android.server.connectivity;
 
+import static android.telephony.SubscriptionManager.OnSubscriptionsChangedListener;
+
 import android.annotation.NonNull;
+import android.content.Context;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.net.NetworkSpecifier;
+import android.net.TelephonyNetworkSpecifier;
+import android.net.TransportInfo;
+import android.net.wifi.WifiInfo;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.util.SparseArray;
+import android.util.SparseIntArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.metrics.DailykeepaliveInfoReported;
@@ -31,6 +41,7 @@ import com.android.metrics.DurationForNumOfKeepalive;
 import com.android.metrics.DurationPerNumOfKeepalive;
 import com.android.metrics.KeepaliveLifetimeForCarrier;
 import com.android.metrics.KeepaliveLifetimePerCarrier;
+import com.android.modules.utils.BackgroundThread;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,6 +62,14 @@ public class KeepaliveStatsTracker {
 
     @NonNull private final Handler mConnectivityServiceHandler;
     @NonNull private final Dependencies mDependencies;
+
+    // Mapping of subId to carrierId. Updates are received from OnSubscriptionsChangedListener
+    private final SparseIntArray mCachedCarrierIdPerSubId = new SparseIntArray();
+    // The default subscription id obtained from SubscriptionManager.getDefaultSubscriptionId.
+    // Updates are done from the OnSubscriptionsChangedListener. Note that there is no callback done
+    // to OnSubscriptionsChangedListener when the default sub id changes.
+    // TODO: Register a listener for the default subId when it is possible.
+    private int mCachedDefaultSubscriptionId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
     // Class to store network information, lifetime durations and active state of a keepalive.
     private static final class KeepaliveStats {
@@ -214,16 +233,53 @@ public class KeepaliveStatsTracker {
         }
     }
 
-    public KeepaliveStatsTracker(@NonNull Handler handler) {
-        this(handler, new Dependencies());
+    public KeepaliveStatsTracker(@NonNull Context context, @NonNull Handler handler) {
+        this(context, handler, new Dependencies());
     }
 
     @VisibleForTesting
-    public KeepaliveStatsTracker(@NonNull Handler handler, @NonNull Dependencies dependencies) {
+    public KeepaliveStatsTracker(
+            @NonNull Context context,
+            @NonNull Handler handler,
+            @NonNull Dependencies dependencies) {
+        Objects.requireNonNull(context);
         mDependencies = Objects.requireNonNull(dependencies);
         mConnectivityServiceHandler = Objects.requireNonNull(handler);
 
+        final SubscriptionManager subscriptionManager =
+                Objects.requireNonNull(context.getSystemService(SubscriptionManager.class));
+
         mLastUpdateDurationsTimestamp = mDependencies.getUptimeMillis();
+
+        // The default constructor for OnSubscriptionsChangedListener will always implicitly grab
+        // the looper of the current thread. In the case the current thread does not have a looper,
+        // this will throw. Therefore, post a runnable that creates it there.
+        // When the callback is called on the BackgroundThread, post a message on the CS handler
+        // thread to update the caches, which can only be touched there.
+        BackgroundThread.getHandler().post(() ->
+                subscriptionManager.addOnSubscriptionsChangedListener(
+                        r -> r.run(), new OnSubscriptionsChangedListener() {
+                            @Override
+                            public void onSubscriptionsChanged() {
+                                final List<SubscriptionInfo> activeSubInfoList =
+                                        subscriptionManager.getActiveSubscriptionInfoList();
+                                // A null subInfo list here indicates the current state is unknown
+                                // but not necessarily empty, simply ignore it. Another call to the
+                                // listener will be invoked in the future.
+                                if (activeSubInfoList == null) return;
+                                final int defaultSubId =
+                                        subscriptionManager.getDefaultSubscriptionId();
+                                mConnectivityServiceHandler.post(() -> {
+                                    mCachedCarrierIdPerSubId.clear();
+                                    mCachedDefaultSubscriptionId = defaultSubId;
+
+                                    for (final SubscriptionInfo subInfo : activeSubInfoList) {
+                                        mCachedCarrierIdPerSubId.put(subInfo.getSubscriptionId(),
+                                                subInfo.getCarrierId());
+                                    }
+                                });
+                            }
+                        }));
     }
 
     /** Ensures the list of duration metrics is large enough for number of registered keepalives. */
@@ -279,11 +335,33 @@ public class KeepaliveStatsTracker {
         mLastUpdateDurationsTimestamp = timeNow;
     }
 
-    // TODO(b/273451360): Make use of SubscriptionManager.OnSubscriptionsChangedListener since
-    // TelephonyManager.getSimCarrierId will be a cross-process call.
-    private int getCarrierId() {
-        // No implementation yet.
-        return TelephonyManager.UNKNOWN_CARRIER_ID;
+    // TODO: Move this function to frameworks/libs/net/.../NetworkCapabilitiesUtils.java
+    private static int getSubId(@NonNull NetworkCapabilities nc, int defaultSubId) {
+        if (nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            final NetworkSpecifier networkSpecifier = nc.getNetworkSpecifier();
+            if (networkSpecifier instanceof TelephonyNetworkSpecifier) {
+                return ((TelephonyNetworkSpecifier) networkSpecifier).getSubscriptionId();
+            }
+            // Use the default subscriptionId.
+            return defaultSubId;
+        }
+        if (nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            final TransportInfo info = nc.getTransportInfo();
+            if (info instanceof WifiInfo) {
+                return ((WifiInfo) info).getSubscriptionId();
+            }
+        }
+
+        return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+    }
+
+    private int getCarrierId(@NonNull NetworkCapabilities networkCapabilities) {
+        // Try to get the correct subscription id.
+        final int subId = getSubId(networkCapabilities, mCachedDefaultSubscriptionId);
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            return TelephonyManager.UNKNOWN_CARRIER_ID;
+        }
+        return mCachedCarrierIdPerSubId.get(subId, TelephonyManager.UNKNOWN_CARRIER_ID);
     }
 
     private int getTransportTypes(@NonNull NetworkCapabilities networkCapabilities) {
@@ -313,7 +391,7 @@ public class KeepaliveStatsTracker {
 
         final KeepaliveStats newKeepaliveStats =
                 new KeepaliveStats(
-                        getCarrierId(), getTransportTypes(nc), intervalSeconds, timeNow);
+                        getCarrierId(nc), getTransportTypes(nc), intervalSeconds, timeNow);
 
         mKeepaliveStatsPerId.put(keepaliveId, newKeepaliveStats);
     }
