@@ -28,6 +28,7 @@ import android.annotation.SystemService;
 import android.content.Context;
 import android.nearby.aidl.IOffloadCallback;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
@@ -74,6 +75,7 @@ public class NearbyManager {
     private static final String TAG = "NearbyManager";
 
     /**
+     * TODO(b/286137024): Remove this when CTS R5 is rolled out.
      * Whether allows Fast Pair to scan.
      *
      * (0 = disabled, 1 = enabled)
@@ -418,4 +420,35 @@ public class NearbyManager {
             });
         }
     }
+
+    /**
+     * TODO(b/286137024): Remove this when CTS R5 is rolled out.
+     * Read from {@link Settings} whether Fast Pair scan is enabled.
+     *
+     * @param context the {@link Context} to query the setting
+     * @return whether the Fast Pair is enabled
+     * @hide
+     */
+    public static boolean getFastPairScanEnabled(@NonNull Context context) {
+        final int enabled = Settings.Secure.getInt(
+                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, 0);
+        return enabled != 0;
+    }
+
+    /**
+     * TODO(b/286137024): Remove this when CTS R5 is rolled out.
+     * Write into {@link Settings} whether Fast Pair scan is enabled
+     *
+     * @param context the {@link Context} to set the setting
+     * @param enable whether the Fast Pair scan should be enabled
+     * @hide
+     */
+    @RequiresPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
+    public static void setFastPairScanEnabled(@NonNull Context context, boolean enable) {
+        Settings.Secure.putInt(
+                context.getContentResolver(), FAST_PAIR_SCAN_ENABLED, enable ? 1 : 0);
+        Log.v(TAG, String.format(
+                "successfully %s Fast Pair scan", enable ? "enables" : "disables"));
+    }
+
 }
