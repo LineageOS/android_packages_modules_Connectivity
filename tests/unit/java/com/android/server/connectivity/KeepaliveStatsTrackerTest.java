@@ -16,23 +16,31 @@
 
 package com.android.server.connectivity;
 
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+
 import static com.android.testutils.HandlerUtils.visibleOnHandlerThread;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
 
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.telephony.TelephonyManager;
 
 import androidx.test.filters.SmallTest;
 
 import com.android.metrics.DailykeepaliveInfoReported;
 import com.android.metrics.DurationForNumOfKeepalive;
 import com.android.metrics.DurationPerNumOfKeepalive;
+import com.android.metrics.KeepaliveLifetimeForCarrier;
+import com.android.metrics.KeepaliveLifetimePerCarrier;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -42,16 +50,78 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
 public class KeepaliveStatsTrackerTest {
+    private static final int TEST_SLOT = 1;
+    private static final int TEST_SLOT2 = 2;
+    private static final int TEST_KEEPALIVE_INTERVAL_SEC = 10;
+    private static final int TEST_KEEPALIVE_INTERVAL2_SEC = 20;
+    // Carrier id not yet implemented, assume it returns unknown for now.
+    private static final int TEST_CARRIER_ID = TelephonyManager.UNKNOWN_CARRIER_ID;
+    private static final Network TEST_NETWORK = new Network(123);
+    private static final NetworkCapabilities TEST_NETWORK_CAPABILITIES =
+            new NetworkCapabilities.Builder().addTransportType(TRANSPORT_CELLULAR).build();
+
     private HandlerThread mHandlerThread;
     private Handler mTestHandler;
 
     private KeepaliveStatsTracker mKeepaliveStatsTracker;
 
     @Mock private KeepaliveStatsTracker.Dependencies mDependencies;
+
+    private static final class KeepaliveCarrierStats {
+        public final int carrierId;
+        public final int transportTypes;
+        public final int intervalMs;
+        public final int lifetimeMs;
+        public final int activeLifetimeMs;
+
+        KeepaliveCarrierStats(
+                int carrierId,
+                int transportTypes,
+                int intervalMs,
+                int lifetimeMs,
+                int activeLifetimeMs) {
+            this.carrierId = carrierId;
+            this.transportTypes = transportTypes;
+            this.intervalMs = intervalMs;
+            this.lifetimeMs = lifetimeMs;
+            this.activeLifetimeMs = activeLifetimeMs;
+        }
+
+        // Equals method on only the key, (carrierId, tranportTypes, intervalMs)
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            final KeepaliveCarrierStats that = (KeepaliveCarrierStats) o;
+
+            return carrierId == that.carrierId && transportTypes == that.transportTypes
+                    && intervalMs == that.intervalMs;
+        }
+
+        @Override
+        public int hashCode() {
+            return carrierId + 3 * transportTypes + 5 * intervalMs;
+        }
+    }
+
+    // Use the default test carrier id, transportType and keepalive interval.
+    private KeepaliveCarrierStats getDefaultCarrierStats(int lifetimeMs, int activeLifetimeMs) {
+        return new KeepaliveCarrierStats(
+                TEST_CARRIER_ID,
+                /* transportTypes= */ (1 << TRANSPORT_CELLULAR),
+                TEST_KEEPALIVE_INTERVAL_SEC * 1000,
+                lifetimeMs,
+                activeLifetimeMs);
+    }
 
     @Before
     public void setUp() {
@@ -80,48 +150,64 @@ public class KeepaliveStatsTrackerTest {
         setUptimeMillis(time);
 
         return visibleOnHandlerThread(
-                mTestHandler,
-                () -> {
-                    final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
-                            mKeepaliveStatsTracker.buildKeepaliveMetrics();
-                    mKeepaliveStatsTracker.resetMetrics();
-                    return dailyKeepaliveInfoReported;
-                });
+                mTestHandler, () -> mKeepaliveStatsTracker.buildAndResetMetrics());
     }
 
-    private void onStartKeepalive(long time) {
+    private void onStartKeepalive(long time, int slot) {
+        onStartKeepalive(time, slot, TEST_KEEPALIVE_INTERVAL_SEC);
+    }
+
+    private void onStartKeepalive(long time, int slot, int intervalSeconds) {
         setUptimeMillis(time);
-        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.onStartKeepalive());
+        visibleOnHandlerThread(mTestHandler, () ->
+                mKeepaliveStatsTracker.onStartKeepalive(
+                        TEST_NETWORK,
+                        slot,
+                        TEST_NETWORK_CAPABILITIES,
+                        intervalSeconds));
     }
 
-    private void onPauseKeepalive(long time) {
-        setUptimeMillis(time);
-        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.onPauseKeepalive());
-    }
-
-    private void onResumeKeepalive(long time) {
-        setUptimeMillis(time);
-        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.onResumeKeepalive());
-    }
-
-    private void onStopKeepalive(long time, boolean wasActive) {
+    private void onPauseKeepalive(long time, int slot) {
         setUptimeMillis(time);
         visibleOnHandlerThread(
-                mTestHandler, () -> mKeepaliveStatsTracker.onStopKeepalive(wasActive));
+                mTestHandler, () -> mKeepaliveStatsTracker.onPauseKeepalive(TEST_NETWORK, slot));
+    }
+
+    private void onResumeKeepalive(long time, int slot) {
+        setUptimeMillis(time);
+        visibleOnHandlerThread(
+                mTestHandler, () -> mKeepaliveStatsTracker.onResumeKeepalive(TEST_NETWORK, slot));
+    }
+
+    private void onStopKeepalive(long time, int slot) {
+        setUptimeMillis(time);
+        visibleOnHandlerThread(
+                mTestHandler, () -> mKeepaliveStatsTracker.onStopKeepalive(TEST_NETWORK, slot));
     }
 
     @Test
     public void testEnsureRunningOnHandlerThread() {
         // Not running on handler thread
-        assertThrows(IllegalStateException.class, () -> mKeepaliveStatsTracker.onStartKeepalive());
-        assertThrows(IllegalStateException.class, () -> mKeepaliveStatsTracker.onPauseKeepalive());
-        assertThrows(IllegalStateException.class, () -> mKeepaliveStatsTracker.onResumeKeepalive());
         assertThrows(
-                IllegalStateException.class, () -> mKeepaliveStatsTracker.onStopKeepalive(true));
+                IllegalStateException.class,
+                () -> mKeepaliveStatsTracker.onStartKeepalive(
+                        TEST_NETWORK,
+                        TEST_SLOT,
+                        TEST_NETWORK_CAPABILITIES,
+                        TEST_KEEPALIVE_INTERVAL_SEC));
+        assertThrows(
+                IllegalStateException.class,
+                () -> mKeepaliveStatsTracker.onPauseKeepalive(TEST_NETWORK, TEST_SLOT));
+        assertThrows(
+                IllegalStateException.class,
+                () -> mKeepaliveStatsTracker.onResumeKeepalive(TEST_NETWORK, TEST_SLOT));
+        assertThrows(
+                IllegalStateException.class,
+                () -> mKeepaliveStatsTracker.onStopKeepalive(TEST_NETWORK, TEST_SLOT));
         assertThrows(
                 IllegalStateException.class, () -> mKeepaliveStatsTracker.buildKeepaliveMetrics());
         assertThrows(
-                IllegalStateException.class, () -> mKeepaliveStatsTracker.resetMetrics());
+                IllegalStateException.class, () -> mKeepaliveStatsTracker.buildAndResetMetrics());
     }
 
     /**
@@ -133,45 +219,106 @@ public class KeepaliveStatsTrackerTest {
      * @param expectActiveDurations integer array where the index is the number of concurrent
      *     keepalives and the value is the expected duration of time that the tracker is in a state
      *     with the given number of keepalives active.
-     * @param resultDurationsPerNumOfKeepalive the DurationPerNumOfKeepalive message to assert.
+     * @param actualDurationsPerNumOfKeepalive the DurationPerNumOfKeepalive message to assert.
      */
     private void assertDurationMetrics(
             int[] expectRegisteredDurations,
             int[] expectActiveDurations,
-            DurationPerNumOfKeepalive resultDurationsPerNumOfKeepalive) {
+            DurationPerNumOfKeepalive actualDurationsPerNumOfKeepalive) {
         final int maxNumOfKeepalive = expectRegisteredDurations.length;
         assertEquals(maxNumOfKeepalive, expectActiveDurations.length);
         assertEquals(
                 maxNumOfKeepalive,
-                resultDurationsPerNumOfKeepalive.getDurationForNumOfKeepaliveCount());
+                actualDurationsPerNumOfKeepalive.getDurationForNumOfKeepaliveCount());
         for (int numOfKeepalive = 0; numOfKeepalive < maxNumOfKeepalive; numOfKeepalive++) {
-            final DurationForNumOfKeepalive resultDurations =
-                    resultDurationsPerNumOfKeepalive.getDurationForNumOfKeepalive(numOfKeepalive);
+            final DurationForNumOfKeepalive actualDurations =
+                    actualDurationsPerNumOfKeepalive.getDurationForNumOfKeepalive(numOfKeepalive);
 
-            assertEquals(numOfKeepalive, resultDurations.getNumOfKeepalive());
+            assertEquals(numOfKeepalive, actualDurations.getNumOfKeepalive());
             assertEquals(
                     expectRegisteredDurations[numOfKeepalive],
-                    resultDurations.getKeepaliveRegisteredDurationsMsec());
+                    actualDurations.getKeepaliveRegisteredDurationsMsec());
             assertEquals(
                     expectActiveDurations[numOfKeepalive],
-                    resultDurations.getKeepaliveActiveDurationsMsec());
+                    actualDurations.getKeepaliveActiveDurationsMsec());
+        }
+    }
+
+    /**
+     * Asserts the actual KeepaliveLifetimePerCarrier contains an expected KeepaliveCarrierStats.
+     * This finds and checks only for the (carrierId, transportTypes, intervalMs) of the given
+     * expectKeepaliveCarrierStats and asserts the lifetime metrics.
+     *
+     * @param expectKeepaliveCarrierStats a keepalive lifetime metric that is expected to be in the
+     *     proto.
+     * @param actualKeepaliveLifetimePerCarrier the KeepaliveLifetimePerCarrier message to assert.
+     */
+    private void findAndAssertCarrierLifetimeMetrics(
+            KeepaliveCarrierStats expectKeepaliveCarrierStats,
+            KeepaliveLifetimePerCarrier actualKeepaliveLifetimePerCarrier) {
+        for (KeepaliveLifetimeForCarrier keepaliveLifetimeForCarrier :
+                actualKeepaliveLifetimePerCarrier.getKeepaliveLifetimeForCarrierList()) {
+            if (expectKeepaliveCarrierStats.carrierId == keepaliveLifetimeForCarrier.getCarrierId()
+                    && expectKeepaliveCarrierStats.transportTypes
+                            == keepaliveLifetimeForCarrier.getTransportTypes()
+                    && expectKeepaliveCarrierStats.intervalMs
+                            == keepaliveLifetimeForCarrier.getIntervalsMsec()) {
+                assertEquals(
+                        expectKeepaliveCarrierStats.lifetimeMs,
+                        keepaliveLifetimeForCarrier.getLifetimeMsec());
+                assertEquals(
+                        expectKeepaliveCarrierStats.activeLifetimeMs,
+                        keepaliveLifetimeForCarrier.getActiveLifetimeMsec());
+                return;
+            }
+        }
+        fail("KeepaliveLifetimeForCarrier not found for a given expected KeepaliveCarrierStats");
+    }
+
+    private void assertNoDuplicates(Object[] arr) {
+        final Set<Object> s = new HashSet<Object>(Arrays.asList(arr));
+        assertEquals(arr.length, s.size());
+    }
+
+    /**
+     * Asserts that a KeepaliveLifetimePerCarrier contains all the expected KeepaliveCarrierStats.
+     *
+     * @param expectKeepaliveCarrierStatsArray an array of keepalive lifetime metrics that is
+     *     expected to be in the KeepaliveLifetimePerCarrier.
+     * @param actualKeepaliveLifetimePerCarrier the KeepaliveLifetimePerCarrier message to assert.
+     */
+    private void assertCarrierLifetimeMetrics(
+            KeepaliveCarrierStats[] expectKeepaliveCarrierStatsArray,
+            KeepaliveLifetimePerCarrier actualKeepaliveLifetimePerCarrier) {
+        assertNoDuplicates(expectKeepaliveCarrierStatsArray);
+        assertEquals(
+                expectKeepaliveCarrierStatsArray.length,
+                actualKeepaliveLifetimePerCarrier.getKeepaliveLifetimeForCarrierCount());
+        for (KeepaliveCarrierStats keepaliveCarrierStats : expectKeepaliveCarrierStatsArray) {
+            findAndAssertCarrierLifetimeMetrics(
+                    keepaliveCarrierStats, actualKeepaliveLifetimePerCarrier);
         }
     }
 
     private void assertDailyKeepaliveInfoReported(
             DailykeepaliveInfoReported dailyKeepaliveInfoReported,
             int[] expectRegisteredDurations,
-            int[] expectActiveDurations) {
+            int[] expectActiveDurations,
+            KeepaliveCarrierStats[] expectKeepaliveCarrierStatsArray) {
         // TODO(b/273451360) Assert these values when they are filled.
-        assertFalse(dailyKeepaliveInfoReported.hasKeepaliveLifetimePerCarrier());
         assertFalse(dailyKeepaliveInfoReported.hasKeepaliveRequests());
         assertFalse(dailyKeepaliveInfoReported.hasAutomaticKeepaliveRequests());
         assertFalse(dailyKeepaliveInfoReported.hasDistinctUserCount());
         assertTrue(dailyKeepaliveInfoReported.getUidList().isEmpty());
 
-        final DurationPerNumOfKeepalive resultDurations =
+        final DurationPerNumOfKeepalive actualDurations =
                 dailyKeepaliveInfoReported.getDurationPerNumOfKeepalive();
-        assertDurationMetrics(expectRegisteredDurations, expectActiveDurations, resultDurations);
+        assertDurationMetrics(expectRegisteredDurations, expectActiveDurations, actualDurations);
+
+        final KeepaliveLifetimePerCarrier actualCarrierLifetime =
+                dailyKeepaliveInfoReported.getKeepaliveLifetimePerCarrier();
+
+        assertCarrierLifetimeMetrics(expectKeepaliveCarrierStatsArray, actualCarrierLifetime);
     }
 
     @Test
@@ -188,7 +335,8 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[0]);
     }
 
     /*
@@ -203,7 +351,7 @@ public class KeepaliveStatsTrackerTest {
         final int startTime = 1000;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -215,7 +363,10 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 
     /*
@@ -231,9 +382,9 @@ public class KeepaliveStatsTrackerTest {
         final int pauseTime = 2030;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
-        onPauseKeepalive(pauseTime);
+        onPauseKeepalive(pauseTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -247,7 +398,10 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 
     /*
@@ -264,11 +418,11 @@ public class KeepaliveStatsTrackerTest {
         final int resumeTime = 3450;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
-        onPauseKeepalive(pauseTime);
+        onPauseKeepalive(pauseTime, TEST_SLOT);
 
-        onResumeKeepalive(resumeTime);
+        onResumeKeepalive(resumeTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -285,7 +439,10 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 
     /*
@@ -303,13 +460,13 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 4157;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
-        onPauseKeepalive(pauseTime);
+        onPauseKeepalive(pauseTime, TEST_SLOT);
 
-        onResumeKeepalive(resumeTime);
+        onResumeKeepalive(resumeTime, TEST_SLOT);
 
-        onStopKeepalive(stopTime, /* wasActive= */ true);
+        onStopKeepalive(stopTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -327,7 +484,10 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 
     /*
@@ -344,11 +504,11 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 4157;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
-        onPauseKeepalive(pauseTime);
+        onPauseKeepalive(pauseTime, TEST_SLOT);
 
-        onStopKeepalive(stopTime, /* wasActive= */ false);
+        onStopKeepalive(stopTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -363,7 +523,10 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 
     /*
@@ -381,17 +544,17 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 4000;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
         for (int i = 0; i < pauseResumeTimes.length; i++) {
             if (i % 2 == 0) {
-                onPauseKeepalive(pauseResumeTimes[i]);
+                onPauseKeepalive(pauseResumeTimes[i], TEST_SLOT);
             } else {
-                onResumeKeepalive(pauseResumeTimes[i]);
+                onResumeKeepalive(pauseResumeTimes[i], TEST_SLOT);
             }
         }
 
-        onStopKeepalive(stopTime, /* wasActive= */ true);
+        onStopKeepalive(stopTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -408,7 +571,10 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 
     /*
@@ -431,19 +597,19 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime1 = 4157;
         final int writeTime = 5000;
 
-        onStartKeepalive(startTime1);
+        onStartKeepalive(startTime1, TEST_SLOT);
 
-        onPauseKeepalive(pauseTime1);
+        onPauseKeepalive(pauseTime1, TEST_SLOT);
 
-        onStartKeepalive(startTime2);
+        onStartKeepalive(startTime2, TEST_SLOT2);
 
-        onResumeKeepalive(resumeTime1);
+        onResumeKeepalive(resumeTime1, TEST_SLOT);
 
-        onPauseKeepalive(pauseTime2);
+        onPauseKeepalive(pauseTime2, TEST_SLOT2);
 
-        onResumeKeepalive(resumeTime2);
+        onResumeKeepalive(resumeTime2, TEST_SLOT2);
 
-        onStopKeepalive(stopTime1, /* wasActive= */ true);
+        onStopKeepalive(stopTime1, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -474,10 +640,18 @@ public class KeepaliveStatsTrackerTest {
                     // 2 active keepalives before keepalive2 is paused and before keepalive1 stops.
                     (pauseTime2 - resumeTime1) + (stopTime1 - resumeTime2)
                 };
+
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                // The carrier stats are aggregated here since the keepalives have the same
+                // (carrierId, transportTypes, intervalMs).
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(
+                            expectRegisteredDurations[1] + 2 * expectRegisteredDurations[2],
+                            expectActiveDurations[1] + 2 * expectActiveDurations[2])
+                });
     }
 
     /*
@@ -494,7 +668,7 @@ public class KeepaliveStatsTrackerTest {
         final int stopTime = 7000;
         final int writeTime2 = 10000;
 
-        onStartKeepalive(startTime);
+        onStartKeepalive(startTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildAndResetMetrics(writeTime);
@@ -505,8 +679,12 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported,
                 expectRegisteredDurations,
-                expectActiveDurations);
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
 
+        // Check metrics was reset from above.
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported2 =
                 buildKeepaliveMetrics(writeTime);
 
@@ -514,10 +692,11 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported2,
                 /* expectRegisteredDurations= */ new int[] {0, 0},
-                /* expectActiveDurations= */ new int[] {0, 0});
+                /* expectActiveDurations= */ new int[] {0, 0},
+                new KeepaliveCarrierStats[] {getDefaultCarrierStats(0, 0)});
 
         // Expect that the keepalive is still registered after resetting so it can be stopped.
-        onStopKeepalive(stopTime, /* wasActive= */ true);
+        onStopKeepalive(stopTime, TEST_SLOT);
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported3 =
                 buildKeepaliveMetrics(writeTime2);
@@ -529,6 +708,157 @@ public class KeepaliveStatsTrackerTest {
         assertDailyKeepaliveInfoReported(
                 dailyKeepaliveInfoReported3,
                 expectRegisteredDurations2,
-                expectActiveDurations2);
+                expectActiveDurations2,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations2[1], expectActiveDurations2[1])
+                });
+    }
+
+    /*
+     * Diagram of test (not to scale):
+     * Key: S - Start/Stop, P - Pause, R - Resume, W - Write
+     *
+     * Keepalive1     S1      S1  W+reset         W
+     * Keepalive2         S2      W+reset         W
+     * Timeline    |------------------------------|
+     */
+    @Test
+    public void testResetMetrics_twoKeepalives() {
+        final int startTime1 = 1000;
+        final int startTime2 = 2000;
+        final int stopTime1 = 4157;
+        final int writeTime = 5000;
+        final int writeTime2 = 10000;
+
+        onStartKeepalive(startTime1, TEST_SLOT);
+
+        onStartKeepalive(startTime2, TEST_SLOT2, TEST_KEEPALIVE_INTERVAL2_SEC);
+
+        onStopKeepalive(stopTime1, TEST_SLOT);
+
+        final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
+                buildAndResetMetrics(writeTime);
+
+        final int[] expectRegisteredDurations =
+                new int[] {
+                    startTime1,
+                    // 1 keepalive before keepalive2 starts and after keepalive1 stops.
+                    (startTime2 - startTime1) + (writeTime - stopTime1),
+                    stopTime1 - startTime2
+                };
+        // Since there is no pause, expect the same as registered durations.
+        final int[] expectActiveDurations =
+                new int[] {
+                    startTime1,
+                    (startTime2 - startTime1) + (writeTime - stopTime1),
+                    stopTime1 - startTime2
+                };
+
+        // Lifetime carrier stats are independent of each other since they have different intervals.
+        final KeepaliveCarrierStats expectKeepaliveCarrierStats1 =
+                getDefaultCarrierStats(stopTime1 - startTime1, stopTime1 - startTime1);
+        final KeepaliveCarrierStats expectKeepaliveCarrierStats2 =
+                new KeepaliveCarrierStats(
+                        TEST_CARRIER_ID,
+                        /* transportTypes= */ (1 << TRANSPORT_CELLULAR),
+                        TEST_KEEPALIVE_INTERVAL2_SEC * 1000,
+                        writeTime - startTime2,
+                        writeTime - startTime2);
+
+        assertDailyKeepaliveInfoReported(
+                dailyKeepaliveInfoReported,
+                expectRegisteredDurations,
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    expectKeepaliveCarrierStats1, expectKeepaliveCarrierStats2
+                });
+
+        final DailykeepaliveInfoReported dailyKeepaliveInfoReported2 =
+                buildKeepaliveMetrics(writeTime2);
+
+        // Only 1 keepalive is registered and active since the reset until the writeTime2.
+        final int[] expectRegisteredDurations2 = new int[] {0, writeTime2 - writeTime};
+        final int[] expectActiveDurations2 = new int[] {0, writeTime2 - writeTime};
+
+        // Only the keepalive with interval of intervalSec2 is present.
+        final KeepaliveCarrierStats expectKeepaliveCarrierStats3 =
+                new KeepaliveCarrierStats(
+                        TEST_CARRIER_ID,
+                        /* transportTypes= */ (1 << TRANSPORT_CELLULAR),
+                        TEST_KEEPALIVE_INTERVAL2_SEC * 1000,
+                        writeTime2 - writeTime,
+                        writeTime2 - writeTime);
+
+        assertDailyKeepaliveInfoReported(
+                dailyKeepaliveInfoReported2,
+                expectRegisteredDurations2,
+                expectActiveDurations2,
+                new KeepaliveCarrierStats[] {expectKeepaliveCarrierStats3});
+    }
+
+    @Test
+    public void testReusableSlot_keepaliveNotStopped() {
+        final int startTime1 = 1000;
+        final int startTime2 = 2000;
+        final int writeTime = 5000;
+
+        onStartKeepalive(startTime1, TEST_SLOT);
+
+        // Attempt to use the same (network, slot)
+        assertThrows(IllegalArgumentException.class, () -> onStartKeepalive(startTime2, TEST_SLOT));
+
+        final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
+                buildKeepaliveMetrics(writeTime);
+
+        // Expect the duration to be from startTime1 and not startTime2, it should not start again.
+        final int[] expectRegisteredDurations = new int[] {startTime1, writeTime - startTime1};
+        final int[] expectActiveDurations = new int[] {startTime1, writeTime - startTime1};
+
+        assertDailyKeepaliveInfoReported(
+                dailyKeepaliveInfoReported,
+                expectRegisteredDurations,
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
+    }
+
+    @Test
+    public void testReusableSlot_keepaliveStopped() {
+        final int startTime1 = 1000;
+        final int stopTime = 2000;
+        final int startTime2 = 3000;
+        final int writeTime = 5000;
+
+        onStartKeepalive(startTime1, TEST_SLOT);
+
+        onStopKeepalive(stopTime, TEST_SLOT);
+
+        // Attempt to use the same (network, slot)
+        onStartKeepalive(startTime2, TEST_SLOT);
+
+        final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
+                buildKeepaliveMetrics(writeTime);
+
+        // Expect the durations to be an aggregate of both periods.
+        // i.e. onStartKeepalive works on the same (network, slot) if it has been stopped.
+        final int[] expectRegisteredDurations =
+                new int[] {
+                    startTime1 + (startTime2 - stopTime),
+                    (stopTime - startTime1) + (writeTime - startTime2)
+                };
+        final int[] expectActiveDurations =
+                new int[] {
+                    startTime1 + (startTime2 - stopTime),
+                    (stopTime - startTime1) + (writeTime - startTime2)
+                };
+
+        assertDailyKeepaliveInfoReported(
+                dailyKeepaliveInfoReported,
+                expectRegisteredDurations,
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
+                });
     }
 }
