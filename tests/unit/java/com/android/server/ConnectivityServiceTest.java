@@ -2943,22 +2943,24 @@ public class ConnectivityServiceTest {
         if (expectLingering) {
             generalCb.expectLosing(net1);
         }
-        generalCb.expectCaps(net2, c -> c.hasCapability(NET_CAPABILITY_VALIDATED));
-        defaultCb.expectAvailableDoubleValidatedCallbacks(net2);
 
         // Make sure cell 1 is unwanted immediately if the radio can't time share, but only
         // after some delay if it can.
         if (expectLingering) {
+            generalCb.expectCaps(net2, c -> c.hasCapability(NET_CAPABILITY_VALIDATED));
+            defaultCb.expectAvailableDoubleValidatedCallbacks(net2);
             net1.assertNotDisconnected(TEST_CALLBACK_TIMEOUT_MS); // always incurs the timeout
             generalCb.assertNoCallback();
             // assertNotDisconnected waited for TEST_CALLBACK_TIMEOUT_MS, so waiting for the
             // linger period gives TEST_CALLBACK_TIMEOUT_MS time for the event to process.
             net1.expectDisconnected(UNREASONABLY_LONG_ALARM_WAIT_MS);
+            generalCb.expect(LOST, net1);
         } else {
             net1.expectDisconnected(TEST_CALLBACK_TIMEOUT_MS);
+            generalCb.expect(LOST, net1);
+            generalCb.expectCaps(net2, c -> c.hasCapability(NET_CAPABILITY_VALIDATED));
+            defaultCb.expectAvailableDoubleValidatedCallbacks(net2);
         }
-        net1.disconnect();
-        generalCb.expect(LOST, net1);
 
         // Remove primary from net 2
         net2.setScore(new NetworkScore.Builder().build());
