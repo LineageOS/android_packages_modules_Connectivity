@@ -55,6 +55,23 @@ inline int createMap(bpf_map_type map_type, uint32_t key_size, uint32_t value_si
                                });
 }
 
+// Note:
+//   'map_type' must be one of BPF_MAP_TYPE_{ARRAY,HASH}_OF_MAPS
+//   'value_size' must be sizeof(u32), ie. 4
+//   'inner_map_fd' is basically a template specifying {map_type, key_size, value_size, max_entries, map_flags}
+//   of the inner map type (and possibly only key_size/value_size actually matter?).
+inline int createOuterMap(bpf_map_type map_type, uint32_t key_size, uint32_t value_size,
+                          uint32_t max_entries, uint32_t map_flags, const BPF_FD_TYPE inner_map_fd) {
+    return bpf(BPF_MAP_CREATE, {
+                                       .map_type = map_type,
+                                       .key_size = key_size,
+                                       .value_size = value_size,
+                                       .max_entries = max_entries,
+                                       .map_flags = map_flags,
+                                       .inner_map_fd = BPF_FD_TO_U32(inner_map_fd),
+                               });
+}
+
 inline int writeToMapEntry(const BPF_FD_TYPE map_fd, const void* key, const void* value,
                            uint64_t flags) {
     return bpf(BPF_MAP_UPDATE_ELEM, {
