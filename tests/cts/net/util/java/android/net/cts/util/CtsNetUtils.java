@@ -86,7 +86,7 @@ public final class CtsNetUtils {
     private static final String FEATURE_IPSEC_TUNNEL_MIGRATION =
             "android.software.ipsec_tunnel_migration";
 
-    private static final int SOCKET_TIMEOUT_MS = 2000;
+    private static final int SOCKET_TIMEOUT_MS = 10_000;
     private static final int PRIVATE_DNS_PROBE_MS = 1_000;
 
     private static final int PRIVATE_DNS_SETTING_TIMEOUT_MS = 10_000;
