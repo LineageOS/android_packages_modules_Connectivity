@@ -27,12 +27,15 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.TelephonyNetworkSpecifier;
@@ -108,6 +111,18 @@ public class KeepaliveStatsTrackerTest {
     @Mock private Context mContext;
     @Mock private KeepaliveStatsTracker.Dependencies mDependencies;
     @Mock private SubscriptionManager mSubscriptionManager;
+
+    private void triggerBroadcastDefaultSubId(int subId) {
+        final ArgumentCaptor<BroadcastReceiver> receiverCaptor =
+                ArgumentCaptor.forClass(BroadcastReceiver.class);
+        verify(mContext).registerReceiver(receiverCaptor.capture(), /* filter= */ any(),
+                /* broadcastPermission= */ any(), eq(mTestHandler));
+        final Intent intent =
+                new Intent(TelephonyManager.ACTION_SUBSCRIPTION_CARRIER_IDENTITY_CHANGED);
+        intent.putExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, subId);
+
+        receiverCaptor.getValue().onReceive(mContext, intent);
+    }
 
     private OnSubscriptionsChangedListener getOnSubscriptionsChangedListener() {
         final ArgumentCaptor<OnSubscriptionsChangedListener> listenerCaptor =
@@ -1126,6 +1141,55 @@ public class KeepaliveStatsTrackerTest {
                     getDefaultCarrierStats(
                             writeTime * 3 - startTime1 - startTime2 - startTime3,
                             writeTime * 3 - startTime1 - startTime2 - startTime3)
+                });
+    }
+
+    @Test
+    public void testUpdateDefaultSubId() {
+        final int startTime1 = 1000;
+        final int startTime2 = 3000;
+        final int writeTime = 5000;
+
+        // No TelephonyNetworkSpecifier set with subId to force the use of default subId.
+        final NetworkCapabilities nc =
+                new NetworkCapabilities.Builder().addTransportType(TRANSPORT_CELLULAR).build();
+        onStartKeepalive(startTime1, TEST_SLOT, nc);
+        // Update default subId
+        triggerBroadcastDefaultSubId(TEST_SUB_ID_1);
+        onStartKeepalive(startTime2, TEST_SLOT2, nc);
+
+        final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
+                buildKeepaliveMetrics(writeTime);
+
+        final int[] expectRegisteredDurations =
+                new int[] {startTime1, startTime2 - startTime1, writeTime - startTime2};
+        final int[] expectActiveDurations =
+                new int[] {startTime1, startTime2 - startTime1, writeTime - startTime2};
+        // Expect the carrier id of the first keepalive to be unknown
+        final KeepaliveCarrierStats expectKeepaliveCarrierStats1 =
+                new KeepaliveCarrierStats(
+                        TelephonyManager.UNKNOWN_CARRIER_ID,
+                        /* transportTypes= */ (1 << TRANSPORT_CELLULAR),
+                        TEST_KEEPALIVE_INTERVAL_SEC * 1000,
+                        writeTime - startTime1,
+                        writeTime - startTime1);
+        // Expect the carrier id of the second keepalive to be TEST_CARRIER_ID_1, from TEST_SUB_ID_1
+        final KeepaliveCarrierStats expectKeepaliveCarrierStats2 =
+                new KeepaliveCarrierStats(
+                        TEST_CARRIER_ID_1,
+                        /* transportTypes= */ (1 << TRANSPORT_CELLULAR),
+                        TEST_KEEPALIVE_INTERVAL_SEC * 1000,
+                        writeTime - startTime2,
+                        writeTime - startTime2);
+        assertDailyKeepaliveInfoReported(
+                dailyKeepaliveInfoReported,
+                /* expectRequestsCount= */ 2,
+                /* expectAutoRequestsCount= */ 2,
+                /* expectAppUids= */ new int[] {TEST_UID},
+                expectRegisteredDurations,
+                expectActiveDurations,
+                new KeepaliveCarrierStats[] {
+                    expectKeepaliveCarrierStats1, expectKeepaliveCarrierStats2
                 });
     }
 }
