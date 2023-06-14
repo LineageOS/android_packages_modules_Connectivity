@@ -46,6 +46,8 @@ class NattKeepalivePacketDataTest {
     private val TEST_SRC_ADDRV4 = "198.168.0.2".address()
     private val TEST_DST_ADDRV4 = "198.168.0.1".address()
     private val TEST_ADDRV6 = "2001:db8::1".address()
+    private val TEST_ADDRV4MAPPEDV6 = "::ffff:1.2.3.4".address()
+    private val TEST_ADDRV4 = "1.2.3.4".address()
 
     private fun String.address() = InetAddresses.parseNumericAddress(this)
     private fun nattKeepalivePacket(
@@ -81,6 +83,28 @@ class NattKeepalivePacketDataTest {
                 NattKeepalivePacketData(TEST_SRC_ADDRV4, TEST_PORT, TEST_DST_ADDRV4, TEST_PORT,
                     byteArrayOf(12, 31, 22, 44)))
         }
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    fun testConstructor_afterR() {
+        // v4 mapped v6 will be translated to a v4 address.
+        assertFailsWith<InvalidPacketException> {
+            nattKeepalivePacket(srcAddress = TEST_ADDRV6, dstAddress = TEST_ADDRV4MAPPEDV6)
+        }
+        assertFailsWith<InvalidPacketException> {
+            nattKeepalivePacket(srcAddress = TEST_ADDRV4MAPPEDV6, dstAddress = TEST_ADDRV6)
+        }
+
+        // Both src and dst address will be v4 after translation, so it won't cause exception.
+        val packet1 = nattKeepalivePacket(
+            dstAddress = TEST_ADDRV4MAPPEDV6, srcAddress = TEST_ADDRV4MAPPEDV6)
+        assertEquals(TEST_ADDRV4, packet1.srcAddress)
+        assertEquals(TEST_ADDRV4, packet1.dstAddress)
+
+        // Packet with v6 src and v6 dst address is valid.
+        val packet2 = nattKeepalivePacket(srcAddress = TEST_ADDRV6, dstAddress = TEST_ADDRV6)
+        assertEquals(TEST_ADDRV6, packet2.srcAddress)
+        assertEquals(TEST_ADDRV6, packet2.dstAddress)
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
