@@ -3151,7 +3151,8 @@ public class ConnectivityManagerTest {
     }
 
     @AppModeFull(reason = "Need WiFi support to test the default active network")
-    @Test
+    // NetworkActivityTracker is not mainlined before S.
+    @Test @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
     public void testDefaultNetworkActiveListener() throws Exception {
         final boolean supportWifi = mPackageManager.hasSystemFeature(FEATURE_WIFI);
         final boolean supportTelephony = mPackageManager.hasSystemFeature(FEATURE_TELEPHONY);
