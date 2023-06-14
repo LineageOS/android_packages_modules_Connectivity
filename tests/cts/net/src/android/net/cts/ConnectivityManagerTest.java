@@ -3235,7 +3235,8 @@ public class ConnectivityManagerTest {
             newMobileDataPreferredUids.add(uid);
             ConnectivitySettingsManager.setMobileDataPreferredUids(
                     mContext, newMobileDataPreferredUids);
-            waitForAvailable(defaultTrackingCb, cellNetwork);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> cellNetwork.equals(entry.getNetwork()));
             // No change for system default network. Expect no callback except CapabilitiesChanged
             // or LinkPropertiesChanged which may be triggered randomly from wifi network.
             assertNoCallbackExceptCapOrLpChange(systemDefaultCb);
@@ -3247,7 +3248,8 @@ public class ConnectivityManagerTest {
             newMobileDataPreferredUids.remove(uid);
             ConnectivitySettingsManager.setMobileDataPreferredUids(
                     mContext, newMobileDataPreferredUids);
-            waitForAvailable(defaultTrackingCb, wifiNetwork);
+            defaultTrackingCb.eventuallyExpect(CallbackEntry.AVAILABLE, NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> wifiNetwork.equals(entry.getNetwork()));
             // No change for system default network. Expect no callback except CapabilitiesChanged
             // or LinkPropertiesChanged which may be triggered randomly from wifi network.
             assertNoCallbackExceptCapOrLpChange(systemDefaultCb);
