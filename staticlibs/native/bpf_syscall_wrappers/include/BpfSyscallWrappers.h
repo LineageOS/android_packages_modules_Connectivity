@@ -28,10 +28,12 @@
   #define BPF_FD_TO_U32(x) static_cast<__u32>((x).get())
 #endif
 
-#define ptr_to_u64(x) ((uint64_t)(uintptr_t)(x))
-
 namespace android {
 namespace bpf {
+
+inline uint64_t ptr_to_u64(const void * const x) {
+    return (uint64_t)(uintptr_t)x;
+}
 
 /* Note: bpf_attr is a union which might have a much larger size then the anonymous struct portion
  * of it that we are using.  The kernel's bpf() system call will perform a strict check to ensure
@@ -199,7 +201,6 @@ DEFINE_BPF_GET_FD_INFO(MapFlags, map_flags)      // int bpfGetFdMapFlags(const B
 }  // namespace bpf
 }  // namespace android
 
-#undef ptr_to_u64
 #undef BPF_FD_TO_U32
 #undef BPF_FD_TYPE
 #undef BPF_FD_JUST_USE_INT
