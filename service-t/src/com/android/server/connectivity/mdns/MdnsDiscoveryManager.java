@@ -238,6 +238,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
         }
         if (perNetworkServiceTypeClients.isEmpty()) {
             // No discovery request. Stops the socket client.
+            sharedLog.i("All service type listeners unregistered; stopping discovery");
             socketClient.stopDiscovery();
         }
     }
