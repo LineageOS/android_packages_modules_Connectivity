@@ -727,6 +727,7 @@ public class KeepaliveTracker {
             srcAddress = InetAddresses.parseNumericAddress(srcAddrString);
             dstAddress = InetAddresses.parseNumericAddress(dstAddrString);
         } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Fail to construct address", e);
             notifyErrorCallback(cb, ERROR_INVALID_IP_ADDRESS);
             return null;
         }
@@ -736,6 +737,7 @@ public class KeepaliveTracker {
             packet = NattKeepalivePacketData.nattKeepalivePacket(
                     srcAddress, srcPort, dstAddress, NATT_PORT);
         } catch (InvalidPacketException e) {
+            Log.e(TAG, "Fail to construct keepalive packet", e);
             notifyErrorCallback(cb, e.getError());
             return null;
         }
