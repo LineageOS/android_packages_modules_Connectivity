@@ -87,9 +87,6 @@ cc_binary {
         "cert-*",
         "android-*",
     ],
-    sanitize: {
-        memtag_heap: true,
-    },
 
     apex_available: [
         "com.android.tethering",
