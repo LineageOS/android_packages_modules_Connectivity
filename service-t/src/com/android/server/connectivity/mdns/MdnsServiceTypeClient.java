@@ -332,7 +332,6 @@ public class MdnsServiceTypeClient {
 
     private void onResponseModified(@NonNull MdnsResponse response) {
         final String serviceInstanceName = response.getServiceInstanceName();
-        sharedLog.i("Handling response from service: " + serviceInstanceName);
         final MdnsResponse currentResponse =
                 instanceNameToResponse.get(serviceInstanceName);
 
