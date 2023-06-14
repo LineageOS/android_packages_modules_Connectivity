@@ -42,6 +42,9 @@ public class ExecutorProvider {
     /** Shuts down all the created {@link ScheduledExecutorService} instances. */
     public void shutdownAll() {
         for (ScheduledExecutorService executor : serviceTypeClientSchedulerExecutors) {
+            if (executor.isShutdown()) {
+                continue;
+            }
             executor.shutdownNow();
         }
     }
