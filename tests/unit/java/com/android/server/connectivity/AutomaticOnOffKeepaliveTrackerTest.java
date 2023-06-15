@@ -714,8 +714,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         verify(testInfo1.socketKeepaliveCallback, never()).onStopped();
         verify(testInfo2.socketKeepaliveCallback, never()).onStopped();
-        // TODO: should call onError with ERROR_INVALID_NETWORK
-        verify(testInfo1.socketKeepaliveCallback, never()).onError(anyInt());
+        verify(testInfo1.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_INVALID_NETWORK);
         verify(testInfo2.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_INVALID_NETWORK);
 
         verifyNoMoreInteractions(ignoreStubs(testInfo1.socketKeepaliveCallback));
