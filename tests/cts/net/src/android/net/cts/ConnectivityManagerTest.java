@@ -3410,6 +3410,7 @@ public class ConnectivityManagerTest {
 
     private void checkFirewallBlocking(final DatagramSocket srcSock, final DatagramSocket dstSock,
             final boolean expectBlock, final int chain) throws Exception {
+        final int uid = Process.myUid();
         final Random random = new Random();
         final byte[] sendData = new byte[100];
         random.nextBytes(sendData);
@@ -3425,7 +3426,8 @@ public class ConnectivityManagerTest {
             fail("Expect not to be blocked by firewall but sending packet was blocked:"
                     + " chain=" + chain
                     + " chainEnabled=" + mCm.getFirewallChainEnabled(chain)
-                    + " uidFirewallRule=" + mCm.getUidFirewallRule(chain, Process.myUid()));
+                    + " uid=" + uid
+                    + " uidFirewallRule=" + mCm.getUidFirewallRule(chain, uid));
         }
 
         dstSock.receive(pkt);
@@ -3435,7 +3437,8 @@ public class ConnectivityManagerTest {
             fail("Expect to be blocked by firewall but sending packet was not blocked:"
                     + " chain=" + chain
                     + " chainEnabled=" + mCm.getFirewallChainEnabled(chain)
-                    + " uidFirewallRule=" + mCm.getUidFirewallRule(chain, Process.myUid()));
+                    + " uid=" + uid
+                    + " uidFirewallRule=" + mCm.getUidFirewallRule(chain, uid));
         }
     }
 
