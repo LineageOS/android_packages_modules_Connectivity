@@ -157,6 +157,7 @@ public class MdnsSocketProviderTest {
                 TETHERED_IFACE_NAME);
         doReturn(789).when(mDeps).getNetworkInterfaceIndexByName(
                 WIFI_P2P_IFACE_NAME);
+        doReturn(TETHERED_IFACE_IDX).when(mDeps).getInterfaceIndex(any());
         final HandlerThread thread = new HandlerThread("MdnsSocketProviderTest");
         thread.start();
         mHandler = new Handler(thread.getLooper());
@@ -227,30 +228,30 @@ public class MdnsSocketProviderTest {
 
     private class TestSocketCallback implements MdnsSocketProvider.SocketCallback {
         private class SocketEvent {
-            public final Network mNetwork;
+            public final SocketKey mSocketKey;
             public final List<LinkAddress> mAddresses;
 
-            SocketEvent(Network network, List<LinkAddress> addresses) {
-                mNetwork = network;
+            SocketEvent(SocketKey socketKey, List<LinkAddress> addresses) {
+                mSocketKey = socketKey;
                 mAddresses = Collections.unmodifiableList(addresses);
             }
         }
 
         private class SocketCreatedEvent extends SocketEvent {
-            SocketCreatedEvent(Network nw, List<LinkAddress> addresses) {
-                super(nw, addresses);
+            SocketCreatedEvent(SocketKey socketKey, List<LinkAddress> addresses) {
+                super(socketKey, addresses);
             }
         }
 
         private class InterfaceDestroyedEvent extends SocketEvent {
-            InterfaceDestroyedEvent(Network nw, List<LinkAddress> addresses) {
-                super(nw, addresses);
+            InterfaceDestroyedEvent(SocketKey socketKey, List<LinkAddress> addresses) {
+                super(socketKey, addresses);
             }
         }
 
         private class AddressesChangedEvent extends SocketEvent {
-            AddressesChangedEvent(Network nw, List<LinkAddress> addresses) {
-                super(nw, addresses);
+            AddressesChangedEvent(SocketKey socketKey, List<LinkAddress> addresses) {
+                super(socketKey, addresses);
             }
         }
 
@@ -258,27 +259,27 @@ public class MdnsSocketProviderTest {
                 new ArrayTrackRecord<SocketEvent>().newReadHead();
 
         @Override
-        public void onSocketCreated(Network network, MdnsInterfaceSocket socket,
+        public void onSocketCreated(SocketKey socketKey, MdnsInterfaceSocket socket,
                 List<LinkAddress> addresses) {
-            mHistory.add(new SocketCreatedEvent(network, addresses));
+            mHistory.add(new SocketCreatedEvent(socketKey, addresses));
         }
 
         @Override
-        public void onInterfaceDestroyed(Network network, MdnsInterfaceSocket socket) {
-            mHistory.add(new InterfaceDestroyedEvent(network, List.of()));
+        public void onInterfaceDestroyed(SocketKey socketKey, MdnsInterfaceSocket socket) {
+            mHistory.add(new InterfaceDestroyedEvent(socketKey, List.of()));
         }
 
         @Override
-        public void onAddressesChanged(Network network, MdnsInterfaceSocket socket,
+        public void onAddressesChanged(SocketKey socketKey, MdnsInterfaceSocket socket,
                 List<LinkAddress> addresses) {
-            mHistory.add(new AddressesChangedEvent(network, addresses));
+            mHistory.add(new AddressesChangedEvent(socketKey, addresses));
         }
 
         public void expectedSocketCreatedForNetwork(Network network, List<LinkAddress> addresses) {
             final SocketEvent event = mHistory.poll(0L /* timeoutMs */, c -> true);
             assertNotNull(event);
             assertTrue(event instanceof SocketCreatedEvent);
-            assertEquals(network, event.mNetwork);
+            assertEquals(network, event.mSocketKey.getNetwork());
             assertEquals(addresses, event.mAddresses);
         }
 
@@ -286,7 +287,7 @@ public class MdnsSocketProviderTest {
             final SocketEvent event = mHistory.poll(0L /* timeoutMs */, c -> true);
             assertNotNull(event);
             assertTrue(event instanceof InterfaceDestroyedEvent);
-            assertEquals(network, event.mNetwork);
+            assertEquals(network, event.mSocketKey.getNetwork());
         }
 
         public void expectedAddressesChangedForNetwork(Network network,
@@ -294,7 +295,7 @@ public class MdnsSocketProviderTest {
             final SocketEvent event = mHistory.poll(0L /* timeoutMs */, c -> true);
             assertNotNull(event);
             assertTrue(event instanceof AddressesChangedEvent);
-            assertEquals(network, event.mNetwork);
+            assertEquals(network, event.mSocketKey.getNetwork());
             assertEquals(event.mAddresses, addresses);
         }
 
