@@ -22,6 +22,7 @@ import android.net.NattSocketKeepalive.NATT_PORT
 import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.assertEqualBothWays
@@ -85,7 +86,7 @@ class NattKeepalivePacketDataTest {
         }
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) @ConnectivityModuleTest
     fun testConstructor_afterR() {
         // v4 mapped v6 will be translated to a v4 address.
         assertFailsWith<InvalidPacketException> {
