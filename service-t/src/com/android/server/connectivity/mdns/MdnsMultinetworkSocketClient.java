@@ -64,7 +64,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         @NonNull
         private final SocketCreationCallback mSocketCreationCallback;
         @NonNull
-        private final ArrayMap<MdnsInterfaceSocket, Network> mActiveNetworkSockets =
+        private final ArrayMap<MdnsInterfaceSocket, SocketKey> mActiveNetworkSockets =
                 new ArrayMap<>();
 
         InterfaceSocketCallback(SocketCreationCallback socketCreationCallback) {
@@ -72,32 +72,32 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         }
 
         @Override
-        public void onSocketCreated(@Nullable Network network,
+        public void onSocketCreated(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> addresses) {
             // The socket may be already created by other request before, try to get the stored
             // ReadPacketHandler.
             ReadPacketHandler handler = mSocketPacketHandlers.get(socket);
             if (handler == null) {
                 // First request to create this socket. Initial a ReadPacketHandler for this socket.
-                handler = new ReadPacketHandler(network, socket.getInterface().getIndex());
+                handler = new ReadPacketHandler(socketKey);
                 mSocketPacketHandlers.put(socket, handler);
             }
             socket.addPacketHandler(handler);
-            mActiveNetworkSockets.put(socket, network);
-            mSocketCreationCallback.onSocketCreated(network);
+            mActiveNetworkSockets.put(socket, socketKey);
+            mSocketCreationCallback.onSocketCreated(socketKey.getNetwork());
         }
 
         @Override
-        public void onInterfaceDestroyed(@Nullable Network network,
+        public void onInterfaceDestroyed(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket) {
             notifySocketDestroyed(socket);
             maybeCleanupPacketHandler(socket);
         }
 
         private void notifySocketDestroyed(@NonNull MdnsInterfaceSocket socket) {
-            final Network network = mActiveNetworkSockets.remove(socket);
-            if (!isAnySocketActive(network)) {
-                mSocketCreationCallback.onAllSocketsDestroyed(network);
+            final SocketKey socketKey = mActiveNetworkSockets.remove(socket);
+            if (!isAnySocketActive(socketKey)) {
+                mSocketCreationCallback.onAllSocketsDestroyed(socketKey.getNetwork());
             }
         }
 
@@ -121,18 +121,18 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         return false;
     }
 
-    private boolean isAnySocketActive(@Nullable Network network) {
+    private boolean isAnySocketActive(@NonNull SocketKey socketKey) {
         for (int i = 0; i < mRequestedNetworks.size(); i++) {
             final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
-            if (isc.mActiveNetworkSockets.containsValue(network)) {
+            if (isc.mActiveNetworkSockets.containsValue(socketKey)) {
                 return true;
             }
         }
         return false;
     }
 
-    private ArrayMap<MdnsInterfaceSocket, Network> getActiveSockets() {
-        final ArrayMap<MdnsInterfaceSocket, Network> sockets = new ArrayMap<>();
+    private ArrayMap<MdnsInterfaceSocket, SocketKey> getActiveSockets() {
+        final ArrayMap<MdnsInterfaceSocket, SocketKey> sockets = new ArrayMap<>();
         for (int i = 0; i < mRequestedNetworks.size(); i++) {
             final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
             sockets.putAll(isc.mActiveNetworkSockets);
@@ -146,17 +146,15 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     }
 
     private class ReadPacketHandler implements MulticastPacketReader.PacketHandler {
-        private final Network mNetwork;
-        private final int mInterfaceIndex;
+        @NonNull private final SocketKey mSocketKey;
 
-        ReadPacketHandler(@NonNull Network network, int interfaceIndex) {
-            mNetwork = network;
-            mInterfaceIndex = interfaceIndex;
+        ReadPacketHandler(@NonNull SocketKey socketKey) {
+            mSocketKey = socketKey;
         }
 
         @Override
         public void handlePacket(byte[] recvbuf, int length, InetSocketAddress src) {
-            processResponsePacket(recvbuf, length, mInterfaceIndex, mNetwork);
+            processResponsePacket(recvbuf, length, mSocketKey);
         }
     }
 
@@ -220,10 +218,10 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
                 instanceof Inet6Address;
         final boolean isIpv4 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
                 instanceof Inet4Address;
-        final ArrayMap<MdnsInterfaceSocket, Network> activeSockets = getActiveSockets();
+        final ArrayMap<MdnsInterfaceSocket, SocketKey> activeSockets = getActiveSockets();
         for (int i = 0; i < activeSockets.size(); i++) {
             final MdnsInterfaceSocket socket = activeSockets.keyAt(i);
-            final Network network = activeSockets.valueAt(i);
+            final Network network = activeSockets.valueAt(i).getNetwork();
             // Check ip capability and network before sending packet
             if (((isIpv6 && socket.hasJoinedIpv6()) || (isIpv4 && socket.hasJoinedIpv4()))
                     // Contrary to MdnsUtils.isNetworkMatched, only send packets targeting
@@ -239,8 +237,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         }
     }
 
-    private void processResponsePacket(byte[] recvbuf, int length, int interfaceIndex,
-            @NonNull Network network) {
+    private void processResponsePacket(byte[] recvbuf, int length, @NonNull SocketKey socketKey) {
         int packetNumber = ++mReceivedPacketNumber;
 
         final MdnsPacket response;
@@ -250,14 +247,16 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             if (e.code != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
                 Log.e(TAG, e.getMessage(), e);
                 if (mCallback != null) {
-                    mCallback.onFailedToParseMdnsResponse(packetNumber, e.code, network);
+                    mCallback.onFailedToParseMdnsResponse(
+                            packetNumber, e.code, socketKey.getNetwork());
                 }
             }
             return;
         }
 
         if (mCallback != null) {
-            mCallback.onResponseReceived(response, interfaceIndex, network);
+            mCallback.onResponseReceived(
+                    response, socketKey.getInterfaceIndex(), socketKey.getNetwork());
         }
     }
 
