@@ -74,7 +74,7 @@ public final class NattKeepalivePacketData extends KeepalivePacketData implement
         if (srcAddr instanceof Inet4Address && dstAddr instanceof Inet4Address) {
             return nattKeepalivePacketv4(
                     (Inet4Address) srcAddr, srcPort, (Inet4Address) dstAddr, dstPort);
-        } else if (srcAddr instanceof Inet6Address && dstAddress instanceof Inet6Address) {
+        } else if (srcAddr instanceof Inet6Address && dstAddr instanceof Inet6Address) {
             return nattKeepalivePacketv6(
                     (Inet6Address) srcAddr, srcPort, (Inet6Address) dstAddr, dstPort);
         } else {
