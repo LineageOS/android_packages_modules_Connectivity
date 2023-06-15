@@ -25,6 +25,7 @@ import static com.android.testutils.HandlerUtils.visibleOnHandlerThread;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -491,8 +492,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         final TestKeepaliveInfo testInfo =
                 doStartNattKeepalive(TEST_KEEPALIVE_INVALID_INTERVAL_SEC);
 
-        // TODO: Should be null, no keepalive should be stored.
-        assertNotNull(getAutoKiForBinder(testInfo.binder));
+        assertNull(getAutoKiForBinder(testInfo.binder));
 
         verify(testInfo.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_INVALID_INTERVAL);
         verifyNoMoreInteractions(ignoreStubs(testInfo.socketKeepaliveCallback));
@@ -510,8 +510,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         checkAndProcessKeepaliveStop();
 
-        // TODO: Should be null, should cleanup on starting failure.
-        assertNotNull(getAutoKiForBinder(testInfo.binder));
+        assertNull(getAutoKiForBinder(testInfo.binder));
 
         verify(testInfo.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_HARDWARE_ERROR);
         verifyNoMoreInteractions(ignoreStubs(testInfo.socketKeepaliveCallback));
@@ -534,8 +533,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         checkAndProcessKeepaliveStop();
 
-        // TODO: Should be null, keepalives that are no longer valid should be cleaned up.
-        assertNotNull(getAutoKiForBinder(testInfo.binder));
+        assertNull(getAutoKiForBinder(testInfo.binder));
 
         verify(testInfo.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_INVALID_IP_ADDRESS);
         verifyNoMoreInteractions(ignoreStubs(testInfo.socketKeepaliveCallback));
