@@ -56,7 +56,8 @@ private const val TIMEOUT_MS = 10_000L
 private val TEST_ADDR = parseNumericAddress("2001:db8::123")
 private val TEST_LINKADDR = LinkAddress(TEST_ADDR, 64 /* prefixLength */)
 private val TEST_NETWORK_1 = mock(Network::class.java)
-private val TEST_NETWORK_2 = mock(Network::class.java)
+private val TEST_SOCKETKEY_1 = mock(SocketKey::class.java)
+private val TEST_SOCKETKEY_2 = mock(SocketKey::class.java)
 private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 private const val TEST_SUBTYPE = "_subtype"
 
@@ -145,7 +146,7 @@ class MdnsAdvertiserTest {
         verify(socketProvider).requestSocket(eq(TEST_NETWORK_1), socketCbCaptor.capture())
 
         val socketCb = socketCbCaptor.value
-        postSync { socketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR)) }
+        postSync { socketCb.onSocketCreated(TEST_SOCKETKEY_1, mockSocket1, listOf(TEST_LINKADDR)) }
 
         val intAdvCbCaptor = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         verify(mockDeps).makeAdvertiser(
@@ -163,7 +164,7 @@ class MdnsAdvertiserTest {
                 mockInterfaceAdvertiser1, SERVICE_ID_1) }
         verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_1), argThat { it.matches(SERVICE_1) })
 
-        postSync { socketCb.onInterfaceDestroyed(TEST_NETWORK_1, mockSocket1) }
+        postSync { socketCb.onInterfaceDestroyed(TEST_SOCKETKEY_1, mockSocket1) }
         verify(mockInterfaceAdvertiser1).destroyNow()
     }
 
@@ -177,8 +178,8 @@ class MdnsAdvertiserTest {
                 socketCbCaptor.capture())
 
         val socketCb = socketCbCaptor.value
-        postSync { socketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR)) }
-        postSync { socketCb.onSocketCreated(TEST_NETWORK_2, mockSocket2, listOf(TEST_LINKADDR)) }
+        postSync { socketCb.onSocketCreated(TEST_SOCKETKEY_1, mockSocket1, listOf(TEST_LINKADDR)) }
+        postSync { socketCb.onSocketCreated(TEST_SOCKETKEY_2, mockSocket2, listOf(TEST_LINKADDR)) }
 
         val intAdvCbCaptor1 = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
         val intAdvCbCaptor2 = ArgumentCaptor.forClass(MdnsInterfaceAdvertiser.Callback::class.java)
@@ -241,8 +242,8 @@ class MdnsAdvertiserTest {
 
         // Callbacks for matching network and all networks both get the socket
         postSync {
-            oneNetSocketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR))
-            allNetSocketCb.onSocketCreated(TEST_NETWORK_1, mockSocket1, listOf(TEST_LINKADDR))
+            oneNetSocketCb.onSocketCreated(TEST_SOCKETKEY_1, mockSocket1, listOf(TEST_LINKADDR))
+            allNetSocketCb.onSocketCreated(TEST_SOCKETKEY_1, mockSocket1, listOf(TEST_LINKADDR))
         }
 
         val expectedRenamed = NsdServiceInfo(
@@ -294,8 +295,8 @@ class MdnsAdvertiserTest {
         verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_2),
                 argThat { it.matches(expectedRenamed) })
 
-        postSync { oneNetSocketCb.onInterfaceDestroyed(TEST_NETWORK_1, mockSocket1) }
-        postSync { allNetSocketCb.onInterfaceDestroyed(TEST_NETWORK_1, mockSocket1) }
+        postSync { oneNetSocketCb.onInterfaceDestroyed(TEST_SOCKETKEY_1, mockSocket1) }
+        postSync { allNetSocketCb.onInterfaceDestroyed(TEST_SOCKETKEY_1, mockSocket1) }
 
         // destroyNow can be called multiple times
         verify(mockInterfaceAdvertiser1, atLeastOnce()).destroyNow()

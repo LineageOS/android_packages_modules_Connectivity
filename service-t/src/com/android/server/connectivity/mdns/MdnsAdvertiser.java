@@ -287,7 +287,7 @@ public class MdnsAdvertiser {
         }
 
         @Override
-        public void onSocketCreated(@NonNull Network network,
+        public void onSocketCreated(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket,
                 @NonNull List<LinkAddress> addresses) {
             MdnsInterfaceAdvertiser advertiser = mAllAdvertisers.get(socket);
@@ -311,14 +311,14 @@ public class MdnsAdvertiser {
         }
 
         @Override
-        public void onInterfaceDestroyed(@NonNull Network network,
+        public void onInterfaceDestroyed(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket) {
             final MdnsInterfaceAdvertiser advertiser = mAdvertisers.get(socket);
             if (advertiser != null) advertiser.destroyNow();
         }
 
         @Override
-        public void onAddressesChanged(@NonNull Network network,
+        public void onAddressesChanged(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> addresses) {
             final MdnsInterfaceAdvertiser advertiser = mAdvertisers.get(socket);
             if (advertiser != null) advertiser.updateAddresses(addresses);
