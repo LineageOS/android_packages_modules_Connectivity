@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -370,7 +371,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeast(1))
-                .onResponseReceived(any(MdnsPacket.class), anyInt(), any());
+                .onResponseReceived(any(MdnsPacket.class), any(SocketKey.class));
     }
 
     @Test
@@ -379,7 +380,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeastOnce())
-                .onResponseReceived(any(MdnsPacket.class), anyInt(), any());
+                .onResponseReceived(any(MdnsPacket.class), any(SocketKey.class));
 
         mdnsClient.stopDiscovery();
     }
@@ -513,7 +514,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockCallback, timeout(TIMEOUT).atLeastOnce())
-                .onResponseReceived(any(), eq(21), any());
+                .onResponseReceived(any(), argThat(key -> key.getInterfaceIndex() == 21));
     }
 
     @Test
@@ -536,6 +537,7 @@ public class MdnsSocketClientTests {
         mdnsClient.startDiscovery();
 
         verify(mockMulticastSocket, never()).getInterfaceIndex();
-        verify(mockCallback, timeout(TIMEOUT).atLeast(1)).onResponseReceived(any(), eq(-1), any());
+        verify(mockCallback, timeout(TIMEOUT).atLeast(1))
+                .onResponseReceived(any(), argThat(key -> key.getInterfaceIndex() == -1));
     }
 }
