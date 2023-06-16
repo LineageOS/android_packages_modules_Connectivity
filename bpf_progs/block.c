@@ -71,3 +71,4 @@ DEFINE_BPF_PROG_KVER("bind6/block_port", AID_ROOT, AID_SYSTEM,
 
 LICENSE("Apache 2.0");
 CRITICAL("ConnectivityNative");
+DISABLE_BTF_ON_USER_BUILDS();
