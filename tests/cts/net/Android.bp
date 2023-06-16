@@ -92,7 +92,7 @@ java_defaults {
         "NetworkStackApiStableShims",
     ],
     jni_uses_sdk_apis: true,
-    min_sdk_version: "29",
+    min_sdk_version: "30",
 }
 
 // Networking CTS tests that target the latest released SDK. These tests can be installed on release
