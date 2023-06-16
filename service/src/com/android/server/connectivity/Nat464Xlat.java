@@ -541,6 +541,25 @@ public class Nat464Xlat {
     }
 
     /**
+     * Get the generated v6 address of clat.
+     */
+    @Nullable
+    public Inet6Address getClatv6SrcAddress() {
+        // Variables in Nat464Xlat should only be accessed from handler thread.
+        ensureRunningOnHandlerThread();
+        if (!isStarted()) return null;
+
+        return mIPv6Address;
+    }
+
+    private void ensureRunningOnHandlerThread() {
+        if (mNetwork.handler().getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on handler thread: " + Thread.currentThread().getName());
+        }
+    }
+
+    /**
      * Dump the NAT64 xlat information.
      *
      * @param pw print writer.

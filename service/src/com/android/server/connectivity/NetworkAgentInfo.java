@@ -68,6 +68,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.ConnectivityService;
 
 import java.io.PrintWriter;
+import java.net.Inet6Address;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1030,6 +1031,14 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
 
     public Network network() {
         return network;
+    }
+
+    /**
+     * Get the generated v6 address of clat.
+     */
+    @Nullable
+    public Inet6Address getClatv6SrcAddress() {
+        return clatd.getClatv6SrcAddress();
     }
 
     /**
