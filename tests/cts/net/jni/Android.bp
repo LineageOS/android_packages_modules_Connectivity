@@ -31,9 +31,9 @@ cc_defaults {
         "liblog",
     ],
     stl: "libc++_static",
-    // To be compatible with Q devices, the min_sdk_version must be 29.
+    // To be compatible with R devices, the min_sdk_version must be 30.
     sdk_version: "current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
 }
 
 cc_library_shared {
