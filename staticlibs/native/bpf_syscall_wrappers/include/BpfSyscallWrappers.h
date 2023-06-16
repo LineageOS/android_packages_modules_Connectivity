@@ -170,33 +170,34 @@ inline int runProgram(const BPF_FD_TYPE prog_fd, const void* data,
 // over time), so we need to check that the field we're interested in is actually
 // supported/returned by the running kernel.  We do this by checking it is fully
 // within the bounds of the struct size as reported by the kernel.
-#define DEFINE_BPF_GET_FD_INFO(NAME, FIELD) \
-inline int bpfGetFd ## NAME(const BPF_FD_TYPE map_fd) { \
-    struct bpf_map_info map_info = {}; \
+#define DEFINE_BPF_GET_FD(TYPE, NAME, FIELD) \
+inline int bpfGetFd ## NAME(const BPF_FD_TYPE fd) { \
+    struct bpf_ ## TYPE ## _info info = {}; \
     union bpf_attr attr = { .info = { \
-        .bpf_fd = BPF_FD_TO_U32(map_fd), \
-        .info_len = sizeof(map_info), \
-        .info = ptr_to_u64(&map_info), \
+        .bpf_fd = BPF_FD_TO_U32(fd), \
+        .info_len = sizeof(info), \
+        .info = ptr_to_u64(&info), \
     }}; \
     int rv = bpf(BPF_OBJ_GET_INFO_BY_FD, attr); \
     if (rv) return rv; \
-    if (attr.info.info_len < offsetof(bpf_map_info, FIELD) + sizeof(map_info.FIELD)) { \
+    if (attr.info.info_len < offsetof(bpf_ ## TYPE ## _info, FIELD) + sizeof(info.FIELD)) { \
         errno = EOPNOTSUPP; \
         return -1; \
     }; \
-    return map_info.FIELD; \
+    return info.FIELD; \
 }
 
-// All 6 of these fields are already present in Linux v4.14 (even ACK 4.14-P)
+// All 7 of these fields are already present in Linux v4.14 (even ACK 4.14-P)
 // while BPF_OBJ_GET_INFO_BY_FD is not implemented at all in v4.9 (even ACK 4.9-Q)
-DEFINE_BPF_GET_FD_INFO(MapType, type)            // int bpfGetFdMapType(const BPF_FD_TYPE map_fd)
-DEFINE_BPF_GET_FD_INFO(MapId, id)                // int bpfGetFdMapId(const BPF_FD_TYPE map_fd)
-DEFINE_BPF_GET_FD_INFO(KeySize, key_size)        // int bpfGetFdKeySize(const BPF_FD_TYPE map_fd)
-DEFINE_BPF_GET_FD_INFO(ValueSize, value_size)    // int bpfGetFdValueSize(const BPF_FD_TYPE map_fd)
-DEFINE_BPF_GET_FD_INFO(MaxEntries, max_entries)  // int bpfGetFdMaxEntries(const BPF_FD_TYPE map_fd)
-DEFINE_BPF_GET_FD_INFO(MapFlags, map_flags)      // int bpfGetFdMapFlags(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(map, MapType, type)            // int bpfGetFdMapType(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(map, MapId, id)                // int bpfGetFdMapId(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(map, KeySize, key_size)        // int bpfGetFdKeySize(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(map, ValueSize, value_size)    // int bpfGetFdValueSize(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(map, MaxEntries, max_entries)  // int bpfGetFdMaxEntries(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(map, MapFlags, map_flags)      // int bpfGetFdMapFlags(const BPF_FD_TYPE map_fd)
+DEFINE_BPF_GET_FD(prog, ProgId, id)              // int bpfGetFdProgId(const BPF_FD_TYPE prog_fd)
 
-#undef DEFINE_BPF_GET_FD_INFO
+#undef DEFINE_BPF_GET_FD
 
 }  // namespace bpf
 }  // namespace android
