@@ -416,3 +416,4 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
 
 LICENSE("Apache 2.0");
 CRITICAL("Connectivity");
+DISABLE_BTF_ON_USER_BUILDS();
