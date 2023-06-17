@@ -4559,7 +4559,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (state == NetworkInfo.State.CONNECTED) return true;
         if (state != NetworkInfo.State.CONNECTING) {
             // TODO: throw if no WTFs are observed in the field.
-            Log.wtf(TAG, "Uncreated network in invalid state: " + state);
+            if (shouldCreateNetworksImmediately()) {
+                Log.wtf(TAG, "Uncreated network in invalid state: " + state);
+            }
             return false;
         }
         return nai.isVPN() || shouldCreateNetworksImmediately();
