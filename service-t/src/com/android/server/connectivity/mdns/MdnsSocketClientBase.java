@@ -41,19 +41,15 @@ public interface MdnsSocketClientBase {
 
     /**
      * Send a mDNS request packet via given network that asks for multicast response.
-     *
-     * <p>The socket client may use a null network to identify some or all interfaces, in which case
-     * passing null sends the packet to these.
      */
-    void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network);
+    void sendPacketRequestingMulticastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks);
 
     /**
      * Send a mDNS request packet via given network that asks for unicast response.
-     *
-     * <p>The socket client may use a null network to identify some or all interfaces, in which case
-     * passing null sends the packet to these.
      */
-    void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network);
+    void sendPacketRequestingUnicastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks);
 
     /*** Notify that the given network is requested for mdns discovery / resolution */
     void notifyNetworkRequested(@NonNull MdnsServiceBrowserListener listener,
