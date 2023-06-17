@@ -93,6 +93,10 @@ public class MdnsSocket {
         }
         for (NetworkInterfaceWrapper networkInterface : networkInterfaces) {
             multicastSocket.joinGroup(multicastAddress, networkInterface.getNetworkInterface());
+            if (!isOnIPv6OnlyNetwork) {
+                multicastSocket.joinGroup(
+                        MULTICAST_IPV6_ADDRESS, networkInterface.getNetworkInterface());
+            }
         }
     }
 
@@ -105,6 +109,10 @@ public class MdnsSocket {
         }
         for (NetworkInterfaceWrapper networkInterface : networkInterfaces) {
             multicastSocket.leaveGroup(multicastAddress, networkInterface.getNetworkInterface());
+            if (!isOnIPv6OnlyNetwork) {
+                multicastSocket.leaveGroup(
+                        MULTICAST_IPV6_ADDRESS, networkInterface.getNetworkInterface());
+            }
         }
     }
 
