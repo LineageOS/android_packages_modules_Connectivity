@@ -31,6 +31,9 @@ import com.android.server.connectivity.mdns.util.MdnsLogger;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -194,36 +197,20 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         }
     }
 
-    /** Sends a mDNS request packet that asks for multicast response. */
-    public void sendMulticastPacket(@NonNull DatagramPacket packet) {
-        sendMdnsPacket(packet, multicastPacketQueue);
+    @Override
+    public void sendPacketRequestingMulticastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks) {
+        sendMdnsPacket(packet, multicastPacketQueue, onlyUseIpv6OnIpv6OnlyNetworks);
     }
 
-    /** Sends a mDNS request packet that asks for unicast response. */
-    public void sendUnicastPacket(DatagramPacket packet) {
+    @Override
+    public void sendPacketRequestingUnicastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks) {
         if (useSeparateSocketForUnicast) {
-            sendMdnsPacket(packet, unicastPacketQueue);
+            sendMdnsPacket(packet, unicastPacketQueue, onlyUseIpv6OnIpv6OnlyNetworks);
         } else {
-            sendMdnsPacket(packet, multicastPacketQueue);
+            sendMdnsPacket(packet, multicastPacketQueue, onlyUseIpv6OnIpv6OnlyNetworks);
         }
-    }
-
-    @Override
-    public void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
-        if (network != null) {
-            throw new IllegalArgumentException("This socket client does not support sending to "
-                    + "specific networks");
-        }
-        sendMulticastPacket(packet);
-    }
-
-    @Override
-    public void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
-        if (network != null) {
-            throw new IllegalArgumentException("This socket client does not support sending to "
-                    + "specific networks");
-        }
-        sendUnicastPacket(packet);
     }
 
     @Override
@@ -243,11 +230,25 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         return false;
     }
 
-    private void sendMdnsPacket(DatagramPacket packet, Queue<DatagramPacket> packetQueueToUse) {
+    private void sendMdnsPacket(DatagramPacket packet, Queue<DatagramPacket> packetQueueToUse,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks) {
         if (shouldStopSocketLoop && !MdnsConfigs.allowAddMdnsPacketAfterDiscoveryStops()) {
             LOGGER.w("sendMdnsPacket() is called after discovery already stopped");
             return;
         }
+
+        final boolean isIpv4 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
+                instanceof Inet4Address;
+        final boolean isIpv6 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
+                instanceof Inet6Address;
+        final boolean ipv6Only = multicastSocket != null && multicastSocket.isOnIPv6OnlyNetwork();
+        if (isIpv4 && ipv6Only) {
+            return;
+        }
+        if (isIpv6 && !ipv6Only && onlyUseIpv6OnIpv6OnlyNetworks) {
+            return;
+        }
+
         synchronized (packetQueueToUse) {
             while (packetQueueToUse.size() >= MdnsConfigs.mdnsPacketQueueMaxSize()) {
                 packetQueueToUse.remove();
@@ -534,9 +535,5 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             }
         }
         packets.clear();
-    }
-
-    public boolean isOnIPv6OnlyNetwork() {
-        return multicastSocket != null && multicastSocket.isOnIPv6OnlyNetwork();
     }
 }
