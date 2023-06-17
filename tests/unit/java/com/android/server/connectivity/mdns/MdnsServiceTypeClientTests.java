@@ -327,7 +327,8 @@ public class MdnsServiceTypeClientTests {
         MdnsSearchOptions searchOptions =
                 MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
         QueryTaskConfig config = new QueryTaskConfig(
-                searchOptions.getSubtypes(), searchOptions.isPassiveMode(), 1, socketKey);
+                searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
+                false /* onlyUseIpv6OnIpv6OnlyNetworks */, 1, socketKey);
 
         // This is the first query. We will ask for unicast response.
         assertTrue(config.expectUnicastResponse);
@@ -356,7 +357,8 @@ public class MdnsServiceTypeClientTests {
         MdnsSearchOptions searchOptions =
                 MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
         QueryTaskConfig config = new QueryTaskConfig(
-                searchOptions.getSubtypes(), searchOptions.isPassiveMode(), 1, socketKey);
+                searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
+                false /* onlyUseIpv6OnIpv6OnlyNetworks */, 1, socketKey);
 
         // This is the first query. We will ask for unicast response.
         assertTrue(config.expectUnicastResponse);
@@ -928,16 +930,16 @@ public class MdnsServiceTypeClientTests {
                 ArgumentCaptor.forClass(DatagramPacket.class);
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         // Send twice for IPv4 and IPv6
-        inOrder.verify(mockSocketClient, times(2)).sendUnicastPacket(srvTxtQueryCaptor.capture(),
-                eq(mockNetwork));
+        inOrder.verify(mockSocketClient, times(2)).sendPacketRequestingUnicastResponse(
+                srvTxtQueryCaptor.capture(),
+                eq(mockNetwork), eq(false));
 
         final MdnsPacket srvTxtQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(srvTxtQueryCaptor.getValue()));
 
         final String[] serviceName = getTestServiceName(instanceName);
         assertFalse(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_PTR));
-        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_SRV, serviceName));
-        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_TXT, serviceName));
+        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_ANY, serviceName));
 
         // Process a response with SRV+TXT
         final MdnsPacket srvTxtResponse = new MdnsPacket(
@@ -959,8 +961,9 @@ public class MdnsServiceTypeClientTests {
         final ArgumentCaptor<DatagramPacket> addressQueryCaptor =
                 ArgumentCaptor.forClass(DatagramPacket.class);
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
-        inOrder.verify(mockSocketClient, times(2)).sendMulticastPacket(addressQueryCaptor.capture(),
-                eq(mockNetwork));
+        inOrder.verify(mockSocketClient, times(2)).sendPacketRequestingMulticastResponse(
+                addressQueryCaptor.capture(),
+                eq(mockNetwork), eq(false));
 
         final MdnsPacket addressQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(addressQueryCaptor.getValue()));
@@ -1018,15 +1021,15 @@ public class MdnsServiceTypeClientTests {
                 ArgumentCaptor.forClass(DatagramPacket.class);
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         // Send twice for IPv4 and IPv6
-        inOrder.verify(mockSocketClient, times(2)).sendUnicastPacket(srvTxtQueryCaptor.capture(),
-                eq(mockNetwork));
+        inOrder.verify(mockSocketClient, times(2)).sendPacketRequestingUnicastResponse(
+                srvTxtQueryCaptor.capture(),
+                eq(mockNetwork), eq(false));
 
         final MdnsPacket srvTxtQueryPacket = MdnsPacket.parse(
                 new MdnsPacketReader(srvTxtQueryCaptor.getValue()));
 
         final String[] serviceName = getTestServiceName(instanceName);
-        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_SRV, serviceName));
-        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_TXT, serviceName));
+        assertTrue(hasQuestion(srvTxtQueryPacket, MdnsRecord.TYPE_ANY, serviceName));
 
         // Process a response with all records
         final MdnsPacket srvTxtResponse = new MdnsPacket(
@@ -1064,13 +1067,13 @@ public class MdnsServiceTypeClientTests {
         final ArgumentCaptor<DatagramPacket> renewalQueryCaptor =
                 ArgumentCaptor.forClass(DatagramPacket.class);
         // Second and later sends are sent as "expect multicast response" queries
-        inOrder.verify(mockSocketClient, times(2)).sendMulticastPacket(renewalQueryCaptor.capture(),
-                eq(mockNetwork));
+        inOrder.verify(mockSocketClient, times(2)).sendPacketRequestingMulticastResponse(
+                renewalQueryCaptor.capture(),
+                eq(mockNetwork), eq(false));
         inOrder.verify(mockListenerOne).onDiscoveryQuerySent(any(), anyInt());
         final MdnsPacket renewalPacket = MdnsPacket.parse(
                 new MdnsPacketReader(renewalQueryCaptor.getValue()));
-        assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_SRV, serviceName));
-        assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_TXT, serviceName));
+        assertTrue(hasQuestion(renewalPacket, MdnsRecord.TYPE_ANY, serviceName));
         inOrder.verifyNoMoreInteractions();
 
         long updatedReceiptTime =  TEST_ELAPSED_REALTIME + TEST_TTL;
@@ -1328,18 +1331,18 @@ public class MdnsServiceTypeClientTests {
         assertEquals(currentThreadExecutor.getAndClearLastScheduledDelayInMs(), timeInMs);
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         if (expectsUnicastResponse) {
-            verify(mockSocketClient).sendUnicastPacket(
-                    expectedIPv4Packets[index], mockNetwork);
+            verify(mockSocketClient).sendPacketRequestingUnicastResponse(
+                    expectedIPv4Packets[index], mockNetwork, false);
             if (multipleSocketDiscovery) {
-                verify(mockSocketClient).sendUnicastPacket(
-                        expectedIPv6Packets[index], mockNetwork);
+                verify(mockSocketClient).sendPacketRequestingUnicastResponse(
+                        expectedIPv6Packets[index], mockNetwork, false);
             }
         } else {
-            verify(mockSocketClient).sendMulticastPacket(
-                    expectedIPv4Packets[index], mockNetwork);
+            verify(mockSocketClient).sendPacketRequestingMulticastResponse(
+                    expectedIPv4Packets[index], mockNetwork, false);
             if (multipleSocketDiscovery) {
-                verify(mockSocketClient).sendMulticastPacket(
-                        expectedIPv6Packets[index], mockNetwork);
+                verify(mockSocketClient).sendPacketRequestingMulticastResponse(
+                        expectedIPv6Packets[index], mockNetwork, false);
             }
         }
     }
