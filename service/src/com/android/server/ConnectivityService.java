@@ -319,7 +319,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.lang.IllegalArgumentException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -4012,7 +4011,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     // the destroyed flag is only just above the "current satisfier wins"
                     // tie-breaker. But technically anything that affects scoring should rematch.
                     rematchAllNetworksAndRequests();
-                    mHandler.postDelayed(() -> nai.disconnect(), timeoutMs);
+                    mHandler.postDelayed(() -> disconnectAndDestroyNetwork(nai), timeoutMs);
                     break;
                 }
             }
@@ -4560,7 +4559,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (state == NetworkInfo.State.CONNECTED) return true;
         if (state != NetworkInfo.State.CONNECTING) {
             // TODO: throw if no WTFs are observed in the field.
-            Log.wtf(TAG, "Uncreated network in invalid state: " + state);
+            if (shouldCreateNetworksImmediately()) {
+                Log.wtf(TAG, "Uncreated network in invalid state: " + state);
+            }
             return false;
         }
         return nai.isVPN() || shouldCreateNetworksImmediately();
@@ -4609,6 +4610,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (DBG) {
             log(nai.toShortString() + " disconnected, was satisfying " + nai.numNetworkRequests());
         }
+
+        nai.disconnect();
+
         // Clear all notifications of this network.
         mNotifier.clearNotification(nai.network.getNetId());
         // A network agent has disconnected.
@@ -5893,7 +5897,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork((Network) msg.obj);
                     if (nai == null) break;
                     nai.onPreventAutomaticReconnect();
-                    nai.disconnect();
+                    disconnectAndDestroyNetwork(nai);
                     break;
                 case EVENT_SET_VPN_NETWORK_PREFERENCE:
                     handleSetVpnNetworkPreference((VpnNetworkPreferenceInfo) msg.obj);
@@ -9040,7 +9044,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 break;
             }
         }
-        nai.disconnect();
+        disconnectAndDestroyNetwork(nai);
     }
 
     private void handleLingerComplete(NetworkAgentInfo oldNetwork) {
@@ -9582,7 +9586,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         updateLegacyTypeTrackerAndVpnLockdownForRematch(changes, nais);
 
         // Tear down all unneeded networks.
-        for (NetworkAgentInfo nai : mNetworkAgentInfos) {
+        // Iterate in reverse order because teardownUnneededNetwork removes the nai from
+        // mNetworkAgentInfos.
+        for (int i = mNetworkAgentInfos.size() - 1; i >= 0; i--) {
+            final NetworkAgentInfo nai = mNetworkAgentInfos.valueAt(i);
             if (unneeded(nai, UnneededFor.TEARDOWN)) {
                 if (nai.getInactivityExpiry() > 0) {
                     // This network has active linger timers and no requests, but is not
@@ -9965,7 +9972,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // This has to happen after matching the requests, because callbacks are just requests.
             notifyNetworkCallbacks(networkAgent, ConnectivityManager.CALLBACK_PRECHECK);
         } else if (state == NetworkInfo.State.DISCONNECTED) {
-            networkAgent.disconnect();
             if (networkAgent.isVPN()) {
                 updateVpnUids(networkAgent, networkAgent.networkCapabilities, null);
             }
