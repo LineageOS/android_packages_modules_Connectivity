@@ -51,6 +51,7 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     public static final short RTA_DST           = 1;
     public static final short RTA_OIF           = 4;
     public static final short RTA_GATEWAY       = 5;
+    public static final short RTA_CACHEINFO     = 12;
 
     private int mIfindex;
     @NonNull
@@ -59,6 +60,8 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     private IpPrefix mDestination;
     @Nullable
     private InetAddress mGateway;
+    @Nullable
+    private StructRtaCacheInfo mRtaCacheInfo;
 
     private RtNetlinkRouteMessage(StructNlMsgHdr header) {
         super(header);
@@ -66,6 +69,7 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
         mDestination = null;
         mGateway = null;
         mIfindex = 0;
+        mRtaCacheInfo = null;
     }
 
     public int getInterfaceIndex() {
@@ -85,6 +89,11 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     @Nullable
     public InetAddress getGateway() {
         return mGateway;
+    }
+
+    @Nullable
+    public StructRtaCacheInfo getRtaCacheInfo() {
+        return mRtaCacheInfo;
     }
 
     /**
@@ -158,6 +167,13 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
             routeMsg.mIfindex = nlAttr.getValueAsInt(0 /* 0 isn't a valid ifindex */);
         }
 
+        // RTA_CACHEINFO
+        byteBuffer.position(baseOffset);
+        nlAttr = StructNlAttr.findNextAttrOfType(RTA_CACHEINFO, byteBuffer);
+        if (nlAttr != null) {
+            routeMsg.mRtaCacheInfo = StructRtaCacheInfo.parse(nlAttr.getValueAsByteBuffer());
+        }
+
         return routeMsg;
     }
 
@@ -180,6 +196,11 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
             final StructNlAttr ifindex = new StructNlAttr(RTA_OIF, mIfindex);
             ifindex.pack(byteBuffer);
         }
+        if (mRtaCacheInfo != null) {
+            final StructNlAttr cacheInfo = new StructNlAttr(RTA_CACHEINFO,
+                    mRtaCacheInfo.writeToBytes());
+            cacheInfo.pack(byteBuffer);
+        }
     }
 
     @Override
@@ -189,7 +210,8 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
                 + "Rtmsg{" + mRtmsg.toString() + "}, "
                 + "destination{" + mDestination.getAddress().getHostAddress() + "}, "
                 + "gateway{" + (mGateway == null ? "" : mGateway.getHostAddress()) + "}, "
-                + "ifindex{" + mIfindex + "} "
+                + "ifindex{" + mIfindex + "}, "
+                + "rta_cacheinfo{" + (mRtaCacheInfo == null ? "" : mRtaCacheInfo.toString()) + "} "
                 + "}";
     }
 }

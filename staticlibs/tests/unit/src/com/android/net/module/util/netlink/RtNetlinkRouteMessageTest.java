@@ -87,6 +87,8 @@ public class RtNetlinkRouteMessageTest {
         assertEquals(routeMsg.getDestination(), TEST_IPV6_GLOBAL_PREFIX);
         assertEquals(735, routeMsg.getInterfaceIndex());
         assertEquals((Inet6Address) routeMsg.getGateway(), TEST_IPV6_LINK_LOCAL_GATEWAY);
+
+        assertNotNull(routeMsg.getRtaCacheInfo());
     }
 
     @Test
@@ -106,7 +108,9 @@ public class RtNetlinkRouteMessageTest {
             + "0A400000FC02000100000000"                   // struct rtmsg
             + "1400010020010DB8000100000000000000000000"   // RTA_DST
             + "14000500FE800000000000000000000000000001"   // RTA_GATEWAY
-            + "08000400DF020000";                          // RTA_OIF
+            + "08000400DF020000"                           // RTA_OIF
+            + "24000C0000000000000000005EEA000000000000"   // RTA_CACHEINFO
+            + "00000000000000000000000000000000";
 
     @Test
     public void testPackRtmNewRoute() {
@@ -117,7 +121,7 @@ public class RtNetlinkRouteMessageTest {
         assertTrue(msg instanceof RtNetlinkRouteMessage);
         final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
 
-        final ByteBuffer packBuffer = ByteBuffer.allocate(76);
+        final ByteBuffer packBuffer = ByteBuffer.allocate(112);
         packBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
         routeMsg.pack(packBuffer);
         assertEquals(RTM_NEWROUTE_PACK_HEX, HexDump.toHexString(packBuffer.array()));
@@ -216,7 +220,9 @@ public class RtNetlinkRouteMessageTest {
                 + "scope: 0, type: 1, flags: 0}, "
                 + "destination{2001:db8:1::}, "
                 + "gateway{fe80::1}, "
-                + "ifindex{735} "
+                + "ifindex{735}, "
+                + "rta_cacheinfo{clntref: 0, lastuse: 0, expires: 59998, error: 0, used: 0, "
+                + "id: 0, ts: 0, tsage: 0} "
                 + "}";
         assertEquals(expected, routeMsg.toString());
     }
