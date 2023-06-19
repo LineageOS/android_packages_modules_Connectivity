@@ -265,7 +265,7 @@ public class MdnsDiscoveryManagerTests {
         // The first callback receives a notification that the network has been destroyed,
         // mockServiceTypeClientOne1 should send service removed notifications and remove from the
         // list of clients.
-        runOnHandler(() -> callback.onAllSocketsDestroyed(SOCKET_KEY_NETWORK_1));
+        runOnHandler(() -> callback.onSocketDestroyed(SOCKET_KEY_NETWORK_1));
         verify(mockServiceTypeClientType1Network1).notifySocketDestroyed();
 
         // Receive a response again, it should be processed only on
@@ -280,7 +280,7 @@ public class MdnsDiscoveryManagerTests {
 
         // The client for NETWORK_1 receives the callback that the NETWORK_2 has been destroyed,
         // mockServiceTypeClientTwo2 shouldn't send any notifications.
-        runOnHandler(() -> callback2.onAllSocketsDestroyed(SOCKET_KEY_NETWORK_2));
+        runOnHandler(() -> callback2.onSocketDestroyed(SOCKET_KEY_NETWORK_2));
         verify(mockServiceTypeClientType2Network1, never()).notifySocketDestroyed();
 
         // Receive a response again, mockServiceTypeClientType2Network1 is still in the list of
@@ -310,7 +310,7 @@ public class MdnsDiscoveryManagerTests {
         verify(mockServiceTypeClientType1NullNetwork).processResponse(
                 response, SOCKET_KEY_NULL_NETWORK);
 
-        runOnHandler(() -> callback.onAllSocketsDestroyed(SOCKET_KEY_NULL_NETWORK));
+        runOnHandler(() -> callback.onSocketDestroyed(SOCKET_KEY_NULL_NETWORK));
         verify(mockServiceTypeClientType1NullNetwork).notifySocketDestroyed();
 
         // Receive a response again, it should not be processed.
@@ -326,7 +326,7 @@ public class MdnsDiscoveryManagerTests {
         verify(socketClient).notifyNetworkUnrequested(mockListenerOne);
         verify(mockServiceTypeClientType1NullNetwork, never()).stopSendAndReceive(any());
         // The stopDiscovery() is only used by MdnsSocketClient, which doesn't send
-        // onAllSocketsDestroyed(). So the socket clients that send onAllSocketsDestroyed() do not
+        // onSocketDestroyed(). So the socket clients that send onSocketDestroyed() do not
         // need to call stopDiscovery().
         verify(socketClient, never()).stopDiscovery();
     }
