@@ -37,9 +37,10 @@ import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
-import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
@@ -58,8 +59,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-
-import androidx.annotation.RequiresApi;
 
 /**
  * This coordinator is responsible for providing clat relevant functionality.
