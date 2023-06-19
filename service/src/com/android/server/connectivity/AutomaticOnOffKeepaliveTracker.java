@@ -94,6 +94,7 @@ public class AutomaticOnOffKeepaliveTracker {
     private static final int ADJUST_TCP_POLLING_DELAY_MS = 2000;
     private static final String AUTOMATIC_ON_OFF_KEEPALIVE_VERSION =
             "automatic_on_off_keepalive_version";
+    public static final long METRICS_COLLECTION_DURATION_MS = 24 * 60 * 60 * 1_000L;
 
     // ConnectivityService parses message constants from itself and AutomaticOnOffKeepaliveTracker
     // with MessageUtils for debugging purposes, and crashes if some messages have the same values.
@@ -180,6 +181,9 @@ public class AutomaticOnOffKeepaliveTracker {
     private final LocalLog mEventLog = new LocalLog(MAX_EVENTS_LOGS);
 
     private final KeepaliveStatsTracker mKeepaliveStatsTracker;
+
+    private final long mMetricsWriteTimeBase;
+
     /**
      * Information about a managed keepalive.
      *
@@ -307,7 +311,26 @@ public class AutomaticOnOffKeepaliveTracker {
                 mContext, mConnectivityServiceHandler);
 
         mAlarmManager = mDependencies.getAlarmManager(context);
-        mKeepaliveStatsTracker = new KeepaliveStatsTracker(context, handler);
+        mKeepaliveStatsTracker =
+                mDependencies.newKeepaliveStatsTracker(context, handler);
+
+        final long time = mDependencies.getElapsedRealtime();
+        mMetricsWriteTimeBase = time % METRICS_COLLECTION_DURATION_MS;
+        final long triggerAtMillis = mMetricsWriteTimeBase + METRICS_COLLECTION_DURATION_MS;
+        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtMillis, TAG,
+                this::writeMetricsAndRescheduleAlarm, handler);
+    }
+
+    private void writeMetricsAndRescheduleAlarm() {
+        mKeepaliveStatsTracker.writeAndResetMetrics();
+
+        final long time = mDependencies.getElapsedRealtime();
+        final long triggerAtMillis =
+                mMetricsWriteTimeBase
+                        + (time - time % METRICS_COLLECTION_DURATION_MS)
+                        + METRICS_COLLECTION_DURATION_MS;
+        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtMillis, TAG,
+                this::writeMetricsAndRescheduleAlarm, mConnectivityServiceHandler);
     }
 
     private void startTcpPollingAlarm(@NonNull AutomaticOnOffKeepalive ki) {
@@ -887,6 +910,14 @@ public class AutomaticOnOffKeepaliveTracker {
         public KeepaliveTracker newKeepaliveTracker(@NonNull Context context,
                 @NonNull Handler connectivityserviceHander) {
             return new KeepaliveTracker(mContext, connectivityserviceHander);
+        }
+
+        /**
+         * Construct a new KeepaliveStatsTracker.
+         */
+        public KeepaliveStatsTracker newKeepaliveStatsTracker(@NonNull Context context,
+                @NonNull Handler connectivityserviceHander) {
+            return new KeepaliveStatsTracker(context, connectivityserviceHander);
         }
 
         /**
