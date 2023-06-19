@@ -265,7 +265,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         TestKeepaliveTracker(@NonNull final Context context, @NonNull final Handler handler,
                 @NonNull final TcpKeepaliveController tcpController) {
-            super(context, handler, tcpController);
+            super(context, handler, tcpController, new Dependencies());
         }
 
         public void setReturnedKeepaliveInfo(@NonNull final KeepaliveInfo ki) {
