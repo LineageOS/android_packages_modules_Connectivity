@@ -179,7 +179,7 @@ public class AutomaticOnOffKeepaliveTracker {
     private static final int MAX_EVENTS_LOGS = 40;
     private final LocalLog mEventLog = new LocalLog(MAX_EVENTS_LOGS);
 
-    private final KeepaliveStatsTracker mKeepaliveStatsTracker = new KeepaliveStatsTracker();
+    private final KeepaliveStatsTracker mKeepaliveStatsTracker;
     /**
      * Information about a managed keepalive.
      *
@@ -307,6 +307,7 @@ public class AutomaticOnOffKeepaliveTracker {
                 mContext, mConnectivityServiceHandler);
 
         mAlarmManager = mDependencies.getAlarmManager(context);
+        mKeepaliveStatsTracker = new KeepaliveStatsTracker(handler);
     }
 
     private void startTcpPollingAlarm(@NonNull AutomaticOnOffKeepalive ki) {
