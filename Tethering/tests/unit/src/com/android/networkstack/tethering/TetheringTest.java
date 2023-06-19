@@ -2685,10 +2685,9 @@ public class TetheringTest {
         final UpstreamNetworkState upstreamState2 = buildMobileIPv4UpstreamState();
         initTetheringUpstream(upstreamState2);
         stateMachine.chooseUpstreamType(true);
-        // Bug: duplicated upstream change event.
-        mTetheringEventCallback.expectUpstreamChanged(upstreamState2.network);
-        inOrder.verify(mNotificationUpdater)
-                .onUpstreamCapabilitiesChanged(upstreamState2.networkCapabilities);
+        // Expect that no upstream change event and capabilities changed event.
+        mTetheringEventCallback.assertNoUpstreamChangeCallback();
+        inOrder.verify(mNotificationUpdater, never()).onUpstreamCapabilitiesChanged(any());
 
         // Set the upstream with the same network ID but different object and different capability.
         final UpstreamNetworkState upstreamState3 = buildMobileIPv4UpstreamState();
@@ -2696,10 +2695,12 @@ public class TetheringTest {
         upstreamState3.networkCapabilities.addCapability(NET_CAPABILITY_VALIDATED);
         initTetheringUpstream(upstreamState3);
         stateMachine.chooseUpstreamType(true);
-        // Bug: duplicated upstream change event.
-        mTetheringEventCallback.expectUpstreamChanged(upstreamState3.network);
+        // Expect that no upstream change event and capabilities changed event.
+        mTetheringEventCallback.assertNoUpstreamChangeCallback();
+        stateMachine.handleUpstreamNetworkMonitorCallback(EVENT_ON_CAPABILITIES, upstreamState3);
         inOrder.verify(mNotificationUpdater)
                 .onUpstreamCapabilitiesChanged(upstreamState3.networkCapabilities);
+
 
         // Lose upstream.
         initTetheringUpstream(null);
