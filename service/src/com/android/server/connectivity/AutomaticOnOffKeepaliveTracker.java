@@ -455,7 +455,9 @@ public class AutomaticOnOffKeepaliveTracker {
                 autoKi.getNetwork(),
                 autoKi.mKi.getSlot(),
                 autoKi.mKi.getNai().networkCapabilities,
-                autoKi.mKi.getKeepaliveIntervalSec());
+                autoKi.mKi.getKeepaliveIntervalSec(),
+                autoKi.mKi.getUid(),
+                STATE_ALWAYS_ON != autoKi.mAutomaticOnOffState);
 
         // Add automatic on/off request into list to track its life cycle.
         try {
