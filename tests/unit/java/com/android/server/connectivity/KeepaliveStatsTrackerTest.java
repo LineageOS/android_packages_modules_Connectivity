@@ -198,7 +198,7 @@ public class KeepaliveStatsTrackerTest {
         mHandlerThread.start();
         mTestHandler = new Handler(mHandlerThread.getLooper());
 
-        setUptimeMillis(0);
+        setElapsedRealtime(0);
         mKeepaliveStatsTracker = new KeepaliveStatsTracker(mContext, mTestHandler, mDependencies);
         HandlerUtils.waitForIdle(BackgroundThread.getHandler(), TIMEOUT_MS);
 
@@ -207,19 +207,19 @@ public class KeepaliveStatsTrackerTest {
         HandlerUtils.waitForIdle(mTestHandler, TIMEOUT_MS);
     }
 
-    private void setUptimeMillis(long time) {
-        doReturn(time).when(mDependencies).getUptimeMillis();
+    private void setElapsedRealtime(long time) {
+        doReturn(time).when(mDependencies).getElapsedRealtime();
     }
 
     private DailykeepaliveInfoReported buildKeepaliveMetrics(long time) {
-        setUptimeMillis(time);
+        setElapsedRealtime(time);
 
         return visibleOnHandlerThread(
                 mTestHandler, () -> mKeepaliveStatsTracker.buildKeepaliveMetrics());
     }
 
     private DailykeepaliveInfoReported buildAndResetMetrics(long time) {
-        setUptimeMillis(time);
+        setElapsedRealtime(time);
 
         return visibleOnHandlerThread(
                 mTestHandler, () -> mKeepaliveStatsTracker.buildAndResetMetrics());
@@ -244,26 +244,26 @@ public class KeepaliveStatsTrackerTest {
 
     private void onStartKeepalive(long time, int slot, NetworkCapabilities nc, int intervalSeconds,
             int uid, boolean isAutoKeepalive) {
-        setUptimeMillis(time);
+        setElapsedRealtime(time);
         visibleOnHandlerThread(mTestHandler, () ->
                 mKeepaliveStatsTracker.onStartKeepalive(TEST_NETWORK, slot, nc, intervalSeconds,
                         uid, isAutoKeepalive));
     }
 
     private void onPauseKeepalive(long time, int slot) {
-        setUptimeMillis(time);
+        setElapsedRealtime(time);
         visibleOnHandlerThread(
                 mTestHandler, () -> mKeepaliveStatsTracker.onPauseKeepalive(TEST_NETWORK, slot));
     }
 
     private void onResumeKeepalive(long time, int slot) {
-        setUptimeMillis(time);
+        setElapsedRealtime(time);
         visibleOnHandlerThread(
                 mTestHandler, () -> mKeepaliveStatsTracker.onResumeKeepalive(TEST_NETWORK, slot));
     }
 
     private void onStopKeepalive(long time, int slot) {
-        setUptimeMillis(time);
+        setElapsedRealtime(time);
         visibleOnHandlerThread(
                 mTestHandler, () -> mKeepaliveStatsTracker.onStopKeepalive(TEST_NETWORK, slot));
     }
