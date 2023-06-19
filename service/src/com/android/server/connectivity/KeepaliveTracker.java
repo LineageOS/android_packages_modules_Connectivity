@@ -104,19 +104,21 @@ public class KeepaliveTracker {
     // Allowed unprivileged keepalive slots per uid. Caller's permission will be enforced if
     // the number of remaining keepalive slots is less than or equal to the threshold.
     private final int mAllowedUnprivilegedSlotsForUid;
-
+    private final Dependencies mDependencies;
     public KeepaliveTracker(Context context, Handler handler) {
-        this(context, handler, new TcpKeepaliveController(handler));
+        this(context, handler, new TcpKeepaliveController(handler), new Dependencies());
     }
 
     @VisibleForTesting
-    KeepaliveTracker(Context context, Handler handler, TcpKeepaliveController tcpController) {
+    KeepaliveTracker(Context context, Handler handler, TcpKeepaliveController tcpController,
+            Dependencies deps) {
         mTcpController = tcpController;
         mContext = context;
+        mDependencies = deps;
 
-        mSupportedKeepalives = KeepaliveResourceUtil.getSupportedKeepalives(context);
+        mSupportedKeepalives = mDependencies.getSupportedKeepalives(mContext);
 
-        final ConnectivityResources res = new ConnectivityResources(mContext);
+        final ConnectivityResources res = mDependencies.createConnectivityResources(mContext);
         mReservedPrivilegedSlots = res.get().getInteger(
                 R.integer.config_reservedPrivilegedKeepaliveSlots);
         mAllowedUnprivilegedSlotsForUid = res.get().getInteger(
@@ -725,6 +727,7 @@ public class KeepaliveTracker {
             srcAddress = InetAddresses.parseNumericAddress(srcAddrString);
             dstAddress = InetAddresses.parseNumericAddress(dstAddrString);
         } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Fail to construct address", e);
             notifyErrorCallback(cb, ERROR_INVALID_IP_ADDRESS);
             return null;
         }
@@ -734,6 +737,7 @@ public class KeepaliveTracker {
             packet = NattKeepalivePacketData.nattKeepalivePacket(
                     srcAddress, srcPort, dstAddress, NATT_PORT);
         } catch (InvalidPacketException e) {
+            Log.e(TAG, "Fail to construct keepalive packet", e);
             notifyErrorCallback(cb, e.getError());
             return null;
         }
@@ -865,5 +869,32 @@ public class KeepaliveTracker {
             pw.decreaseIndent();
         }
         pw.decreaseIndent();
+    }
+
+    /**
+     * Dependencies class for testing.
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        /**
+         * Read supported keepalive count for each transport type from overlay resource. This should
+         * be used to create a local variable store of resource customization, and set as the
+         * input for {@link getSupportedKeepalivesForNetworkCapabilities}.
+         *
+         * @param context The context to read resource from.
+         * @return An array of supported keepalive count for each transport type.
+         */
+        @NonNull
+        public int[] getSupportedKeepalives(@NonNull Context context) {
+            return KeepaliveResourceUtil.getSupportedKeepalives(context);
+        }
+
+        /**
+         * Create a new {@link ConnectivityResources}.
+         */
+        @NonNull
+        public ConnectivityResources createConnectivityResources(@NonNull Context context) {
+            return new ConnectivityResources(context);
+        }
     }
 }
