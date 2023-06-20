@@ -528,8 +528,12 @@ public class KeepaliveTracker {
         if (networkKeepalives != null) {
             final ArrayList<KeepaliveInfo> kalist = new ArrayList(networkKeepalives.values());
             for (KeepaliveInfo ki : kalist) {
-                // Check if keepalive is already stopped
+                // If the keepalive is paused, then it is already stopped with the hardware and so
+                // continue. Note that to send the appropriate stop reason callback,
+                // AutomaticOnOffKeepaliveTracker will call finalizePausedKeepalive which will also
+                // finally remove this keepalive slot from the array.
                 if (ki.mStopReason == SUCCESS_PAUSED) continue;
+
                 ki.stop(reason);
                 // Clean up keepalives since the network agent is disconnected and unable to pass
                 // back asynchronous result of stop().
