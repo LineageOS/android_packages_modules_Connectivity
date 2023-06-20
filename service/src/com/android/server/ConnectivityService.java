@@ -1704,7 +1704,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mUserAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
                 null /* broadcastPermission */, mHandler);
 
-        mNetworkActivityTracker = new LegacyNetworkActivityTracker(mContext, mNetd, mHandler);
+        mNetworkActivityTracker =
+                new LegacyNetworkActivityTracker(mContext, mNetd, mHandler, mDeps.isAtLeastU());
 
         final NetdCallback netdCallback = new NetdCallback();
         try {
@@ -11130,10 +11131,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 new RemoteCallbackList<>();
         // Indicate the current system default network activity is active or not.
         // This needs to be volatile to allow non handler threads to read this value without lock.
-        // TODO: Remove initial value. Initial value is set to keep the existing behavior.
-        // This will be removed in following CL.
-        private volatile boolean mIsDefaultNetworkActive = true;
+        private volatile boolean mIsDefaultNetworkActive;
         private final ArrayMap<String, IdleTimerParams> mActiveIdleTimers = new ArrayMap<>();
+        private final boolean mIsAtLeastU;
 
         private static class IdleTimerParams {
             public final int timeout;
@@ -11146,10 +11146,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         LegacyNetworkActivityTracker(@NonNull Context context, @NonNull INetd netd,
-                @NonNull Handler handler) {
+                @NonNull Handler handler, boolean isAtLeastU) {
             mContext = context;
             mNetd = netd;
             mHandler = handler;
+            mIsAtLeastU = isAtLeastU;
         }
 
         private void ensureRunningOnConnectivityServiceThread() {
@@ -11232,8 +11233,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
          *
          * Every {@code setupDataActivityTracking} should be paired with a
          * {@link #removeDataActivityTracking} for cleanup.
+         *
+         * @return true if the idleTimer is added to the network, false otherwise
          */
-        private void setupDataActivityTracking(NetworkAgentInfo networkAgent) {
+        private boolean setupDataActivityTracking(NetworkAgentInfo networkAgent) {
             final String iface = networkAgent.linkProperties.getInterfaceName();
 
             final int timeout;
@@ -11252,23 +11255,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         15);
                 type = NetworkCapabilities.TRANSPORT_WIFI;
             } else {
-                return; // do not track any other networks
+                return false; // do not track any other networks
             }
 
             updateRadioPowerState(true /* isActive */, type);
 
             if (timeout > 0 && iface != null) {
                 try {
-                    // Networks start up.
-                    mIsDefaultNetworkActive = true;
                     mActiveIdleTimers.put(iface, new IdleTimerParams(timeout, type));
                     mNetd.idletimerAddInterface(iface, timeout, Integer.toString(type));
-                    reportNetworkActive();
+                    return true;
                 } catch (Exception e) {
                     // You shall not crash!
                     loge("Exception in setupDataActivityTracking " + e);
                 }
             }
+            return false;
         }
 
         /**
@@ -11305,27 +11307,33 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
+        private void updateDefaultNetworkActivity(NetworkAgentInfo defaultNetwork,
+                boolean hasIdleTimer) {
+            if (defaultNetwork != null) {
+                mIsDefaultNetworkActive = true;
+                // On T-, callbacks are called only when the network has the idle timer.
+                if (mIsAtLeastU || hasIdleTimer) {
+                    reportNetworkActive();
+                }
+            } else {
+                // If there is no default network, default network is considered inactive.
+                mIsDefaultNetworkActive = false;
+            }
+        }
+
         /**
          * Update data activity tracking when network state is updated.
          */
         public void updateDataActivityTracking(NetworkAgentInfo newNetwork,
                 NetworkAgentInfo oldNetwork) {
             ensureRunningOnConnectivityServiceThread();
+            boolean hasIdleTimer = false;
             if (newNetwork != null) {
-                setupDataActivityTracking(newNetwork);
+                hasIdleTimer = setupDataActivityTracking(newNetwork);
             }
+            updateDefaultNetworkActivity(newNetwork, hasIdleTimer);
             if (oldNetwork != null) {
                 removeDataActivityTracking(oldNetwork);
-            }
-            if (mActiveIdleTimers.isEmpty()) {
-                // If there are no idle timers, it means that system is not monitoring activity,
-                // so the default network is always considered active.
-                //
-                // TODO : Distinguish between the cases where mActiveIdleTimers is empty because
-                // tracking is disabled (negative idle timer value configured), or no active
-                // default network. In the latter case, this reports active but it should report
-                // inactive.
-                mIsDefaultNetworkActive = true;
             }
         }
 
