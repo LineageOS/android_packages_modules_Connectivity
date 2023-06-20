@@ -68,6 +68,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.ConnectivityService;
 
 import java.io.PrintWriter;
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -1039,6 +1040,14 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
     @Nullable
     public Inet6Address getClatv6SrcAddress() {
         return clatd.getClatv6SrcAddress();
+    }
+
+    /**
+     * Translate the input v4 address to v6 clat address.
+     */
+    @Nullable
+    public Inet6Address translateV4toClatV6(@NonNull Inet4Address addr) {
+        return clatd.translateV4toV6(addr);
     }
 
     /**
