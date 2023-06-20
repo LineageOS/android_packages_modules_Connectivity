@@ -123,4 +123,54 @@ public class NetworkNsdReportedMetrics {
         // TODO: Report repliedRequestsCount
         mDependencies.statsWrite(builder.build());
     }
+
+    /**
+     * Report service discovery started metric data.
+     *
+     * @param transactionId The transaction id of service discovery.
+     */
+    public void reportServiceDiscoveryStarted(int transactionId) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_DISCOVER);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_DISCOVERY_STARTED);
+        mDependencies.statsWrite(builder.build());
+    }
+
+    /**
+     * Report service discovery failed metric data.
+     *
+     * @param transactionId The transaction id of service discovery.
+     * @param durationMs The duration of service discovery failed.
+     */
+    public void reportServiceDiscoveryFailed(int transactionId, long durationMs) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_DISCOVER);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_DISCOVERY_FAILED);
+        builder.setEventDurationMillisec(durationMs);
+        mDependencies.statsWrite(builder.build());
+    }
+
+    /**
+     * Report service discovery stop metric data.
+     *
+     * @param transactionId The transaction id of service discovery.
+     * @param durationMs The duration of discovering services.
+     * @param foundCallbackCount The count of found service callbacks before stop discovery.
+     * @param lostCallbackCount The count of lost service callbacks before stop discovery.
+     * @param servicesCount The count of found services.
+     */
+    public void reportServiceDiscoveryStop(int transactionId, long durationMs,
+            int foundCallbackCount, int lostCallbackCount, int servicesCount) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_DISCOVER);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_DISCOVERY_STOP);
+        builder.setEventDurationMillisec(durationMs);
+        builder.setFoundCallbackCount(foundCallbackCount);
+        builder.setLostCallbackCount(lostCallbackCount);
+        builder.setFoundServiceCount(servicesCount);
+        mDependencies.statsWrite(builder.build());
+    }
 }
