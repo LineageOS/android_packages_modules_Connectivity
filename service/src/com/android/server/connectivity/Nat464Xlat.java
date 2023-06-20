@@ -101,7 +101,8 @@ public class Nat464Xlat {
     private IpPrefix mNat64PrefixFromRa;
     private String mBaseIface;
     private String mIface;
-    private Inet6Address mIPv6Address;
+    @VisibleForTesting
+    Inet6Address mIPv6Address;
     private State mState = State.IDLE;
     private final ClatCoordinator mClatCoordinator;  // non-null iff T+
 
@@ -241,6 +242,7 @@ public class Nat464Xlat {
         mNat64PrefixInUse = null;
         mIface = null;
         mBaseIface = null;
+        mIPv6Address = null;
 
         if (!mPrefixDiscoveryRunning) {
             setPrefix64(null);
@@ -577,7 +579,6 @@ public class Nat464Xlat {
     public Inet6Address getClatv6SrcAddress() {
         // Variables in Nat464Xlat should only be accessed from handler thread.
         ensureRunningOnHandlerThread();
-        if (!isStarted()) return null;
 
         return mIPv6Address;
     }
