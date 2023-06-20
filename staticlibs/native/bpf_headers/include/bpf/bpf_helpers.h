@@ -233,14 +233,22 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
                         selinux, pindir, share, KVER(5, 8, 0), KVER_INF,       \
                         min_loader, max_loader, ignore_eng, ignore_user,       \
                         ignore_userdebug);                                     \
+                                                                               \
+    _Static_assert((size_bytes) >= 4096, "min 4 kiB ringbuffer size");         \
+    _Static_assert((size_bytes) <= 0x10000000, "max 256 MiB ringbuffer size"); \
+    _Static_assert(((size_bytes) & ((size_bytes) - 1)) == 0,                   \
+                   "ring buffer size must be a power of two");                 \
+                                                                               \
     static inline __always_inline __unused int bpf_##the_map##_output(         \
             const ValueType* v) {                                              \
         return bpf_ringbuf_output_unsafe(&the_map, v, sizeof(*v), 0);          \
     }                                                                          \
+                                                                               \
     static inline __always_inline __unused                                     \
             ValueType* bpf_##the_map##_reserve() {                             \
         return bpf_ringbuf_reserve_unsafe(&the_map, sizeof(ValueType), 0);     \
     }                                                                          \
+                                                                               \
     static inline __always_inline __unused void bpf_##the_map##_submit(        \
             const ValueType* v) {                                              \
         bpf_ringbuf_submit_unsafe(v, 0);                                       \
