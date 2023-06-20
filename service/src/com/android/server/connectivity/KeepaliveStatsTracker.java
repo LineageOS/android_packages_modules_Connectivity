@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tracks carrier and duration metrics of automatic on/off keepalives.
@@ -63,9 +64,14 @@ import java.util.Set;
  * <p>This class follows AutomaticOnOffKeepaliveTracker closely and its on*Keepalive methods needs
  * to be called in a timely manner to keep the metrics accurate. It is also not thread-safe and all
  * public methods must be called by the same thread, namely the ConnectivityService handler thread.
+ *
+ * <p>In the case that the keepalive state becomes out of sync with the hardware, the tracker will
+ * be disabled. e.g. Calling onStartKeepalive on a given network, slot pair twice without calling
+ * onStopKeepalive is unexpected and will disable the tracker.
  */
 public class KeepaliveStatsTracker {
     private static final String TAG = KeepaliveStatsTracker.class.getSimpleName();
+    private static final int INVALID_KEEPALIVE_ID = -1;
 
     @NonNull private final Handler mConnectivityServiceHandler;
     @NonNull private final Dependencies mDependencies;
@@ -75,6 +81,10 @@ public class KeepaliveStatsTracker {
     // The default subscription id obtained from SubscriptionManager.getDefaultSubscriptionId.
     // Updates are received from the ACTION_DEFAULT_SUBSCRIPTION_CHANGED broadcast.
     private int mCachedDefaultSubscriptionId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+
+    // Boolean to track whether the KeepaliveStatsTracker is enabled.
+    // Use a final AtomicBoolean to ensure initialization is seen on the handler thread.
+    private final AtomicBoolean mEnabled = new AtomicBoolean(true);
 
     // Class to store network information, lifetime durations and active state of a keepalive.
     private static final class KeepaliveStats {
@@ -185,17 +195,21 @@ public class KeepaliveStatsTracker {
     // Map of keepalives identified by the id from getKeepaliveId to their stats information.
     private final SparseArray<KeepaliveStats> mKeepaliveStatsPerId = new SparseArray<>();
 
-    // Generate a unique integer using a given network's netId and the slot number.
+    // Generate and return a unique integer using a given network's netId and the slot number.
     // This is possible because netId is a 16 bit integer, so an integer with the first 16 bits as
     // the netId and the last 16 bits as the slot number can be created. This allows slot numbers to
     // be up to 2^16.
+    // Returns INVALID_KEEPALIVE_ID if the netId or slot is not as expected above.
     private int getKeepaliveId(@NonNull Network network, int slot) {
         final int netId = network.getNetId();
+        // Since there is no enforcement that a Network's netId is valid check for it here.
         if (netId < 0 || netId >= (1 << 16)) {
-            throw new IllegalArgumentException("Unexpected netId value: " + netId);
+            disableTracker("Unexpected netId value: " + netId);
+            return INVALID_KEEPALIVE_ID;
         }
         if (slot < 0 || slot >= (1 << 16)) {
-            throw new IllegalArgumentException("Unexpected slot value: " + slot);
+            disableTracker("Unexpected slot value: " + slot);
+            return INVALID_KEEPALIVE_ID;
         }
 
         return (netId << 16) + slot;
@@ -332,12 +346,12 @@ public class KeepaliveStatsTracker {
     /** Ensures the list of duration metrics is large enough for number of registered keepalives. */
     private void ensureDurationPerNumOfKeepaliveSize() {
         if (mNumActiveKeepalive < 0 || mNumRegisteredKeepalive < 0) {
-            throw new IllegalStateException(
-                    "Number of active or registered keepalives is negative");
+            disableTracker("Number of active or registered keepalives is negative");
+            return;
         }
         if (mNumActiveKeepalive > mNumRegisteredKeepalive) {
-            throw new IllegalStateException(
-                    "Number of active keepalives greater than registered keepalives");
+            disableTracker("Number of active keepalives greater than registered keepalives");
+            return;
         }
 
         while (mDurationPerNumOfKeepalive.size() <= mNumRegisteredKeepalive) {
@@ -426,10 +440,12 @@ public class KeepaliveStatsTracker {
             int appUid,
             boolean isAutoKeepalive) {
         ensureRunningOnHandlerThread();
+        if (!isEnabled()) return;
         final int keepaliveId = getKeepaliveId(network, slot);
+        if (keepaliveId == INVALID_KEEPALIVE_ID) return;
         if (mKeepaliveStatsPerId.contains(keepaliveId)) {
-            throw new IllegalArgumentException(
-                    "Attempt to start keepalive stats on a known network, slot pair");
+            disableTracker("Attempt to start keepalive stats on a known network, slot pair");
+            return;
         }
 
         mNumKeepaliveRequests++;
@@ -457,13 +473,11 @@ public class KeepaliveStatsTracker {
     /**
      * Inform the KeepaliveStatsTracker that the keepalive with the given network, slot pair has
      * updated its active state to keepaliveActive.
-     *
-     * @return the KeepaliveStats associated with the network, slot pair or null if it is unknown.
      */
-    private @NonNull KeepaliveStats onKeepaliveActive(
+    private void onKeepaliveActive(
             @NonNull Network network, int slot, boolean keepaliveActive) {
         final long timeNow = mDependencies.getElapsedRealtime();
-        return onKeepaliveActive(network, slot, keepaliveActive, timeNow);
+        onKeepaliveActive(network, slot, keepaliveActive, timeNow);
     }
 
     /**
@@ -474,45 +488,53 @@ public class KeepaliveStatsTracker {
      * @param slot the slot number of the keepalive
      * @param keepaliveActive the new active state of the keepalive
      * @param timeNow a timestamp obtained using Dependencies.getElapsedRealtime
-     * @return the KeepaliveStats associated with the network, slot pair or null if it is unknown.
      */
-    private @NonNull KeepaliveStats onKeepaliveActive(
+    private void onKeepaliveActive(
             @NonNull Network network, int slot, boolean keepaliveActive, long timeNow) {
-        ensureRunningOnHandlerThread();
-
         final int keepaliveId = getKeepaliveId(network, slot);
-        if (!mKeepaliveStatsPerId.contains(keepaliveId)) {
-            throw new IllegalArgumentException(
-                    "Attempt to set active keepalive on an unknown network, slot pair");
+        if (keepaliveId == INVALID_KEEPALIVE_ID) return;
+
+        final KeepaliveStats keepaliveStats = mKeepaliveStatsPerId.get(keepaliveId, null);
+
+        if (keepaliveStats == null) {
+            disableTracker("Attempt to set active keepalive on an unknown network, slot pair");
+            return;
         }
         updateDurationsPerNumOfKeepalive(timeNow);
 
-        final KeepaliveStats keepaliveStats = mKeepaliveStatsPerId.get(keepaliveId);
         if (keepaliveActive != keepaliveStats.isKeepaliveActive()) {
             mNumActiveKeepalive += keepaliveActive ? 1 : -1;
         }
 
         keepaliveStats.updateLifetimeStatsAndSetActive(timeNow, keepaliveActive);
-        return keepaliveStats;
     }
 
     /** Inform the KeepaliveStatsTracker a keepalive has just been paused. */
     public void onPauseKeepalive(@NonNull Network network, int slot) {
+        ensureRunningOnHandlerThread();
+        if (!isEnabled()) return;
         onKeepaliveActive(network, slot, /* keepaliveActive= */ false);
     }
 
     /** Inform the KeepaliveStatsTracker a keepalive has just been resumed. */
     public void onResumeKeepalive(@NonNull Network network, int slot) {
+        ensureRunningOnHandlerThread();
+        if (!isEnabled()) return;
         onKeepaliveActive(network, slot, /* keepaliveActive= */ true);
     }
 
     /** Inform the KeepaliveStatsTracker a keepalive has just been stopped. */
     public void onStopKeepalive(@NonNull Network network, int slot) {
+        ensureRunningOnHandlerThread();
+        if (!isEnabled()) return;
+
         final int keepaliveId = getKeepaliveId(network, slot);
+        if (keepaliveId == INVALID_KEEPALIVE_ID) return;
         final long timeNow = mDependencies.getElapsedRealtime();
 
-        final KeepaliveStats keepaliveStats =
-                onKeepaliveActive(network, slot, /* keepaliveActive= */ false, timeNow);
+        onKeepaliveActive(network, slot, /* keepaliveActive= */ false, timeNow);
+        final KeepaliveStats keepaliveStats = mKeepaliveStatsPerId.get(keepaliveId, null);
+        if (keepaliveStats == null) return;
 
         mNumRegisteredKeepalive--;
 
@@ -651,13 +673,31 @@ public class KeepaliveStatsTracker {
         return metrics;
     }
 
-    /** Writes the stored metrics to ConnectivityStatsLog and resets.  */
+    private void disableTracker(String msg) {
+        if (!mEnabled.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
+            // already disabled
+            return;
+        }
+        Log.wtf(TAG, msg + ". Disabling KeepaliveStatsTracker");
+        // TODO: Unregister the OnSubscriptionsChangedListener and BroadcastReceiver.
+    }
+
+    /** Whether this tracker is enabled. This method is thread safe. */
+    public boolean isEnabled() {
+        return mEnabled.get();
+    }
+
+    /** Writes the stored metrics to ConnectivityStatsLog and resets. */
     public void writeAndResetMetrics() {
         ensureRunningOnHandlerThread();
         // Keepalive stats use repeated atoms, which are only supported on T+. If written to statsd
         // on S- they will bootloop the system, so they must not be sent on S-. See b/289471411.
         if (!SdkLevel.isAtLeastT()) {
             Log.d(TAG, "KeepaliveStatsTracker is disabled before T, skipping write");
+            return;
+        }
+        if (!isEnabled()) {
+            Log.d(TAG, "KeepaliveStatsTracker is disabled, skipping write");
             return;
         }
 

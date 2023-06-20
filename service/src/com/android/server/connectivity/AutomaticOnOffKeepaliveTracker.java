@@ -338,6 +338,10 @@ public class AutomaticOnOffKeepaliveTracker {
     }
 
     private void writeMetricsAndRescheduleAlarm() {
+        // If the metrics is disabled, skip writing and scheduling the next alarm.
+        if (!mKeepaliveStatsTracker.isEnabled()) {
+            return;
+        }
         mKeepaliveStatsTracker.writeAndResetMetrics();
 
         final long time = mDependencies.getElapsedRealtime();

@@ -25,7 +25,9 @@ import static com.android.testutils.HandlerUtils.visibleOnHandlerThread;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -433,6 +435,12 @@ public class KeepaliveStatsTrackerTest {
         assertCarrierLifetimeMetrics(expectKeepaliveCarrierStatsArray, actualCarrierLifetime);
     }
 
+    // The KeepaliveStatsTracker will be disabled when an error occurs with the keepalive states.
+    // Most tests should assert that the tracker is still active to ensure no errors occurred.
+    private void assertKeepaliveStatsTrackerActive() {
+        assertTrue(mKeepaliveStatsTracker.isEnabled());
+    }
+
     @Test
     public void testNoKeepalive() {
         final int writeTime = 5000;
@@ -452,6 +460,7 @@ public class KeepaliveStatsTrackerTest {
                 expectRegisteredDurations,
                 expectActiveDurations,
                 new KeepaliveCarrierStats[0]);
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -485,6 +494,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -523,6 +533,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -567,6 +578,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -615,6 +627,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -657,6 +670,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -708,6 +722,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -788,6 +803,7 @@ public class KeepaliveStatsTrackerTest {
                             expectRegisteredDurations[1] + 2 * expectRegisteredDurations[2],
                             expectActiveDurations[1] + 2 * expectActiveDurations[2])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -857,6 +873,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations2[1], expectActiveDurations2[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     /*
@@ -946,6 +963,7 @@ public class KeepaliveStatsTrackerTest {
                 expectRegisteredDurations2,
                 expectActiveDurations2,
                 new KeepaliveCarrierStats[] {expectKeepaliveCarrierStats3});
+        assertKeepaliveStatsTrackerActive();
     }
 
     @Test
@@ -957,7 +975,10 @@ public class KeepaliveStatsTrackerTest {
         onStartKeepalive(startTime1, TEST_SLOT);
 
         // Attempt to use the same (network, slot)
-        assertThrows(IllegalArgumentException.class, () -> onStartKeepalive(startTime2, TEST_SLOT));
+        onStartKeepalive(startTime2, TEST_SLOT);
+        // Starting a 2nd keepalive on the same slot is unexpected and an error so the stats tracker
+        // is disabled.
+        assertFalse(mKeepaliveStatsTracker.isEnabled());
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported =
                 buildKeepaliveMetrics(writeTime);
@@ -1018,6 +1039,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     getDefaultCarrierStats(expectRegisteredDurations[1], expectActiveDurations[1])
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     @Test
@@ -1065,6 +1087,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     expectKeepaliveCarrierStats1, expectKeepaliveCarrierStats2
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     @Test
@@ -1106,6 +1129,7 @@ public class KeepaliveStatsTrackerTest {
                 /* expectRegisteredDurations= */ new int[] {startTime, writeTime - startTime},
                 /* expectActiveDurations= */ new int[] {startTime, writeTime - startTime},
                 new KeepaliveCarrierStats[] {expectKeepaliveCarrierStats});
+        assertKeepaliveStatsTrackerActive();
     }
 
     @Test
@@ -1148,6 +1172,7 @@ public class KeepaliveStatsTrackerTest {
                             writeTime * 3 - startTime1 - startTime2 - startTime3,
                             writeTime * 3 - startTime1 - startTime2 - startTime3)
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     @Test
@@ -1197,6 +1222,7 @@ public class KeepaliveStatsTrackerTest {
                 new KeepaliveCarrierStats[] {
                     expectKeepaliveCarrierStats1, expectKeepaliveCarrierStats2
                 });
+        assertKeepaliveStatsTrackerActive();
     }
 
     @Test
