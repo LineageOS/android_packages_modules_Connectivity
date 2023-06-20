@@ -140,6 +140,7 @@ public final class NetworkStackConstants {
      * ICMPv6 constants.
      *
      * See also:
+     *     - https://tools.ietf.org/html/rfc4191
      *     - https://tools.ietf.org/html/rfc4443
      *     - https://tools.ietf.org/html/rfc4861
      */
@@ -157,6 +158,7 @@ public final class NetworkStackConstants {
     public static final int ICMPV6_ND_OPTION_TLLA  = 2;
     public static final int ICMPV6_ND_OPTION_PIO   = 3;
     public static final int ICMPV6_ND_OPTION_MTU   = 5;
+    public static final int ICMPV6_ND_OPTION_RIO   = 24;
     public static final int ICMPV6_ND_OPTION_RDNSS = 25;
     public static final int ICMPV6_ND_OPTION_PREF64 = 38;
 
