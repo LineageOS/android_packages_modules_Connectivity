@@ -41,6 +41,7 @@ import androidx.annotation.RequiresApi;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
@@ -885,6 +886,29 @@ public class ClatCoordinator {
             pw.decreaseIndent();
         } catch (ErrnoException e) {
             pw.println("Error dumping BPF egress4 map: " + e);
+        }
+    }
+
+    /**
+     * Dump raw BPF map into base64 encoded strings {@literal "<base64 key>,<base64 value>"}.
+     * Allow to dump only one map in each call. For test only.
+     *
+     * @param pw print writer.
+     * @param isEgress4Map whether to dump the egress4 map (true) or the ingress6 map (false).
+     *
+     * Usage:
+     * $ dumpsys connectivity {clatEgress4RawBpfMap|clatIngress6RawBpfMap}
+     *
+     * Output:
+     * {@literal <base64 encoded key #1>,<base64 encoded value #1>}
+     * {@literal <base64 encoded key #2>,<base64 encoded value #2>}
+     * ..
+     */
+    public void dumpRawMap(@NonNull IndentingPrintWriter pw, boolean isEgress4Map) {
+        if (isEgress4Map) {
+            BpfDump.dumpRawMap(mEgressMap, pw);
+        } else {
+            BpfDump.dumpRawMap(mIngressMap, pw);
         }
     }
 

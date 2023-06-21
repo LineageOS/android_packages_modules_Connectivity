@@ -622,6 +622,18 @@ public class Nat464Xlat {
         }
     }
 
+    /**
+     * Dump the raw BPF maps in 464XLAT
+     *
+     * @param pw print writer.
+     * @param isEgress4Map whether to dump the egress4 map (true) or the ingress6 map (false).
+     */
+    public void dumpRawBpfMap(IndentingPrintWriter pw, boolean isEgress4Map) {
+        if (SdkLevel.isAtLeastT()) {
+            mClatCoordinator.dumpRawMap(pw, isEgress4Map);
+        }
+    }
+
     @Override
     public String toString() {
         return "mBaseIface: " + mBaseIface + ", mIface: " + mIface + ", mState: " + mState;

@@ -1362,7 +1362,7 @@ public class BpfCoordinator {
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_STATS)) {
             try (IBpfMap<TetherStatsKey, TetherStatsValue> statsMap = mDeps.getBpfStatsMap()) {
                 BpfDump.dumpRawMap(statsMap, pw);
-            } catch (ErrnoException | IOException e) {
+            } catch (IOException e) {
                 pw.println("Error dumping stats map: " + e);
             }
             return;
@@ -1370,7 +1370,7 @@ public class BpfCoordinator {
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_UPSTREAM4)) {
             try (IBpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map()) {
                 BpfDump.dumpRawMap(upstreamMap, pw);
-            } catch (ErrnoException | IOException e) {
+            } catch (IOException e) {
                 pw.println("Error dumping IPv4 map: " + e);
             }
             return;
