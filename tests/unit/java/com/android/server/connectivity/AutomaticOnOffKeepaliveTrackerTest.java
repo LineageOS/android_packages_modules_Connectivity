@@ -692,6 +692,10 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         assertNull(getAutoKiForBinder(testInfo.binder));
 
         verifyNoMoreInteractions(ignoreStubs(testInfo.socketKeepaliveCallback));
+
+        // Make sure the slot is free
+        final TestKeepaliveInfo testInfo2 = doStartNattKeepalive();
+        checkAndProcessKeepaliveStart(testInfo2.kpd);
     }
 
     @Test
@@ -820,36 +824,34 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         clearInvocations(mNai);
         // Start the second keepalive while the first is paused.
-        // TODO: Uncomment the following test after fixing b/283886067. Currently this attempts to
-        // start the keepalive on TEST_SLOT and this throws in the handler thread.
-        // final TestKeepaliveInfo testInfo2 = doStartNattKeepalive();
-        // // The slot used is TEST_SLOT + 1 since TEST_SLOT is being taken by the paused keepalive.
-        // checkAndProcessKeepaliveStart(TEST_SLOT + 1, testInfo2.kpd);
-        // verify(testInfo2.socketKeepaliveCallback).onStarted();
-        // assertNotNull(getAutoKiForBinder(testInfo2.binder));
+        final TestKeepaliveInfo testInfo2 = doStartNattKeepalive();
+        // The slot used is TEST_SLOT + 1 since TEST_SLOT is being taken by the paused keepalive.
+        checkAndProcessKeepaliveStart(TEST_SLOT + 1, testInfo2.kpd);
+        verify(testInfo2.socketKeepaliveCallback).onStarted();
+        assertNotNull(getAutoKiForBinder(testInfo2.binder));
 
-        // clearInvocations(mNai);
-        // doResumeKeepalive(autoKi1);
-        // // Resume on TEST_SLOT.
-        // checkAndProcessKeepaliveStart(TEST_SLOT, testInfo1.kpd);
-        // verify(testInfo1.socketKeepaliveCallback).onResumed();
+        clearInvocations(mNai);
+        doResumeKeepalive(autoKi1);
+        // Resume on TEST_SLOT.
+        checkAndProcessKeepaliveStart(TEST_SLOT, testInfo1.kpd);
+        verify(testInfo1.socketKeepaliveCallback).onResumed();
 
-        // clearInvocations(mNai);
-        // doStopKeepalive(autoKi1);
-        // checkAndProcessKeepaliveStop(TEST_SLOT);
-        // verify(testInfo1.socketKeepaliveCallback).onStopped();
-        // verify(testInfo2.socketKeepaliveCallback, never()).onStopped();
-        // assertNull(getAutoKiForBinder(testInfo1.binder));
+        clearInvocations(mNai);
+        doStopKeepalive(autoKi1);
+        checkAndProcessKeepaliveStop(TEST_SLOT);
+        verify(testInfo1.socketKeepaliveCallback).onStopped();
+        verify(testInfo2.socketKeepaliveCallback, never()).onStopped();
+        assertNull(getAutoKiForBinder(testInfo1.binder));
 
-        // clearInvocations(mNai);
-        // assertNotNull(getAutoKiForBinder(testInfo2.binder));
-        // doStopKeepalive(getAutoKiForBinder(testInfo2.binder));
-        // checkAndProcessKeepaliveStop(TEST_SLOT + 1);
-        // verify(testInfo2.socketKeepaliveCallback).onStopped();
-        // assertNull(getAutoKiForBinder(testInfo2.binder));
+        clearInvocations(mNai);
+        assertNotNull(getAutoKiForBinder(testInfo2.binder));
+        doStopKeepalive(getAutoKiForBinder(testInfo2.binder));
+        checkAndProcessKeepaliveStop(TEST_SLOT + 1);
+        verify(testInfo2.socketKeepaliveCallback).onStopped();
+        assertNull(getAutoKiForBinder(testInfo2.binder));
 
-        // verifyNoMoreInteractions(ignoreStubs(testInfo1.socketKeepaliveCallback));
-        // verifyNoMoreInteractions(ignoreStubs(testInfo2.socketKeepaliveCallback));
+        verifyNoMoreInteractions(ignoreStubs(testInfo1.socketKeepaliveCallback));
+        verifyNoMoreInteractions(ignoreStubs(testInfo2.socketKeepaliveCallback));
     }
 
     @Test
