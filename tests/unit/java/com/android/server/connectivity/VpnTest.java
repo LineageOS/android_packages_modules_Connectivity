@@ -80,6 +80,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -804,6 +805,32 @@ public class VpnTest extends VpnTestBase {
         final Vpn vpn = createVpn();
         assertTrue(vpn.prepare(null, null, VpnManager.TYPE_VPN_SERVICE));
 
+    }
+
+    @Test
+    public void testPrepare_legacyVpnWithoutControlVpn()
+            throws Exception {
+        doThrow(new SecurityException("no CONTROL_VPN")).when(mContext)
+                .enforceCallingOrSelfPermission(eq(CONTROL_VPN), any());
+        final Vpn vpn = createVpn();
+        assertThrows(SecurityException.class,
+                () -> vpn.prepare(null, VpnConfig.LEGACY_VPN, VpnManager.TYPE_VPN_SERVICE));
+
+        // CONTROL_VPN can be held by the caller or another system server process - both are
+        // allowed. Just checking for `enforceCallingPermission` may not be sufficient.
+        verify(mContext, never()).enforceCallingPermission(eq(CONTROL_VPN), any());
+    }
+
+    @Test
+    public void testPrepare_legacyVpnWithControlVpn()
+            throws Exception {
+        doNothing().when(mContext).enforceCallingOrSelfPermission(eq(CONTROL_VPN), any());
+        final Vpn vpn = createVpn();
+        assertTrue(vpn.prepare(null, VpnConfig.LEGACY_VPN, VpnManager.TYPE_VPN_SERVICE));
+
+        // CONTROL_VPN can be held by the caller or another system server process - both are
+        // allowed. Just checking for `enforceCallingPermission` may not be sufficient.
+        verify(mContext, never()).enforceCallingPermission(eq(CONTROL_VPN), any());
     }
 
     @Test
