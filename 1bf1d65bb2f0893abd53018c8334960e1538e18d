@@ -16,6 +16,23 @@
       "message": "Includes fixup https://review.calyxos.org/c/CalyxOS/platform_packages_modules_Connectivity/+/16905\n\nCommit message is reworded",
       "revId": "1bf1d65bb2f0893abd53018c8334960e1538e18d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a2f97a28_552c9c0a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2023-06-22T21:07:21Z",
+      "side": 1,
+      "message": "Requires netd change",
+      "revId": "1bf1d65bb2f0893abd53018c8334960e1538e18d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
