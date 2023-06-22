@@ -20,10 +20,12 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -72,6 +74,7 @@ public class Nat464XlatTest {
     static final String STACKED_IFACE = "v4-test0";
     static final LinkAddress V6ADDR = new LinkAddress("2001:db8:1::f00/64");
     static final LinkAddress ADDR = new LinkAddress("192.0.2.5/29");
+    static final String CLAT_V6 = "64:ff9b::1";
     static final String NAT64_PREFIX = "64:ff9b::/96";
     static final String OTHER_NAT64_PREFIX = "2001:db8:0:64::/96";
     static final int NETID = 42;
@@ -132,6 +135,8 @@ public class Nat464XlatTest {
         when(mNetd.interfaceGetCfg(eq(STACKED_IFACE))).thenReturn(mConfig);
         mConfig.ipv4Addr = ADDR.getAddress().getHostAddress();
         mConfig.prefixLength =  ADDR.getPrefixLength();
+        doReturn(CLAT_V6).when(mClatCoordinator).clatStart(
+                BASE_IFACE, NETID, new IpPrefix(NAT64_PREFIX));
     }
 
     private void assertRequiresClat(boolean expected, NetworkAgentInfo nai) {
@@ -286,7 +291,8 @@ public class Nat464XlatTest {
         assertFalse(c.getValue().getAllInterfaceNames().contains(STACKED_IFACE));
         verify(mDnsResolver).stopPrefix64Discovery(eq(NETID));
         assertIdle(nat);
-
+        // Verify the generated v6 is reset when clat is stopped.
+        assertNull(nat.mIPv6Address);
         // Stacked interface removed notification arrives and is ignored.
         nat.interfaceRemoved(STACKED_IFACE);
         mLooper.dispatchNext();
