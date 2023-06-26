@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -289,16 +290,32 @@ public class KeepaliveStatsTracker {
         this(context, handler, new Dependencies());
     }
 
+    private final Context mContext;
+    private final SubscriptionManager mSubscriptionManager;
+
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            mCachedDefaultSubscriptionId =
+                    intent.getIntExtra(
+                            SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX,
+                            SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+        }
+    };
+
+    private final CompletableFuture<OnSubscriptionsChangedListener> mListenerFuture =
+            new CompletableFuture<>();
+
     @VisibleForTesting
     public KeepaliveStatsTracker(
             @NonNull Context context,
             @NonNull Handler handler,
             @NonNull Dependencies dependencies) {
-        Objects.requireNonNull(context);
+        mContext = Objects.requireNonNull(context);
         mDependencies = Objects.requireNonNull(dependencies);
         mConnectivityServiceHandler = Objects.requireNonNull(handler);
 
-        final SubscriptionManager subscriptionManager =
+        mSubscriptionManager =
                 Objects.requireNonNull(context.getSystemService(SubscriptionManager.class));
 
         mLastUpdateDurationsTimestamp = mDependencies.getElapsedRealtime();
@@ -308,15 +325,7 @@ public class KeepaliveStatsTracker {
         }
 
         context.registerReceiver(
-                new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        mCachedDefaultSubscriptionId =
-                                intent.getIntExtra(
-                                        SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX,
-                                        SubscriptionManager.INVALID_SUBSCRIPTION_ID);
-                    }
-                },
+                mBroadcastReceiver,
                 new IntentFilter(SubscriptionManager.ACTION_DEFAULT_SUBSCRIPTION_CHANGED),
                 /* broadcastPermission= */ null,
                 mConnectivityServiceHandler);
@@ -326,27 +335,30 @@ public class KeepaliveStatsTracker {
         // this will throw. Therefore, post a runnable that creates it there.
         // When the callback is called on the BackgroundThread, post a message on the CS handler
         // thread to update the caches, which can only be touched there.
-        BackgroundThread.getHandler().post(() ->
-                subscriptionManager.addOnSubscriptionsChangedListener(
-                        r -> r.run(), new OnSubscriptionsChangedListener() {
-                            @Override
-                            public void onSubscriptionsChanged() {
-                                final List<SubscriptionInfo> activeSubInfoList =
-                                        subscriptionManager.getActiveSubscriptionInfoList();
-                                // A null subInfo list here indicates the current state is unknown
-                                // but not necessarily empty, simply ignore it. Another call to the
-                                // listener will be invoked in the future.
-                                if (activeSubInfoList == null) return;
-                                mConnectivityServiceHandler.post(() -> {
-                                    mCachedCarrierIdPerSubId.clear();
+        BackgroundThread.getHandler().post(() -> {
+            final OnSubscriptionsChangedListener listener =
+                    new OnSubscriptionsChangedListener() {
+                        @Override
+                        public void onSubscriptionsChanged() {
+                            final List<SubscriptionInfo> activeSubInfoList =
+                                    mSubscriptionManager.getActiveSubscriptionInfoList();
+                            // A null subInfo list here indicates the current state is unknown
+                            // but not necessarily empty, simply ignore it. Another call to the
+                            // listener will be invoked in the future.
+                            if (activeSubInfoList == null) return;
+                            mConnectivityServiceHandler.post(() -> {
+                                mCachedCarrierIdPerSubId.clear();
 
-                                    for (final SubscriptionInfo subInfo : activeSubInfoList) {
-                                        mCachedCarrierIdPerSubId.put(subInfo.getSubscriptionId(),
-                                                subInfo.getCarrierId());
-                                    }
-                                });
-                            }
-                        }));
+                                for (final SubscriptionInfo subInfo : activeSubInfoList) {
+                                    mCachedCarrierIdPerSubId.put(subInfo.getSubscriptionId(),
+                                            subInfo.getCarrierId());
+                                }
+                            });
+                        }
+                    };
+            mListenerFuture.complete(listener);
+            mSubscriptionManager.addOnSubscriptionsChangedListener(r -> r.run(), listener);
+        });
     }
 
     /** Ensures the list of duration metrics is large enough for number of registered keepalives. */
@@ -685,7 +697,11 @@ public class KeepaliveStatsTracker {
             return;
         }
         Log.wtf(TAG, msg + ". Disabling KeepaliveStatsTracker");
-        // TODO: Unregister the OnSubscriptionsChangedListener and BroadcastReceiver.
+        mContext.unregisterReceiver(mBroadcastReceiver);
+        // The returned future is ignored since it is void and the is never completed exceptionally.
+        final CompletableFuture<Void> unused = mListenerFuture.thenAcceptAsync(
+                listener -> mSubscriptionManager.removeOnSubscriptionsChangedListener(listener),
+                BackgroundThread.getExecutor());
     }
 
     /** Whether this tracker is enabled. This method is thread safe. */
