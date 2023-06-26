@@ -25,17 +25,14 @@ import static android.net.InetAddresses.parseNumericAddress;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_GLOBAL;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
+import static android.net.TetheringTester.buildTcpPacket;
+import static android.net.TetheringTester.buildUdpPacket;
+import static android.net.TetheringTester.isAddressIpv4;
 import static android.net.TetheringTester.isExpectedIcmpPacket;
 import static android.net.TetheringTester.isExpectedTcpPacket;
 import static android.net.TetheringTester.isExpectedUdpPacket;
-import static android.system.OsConstants.IPPROTO_IP;
-import static android.system.OsConstants.IPPROTO_IPV6;
-import static android.system.OsConstants.IPPROTO_TCP;
-import static android.system.OsConstants.IPPROTO_UDP;
 
 import static com.android.net.module.util.HexDump.dumpHexString;
-import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4;
-import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV6;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
 import static com.android.net.module.util.NetworkStackConstants.TCPHDR_ACK;
 import static com.android.net.module.util.NetworkStackConstants.TCPHDR_SYN;
@@ -67,11 +64,9 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.modules.utils.build.SdkLevel;
-import com.android.net.module.util.PacketBuilder;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.Ipv6Header;
 import com.android.testutils.HandlerUtils;
@@ -128,25 +123,11 @@ public abstract class EthernetTetheringTestBase {
             (Inet6Address) parseNumericAddress("64:ff9b::808:808");
     protected static final IpPrefix TEST_NAT64PREFIX = new IpPrefix("64:ff9b::/96");
 
-    // IPv4 header definition.
-    protected static final short ID = 27149;
-    protected static final short FLAGS_AND_FRAGMENT_OFFSET = (short) 0x4000; // flags=DF, offset=0
-    protected static final byte TIME_TO_LIVE = (byte) 0x40;
-    protected static final byte TYPE_OF_SERVICE = 0;
-
-    // IPv6 header definition.
-    private static final short HOP_LIMIT = 0x40;
-    // version=6, traffic class=0x0, flowlabel=0x0;
-    private static final int VERSION_TRAFFICCLASS_FLOWLABEL = 0x60000000;
-
-    // UDP and TCP header definition.
     // LOCAL_PORT is used by public port and private port. Assume port 9876 has not been used yet
     // before the testing that public port and private port are the same in the testing. Note that
     // NAT port forwarding could be different between private port and public port.
     protected static final short LOCAL_PORT = 9876;
     protected static final short REMOTE_PORT = 433;
-    private static final short WINDOW = (short) 0x2000;
-    private static final short URGENT_POINTER = 0;
 
     // Payload definition.
     protected static final ByteBuffer EMPTY_PAYLOAD = ByteBuffer.wrap(new byte[0]);
@@ -654,72 +635,6 @@ public abstract class EthernetTetheringTestBase {
         return runAsShell(MANAGE_TEST_NETWORKS, () -> initTestNetwork(mContext, lp, TIMEOUT_MS));
     }
 
-    private short getEthType(@NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp) {
-        return isAddressIpv4(srcIp, dstIp) ? (short) ETHER_TYPE_IPV4 : (short) ETHER_TYPE_IPV6;
-    }
-
-    private int getIpProto(@NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp) {
-        return isAddressIpv4(srcIp, dstIp) ? IPPROTO_IP : IPPROTO_IPV6;
-    }
-
-    @NonNull
-    protected ByteBuffer buildUdpPacket(
-            @Nullable final MacAddress srcMac, @Nullable final MacAddress dstMac,
-            @NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp,
-            short srcPort, short dstPort, @Nullable final ByteBuffer payload)
-            throws Exception {
-        final int ipProto = getIpProto(srcIp, dstIp);
-        final boolean hasEther = (srcMac != null && dstMac != null);
-        final int payloadLen = (payload == null) ? 0 : payload.limit();
-        final ByteBuffer buffer = PacketBuilder.allocate(hasEther, ipProto, IPPROTO_UDP,
-                payloadLen);
-        final PacketBuilder packetBuilder = new PacketBuilder(buffer);
-
-        // [1] Ethernet header
-        if (hasEther) {
-            packetBuilder.writeL2Header(srcMac, dstMac, getEthType(srcIp, dstIp));
-        }
-
-        // [2] IP header
-        if (ipProto == IPPROTO_IP) {
-            packetBuilder.writeIpv4Header(TYPE_OF_SERVICE, ID, FLAGS_AND_FRAGMENT_OFFSET,
-                    TIME_TO_LIVE, (byte) IPPROTO_UDP, (Inet4Address) srcIp, (Inet4Address) dstIp);
-        } else {
-            packetBuilder.writeIpv6Header(VERSION_TRAFFICCLASS_FLOWLABEL, (byte) IPPROTO_UDP,
-                    HOP_LIMIT, (Inet6Address) srcIp, (Inet6Address) dstIp);
-        }
-
-        // [3] UDP header
-        packetBuilder.writeUdpHeader(srcPort, dstPort);
-
-        // [4] Payload
-        if (payload != null) {
-            buffer.put(payload);
-            // in case data might be reused by caller, restore the position and
-            // limit of bytebuffer.
-            payload.clear();
-        }
-
-        return packetBuilder.finalizePacket();
-    }
-
-    @NonNull
-    protected ByteBuffer buildUdpPacket(@NonNull final InetAddress srcIp,
-            @NonNull final InetAddress dstIp, short srcPort, short dstPort,
-            @Nullable final ByteBuffer payload) throws Exception {
-        return buildUdpPacket(null /* srcMac */, null /* dstMac */, srcIp, dstIp, srcPort,
-                dstPort, payload);
-    }
-
-    private boolean isAddressIpv4(@NonNull final  InetAddress srcIp,
-            @NonNull final InetAddress dstIp) {
-        if (srcIp instanceof Inet4Address && dstIp instanceof Inet4Address) return true;
-        if (srcIp instanceof Inet6Address && dstIp instanceof Inet6Address) return false;
-
-        fail("Unsupported conditions: srcIp " + srcIp + ", dstIp " + dstIp);
-        return false;  // unreachable
-    }
-
     protected void sendDownloadPacketUdp(@NonNull final InetAddress srcIp,
             @NonNull final InetAddress dstIp, @NonNull final TetheringTester tester,
             boolean is6To4) throws Exception {
@@ -759,45 +674,6 @@ public abstract class EthernetTetheringTestBase {
             Log.d(TAG, "Packet in upstream: " + dumpHexString(p));
             return isExpectedUdpPacket(p, false /* hasEther */, isIpv4, TX_PAYLOAD);
         });
-    }
-
-
-    @NonNull
-    private ByteBuffer buildTcpPacket(
-            @Nullable final MacAddress srcMac, @Nullable final MacAddress dstMac,
-            @NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp,
-            short srcPort, short dstPort, final short seq, final short ack,
-            final byte tcpFlags, @NonNull final ByteBuffer payload) throws Exception {
-        final int ipProto = getIpProto(srcIp, dstIp);
-        final boolean hasEther = (srcMac != null && dstMac != null);
-        final ByteBuffer buffer = PacketBuilder.allocate(hasEther, ipProto, IPPROTO_TCP,
-                payload.limit());
-        final PacketBuilder packetBuilder = new PacketBuilder(buffer);
-
-        // [1] Ethernet header
-        if (hasEther) {
-            packetBuilder.writeL2Header(srcMac, dstMac, getEthType(srcIp, dstIp));
-        }
-
-        // [2] IP header
-        if (ipProto == IPPROTO_IP) {
-            packetBuilder.writeIpv4Header(TYPE_OF_SERVICE, ID, FLAGS_AND_FRAGMENT_OFFSET,
-                    TIME_TO_LIVE, (byte) IPPROTO_TCP, (Inet4Address) srcIp, (Inet4Address) dstIp);
-        } else {
-            packetBuilder.writeIpv6Header(VERSION_TRAFFICCLASS_FLOWLABEL, (byte) IPPROTO_TCP,
-                    HOP_LIMIT, (Inet6Address) srcIp, (Inet6Address) dstIp);
-        }
-
-        // [3] TCP header
-        packetBuilder.writeTcpHeader(srcPort, dstPort, seq, ack, tcpFlags, WINDOW, URGENT_POINTER);
-
-        // [4] Payload
-        buffer.put(payload);
-        // in case data might be reused by caller, restore the position and
-        // limit of bytebuffer.
-        payload.clear();
-
-        return packetBuilder.finalizePacket();
     }
 
     protected void sendDownloadPacketTcp(@NonNull final InetAddress srcIp,
