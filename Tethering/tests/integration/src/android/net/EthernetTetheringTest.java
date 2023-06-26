@@ -20,23 +20,17 @@ import static android.net.InetAddresses.parseNumericAddress;
 import static android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL;
 import static android.net.TetheringManager.TETHERING_ETHERNET;
 import static android.net.TetheringTester.TestDnsPacket;
+import static android.net.TetheringTester.buildIcmpEchoPacketV4;
+import static android.net.TetheringTester.buildUdpPacket;
 import static android.net.TetheringTester.isExpectedIcmpPacket;
 import static android.net.TetheringTester.isExpectedUdpDnsPacket;
 import static android.system.OsConstants.ICMP_ECHO;
 import static android.system.OsConstants.ICMP_ECHOREPLY;
-import static android.system.OsConstants.IPPROTO_ICMP;
 
 import static com.android.net.module.util.ConnectivityUtils.isIPv6ULA;
 import static com.android.net.module.util.HexDump.dumpHexString;
-import static com.android.net.module.util.IpUtils.icmpChecksum;
-import static com.android.net.module.util.IpUtils.ipChecksum;
-import static com.android.net.module.util.NetworkStackConstants.ETHER_TYPE_IPV4;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ECHO_REPLY_TYPE;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ECHO_REQUEST_TYPE;
-import static com.android.net.module.util.NetworkStackConstants.ICMP_CHECKSUM_OFFSET;
-import static com.android.net.module.util.NetworkStackConstants.IPV4_CHECKSUM_OFFSET;
-import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_LEN;
-import static com.android.net.module.util.NetworkStackConstants.IPV4_LENGTH_OFFSET;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -53,14 +47,11 @@ import android.os.SystemProperties;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.test.filters.MediumTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.Ipv6Utils;
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.structs.EthernetHeader;
-import com.android.net.module.util.structs.Icmpv4Header;
 import com.android.net.module.util.structs.Ipv4Header;
 import com.android.net.module.util.structs.UdpHeader;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -96,7 +87,6 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
     private static final String TAG = EthernetTetheringTest.class.getSimpleName();
 
     private static final short DNS_PORT = 53;
-    private static final short ICMPECHO_CODE = 0x0;
     private static final short ICMPECHO_ID = 0x0;
     private static final short ICMPECHO_SEQ = 0x0;
 
@@ -562,85 +552,6 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
     @IgnoreUpTo(Build.VERSION_CODES.R)
     public void testTetherClatUdp() throws Exception {
         runClatUdpTest();
-    }
-
-    // PacketBuilder doesn't support IPv4 ICMP packet. It may need to refactor PacketBuilder first
-    // because ICMP is a specific layer 3 protocol for PacketBuilder which expects packets always
-    // have layer 3 (IP) and layer 4 (TCP, UDP) for now. Since we don't use IPv4 ICMP packet too
-    // much in this test, we just write a ICMP packet builder here.
-    // TODO: move ICMPv4 packet build function to common utilis.
-    @NonNull
-    private ByteBuffer buildIcmpEchoPacketV4(
-            @Nullable final MacAddress srcMac, @Nullable final MacAddress dstMac,
-            @NonNull final Inet4Address srcIp, @NonNull final Inet4Address dstIp,
-            int type, short id, short seq) throws Exception {
-        if (type != ICMP_ECHO && type != ICMP_ECHOREPLY) {
-            fail("Unsupported ICMP type: " + type);
-        }
-
-        // Build ICMP echo id and seq fields as payload. Ignore the data field.
-        final ByteBuffer payload = ByteBuffer.allocate(4);
-        payload.putShort(id);
-        payload.putShort(seq);
-        payload.rewind();
-
-        final boolean hasEther = (srcMac != null && dstMac != null);
-        final int etherHeaderLen = hasEther ? Struct.getSize(EthernetHeader.class) : 0;
-        final int ipv4HeaderLen = Struct.getSize(Ipv4Header.class);
-        final int Icmpv4HeaderLen = Struct.getSize(Icmpv4Header.class);
-        final int payloadLen = payload.limit();
-        final ByteBuffer packet = ByteBuffer.allocate(etherHeaderLen + ipv4HeaderLen
-                + Icmpv4HeaderLen + payloadLen);
-
-        // [1] Ethernet header
-        if (hasEther) {
-            final EthernetHeader ethHeader = new EthernetHeader(dstMac, srcMac, ETHER_TYPE_IPV4);
-            ethHeader.writeToByteBuffer(packet);
-        }
-
-        // [2] IP header
-        final Ipv4Header ipv4Header = new Ipv4Header(TYPE_OF_SERVICE,
-                (short) 0 /* totalLength, calculate later */, ID,
-                FLAGS_AND_FRAGMENT_OFFSET, TIME_TO_LIVE, (byte) IPPROTO_ICMP,
-                (short) 0 /* checksum, calculate later */, srcIp, dstIp);
-        ipv4Header.writeToByteBuffer(packet);
-
-        // [3] ICMP header
-        final Icmpv4Header icmpv4Header = new Icmpv4Header((byte) type, ICMPECHO_CODE,
-                (short) 0 /* checksum, calculate later */);
-        icmpv4Header.writeToByteBuffer(packet);
-
-        // [4] Payload
-        packet.put(payload);
-        packet.flip();
-
-        // [5] Finalize packet
-        // Used for updating IP header fields. If there is Ehternet header, IPv4 header offset
-        // in buffer equals ethernet header length because IPv4 header is located next to ethernet
-        // header. Otherwise, IPv4 header offset is 0.
-        final int ipv4HeaderOffset = hasEther ? etherHeaderLen : 0;
-
-        // Populate the IPv4 totalLength field.
-        packet.putShort(ipv4HeaderOffset + IPV4_LENGTH_OFFSET,
-                (short) (ipv4HeaderLen + Icmpv4HeaderLen + payloadLen));
-
-        // Populate the IPv4 header checksum field.
-        packet.putShort(ipv4HeaderOffset + IPV4_CHECKSUM_OFFSET,
-                ipChecksum(packet, ipv4HeaderOffset /* headerOffset */));
-
-        // Populate the ICMP checksum field.
-        packet.putShort(ipv4HeaderOffset + IPV4_HEADER_MIN_LEN + ICMP_CHECKSUM_OFFSET,
-                icmpChecksum(packet, ipv4HeaderOffset + IPV4_HEADER_MIN_LEN,
-                        Icmpv4HeaderLen + payloadLen));
-        return packet;
-    }
-
-    @NonNull
-    private ByteBuffer buildIcmpEchoPacketV4(@NonNull final Inet4Address srcIp,
-            @NonNull final Inet4Address dstIp, int type, short id, short seq)
-            throws Exception {
-        return buildIcmpEchoPacketV4(null /* srcMac */, null /* dstMac */, srcIp, dstIp,
-                type, id, seq);
     }
 
     @Test
