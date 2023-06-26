@@ -17,8 +17,12 @@
 package android.net;
 
 import static android.net.InetAddresses.parseNumericAddress;
+import static android.system.OsConstants.ICMP_ECHO;
+import static android.system.OsConstants.ICMP_ECHOREPLY;
 import static android.system.OsConstants.IPPROTO_ICMP;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
+import static android.system.OsConstants.IPPROTO_IP;
+import static android.system.OsConstants.IPPROTO_IPV6;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
@@ -27,6 +31,8 @@ import static com.android.net.module.util.DnsPacket.ARSECTION;
 import static com.android.net.module.util.DnsPacket.NSSECTION;
 import static com.android.net.module.util.DnsPacket.QDSECTION;
 import static com.android.net.module.util.HexDump.dumpHexString;
+import static com.android.net.module.util.IpUtils.icmpChecksum;
+import static com.android.net.module.util.IpUtils.ipChecksum;
 import static com.android.net.module.util.NetworkStackConstants.ARP_REPLY;
 import static com.android.net.module.util.NetworkStackConstants.ARP_REQUEST;
 import static com.android.net.module.util.NetworkStackConstants.ETHER_ADDR_LEN;
@@ -38,6 +44,10 @@ import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_TLLA;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_NEIGHBOR_SOLICITATION;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
+import static com.android.net.module.util.NetworkStackConstants.ICMP_CHECKSUM_OFFSET;
+import static com.android.net.module.util.NetworkStackConstants.IPV4_CHECKSUM_OFFSET;
+import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_LEN;
+import static com.android.net.module.util.NetworkStackConstants.IPV4_LENGTH_OFFSET;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ALL_NODES_MULTICAST;
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_OVERRIDE;
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED;
@@ -58,6 +68,7 @@ import androidx.annotation.Nullable;
 
 import com.android.net.module.util.DnsPacket;
 import com.android.net.module.util.Ipv6Utils;
+import com.android.net.module.util.PacketBuilder;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.EthernetHeader;
 import com.android.net.module.util.structs.Icmpv4Header;
@@ -101,6 +112,23 @@ public final class TetheringTester {
             DhcpPacket.DHCP_LEASE_TIME,
     };
     private static final InetAddress LINK_LOCAL = parseNumericAddress("fe80::1");
+    // IPv4 header definition.
+    protected static final short ID = 27149;
+    protected static final short FLAGS_AND_FRAGMENT_OFFSET = (short) 0x4000; // flags=DF, offset=0
+    protected static final byte TIME_TO_LIVE = (byte) 0x40;
+    protected static final byte TYPE_OF_SERVICE = 0;
+
+    // IPv6 header definition.
+    private static final short HOP_LIMIT = 0x40;
+    // version=6, traffic class=0x0, flowlabel=0x0;
+    private static final int VERSION_TRAFFICCLASS_FLOWLABEL = 0x60000000;
+
+    // UDP and TCP header definition.
+    private static final short WINDOW = (short) 0x2000;
+    private static final short URGENT_POINTER = 0;
+
+    // ICMP definition.
+    private static final short ICMPECHO_CODE = 0x0;
 
     public static final String DHCP_HOSTNAME = "testhostname";
 
@@ -626,6 +654,190 @@ public final class TetheringTester {
         }
 
         return false;
+    }
+
+    @NonNull
+    public static ByteBuffer buildUdpPacket(
+            @Nullable final MacAddress srcMac, @Nullable final MacAddress dstMac,
+            @NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp,
+            short srcPort, short dstPort, @Nullable final ByteBuffer payload)
+            throws Exception {
+        final int ipProto = getIpProto(srcIp, dstIp);
+        final boolean hasEther = (srcMac != null && dstMac != null);
+        final int payloadLen = (payload == null) ? 0 : payload.limit();
+        final ByteBuffer buffer = PacketBuilder.allocate(hasEther, ipProto, IPPROTO_UDP,
+                payloadLen);
+        final PacketBuilder packetBuilder = new PacketBuilder(buffer);
+
+        // [1] Ethernet header
+        if (hasEther) {
+            packetBuilder.writeL2Header(srcMac, dstMac, getEthType(srcIp, dstIp));
+        }
+
+        // [2] IP header
+        if (ipProto == IPPROTO_IP) {
+            packetBuilder.writeIpv4Header(TYPE_OF_SERVICE, ID, FLAGS_AND_FRAGMENT_OFFSET,
+                    TIME_TO_LIVE, (byte) IPPROTO_UDP, (Inet4Address) srcIp, (Inet4Address) dstIp);
+        } else {
+            packetBuilder.writeIpv6Header(VERSION_TRAFFICCLASS_FLOWLABEL, (byte) IPPROTO_UDP,
+                    HOP_LIMIT, (Inet6Address) srcIp, (Inet6Address) dstIp);
+        }
+
+        // [3] UDP header
+        packetBuilder.writeUdpHeader(srcPort, dstPort);
+
+        // [4] Payload
+        if (payload != null) {
+            buffer.put(payload);
+            // in case data might be reused by caller, restore the position and
+            // limit of bytebuffer.
+            payload.clear();
+        }
+
+        return packetBuilder.finalizePacket();
+    }
+
+    @NonNull
+    public static ByteBuffer buildUdpPacket(@NonNull final InetAddress srcIp,
+            @NonNull final InetAddress dstIp, short srcPort, short dstPort,
+            @Nullable final ByteBuffer payload) throws Exception {
+        return buildUdpPacket(null /* srcMac */, null /* dstMac */, srcIp, dstIp, srcPort,
+                dstPort, payload);
+    }
+
+    @NonNull
+    public static ByteBuffer buildTcpPacket(
+            @Nullable final MacAddress srcMac, @Nullable final MacAddress dstMac,
+            @NonNull final InetAddress srcIp, @NonNull final InetAddress dstIp,
+            short srcPort, short dstPort, final short seq, final short ack,
+            final byte tcpFlags, @NonNull final ByteBuffer payload) throws Exception {
+        final int ipProto = getIpProto(srcIp, dstIp);
+        final boolean hasEther = (srcMac != null && dstMac != null);
+        final ByteBuffer buffer = PacketBuilder.allocate(hasEther, ipProto, IPPROTO_TCP,
+                payload.limit());
+        final PacketBuilder packetBuilder = new PacketBuilder(buffer);
+
+        // [1] Ethernet header
+        if (hasEther) {
+            packetBuilder.writeL2Header(srcMac, dstMac, getEthType(srcIp, dstIp));
+        }
+
+        // [2] IP header
+        if (ipProto == IPPROTO_IP) {
+            packetBuilder.writeIpv4Header(TYPE_OF_SERVICE, ID, FLAGS_AND_FRAGMENT_OFFSET,
+                    TIME_TO_LIVE, (byte) IPPROTO_TCP, (Inet4Address) srcIp, (Inet4Address) dstIp);
+        } else {
+            packetBuilder.writeIpv6Header(VERSION_TRAFFICCLASS_FLOWLABEL, (byte) IPPROTO_TCP,
+                    HOP_LIMIT, (Inet6Address) srcIp, (Inet6Address) dstIp);
+        }
+
+        // [3] TCP header
+        packetBuilder.writeTcpHeader(srcPort, dstPort, seq, ack, tcpFlags, WINDOW, URGENT_POINTER);
+
+        // [4] Payload
+        buffer.put(payload);
+        // in case data might be reused by caller, restore the position and
+        // limit of bytebuffer.
+        payload.clear();
+
+        return packetBuilder.finalizePacket();
+    }
+
+    // PacketBuilder doesn't support IPv4 ICMP packet. It may need to refactor PacketBuilder first
+    // because ICMP is a specific layer 3 protocol for PacketBuilder which expects packets always
+    // have layer 3 (IP) and layer 4 (TCP, UDP) for now. Since we don't use IPv4 ICMP packet too
+    // much in this test, we just write a ICMP packet builder here.
+    @NonNull
+    public static ByteBuffer buildIcmpEchoPacketV4(
+            @Nullable final MacAddress srcMac, @Nullable final MacAddress dstMac,
+            @NonNull final Inet4Address srcIp, @NonNull final Inet4Address dstIp,
+            int type, short id, short seq) throws Exception {
+        if (type != ICMP_ECHO && type != ICMP_ECHOREPLY) {
+            fail("Unsupported ICMP type: " + type);
+        }
+
+        // Build ICMP echo id and seq fields as payload. Ignore the data field.
+        final ByteBuffer payload = ByteBuffer.allocate(4);
+        payload.putShort(id);
+        payload.putShort(seq);
+        payload.rewind();
+
+        final boolean hasEther = (srcMac != null && dstMac != null);
+        final int etherHeaderLen = hasEther ? Struct.getSize(EthernetHeader.class) : 0;
+        final int ipv4HeaderLen = Struct.getSize(Ipv4Header.class);
+        final int Icmpv4HeaderLen = Struct.getSize(Icmpv4Header.class);
+        final int payloadLen = payload.limit();
+        final ByteBuffer packet = ByteBuffer.allocate(etherHeaderLen + ipv4HeaderLen
+                + Icmpv4HeaderLen + payloadLen);
+
+        // [1] Ethernet header
+        if (hasEther) {
+            final EthernetHeader ethHeader = new EthernetHeader(dstMac, srcMac, ETHER_TYPE_IPV4);
+            ethHeader.writeToByteBuffer(packet);
+        }
+
+        // [2] IP header
+        final Ipv4Header ipv4Header = new Ipv4Header(TYPE_OF_SERVICE,
+                (short) 0 /* totalLength, calculate later */, ID,
+                FLAGS_AND_FRAGMENT_OFFSET, TIME_TO_LIVE, (byte) IPPROTO_ICMP,
+                (short) 0 /* checksum, calculate later */, srcIp, dstIp);
+        ipv4Header.writeToByteBuffer(packet);
+
+        // [3] ICMP header
+        final Icmpv4Header icmpv4Header = new Icmpv4Header((byte) type, ICMPECHO_CODE,
+                (short) 0 /* checksum, calculate later */);
+        icmpv4Header.writeToByteBuffer(packet);
+
+        // [4] Payload
+        packet.put(payload);
+        packet.flip();
+
+        // [5] Finalize packet
+        // Used for updating IP header fields. If there is Ehternet header, IPv4 header offset
+        // in buffer equals ethernet header length because IPv4 header is located next to ethernet
+        // header. Otherwise, IPv4 header offset is 0.
+        final int ipv4HeaderOffset = hasEther ? etherHeaderLen : 0;
+
+        // Populate the IPv4 totalLength field.
+        packet.putShort(ipv4HeaderOffset + IPV4_LENGTH_OFFSET,
+                (short) (ipv4HeaderLen + Icmpv4HeaderLen + payloadLen));
+
+        // Populate the IPv4 header checksum field.
+        packet.putShort(ipv4HeaderOffset + IPV4_CHECKSUM_OFFSET,
+                ipChecksum(packet, ipv4HeaderOffset /* headerOffset */));
+
+        // Populate the ICMP checksum field.
+        packet.putShort(ipv4HeaderOffset + IPV4_HEADER_MIN_LEN + ICMP_CHECKSUM_OFFSET,
+                icmpChecksum(packet, ipv4HeaderOffset + IPV4_HEADER_MIN_LEN,
+                        Icmpv4HeaderLen + payloadLen));
+        return packet;
+    }
+
+    @NonNull
+    public static ByteBuffer buildIcmpEchoPacketV4(@NonNull final Inet4Address srcIp,
+            @NonNull final Inet4Address dstIp, int type, short id, short seq)
+            throws Exception {
+        return buildIcmpEchoPacketV4(null /* srcMac */, null /* dstMac */, srcIp, dstIp,
+                type, id, seq);
+    }
+
+    private static short getEthType(@NonNull final InetAddress srcIp,
+            @NonNull final InetAddress dstIp) {
+        return isAddressIpv4(srcIp, dstIp) ? (short) ETHER_TYPE_IPV4 : (short) ETHER_TYPE_IPV6;
+    }
+
+    private static int getIpProto(@NonNull final InetAddress srcIp,
+            @NonNull final InetAddress dstIp) {
+        return isAddressIpv4(srcIp, dstIp) ? IPPROTO_IP : IPPROTO_IPV6;
+    }
+
+    public static boolean isAddressIpv4(@NonNull final  InetAddress srcIp,
+            @NonNull final InetAddress dstIp) {
+        if (srcIp instanceof Inet4Address && dstIp instanceof Inet4Address) return true;
+        if (srcIp instanceof Inet6Address && dstIp instanceof Inet6Address) return false;
+
+        fail("Unsupported conditions: srcIp " + srcIp + ", dstIp " + dstIp);
+        return false;  // unreachable
     }
 
     public void sendUploadPacket(ByteBuffer packet) throws Exception {
