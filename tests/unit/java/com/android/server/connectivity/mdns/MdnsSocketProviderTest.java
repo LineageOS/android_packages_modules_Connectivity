@@ -157,7 +157,6 @@ public class MdnsSocketProviderTest {
                 TETHERED_IFACE_NAME);
         doReturn(789).when(mDeps).getNetworkInterfaceIndexByName(
                 WIFI_P2P_IFACE_NAME);
-        doReturn(TETHERED_IFACE_IDX).when(mDeps).getInterfaceIndex(any());
         final HandlerThread thread = new HandlerThread("MdnsSocketProviderTest");
         thread.start();
         mHandler = new Handler(thread.getLooper());
