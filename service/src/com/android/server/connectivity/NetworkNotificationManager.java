@@ -322,7 +322,8 @@ public class NetworkNotificationManager {
 
     private boolean maybeNotifyViaDialog(Resources res, NotificationType notifyType,
             PendingIntent intent) {
-        if (notifyType != NotificationType.NO_INTERNET
+        if (notifyType != NotificationType.LOST_INTERNET
+                && notifyType != NotificationType.NO_INTERNET
                 && notifyType != NotificationType.PARTIAL_CONNECTIVITY) {
             return false;
         }
@@ -432,7 +433,8 @@ public class NetworkNotificationManager {
      * A notification with a higher number will take priority over a notification with a lower
      * number.
      */
-    private static int priority(NotificationType t) {
+    @VisibleForTesting
+    public static int priority(NotificationType t) {
         if (t == null) {
             return 0;
         }
