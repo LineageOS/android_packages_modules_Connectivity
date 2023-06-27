@@ -56,8 +56,8 @@ private const val TIMEOUT_MS = 10_000L
 private val TEST_ADDR = parseNumericAddress("2001:db8::123")
 private val TEST_LINKADDR = LinkAddress(TEST_ADDR, 64 /* prefixLength */)
 private val TEST_NETWORK_1 = mock(Network::class.java)
-private val TEST_SOCKETKEY_1 = mock(SocketKey::class.java)
-private val TEST_SOCKETKEY_2 = mock(SocketKey::class.java)
+private val TEST_SOCKETKEY_1 = SocketKey(1001 /* interfaceIndex */)
+private val TEST_SOCKETKEY_2 = SocketKey(1002 /* interfaceIndex */)
 private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 private const val TEST_SUBTYPE = "_subtype"
 
