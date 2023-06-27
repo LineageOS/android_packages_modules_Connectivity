@@ -164,6 +164,12 @@ private fun Message(what: Int, arg1: Int, arg2: Int, obj: Any?) = Message.obtain
     it.obj = obj
 }
 
+// On T and below, the native network is only created when the agent connects.
+// Starting in U, the native network was to be created as soon as the agent is registered,
+// but this has been flagged off for now pending resolution of race conditions.
+// TODO : enable this in a Mainline update or in V.
+private const val SHOULD_CREATE_NETWORKS_IMMEDIATELY = false
+
 @RunWith(DevSdkIgnoreRunner::class)
 // NetworkAgent is not updatable in R-, so this test does not need to be compatible with older
 // versions. NetworkAgent was also based on AsyncChannel before S so cannot be tested the same way.
@@ -1302,7 +1308,7 @@ class NetworkAgentTest {
         requestNetwork(makeTestNetworkRequest(specifier = specifier6), callback)
         val agent6 = createNetworkAgent(specifier = specifier6)
         val network6 = agent6.register()
-        if (SdkLevel.isAtLeastU()) {
+        if (SHOULD_CREATE_NETWORKS_IMMEDIATELY) {
             agent6.expectCallback<OnNetworkCreated>()
         } else {
             // No callbacks are sent, so check LinkProperties to wait for the network to be created.
@@ -1316,9 +1322,10 @@ class NetworkAgentTest {
         val timeoutMs = agent6.DEFAULT_TIMEOUT_MS.toInt() + 1_000
         agent6.unregisterAfterReplacement(timeoutMs)
         agent6.expectCallback<OnNetworkUnwanted>()
-        if (!SdkLevel.isAtLeastT() || SdkLevel.isAtLeastU()) {
+        if (!SdkLevel.isAtLeastT() || SHOULD_CREATE_NETWORKS_IMMEDIATELY) {
             // Before T, onNetworkDestroyed is called even if the network was never created.
-            // On U+, the network was created by register(). Destroying it sends onNetworkDestroyed.
+            // If immediate native network creation is supported, the network was created by
+            // register(). Destroying it sends onNetworkDestroyed.
             agent6.expectCallback<OnNetworkDestroyed>()
         }
         // Poll for LinkProperties becoming null, because when onNetworkUnwanted is called, the
@@ -1477,10 +1484,9 @@ class NetworkAgentTest {
 
     @Test
     fun testNativeNetworkCreation_PhysicalNetwork() {
-        // On T and below, the native network is only created when the agent connects.
-        // Starting in U, the native network is created as soon as the agent is registered.
-        doTestNativeNetworkCreation(expectCreatedImmediately = SdkLevel.isAtLeastU(),
-            intArrayOf(TRANSPORT_CELLULAR))
+        doTestNativeNetworkCreation(
+                expectCreatedImmediately = SHOULD_CREATE_NETWORKS_IMMEDIATELY,
+                intArrayOf(TRANSPORT_CELLULAR))
     }
 
     @Test
