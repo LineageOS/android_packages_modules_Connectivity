@@ -1317,10 +1317,9 @@ public class NsdService extends INsdManager.Stub {
                 final NsdServiceInfo info = buildNsdServiceInfoFromMdnsEvent(event, code);
                 // Errors are already logged if null
                 if (info == null) return false;
-                if (DBG) {
-                    Log.d(TAG, String.format("MdnsDiscoveryManager event code=%s transactionId=%d",
-                            NsdManager.nameOf(code), transactionId));
-                }
+                mServiceLogs.log(String.format(
+                        "MdnsDiscoveryManager event code=%s transactionId=%d",
+                        NsdManager.nameOf(code), transactionId));
                 switch (code) {
                     case NsdManager.SERVICE_FOUND:
                         clientInfo.onServiceFound(clientId, info);
@@ -1722,6 +1721,7 @@ public class NsdService extends INsdManager.Stub {
     private class AdvertiserCallback implements MdnsAdvertiser.AdvertiserCallback {
         @Override
         public void onRegisterServiceSucceeded(int serviceId, NsdServiceInfo registeredInfo) {
+            mServiceLogs.log("onRegisterServiceSucceeded: serviceId " + serviceId);
             final ClientInfo clientInfo = getClientInfoOrLog(serviceId);
             if (clientInfo == null) return;
 
