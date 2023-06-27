@@ -43,6 +43,7 @@ public class SocketKey {
         mInterfaceIndex = interfaceIndex;
     }
 
+    @Nullable
     public Network getNetwork() {
         return mNetwork;
     }
