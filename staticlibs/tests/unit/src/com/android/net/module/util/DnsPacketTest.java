@@ -219,7 +219,7 @@ public class DnsPacketTest {
                 0x00, 0x04, /* Data length */
                 (byte) 0xac, (byte) 0xd9, (byte) 0xa1, (byte) 0x84 /* Address */};
         final DnsPacket.DnsRecord questionsFromBytes =
-                new DnsPacket.DnsRecord(DnsPacket.QDSECTION, ByteBuffer.wrap(qdWithTTLRData));
+                DnsPacket.DnsRecord.parse(DnsPacket.QDSECTION, ByteBuffer.wrap(qdWithTTLRData));
         assertEquals(0, questionsFromBytes.ttl);
         assertNull(questionsFromBytes.getRR());
 
@@ -230,12 +230,12 @@ public class DnsPacketTest {
                 0x00, 0x01, /* Type */
                 0x00, 0x01, /* Class */};
         assertThrows(BufferUnderflowException.class, () ->
-                new DnsPacket.DnsRecord(DnsPacket.ANSECTION, ByteBuffer.wrap(anWithoutTTLRData)));
+                DnsPacket.DnsRecord.parse(DnsPacket.ANSECTION, ByteBuffer.wrap(anWithoutTTLRData)));
     }
 
     private void assertDnsRecordRoundTrip(DnsPacket.DnsRecord before)
             throws IOException {
-        final DnsPacket.DnsRecord after = new DnsPacket.DnsRecord(before.rType,
+        final DnsPacket.DnsRecord after = DnsPacket.DnsRecord.parse(before.rType,
                 ByteBuffer.wrap(before.getBytes()));
         assertEquals(after, before);
     }
@@ -393,7 +393,7 @@ public class DnsPacketTest {
                 "test.com", TYPE_AAAA, CLASS_IN);
         final DnsPacket.DnsRecord testAnswer = DnsPacket.DnsRecord.makeCNameRecord(
                 DnsPacket.ANSECTION, "test.com", CLASS_IN, 9, "www.test.com");
-        final DnsPacket.DnsRecord questionFromBytes = new DnsPacket.DnsRecord(DnsPacket.QDSECTION,
+        final DnsPacket.DnsRecord questionFromBytes = DnsPacket.DnsRecord.parse(DnsPacket.QDSECTION,
                 ByteBuffer.wrap(testQuestion.getBytes()));
         assertEquals(testQuestion, questionFromBytes);
         assertEquals(testQuestion.hashCode(), questionFromBytes.hashCode());
