@@ -18,7 +18,6 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.net.Network;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
@@ -70,8 +69,8 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
     private final List<String> subtypes;
     private final boolean expectUnicastResponse;
     private final int transactionId;
-    @Nullable
-    private final Network network;
+    @NonNull
+    private final SocketKey socketKey;
     private final boolean sendDiscoveryQueries;
     @NonNull
     private final List<MdnsResponse> servicesToResolve;
@@ -86,7 +85,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             @NonNull Collection<String> subtypes,
             boolean expectUnicastResponse,
             int transactionId,
-            @Nullable Network network,
+            @NonNull SocketKey socketKey,
             boolean onlyUseIpv6OnIpv6OnlyNetworks,
             boolean sendDiscoveryQueries,
             @NonNull Collection<MdnsResponse> servicesToResolve,
@@ -97,7 +96,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         this.subtypes = new ArrayList<>(subtypes);
         this.expectUnicastResponse = expectUnicastResponse;
         this.transactionId = transactionId;
-        this.network = network;
+        this.socketKey = socketKey;
         this.onlyUseIpv6OnIpv6OnlyNetworks = onlyUseIpv6OnIpv6OnlyNetworks;
         this.sendDiscoveryQueries = sendDiscoveryQueries;
         this.servicesToResolve = new ArrayList<>(servicesToResolve);
@@ -216,7 +215,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         if (expectUnicastResponse) {
             if (requestSender instanceof MdnsMultinetworkSocketClient) {
                 ((MdnsMultinetworkSocketClient) requestSender).sendPacketRequestingUnicastResponse(
-                        packet, network, onlyUseIpv6OnIpv6OnlyNetworks);
+                        packet, socketKey, onlyUseIpv6OnIpv6OnlyNetworks);
             } else {
                 requestSender.sendPacketRequestingUnicastResponse(
                         packet, onlyUseIpv6OnIpv6OnlyNetworks);
@@ -225,7 +224,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             if (requestSender instanceof MdnsMultinetworkSocketClient) {
                 ((MdnsMultinetworkSocketClient) requestSender)
                         .sendPacketRequestingMulticastResponse(
-                                packet, network, onlyUseIpv6OnIpv6OnlyNetworks);
+                                packet, socketKey, onlyUseIpv6OnIpv6OnlyNetworks);
             } else {
                 requestSender.sendPacketRequestingMulticastResponse(
                         packet, onlyUseIpv6OnIpv6OnlyNetworks);

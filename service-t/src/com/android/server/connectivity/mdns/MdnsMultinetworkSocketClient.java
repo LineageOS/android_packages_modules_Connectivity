@@ -213,25 +213,22 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         return true;
     }
 
-    private void sendMdnsPacket(@NonNull DatagramPacket packet, @Nullable Network targetNetwork,
+    private void sendMdnsPacket(@NonNull DatagramPacket packet, @NonNull SocketKey targetSocketKey,
             boolean onlyUseIpv6OnIpv6OnlyNetworks) {
         final boolean isIpv6 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
                 instanceof Inet6Address;
         final boolean isIpv4 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
                 instanceof Inet4Address;
         final ArrayMap<MdnsInterfaceSocket, SocketKey> activeSockets = getActiveSockets();
-        boolean shouldQueryIpv6 = !onlyUseIpv6OnIpv6OnlyNetworks || isIpv6OnlyNetworks(
-                activeSockets, targetNetwork);
+        boolean shouldQueryIpv6 = !onlyUseIpv6OnIpv6OnlyNetworks || isIpv6OnlySockets(
+                activeSockets, targetSocketKey);
         for (int i = 0; i < activeSockets.size(); i++) {
             final MdnsInterfaceSocket socket = activeSockets.keyAt(i);
-            final Network network = activeSockets.valueAt(i).getNetwork();
+            final SocketKey socketKey = activeSockets.valueAt(i);
             // Check ip capability and network before sending packet
             if (((isIpv6 && socket.hasJoinedIpv6() && shouldQueryIpv6)
                     || (isIpv4 && socket.hasJoinedIpv4()))
-                    // Contrary to MdnsUtils.isNetworkMatched, only send packets targeting
-                    // the null network to interfaces that have the null network (tethering
-                    // downstream interfaces).
-                    && Objects.equals(network, targetNetwork)) {
+                    && Objects.equals(socketKey, targetSocketKey)) {
                 try {
                     socket.send(packet);
                 } catch (IOException e) {
@@ -241,13 +238,13 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         }
     }
 
-    private boolean isIpv6OnlyNetworks(
+    private boolean isIpv6OnlySockets(
             @NonNull ArrayMap<MdnsInterfaceSocket, SocketKey> activeSockets,
-            @Nullable Network targetNetwork) {
+            @NonNull SocketKey targetSocketKey) {
         for (int i = 0; i < activeSockets.size(); i++) {
             final MdnsInterfaceSocket socket = activeSockets.keyAt(i);
-            final Network network = activeSockets.valueAt(i).getNetwork();
-            if (Objects.equals(network, targetNetwork) && socket.hasJoinedIpv4()) {
+            final SocketKey socketKey = activeSockets.valueAt(i);
+            if (Objects.equals(socketKey, targetSocketKey) && socket.hasJoinedIpv4()) {
                 return false;
             }
         }
@@ -276,38 +273,35 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     }
 
     /**
-     * Send a mDNS request packet via given network that asks for multicast response.
-     *
-     * <p>The socket client may use a null network to identify some or all interfaces, in which case
-     * passing null sends the packet to these.
+     * Send a mDNS request packet via given socket key that asks for multicast response.
      */
     public void sendPacketRequestingMulticastResponse(@NonNull DatagramPacket packet,
-            @Nullable Network network, boolean onlyUseIpv6OnIpv6OnlyNetworks) {
-        mHandler.post(() -> sendMdnsPacket(packet, network, onlyUseIpv6OnIpv6OnlyNetworks));
+            @NonNull SocketKey socketKey, boolean onlyUseIpv6OnIpv6OnlyNetworks) {
+        mHandler.post(() -> sendMdnsPacket(packet, socketKey, onlyUseIpv6OnIpv6OnlyNetworks));
     }
 
     @Override
     public void sendPacketRequestingMulticastResponse(
             @NonNull DatagramPacket packet, boolean onlyUseIpv6OnIpv6OnlyNetworks) {
-        sendPacketRequestingMulticastResponse(
-                packet, null /* network */, onlyUseIpv6OnIpv6OnlyNetworks);
+        throw new UnsupportedOperationException("This socket client need to specify the socket to"
+                + "send packet");
     }
 
     /**
-     * Send a mDNS request packet via given network that asks for unicast response.
+     * Send a mDNS request packet via given socket key that asks for unicast response.
      *
      * <p>The socket client may use a null network to identify some or all interfaces, in which case
      * passing null sends the packet to these.
      */
     public void sendPacketRequestingUnicastResponse(@NonNull DatagramPacket packet,
-            @Nullable Network network, boolean onlyUseIpv6OnIpv6OnlyNetworks) {
-        mHandler.post(() -> sendMdnsPacket(packet, network, onlyUseIpv6OnIpv6OnlyNetworks));
+            @NonNull SocketKey socketKey, boolean onlyUseIpv6OnIpv6OnlyNetworks) {
+        mHandler.post(() -> sendMdnsPacket(packet, socketKey, onlyUseIpv6OnIpv6OnlyNetworks));
     }
 
     @Override
     public void sendPacketRequestingUnicastResponse(
             @NonNull DatagramPacket packet, boolean onlyUseIpv6OnIpv6OnlyNetworks) {
-        sendPacketRequestingUnicastResponse(
-                packet, null /* network */, onlyUseIpv6OnIpv6OnlyNetworks);
+        throw new UnsupportedOperationException("This socket client need to specify the socket to"
+                + "send packet");
     }
 }
