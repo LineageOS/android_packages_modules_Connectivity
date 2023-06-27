@@ -4549,9 +4549,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     @VisibleForTesting
     protected static boolean shouldCreateNetworksImmediately() {
-        // Before U, physical networks are only created when the agent advances to CONNECTED.
-        // In U and above, all networks are immediately created when the agent is registered.
-        return SdkLevel.isAtLeastU();
+        // The feature of creating the networks immediately was slated for U, but race conditions
+        // detected late required this was flagged off.
+        // TODO : enable this in a Mainline update or in V, and re-enable the test for this
+        // in NetworkAgentTest.
+        return false;
     }
 
     private static boolean shouldCreateNativeNetwork(@NonNull NetworkAgentInfo nai,
