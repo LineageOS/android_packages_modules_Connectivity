@@ -19,7 +19,6 @@ package com.android.server.connectivity.mdns;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -212,31 +211,31 @@ public class MdnsDiscoveryManagerTests {
         runOnHandler(() -> discoveryManager.onResponseReceived(
                 responseForServiceTypeOne, SOCKET_KEY_NULL_NETWORK));
         // Packets for network null are only processed by the ServiceTypeClient for network null
-        verify(mockServiceTypeClientType1NullNetwork).processResponse(responseForServiceTypeOne,
-                SOCKET_KEY_NULL_NETWORK.getInterfaceIndex(), SOCKET_KEY_NULL_NETWORK.getNetwork());
-        verify(mockServiceTypeClientType1Network1, never()).processResponse(any(), anyInt(), any());
-        verify(mockServiceTypeClientType2Network2, never()).processResponse(any(), anyInt(), any());
+        verify(mockServiceTypeClientType1NullNetwork).processResponse(
+                responseForServiceTypeOne, SOCKET_KEY_NULL_NETWORK);
+        verify(mockServiceTypeClientType1Network1, never()).processResponse(any(), any());
+        verify(mockServiceTypeClientType2Network2, never()).processResponse(any(), any());
 
         final MdnsPacket responseForServiceTypeTwo = createMdnsPacket(SERVICE_TYPE_2);
         runOnHandler(() -> discoveryManager.onResponseReceived(
                 responseForServiceTypeTwo, SOCKET_KEY_NETWORK_1));
-        verify(mockServiceTypeClientType1NullNetwork, never()).processResponse(any(), anyInt(),
-                eq(SOCKET_KEY_NETWORK_1.getNetwork()));
-        verify(mockServiceTypeClientType1Network1).processResponse(responseForServiceTypeTwo,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
-        verify(mockServiceTypeClientType2Network2, never()).processResponse(any(), anyInt(),
-                eq(SOCKET_KEY_NETWORK_1.getNetwork()));
+        verify(mockServiceTypeClientType1NullNetwork, never()).processResponse(any(),
+                eq(SOCKET_KEY_NETWORK_1));
+        verify(mockServiceTypeClientType1Network1).processResponse(
+                responseForServiceTypeTwo, SOCKET_KEY_NETWORK_1);
+        verify(mockServiceTypeClientType2Network2, never()).processResponse(any(),
+                eq(SOCKET_KEY_NETWORK_1));
 
         final MdnsPacket responseForSubtype =
                 createMdnsPacket("subtype._sub._googlecast._tcp.local");
         runOnHandler(() -> discoveryManager.onResponseReceived(
                 responseForSubtype, SOCKET_KEY_NETWORK_2));
-        verify(mockServiceTypeClientType1NullNetwork, never()).processResponse(any(), anyInt(),
-                eq(SOCKET_KEY_NETWORK_2.getNetwork()));
-        verify(mockServiceTypeClientType1Network1, never()).processResponse(any(), anyInt(),
-                eq(SOCKET_KEY_NETWORK_2.getNetwork()));
-        verify(mockServiceTypeClientType2Network2).processResponse(responseForSubtype,
-                SOCKET_KEY_NETWORK_2.getInterfaceIndex(), SOCKET_KEY_NETWORK_2.getNetwork());
+        verify(mockServiceTypeClientType1NullNetwork, never()).processResponse(any(),
+                eq(SOCKET_KEY_NETWORK_2));
+        verify(mockServiceTypeClientType1Network1, never()).processResponse(any(),
+                eq(SOCKET_KEY_NETWORK_2));
+        verify(mockServiceTypeClientType2Network2).processResponse(
+                responseForSubtype, SOCKET_KEY_NETWORK_2);
     }
 
     @Test
@@ -260,10 +259,8 @@ public class MdnsDiscoveryManagerTests {
         // Receive a response, it should be processed on both clients.
         final MdnsPacket response = createMdnsPacket(SERVICE_TYPE_1);
         runOnHandler(() -> discoveryManager.onResponseReceived(response, SOCKET_KEY_NETWORK_1));
-        verify(mockServiceTypeClientType1Network1).processResponse(response,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
-        verify(mockServiceTypeClientType2Network1).processResponse(response,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
+        verify(mockServiceTypeClientType1Network1).processResponse(response, SOCKET_KEY_NETWORK_1);
+        verify(mockServiceTypeClientType2Network1).processResponse(response, SOCKET_KEY_NETWORK_1);
 
         // The first callback receives a notification that the network has been destroyed,
         // mockServiceTypeClientOne1 should send service removed notifications and remove from the
@@ -276,10 +273,10 @@ public class MdnsDiscoveryManagerTests {
         // removed from the list of clients, it is no longer able to process responses.
         runOnHandler(() -> discoveryManager.onResponseReceived(response, SOCKET_KEY_NETWORK_1));
         // Still times(1) as a response was received once previously
-        verify(mockServiceTypeClientType1Network1, times(1)).processResponse(response,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
-        verify(mockServiceTypeClientType2Network1, times(2)).processResponse(response,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
+        verify(mockServiceTypeClientType1Network1, times(1)).processResponse(
+                response, SOCKET_KEY_NETWORK_1);
+        verify(mockServiceTypeClientType2Network1, times(2)).processResponse(
+                response, SOCKET_KEY_NETWORK_1);
 
         // The client for NETWORK_1 receives the callback that the NETWORK_2 has been destroyed,
         // mockServiceTypeClientTwo2 shouldn't send any notifications.
@@ -289,10 +286,10 @@ public class MdnsDiscoveryManagerTests {
         // Receive a response again, mockServiceTypeClientType2Network1 is still in the list of
         // clients, it's still able to process responses.
         runOnHandler(() -> discoveryManager.onResponseReceived(response, SOCKET_KEY_NETWORK_1));
-        verify(mockServiceTypeClientType1Network1, times(1)).processResponse(response,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
-        verify(mockServiceTypeClientType2Network1, times(3)).processResponse(response,
-                SOCKET_KEY_NETWORK_1.getInterfaceIndex(), SOCKET_KEY_NETWORK_1.getNetwork());
+        verify(mockServiceTypeClientType1Network1, times(1)).processResponse(
+                response, SOCKET_KEY_NETWORK_1);
+        verify(mockServiceTypeClientType2Network1, times(3)).processResponse(
+                response, SOCKET_KEY_NETWORK_1);
     }
 
     @Test
@@ -310,8 +307,8 @@ public class MdnsDiscoveryManagerTests {
         final MdnsPacket response = createMdnsPacket(SERVICE_TYPE_1);
         final int ifIndex = 1;
         runOnHandler(() -> discoveryManager.onResponseReceived(response, SOCKET_KEY_NULL_NETWORK));
-        verify(mockServiceTypeClientType1NullNetwork).processResponse(response,
-                SOCKET_KEY_NULL_NETWORK.getInterfaceIndex(), SOCKET_KEY_NULL_NETWORK.getNetwork());
+        verify(mockServiceTypeClientType1NullNetwork).processResponse(
+                response, SOCKET_KEY_NULL_NETWORK);
 
         runOnHandler(() -> callback.onAllSocketsDestroyed(SOCKET_KEY_NULL_NETWORK));
         verify(mockServiceTypeClientType1NullNetwork).notifySocketDestroyed();
@@ -319,8 +316,8 @@ public class MdnsDiscoveryManagerTests {
         // Receive a response again, it should not be processed.
         runOnHandler(() -> discoveryManager.onResponseReceived(response, SOCKET_KEY_NULL_NETWORK));
         // Still times(1) as a response was received once previously
-        verify(mockServiceTypeClientType1NullNetwork, times(1)).processResponse(response,
-                SOCKET_KEY_NULL_NETWORK.getInterfaceIndex(), SOCKET_KEY_NULL_NETWORK.getNetwork());
+        verify(mockServiceTypeClientType1NullNetwork, times(1)).processResponse(
+                response, SOCKET_KEY_NULL_NETWORK);
 
         // Unregister the listener, notifyNetworkUnrequested should be called but other stop methods
         // won't be call because the service type client was unregistered and destroyed. But those

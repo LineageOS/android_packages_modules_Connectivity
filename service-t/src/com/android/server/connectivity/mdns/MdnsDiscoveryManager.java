@@ -254,8 +254,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     private void handleOnResponseReceived(@NonNull MdnsPacket packet,
             @NonNull SocketKey socketKey) {
         for (MdnsServiceTypeClient serviceTypeClient : getMdnsServiceTypeClient(socketKey)) {
-            serviceTypeClient.processResponse(
-                    packet, socketKey.getInterfaceIndex(), socketKey.getNetwork());
+            serviceTypeClient.processResponse(packet, socketKey);
         }
     }
 
