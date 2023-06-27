@@ -82,6 +82,6 @@ public interface MdnsSocketClientBase {
         void onSocketCreated(@NonNull SocketKey socketKey);
 
         /*** Notify requested socket is destroyed */
-        void onAllSocketsDestroyed(@NonNull SocketKey socketKey);
+        void onSocketDestroyed(@NonNull SocketKey socketKey);
     }
 }

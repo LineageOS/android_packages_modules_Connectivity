@@ -64,7 +64,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         @NonNull
         private final SocketCreationCallback mSocketCreationCallback;
         @NonNull
-        private final ArrayMap<MdnsInterfaceSocket, SocketKey> mActiveNetworkSockets =
+        private final ArrayMap<MdnsInterfaceSocket, SocketKey> mActiveSockets =
                 new ArrayMap<>();
 
         InterfaceSocketCallback(SocketCreationCallback socketCreationCallback) {
@@ -83,7 +83,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
                 mSocketPacketHandlers.put(socket, handler);
             }
             socket.addPacketHandler(handler);
-            mActiveNetworkSockets.put(socket, socketKey);
+            mActiveSockets.put(socket, socketKey);
             mSocketCreationCallback.onSocketCreated(socketKey);
         }
 
@@ -95,16 +95,16 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         }
 
         private void notifySocketDestroyed(@NonNull MdnsInterfaceSocket socket) {
-            final SocketKey socketKey = mActiveNetworkSockets.remove(socket);
-            if (!isAnySocketActive(socketKey)) {
-                mSocketCreationCallback.onAllSocketsDestroyed(socketKey);
+            final SocketKey socketKey = mActiveSockets.remove(socket);
+            if (!isSocketActive(socket)) {
+                mSocketCreationCallback.onSocketDestroyed(socketKey);
             }
         }
 
         void onNetworkUnrequested() {
-            for (int i = mActiveNetworkSockets.size() - 1; i >= 0; i--) {
+            for (int i = mActiveSockets.size() - 1; i >= 0; i--) {
                 // Iterate from the end so the socket can be removed
-                final MdnsInterfaceSocket socket = mActiveNetworkSockets.keyAt(i);
+                final MdnsInterfaceSocket socket = mActiveSockets.keyAt(i);
                 notifySocketDestroyed(socket);
                 maybeCleanupPacketHandler(socket);
             }
@@ -114,17 +114,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     private boolean isSocketActive(@NonNull MdnsInterfaceSocket socket) {
         for (int i = 0; i < mRequestedNetworks.size(); i++) {
             final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
-            if (isc.mActiveNetworkSockets.containsKey(socket)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isAnySocketActive(@NonNull SocketKey socketKey) {
-        for (int i = 0; i < mRequestedNetworks.size(); i++) {
-            final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
-            if (isc.mActiveNetworkSockets.containsValue(socketKey)) {
+            if (isc.mActiveSockets.containsKey(socket)) {
                 return true;
             }
         }
@@ -135,7 +125,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         final ArrayMap<MdnsInterfaceSocket, SocketKey> sockets = new ArrayMap<>();
         for (int i = 0; i < mRequestedNetworks.size(); i++) {
             final InterfaceSocketCallback isc = mRequestedNetworks.valueAt(i);
-            sockets.putAll(isc.mActiveNetworkSockets);
+            sockets.putAll(isc.mActiveSockets);
         }
         return sockets;
     }
