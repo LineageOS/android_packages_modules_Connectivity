@@ -567,7 +567,7 @@ public class Nat464Xlat {
         try {
             return (Inet6Address) Inet6Address.getByAddress(v6Addr);
         } catch (UnknownHostException e) {
-            Log.e(TAG, "getByAddress should never throw for a numeric address");
+            Log.wtf(TAG, "getByAddress should never throw for a numeric address", e);
             return null;
         }
     }
