@@ -15,6 +15,8 @@
  */
 package com.android.cts.net;
 
+import org.junit.Test;
+
 public class HostsideSelfDeclaredNetworkCapabilitiesCheckTest extends HostsideNetworkTestCase {
 
     private static final String TEST_WITH_PROPERTY_IN_CURRENT_SDK_APK =
@@ -34,6 +36,7 @@ public class HostsideSelfDeclaredNetworkCapabilitiesCheckTest extends HostsideNe
             "requestNetwork_withoutRequestCapabilities";
 
 
+    @Test
     public void testRequestNetworkInCurrentSdkWithProperty() throws Exception {
         uninstallPackage(TEST_APP_PKG, false);
         installPackage(TEST_WITH_PROPERTY_IN_CURRENT_SDK_APK);
@@ -48,6 +51,7 @@ public class HostsideSelfDeclaredNetworkCapabilitiesCheckTest extends HostsideNe
         uninstallPackage(TEST_APP_PKG, true);
     }
 
+    @Test
     public void testRequestNetworkInCurrentSdkWithoutProperty() throws Exception {
         uninstallPackage(TEST_APP_PKG, false);
         installPackage(TEST_WITHOUT_PROPERTY_IN_CURRENT_SDK_APK);
@@ -62,6 +66,7 @@ public class HostsideSelfDeclaredNetworkCapabilitiesCheckTest extends HostsideNe
         uninstallPackage(TEST_APP_PKG, true);
     }
 
+    @Test
     public void testRequestNetworkInSdk33() throws Exception {
         uninstallPackage(TEST_APP_PKG, false);
         installPackage(TEST_IN_SDK_33_APK);
@@ -75,6 +80,7 @@ public class HostsideSelfDeclaredNetworkCapabilitiesCheckTest extends HostsideNe
         uninstallPackage(TEST_APP_PKG, true);
     }
 
+    @Test
     public void testReinstallPackageWillUpdateProperty() throws Exception {
         uninstallPackage(TEST_APP_PKG, false);
         installPackage(TEST_WITHOUT_PROPERTY_IN_CURRENT_SDK_APK);
