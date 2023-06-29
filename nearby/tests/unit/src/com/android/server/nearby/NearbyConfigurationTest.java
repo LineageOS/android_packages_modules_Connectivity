@@ -25,6 +25,7 @@ import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.os.Build;
 import android.provider.DeviceConfig;
 
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -68,7 +69,12 @@ public final class NearbyConfigurationTest {
                 "3", false);
         Thread.sleep(500);
 
-        assertThat(mNearbyConfiguration.isTestAppSupported()).isTrue();
+        // TestAppSupported Flag can only be set to true in user-debug devices.
+        if (Build.isDebuggable()) {
+            assertThat(mNearbyConfiguration.isTestAppSupported()).isTrue();
+        } else {
+            assertThat(mNearbyConfiguration.isTestAppSupported()).isFalse();
+        }
         assertThat(mNearbyConfiguration.isPresenceBroadcastLegacyEnabled()).isTrue();
         assertThat(mNearbyConfiguration.getNanoAppMinVersion()).isEqualTo(3);
     }
