@@ -27,6 +27,7 @@ import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.google.common.truth.Truth.assertThat
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.hamcrest.MatcherAssert
@@ -81,4 +82,113 @@ class BidirectionalStreamTest {
             "Received byte count must be > 0", info.receivedByteCount, Matchers.greaterThan(0L))
         assertEquals("h2", info.negotiatedProtocol)
     }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_getHttpMethod() {
+        val builder = createBidirectionalStreamBuilder(URL)
+        val method = "GET"
+
+        builder.setHttpMethod(method)
+        stream = builder.build()
+        assertThat(stream!!.getHttpMethod()).isEqualTo(method)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_hasTrafficStatsTag() {
+        val builder = createBidirectionalStreamBuilder(URL)
+
+        builder.setTrafficStatsTag(10)
+        stream = builder.build()
+        assertThat(stream!!.hasTrafficStatsTag()).isTrue()
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_getTrafficStatsTag() {
+        val builder = createBidirectionalStreamBuilder(URL)
+        val trafficStatsTag = 10
+
+        builder.setTrafficStatsTag(trafficStatsTag)
+        stream = builder.build()
+        assertThat(stream!!.getTrafficStatsTag()).isEqualTo(trafficStatsTag)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_hasTrafficStatsUid() {
+        val builder = createBidirectionalStreamBuilder(URL)
+
+        builder.setTrafficStatsUid(10)
+        stream = builder.build()
+        assertThat(stream!!.hasTrafficStatsUid()).isTrue()
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_getTrafficStatsUid() {
+        val builder = createBidirectionalStreamBuilder(URL)
+        val trafficStatsUid = 10
+
+        builder.setTrafficStatsUid(trafficStatsUid)
+        stream = builder.build()
+        assertThat(stream!!.getTrafficStatsUid()).isEqualTo(trafficStatsUid)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_getHeaders_asList() {
+        val builder = createBidirectionalStreamBuilder(URL)
+        val expectedHeaders = mapOf(
+          "Authorization" to "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==",
+          "Max-Forwards" to "10",
+          "X-Client-Data" to "random custom header content").entries.toList()
+
+        for (header in expectedHeaders) {
+            builder.addHeader(header.key, header.value)
+        }
+
+        stream = builder.build()
+        assertThat(stream!!.getHeaders().getAsList()).containsAtLeastElementsIn(expectedHeaders)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_getHeaders_asMap() {
+        val builder = createBidirectionalStreamBuilder(URL)
+        val expectedHeaders = mapOf(
+          "Authorization" to listOf("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="),
+          "Max-Forwards" to listOf("10"),
+          "X-Client-Data" to listOf("random custom header content"))
+
+        for (header in expectedHeaders) {
+            builder.addHeader(header.key, header.value.get(0))
+        }
+
+        stream = builder.build()
+        assertThat(stream!!.getHeaders().getAsMap()).containsAtLeastEntriesIn(expectedHeaders)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_getPriority() {
+        val builder = createBidirectionalStreamBuilder(URL)
+        val priority = BidirectionalStream.STREAM_PRIORITY_LOW
+
+        builder.setPriority(priority)
+        stream = builder.build()
+        assertThat(stream!!.getPriority()).isEqualTo(priority)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testBidirectionalStream_isDelayRequestHeadersUntilFirstFlushEnabled() {
+        val builder = createBidirectionalStreamBuilder(URL)
+
+        builder.setDelayRequestHeadersUntilFirstFlushEnabled(true)
+        stream = builder.build()
+        assertThat(stream!!.isDelayRequestHeadersUntilFirstFlushEnabled()).isTrue()
+    }
+
 }
