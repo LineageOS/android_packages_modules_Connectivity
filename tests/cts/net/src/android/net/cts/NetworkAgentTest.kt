@@ -130,6 +130,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1214,6 +1215,7 @@ class NetworkAgentTest {
 
     @Test
     fun testUnregisterAfterReplacement() {
+        assumeFalse(Build.isDebuggable()) // Disabled presubmit pending prebuilt update on U
         // Keeps an eye on all test networks.
         val matchAllCallback = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
         registerNetworkCallback(makeTestNetworkRequest(), matchAllCallback)
@@ -1484,6 +1486,7 @@ class NetworkAgentTest {
 
     @Test
     fun testNativeNetworkCreation_PhysicalNetwork() {
+        assumeFalse(Build.isDebuggable()) // Disabled presubmit pending prebuilt update on U
         doTestNativeNetworkCreation(
                 expectCreatedImmediately = SHOULD_CREATE_NETWORKS_IMMEDIATELY,
                 intArrayOf(TRANSPORT_CELLULAR))
