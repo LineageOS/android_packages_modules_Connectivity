@@ -119,9 +119,11 @@ public abstract class EthernetTetheringTestBase {
             (Inet4Address) parseNumericAddress("8.8.8.8");
     protected static final Inet6Address REMOTE_IP6_ADDR =
             (Inet6Address) parseNumericAddress("2002:db8:1::515:ca");
+    // The IPv6 network address translation of REMOTE_IP4_ADDR if pref64::/n is 64:ff9b::/96.
+    // For more information, see TetheringTester#PREF64_IPV4ONLY_ADDR, which assumes a prefix
+    // of 64:ff9b::/96.
     protected static final Inet6Address REMOTE_NAT64_ADDR =
             (Inet6Address) parseNumericAddress("64:ff9b::808:808");
-    protected static final IpPrefix TEST_NAT64PREFIX = new IpPrefix("64:ff9b::/96");
 
     // LOCAL_PORT is used by public port and private port. Assume port 9876 has not been used yet
     // before the testing that public port and private port are the same in the testing. Note that
@@ -630,7 +632,6 @@ public abstract class EthernetTetheringTestBase {
         final LinkProperties lp = new LinkProperties();
         lp.setLinkAddresses(addresses);
         lp.setDnsServers(dnses);
-        lp.setNat64Prefix(TEST_NAT64PREFIX);
 
         return runAsShell(MANAGE_TEST_NETWORKS, () -> initTestNetwork(mContext, lp, TIMEOUT_MS));
     }
