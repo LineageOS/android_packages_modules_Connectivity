@@ -130,6 +130,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -163,6 +164,12 @@ private fun Message(what: Int, arg1: Int, arg2: Int, obj: Any?) = Message.obtain
     it.arg2 = arg2
     it.obj = obj
 }
+
+// On T and below, the native network is only created when the agent connects.
+// Starting in U, the native network was to be created as soon as the agent is registered,
+// but this has been flagged off for now pending resolution of race conditions.
+// TODO : enable this in a Mainline update or in V.
+private const val SHOULD_CREATE_NETWORKS_IMMEDIATELY = false
 
 @RunWith(DevSdkIgnoreRunner::class)
 // NetworkAgent is not updatable in R-, so this test does not need to be compatible with older
@@ -1208,6 +1215,7 @@ class NetworkAgentTest {
 
     @Test
     fun testUnregisterAfterReplacement() {
+        assumeFalse(Build.isDebuggable()) // Disabled presubmit pending prebuilt update on U
         // Keeps an eye on all test networks.
         val matchAllCallback = TestableNetworkCallback(timeoutMs = DEFAULT_TIMEOUT_MS)
         registerNetworkCallback(makeTestNetworkRequest(), matchAllCallback)
@@ -1247,15 +1255,15 @@ class NetworkAgentTest {
 
         // Connect a third network. Because network1 is awaiting replacement, network3 is preferred
         // as soon as it validates (until then, it is outscored by network1).
-        // The fact that the first event seen by matchAllCallback is the connection of network3
+        // The fact that the first events seen by matchAllCallback is the connection of network3
         // implicitly ensures that no callbacks are sent since network1 was lost.
         val (agent3, network3) = connectNetwork()
+        matchAllCallback.expectAvailableThenValidatedCallbacks(network3)
+        testCallback.expectAvailableDoubleValidatedCallbacks(network3)
+
         // As soon as the replacement arrives, network1 is disconnected.
         // Check that this happens before the replacement timeout (5 seconds) fires.
-        matchAllCallback.expectAvailableCallbacks(network3, validated = false)
         matchAllCallback.expect<Lost>(network1, 2_000 /* timeoutMs */)
-        matchAllCallback.expectCaps(network3) { it.hasCapability(NET_CAPABILITY_VALIDATED) }
-        testCallback.expectAvailableDoubleValidatedCallbacks(network3)
         agent1.expectCallback<OnNetworkUnwanted>()
 
         // Test lingering:
@@ -1301,8 +1309,8 @@ class NetworkAgentTest {
         val callback = TestableNetworkCallback()
         requestNetwork(makeTestNetworkRequest(specifier = specifier6), callback)
         val agent6 = createNetworkAgent(specifier = specifier6)
-        agent6.register()
-        if (SdkLevel.isAtLeastU()) {
+        val network6 = agent6.register()
+        if (SHOULD_CREATE_NETWORKS_IMMEDIATELY) {
             agent6.expectCallback<OnNetworkCreated>()
         } else {
             // No callbacks are sent, so check LinkProperties to wait for the network to be created.
@@ -1316,9 +1324,10 @@ class NetworkAgentTest {
         val timeoutMs = agent6.DEFAULT_TIMEOUT_MS.toInt() + 1_000
         agent6.unregisterAfterReplacement(timeoutMs)
         agent6.expectCallback<OnNetworkUnwanted>()
-        if (!SdkLevel.isAtLeastT() || SdkLevel.isAtLeastU()) {
+        if (!SdkLevel.isAtLeastT() || SHOULD_CREATE_NETWORKS_IMMEDIATELY) {
             // Before T, onNetworkDestroyed is called even if the network was never created.
-            // On U+, the network was created by register(). Destroying it sends onNetworkDestroyed.
+            // If immediate native network creation is supported, the network was created by
+            // register(). Destroying it sends onNetworkDestroyed.
             agent6.expectCallback<OnNetworkDestroyed>()
         }
         // Poll for LinkProperties becoming null, because when onNetworkUnwanted is called, the
@@ -1368,9 +1377,8 @@ class NetworkAgentTest {
 
         val (newWifiAgent, newWifiNetwork) = connectNetwork(TRANSPORT_WIFI)
         testCallback.expectAvailableCallbacks(newWifiNetwork, validated = true)
-        matchAllCallback.expectAvailableCallbacks(newWifiNetwork, validated = false)
+        matchAllCallback.expectAvailableThenValidatedCallbacks(newWifiNetwork)
         matchAllCallback.expect<Lost>(wifiNetwork)
-        matchAllCallback.expectCaps(newWifiNetwork) { it.hasCapability(NET_CAPABILITY_VALIDATED) }
         wifiAgent.expectCallback<OnNetworkUnwanted>()
     }
 
@@ -1478,10 +1486,10 @@ class NetworkAgentTest {
 
     @Test
     fun testNativeNetworkCreation_PhysicalNetwork() {
-        // On T and below, the native network is only created when the agent connects.
-        // Starting in U, the native network is created as soon as the agent is registered.
-        doTestNativeNetworkCreation(expectCreatedImmediately = SdkLevel.isAtLeastU(),
-            intArrayOf(TRANSPORT_CELLULAR))
+        assumeFalse(Build.isDebuggable()) // Disabled presubmit pending prebuilt update on U
+        doTestNativeNetworkCreation(
+                expectCreatedImmediately = SHOULD_CREATE_NETWORKS_IMMEDIATELY,
+                intArrayOf(TRANSPORT_CELLULAR))
     }
 
     @Test
