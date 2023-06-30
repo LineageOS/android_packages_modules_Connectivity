@@ -84,7 +84,8 @@ public class KeepaliveStatsTracker {
 
     // Boolean to track whether the KeepaliveStatsTracker is enabled.
     // Use a final AtomicBoolean to ensure initialization is seen on the handler thread.
-    private final AtomicBoolean mEnabled = new AtomicBoolean(true);
+    // Repeated fields in metrics are only supported on T+ so this is enabled only on T+.
+    private final AtomicBoolean mEnabled = new AtomicBoolean(SdkLevel.isAtLeastT());
 
     // Class to store network information, lifetime durations and active state of a keepalive.
     private static final class KeepaliveStats {
@@ -301,6 +302,11 @@ public class KeepaliveStatsTracker {
                 Objects.requireNonNull(context.getSystemService(SubscriptionManager.class));
 
         mLastUpdateDurationsTimestamp = mDependencies.getElapsedRealtime();
+
+        if (!isEnabled()) {
+            return;
+        }
+
         context.registerReceiver(
                 new BroadcastReceiver() {
                     @Override
