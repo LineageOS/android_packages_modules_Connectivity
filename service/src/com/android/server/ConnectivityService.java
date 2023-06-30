@@ -391,7 +391,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // Timeout in case the "actively prefer bad wifi" feature is on
     private static final int ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS = 20 * 1000;
     // Timeout in case the "actively prefer bad wifi" feature is off
-    private static final int DONT_ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS = 8 * 1000;
+    private static final int DEFAULT_EVALUATION_TIMEOUT_MS = 8 * 1000;
 
     // Default to 30s linger time-out, and 5s for nascent network. Modifiable only for testing.
     private static final String LINGER_DELAY_PROPERTY = "persist.netmon.linger";
@@ -9939,10 +9939,25 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 networkAgent.networkMonitor().notifyNetworkConnected(params.linkProperties,
                         params.networkCapabilities);
             }
-            final long delay = !avoidBadWifi() && activelyPreferBadWifi()
-                    ? ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS
-                    : DONT_ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS;
-            scheduleEvaluationTimeout(networkAgent.network, delay);
+            final long evaluationDelay;
+            if (!networkAgent.networkCapabilities.hasSingleTransport(TRANSPORT_WIFI)) {
+                // If the network is anything other than pure wifi, use the default timeout.
+                evaluationDelay = DEFAULT_EVALUATION_TIMEOUT_MS;
+            } else if (networkAgent.networkAgentConfig.isExplicitlySelected()) {
+                // If the network is explicitly selected, use the default timeout because it's
+                // shorter and the user is likely staring at the screen expecting it to validate
+                // right away.
+                evaluationDelay = DEFAULT_EVALUATION_TIMEOUT_MS;
+            } else if (avoidBadWifi() || !activelyPreferBadWifi()) {
+                // If avoiding bad wifi, or if not avoiding but also not preferring bad wifi
+                evaluationDelay = DEFAULT_EVALUATION_TIMEOUT_MS;
+            } else {
+                // It's wifi, automatically connected, and bad wifi is preferred : use the
+                // longer timeout to avoid the device switching to captive portals with bad
+                // signal or very slow response.
+                evaluationDelay = ACTIVELY_PREFER_BAD_WIFI_INITIAL_TIMEOUT_MS;
+            }
+            scheduleEvaluationTimeout(networkAgent.network, evaluationDelay);
 
             // Whether a particular NetworkRequest listen should cause signal strength thresholds to
             // be communicated to a particular NetworkAgent depends only on the network's immutable,
