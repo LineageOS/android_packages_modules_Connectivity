@@ -18,7 +18,6 @@ package com.android.net.module.util.netlink;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
@@ -50,7 +49,6 @@ public class StructIfaddrMsg extends Struct {
     @Field(order = 4, type = Type.S32)
     public final int index;
 
-    @VisibleForTesting
     public StructIfaddrMsg(short family, short prefixLen, short flags, short scope, int index) {
         this.family = family;
         this.prefixLen = prefixLen;
