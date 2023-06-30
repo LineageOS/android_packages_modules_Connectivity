@@ -135,10 +135,17 @@
     <!-- Whether to cancel network notifications automatically when tapped -->
     <bool name="config_autoCancelNetworkNotifications">true</bool>
 
-    <!-- When no internet or partial connectivity is detected on a network, and a high priority
-         (heads up) notification would be shown due to the network being explicitly selected,
-         directly show the dialog that would normally be shown when tapping the notification
-         instead of showing the notification. -->
+    <!-- Configuration to let OEMs customize what to do when :
+         • Partial connectivity is detected on the network
+         • No internet is detected on the network, and
+           - the network was explicitly selected
+           - the system is configured to actively prefer bad wifi (see config_activelyPreferBadWifi)
+         The default behavior (false) is to post a notification with a PendingIntent so
+         the user is informed and can act if they wish.
+         Making this true instead will have the system fire the intent immediately instead
+         of showing a notification. OEMs who do this should have some intent receiver
+         listening to the intent and take the action they prefer (e.g. show a dialog,
+         show a customized notification etc).  -->
     <bool name="config_notifyNoInternetAsDialogWhenHighPriority">false</bool>
 
     <!-- When showing notifications indicating partial connectivity, display the same notifications
