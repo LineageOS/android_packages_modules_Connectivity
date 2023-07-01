@@ -36,6 +36,7 @@ import android.content.Context;
 import android.icu.text.MessageFormat;
 import android.net.ConnectivityManager;
 import android.net.ConnectivitySettingsManager;
+import android.net.ConnectivityThread;
 import android.net.InetAddresses;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
@@ -189,7 +190,19 @@ public class RateLimitTest {
             // whatever happens, don't leave the device in rate limited state.
             ConnectivitySettingsManager.setIngressRateLimitInBytesPerSecond(mContext, -1);
         }
-        if (mSocket != null) mSocket.close();
+        if (mSocket == null) {
+            // HACK(b/272147742): dump ConnectivityThread if test initialization failed.
+            final StackTraceElement[] elements = ConnectivityThread.get().getStackTrace();
+            final StringBuilder sb = new StringBuilder();
+            // Skip first element as it includes the invocation of getStackTrace()
+            for (int i = 1; i < elements.length; i++) {
+                sb.append(elements[i]);
+                sb.append("\n");
+            }
+            Log.e(TAG, sb.toString());
+        } else {
+            mSocket.close();
+        }
         if (mNetworkAgent != null) mNetworkAgent.unregister();
         if (mTunInterface != null) mTunInterface.getFileDescriptor().close();
         if (mCm != null) mCm.unregisterNetworkCallback(mNetworkCallback);
