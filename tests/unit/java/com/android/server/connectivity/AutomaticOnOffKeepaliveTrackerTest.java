@@ -52,6 +52,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.net.INetd;
 import android.net.ISocketKeepaliveCallback;
+import android.net.InetAddresses;
 import android.net.KeepalivePacketData;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -116,7 +117,8 @@ public class AutomaticOnOffKeepaliveTrackerTest {
     private static final int MOCK_RESOURCE_ID = 5;
     private static final int TEST_KEEPALIVE_INTERVAL_SEC = 10;
     private static final int TEST_KEEPALIVE_INVALID_INTERVAL_SEC = 9;
-
+    private static final byte[] V4_SRC_ADDR = new byte[] { (byte) 192, 0, 0, (byte) 129 };
+    private static final String TEST_V4_IFACE = "v4-testIface";
     private AutomaticOnOffKeepaliveTracker mAOOKeepaliveTracker;
     private HandlerThread mHandlerThread;
 
@@ -327,6 +329,8 @@ public class AutomaticOnOffKeepaliveTrackerTest {
                 NetworkInfo.DetailedState.CONNECTED, "test reason", "test extra info");
         doReturn(new Network(TEST_NETID)).when(mNai).network();
         mNai.linkProperties = new LinkProperties();
+        doReturn(null).when(mNai).translateV4toClatV6(any());
+        doReturn(null).when(mNai).getClatv6SrcAddress();
 
         doReturn(PERMISSION_GRANTED).when(mCtx).checkPermission(any() /* permission */,
                 anyInt() /* pid */, anyInt() /* uid */);
@@ -429,8 +433,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
     }
 
     private TestKeepaliveInfo doStartNattKeepalive(int intervalSeconds) throws Exception {
-        final InetAddress srcAddress = InetAddress.getByAddress(
-                new byte[] { (byte) 192, 0, 0, (byte) 129 });
+        final InetAddress srcAddress = InetAddress.getByAddress(V4_SRC_ADDR);
         final int srcPort = 12345;
         final InetAddress dstAddress = InetAddress.getByAddress(new byte[] {8, 8, 8, 8});
         final int dstPort = 12345;
@@ -606,6 +609,42 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         assertNull(getAutoKiForBinder(testInfo.binder));
 
         verify(testInfo.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_INVALID_INTERVAL);
+        verifyNoMoreInteractions(ignoreStubs(testInfo.socketKeepaliveCallback));
+    }
+
+    @Test
+    public void testStartNattKeepalive_addressTranslationOnClat() throws Exception {
+        final InetAddress v6AddrSrc = InetAddresses.parseNumericAddress("2001:db8::1");
+        final InetAddress v6AddrDst = InetAddresses.parseNumericAddress("2001:db8::2");
+        doReturn(v6AddrDst).when(mNai).translateV4toClatV6(any());
+        doReturn(v6AddrSrc).when(mNai).getClatv6SrcAddress();
+        doReturn(InetAddress.getByAddress(V4_SRC_ADDR)).when(mNai).getClatv4SrcAddress();
+        // Setup nai to add clat address
+        final LinkProperties stacked = new LinkProperties();
+        stacked.setInterfaceName(TEST_V4_IFACE);
+        mNai.linkProperties.addStackedLink(stacked);
+
+        final TestKeepaliveInfo testInfo = doStartNattKeepalive();
+        final ArgumentCaptor<NattKeepalivePacketData> kpdCaptor =
+                ArgumentCaptor.forClass(NattKeepalivePacketData.class);
+        verify(mNai).onStartNattSocketKeepalive(
+                eq(TEST_SLOT), eq(TEST_KEEPALIVE_INTERVAL_SEC), kpdCaptor.capture());
+        final NattKeepalivePacketData kpd = kpdCaptor.getValue();
+        // Verify the addresses are updated to v6 when clat is started.
+        assertEquals(v6AddrSrc, kpd.getSrcAddress());
+        assertEquals(v6AddrDst, kpd.getDstAddress());
+
+        triggerEventKeepalive(TEST_SLOT, SocketKeepalive.SUCCESS);
+        verify(testInfo.socketKeepaliveCallback).onStarted();
+
+        // Remove clat address should stop the keepalive.
+        doReturn(null).when(mNai).getClatv6SrcAddress();
+        visibleOnHandlerThread(
+                mTestHandler, () -> mAOOKeepaliveTracker.handleCheckKeepalivesStillValid(mNai));
+        checkAndProcessKeepaliveStop();
+        assertNull(getAutoKiForBinder(testInfo.binder));
+
+        verify(testInfo.socketKeepaliveCallback).onError(SocketKeepalive.ERROR_INVALID_IP_ADDRESS);
         verifyNoMoreInteractions(ignoreStubs(testInfo.socketKeepaliveCallback));
     }
 
