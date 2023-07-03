@@ -583,6 +583,21 @@ public class Nat464Xlat {
         return mIPv6Address;
     }
 
+    /**
+     * Get the generated v4 address of clat.
+     */
+    @Nullable
+    public Inet4Address getClatv4SrcAddress() {
+        // Variables in Nat464Xlat should only be accessed from handler thread.
+        ensureRunningOnHandlerThread();
+        if (!isStarted()) return null;
+
+        final LinkAddress v4Addr = getLinkAddress(mIface);
+        if (v4Addr == null) return null;
+
+        return (Inet4Address) v4Addr.getAddress();
+    }
+
     private void ensureRunningOnHandlerThread() {
         if (mNetwork.handler().getLooper().getThread() != Thread.currentThread()) {
             throw new IllegalStateException(
