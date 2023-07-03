@@ -291,6 +291,18 @@ public class AutomaticOnOffKeepaliveTracker {
             }
         }
 
+        /**
+         * Construct a new AutomaticOnOffKeepalive from existing AutomaticOnOffKeepalive with a
+         * new KeepaliveInfo.
+         */
+        public AutomaticOnOffKeepalive withKeepaliveInfo(KeepaliveTracker.KeepaliveInfo ki)
+                throws InvalidSocketException {
+            return new AutomaticOnOffKeepalive(
+                    ki,
+                    mAutomaticOnOffState != STATE_ALWAYS_ON /* autoOnOff */,
+                    mUnderpinnedNetwork);
+        }
+
         @Override
         public String toString() {
             return "AutomaticOnOffKeepalive [ "
@@ -470,13 +482,26 @@ public class AutomaticOnOffKeepaliveTracker {
      * The message is expected to contain a KeepaliveTracker.KeepaliveInfo.
      */
     public void handleStartKeepalive(Message message) {
-        final AutomaticOnOffKeepalive autoKi = (AutomaticOnOffKeepalive) message.obj;
-        final int error = mKeepaliveTracker.handleStartKeepalive(autoKi.mKi);
+        final AutomaticOnOffKeepalive target = (AutomaticOnOffKeepalive) message.obj;
+        final Pair<Integer, KeepaliveTracker.KeepaliveInfo> res =
+                mKeepaliveTracker.handleStartKeepalive(target.mKi);
+        final int error = res.first;
         if (error != SUCCESS) {
-            mEventLog.log("Failed to start keepalive " + autoKi.mCallback + " on "
-                    + autoKi.getNetwork() + " with error " + error);
+            mEventLog.log("Failed to start keepalive " + target.mCallback + " on "
+                    + target.getNetwork() + " with error " + error);
             return;
         }
+        // Generate a new auto ki with the started keepalive info.
+        final AutomaticOnOffKeepalive autoKi;
+        try {
+            autoKi = target.withKeepaliveInfo(res.second);
+            // Close the duplicated fd.
+            target.close();
+        } catch (InvalidSocketException e) {
+            Log.wtf(TAG, "Fail to create AutomaticOnOffKeepalive", e);
+            return;
+        }
+
         mEventLog.log("Start keepalive " + autoKi.mCallback + " on " + autoKi.getNetwork());
         mKeepaliveStatsTracker.onStartKeepalive(
                 autoKi.getNetwork(),
@@ -506,14 +531,19 @@ public class AutomaticOnOffKeepaliveTracker {
      * @return SUCCESS if the keepalive is successfully starting and the error reason otherwise.
      */
     private int handleResumeKeepalive(@NonNull final KeepaliveTracker.KeepaliveInfo ki) {
-        final int error = mKeepaliveTracker.handleStartKeepalive(ki);
+        final Pair<Integer, KeepaliveTracker.KeepaliveInfo> res =
+                mKeepaliveTracker.handleStartKeepalive(ki);
+        final KeepaliveTracker.KeepaliveInfo startedKi = res.second;
+        final int error = res.first;
         if (error != SUCCESS) {
-            mEventLog.log("Failed to resume keepalive " + ki.mCallback + " on " + ki.mNai
-                    + " with error " + error);
+            mEventLog.log("Failed to resume keepalive " + startedKi.mCallback + " on "
+                    + startedKi.mNai + " with error " + error);
             return error;
         }
-        mKeepaliveStatsTracker.onResumeKeepalive(ki.getNai().network(), ki.getSlot());
-        mEventLog.log("Resumed successfully keepalive " + ki.mCallback + " on " + ki.mNai);
+
+        mKeepaliveStatsTracker.onResumeKeepalive(startedKi.getNai().network(), startedKi.getSlot());
+        mEventLog.log("Resumed successfully keepalive " + startedKi.mCallback
+                + " on " + startedKi.mNai);
 
         return SUCCESS;
     }
