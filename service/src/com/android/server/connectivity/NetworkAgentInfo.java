@@ -1043,6 +1043,14 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
     }
 
     /**
+     * Get the generated v4 address of clat.
+     */
+    @Nullable
+    public Inet4Address getClatv4SrcAddress() {
+        return clatd.getClatv4SrcAddress();
+    }
+
+    /**
      * Translate the input v4 address to v6 clat address.
      */
     @Nullable
