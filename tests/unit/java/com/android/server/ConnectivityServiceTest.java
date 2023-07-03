@@ -6857,17 +6857,19 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testPacketKeepalives() throws Exception {
-        InetAddress myIPv4 = InetAddress.getByName("192.0.2.129");
+        final LinkAddress v4Addr = new LinkAddress("192.0.2.129/24");
+        final InetAddress myIPv4 = v4Addr.getAddress();
         InetAddress notMyIPv4 = InetAddress.getByName("192.0.2.35");
         InetAddress myIPv6 = InetAddress.getByName("2001:db8::1");
         InetAddress dstIPv4 = InetAddress.getByName("8.8.8.8");
         InetAddress dstIPv6 = InetAddress.getByName("2001:4860:4860::8888");
-
+        doReturn(getClatInterfaceConfigParcel(v4Addr)).when(mMockNetd)
+                .interfaceGetCfg(CLAT_MOBILE_IFNAME);
         final int validKaInterval = 15;
         final int invalidKaInterval = 9;
 
         LinkProperties lp = new LinkProperties();
-        lp.setInterfaceName("wlan12");
+        lp.setInterfaceName(MOBILE_IFNAME);
         lp.addLinkAddress(new LinkAddress(myIPv6, 64));
         lp.addLinkAddress(new LinkAddress(myIPv4, 25));
         lp.addRoute(new RouteInfo(InetAddress.getByName("fe80::1234")));
