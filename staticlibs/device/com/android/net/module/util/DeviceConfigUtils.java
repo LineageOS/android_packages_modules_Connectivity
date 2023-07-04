@@ -53,6 +53,8 @@ public final class DeviceConfigUtils {
             "com.android.server.connectivity.intent.action.SERVICE_CONNECTIVITY_RESOURCES_APK";
     private static final String CONNECTIVITY_RES_PKG_DIR = "/apex/" + TETHERING_MODULE_NAME + "/";
 
+    private static final long DEFAULT_PACKAGE_VERSION = 1000;
+
     @VisibleForTesting
     public static void resetPackageVersionCacheForTest() {
         sPackageVersion = -1;
@@ -60,17 +62,21 @@ public final class DeviceConfigUtils {
     }
 
     private static volatile long sPackageVersion = -1;
-    private static long getPackageVersion(@NonNull final Context context)
-            throws PackageManager.NameNotFoundException {
+    private static long getPackageVersion(@NonNull final Context context) {
         // sPackageVersion may be set by another thread just after this check, but querying the
         // package version several times on rare occasions is fine.
         if (sPackageVersion >= 0) {
             return sPackageVersion;
         }
-        final long version = context.getPackageManager().getPackageInfo(
-                context.getPackageName(), 0).getLongVersionCode();
-        sPackageVersion = version;
-        return version;
+        try {
+            final long version = context.getPackageManager().getPackageInfo(
+                    context.getPackageName(), 0).getLongVersionCode();
+            sPackageVersion = version;
+            return version;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Failed to get package info: " + e);
+            return DEFAULT_PACKAGE_VERSION;
+        }
     }
 
     /**
@@ -173,13 +179,8 @@ public final class DeviceConfigUtils {
      */
     public static boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
             @NonNull String name, boolean defaultEnabled) {
-        try {
-            final long packageVersion = getPackageVersion(context);
-            return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Could not find the package name", e);
-            return false;
-        }
+        final long packageVersion = getPackageVersion(context);
+        return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
     }
 
     /**
@@ -205,18 +206,12 @@ public final class DeviceConfigUtils {
             throw new IllegalArgumentException(
                     "This method is only usable by the tethering module");
         }
-        try {
-            final long packageVersion = getTetheringModuleVersion(context);
-            return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Could not find the module name", e);
-            return false;
-        }
+        final long packageVersion = getTetheringModuleVersion(context);
+        return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
     }
 
     private static boolean isFeatureEnabled(@NonNull Context context, long packageVersion,
-            @NonNull String namespace, String name, boolean defaultEnabled)
-            throws PackageManager.NameNotFoundException {
+            @NonNull String namespace, String name, boolean defaultEnabled) {
         final int propertyVersion = getDeviceConfigPropertyInt(namespace, name,
                 0 /* default value */);
         return (propertyVersion == 0 && defaultEnabled)
@@ -251,11 +246,17 @@ public final class DeviceConfigUtils {
     }
 
     private static volatile long sModuleVersion = -1;
-    private static long getTetheringModuleVersion(@NonNull Context context)
-            throws PackageManager.NameNotFoundException {
+    private static long getTetheringModuleVersion(@NonNull Context context) {
         if (sModuleVersion >= 0) return sModuleVersion;
 
-        sModuleVersion = resolveTetheringModuleVersion(context);
+        try {
+            sModuleVersion = resolveTetheringModuleVersion(context);
+        } catch (PackageManager.NameNotFoundException e) {
+            // It's expected to fail tethering module version resolution on the devices with
+            // flattened apex
+            Log.e(TAG, "Failed to resolve tethering module version: " + e);
+            return DEFAULT_PACKAGE_VERSION;
+        }
         return sModuleVersion;
     }
 
