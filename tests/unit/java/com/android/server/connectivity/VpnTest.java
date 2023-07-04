@@ -2770,16 +2770,15 @@ public class VpnTest extends VpnTestBase {
 
     private void verifyMobikeTriggered(List<Network> expected, int retryIndex) {
         // Verify retry is scheduled
-        final long expectedDelaySec = mTestDeps.getValidationFailRecoverySeconds(retryIndex);
+        final long expectedDelayMs = mTestDeps.getValidationFailRecoveryMs(retryIndex);
         final ArgumentCaptor<Long> delayCaptor = ArgumentCaptor.forClass(Long.class);
         verify(mExecutor, times(retryIndex + 1)).schedule(
-                any(Runnable.class), delayCaptor.capture(), eq(TimeUnit.SECONDS));
+                any(Runnable.class), delayCaptor.capture(), eq(TimeUnit.MILLISECONDS));
         final List<Long> delays = delayCaptor.getAllValues();
-        assertEquals(expectedDelaySec, (long) delays.get(delays.size() - 1));
+        assertEquals(expectedDelayMs, (long) delays.get(delays.size() - 1));
 
         final ArgumentCaptor<Network> networkCaptor = ArgumentCaptor.forClass(Network.class);
-        // TODO: Make the timeout shorter if real timeout will be used
-        verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS + expectedDelaySec * 1000))
+        verify(mIkeSessionWrapper, timeout(TEST_TIMEOUT_MS + expectedDelayMs))
                 .setNetwork(networkCaptor.capture(), anyInt() /* ipVersion */,
                         anyInt() /* encapType */, anyInt() /* keepaliveDelay */);
         assertEquals(expected, Collections.singletonList(networkCaptor.getValue()));
@@ -2850,22 +2849,22 @@ public class VpnTest extends VpnTestBase {
                 NetworkAgent.VALIDATION_STATUS_NOT_VALID);
 
         // Verify session reset is scheduled
-        long expectedDelay = mTestDeps.getValidationFailRecoverySeconds(retry++);
+        long expectedDelay = mTestDeps.getValidationFailRecoveryMs(retry++);
         final ArgumentCaptor<Long> delayCaptor = ArgumentCaptor.forClass(Long.class);
         verify(mExecutor, times(retry)).schedule(any(Runnable.class), delayCaptor.capture(),
-                eq(TimeUnit.SECONDS));
+                eq(TimeUnit.MILLISECONDS));
         final List<Long> delays = delayCaptor.getAllValues();
         assertEquals(expectedDelay, (long) delays.get(delays.size() - 1));
 
         // Another invalid status reported should not trigger other scheduled recovery.
-        expectedDelay = mTestDeps.getValidationFailRecoverySeconds(retry++);
+        expectedDelay = mTestDeps.getValidationFailRecoveryMs(retry++);
         ((Vpn.IkeV2VpnRunner) vpnSnapShot.vpn.mVpnRunner).onValidationStatus(
                 NetworkAgent.VALIDATION_STATUS_NOT_VALID);
         verify(mExecutor, never()).schedule(
-                any(Runnable.class), eq(expectedDelay), eq(TimeUnit.SECONDS));
+                any(Runnable.class), eq(expectedDelay), eq(TimeUnit.MILLISECONDS));
 
         // Verify that session being reset
-        verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS + expectedDelay * 1000))
+        verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS + expectedDelay))
                 .createIkeSession(any(), any(), any(), any(), any(), any());
     }
 
@@ -3144,9 +3143,9 @@ public class VpnTest extends VpnTestBase {
         }
 
         @Override
-        public long getValidationFailRecoverySeconds(int retryCount) {
+        public long getValidationFailRecoveryMs(int retryCount) {
             // Simply return retryCount as the delay seconds for retrying.
-            return retryCount;
+            return retryCount * 100L;
         }
 
         @Override
