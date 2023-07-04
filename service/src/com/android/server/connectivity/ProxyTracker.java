@@ -404,7 +404,7 @@ public class ProxyTracker {
                 // network, so discount this case.
                 if (null == mGlobalProxy && !lp.getHttpProxy().getPacFileUrl()
                         .equals(defaultProxy.getPacFileUrl())) {
-                    throw new IllegalStateException("Unexpected discrepancy between proxy in LP of "
+                    Log.wtf(TAG, "Unexpected discrepancy between proxy in LP of "
                             + "default network and default proxy. The former has a PAC URL of "
                             + lp.getHttpProxy().getPacFileUrl() + " while the latter has "
                             + defaultProxy.getPacFileUrl());
