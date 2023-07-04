@@ -26,6 +26,8 @@ import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFS
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -50,6 +52,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.FileDescriptor;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
@@ -170,7 +173,9 @@ public class NetlinkUtilsTest {
             assertEquals(0, response.position());
             assertEquals(ByteOrder.nativeOrder(), response.order());
 
-            final StructNlMsgHdr nlmsghdr = StructNlMsgHdr.parse(response);
+            final NetlinkMessage msg = NetlinkMessage.parse(response, NETLINK_ROUTE);
+            assertNotNull(msg);
+            final StructNlMsgHdr nlmsghdr = msg.getHeader();
             assertNotNull(nlmsghdr);
 
             if (nlmsghdr.nlmsg_type == NetlinkConstants.NLMSG_DONE) {
@@ -181,12 +186,15 @@ public class NetlinkUtilsTest {
             assertTrue((nlmsghdr.nlmsg_flags & StructNlMsgHdr.NLM_F_MULTI) != 0);
             assertEquals(testSeqno, nlmsghdr.nlmsg_seq);
             assertEquals(localAddr.getPortId(), nlmsghdr.nlmsg_pid);
+            assertTrue(msg instanceof RtNetlinkAddressMessage);
             addrMessageCount++;
 
-            final StructIfaddrMsg ifaMsg = Struct.parse(StructIfaddrMsg.class, response);
-            assertTrue(
-                    "Non-IP address family: " + ifaMsg.family,
-                    ifaMsg.family == AF_INET || ifaMsg.family == AF_INET6);
+            // From the query response we can see the RTM_NEWADDR messages representing for IPv4
+            // and IPv6 loopback address: 127.0.0.1 and ::1.
+            final StructIfaddrMsg ifaMsg = ((RtNetlinkAddressMessage) msg).getIfaddrHeader();
+            final InetAddress ipAddress = ((RtNetlinkAddressMessage) msg).getIpAddress();
+            assertThat((int) ifaMsg.family).isAnyOf(AF_INET, AF_INET6);
+            assertTrue(ipAddress.isLoopbackAddress());
         }
 
         assertTrue(addrMessageCount > 0);
