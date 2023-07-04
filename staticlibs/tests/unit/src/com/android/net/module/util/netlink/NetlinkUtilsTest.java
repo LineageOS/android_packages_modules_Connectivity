@@ -183,7 +183,7 @@ public class NetlinkUtilsTest {
             assertEquals(localAddr.getPortId(), nlmsghdr.nlmsg_pid);
             addrMessageCount++;
 
-            final IfaddrMsg ifaMsg = Struct.parse(IfaddrMsg.class, response);
+            final StructIfaddrMsg ifaMsg = Struct.parse(StructIfaddrMsg.class, response);
             assertTrue(
                     "Non-IP address family: " + ifaMsg.family,
                     ifaMsg.family == AF_INET || ifaMsg.family == AF_INET6);
@@ -196,7 +196,7 @@ public class NetlinkUtilsTest {
 
     /** A convenience method to create an RTM_GETADDR request message. */
     private static byte[] newGetAddrRequest(int seqNo) {
-        final int length = StructNlMsgHdr.STRUCT_SIZE + Struct.getSize(RtgenMsg.class);
+        final int length = StructNlMsgHdr.STRUCT_SIZE + Struct.getSize(StructIfaddrMsg.class);
         final byte[] bytes = new byte[length];
         final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         byteBuffer.order(ByteOrder.nativeOrder());
@@ -208,38 +208,11 @@ public class NetlinkUtilsTest {
         nlmsghdr.nlmsg_seq = seqNo;
         nlmsghdr.pack(byteBuffer);
 
-        final RtgenMsg rtgenMsg = new RtgenMsg();
-        rtgenMsg.family = (byte) AF_UNSPEC;
-        rtgenMsg.writeToByteBuffer(byteBuffer);
+        final StructIfaddrMsg addrMsg = new StructIfaddrMsg((byte) AF_UNSPEC /* family */,
+                (short) 0 /* prefixLen */, (short) 0 /* flags */, (short) 0 /* scope */,
+                0 /* index */);
+        addrMsg.pack(byteBuffer);
 
         return bytes;
-    }
-
-    /** From uapi/linux/rtnetlink.h */
-    private static class RtgenMsg extends Struct {
-        @Field(order = 0, type = Type.U8)
-        public short family;
-    }
-
-    /**
-     * From uapi/linux/ifaddr.h
-     *
-     * Public ensures visibility to Struct class
-     */
-    public static class IfaddrMsg extends Struct {
-        @Field(order = 0, type = Type.U8)
-        public short family;
-
-        @Field(order = 1, type = Type.U8)
-        public short prefixlen;
-
-        @Field(order = 2, type = Type.U8)
-        public short flags;
-
-        @Field(order = 3, type = Type.U8)
-        public short scope;
-
-        @Field(order = 4, type = Type.S32)
-        public int index;
     }
 }
