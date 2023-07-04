@@ -167,11 +167,16 @@ public abstract class EthernetTetheringTestBase {
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
 
-        mRunTests = runAsShell(NETWORK_SETTINGS, TETHER_PRIVILEGED, () ->
-                mTm.isTetheringSupported());
+        mRunTests = isEthernetTetheringSupported();
         assumeTrue(mRunTests);
 
         mTetheredInterfaceRequester = new TetheredInterfaceRequester(mHandler, mEm);
+    }
+
+    private boolean isEthernetTetheringSupported() throws Exception {
+        if (mEm == null) return false;
+
+        return runAsShell(NETWORK_SETTINGS, TETHER_PRIVILEGED, () -> mTm.isTetheringSupported());
     }
 
     protected void maybeStopTapPacketReader(final TapPacketReader tapPacketReader)
