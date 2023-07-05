@@ -22,7 +22,6 @@ import static com.android.server.connectivity.mdns.util.MdnsUtils.toDnsLowerCase
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.net.Network;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.ArrayMap;
@@ -45,15 +44,15 @@ import java.util.Objects;
 public class MdnsServiceCache {
     private static class CacheKey {
         @NonNull final String mLowercaseServiceType;
-        @Nullable final Network mNetwork;
+        @NonNull final SocketKey mSocketKey;
 
-        CacheKey(@NonNull String serviceType, @Nullable Network network) {
+        CacheKey(@NonNull String serviceType, @NonNull SocketKey socketKey) {
             mLowercaseServiceType = toDnsLowerCase(serviceType);
-            mNetwork = network;
+            mSocketKey = socketKey;
         }
 
         @Override public int hashCode() {
-            return Objects.hash(mLowercaseServiceType, mNetwork);
+            return Objects.hash(mLowercaseServiceType, mSocketKey);
         }
 
         @Override public boolean equals(Object other) {
@@ -64,11 +63,11 @@ public class MdnsServiceCache {
                 return false;
             }
             return Objects.equals(mLowercaseServiceType, ((CacheKey) other).mLowercaseServiceType)
-                    && Objects.equals(mNetwork, ((CacheKey) other).mNetwork);
+                    && Objects.equals(mSocketKey, ((CacheKey) other).mSocketKey);
         }
     }
     /**
-     * A map of cached services. Key is composed of service name, type and network. Value is the
+     * A map of cached services. Key is composed of service name, type and socket. Value is the
      * service which use the service type to discover from each socket.
      */
     @NonNull
@@ -81,17 +80,17 @@ public class MdnsServiceCache {
     }
 
     /**
-     * Get the cache services which are queried from given service type and network.
+     * Get the cache services which are queried from given service type and socket.
      *
      * @param serviceType the target service type.
-     * @param network the target network
+     * @param socketKey the target socket
      * @return the set of services which matches the given service type.
      */
     @NonNull
     public List<MdnsResponse> getCachedServices(@NonNull String serviceType,
-            @Nullable Network network) {
+            @NonNull SocketKey socketKey) {
         ensureRunningOnHandlerThread(mHandler);
-        final CacheKey key = new CacheKey(serviceType, network);
+        final CacheKey key = new CacheKey(serviceType, socketKey);
         return mCachedServices.containsKey(key)
                 ? Collections.unmodifiableList(new ArrayList<>(mCachedServices.get(key)))
                 : Collections.emptyList();
@@ -112,15 +111,15 @@ public class MdnsServiceCache {
      *
      * @param serviceName the target service name.
      * @param serviceType the target service type.
-     * @param network the target network
+     * @param socketKey the target socket
      * @return the service which matches given conditions.
      */
     @Nullable
     public MdnsResponse getCachedService(@NonNull String serviceName,
-            @NonNull String serviceType, @Nullable Network network) {
+            @NonNull String serviceType, @NonNull SocketKey socketKey) {
         ensureRunningOnHandlerThread(mHandler);
         final List<MdnsResponse> responses =
-                mCachedServices.get(new CacheKey(serviceType, network));
+                mCachedServices.get(new CacheKey(serviceType, socketKey));
         if (responses == null) {
             return null;
         }
@@ -132,14 +131,14 @@ public class MdnsServiceCache {
      * Add or update a service.
      *
      * @param serviceType the service type.
-     * @param network the target network
+     * @param socketKey the target socket
      * @param response the response of the discovered service.
      */
-    public void addOrUpdateService(@NonNull String serviceType, @Nullable Network network,
+    public void addOrUpdateService(@NonNull String serviceType, @NonNull SocketKey socketKey,
             @NonNull MdnsResponse response) {
         ensureRunningOnHandlerThread(mHandler);
         final List<MdnsResponse> responses = mCachedServices.computeIfAbsent(
-                new CacheKey(serviceType, network), key -> new ArrayList<>());
+                new CacheKey(serviceType, socketKey), key -> new ArrayList<>());
         // Remove existing service if present.
         final MdnsResponse existing =
                 findMatchedResponse(responses, response.getServiceInstanceName());
@@ -148,18 +147,18 @@ public class MdnsServiceCache {
     }
 
     /**
-     * Remove a service which matches the given service name, type and network.
+     * Remove a service which matches the given service name, type and socket.
      *
      * @param serviceName the target service name.
      * @param serviceType the target service type.
-     * @param network the target network.
+     * @param socketKey the target socket.
      */
     @Nullable
     public MdnsResponse removeService(@NonNull String serviceName, @NonNull String serviceType,
-            @Nullable Network network) {
+            @NonNull SocketKey socketKey) {
         ensureRunningOnHandlerThread(mHandler);
         final List<MdnsResponse> responses =
-                mCachedServices.get(new CacheKey(serviceType, network));
+                mCachedServices.get(new CacheKey(serviceType, socketKey));
         if (responses == null) {
             return null;
         }
