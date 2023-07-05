@@ -289,6 +289,110 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
+    public void sendQueries_activeScanWithQueryBackoff() {
+        MdnsSearchOptions searchOptions =
+                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(
+                        false).setNumOfQueriesBeforeBackoff(11).build();
+        client.startSendAndReceive(mockListenerOne, searchOptions);
+
+        // First burst, 3 queries.
+        verifyAndSendQuery(0, 0, /* expectsUnicastResponse= */ true);
+        verifyAndSendQuery(
+                1, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(
+                2, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        // Second burst will be sent after initialTimeBetweenBurstsMs, 3 queries.
+        verifyAndSendQuery(
+                3, MdnsConfigs.initialTimeBetweenBurstsMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(
+                4, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(
+                5, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        // Third burst will be sent after initialTimeBetweenBurstsMs * 2, 3 queries.
+        verifyAndSendQuery(
+                6, MdnsConfigs.initialTimeBetweenBurstsMs() * 2, /* expectsUnicastResponse= */
+                false);
+        verifyAndSendQuery(
+                7, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(
+                8, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        // Forth burst will be sent after initialTimeBetweenBurstsMs * 4, 3 queries.
+        verifyAndSendQuery(
+                9, MdnsConfigs.initialTimeBetweenBurstsMs() * 4, /* expectsUnicastResponse= */
+                false);
+        verifyAndSendQuery(
+                10, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(
+                11, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        // In backoff mode, the current scheduled task will be canceled and reschedule if the
+        // 0.8 * smallestRemainingTtl is larger than time to next run.
+        long currentTime = TEST_TTL / 2 + TEST_ELAPSED_REALTIME;
+        doReturn(currentTime).when(mockDecoderClock).elapsedRealtime();
+        client.processResponse(createResponse(
+                "service-instance-1", "192.0.2.123", 5353,
+                SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), socketKey);
+        verifyAndSendQuery(12, (long) (TEST_TTL / 2 * 0.8), /* expectsUnicastResponse= */
+                false);
+        currentTime += (long) (TEST_TTL / 2 * 0.8);
+        doReturn(currentTime).when(mockDecoderClock).elapsedRealtime();
+        verifyAndSendQuery(
+                13, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+    }
+
+    @Test
+    public void sendQueries_passiveScanWithQueryBackoff() {
+        MdnsSearchOptions searchOptions =
+                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(
+                        true).setNumOfQueriesBeforeBackoff(3).build();
+        client.startSendAndReceive(mockListenerOne, searchOptions);
+        verifyAndSendQuery(0, 0, /* expectsUnicastResponse= */ true);
+        verifyAndSendQuery(
+                1, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(
+                2, MdnsConfigs.timeBetweenQueriesInBurstMs(), /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(3, MdnsConfigs.timeBetweenBurstsMs(), /* expectsUnicastResponse= */
+                false);
+        assertEquals(4, currentThreadExecutor.getNumOfScheduledFuture());
+
+        // In backoff mode, the current scheduled task will be canceled and reschedule if the
+        // 0.8 * smallestRemainingTtl is larger than time to next run.
+        doReturn(TEST_ELAPSED_REALTIME + 20000).when(mockDecoderClock).elapsedRealtime();
+        client.processResponse(createResponse(
+                "service-instance-1", "192.0.2.123", 5353,
+                SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), socketKey);
+        verify(expectedSendFutures[4]).cancel(true);
+        assertEquals(5, currentThreadExecutor.getNumOfScheduledFuture());
+        verifyAndSendQuery(4, 80000 /* timeInMs */, false /* expectsUnicastResponse */);
+        assertEquals(6, currentThreadExecutor.getNumOfScheduledFuture());
+        // Next run should also be scheduled in 0.8 * smallestRemainingTtl
+        verifyAndSendQuery(5, 80000 /* timeInMs */, false /* expectsUnicastResponse */);
+        assertEquals(7, currentThreadExecutor.getNumOfScheduledFuture());
+
+        // If the records is not refreshed, the current scheduled task will not be canceled.
+        doReturn(TEST_ELAPSED_REALTIME + 20001).when(mockDecoderClock).elapsedRealtime();
+        client.processResponse(createResponse(
+                "service-instance-1", "192.0.2.123", 5353,
+                SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL,
+                TEST_ELAPSED_REALTIME - 1), socketKey);
+        verify(expectedSendFutures[7], never()).cancel(true);
+
+        // In backoff mode, the current scheduled task will not be canceled if the
+        // 0.8 * smallestRemainingTtl is smaller than time to next run.
+        doReturn(TEST_ELAPSED_REALTIME).when(mockDecoderClock).elapsedRealtime();
+        client.processResponse(createResponse(
+                "service-instance-1", "192.0.2.123", 5353,
+                SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), socketKey);
+        verify(expectedSendFutures[7], never()).cancel(true);
+
+        client.stopSendAndReceive(mockListenerOne);
+        verify(expectedSendFutures[7]).cancel(true);
+    }
+
+    @Test
     public void sendQueries_reentry_passiveScanMode() {
         MdnsSearchOptions searchOptions =
                 MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(true).build();
@@ -328,7 +432,8 @@ public class MdnsServiceTypeClientTests {
                 MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
         QueryTaskConfig config = new QueryTaskConfig(
                 searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
-                false /* onlyUseIpv6OnIpv6OnlyNetworks */, 1, socketKey);
+                false /* onlyUseIpv6OnIpv6OnlyNetworks */, 3 /* numOfQueriesBeforeBackoff */,
+                socketKey);
 
         // This is the first query. We will ask for unicast response.
         assertTrue(config.expectUnicastResponse);
@@ -358,7 +463,8 @@ public class MdnsServiceTypeClientTests {
                 MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
         QueryTaskConfig config = new QueryTaskConfig(
                 searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
-                false /* onlyUseIpv6OnIpv6OnlyNetworks */, 1, socketKey);
+                false /* onlyUseIpv6OnIpv6OnlyNetworks */, 3 /* numOfQueriesBeforeBackoff */,
+                socketKey);
 
         // This is the first query. We will ask for unicast response.
         assertTrue(config.expectUnicastResponse);
@@ -714,8 +820,10 @@ public class MdnsServiceTypeClientTests {
                         return mockPacketWriter;
                     }
                 };
-        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder().setRemoveExpiredService(
-                true).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .setRemoveExpiredService(true)
+                .setNumOfQueriesBeforeBackoff(Integer.MAX_VALUE)
+                .build();
         client.startSendAndReceive(mockListenerOne, searchOptions);
         Runnable firstMdnsTask = currentThreadExecutor.getAndClearSubmittedRunnable();
 
@@ -1248,13 +1356,16 @@ public class MdnsServiceTypeClientTests {
         final String ipV4Address = "192.0.2.0";
 
         final MdnsSearchOptions resolveOptions = MdnsSearchOptions.newBuilder()
+                .setNumOfQueriesBeforeBackoff(Integer.MAX_VALUE)
                 .setResolveInstanceName("instance1").build();
 
         client.startSendAndReceive(mockListenerOne, resolveOptions);
         // Ensure the first task is executed so it schedules a future task
         currentThreadExecutor.getAndClearSubmittedFuture().get(
                 TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        client.startSendAndReceive(mockListenerTwo, MdnsSearchOptions.getDefaultOptions());
+        client.startSendAndReceive(mockListenerTwo,
+                MdnsSearchOptions.newBuilder().setNumOfQueriesBeforeBackoff(
+                        Integer.MAX_VALUE).build());
 
         // Filing the second request cancels the first future
         verify(expectedSendFutures[0]).cancel(true);
@@ -1317,7 +1428,7 @@ public class MdnsServiceTypeClientTests {
 
     private void verifyAndSendQuery(int index, long timeInMs, boolean expectsUnicastResponse,
             boolean multipleSocketDiscovery) {
-        assertEquals(currentThreadExecutor.getAndClearLastScheduledDelayInMs(), timeInMs);
+        assertEquals(timeInMs, currentThreadExecutor.getAndClearLastScheduledDelayInMs());
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         if (expectsUnicastResponse) {
             verify(mockSocketClient).sendPacketRequestingUnicastResponse(
@@ -1406,6 +1517,10 @@ public class MdnsServiceTypeClientTests {
             lastSubmittedFuture = null;
             return val;
         }
+
+        public int getNumOfScheduledFuture() {
+            return futureIndex - 1;
+        }
     }
 
     private MdnsPacket createResponse(
@@ -1424,7 +1539,7 @@ public class MdnsServiceTypeClientTests {
                 textAttributes, ptrTtlMillis);
     }
 
-    // Creates a mDNS response.
+
     private MdnsPacket createResponse(
             @NonNull String serviceInstanceName,
             @Nullable String host,
@@ -1432,6 +1547,19 @@ public class MdnsServiceTypeClientTests {
             @NonNull String[] type,
             @NonNull Map<String, String> textAttributes,
             long ptrTtlMillis) {
+        return createResponse(serviceInstanceName, host, port, type, textAttributes, ptrTtlMillis,
+                TEST_ELAPSED_REALTIME);
+    }
+
+    // Creates a mDNS response.
+    private MdnsPacket createResponse(
+            @NonNull String serviceInstanceName,
+            @Nullable String host,
+            int port,
+            @NonNull String[] type,
+            @NonNull Map<String, String> textAttributes,
+            long ptrTtlMillis,
+            long receiptTimeMillis) {
 
         final ArrayList<MdnsRecord> answerRecords = new ArrayList<>();
 
@@ -1442,7 +1570,7 @@ public class MdnsServiceTypeClientTests {
         final String[] serviceName = serviceNameList.toArray(new String[0]);
         final MdnsPointerRecord pointerRecord = new MdnsPointerRecord(
                 type,
-                TEST_ELAPSED_REALTIME /* receiptTimeMillis */,
+                receiptTimeMillis,
                 false /* cacheFlush */,
                 ptrTtlMillis,
                 serviceName);
@@ -1451,7 +1579,7 @@ public class MdnsServiceTypeClientTests {
         // Set SRV record.
         final MdnsServiceRecord serviceRecord = new MdnsServiceRecord(
                 serviceName,
-                TEST_ELAPSED_REALTIME /* receiptTimeMillis */,
+                receiptTimeMillis,
                 false /* cacheFlush */,
                 TEST_TTL,
                 0 /* servicePriority */,
@@ -1465,7 +1593,7 @@ public class MdnsServiceTypeClientTests {
             final InetAddress addr = InetAddresses.parseNumericAddress(host);
             final MdnsInetAddressRecord inetAddressRecord = new MdnsInetAddressRecord(
                     new String[] {"hostname"} /* name */,
-                    TEST_ELAPSED_REALTIME /* receiptTimeMillis */,
+                    receiptTimeMillis,
                     false /* cacheFlush */,
                     TEST_TTL,
                     addr);
@@ -1479,7 +1607,7 @@ public class MdnsServiceTypeClientTests {
         }
         final MdnsTextRecord textRecord = new MdnsTextRecord(
                 serviceName,
-                TEST_ELAPSED_REALTIME /* receiptTimeMillis */,
+                receiptTimeMillis,
                 false /* cacheFlush */,
                 TEST_TTL,
                 textEntries);
