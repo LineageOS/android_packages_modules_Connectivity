@@ -16,7 +16,6 @@
 
 package com.android.server.connectivity.mdns
 
-import android.net.Network
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -32,7 +31,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
 
 private const val SERVICE_NAME_1 = "service-instance-1"
 private const val SERVICE_NAME_2 = "service-instance-2"
@@ -44,7 +42,7 @@ private const val DEFAULT_TIMEOUT_MS = 2000L
 @RunWith(DevSdkIgnoreRunner::class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class MdnsServiceCacheTest {
-    private val network = mock(Network::class.java)
+    private val socketKey = SocketKey(null /* network */, INTERFACE_INDEX)
     private val thread = HandlerThread(MdnsServiceCacheTest::class.simpleName)
     private val handler by lazy {
         Handler(thread.looper)
@@ -71,39 +69,47 @@ class MdnsServiceCacheTest {
         return future.get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
     }
 
-    private fun addOrUpdateService(serviceType: String, network: Network, service: MdnsResponse):
-            Unit = runningOnHandlerAndReturn {
-        serviceCache.addOrUpdateService(serviceType, network, service) }
+    private fun addOrUpdateService(
+            serviceType: String,
+            socketKey: SocketKey,
+            service: MdnsResponse
+    ): Unit = runningOnHandlerAndReturn {
+        serviceCache.addOrUpdateService(serviceType, socketKey, service)
+    }
 
-    private fun removeService(serviceName: String, serviceType: String, network: Network):
+    private fun removeService(serviceName: String, serviceType: String, socketKey: SocketKey):
             Unit = runningOnHandlerAndReturn {
-        serviceCache.removeService(serviceName, serviceType, network) }
+        serviceCache.removeService(serviceName, serviceType, socketKey) }
 
-    private fun getService(serviceName: String, serviceType: String, network: Network):
+    private fun getService(serviceName: String, serviceType: String, socketKey: SocketKey):
             MdnsResponse? = runningOnHandlerAndReturn {
-        serviceCache.getCachedService(serviceName, serviceType, network) }
+        serviceCache.getCachedService(serviceName, serviceType, socketKey) }
 
-    private fun getServices(serviceType: String, network: Network): List<MdnsResponse> =
-        runningOnHandlerAndReturn { serviceCache.getCachedServices(serviceType, network) }
+    private fun getServices(serviceType: String, socketKey: SocketKey): List<MdnsResponse> =
+        runningOnHandlerAndReturn { serviceCache.getCachedServices(serviceType, socketKey) }
 
     @Test
     fun testAddAndRemoveService() {
-        addOrUpdateService(SERVICE_TYPE_1, network, createResponse(SERVICE_NAME_1, SERVICE_TYPE_1))
-        var response = getService(SERVICE_NAME_1, SERVICE_TYPE_1, network)
+        addOrUpdateService(
+                SERVICE_TYPE_1, socketKey, createResponse(SERVICE_NAME_1, SERVICE_TYPE_1))
+        var response = getService(SERVICE_NAME_1, SERVICE_TYPE_1, socketKey)
         assertNotNull(response)
         assertEquals(SERVICE_NAME_1, response.serviceInstanceName)
-        removeService(SERVICE_NAME_1, SERVICE_TYPE_1, network)
-        response = getService(SERVICE_NAME_1, SERVICE_TYPE_1, network)
+        removeService(SERVICE_NAME_1, SERVICE_TYPE_1, socketKey)
+        response = getService(SERVICE_NAME_1, SERVICE_TYPE_1, socketKey)
         assertNull(response)
     }
 
     @Test
     fun testGetCachedServices_multipleServiceTypes() {
-        addOrUpdateService(SERVICE_TYPE_1, network, createResponse(SERVICE_NAME_1, SERVICE_TYPE_1))
-        addOrUpdateService(SERVICE_TYPE_1, network, createResponse(SERVICE_NAME_2, SERVICE_TYPE_1))
-        addOrUpdateService(SERVICE_TYPE_2, network, createResponse(SERVICE_NAME_2, SERVICE_TYPE_2))
+        addOrUpdateService(
+                SERVICE_TYPE_1, socketKey, createResponse(SERVICE_NAME_1, SERVICE_TYPE_1))
+        addOrUpdateService(
+                SERVICE_TYPE_1, socketKey, createResponse(SERVICE_NAME_2, SERVICE_TYPE_1))
+        addOrUpdateService(
+                SERVICE_TYPE_2, socketKey, createResponse(SERVICE_NAME_2, SERVICE_TYPE_2))
 
-        val responses1 = getServices(SERVICE_TYPE_1, network)
+        val responses1 = getServices(SERVICE_TYPE_1, socketKey)
         assertEquals(2, responses1.size)
         assertTrue(responses1.stream().anyMatch { response ->
             response.serviceInstanceName == SERVICE_NAME_1
@@ -111,19 +117,19 @@ class MdnsServiceCacheTest {
         assertTrue(responses1.any { response ->
             response.serviceInstanceName == SERVICE_NAME_2
         })
-        val responses2 = getServices(SERVICE_TYPE_2, network)
+        val responses2 = getServices(SERVICE_TYPE_2, socketKey)
         assertEquals(1, responses2.size)
         assertTrue(responses2.any { response ->
             response.serviceInstanceName == SERVICE_NAME_2
         })
 
-        removeService(SERVICE_NAME_2, SERVICE_TYPE_1, network)
-        val responses3 = getServices(SERVICE_TYPE_1, network)
+        removeService(SERVICE_NAME_2, SERVICE_TYPE_1, socketKey)
+        val responses3 = getServices(SERVICE_TYPE_1, socketKey)
         assertEquals(1, responses3.size)
         assertTrue(responses3.any { response ->
             response.serviceInstanceName == SERVICE_NAME_1
         })
-        val responses4 = getServices(SERVICE_TYPE_2, network)
+        val responses4 = getServices(SERVICE_TYPE_2, socketKey)
         assertEquals(1, responses4.size)
         assertTrue(responses4.any { response ->
             response.serviceInstanceName == SERVICE_NAME_2
@@ -132,5 +138,5 @@ class MdnsServiceCacheTest {
 
     private fun createResponse(serviceInstanceName: String, serviceType: String) = MdnsResponse(
         0 /* now */, "$serviceInstanceName.$serviceType".split(".").toTypedArray(),
-            INTERFACE_INDEX, network)
+            socketKey.interfaceIndex, socketKey.network)
 }
