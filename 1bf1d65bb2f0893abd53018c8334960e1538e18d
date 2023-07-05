@@ -33,6 +33,24 @@
       "message": "Requires netd change",
       "revId": "1bf1d65bb2f0893abd53018c8334960e1538e18d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "35ac0939_4d77b922",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2023-07-05T16:51:50Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "a2f97a28_552c9c0a",
+      "revId": "1bf1d65bb2f0893abd53018c8334960e1538e18d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
