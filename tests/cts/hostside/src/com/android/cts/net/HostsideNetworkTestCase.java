@@ -16,16 +16,21 @@
 
 package com.android.cts.net;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import com.android.ddmlib.Log;
 import com.android.modules.utils.build.testing.DeviceSdkLevel;
 import com.android.tradefed.device.DeviceNotAvailableException;
+import com.android.tradefed.invoker.TestInformation;
+import com.android.tradefed.targetprep.BuildError;
 import com.android.tradefed.targetprep.TargetSetupError;
+import com.android.tradefed.targetprep.suite.SuiteApkInstaller;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
+import com.android.tradefed.testtype.junit4.AfterClassWithInfo;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
-import com.android.tradefed.testtype.junit4.DeviceTestRunOptions;
+import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
 import com.android.tradefed.util.RunUtil;
 
 import org.junit.runner.RunWith;
@@ -40,32 +45,59 @@ abstract class HostsideNetworkTestCase extends BaseHostJUnit4Test {
     protected static final String TEST_APP2_PKG = "com.android.cts.net.hostside.app2";
     protected static final String TEST_APP2_APK = "CtsHostsideNetworkTestsApp2.apk";
 
-    protected void setUp() throws Exception {
-        DeviceSdkLevel deviceSdkLevel = new DeviceSdkLevel(getDevice());
-        String testApk = deviceSdkLevel.isDeviceAtLeastT() ? TEST_APK_NEXT
-                : TEST_APK;
+    @BeforeClassWithInfo
+    public static void setUpOnce(TestInformation testInfo) throws Exception {
+        DeviceSdkLevel deviceSdkLevel = new DeviceSdkLevel(testInfo.getDevice());
+        String testApk = deviceSdkLevel.isDeviceAtLeastT() ? TEST_APK_NEXT : TEST_APK;
 
-        uninstallPackage(TEST_PKG, false);
-        installPackage(testApk);
+        uninstallPackage(testInfo, TEST_PKG, false);
+        installPackage(testInfo, testApk);
     }
 
-    protected void tearDown() throws Exception {
-        uninstallPackage(TEST_PKG, true);
+    @AfterClassWithInfo
+    public static void tearDownOnce(TestInformation testInfo) throws DeviceNotAvailableException {
+        uninstallPackage(testInfo, TEST_PKG, true);
+    }
+
+    // Custom static method to install the specified package, this is used to bypass auto-cleanup
+    // per test in BaseHostJUnit4.
+    protected static void installPackage(TestInformation testInfo, String apk)
+            throws DeviceNotAvailableException, TargetSetupError {
+        assertNotNull(testInfo);
+        final int userId = testInfo.getDevice().getCurrentUser();
+        final SuiteApkInstaller installer = new SuiteApkInstaller();
+        // Force the apk clean up
+        installer.setCleanApk(true);
+        installer.addTestFileName(apk);
+        installer.setUserId(userId);
+        installer.setShouldGrantPermission(true);
+        installer.addInstallArg("-t");
+        try {
+            installer.setUp(testInfo);
+        } catch (BuildError e) {
+            throw new TargetSetupError(
+                    e.getMessage(), e, testInfo.getDevice().getDeviceDescriptor(), e.getErrorId());
+        }
     }
 
     protected void installPackage(String apk) throws DeviceNotAvailableException, TargetSetupError {
-        final DeviceTestRunOptions installOptions = new DeviceTestRunOptions(
-                null /* packageName */);
-        final int userId = getDevice().getCurrentUser();
-        installPackageAsUser(apk, true /* grantPermission */, userId, "-t");
+        installPackage(getTestInformation(), apk);
     }
 
-    protected void uninstallPackage(String packageName, boolean shouldSucceed)
+    protected static void uninstallPackage(TestInformation testInfo, String packageName,
+            boolean shouldSucceed)
             throws DeviceNotAvailableException {
-        final String result = uninstallPackage(packageName);
+        assertNotNull(testInfo);
+        final String result = testInfo.getDevice().uninstallPackage(packageName);
         if (shouldSucceed) {
             assertNull("uninstallPackage(" + packageName + ") failed: " + result, result);
         }
+    }
+
+    protected void uninstallPackage(String packageName,
+            boolean shouldSucceed)
+            throws DeviceNotAvailableException {
+        uninstallPackage(getTestInformation(), packageName, shouldSucceed);
     }
 
     protected void assertPackageUninstalled(String packageName) throws DeviceNotAvailableException,
