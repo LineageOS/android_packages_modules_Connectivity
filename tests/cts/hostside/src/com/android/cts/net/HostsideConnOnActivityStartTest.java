@@ -18,9 +18,13 @@ package com.android.cts.net;
 
 import android.platform.test.annotations.FlakyTest;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     private static final String TEST_CLASS = TEST_PKG + ".ConnOnActivityStartTest";
-    @Override
+    @Before
     public void setUp() throws Exception {
         super.setUp();
 
@@ -28,26 +32,30 @@ public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
         installPackage(TEST_APP2_APK);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         super.tearDown();
 
         uninstallPackage(TEST_APP2_PKG, true);
     }
 
+    @Test
     public void testStartActivity_batterySaver() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_batterySaver");
     }
 
+    @Test
     public void testStartActivity_dataSaver() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_dataSaver");
     }
 
     @FlakyTest(bugId = 231440256)
+    @Test
     public void testStartActivity_doze() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_doze");
     }
 
+    @Test
     public void testStartActivity_appStandby() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_appStandby");
     }
