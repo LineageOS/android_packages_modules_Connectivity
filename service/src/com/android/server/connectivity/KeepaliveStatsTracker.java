@@ -45,6 +45,7 @@ import com.android.metrics.DurationPerNumOfKeepalive;
 import com.android.metrics.KeepaliveLifetimeForCarrier;
 import com.android.metrics.KeepaliveLifetimePerCarrier;
 import com.android.modules.utils.BackgroundThread;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.CollectionUtils;
 import com.android.server.ConnectivityStatsLog;
 
@@ -250,6 +251,22 @@ public class KeepaliveStatsTracker {
         // relative to start time and avoid timezone change, including time spent in deep sleep.
         public long getElapsedRealtime() {
             return SystemClock.elapsedRealtime();
+        }
+
+        /**
+         * Writes a DAILY_KEEPALIVE_INFO_REPORTED to ConnectivityStatsLog.
+         *
+         * @param dailyKeepaliveInfoReported the proto to write to statsD.
+         */
+        public void writeStats(DailykeepaliveInfoReported dailyKeepaliveInfoReported) {
+            ConnectivityStatsLog.write(
+                    ConnectivityStatsLog.DAILY_KEEPALIVE_INFO_REPORTED,
+                    dailyKeepaliveInfoReported.getDurationPerNumOfKeepalive().toByteArray(),
+                    dailyKeepaliveInfoReported.getKeepaliveLifetimePerCarrier().toByteArray(),
+                    dailyKeepaliveInfoReported.getKeepaliveRequests(),
+                    dailyKeepaliveInfoReported.getAutomaticKeepaliveRequests(),
+                    dailyKeepaliveInfoReported.getDistinctUserCount(),
+                    CollectionUtils.toIntArray(dailyKeepaliveInfoReported.getUidList()));
         }
     }
 
@@ -637,15 +654,15 @@ public class KeepaliveStatsTracker {
     /** Writes the stored metrics to ConnectivityStatsLog and resets.  */
     public void writeAndResetMetrics() {
         ensureRunningOnHandlerThread();
+        // Keepalive stats use repeated atoms, which are only supported on T+. If written to statsd
+        // on S- they will bootloop the system, so they must not be sent on S-. See b/289471411.
+        if (!SdkLevel.isAtLeastT()) {
+            Log.d(TAG, "KeepaliveStatsTracker is disabled before T, skipping write");
+            return;
+        }
+
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported = buildAndResetMetrics();
-        ConnectivityStatsLog.write(
-                ConnectivityStatsLog.DAILY_KEEPALIVE_INFO_REPORTED,
-                dailyKeepaliveInfoReported.getDurationPerNumOfKeepalive().toByteArray(),
-                dailyKeepaliveInfoReported.getKeepaliveLifetimePerCarrier().toByteArray(),
-                dailyKeepaliveInfoReported.getKeepaliveRequests(),
-                dailyKeepaliveInfoReported.getAutomaticKeepaliveRequests(),
-                dailyKeepaliveInfoReported.getDistinctUserCount(),
-                CollectionUtils.toIntArray(dailyKeepaliveInfoReported.getUidList()));
+        mDependencies.writeStats(dailyKeepaliveInfoReported);
     }
 
     private void ensureRunningOnHandlerThread() {
