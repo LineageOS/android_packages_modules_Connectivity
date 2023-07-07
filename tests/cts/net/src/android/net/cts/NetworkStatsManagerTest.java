@@ -377,9 +377,14 @@ public class NetworkStatsManagerTest {
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build(), callback);
         synchronized (this) {
-            try {
-                wait((int) (TIMEOUT_MILLIS * 2.4));
-            } catch (InterruptedException e) {
+            long now = System.currentTimeMillis();
+            final long deadline = (long) (now + TIMEOUT_MILLIS * 2.4);
+            while (!callback.success && now < deadline) {
+                try {
+                    wait(deadline - now);
+                } catch (InterruptedException e) {
+                }
+                now = System.currentTimeMillis();
             }
         }
         if (callback.success) {
