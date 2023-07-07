@@ -1965,7 +1965,16 @@ public class VpnTest extends VpnTestBase {
 
         vpn.startVpnProfile(TEST_VPN_PKG);
         final NetworkCallback nwCb = triggerOnAvailableAndGetCallback(underlyingNetworkCaps);
-        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
+        // There are 4 interactions with the executor.
+        // - Network available
+        // - LP change
+        // - NC change
+        // - schedule() calls in scheduleStartIkeSession()
+        // The first 3 calls are triggered from Executor.execute(). The execute() will also call to
+        // schedule() with 0 delay. Verify the exact interaction here so that it won't cause flakes
+        // in the follow-up flow.
+        verify(mExecutor, timeout(TEST_TIMEOUT_MS).times(4))
+                .schedule(any(Runnable.class), anyLong(), any());
         reset(mExecutor);
 
         // Mock the setup procedure by firing callbacks
