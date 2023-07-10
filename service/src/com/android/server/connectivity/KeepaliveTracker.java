@@ -553,6 +553,8 @@ public class KeepaliveTracker {
 
     private KeepaliveInfo handleUpdateKeepaliveForClat(KeepaliveInfo ki)
             throws InvalidSocketException, InvalidPacketException {
+        // Translation applies to only NAT-T keepalive
+        if (ki.mType != KeepaliveInfo.TYPE_NATT) return ki;
         // Only try to translate address if the packet source address is the clat's source address.
         if (!ki.mPacket.getSrcAddress().equals(ki.getNai().getClatv4SrcAddress())) return ki;
 
