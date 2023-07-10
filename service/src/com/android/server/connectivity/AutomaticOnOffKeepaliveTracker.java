@@ -495,8 +495,11 @@ public class AutomaticOnOffKeepaliveTracker {
         final AutomaticOnOffKeepalive autoKi;
         try {
             autoKi = target.withKeepaliveInfo(res.second);
-            // Close the duplicated fd.
-            target.close();
+            // Only automatic keepalives duplicate the fd.
+            if (target.mAutomaticOnOffState != STATE_ALWAYS_ON) {
+                // Close the duplicated fd.
+                target.close();
+            }
         } catch (InvalidSocketException e) {
             Log.wtf(TAG, "Fail to create AutomaticOnOffKeepalive", e);
             return;
