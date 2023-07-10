@@ -559,8 +559,6 @@ int get_transport_checksum(const uint8_t *packet) {
   }
 }
 
-struct clat_config Global_Clatd_Config;
-
 class ClatdTest : public ::testing::Test {
  protected:
   static TunInterface sTun;
