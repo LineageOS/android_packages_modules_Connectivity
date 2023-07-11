@@ -119,7 +119,14 @@ NetworkTracePoller NetworkTraceHandler::sPoller(
       // the session and delegates writing. The corresponding handler will write
       // with the setting specified in the trace config.
       NetworkTraceHandler::Trace([&](NetworkTraceHandler::TraceContext ctx) {
-        ctx.GetDataSourceLocked()->Write(packets, ctx);
+        perfetto::LockedHandle<NetworkTraceHandler> handle =
+            ctx.GetDataSourceLocked();
+        // The underlying handle can be invalidated between when Trace starts
+        // and GetDataSourceLocked is called, but not while the LockedHandle
+        // exists and holds the lock. Check validity prior to use.
+        if (handle.valid()) {
+          handle->Write(packets, ctx);
+        }
       });
     });
 
