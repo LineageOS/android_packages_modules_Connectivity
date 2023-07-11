@@ -52,4 +52,17 @@ public class ArrayUtils {
     public static boolean isEmpty(byte[] bytes) {
         return bytes == null || bytes.length == 0;
     }
+
+    /** Appends a byte array to a byte. */
+    public static byte[] append(byte a, byte[] b) {
+        if (b == null) {
+            return new byte[]{a};
+        }
+
+        int length = b.length;
+        byte[] result = new byte[length + 1];
+        result[0] = a;
+        System.arraycopy(b, 0, result, 1, length);
+        return result;
+    }
 }
