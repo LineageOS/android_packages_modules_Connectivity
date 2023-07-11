@@ -82,9 +82,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -220,7 +220,7 @@ public class NetworkStatsManagerTest {
         } else {
             Log.w(LOG_TAG, "Network: " + networkInfo.toString());
         }
-        InputStreamReader in = null;
+        BufferedInputStream in = null;
         HttpURLConnection urlc = null;
         String originalKeepAlive = System.getProperty("http.keepAlive");
         System.setProperty("http.keepAlive", "false");
@@ -236,10 +236,10 @@ public class NetworkStatsManagerTest {
             urlc.connect();
             boolean ping = urlc.getResponseCode() == 200;
             if (ping) {
-                in = new InputStreamReader((InputStream) urlc.getContent());
-                // Since the test doesn't really care about the precise amount of data, instead
-                // of reading all contents, just read few bytes at the beginning.
-                in.read();
+                in = new BufferedInputStream((InputStream) urlc.getContent());
+                while (in.read() != -1) {
+                    // Comments to suppress lint error.
+                }
             }
         } catch (Exception e) {
             Log.i(LOG_TAG, "Badness during exercising remote server: " + e);
@@ -377,9 +377,14 @@ public class NetworkStatsManagerTest {
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build(), callback);
         synchronized (this) {
-            try {
-                wait((int) (TIMEOUT_MILLIS * 2.4));
-            } catch (InterruptedException e) {
+            long now = System.currentTimeMillis();
+            final long deadline = (long) (now + TIMEOUT_MILLIS * 2.4);
+            while (!callback.success && now < deadline) {
+                try {
+                    wait(deadline - now);
+                } catch (InterruptedException e) {
+                }
+                now = System.currentTimeMillis();
             }
         }
         if (callback.success) {
