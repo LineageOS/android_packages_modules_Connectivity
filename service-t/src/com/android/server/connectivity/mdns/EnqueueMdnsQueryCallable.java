@@ -17,7 +17,6 @@
 package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
-import android.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
@@ -106,12 +105,11 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
     // Incompatible return type for override of Callable#call().
     @SuppressWarnings("nullness:override.return.invalid")
     @Override
-    @Nullable
     public Pair<Integer, List<String>> call() {
         try {
             MdnsSocketClientBase requestSender = weakRequestSender.get();
             if (requestSender == null) {
-                return null;
+                return Pair.create(-1, new ArrayList<>());
             }
 
             int numQuestions = 0;
@@ -158,7 +156,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
 
             if (numQuestions == 0) {
                 // No query to send
-                return null;
+                return Pair.create(-1, new ArrayList<>());
             }
 
             // Header.
@@ -197,7 +195,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         } catch (IOException e) {
             LOGGER.e(String.format("Failed to create mDNS packet for subtype: %s.",
                     TextUtils.join(",", subtypes)), e);
-            return null;
+            return Pair.create(-1, new ArrayList<>());
         }
     }
 
