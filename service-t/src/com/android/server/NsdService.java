@@ -29,6 +29,8 @@ import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
 import static com.android.networkstack.apishim.ConstantsShim.REGISTER_NSD_OFFLOAD_ENGINE;
+import static com.android.server.connectivity.mdns.MdnsAdvertiser.AdvertiserMetrics;
+import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
 import static com.android.server.connectivity.mdns.MdnsRecord.MAX_LABEL_LENGTH;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 
@@ -992,14 +994,20 @@ public class NsdService extends INsdManager.Stub {
                         // instead of looking at the flag value.
                         final long stopTimeMs = mClock.elapsedRealtime();
                         if (request instanceof AdvertiserClientRequest) {
+                            final AdvertiserMetrics metrics =
+                                    mAdvertiser.getAdvertiserMetrics(transactionId);
                             mAdvertiser.removeService(transactionId);
                             clientInfo.onUnregisterServiceSucceeded(clientRequestId, transactionId,
-                                    request.calculateRequestDurationMs(stopTimeMs));
+                                    request.calculateRequestDurationMs(stopTimeMs), metrics);
                         } else {
                             if (unregisterService(transactionId)) {
                                 clientInfo.onUnregisterServiceSucceeded(clientRequestId,
                                         transactionId,
-                                        request.calculateRequestDurationMs(stopTimeMs));
+                                        request.calculateRequestDurationMs(stopTimeMs),
+                                        new AdvertiserMetrics(NO_PACKET /* repliedRequestsCount */,
+                                                NO_PACKET /* sentPacketCount */,
+                                                0 /* conflictDuringProbingCount */,
+                                                0 /* conflictAfterProbingCount */));
                             } else {
                                 clientInfo.onUnregisterServiceFailed(
                                         clientRequestId, NsdManager.FAILURE_INTERNAL_ERROR);
@@ -2496,9 +2504,14 @@ public class NsdService extends INsdManager.Stub {
                 }
 
                 if (request instanceof AdvertiserClientRequest) {
+                    final AdvertiserMetrics metrics =
+                            mAdvertiser.getAdvertiserMetrics(transactionId);
                     mAdvertiser.removeService(transactionId);
                     mMetrics.reportServiceUnregistration(transactionId,
-                            request.calculateRequestDurationMs(mClock.elapsedRealtime()));
+                            request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                            metrics.mRepliedRequestsCount, metrics.mSentPacketCount,
+                            metrics.mConflictDuringProbingCount,
+                            metrics.mConflictAfterProbingCount);
                     continue;
                 }
 
@@ -2524,7 +2537,11 @@ public class NsdService extends INsdManager.Stub {
                     case NsdManager.REGISTER_SERVICE:
                         unregisterService(transactionId);
                         mMetrics.reportServiceUnregistration(transactionId,
-                                request.calculateRequestDurationMs(mClock.elapsedRealtime()));
+                                request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                                NO_PACKET /* repliedRequestsCount */,
+                                NO_PACKET /* sentPacketCount */,
+                                0 /* conflictDuringProbingCount */,
+                                0 /* conflictAfterProbingCount */);
                         break;
                     default:
                         break;
@@ -2663,8 +2680,11 @@ public class NsdService extends INsdManager.Stub {
             }
         }
 
-        void onUnregisterServiceSucceeded(int listenerKey, int transactionId, long durationMs) {
-            mMetrics.reportServiceUnregistration(transactionId, durationMs);
+        void onUnregisterServiceSucceeded(int listenerKey, int transactionId, long durationMs,
+                AdvertiserMetrics metrics) {
+            mMetrics.reportServiceUnregistration(transactionId, durationMs,
+                    metrics.mRepliedRequestsCount, metrics.mSentPacketCount,
+                    metrics.mConflictDuringProbingCount, metrics.mConflictAfterProbingCount);
             try {
                 mCb.onUnregisterServiceSucceeded(listenerKey);
             } catch (RemoteException e) {

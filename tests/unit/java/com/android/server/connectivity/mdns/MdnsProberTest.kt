@@ -92,7 +92,7 @@ class MdnsProberTest {
 
     private fun assertProbesSent(probeInfo: TestProbeInfo, expectedHex: String) {
         repeat(probeInfo.numSends) { i ->
-            verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(i, probeInfo)
+            verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(i, probeInfo, 1 /* sentPacketCount */)
             // If the probe interval is short, more than (i+1) probes may have been sent already
             verify(socket, atLeast(i + 1)).send(any())
         }
@@ -190,7 +190,7 @@ class MdnsProberTest {
         prober.startProbing(probeInfo)
 
         // Expect the initial probe
-        verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(0, probeInfo)
+        verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(0, probeInfo, 1 /* sentPacketCount */)
 
         // Stop probing
         val stopResult = CompletableFuture<Boolean>()
@@ -200,7 +200,7 @@ class MdnsProberTest {
 
         // Wait for a bit (more than the probe delay) to ensure no more probes were sent
         Thread.sleep(SHORT_TIMEOUT_MS * 2)
-        verify(cb, never()).onSent(1, probeInfo)
+        verify(cb, never()).onSent(1, probeInfo, 1 /* sentPacketCount */)
         verify(cb, never()).onFinished(probeInfo)
 
         // Only one sent packet
