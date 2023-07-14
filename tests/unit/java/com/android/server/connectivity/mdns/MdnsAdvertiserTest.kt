@@ -33,7 +33,10 @@ import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.waitForIdle
 import java.net.NetworkInterface
 import java.util.Objects
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -189,6 +192,18 @@ class MdnsAdvertiserTest {
         verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_1), argThat { it.matches(SERVICE_1) })
         verify(cb).onOffloadStartOrUpdate(eq(TEST_INTERFACE1), eq(OFFLOAD_SERVICEINFO_NO_SUBTYPE))
 
+        // Service is conflicted.
+        postSync { intAdvCbCaptor.value.onServiceConflict(mockInterfaceAdvertiser1, SERVICE_ID_1) }
+
+        // Verify the metrics data
+        doReturn(25).`when`(mockInterfaceAdvertiser1).getServiceRepliedRequestsCount(SERVICE_ID_1)
+        doReturn(40).`when`(mockInterfaceAdvertiser1).getSentPacketCount(SERVICE_ID_1)
+        val metrics = postReturn { advertiser.getAdvertiserMetrics(SERVICE_ID_1) }
+        assertEquals(25, metrics.mRepliedRequestsCount)
+        assertEquals(40, metrics.mSentPacketCount)
+        assertEquals(0, metrics.mConflictDuringProbingCount)
+        assertEquals(1, metrics.mConflictAfterProbingCount)
+
         postSync { socketCb.onInterfaceDestroyed(TEST_SOCKETKEY_1, mockSocket1) }
         verify(mockInterfaceAdvertiser1).destroyNow()
         postSync { intAdvCbCaptor.value.onDestroyed(mockSocket1) }
@@ -234,6 +249,22 @@ class MdnsAdvertiserTest {
         verify(cb).onOffloadStartOrUpdate(eq(TEST_INTERFACE2), eq(OFFLOAD_SERVICEINFO))
         verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_1),
                 argThat { it.matches(ALL_NETWORKS_SERVICE) })
+
+        // Services are conflicted.
+        postSync { intAdvCbCaptor1.value.onServiceConflict(mockInterfaceAdvertiser1, SERVICE_ID_1) }
+        postSync { intAdvCbCaptor1.value.onServiceConflict(mockInterfaceAdvertiser1, SERVICE_ID_1) }
+        postSync { intAdvCbCaptor2.value.onServiceConflict(mockInterfaceAdvertiser2, SERVICE_ID_1) }
+
+        // Verify the metrics data
+        doReturn(10).`when`(mockInterfaceAdvertiser1).getServiceRepliedRequestsCount(SERVICE_ID_1)
+        doReturn(5).`when`(mockInterfaceAdvertiser2).getServiceRepliedRequestsCount(SERVICE_ID_1)
+        doReturn(22).`when`(mockInterfaceAdvertiser1).getSentPacketCount(SERVICE_ID_1)
+        doReturn(12).`when`(mockInterfaceAdvertiser2).getSentPacketCount(SERVICE_ID_1)
+        val metrics = postReturn { advertiser.getAdvertiserMetrics(SERVICE_ID_1) }
+        assertEquals(15, metrics.mRepliedRequestsCount)
+        assertEquals(34, metrics.mSentPacketCount)
+        assertEquals(2, metrics.mConflictDuringProbingCount)
+        assertEquals(1, metrics.mConflictAfterProbingCount)
 
         // Unregister the service
         postSync { advertiser.removeService(SERVICE_ID_1) }
@@ -345,6 +376,14 @@ class MdnsAdvertiserTest {
     private fun postSync(r: () -> Unit) {
         handler.post(r)
         handler.waitForIdle(TIMEOUT_MS)
+    }
+
+    private fun <T> postReturn(r: (() -> T)): T {
+        val future = CompletableFuture<T>()
+        handler.post {
+            future.complete(r())
+        }
+        return future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
     }
 }
 
