@@ -29,7 +29,6 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Pair;
 
-import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
@@ -93,6 +92,7 @@ public class MdnsServiceTypeClient {
         }
 
         @Override
+        @SuppressWarnings("FutureReturnValueIgnored")
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case EVENT_START_QUERYTASK: {
@@ -278,6 +278,7 @@ public class MdnsServiceTypeClient {
      * @param listener      The {@link MdnsServiceBrowserListener} to register.
      * @param searchOptions {@link MdnsSearchOptions} contains the list of subtypes to discover.
      */
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void startSendAndReceive(
             @NonNull MdnsServiceBrowserListener listener,
             @NonNull MdnsSearchOptions searchOptions) {
@@ -841,7 +842,6 @@ public class MdnsServiceTypeClient {
         return minRemainingTtl == Long.MAX_VALUE ? 0 : minRemainingTtl;
     }
 
-    @GuardedBy("lock")
     @NonNull
     private void scheduleNextRun(@NonNull QueryTaskConfig nextRunConfig,
             long minRemainingTtl,
