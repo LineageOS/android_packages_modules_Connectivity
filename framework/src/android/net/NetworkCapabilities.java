@@ -693,11 +693,11 @@ public final class NetworkCapabilities implements Parcelable {
     private static final int MIN_NET_CAPABILITY = NET_CAPABILITY_MMS;
     private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
 
-    private static final int ALL_VALID_CAPABILITIES;
+    private static final long ALL_VALID_CAPABILITIES;
     static {
-        int caps = 0;
+        long caps = 0;
         for (int i = MIN_NET_CAPABILITY; i <= MAX_NET_CAPABILITY; ++i) {
-            caps |= 1 << i;
+            caps |= 1L << i;
         }
         ALL_VALID_CAPABILITIES = caps;
     }
