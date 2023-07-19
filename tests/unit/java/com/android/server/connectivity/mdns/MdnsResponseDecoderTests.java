@@ -18,7 +18,7 @@ package com.android.server.connectivity.mdns;
 
 import static android.net.InetAddresses.parseNumericAddress;
 
-import static com.android.server.connectivity.mdns.MdnsResponseDecoder.Clock;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
