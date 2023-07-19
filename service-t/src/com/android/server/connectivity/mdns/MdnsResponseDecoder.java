@@ -19,7 +19,6 @@ package com.android.server.connectivity.mdns;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
-import android.os.SystemClock;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Pair;
@@ -40,10 +39,10 @@ public class MdnsResponseDecoder {
     private final boolean allowMultipleSrvRecordsPerHost =
             MdnsConfigs.allowMultipleSrvRecordsPerHost();
     @Nullable private final String[] serviceType;
-    private final Clock clock;
+    private final MdnsUtils.Clock clock;
 
     /** Constructs a new decoder that will extract responses for the given service type. */
-    public MdnsResponseDecoder(@NonNull Clock clock, @Nullable String[] serviceType) {
+    public MdnsResponseDecoder(@NonNull MdnsUtils.Clock clock, @Nullable String[] serviceType) {
         this.clock = clock;
         this.serviceType = serviceType;
     }
@@ -329,11 +328,5 @@ public class MdnsResponseDecoder {
             }
         }
         return result == null ? List.of() : result;
-    }
-
-    public static class Clock {
-        public long elapsedRealtime() {
-            return SystemClock.elapsedRealtime();
-        }
     }
 }
