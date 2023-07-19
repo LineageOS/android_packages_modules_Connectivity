@@ -20,6 +20,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.util.ArraySet;
 
 import com.android.server.connectivity.mdns.MdnsConstants;
@@ -172,5 +173,15 @@ public class MdnsUtils {
     public static boolean isRecordRenewalNeeded(@NonNull MdnsRecord mdnsRecord, final long now) {
         return mdnsRecord.getTtl() > 0
                 && mdnsRecord.getRemainingTTL(now) <= mdnsRecord.getTtl() / 2;
+    }
+
+    /** A wrapper class of {@link SystemClock} to be mocked in unit tests. */
+    public static class Clock {
+        /**
+         * @see SystemClock#elapsedRealtime
+         */
+        public long elapsedRealtime() {
+            return SystemClock.elapsedRealtime();
+        }
     }
 }
