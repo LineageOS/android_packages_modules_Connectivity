@@ -33,6 +33,7 @@ import static android.system.OsConstants.SO_SNDTIMEO;
 import android.net.util.SocketUtils;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.system.OsConstants;
 import android.system.StructTimeval;
 import android.util.Log;
 
@@ -289,6 +290,21 @@ public class NetlinkUtils {
         checkTimeout(timeoutMs);
         Os.setsockoptTimeval(fd, SOL_SOCKET, SO_SNDTIMEO, StructTimeval.fromMillis(timeoutMs));
         return Os.write(fd, bytes, offset, count);
+    }
+
+    private static final long CLOCK_TICKS_PER_SECOND = Os.sysconf(OsConstants._SC_CLK_TCK);
+
+    /**
+     * Convert the system time in clock ticks(clock_t type in times(), not in clock()) to
+     * milliseconds. times() clock_t ticks at the kernel's USER_HZ (100) while clock() clock_t
+     * ticks at CLOCKS_PER_SEC (1000000).
+     *
+     * See the NOTES on https://man7.org/linux/man-pages/man2/times.2.html for the difference
+     * of clock_t used in clock() and times().
+     */
+    public static long ticksToMilliSeconds(int intClockTicks) {
+        final long longClockTicks = intClockTicks & 0xffffffffL;
+        return (longClockTicks * 1000) / CLOCK_TICKS_PER_SECOND;
     }
 
     private NetlinkUtils() {}

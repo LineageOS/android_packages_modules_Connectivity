@@ -16,8 +16,7 @@
 
 package com.android.net.module.util.netlink;
 
-import android.system.Os;
-import android.system.OsConstants;
+import static com.android.net.module.util.netlink.NetlinkUtils.ticksToMilliSeconds;
 
 import java.nio.ByteBuffer;
 
@@ -55,15 +54,6 @@ public class StructNdaCacheInfo {
         struct.ndm_updated = byteBuffer.getInt();
         struct.ndm_refcnt = byteBuffer.getInt();
         return struct;
-    }
-
-    // TODO: investigate whether this can change during device runtime and
-    // decide what (if anything) should be done about that.
-    private static final long CLOCK_TICKS_PER_SECOND = Os.sysconf(OsConstants._SC_CLK_TCK);
-
-    private static long ticksToMilliSeconds(int intClockTicks) {
-        final long longClockTicks = (long) intClockTicks & 0xffffffff;
-        return (longClockTicks * 1000) / CLOCK_TICKS_PER_SECOND;
     }
 
     /**
