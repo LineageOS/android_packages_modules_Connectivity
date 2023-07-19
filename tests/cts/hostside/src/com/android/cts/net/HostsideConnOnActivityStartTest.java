@@ -18,21 +18,24 @@ package com.android.cts.net;
 
 import android.platform.test.annotations.FlakyTest;
 
-import org.junit.After;
-import org.junit.Before;
+import com.android.tradefed.device.DeviceNotAvailableException;
+import com.android.tradefed.invoker.TestInformation;
+import com.android.tradefed.testtype.junit4.AfterClassWithInfo;
+import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
+
 import org.junit.Test;
 
 public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     private static final String TEST_CLASS = TEST_PKG + ".ConnOnActivityStartTest";
-    @Before
-    public void setUp() throws Exception {
-        uninstallPackage(TEST_APP2_PKG, false);
-        installPackage(TEST_APP2_APK);
+    @BeforeClassWithInfo
+    public static void setUpOnce(TestInformation testInfo) throws Exception {
+        uninstallPackage(testInfo, TEST_APP2_PKG, false);
+        installPackage(testInfo, TEST_APP2_APK);
     }
 
-    @After
-    public void tearDown() throws Exception {
-        uninstallPackage(TEST_APP2_PKG, true);
+    @AfterClassWithInfo
+    public static void tearDownOnce(TestInformation testInfo) throws DeviceNotAvailableException {
+        uninstallPackage(testInfo, TEST_APP2_PKG, true);
     }
 
     @Test
