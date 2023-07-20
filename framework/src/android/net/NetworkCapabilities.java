@@ -690,17 +690,10 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
 
-    private static final int MIN_NET_CAPABILITY = NET_CAPABILITY_MMS;
     private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
 
-    private static final long ALL_VALID_CAPABILITIES;
-    static {
-        long caps = 0;
-        for (int i = MIN_NET_CAPABILITY; i <= MAX_NET_CAPABILITY; ++i) {
-            caps |= 1L << i;
-        }
-        ALL_VALID_CAPABILITIES = caps;
-    }
+    // Set all bits up to the MAX_NET_CAPABILITY-th bit
+    private static final long ALL_VALID_CAPABILITIES = (2L << MAX_NET_CAPABILITY) - 1;
 
     /**
      * Network capabilities that are expected to be mutable, i.e., can change while a particular
@@ -2519,7 +2512,7 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     private static boolean isValidCapability(@NetworkCapabilities.NetCapability int capability) {
-        return capability >= MIN_NET_CAPABILITY && capability <= MAX_NET_CAPABILITY;
+        return capability >= 0 && capability <= MAX_NET_CAPABILITY;
     }
 
     private static void checkValidCapability(@NetworkCapabilities.NetCapability int capability) {
