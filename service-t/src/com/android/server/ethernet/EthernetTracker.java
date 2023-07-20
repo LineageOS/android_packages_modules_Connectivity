@@ -431,7 +431,7 @@ public class EthernetTracker {
             for (String iface : getClientModeInterfaces(canUseRestrictedNetworks)) {
                 unicastInterfaceStateChange(listener, iface);
             }
-            if (mTetheringInterfaceMode == INTERFACE_MODE_SERVER) {
+            if (mTetheringInterface != null && mTetheringInterfaceMode == INTERFACE_MODE_SERVER) {
                 unicastInterfaceStateChange(listener, mTetheringInterface);
             }
 
