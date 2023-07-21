@@ -668,6 +668,20 @@ class EthernetManagerTest {
     }
 
     @Test
+    fun testCallbacks_afterRemovingServerModeInterface() {
+        // do not run this test if an interface that can be used for tethering already exists.
+        assumeNoInterfaceForTetheringAvailable()
+
+        val iface = createInterface()
+        requestTetheredInterface().expectOnAvailable()
+        removeInterface(iface)
+
+        val listener = EthernetStateListener()
+        addInterfaceStateListener(listener)
+        listener.assertNoCallback()
+    }
+
+    @Test
     fun testGetInterfaceList() {
         // Create two test interfaces and check the return list contains the interface names.
         val iface1 = createInterface()
