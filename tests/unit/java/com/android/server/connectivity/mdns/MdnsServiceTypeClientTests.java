@@ -93,6 +93,7 @@ public class MdnsServiceTypeClientTests {
     private static final int INTERFACE_INDEX = 999;
     private static final long DEFAULT_TIMEOUT = 2000L;
     private static final String SERVICE_TYPE = "_googlecast._tcp.local";
+    private static final String SUBTYPE = "_subtype";
     private static final String[] SERVICE_TYPE_LABELS = TextUtils.split(SERVICE_TYPE, "\\.");
     private static final InetSocketAddress IPV4_ADDRESS = new InetSocketAddress(
             MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
@@ -262,7 +263,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_activeScanMode() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -314,7 +315,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_reentry_activeScanMode() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -325,8 +326,8 @@ public class MdnsServiceTypeClientTests {
         // After the first query is sent, change the subtypes, and restart.
         searchOptions =
                 MdnsSearchOptions.newBuilder()
-                        .addSubtype("12345")
-                        .addSubtype("abcde")
+                        .addSubtype(SUBTYPE)
+                        .addSubtype("_subtype2")
                         .setIsPassiveMode(false)
                         .build();
         startSendAndReceive(mockListenerOne, searchOptions);
@@ -348,7 +349,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_passiveScanMode() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(true).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -374,7 +375,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_activeScanWithQueryBackoff() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(
                         false).setNumOfQueriesBeforeBackoff(11).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
@@ -433,7 +434,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_passiveScanWithQueryBackoff() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(
                         true).setNumOfQueriesBeforeBackoff(3).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
@@ -492,7 +493,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_reentry_passiveScanMode() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(true).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -503,8 +504,8 @@ public class MdnsServiceTypeClientTests {
         // After the first query is sent, change the subtypes, and restart.
         searchOptions =
                 MdnsSearchOptions.newBuilder()
-                        .addSubtype("12345")
-                        .addSubtype("abcde")
+                        .addSubtype(SUBTYPE)
+                        .addSubtype("_subtype2")
                         .setIsPassiveMode(true)
                         .build();
         startSendAndReceive(mockListenerOne, searchOptions);
@@ -528,7 +529,7 @@ public class MdnsServiceTypeClientTests {
     public void testQueryTaskConfig_alwaysAskForUnicastResponse() {
         //MdnsConfigsFlagsImpl.alwaysAskForUnicastResponseInEachBurst.override(true);
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
         QueryTaskConfig config = new QueryTaskConfig(
                 searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
                 false /* onlyUseIpv6OnIpv6OnlyNetworks */, 3 /* numOfQueriesBeforeBackoff */,
@@ -559,7 +560,7 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void testQueryTaskConfig_askForUnicastInFirstQuery() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(false).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
         QueryTaskConfig config = new QueryTaskConfig(
                 searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
                 false /* onlyUseIpv6OnIpv6OnlyNetworks */, 3 /* numOfQueriesBeforeBackoff */,
@@ -590,15 +591,15 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void testIfPreviousTaskIsCanceledWhenNewSessionStarts() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(true).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         Runnable firstMdnsTask = currentThreadExecutor.getAndClearSubmittedRunnable();
 
         // Change the sutypes and start a new session.
         searchOptions =
                 MdnsSearchOptions.newBuilder()
-                        .addSubtype("12345")
-                        .addSubtype("abcde")
+                        .addSubtype(SUBTYPE)
+                        .addSubtype("_subtype2")
                         .setIsPassiveMode(true)
                         .build();
         startSendAndReceive(mockListenerOne, searchOptions);
@@ -619,7 +620,7 @@ public class MdnsServiceTypeClientTests {
     public void testIfPreviousTaskIsCanceledWhenSessionStops() {
         //MdnsConfigsFlagsImpl.shouldCancelScanTaskWhenFutureIsNull.override(true);
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype("12345").setIsPassiveMode(true).build();
+                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Change the sutypes and start a new session.
         stopSendAndReceive(mockListenerOne);
@@ -708,14 +709,12 @@ public class MdnsServiceTypeClientTests {
 
         // Process the initial response.
         processResponse(createResponse(
-                "service-instance-1", ipV4Address, 5353,
-                /* subtype= */ "ABCDE",
+                "service-instance-1", ipV4Address, 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Process a second response with a different port and updated text attributes.
         processResponse(createResponse(
-                        "service-instance-1", ipV4Address, 5354,
-                        /* subtype= */ "ABCDE",
+                        "service-instance-1", ipV4Address, 5354, SUBTYPE,
                         Collections.singletonMap("key", "value"), TEST_TTL),
                 socketKey);
 
@@ -727,7 +726,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList("ABCDE") /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -737,7 +736,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(initialServiceInfo.getServiceInstanceName(), "service-instance-1");
         assertEquals(initialServiceInfo.getIpv4Address(), ipV4Address);
         assertEquals(initialServiceInfo.getPort(), 5353);
-        assertEquals(initialServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
+        assertEquals(initialServiceInfo.getSubtypes(), Collections.singletonList(SUBTYPE));
         assertNull(initialServiceInfo.getAttributeByKey("key"));
         assertEquals(socketKey.getInterfaceIndex(), initialServiceInfo.getInterfaceIndex());
         assertEquals(socketKey.getNetwork(), initialServiceInfo.getNetwork());
@@ -749,7 +748,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(updatedServiceInfo.getIpv4Address(), ipV4Address);
         assertEquals(updatedServiceInfo.getPort(), 5354);
         assertTrue(updatedServiceInfo.hasSubtypes());
-        assertEquals(updatedServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
+        assertEquals(updatedServiceInfo.getSubtypes(), Collections.singletonList(SUBTYPE));
         assertEquals(updatedServiceInfo.getAttributeByKey("key"), "value");
         assertEquals(socketKey.getInterfaceIndex(), updatedServiceInfo.getInterfaceIndex());
         assertEquals(socketKey.getNetwork(), updatedServiceInfo.getNetwork());
@@ -762,14 +761,12 @@ public class MdnsServiceTypeClientTests {
 
         // Process the initial response.
         processResponse(createResponse(
-                "service-instance-1", ipV6Address, 5353,
-                /* subtype= */ "ABCDE",
+                "service-instance-1", ipV6Address, 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Process a second response with a different port and updated text attributes.
         processResponse(createResponse(
-                        "service-instance-1", ipV6Address, 5354,
-                        /* subtype= */ "ABCDE",
+                        "service-instance-1", ipV6Address, 5354, SUBTYPE,
                         Collections.singletonMap("key", "value"), TEST_TTL),
                 socketKey);
 
@@ -781,7 +778,7 @@ public class MdnsServiceTypeClientTests {
                 List.of() /* ipv4Address */,
                 List.of(ipV6Address) /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList("ABCDE") /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -791,7 +788,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(initialServiceInfo.getServiceInstanceName(), "service-instance-1");
         assertEquals(initialServiceInfo.getIpv6Address(), ipV6Address);
         assertEquals(initialServiceInfo.getPort(), 5353);
-        assertEquals(initialServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
+        assertEquals(initialServiceInfo.getSubtypes(), Collections.singletonList(SUBTYPE));
         assertNull(initialServiceInfo.getAttributeByKey("key"));
         assertEquals(socketKey.getInterfaceIndex(), initialServiceInfo.getInterfaceIndex());
         assertEquals(socketKey.getNetwork(), initialServiceInfo.getNetwork());
@@ -803,7 +800,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(updatedServiceInfo.getIpv6Address(), ipV6Address);
         assertEquals(updatedServiceInfo.getPort(), 5354);
         assertTrue(updatedServiceInfo.hasSubtypes());
-        assertEquals(updatedServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
+        assertEquals(updatedServiceInfo.getSubtypes(), Collections.singletonList(SUBTYPE));
         assertEquals(updatedServiceInfo.getAttributeByKey("key"), "value");
         assertEquals(socketKey.getInterfaceIndex(), updatedServiceInfo.getInterfaceIndex());
         assertEquals(socketKey.getNetwork(), updatedServiceInfo.getNetwork());
@@ -865,8 +862,7 @@ public class MdnsServiceTypeClientTests {
     public void reportExistingServiceToNewlyRegisteredListeners() throws Exception {
         // Process the initial response.
         processResponse(createResponse(
-                "service-instance-1", "192.168.1.1", 5353,
-                /* subtype= */ "ABCDE",
+                "service-instance-1", "192.168.1.1", 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         startSendAndReceive(mockListenerOne, MdnsSearchOptions.getDefaultOptions());
@@ -879,7 +875,7 @@ public class MdnsServiceTypeClientTests {
                 List.of("192.168.1.1") /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList("ABCDE") /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -889,7 +885,7 @@ public class MdnsServiceTypeClientTests {
         assertEquals(existingServiceInfo.getServiceInstanceName(), "service-instance-1");
         assertEquals(existingServiceInfo.getIpv4Address(), "192.168.1.1");
         assertEquals(existingServiceInfo.getPort(), 5353);
-        assertEquals(existingServiceInfo.getSubtypes(), Collections.singletonList("ABCDE"));
+        assertEquals(existingServiceInfo.getSubtypes(), Collections.singletonList(SUBTYPE));
         assertNull(existingServiceInfo.getAttributeByKey("key"));
 
         // Process a goodbye message for the existing response.
@@ -928,7 +924,7 @@ public class MdnsServiceTypeClientTests {
 
         // Process the initial response.
         processResponse(createResponse(
-                serviceInstanceName, "192.168.1.1", 5353, /* subtype= */ "ABCDE",
+                serviceInstanceName, "192.168.1.1", 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Clear the scheduled runnable.
@@ -970,7 +966,7 @@ public class MdnsServiceTypeClientTests {
 
         // Process the initial response.
         processResponse(createResponse(
-                serviceInstanceName, "192.168.1.1", 5353, /* subtype= */ "ABCDE",
+                serviceInstanceName, "192.168.1.1", 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Clear the scheduled runnable.
@@ -1004,7 +1000,7 @@ public class MdnsServiceTypeClientTests {
 
         // Process the initial response.
         processResponse(createResponse(
-                serviceInstanceName, "192.168.1.1", 5353, /* subtype= */ "ABCDE",
+                serviceInstanceName, "192.168.1.1", 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Clear the scheduled runnable.
@@ -1028,19 +1024,18 @@ public class MdnsServiceTypeClientTests {
         InOrder inOrder = inOrder(mockListenerOne);
 
         // Process the initial response which is incomplete.
-        final String subtype = "ABCDE";
         processResponse(createResponse(
-                serviceName, null, 5353, subtype,
+                serviceName, null, 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Process a second response which has ip address to make response become complete.
         processResponse(createResponse(
-                serviceName, ipV4Address, 5353, subtype,
+                serviceName, ipV4Address, 5353, SUBTYPE,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
         // Process a third response with a different ip address, port and updated text attributes.
         processResponse(createResponse(
-                serviceName, ipV6Address, 5354, subtype,
+                serviceName, ipV6Address, 5354, SUBTYPE,
                 Collections.singletonMap("key", "value"), TEST_TTL), socketKey);
 
         // Process the last response which is goodbye message (with the main type, not subtype).
@@ -1057,7 +1052,7 @@ public class MdnsServiceTypeClientTests {
                 List.of() /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -1069,7 +1064,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -1081,7 +1076,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of(ipV6Address) /* ipv6Address */,
                 5354 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", "value") /* attributes */,
                 socketKey);
 
@@ -1093,7 +1088,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of(ipV6Address) /* ipv6Address */,
                 5354 /* port */,
-                Collections.singletonList("ABCDE") /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", "value") /* attributes */,
                 socketKey);
 
@@ -1105,7 +1100,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of(ipV6Address) /* ipv6Address */,
                 5354 /* port */,
-                Collections.singletonList("ABCDE") /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", "value") /* attributes */,
                 socketKey);
     }
@@ -1524,15 +1519,16 @@ public class MdnsServiceTypeClientTests {
         verify(mockListenerOne, never()).onServiceNameRemoved(matchServiceName(otherInstance));
 
         // mockListenerTwo gets notified for both though
-        verify(mockListenerTwo).onServiceNameDiscovered(
+        final InOrder inOrder2 = inOrder(mockListenerTwo);
+        inOrder2.verify(mockListenerTwo).onServiceNameDiscovered(
                 matchServiceName(requestedInstance));
-        verify(mockListenerTwo).onServiceFound(matchServiceName(requestedInstance));
+        inOrder2.verify(mockListenerTwo).onServiceFound(matchServiceName(requestedInstance));
+        inOrder2.verify(mockListenerTwo).onServiceRemoved(matchServiceName(requestedInstance));
+        inOrder2.verify(mockListenerTwo).onServiceNameRemoved(matchServiceName(requestedInstance));
         verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
         verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
         verify(mockListenerTwo).onServiceRemoved(matchServiceName(otherInstance));
         verify(mockListenerTwo).onServiceNameRemoved(matchServiceName(otherInstance));
-        verify(mockListenerTwo).onServiceRemoved(matchServiceName(requestedInstance));
-        verify(mockListenerTwo).onServiceNameRemoved(matchServiceName(requestedInstance));
     }
 
     @Test
@@ -1545,9 +1541,9 @@ public class MdnsServiceTypeClientTests {
         InOrder inOrder = inOrder(mockListenerOne);
 
         // Process a response which has ip address to make response become complete.
-        final String subtype = "ABCDE";
+
         processResponse(createResponse(
-                        serviceName, ipV4Address, 5353, subtype,
+                        serviceName, ipV4Address, 5353, SUBTYPE,
                         Collections.emptyMap(), TEST_TTL),
                 socketKey);
 
@@ -1559,7 +1555,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -1571,7 +1567,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -1593,7 +1589,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
@@ -1606,14 +1602,14 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of() /* ipv6Address */,
                 5353 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", null) /* attributes */,
                 socketKey);
 
         // Process a response with a different ip address, port and updated text attributes.
         final String ipV6Address = "2001:db8::";
         processResponse(createResponse(
-                serviceName, ipV6Address, 5354, subtype,
+                serviceName, ipV6Address, 5354, SUBTYPE,
                 Collections.singletonMap("key", "value"), TEST_TTL), socketKey);
 
         // Verify the onServiceUpdated is called.
@@ -1624,7 +1620,7 @@ public class MdnsServiceTypeClientTests {
                 List.of(ipV4Address) /* ipv4Address */,
                 List.of(ipV6Address) /* ipv6Address */,
                 5354 /* port */,
-                Collections.singletonList(subtype) /* subTypes */,
+                Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", "value") /* attributes */,
                 socketKey);
     }
