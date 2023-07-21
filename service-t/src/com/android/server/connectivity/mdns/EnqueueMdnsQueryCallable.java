@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsServiceTypeClient.INVALID_TRANSACTION_ID;
+
 import android.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
@@ -102,6 +104,11 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         this.clock = clock;
     }
 
+    /**
+     * Call to execute the mdns query.
+     *
+     * @return The pair of transaction id and the subtypes for the query.
+     */
     // Incompatible return type for override of Callable#call().
     @SuppressWarnings("nullness:override.return.invalid")
     @Override
@@ -109,7 +116,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         try {
             MdnsSocketClientBase requestSender = weakRequestSender.get();
             if (requestSender == null) {
-                return Pair.create(-1, new ArrayList<>());
+                return Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
             }
 
             int numQuestions = 0;
@@ -156,7 +163,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
 
             if (numQuestions == 0) {
                 // No query to send
-                return Pair.create(-1, new ArrayList<>());
+                return Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
             }
 
             // Header.
@@ -195,7 +202,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         } catch (IOException e) {
             LOGGER.e(String.format("Failed to create mDNS packet for subtype: %s.",
                     TextUtils.join(",", subtypes)), e);
-            return Pair.create(-1, new ArrayList<>());
+            return Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
         }
     }
 
