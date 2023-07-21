@@ -22,10 +22,24 @@
 // Reject the packet
 #define BPF_REJECT BPF_STMT(BPF_RET | BPF_K, 0)
 
+// *TWO* instructions: compare and if not equal jump over the accept statement
+#define BPF2_ACCEPT_IF_EQUAL(v) \
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (v), 0, 1), \
+	BPF_ACCEPT
+
 // *TWO* instructions: compare and if equal jump over the reject statement
 #define BPF2_REJECT_IF_NOT_EQUAL(v) \
 	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (v), 1, 0), \
 	BPF_REJECT
+
+// *TWO* instructions: compare and if none of the bits are set jump over the reject statement
+#define BPF2_REJECT_IF_ANY_BITS_SET(v) \
+	BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, (v), 0, 1), \
+	BPF_REJECT
+
+// loads skb->protocol
+#define BPF_LOAD_SKB_PROTOCOL \
+	BPF_STMT(BPF_LD | BPF_H | BPF_ABS, (__u32)SKF_AD_OFF + SKF_AD_PROTOCOL)
 
 // 8-bit load relative to start of link layer (mac/ethernet) header.
 #define BPF_LOAD_MAC_RELATIVE_U8(ofs) \
