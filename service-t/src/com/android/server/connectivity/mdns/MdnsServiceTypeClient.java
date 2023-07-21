@@ -329,6 +329,13 @@ public class MdnsServiceTypeClient {
         }
     }
 
+    /**
+     * Get the executor service.
+     */
+    public ScheduledExecutorService getExecutor() {
+        return executor;
+    }
+
     private void removeScheduledTask() {
         dependencies.removeMessages(handler, EVENT_START_QUERYTASK);
         sharedLog.log("Remove EVENT_START_QUERYTASK"
