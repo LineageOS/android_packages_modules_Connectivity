@@ -30,6 +30,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -168,39 +171,40 @@ public class DomainUtilsTest {
 
     @Test
     public void testDecodeDomainNames() {
+        ArrayList<String> suffixStringList;
         String suffixes = "06676F6F676C6503636F6D00" // google.com
                 + "076578616D706C6503636F6D00"       // example.com
                 + "06676F6F676C6500";                // google
-        String[] expected = new String[] {"google.com", "example.com"};
+        List<String> expected = Arrays.asList("google.com", "example.com");
         ByteBuffer buffer = ByteBuffer.wrap(HexEncoding.decode(suffixes));
-        String[] suffixString = DomainUtils.decode(buffer, false /* compression */);
-        assertArrayEquals(expected, suffixString);
+        suffixStringList = DomainUtils.decode(buffer, false /* compression */);
+        assertEquals(expected, suffixStringList);
 
         // include suffix with invalid length: 64
         suffixes = "06676F6F676C6503636F6D00"        // google.com
                 + "406578616D706C6503636F6D00"       // example.com(length=64)
                 + "06676F6F676C6500";                // google
-        expected = new String[] {"google.com"};
+        expected = Arrays.asList("google.com");
         buffer = ByteBuffer.wrap(HexEncoding.decode(suffixes));
-        suffixString = DomainUtils.decode(buffer, false /* compression */);
-        assertArrayEquals(expected, suffixString);
+        suffixStringList = DomainUtils.decode(buffer, false /* compression */);
+        assertEquals(expected, suffixStringList);
 
         // include suffix with invalid length: 0
         suffixes = "06676F6F676C6503636F6D00"         // google.com
                 + "076578616D706C6503636F6D00"        // example.com
                 + "00676F6F676C6500";                 // google(length=0)
-        expected = new String[] {"google.com", "example.com"};
+        expected = Arrays.asList("google.com", "example.com");
         buffer = ByteBuffer.wrap(HexEncoding.decode(suffixes));
-        suffixString = DomainUtils.decode(buffer, false /* compression */);
-        assertArrayEquals(expected, suffixString);
+        suffixStringList = DomainUtils.decode(buffer, false /* compression */);
+        assertEquals(expected, suffixStringList);
 
         suffixes =
                 "076578616D706C6504636F727006676F6F676C6503636F6D00"  // example.corp.google.com
                 + "C008"                                              // corp.google.com
                 + "C00D";                                             // google.com
-        expected = new String[] {"example.corp.google.com", "corp.google.com", "google.com"};
+        expected = Arrays.asList("example.corp.google.com", "corp.google.com", "google.com");
         buffer = ByteBuffer.wrap(HexEncoding.decode(suffixes));
-        suffixString = DomainUtils.decode(buffer, true /* compression */);
-        assertArrayEquals(expected, suffixString);
+        suffixStringList = DomainUtils.decode(buffer, true /* compression */);
+        assertEquals(expected, suffixStringList);
     }
 }

@@ -123,7 +123,7 @@ public final class DomainUtils {
      * @return domain name(s) string array with space separated, or empty string if decode fails.
      */
     @NonNull
-    public static String[] decode(@NonNull final ByteBuffer buffer, boolean compression) {
+    public static ArrayList<String> decode(@NonNull final ByteBuffer buffer, boolean compression) {
         final ArrayList<String> domainList = new ArrayList<>();
         while (buffer.remaining() > 0) {
             try {
@@ -138,6 +138,6 @@ public final class DomainUtils {
                 break;
             }
         }
-        return domainList.toArray(new String[0]);
+        return domainList;
     }
 }
