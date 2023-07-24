@@ -472,8 +472,8 @@ public class NsdServiceTest {
         final ArgumentCaptor<NsdServiceInfo> resInfoCaptor =
                 ArgumentCaptor.forClass(NsdServiceInfo.class);
         verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(resInfoCaptor.capture());
-        verify(mMetrics).reportServiceResolved(
-                getAddrId, 10L /* durationMs */, false /* isServiceFromCache */);
+        verify(mMetrics).reportServiceResolved(getAddrId, 10L /* durationMs */,
+                false /* isServiceFromCache */, 0 /* sentQueryCount */);
 
         final NsdServiceInfo resolvedService = resInfoCaptor.getValue();
         assertEquals(SERVICE_NAME, resolvedService.getServiceName());
@@ -896,7 +896,7 @@ public class NsdServiceTest {
         verify(serviceInfoCallback, timeout(TIMEOUT_MS)).onServiceInfoCallbackUnregistered();
         verify(mMetrics).reportServiceInfoCallbackUnregistered(servInfoId, 10L /* durationMs */,
                 3 /* updateCallbackCount */, 1 /* lostCallbackCount */,
-                true /* isServiceFromCache */);
+                true /* isServiceFromCache */, 1 /* sentQueryCount */);
     }
 
     @Test
@@ -989,6 +989,11 @@ public class NsdServiceTest {
         final int discId = listener.mTransactionId;
         verify(mMetrics).reportServiceDiscoveryStarted(discId);
 
+        // Callbacks for query sent.
+        listener.onDiscoveryQuerySent(Collections.emptyList(), 1 /* transactionId */);
+        listener.onDiscoveryQuerySent(Collections.emptyList(), 2 /* transactionId */);
+        listener.onDiscoveryQuerySent(Collections.emptyList(), 3 /* transactionId */);
+
         final MdnsServiceInfo foundInfo = new MdnsServiceInfo(
                 SERVICE_NAME, /* serviceInstanceName */
                 serviceTypeWithLocalDomain.split("\\."), /* serviceType */
@@ -1037,7 +1042,8 @@ public class NsdServiceTest {
         verify(discListener, timeout(TIMEOUT_MS)).onDiscoveryStopped(SERVICE_TYPE);
         verify(mSocketProvider, timeout(CLEANUP_DELAY_MS + TIMEOUT_MS)).requestStopWhenInactive();
         verify(mMetrics).reportServiceDiscoveryStop(discId, 10L /* durationMs */,
-                1 /* foundCallbackCount */, 1 /* lostCallbackCount */, 1 /* servicesCount */);
+                1 /* foundCallbackCount */, 1 /* lostCallbackCount */, 1 /* servicesCount */,
+                3 /* sentQueryCount */);
     }
 
     @Test
@@ -1149,8 +1155,8 @@ public class NsdServiceTest {
         final ArgumentCaptor<NsdServiceInfo> infoCaptor =
                 ArgumentCaptor.forClass(NsdServiceInfo.class);
         verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(infoCaptor.capture());
-        verify(mMetrics).reportServiceResolved(
-                listener.mTransactionId, 10 /* durationMs */, true /* isServiceFromCache */);
+        verify(mMetrics).reportServiceResolved(listener.mTransactionId, 10 /* durationMs */,
+                true /* isServiceFromCache */, 0 /* sendQueryCount */);
 
         final NsdServiceInfo info = infoCaptor.getValue();
         assertEquals(SERVICE_NAME, info.getServiceName());
