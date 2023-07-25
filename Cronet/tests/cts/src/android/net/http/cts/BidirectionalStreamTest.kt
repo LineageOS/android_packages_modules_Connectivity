@@ -33,7 +33,9 @@ import kotlin.test.assertEquals
 import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers
 import org.junit.After
+import org.junit.AssumptionViolatedException
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.runner.RunWith
 
 private const val URL = "https://source.android.com"
@@ -67,10 +69,21 @@ class BidirectionalStreamTest {
 
     @Test
     @Throws(Exception::class)
+    @Ignore("b/292298108 Re-enable and confirm non-flaky after SLO")
     fun testBidirectionalStream_GetStream_CompletesSuccessfully() {
         stream = createBidirectionalStreamBuilder(URL).setHttpMethod("GET").build()
         stream!!.start()
-        callback.assumeCallback(ResponseStep.ON_SUCCEEDED)
+        // We call to a real server and hence the server may not be reachable, cancel this stream
+        // and rethrow the exception before tearDown,
+        // otherwise shutdown would fail with active request error.
+        try {
+            callback.assumeCallback(ResponseStep.ON_SUCCEEDED)
+        } catch (e: AssumptionViolatedException) {
+            stream!!.cancel()
+            callback.blockForDone()
+            throw e
+        }
+
         val info = callback.mResponseInfo
         assumeOKStatusCode(info)
         MatcherAssert.assertThat(
@@ -185,5 +198,4 @@ class BidirectionalStreamTest {
         stream = builder.build()
         assertThat(stream!!.isDelayRequestHeadersUntilFirstFlushEnabled()).isTrue()
     }
-
 }
