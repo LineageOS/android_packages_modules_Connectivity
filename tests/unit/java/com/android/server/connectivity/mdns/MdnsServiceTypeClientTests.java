@@ -52,7 +52,6 @@ import android.text.TextUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
-import com.android.server.connectivity.mdns.MdnsServiceTypeClient.QueryTaskConfig;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
