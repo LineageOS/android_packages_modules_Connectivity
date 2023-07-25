@@ -50,6 +50,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
@@ -60,6 +61,7 @@ import android.os.UserHandle;
 import android.telephony.TelephonyManager;
 import android.testing.PollingCheck;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -428,6 +430,22 @@ public class NetworkNotificationManagerTest {
 
         // UiDevice.getLauncherPackageName() requires the test manifest to have a <queries> tag for
         // the launcher intent.
+        // Attempted workaround for b/286550950 where Settings is reported as the launcher
+        PollingCheck.check(
+                "Launcher package name was still settings after " + TEST_TIMEOUT_MS + "ms",
+                TEST_TIMEOUT_MS,
+                () -> {
+                    if ("com.android.settings".equals(uiDevice.getLauncherPackageName())) {
+                        final Intent intent = new Intent(Intent.ACTION_MAIN);
+                        intent.addCategory(Intent.CATEGORY_HOME);
+                        final List<ResolveInfo> acts = ctx.getPackageManager()
+                                .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                        Log.e(NetworkNotificationManagerTest.class.getSimpleName(),
+                                "Got settings as launcher name; launcher activities: " + acts);
+                        return false;
+                    }
+                    return true;
+                });
         final String launcherPackageName = uiDevice.getLauncherPackageName();
         assertTrue(String.format("Launcher (%s) is not shown", launcherPackageName),
                 uiDevice.wait(Until.hasObject(By.pkg(launcherPackageName)),
