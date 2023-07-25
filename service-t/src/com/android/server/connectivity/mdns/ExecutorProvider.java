@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.NonNull;
 import android.util.ArraySet;
 
 import java.util.Set;
@@ -47,5 +48,17 @@ public class ExecutorProvider {
             }
             executor.shutdownNow();
         }
+        serviceTypeClientSchedulerExecutors.clear();
+    }
+
+    /**
+     * Shutdown one executor service and remove the executor service from the set.
+     * @param executorService the executorService to be shutdown
+     */
+    public void shutdownExecutorService(@NonNull ScheduledExecutorService executorService) {
+        if (!executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
+        serviceTypeClientSchedulerExecutors.remove(executorService);
     }
 }
