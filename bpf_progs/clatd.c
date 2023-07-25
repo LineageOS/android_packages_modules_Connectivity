@@ -138,10 +138,11 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
     }
 
     switch (proto) {
-        case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
-        case IPPROTO_UDP:  // address means there is no need to update their checksums.
-        case IPPROTO_GRE:  // We do not need to bother looking at GRE/ESP headers,
-        case IPPROTO_ESP:  // since there is never a checksum to update.
+        case IPPROTO_TCP:      // For TCP, UDP & UDPLITE the checksum neutrality of the chosen
+        case IPPROTO_UDP:      // IPv6 address means there is no need to update their checksums.
+        case IPPROTO_UDPLITE:  //
+        case IPPROTO_GRE:      // We do not need to bother looking at GRE/ESP headers,
+        case IPPROTO_ESP:      // since there is never a checksum to update.
             break;
 
         default:  // do not know how to handle anything else
@@ -328,12 +329,13 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
     if (ip4->frag_off & ~htons(IP_DF)) return TC_ACT_PIPE;
 
     switch (ip4->protocol) {
-        case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
-        case IPPROTO_GRE:  // address means there is no need to update their checksums.
-        case IPPROTO_ESP:  // We do not need to bother looking at GRE/ESP headers,
-            break;         // since there is never a checksum to update.
+        case IPPROTO_TCP:      // For TCP, UDP & UDPLITE the checksum neutrality of the chosen
+        case IPPROTO_UDPLITE:  // IPv6 address means there is no need to update their checksums.
+        case IPPROTO_GRE:      // We do not need to bother looking at GRE/ESP headers,
+        case IPPROTO_ESP:      // since there is never a checksum to update.
+            break;
 
-        case IPPROTO_UDP:  // See above comment, but must also have UDP header...
+        case IPPROTO_UDP:      // See above comment, but must also have UDP header...
             if (data + sizeof(*ip4) + sizeof(struct udphdr) > data_end) return TC_ACT_PIPE;
             const struct udphdr* uh = (const struct udphdr*)(ip4 + 1);
             // If IPv4/UDP checksum is 0 then fallback to clatd so it can calculate the
