@@ -126,6 +126,15 @@
     {
       "name": "FrameworksNetDeflakeTest"
     },
+    // Postsubmit on virtual devices to monitor flakiness of @SkipPresubmit methods
+    {
+      "name": "CtsNetTestCases",
+      "options": [
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
     {
       "name": "FrameworksNetTests"
     }
@@ -136,6 +145,9 @@
       "options": [
         {
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
         },
         {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
@@ -149,6 +161,9 @@
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
         },
         {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
         }
       ]
@@ -158,6 +173,9 @@
       "options": [
         {
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
         },
         {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
@@ -171,6 +189,9 @@
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
         },
         {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
         }
       ]
@@ -182,6 +203,9 @@
       "options": [
         {
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
         },
         {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
@@ -203,6 +227,9 @@
       "options": [
         {
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
         },
         {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
@@ -260,6 +287,15 @@
       "options": [
         {
           "exclude-annotation": "com.android.testutils.NetworkStackModuleTest"
+        }
+      ]
+    },
+    // Postsubmit on virtual devices to monitor flakiness of @SkipMainlinePresubmit methods
+    {
+      "name": "CtsNetTestCasesLatestSdk[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
+      "options": [
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
         }
       ]
     }
