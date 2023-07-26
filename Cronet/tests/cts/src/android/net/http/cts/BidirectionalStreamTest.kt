@@ -27,6 +27,7 @@ import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.SkipPresubmit
 import com.google.common.truth.Truth.assertThat
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,7 +36,6 @@ import org.hamcrest.Matchers
 import org.junit.After
 import org.junit.AssumptionViolatedException
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.runner.RunWith
 
 private const val URL = "https://source.android.com"
@@ -69,7 +69,7 @@ class BidirectionalStreamTest {
 
     @Test
     @Throws(Exception::class)
-    @Ignore("b/292298108 Re-enable and confirm non-flaky after SLO")
+    @SkipPresubmit(reason = "b/293141085 Confirm non-flaky and move to presubmit after SLO")
     fun testBidirectionalStream_GetStream_CompletesSuccessfully() {
         stream = createBidirectionalStreamBuilder(URL).setHttpMethod("GET").build()
         stream!!.start()
