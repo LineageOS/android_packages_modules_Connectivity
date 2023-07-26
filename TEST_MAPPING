@@ -180,6 +180,9 @@
         },
         {
           "exclude-annotation": "com.android.testutils.ConnectivityModuleTest"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.DnsResolverModuleTest"
         }
       ]
     },
@@ -195,6 +198,9 @@
         },
         {
           "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.DnsResolverModuleTest"
         }
       ]
     },
