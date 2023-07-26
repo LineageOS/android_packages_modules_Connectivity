@@ -31,6 +31,7 @@ android_test {
     ],
     static_libs: [
         "androidx.test.rules",
+        "mockito-target-minus-junit4",
         "net-tests-utils",
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
