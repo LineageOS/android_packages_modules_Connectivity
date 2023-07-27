@@ -2560,10 +2560,9 @@ public class ConnectivityManagerTest {
         assertThrows(SecurityException.class, () -> mCm.factoryReset());
     }
 
-    // @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
-    // @Test
-    // Temporarily disable the unreliable test, which is blocked by b/254183718.
-    private void testFactoryReset() throws Exception {
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test
+    public void testFactoryReset() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
 
         // Store current settings.
