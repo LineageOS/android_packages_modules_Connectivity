@@ -2591,6 +2591,7 @@ public class ConnectivityManagerTest {
             // prevent the race condition between airplane mode enabled and the followed
             // up wifi tethering enabled.
             tetherEventCallback.expectNoTetheringActive();
+            tetherUtils.expectSoftApDisabled();
 
             // start wifi tethering
             tetherUtils.startWifiTethering(tetherEventCallback);
