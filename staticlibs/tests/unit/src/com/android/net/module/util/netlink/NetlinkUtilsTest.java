@@ -26,8 +26,6 @@ import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFS
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
-import static com.google.common.truth.Truth.assertThat;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -193,7 +191,9 @@ public class NetlinkUtilsTest {
             // and IPv6 loopback address: 127.0.0.1 and ::1.
             final StructIfaddrMsg ifaMsg = ((RtNetlinkAddressMessage) msg).getIfaddrHeader();
             final InetAddress ipAddress = ((RtNetlinkAddressMessage) msg).getIpAddress();
-            assertThat((int) ifaMsg.family).isAnyOf(AF_INET, AF_INET6);
+            assertTrue(
+                    "Non-IP address family: " + ifaMsg.family,
+                    ifaMsg.family == AF_INET || ifaMsg.family == AF_INET6);
             assertTrue(ipAddress.isLoopbackAddress());
         }
 

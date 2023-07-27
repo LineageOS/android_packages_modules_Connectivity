@@ -22,7 +22,6 @@ android_library {
         "net-utils-device-common-bpf",
         "net-utils-device-common-ip",
         "net-utils-device-common-wear",
-        "truth",
     ],
     libs: [
         "android.test.runner",
