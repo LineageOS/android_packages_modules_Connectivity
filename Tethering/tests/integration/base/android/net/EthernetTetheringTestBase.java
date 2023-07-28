@@ -58,6 +58,8 @@ import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringRequest;
 import android.net.TetheringTester.TetheredDevice;
 import android.net.cts.util.CtsNetUtils;
+import android.net.cts.util.CtsTetheringUtils;
+import android.net.cts.util.CtsTetheringUtils.TestTetheringEventCallback;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
@@ -75,6 +77,7 @@ import com.android.testutils.TestNetworkTracker;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 
 import java.io.FileDescriptor;
 import java.net.Inet4Address;
@@ -160,6 +163,28 @@ public abstract class EthernetTetheringTestBase {
     private TestNetworkInterface mDownstreamIface;
     private TapPacketReader mDownstreamReader;
     private MyTetheringEventCallback mTetheringEventCallback;
+
+    @BeforeClass
+    public static void setUpOnce() throws Exception {
+        // The first test case may experience tethering restart with IP conflict handling.
+        // Tethering would cache the last upstreams so that the next enabled tethering avoids
+        // picking up the address that is in conflict with the upstreams. To protect subsequent
+        // tests, turn tethering on and off before running them.
+        final Context ctx = InstrumentationRegistry.getInstrumentation().getContext();
+        final CtsTetheringUtils utils = new CtsTetheringUtils(ctx);
+        final TestTetheringEventCallback callback = utils.registerTetheringEventCallback();
+        try {
+            if (!callback.isWifiTetheringSupported(ctx)) return;
+
+            callback.expectNoTetheringActive();
+
+            utils.startWifiTethering(callback);
+            callback.getCurrentValidUpstream();
+            utils.stopWifiTethering(callback);
+        } finally {
+            utils.unregisterTetheringEventCallback(callback);
+        }
+    }
 
     @Before
     public void setUp() throws Exception {
