@@ -2467,7 +2467,8 @@ public class VpnTest extends VpnTestBase {
         if (expectedReadFromCarrierConfig) {
             final ArgumentCaptor<NetworkCapabilities> ncCaptor =
                     ArgumentCaptor.forClass(NetworkCapabilities.class);
-            verify(mMockNetworkAgent).doSendNetworkCapabilities(ncCaptor.capture());
+            verify(mMockNetworkAgent, timeout(TEST_TIMEOUT_MS))
+                    .doSendNetworkCapabilities(ncCaptor.capture());
 
             final VpnTransportInfo info =
                     (VpnTransportInfo) ncCaptor.getValue().getTransportInfo();
