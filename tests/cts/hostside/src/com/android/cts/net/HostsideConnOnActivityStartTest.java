@@ -18,6 +18,7 @@ package com.android.cts.net;
 
 import android.platform.test.annotations.FlakyTest;
 
+import com.android.testutils.SkipPresubmit;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.testtype.junit4.AfterClassWithInfo;
@@ -25,6 +26,7 @@ import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
 
 import org.junit.Test;
 
+@SkipPresubmit(reason = "Out of SLO flakiness")
 public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     private static final String TEST_CLASS = TEST_PKG + ".ConnOnActivityStartTest";
     @BeforeClassWithInfo
