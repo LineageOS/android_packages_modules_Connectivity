@@ -49,6 +49,7 @@ import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTT
 import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
 import com.android.testutils.DeviceConfigRule
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
+import com.android.testutils.SkipMainlinePresubmit
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestHttpServer.Request
 import com.android.testutils.TestableNetworkCallback
@@ -137,6 +138,7 @@ class CaptivePortalTest {
     }
 
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     fun testCaptivePortalIsNotDefaultNetwork() {
         assumeTrue(pm.hasSystemFeature(FEATURE_TELEPHONY))
         assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
