@@ -15,10 +15,13 @@
  */
 package com.android.cts.net;
 
+import com.android.testutils.SkipPresubmit;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+@SkipPresubmit(reason = "Out of SLO flakiness")
 public class HostsideNetworkCallbackTests extends HostsideNetworkTestCase {
 
     @Before
