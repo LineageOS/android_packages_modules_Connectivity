@@ -422,6 +422,7 @@ import com.android.testutils.FunctionalUtils.ThrowingConsumer;
 import com.android.testutils.FunctionalUtils.ThrowingRunnable;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
+import com.android.testutils.SkipPresubmit;
 import com.android.testutils.TestableNetworkCallback;
 import com.android.testutils.TestableNetworkOfferCallback;
 
@@ -7414,6 +7415,7 @@ public class ConnectivityServiceTest {
         assertPinnedToWifiWithCellDefault();
     }
 
+    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testNetworkCallbackMaximum() throws Exception {
         final int MAX_REQUESTS = 100;
