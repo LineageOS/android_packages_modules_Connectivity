@@ -197,6 +197,8 @@ import com.android.testutils.DeviceConfigRule;
 import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
 import com.android.testutils.RecorderCallback.CallbackEntry;
+import com.android.testutils.SkipMainlinePresubmit;
+import com.android.testutils.SkipPresubmit;
 import com.android.testutils.TestHttpServer;
 import com.android.testutils.TestNetworkTracker;
 import com.android.testutils.TestableNetworkCallback;
@@ -1017,6 +1019,7 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testIsPrivateDnsBroken() throws InterruptedException {
         final String invalidPrivateDnsServer = "invalidhostname.example.com";
         final String goodPrivateDnsServer = "dns.google";
@@ -1124,6 +1127,7 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testRegisterNetworkCallback_withPendingIntent() {
         assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
 
@@ -1267,6 +1271,7 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testRegisterNetworkRequest_identicalPendingIntents() throws Exception {
         runIdenticalPendingIntentsRequestTest(false /* useListen */);
     }
@@ -2129,6 +2134,7 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "NETWORK_AIRPLANE_MODE permission can't be granted to instant apps")
     @Test
+    @SkipPresubmit(reason = "Out of SLO flakiness")
     public void testSetAirplaneMode() throws Exception{
         // Starting from T, wifi supports airplane mode enhancement which may not disconnect wifi
         // when airplane mode is on. The actual behavior that the device will have could only be
@@ -2738,6 +2744,7 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testSetOemNetworkPreferenceForTestOnlyPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
         // shims, and @IgnoreUpTo does not check that.
@@ -2892,6 +2899,7 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testRejectPartialConnectivity_TearDownNetwork() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
         assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
@@ -3197,6 +3205,7 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
+    @SkipPresubmit(reason = "Out of SLO flakiness")
     public void testMobileDataPreferredUids() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
         final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
