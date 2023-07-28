@@ -57,6 +57,7 @@ java_library {
     visibility: [
         "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/libs/net/client-libs/tests:__subpackages__",
+        "//packages/modules/Connectivity/tests/cts/hostside",
     ],
     // There are downstream branches using an old version of Kotlin
     // that used to reserve the right to make breaking changes to the
