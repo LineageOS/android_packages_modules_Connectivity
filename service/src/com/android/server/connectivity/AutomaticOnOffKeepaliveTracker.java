@@ -332,12 +332,18 @@ public class AutomaticOnOffKeepaliveTracker {
 
         final long time = mDependencies.getElapsedRealtime();
         mMetricsWriteTimeBase = time % METRICS_COLLECTION_DURATION_MS;
-        final long triggerAtMillis = mMetricsWriteTimeBase + METRICS_COLLECTION_DURATION_MS;
-        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtMillis, TAG,
-                this::writeMetricsAndRescheduleAlarm, handler);
+        if (mKeepaliveStatsTracker.isEnabled()) {
+            final long triggerAtMillis = mMetricsWriteTimeBase + METRICS_COLLECTION_DURATION_MS;
+            mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtMillis, TAG,
+                    this::writeMetricsAndRescheduleAlarm, handler);
+        }
     }
 
     private void writeMetricsAndRescheduleAlarm() {
+        // If the metrics is disabled, skip writing and scheduling the next alarm.
+        if (!mKeepaliveStatsTracker.isEnabled()) {
+            return;
+        }
         mKeepaliveStatsTracker.writeAndResetMetrics();
 
         final long time = mDependencies.getElapsedRealtime();
