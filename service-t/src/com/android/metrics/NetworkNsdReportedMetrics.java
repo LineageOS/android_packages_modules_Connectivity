@@ -206,4 +206,19 @@ public class NetworkNsdReportedMetrics {
         builder.setEventDurationMillisec(durationMs);
         mDependencies.statsWrite(builder.build());
     }
+
+    /**
+     * Report service resolution stop metric data.
+     *
+     * @param transactionId The transaction id of service resolution.
+     * @param durationMs The duration before stop resolving the service.
+     */
+    public void reportServiceResolutionStop(int transactionId, long durationMs) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_RESOLVE);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_RESOLUTION_STOP);
+        builder.setEventDurationMillisec(durationMs);
+        mDependencies.statsWrite(builder.build());
+    }
 }
