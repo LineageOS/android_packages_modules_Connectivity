@@ -19,6 +19,8 @@ import android.annotation.NonNull;
 
 import androidx.annotation.IntDef;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.concurrent.Executor;
 
 /**
@@ -35,6 +37,7 @@ import java.util.concurrent.Executor;
 public abstract class RangingSession {
 
     /** Types of ranging error. */
+    @Retention(RetentionPolicy.SOURCE)
     @IntDef(
             value = {
                 RANGING_ERROR_UNKNOWN,

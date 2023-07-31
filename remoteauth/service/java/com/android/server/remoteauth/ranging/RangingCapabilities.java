@@ -17,10 +17,18 @@ package com.android.server.remoteauth.ranging;
 
 import androidx.annotation.IntDef;
 
+import com.google.common.collect.ImmutableList;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.List;
+
 /** The ranging capabilities of the device. */
 public class RangingCapabilities {
 
     /** Possible ranging methods */
+    @Retention(RetentionPolicy.SOURCE)
     @IntDef(
             value = {
                 RANGING_METHOD_UNKNOWN,
@@ -33,4 +41,35 @@ public class RangingCapabilities {
 
     /** Ultra-wideband ranging. */
     public static final int RANGING_METHOD_UWB = 0x1;
+
+    private final ImmutableList<Integer> mSupportedRangingMethods;
+
+    /**
+     * Gets the list of supported ranging methods of the device.
+     *
+     * @return list of {@link RangingMethod}
+     */
+    public ImmutableList<Integer> getSupportedRangingMethods() {
+        return mSupportedRangingMethods;
+    }
+
+    private RangingCapabilities(List<Integer> supportedRangingMethods) {
+        mSupportedRangingMethods = ImmutableList.copyOf(supportedRangingMethods);
+    }
+
+    /** Builder class for {@link RangingCapabilities}. */
+    public static final class Builder {
+        private List<Integer> mSupportedRangingMethods = new ArrayList<>();
+
+        /** Adds a supported {@link RangingMethod} */
+        public Builder addSupportedRangingMethods(@RangingMethod int rangingMethod) {
+            mSupportedRangingMethods.add(rangingMethod);
+            return this;
+        }
+
+        /** Builds {@link RangingCapabilities}. */
+        public RangingCapabilities build() {
+            return new RangingCapabilities(mSupportedRangingMethods);
+        }
+    }
 }

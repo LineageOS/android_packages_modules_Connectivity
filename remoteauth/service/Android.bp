@@ -39,6 +39,7 @@ java_library {
         "framework-statsd",
     ],
     static_libs: [
+        "guava",
         "libprotobuf-java-lite",
         "fast-pair-lite-protos",
         "modules-utils-build",
