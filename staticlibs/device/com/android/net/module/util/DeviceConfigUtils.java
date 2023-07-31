@@ -224,14 +224,7 @@ public final class DeviceConfigUtils {
     // If that fails retry by appending "go.tethering" instead
     private static long resolveTetheringModuleVersion(@NonNull Context context)
             throws PackageManager.NameNotFoundException {
-        final String connResourcesPackage = getConnectivityResourcesPackageName(context);
-        final int pkgPrefixLen = connResourcesPackage.indexOf("connectivity");
-        if (pkgPrefixLen < 0) {
-            throw new IllegalStateException(
-                    "Invalid connectivity resources package: " + connResourcesPackage);
-        }
-
-        final String pkgPrefix = connResourcesPackage.substring(0, pkgPrefixLen);
+        final String pkgPrefix = resolvePkgPrefix(context);
         final PackageManager packageManager = context.getPackageManager();
         try {
             return packageManager.getPackageInfo(pkgPrefix + "tethering",
@@ -243,6 +236,17 @@ public final class DeviceConfigUtils {
 
         return packageManager.getPackageInfo(pkgPrefix + "go.tethering",
                 PackageManager.MATCH_APEX).getLongVersionCode();
+    }
+
+    private static String resolvePkgPrefix(Context context) {
+        final String connResourcesPackage = getConnectivityResourcesPackageName(context);
+        final int pkgPrefixLen = connResourcesPackage.indexOf("connectivity");
+        if (pkgPrefixLen < 0) {
+            throw new IllegalStateException(
+                    "Invalid connectivity resources package: " + connResourcesPackage);
+        }
+
+        return connResourcesPackage.substring(0, pkgPrefixLen);
     }
 
     private static volatile long sModuleVersion = -1;
