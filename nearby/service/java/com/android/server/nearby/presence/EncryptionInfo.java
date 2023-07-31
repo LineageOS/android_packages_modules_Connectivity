@@ -17,11 +17,13 @@
 package com.android.server.nearby.presence;
 
 import android.annotation.IntDef;
+import android.annotation.Nullable;
 import android.nearby.DataElement;
 
 import androidx.annotation.NonNull;
 
 import com.android.internal.util.Preconditions;
+import com.android.server.nearby.util.ArrayUtils;
 
 import java.util.Arrays;
 
@@ -40,7 +42,7 @@ public class EncryptionInfo {
 
     // 1st byte : encryption scheme
     // 2nd to 17th bytes: salt
-    private static final int ENCRYPTION_INFO_LENGTH = 17;
+    public static final int ENCRYPTION_INFO_LENGTH = 17;
     private static final int ENCODING_SCHEME_MASK = 0b01111000;
     private static final int ENCODING_SCHEME_OFFSET = 3;
     @EncodingScheme
@@ -68,5 +70,21 @@ public class EncryptionInfo {
 
     public byte[] getSalt() {
         return mSalt;
+    }
+
+    /** Combines the encoding scheme and salt to a byte array
+     * that represents an {@link EncryptionInfo}.
+     */
+    @Nullable
+    public static byte[] toByte(@EncodingScheme int encodingScheme, byte[] salt) {
+        if (ArrayUtils.isEmpty(salt)) {
+            return null;
+        }
+        if (salt.length != ENCRYPTION_INFO_LENGTH - 1) {
+            return null;
+        }
+        byte schemeByte =
+                (byte) ((encodingScheme << ENCODING_SCHEME_OFFSET) & ENCODING_SCHEME_MASK);
+        return ArrayUtils.append(schemeByte, salt);
     }
 }
