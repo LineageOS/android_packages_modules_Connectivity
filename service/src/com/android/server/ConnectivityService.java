@@ -1704,8 +1704,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mUserAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
                 null /* broadcastPermission */, mHandler);
 
-        mNetworkActivityTracker =
-                new LegacyNetworkActivityTracker(mContext, mNetd, mHandler, mDeps.isAtLeastU());
+        mNetworkActivityTracker = new LegacyNetworkActivityTracker(mContext, mNetd, mHandler);
 
         final NetdCallback netdCallback = new NetdCallback();
         try {
@@ -11141,7 +11140,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // This needs to be volatile to allow non handler threads to read this value without lock.
         private volatile boolean mIsDefaultNetworkActive;
         private final ArrayMap<String, IdleTimerParams> mActiveIdleTimers = new ArrayMap<>();
-        private final boolean mIsAtLeastU;
 
         private static class IdleTimerParams {
             public final int timeout;
@@ -11154,11 +11152,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         LegacyNetworkActivityTracker(@NonNull Context context, @NonNull INetd netd,
-                @NonNull Handler handler, boolean isAtLeastU) {
+                @NonNull Handler handler) {
             mContext = context;
             mNetd = netd;
             mHandler = handler;
-            mIsAtLeastU = isAtLeastU;
         }
 
         private void ensureRunningOnConnectivityServiceThread() {
@@ -11319,8 +11316,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 boolean hasIdleTimer) {
             if (defaultNetwork != null) {
                 mIsDefaultNetworkActive = true;
-                // On T-, callbacks are called only when the network has the idle timer.
-                if (mIsAtLeastU || hasIdleTimer) {
+                // Callbacks are called only when the network has the idle timer.
+                if (hasIdleTimer) {
                     reportNetworkActive();
                 }
             } else {
