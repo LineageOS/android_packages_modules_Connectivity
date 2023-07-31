@@ -1346,7 +1346,8 @@ public class VpnTest extends VpnTestBase {
         final ArgumentCaptor<Intent> intentArgumentCaptor = ArgumentCaptor.forClass(Intent.class);
 
         final int verifyTimes = profileState.length;
-        verify(userContext, times(verifyTimes)).startService(intentArgumentCaptor.capture());
+        verify(userContext, timeout(TEST_TIMEOUT_MS).times(verifyTimes))
+                .startService(intentArgumentCaptor.capture());
 
         for (int i = 0; i < verifyTimes; i++) {
             final Intent intent = intentArgumentCaptor.getAllValues().get(i);
@@ -1658,7 +1659,7 @@ public class VpnTest extends VpnTestBase {
             verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), anyLong(), any());
         } else {
             final IkeSessionCallback ikeCb = captor.getValue();
-            ikeCb.onClosedWithException(exception);
+            mExecutor.execute(() -> ikeCb.onClosedWithException(exception));
         }
 
         verifyPowerSaveTempWhitelistApp(TEST_VPN_PKG);
@@ -1677,7 +1678,7 @@ public class VpnTest extends VpnTestBase {
             int retryIndex = 0;
             final IkeSessionCallback ikeCb2 = verifyRetryAndGetNewIkeCb(retryIndex++);
 
-            ikeCb2.onClosedWithException(exception);
+            mExecutor.execute(() -> ikeCb2.onClosedWithException(exception));
             verifyRetryAndGetNewIkeCb(retryIndex++);
         }
     }
@@ -1688,11 +1689,8 @@ public class VpnTest extends VpnTestBase {
 
         // Verify retry is scheduled
         final long expectedDelayMs = mTestDeps.getNextRetryDelayMs(retryIndex);
-        final ArgumentCaptor<Long> delayCaptor = ArgumentCaptor.forClass(Long.class);
-        verify(mExecutor, atLeastOnce()).schedule(any(Runnable.class), delayCaptor.capture(),
-                eq(TimeUnit.MILLISECONDS));
-        final List<Long> delays = delayCaptor.getAllValues();
-        assertEquals(expectedDelayMs, (long) delays.get(delays.size() - 1));
+        verify(mExecutor, timeout(TEST_TIMEOUT_MS)).schedule(any(Runnable.class),
+                eq(expectedDelayMs), eq(TimeUnit.MILLISECONDS));
 
         verify(mIkev2SessionCreator, timeout(TEST_TIMEOUT_MS + expectedDelayMs))
                 .createIkeSession(any(), any(), any(), any(), ikeCbCaptor.capture(), any());
