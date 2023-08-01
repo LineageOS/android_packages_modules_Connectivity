@@ -1147,7 +1147,8 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
             entry.txPackets = left.txPackets[i];
             entry.operations = left.operations[i];
 
-            // find remote row that matches, and subtract
+            // Find the remote row that matches and subtract.
+            // The returned row must be uniquely matched.
             final int j = right.findIndexHinted(entry.iface, entry.uid, entry.set, entry.tag,
                     entry.metered, entry.roaming, entry.defaultNetwork, i);
             if (j != -1) {
@@ -1304,13 +1305,14 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
 
     /**
      * Removes the interface name from all entries.
-     * This mutates the original structure in place.
+     * This returns a newly constructed object instead of mutating the original structure.
      * @hide
      */
-    public void clearInterfaces() {
-        for (int i = 0; i < size; i++) {
-            iface[i] = null;
-        }
+    @NonNull
+    public NetworkStats clearInterfaces() {
+        final Entry temp = new Entry();
+        return map(entry -> temp.setKeys(IFACE_ALL, entry.getUid(), entry.getSet(),
+                entry.getTag(), entry.getMetered(), entry.getRoaming(), entry.getDefaultNetwork()));
     }
 
     /**
