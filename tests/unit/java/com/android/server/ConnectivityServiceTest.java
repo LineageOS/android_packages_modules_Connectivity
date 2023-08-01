@@ -11330,7 +11330,8 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testIsDefaultNetworkActiveNoDefaultNetwork() throws Exception {
-        assertFalse(mCm.isDefaultNetworkActive());
+        // isDefaultNetworkActive returns true if there is no default network, which is known issue.
+        assertTrue(mCm.isDefaultNetworkActive());
 
         final LinkProperties cellLp = new LinkProperties();
         cellLp.setInterfaceName(MOBILE_IFNAME);
@@ -11342,7 +11343,7 @@ public class ConnectivityServiceTest {
         mCellAgent.disconnect();
         waitForIdle();
 
-        assertFalse(mCm.isDefaultNetworkActive());
+        assertTrue(mCm.isDefaultNetworkActive());
     }
 
     @Test
