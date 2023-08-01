@@ -72,7 +72,7 @@ class ConnectivityCheckTest {
         val cb = TestableNetworkCallback()
         val cm = context.getSystemService(ConnectivityManager::class.java)
                 ?: fail("Could not get ConnectivityManager")
-        cm.registerNetworkCallback(
+        cm.requestNetwork(
                 NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_CELLULAR)
                         .addCapability(NET_CAPABILITY_INTERNET).build(), cb)
