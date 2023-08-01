@@ -1114,6 +1114,7 @@ public class NsdService extends INsdManager.Stub {
                                 resolveServiceType, listener, options);
                         storeDiscoveryManagerRequestMap(clientRequestId, transactionId, listener,
                                 clientInfo, info.getNetwork());
+                        clientInfo.onServiceInfoCallbackRegistered(transactionId);
                         clientInfo.log("Register a ServiceInfoListener " + transactionId
                                 + " for service type:" + resolveServiceType);
                         break;
@@ -1140,7 +1141,7 @@ public class NsdService extends INsdManager.Stub {
                         if (request instanceof DiscoveryManagerRequest) {
                             stopDiscoveryManagerRequest(
                                     request, clientRequestId, transactionId, clientInfo);
-                            clientInfo.onServiceInfoCallbackUnregistered(clientRequestId);
+                            clientInfo.onServiceInfoCallbackUnregistered(clientRequestId, request);
                             clientInfo.log("Unregister the ServiceInfoListener " + transactionId);
                         } else {
                             loge("Unregister failed with non-DiscoveryManagerRequest.");
@@ -1478,11 +1479,17 @@ public class NsdService extends INsdManager.Stub {
 
                         final List<InetAddress> addresses = getInetAddresses(serviceInfo);
                         info.setHostAddresses(addresses);
-                        clientInfo.onServiceUpdated(clientRequestId, info);
+                        clientInfo.onServiceUpdated(clientRequestId, info, request);
+                        // Set the ServiceFromCache flag only if the service is actually being
+                        // retrieved from the cache. This flag should not be overridden by later
+                        // service updates, which may not be cached.
+                        if (event.mIsServiceFromCache) {
+                            request.setServiceFromCache(true);
+                        }
                         break;
                     }
                     case NsdManager.SERVICE_UPDATED_LOST:
-                        clientInfo.onServiceUpdatedLost(clientRequestId);
+                        clientInfo.onServiceUpdatedLost(clientRequestId, request);
                         break;
                     default:
                         return false;
@@ -2396,6 +2403,12 @@ public class NsdService extends INsdManager.Stub {
                     } else if (listener instanceof ResolutionListener) {
                         mMetrics.reportServiceResolutionStop(transactionId,
                                 request.calculateRequestDurationMs(mClock.elapsedRealtime()));
+                    } else if (listener instanceof ServiceInfoListener) {
+                        mMetrics.reportServiceInfoCallbackUnregistered(transactionId,
+                                request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                                request.getFoundServiceCount(),
+                                request.getLostServiceCount(),
+                                request.isServiceFromCache());
                     }
                     continue;
                 }
@@ -2622,6 +2635,7 @@ public class NsdService extends INsdManager.Stub {
         }
 
         void onServiceInfoCallbackRegistrationFailed(int listenerKey, int error) {
+            mMetrics.reportServiceInfoCallbackRegistrationFailed(NO_TRANSACTION);
             try {
                 mCb.onServiceInfoCallbackRegistrationFailed(listenerKey, error);
             } catch (RemoteException e) {
@@ -2629,7 +2643,12 @@ public class NsdService extends INsdManager.Stub {
             }
         }
 
-        void onServiceUpdated(int listenerKey, NsdServiceInfo info) {
+        void onServiceInfoCallbackRegistered(int transactionId) {
+            mMetrics.reportServiceInfoCallbackRegistered(transactionId);
+        }
+
+        void onServiceUpdated(int listenerKey, NsdServiceInfo info, ClientRequest request) {
+            request.onServiceFound(info.getServiceName());
             try {
                 mCb.onServiceUpdated(listenerKey, info);
             } catch (RemoteException e) {
@@ -2637,7 +2656,8 @@ public class NsdService extends INsdManager.Stub {
             }
         }
 
-        void onServiceUpdatedLost(int listenerKey) {
+        void onServiceUpdatedLost(int listenerKey, ClientRequest request) {
+            request.onServiceLost();
             try {
                 mCb.onServiceUpdatedLost(listenerKey);
             } catch (RemoteException e) {
@@ -2645,7 +2665,13 @@ public class NsdService extends INsdManager.Stub {
             }
         }
 
-        void onServiceInfoCallbackUnregistered(int listenerKey) {
+        void onServiceInfoCallbackUnregistered(int listenerKey, ClientRequest request) {
+            mMetrics.reportServiceInfoCallbackUnregistered(
+                    request.mTransactionId,
+                    request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                    request.getFoundServiceCount(),
+                    request.getLostServiceCount(),
+                    request.isServiceFromCache());
             try {
                 mCb.onServiceInfoCallbackUnregistered(listenerKey);
             } catch (RemoteException e) {

@@ -822,13 +822,17 @@ public class NsdServiceTest {
         client.registerServiceInfoCallback(request, Runnable::run, serviceInfoCallback);
         waitForIdle();
         // Verify the registration callback start.
-        final ArgumentCaptor<MdnsServiceBrowserListener> listenerCaptor =
-                ArgumentCaptor.forClass(MdnsServiceBrowserListener.class);
+        final ArgumentCaptor<MdnsListener> listenerCaptor =
+                ArgumentCaptor.forClass(MdnsListener.class);
         verify(mSocketProvider).startMonitoringSockets();
         verify(mDiscoveryManager).registerListener(eq(serviceTypeWithLocalDomain),
                 listenerCaptor.capture(), argThat(options -> network.equals(options.getNetwork())));
 
-        final MdnsServiceBrowserListener listener = listenerCaptor.getValue();
+        final MdnsListener listener = listenerCaptor.getValue();
+        final int servInfoId = listener.mTransactionId;
+        // Verify the service info callback registered.
+        verify(mMetrics).reportServiceInfoCallbackRegistered(servInfoId);
+
         final MdnsServiceInfo mdnsServiceInfo = new MdnsServiceInfo(
                 SERVICE_NAME,
                 serviceTypeWithLocalDomain.split("\\."),
@@ -842,8 +846,11 @@ public class NsdServiceTest {
                 1234,
                 network);
 
+        // Callbacks for query sent.
+        listener.onDiscoveryQuerySent(Collections.emptyList(), 1 /* transactionId */);
+
         // Verify onServiceFound callback
-        listener.onServiceFound(mdnsServiceInfo, false /* isServiceFromCache */);
+        listener.onServiceFound(mdnsServiceInfo, true /* isServiceFromCache */);
         final ArgumentCaptor<NsdServiceInfo> updateInfoCaptor =
                 ArgumentCaptor.forClass(NsdServiceInfo.class);
         verify(serviceInfoCallback, timeout(TIMEOUT_MS).times(1))
@@ -878,10 +885,18 @@ public class NsdServiceTest {
                 List.of(parseNumericAddress(v4Address), parseNumericAddress(v6Address)),
                 PORT, IFACE_IDX_ANY, new Network(999));
 
+        // Service lost then recovered.
+        listener.onServiceRemoved(updatedServiceInfo);
+        listener.onServiceFound(updatedServiceInfo, false /* isServiceFromCache */);
+
         // Verify service callback unregistration.
+        doReturn(TEST_TIME_MS + 10L).when(mClock).elapsedRealtime();
         client.unregisterServiceInfoCallback(serviceInfoCallback);
         waitForIdle();
         verify(serviceInfoCallback, timeout(TIMEOUT_MS)).onServiceInfoCallbackUnregistered();
+        verify(mMetrics).reportServiceInfoCallbackUnregistered(servInfoId, 10L /* durationMs */,
+                3 /* updateCallbackCount */, 1 /* lostCallbackCount */,
+                true /* isServiceFromCache */);
     }
 
     @Test
@@ -897,6 +912,7 @@ public class NsdServiceTest {
         // Fail to register service callback.
         verify(serviceInfoCallback, timeout(TIMEOUT_MS))
                 .onServiceInfoCallbackRegistrationFailed(eq(FAILURE_BAD_PARAMETERS));
+        verify(mMetrics).reportServiceInfoCallbackRegistrationFailed(NO_TRANSACTION);
     }
 
     @Test
