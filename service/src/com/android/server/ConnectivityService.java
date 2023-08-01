@@ -11143,7 +11143,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 new RemoteCallbackList<>();
         // Indicate the current system default network activity is active or not.
         // This needs to be volatile to allow non handler threads to read this value without lock.
-        private volatile boolean mIsDefaultNetworkActive;
+        // If there is no default network, default network is considered active to keep the existing
+        // behavior. Initial value is used until first connect to the default network.
+        private volatile boolean mIsDefaultNetworkActive = true;
         private final ArrayMap<String, IdleTimerParams> mActiveIdleTimers = new ArrayMap<>();
 
         private static class IdleTimerParams {
@@ -11326,8 +11328,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     reportNetworkActive();
                 }
             } else {
-                // If there is no default network, default network is considered inactive.
-                mIsDefaultNetworkActive = false;
+                // If there is no default network, default network is considered active to keep the
+                // existing behavior.
+                mIsDefaultNetworkActive = true;
             }
         }
 
