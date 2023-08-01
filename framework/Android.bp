@@ -62,6 +62,7 @@ java_defaults {
         ":framework-connectivity-sources",
         ":net-utils-framework-common-srcs",
         ":framework-connectivity-api-shared-srcs",
+        ":framework-remoteauth-java-sources",
     ],
     aidl: {
         generate_get_transaction_name: true,
@@ -150,6 +151,7 @@ java_sdk_library {
         "//packages/modules/Connectivity/framework-t",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/service-t",
+        "//packages/modules/Connectivity/remoteauth:__subpackages__",
         "//frameworks/base/packages/Connectivity/service",
         "//frameworks/base",
 
