@@ -1250,8 +1250,9 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 TEST_IFACE2, IMSI_1, null /* wifiNetworkKey */,
                 false /* isTemporarilyNotMetered */, false /* isRoaming */);
 
-        final NetworkStateSnapshot[] states = new NetworkStateSnapshot[] {
-                mobileState, buildWifiState()};
+        final NetworkStateSnapshot[] states = new NetworkStateSnapshot[]{
+                mobileState, buildWifiState(false, TEST_IFACE, null),
+                buildWifiState(false, TEST_IFACE3, null)};
         mService.notifyNetworkStatus(NETWORKS_MOBILE, states, getActiveIface(states),
                 new UnderlyingNetworkInfo[0]);
         setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_LTE);
@@ -1266,16 +1267,22 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         final NetworkStats.Entry entry3 = new NetworkStats.Entry(
                 TEST_IFACE, UID_BLUE, SET_DEFAULT, 0xBEEF, METERED_NO, ROAMING_NO,
                 DEFAULT_NETWORK_NO, 1024L, 8L, 512L, 4L, 2L);
+        // Add an entry that with different wifi interface, but expected to be merged into entry3
+        // after clearing interface information.
+        final NetworkStats.Entry entry4 = new NetworkStats.Entry(
+                TEST_IFACE3, UID_BLUE, SET_DEFAULT, 0xBEEF, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 1L, 2L, 3L, 4L, 5L);
 
         final TetherStatsParcel[] emptyTetherStats = {};
         // The interfaces that expect to be used to query the stats.
-        final String[] wifiIfaces = {TEST_IFACE};
+        final String[] wifiIfaces = {TEST_IFACE, TEST_IFACE3};
         incrementCurrentTime(HOUR_IN_MILLIS);
         mockDefaultSettings();
-        mockNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 3)
+        mockNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 4)
                 .insertEntry(entry1)
                 .insertEntry(entry2)
-                .insertEntry(entry3), emptyTetherStats, wifiIfaces);
+                .insertEntry(entry3)
+                .insertEntry(entry4), emptyTetherStats, wifiIfaces);
 
         // getUidStatsForTransport (through getNetworkStatsUidDetail) adds all operation counts
         // with active interface, and the interface here is mobile interface, so this test makes
@@ -1293,7 +1300,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         assertValues(wifiStats, null /* iface */, UID_RED, SET_DEFAULT, 0xF00D,
                 METERED_NO, ROAMING_NO, METERED_NO, 50L, 5L, 50L, 5L, 1L);
         assertValues(wifiStats, null /* iface */, UID_BLUE, SET_DEFAULT, 0xBEEF,
-                METERED_NO, ROAMING_NO, METERED_NO, 1024L, 8L, 512L, 4L, 2L);
+                METERED_NO, ROAMING_NO, METERED_NO, 1025L, 10L, 515L, 8L, 7L);
 
         final String[] mobileIfaces = {TEST_IFACE2};
         mockNetworkStatsUidDetail(buildEmptyStats(), emptyTetherStats, mobileIfaces);
