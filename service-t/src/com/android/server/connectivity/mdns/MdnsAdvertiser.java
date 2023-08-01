@@ -124,7 +124,7 @@ public class MdnsAdvertiser {
                 @NonNull MdnsInterfaceAdvertiser advertiser, int serviceId) {
             final Registration registration = mRegistrations.get(serviceId);
             if (registration == null) {
-                Log.wtf(TAG, "Register succeeded for unknown registration");
+                mSharedLog.wtf("Register succeeded for unknown registration");
                 return;
             }
 
@@ -329,7 +329,8 @@ public class MdnsAdvertiser {
                     mAdvertisers.valueAt(i).addService(
                             id, registration.getServiceInfo(), registration.getSubtype());
                 } catch (NameConflictException e) {
-                    Log.wtf(TAG, "Name conflict adding services that should have unique names", e);
+                    mSharedLog.wtf("Name conflict adding services that should have unique names",
+                            e);
                 }
             }
         }
@@ -363,7 +364,8 @@ public class MdnsAdvertiser {
                     advertiser.addService(mPendingRegistrations.keyAt(i),
                             registration.getServiceInfo(), registration.getSubtype());
                 } catch (NameConflictException e) {
-                    Log.wtf(TAG, "Name conflict adding services that should have unique names", e);
+                    mSharedLog.wtf("Name conflict adding services that should have unique names",
+                            e);
                 }
             }
         }
@@ -545,7 +547,7 @@ public class MdnsAdvertiser {
     public void addService(int id, NsdServiceInfo service, @Nullable String subtype) {
         checkThread();
         if (mRegistrations.get(id) != null) {
-            Log.e(TAG, "Adding duplicate registration for " + service);
+            mSharedLog.e("Adding duplicate registration for " + service);
             // TODO (b/264986328): add a more specific error code
             mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
             return;
