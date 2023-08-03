@@ -227,22 +227,27 @@ public class AutomaticOnOffKeepaliveTracker {
                     throw new IllegalArgumentException("fd can't be null with automatic "
                             + "on/off keepalives");
                 }
-                try {
-                    mFd = Os.dup(ki.mFd);
-                } catch (ErrnoException e) {
-                    Log.e(TAG, "Cannot dup fd: ", e);
-                    throw new InvalidSocketException(ERROR_INVALID_SOCKET, e);
-                }
                 mAlarmListener = () -> mConnectivityServiceHandler.obtainMessage(
                         CMD_MONITOR_AUTOMATIC_KEEPALIVE, mCallback.asBinder())
                         .sendToTarget();
             } else {
                 mAutomaticOnOffState = STATE_ALWAYS_ON;
-                // A null fd is acceptable in KeepaliveInfo for backward compatibility of
-                // PacketKeepalive API, but it must never happen with automatic keepalives.
-                // TODO : remove mFd from KeepaliveInfo or from this class.
-                mFd = ki.mFd;
                 mAlarmListener = null;
+            }
+
+            // A null fd is acceptable in KeepaliveInfo for backward compatibility of
+            // PacketKeepalive API, but it must never happen with automatic keepalives.
+            // TODO : remove mFd from KeepaliveInfo.
+            mFd = dupFd(ki.mFd);
+        }
+
+        private FileDescriptor dupFd(FileDescriptor fd) throws InvalidSocketException {
+            try {
+                if (fd == null) return null;
+                return Os.dup(fd);
+            } catch (ErrnoException e) {
+                Log.e(TAG, "Cannot dup fd: ", e);
+                throw new InvalidSocketException(ERROR_INVALID_SOCKET, e);
             }
         }
 
@@ -501,11 +506,7 @@ public class AutomaticOnOffKeepaliveTracker {
         final AutomaticOnOffKeepalive autoKi;
         try {
             autoKi = target.withKeepaliveInfo(res.second);
-            // Only automatic keepalives duplicate the fd.
-            if (target.mAutomaticOnOffState != STATE_ALWAYS_ON) {
-                // Close the duplicated fd.
-                target.close();
-            }
+            target.close();
         } catch (InvalidSocketException e) {
             Log.wtf(TAG, "Fail to create AutomaticOnOffKeepalive", e);
             return;
