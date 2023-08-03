@@ -41,7 +41,7 @@ public class BpfInterfaceMapUpdater {
     // This is current path but may be changed soon.
     private static final String IFACE_INDEX_NAME_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_iface_index_name_map";
-    private final IBpfMap<S32, InterfaceMapValue> mBpfMap;
+    private final IBpfMap<S32, InterfaceMapValue> mIndexToIfaceBpfMap;
     private final INetd mNetd;
     private final Handler mHandler;
     private final Dependencies mDeps;
@@ -53,7 +53,7 @@ public class BpfInterfaceMapUpdater {
     @VisibleForTesting
     public BpfInterfaceMapUpdater(Context ctx, Handler handler, Dependencies deps) {
         mDeps = deps;
-        mBpfMap = deps.getInterfaceMap();
+        mIndexToIfaceBpfMap = deps.getInterfaceMap();
         mNetd = deps.getINetd(ctx);
         mHandler = handler;
     }
@@ -91,7 +91,7 @@ public class BpfInterfaceMapUpdater {
      */
     public void start() {
         mHandler.post(() -> {
-            if (mBpfMap == null) {
+            if (mIndexToIfaceBpfMap == null) {
                 Log.wtf(TAG, "Fail to start: Null bpf map");
                 return;
             }
@@ -126,7 +126,7 @@ public class BpfInterfaceMapUpdater {
         }
 
         try {
-            mBpfMap.updateEntry(new S32(iface.index), new InterfaceMapValue(ifaceName));
+            mIndexToIfaceBpfMap.updateEntry(new S32(iface.index), new InterfaceMapValue(ifaceName));
         } catch (ErrnoException e) {
             Log.e(TAG, "Unable to update entry for " + ifaceName + ", " + e);
         }
@@ -142,7 +142,7 @@ public class BpfInterfaceMapUpdater {
     /** get interface name by interface index from bpf map */
     public String getIfNameByIndex(final int index) {
         try {
-            final InterfaceMapValue value = mBpfMap.getValue(new S32(index));
+            final InterfaceMapValue value = mIndexToIfaceBpfMap.getValue(new S32(index));
             if (value == null) {
                 Log.e(TAG, "No if name entry for index " + index);
                 return null;
@@ -162,11 +162,12 @@ public class BpfInterfaceMapUpdater {
     public void dump(final IndentingPrintWriter pw) {
         pw.println("BPF map status:");
         pw.increaseIndent();
-        BpfDump.dumpMapStatus(mBpfMap, pw, "IfaceIndexNameMap", IFACE_INDEX_NAME_MAP_PATH);
+        BpfDump.dumpMapStatus(mIndexToIfaceBpfMap, pw, "IfaceIndexNameMap",
+                IFACE_INDEX_NAME_MAP_PATH);
         pw.decreaseIndent();
         pw.println("BPF map content:");
         pw.increaseIndent();
-        BpfDump.dumpMap(mBpfMap, pw, "IfaceIndexNameMap",
+        BpfDump.dumpMap(mIndexToIfaceBpfMap, pw, "IfaceIndexNameMap",
                 (key, value) -> "ifaceIndex=" + key.val
                         + " ifaceName=" + value.getInterfaceNameString());
         pw.decreaseIndent();
