@@ -46,6 +46,8 @@ public class SharedLog {
         ERROR,
         MARK,
         WARN,
+        VERBOSE,
+        TERRIBLE,
     }
 
     private final LocalLog mLocalLog;
@@ -158,6 +160,41 @@ public class SharedLog {
     public void w(String msg) {
         Log.w(mTag, record(Category.WARN, msg));
     }
+
+    /**
+     * Log a verbose message.
+     *
+     * <p>The log entry will be also added to the system log.
+     */
+    public void v(String msg) {
+        Log.v(mTag, record(Category.VERBOSE, msg));
+    }
+
+    /**
+     * Log a terrible failure message.
+     *
+     * <p>The log entry will be also added to the system log and will trigger system reporting
+     * for terrible failures.
+     */
+    public void wtf(String msg) {
+        Log.wtf(mTag, record(Category.TERRIBLE, msg));
+    }
+
+    /**
+     * Log a terrible failure due to an exception, with the exception stacktrace if provided.
+     *
+     * <p>The error and exception message appear in the shared log, but the stacktrace is only
+     * logged in general log output (logcat). The log entry will be also added to the system log
+     * and will trigger system reporting for terrible failures.
+     */
+    public void wtf(@NonNull String msg, @Nullable Throwable exception) {
+        if (exception == null) {
+            e(msg);
+            return;
+        }
+        Log.wtf(mTag, record(Category.TERRIBLE, msg + ": " + exception.getMessage()), exception);
+    }
+
 
     //////
     // Methods that only log an entry (and do NOT emit to the system log).
