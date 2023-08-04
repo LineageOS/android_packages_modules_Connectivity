@@ -18,6 +18,7 @@ package android.net.nsd;
 
 import android.annotation.LongDef;
 import android.annotation.NonNull;
+import android.annotation.SystemApi;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -32,7 +33,7 @@ import java.lang.annotation.RetentionPolicy;
  *
  * @hide
  */
-//@SystemApi
+@SystemApi
 public interface OffloadEngine {
     /**
      * Indicates that the OffloadEngine can generate replies to mDns queries.
@@ -55,6 +56,9 @@ public interface OffloadEngine {
      */
     int OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK = 1;
 
+    /**
+     * @hide
+     */
     @Retention(RetentionPolicy.SOURCE)
     @LongDef(flag = true, prefix = {"OFFLOAD_TYPE"}, value = {
             OFFLOAD_TYPE_REPLY,
@@ -63,6 +67,9 @@ public interface OffloadEngine {
     })
     @interface OffloadType {}
 
+    /**
+     * @hide
+     */
     @Retention(RetentionPolicy.SOURCE)
     @LongDef(flag = true, prefix = {"OFFLOAD_CAPABILITY"}, value = {
             OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK
