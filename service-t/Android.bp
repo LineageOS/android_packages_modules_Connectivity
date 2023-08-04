@@ -88,8 +88,9 @@ java_library {
     name: "service-connectivity-mdns-standalone-build-test",
     sdk_version: "core_platform",
     srcs: [
-        ":service-mdns-droidstubs",
         "src/com/android/server/connectivity/mdns/**/*.java",
+        ":framework-connectivity-t-mdns-standalone-build-sources",
+        ":service-mdns-droidstubs"
     ],
     exclude_srcs: [
         "src/com/android/server/connectivity/mdns/internal/SocketNetlinkMonitor.java",
