@@ -150,7 +150,7 @@ class MdnsInterfaceAdvertiserTest {
                 0L /* initialDelayMs */)
 
         thread.waitForIdle(TIMEOUT_MS)
-        verify(cb).onRegisterServiceSucceeded(advertiser, TEST_SERVICE_ID_1)
+        verify(cb).onServiceProbingSucceeded(advertiser, TEST_SERVICE_ID_1)
 
         // Remove the service: expect exit announcements
         val testExitInfo = mock(ExitAnnouncementInfo::class.java)
@@ -256,7 +256,7 @@ class MdnsInterfaceAdvertiserTest {
         val mockProbingInfo = mock(ProbingInfo::class.java)
         doReturn(mockProbingInfo).`when`(repository).setServiceProbing(TEST_SERVICE_ID_1)
 
-        advertiser.restartProbingForConflict(TEST_SERVICE_ID_1)
+        advertiser.maybeRestartProbingForConflict(TEST_SERVICE_ID_1)
 
         verify(prober).restartForConflict(mockProbingInfo)
     }
