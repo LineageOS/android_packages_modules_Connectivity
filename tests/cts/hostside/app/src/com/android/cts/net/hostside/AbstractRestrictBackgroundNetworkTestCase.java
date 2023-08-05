@@ -29,6 +29,7 @@ import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isAppStandbySu
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isBatterySaverSupported;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isDozeModeSupported;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.restrictBackgroundValueToString;
+import static com.android.cts.net.hostside.NetworkPolicyTestUtils.setRestrictBackgroundInternal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -181,6 +182,12 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         mServiceClient.bind();
         mPowerManager = mContext.getSystemService(PowerManager.class);
         executeShellCommand("cmd netpolicy start-watching " + mUid);
+        // Some of the test cases assume that Data saver mode is initially disabled, which might not
+        // always be the case. Therefore, explicitly disable it before running the tests.
+        // Invoke setRestrictBackgroundInternal() directly instead of going through
+        // setRestrictBackground(), as some devices do not fully support the Data saver mode but
+        // still have certain parts of it enabled by default.
+        setRestrictBackgroundInternal(false);
         setAppIdle(false);
         mLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 
