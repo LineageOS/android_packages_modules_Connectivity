@@ -344,7 +344,7 @@ public class NetworkPolicyTestUtils {
         setRestrictBackgroundInternal(enabled);
     }
 
-    private static void setRestrictBackgroundInternal(boolean enabled) {
+    static void setRestrictBackgroundInternal(boolean enabled) {
         executeShellCommand("cmd netpolicy set restrict-background " + enabled);
         final String output = executeShellCommand("cmd netpolicy get restrict-background");
         final String expectedSuffix = enabled ? "enabled" : "disabled";
