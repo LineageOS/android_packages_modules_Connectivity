@@ -63,6 +63,9 @@ int bpfGetIfaceStatsInternal(const char* iface, Stats* stats,
                              const BpfMap<uint32_t, StatsValue>& ifaceStatsMap,
                              const BpfMap<uint32_t, IfaceValue>& ifaceNameMap);
 // For test only
+int bpfGetIfIndexStatsInternal(uint32_t ifindex, Stats* stats,
+                               const BpfMap<uint32_t, StatsValue>& ifaceStatsMap);
+// For test only
 int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>& lines,
                                        const BpfMap<StatsKey, StatsValue>& statsMap,
                                        const BpfMap<uint32_t, IfaceValue>& ifaceMap);
@@ -112,6 +115,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
 
 int bpfGetUidStats(uid_t uid, Stats* stats);
 int bpfGetIfaceStats(const char* iface, Stats* stats);
+int bpfGetIfIndexStats(int ifindex, Stats* stats);
 int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines);
 
 int parseBpfNetworkStatsDev(std::vector<stats_line>* lines);
