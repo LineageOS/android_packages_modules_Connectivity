@@ -3303,6 +3303,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     private static native long nativeGetTotalStat(int type);
     private static native long nativeGetIfaceStat(String iface, int type);
+    private static native long nativeGetIfIndexStat(int ifindex, int type);
     private static native long nativeGetUidStat(int uid, int type);
 
     /** Initializes and registers the Perfetto Network Trace data source */
