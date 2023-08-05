@@ -105,6 +105,25 @@ int bpfGetIfaceStats(const char* iface, Stats* stats) {
     return bpfGetIfaceStatsInternal(iface, stats, ifaceStatsMap, ifaceIndexNameMap);
 }
 
+int bpfGetIfIndexStatsInternal(uint32_t ifindex, Stats* stats,
+                               const BpfMap<uint32_t, StatsValue>& ifaceStatsMap) {
+    InitStats(stats);
+    auto statsEntry = ifaceStatsMap.readValue(ifindex);
+    if (statsEntry.ok()) {
+        stats->rxPackets = statsEntry.value().rxPackets;
+        stats->txPackets = statsEntry.value().txPackets;
+        stats->rxBytes = statsEntry.value().rxBytes;
+        stats->txBytes = statsEntry.value().txBytes;
+        return 0;
+    }
+    return (statsEntry.error().code() == ENOENT) ? 0 : -statsEntry.error().code();
+}
+
+int bpfGetIfIndexStats(int ifindex, Stats* stats) {
+    static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
+    return bpfGetIfIndexStatsInternal(ifindex, stats, ifaceStatsMap);
+}
+
 stats_line populateStatsEntry(const StatsKey& statsKey, const StatsValue& statsEntry,
                               const char* ifname) {
     stats_line newLine;
