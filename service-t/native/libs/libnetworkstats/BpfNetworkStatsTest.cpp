@@ -275,6 +275,20 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetIfaceStatsInternal) {
     expectStatsEqual(totalValue, totalResult);
 }
 
+TEST_F(BpfNetworkStatsHelperTest, TestGetIfIndexStatsInternal) {
+    StatsValue value = {
+          .rxPackets = TEST_PACKET0,
+          .rxBytes = TEST_BYTES0,
+          .txPackets = TEST_PACKET1,
+          .txBytes = TEST_BYTES1,
+    };
+    EXPECT_RESULT_OK(mFakeIfaceStatsMap.writeValue(IFACE_INDEX1, value, BPF_ANY));
+
+    Stats result = {};
+    ASSERT_EQ(0, bpfGetIfIndexStatsInternal(IFACE_INDEX1, &result, mFakeIfaceStatsMap));
+    expectStatsEqual(value, result);
+}
+
 TEST_F(BpfNetworkStatsHelperTest, TestGetStatsDetail) {
     updateIfaceMap(IFACE_NAME1, IFACE_INDEX1);
     updateIfaceMap(IFACE_NAME2, IFACE_INDEX2);
