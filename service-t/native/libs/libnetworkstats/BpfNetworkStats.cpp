@@ -40,8 +40,19 @@ namespace bpf {
 
 using base::Result;
 
+// This explicitly zero-initializes the relevant Stats fields.
+void InitStats(Stats* stats) {
+    stats->rxBytes = 0;
+    stats->rxPackets = 0;
+    stats->txBytes = 0;
+    stats->txPackets = 0;
+    stats->tcpRxPackets = -1;
+    stats->tcpTxPackets = -1;
+}
+
 int bpfGetUidStatsInternal(uid_t uid, Stats* stats,
                            const BpfMap<uint32_t, StatsValue>& appUidStatsMap) {
+    InitStats(stats);
     auto statsEntry = appUidStatsMap.readValue(uid);
     if (statsEntry.ok()) {
         stats->rxPackets = statsEntry.value().rxPackets;
@@ -61,9 +72,8 @@ int bpfGetUidStats(uid_t uid, Stats* stats) {
 int bpfGetIfaceStatsInternal(const char* iface, Stats* stats,
                              const BpfMap<uint32_t, StatsValue>& ifaceStatsMap,
                              const BpfMap<uint32_t, IfaceValue>& ifaceNameMap) {
+    InitStats(stats);
     int64_t unknownIfaceBytesTotal = 0;
-    stats->tcpRxPackets = -1;
-    stats->tcpTxPackets = -1;
     const auto processIfaceStats =
             [iface, stats, &ifaceNameMap, &unknownIfaceBytesTotal](
                     const uint32_t& key,
