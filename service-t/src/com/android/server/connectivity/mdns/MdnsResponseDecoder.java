@@ -23,7 +23,6 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Pair;
 
-import com.android.server.connectivity.mdns.util.MdnsLogger;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.EOFException;
@@ -35,7 +34,6 @@ import java.util.List;
 public class MdnsResponseDecoder {
     public static final int SUCCESS = 0;
     private static final String TAG = "MdnsResponseDecoder";
-    private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
     private final boolean allowMultipleSrvRecordsPerHost =
             MdnsConfigs.allowMultipleSrvRecordsPerHost();
     @Nullable private final String[] serviceType;

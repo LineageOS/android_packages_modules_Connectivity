@@ -152,11 +152,11 @@ public class MdnsSocketProviderTest {
                 .getNetworkInterfaceByName(WIFI_P2P_IFACE_NAME);
         doReturn(mTetheredIfaceWrapper).when(mDeps).getNetworkInterfaceByName(TETHERED_IFACE_NAME);
         doReturn(mock(MdnsInterfaceSocket.class))
-                .when(mDeps).createMdnsInterfaceSocket(any(), anyInt(), any(), any());
+                .when(mDeps).createMdnsInterfaceSocket(any(), anyInt(), any(), any(), any());
         doReturn(TETHERED_IFACE_IDX).when(mDeps).getNetworkInterfaceIndexByName(
-                TETHERED_IFACE_NAME);
+                eq(TETHERED_IFACE_NAME), any());
         doReturn(789).when(mDeps).getNetworkInterfaceIndexByName(
-                WIFI_P2P_IFACE_NAME);
+                eq(WIFI_P2P_IFACE_NAME), any());
         final HandlerThread thread = new HandlerThread("MdnsSocketProviderTest");
         thread.start();
         mHandler = new Handler(thread.getLooper());

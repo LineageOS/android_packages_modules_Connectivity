@@ -44,7 +44,6 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.ArrayMap;
-import android.util.Log;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -118,7 +117,7 @@ public class MdnsSocketProvider {
 
             if (mWifiP2pTetherInterface != null) {
                 if (newP2pIface != null) {
-                    Log.wtf(TAG, "Wifi p2p interface is changed from " + mWifiP2pTetherInterface
+                    mSharedLog.wtf("Wifi p2p interface is changed from " + mWifiP2pTetherInterface
                             + " to " + newP2pIface + " without null broadcast");
                 }
                 // Remove the socket.
@@ -133,7 +132,7 @@ public class MdnsSocketProvider {
             if (newP2pIface != null && !socketAlreadyExists) {
                 // Create a socket for wifi p2p interface.
                 final int ifaceIndex =
-                        mDependencies.getNetworkInterfaceIndexByName(newP2pIface);
+                        mDependencies.getNetworkInterfaceIndexByName(newP2pIface, mSharedLog);
                 createSocket(LOCAL_NET, createLPForTetheredInterface(newP2pIface, ifaceIndex));
             }
         }
@@ -233,21 +232,23 @@ public class MdnsSocketProvider {
         /*** Create a MdnsInterfaceSocket */
         public MdnsInterfaceSocket createMdnsInterfaceSocket(
                 @NonNull NetworkInterface networkInterface, int port, @NonNull Looper looper,
-                @NonNull byte[] packetReadBuffer) throws IOException {
-            return new MdnsInterfaceSocket(networkInterface, port, looper, packetReadBuffer);
+                @NonNull byte[] packetReadBuffer, @NonNull SharedLog sharedLog) throws IOException {
+            return new MdnsInterfaceSocket(networkInterface, port, looper, packetReadBuffer,
+                    sharedLog);
         }
 
         /*** Get network interface by given interface name */
-        public int getNetworkInterfaceIndexByName(@NonNull final String ifaceName) {
+        public int getNetworkInterfaceIndexByName(@NonNull final String ifaceName,
+                @NonNull SharedLog sharedLog) {
             final NetworkInterface iface;
             try {
                 iface = NetworkInterface.getByName(ifaceName);
             } catch (SocketException e) {
-                Log.e(TAG, "Error querying interface", e);
+                sharedLog.e("Error querying interface", e);
                 return IFACE_IDX_NOT_EXIST;
             }
             if (iface == null) {
-                Log.e(TAG, "Interface not found: " + ifaceName);
+                sharedLog.e("Interface not found: " + ifaceName);
                 return IFACE_IDX_NOT_EXIST;
             }
             return iface.getIndex();
@@ -335,7 +336,7 @@ public class MdnsSocketProvider {
         ensureRunningOnHandlerThread(mHandler);
         mRequestStop = false; // Reset stop request flag.
         if (mMonitoringSockets) {
-            Log.d(TAG, "Already monitoring sockets.");
+            mSharedLog.v("Already monitoring sockets.");
             return;
         }
         mSharedLog.i("Start monitoring sockets.");
@@ -390,7 +391,7 @@ public class MdnsSocketProvider {
     public void requestStopWhenInactive() {
         ensureRunningOnHandlerThread(mHandler);
         if (!mMonitoringSockets) {
-            Log.d(TAG, "Monitoring sockets hasn't been started.");
+            mSharedLog.v("Monitoring sockets hasn't been started.");
             return;
         }
         mRequestStop = true;
@@ -410,7 +411,7 @@ public class MdnsSocketProvider {
         mActiveNetworksLinkProperties.put(network, lp);
         if (!matchRequestedNetwork(network)) {
             if (DBG) {
-                Log.d(TAG, "Ignore LinkProperties change. There is no request for the"
+                mSharedLog.v("Ignore LinkProperties change. There is no request for the"
                         + " Network:" + network);
             }
             return;
@@ -428,7 +429,7 @@ public class MdnsSocketProvider {
             @NonNull final List<LinkAddress> updatedAddresses) {
         for (int i = 0; i < mTetherInterfaceSockets.size(); ++i) {
             String tetheringInterfaceName = mTetherInterfaceSockets.keyAt(i);
-            if (mDependencies.getNetworkInterfaceIndexByName(tetheringInterfaceName)
+            if (mDependencies.getNetworkInterfaceIndexByName(tetheringInterfaceName, mSharedLog)
                     == ifaceIndex) {
                 updateSocketInfoAddress(null /* network */,
                         mTetherInterfaceSockets.valueAt(i), updatedAddresses);
@@ -462,7 +463,7 @@ public class MdnsSocketProvider {
             // tethering are only created if there is a request for all networks (interfaces).
             // Therefore, only update the interface list and skip this change if no such request.
             if (DBG) {
-                Log.d(TAG, "Ignore tether interfaces change. There is no request for all"
+                mSharedLog.v("Ignore tether interfaces change. There is no request for all"
                         + " networks.");
             }
             current.clear();
@@ -482,7 +483,7 @@ public class MdnsSocketProvider {
                 continue;
             }
 
-            int ifaceIndex = mDependencies.getNetworkInterfaceIndexByName(name);
+            int ifaceIndex = mDependencies.getNetworkInterfaceIndexByName(name, mSharedLog);
             createSocket(LOCAL_NET, createLPForTetheredInterface(name, ifaceIndex));
         }
         for (String name : interfaceDiff.removed) {
@@ -495,7 +496,7 @@ public class MdnsSocketProvider {
     private void createSocket(NetworkKey networkKey, LinkProperties lp) {
         final String interfaceName = lp.getInterfaceName();
         if (interfaceName == null) {
-            Log.e(TAG, "Can not create socket with null interface name.");
+            mSharedLog.e("Can not create socket with null interface name.");
             return;
         }
 
@@ -514,7 +515,7 @@ public class MdnsSocketProvider {
                 if (knownTransports != null) {
                     transports = knownTransports;
                 } else {
-                    Log.wtf(TAG, "transports is missing for key: " + networkKey);
+                    mSharedLog.wtf("transports is missing for key: " + networkKey);
                     transports = new int[0];
                 }
             }
@@ -525,7 +526,8 @@ public class MdnsSocketProvider {
             mSharedLog.log("Create socket on net:" + networkKey + ", ifName:" + interfaceName);
             final MdnsInterfaceSocket socket = mDependencies.createMdnsInterfaceSocket(
                     networkInterface.getNetworkInterface(), MdnsConstants.MDNS_PORT, mLooper,
-                    mPacketReadBuffer);
+                    mPacketReadBuffer, mSharedLog.forSubComponent(
+                            MdnsInterfaceSocket.class.getSimpleName() + "/" + interfaceName));
             final List<LinkAddress> addresses = lp.getLinkAddresses();
             final Network network =
                     networkKey == LOCAL_NET ? null : ((NetworkAsKey) networkKey).mNetwork;
@@ -637,7 +639,7 @@ public class MdnsSocketProvider {
             final LinkProperties lp = mActiveNetworksLinkProperties.get(network);
             if (lp == null) {
                 // The requested network is not existed. Maybe wait for LinkProperties change later.
-                if (DBG) Log.d(TAG, "There is no LinkProperties for this network:" + network);
+                if (DBG) mSharedLog.v("There is no LinkProperties for this network:" + network);
                 return;
             }
             createSocket(new NetworkAsKey(network), lp);
@@ -652,7 +654,8 @@ public class MdnsSocketProvider {
     private void retrieveAndNotifySocketFromInterface(String interfaceName, SocketCallback cb) {
         final SocketInfo socketInfo = mTetherInterfaceSockets.get(interfaceName);
         if (socketInfo == null) {
-            int ifaceIndex = mDependencies.getNetworkInterfaceIndexByName(interfaceName);
+            int ifaceIndex = mDependencies.getNetworkInterfaceIndexByName(interfaceName,
+                    mSharedLog);
             createSocket(
                     LOCAL_NET,
                     createLPForTetheredInterface(interfaceName, ifaceIndex));

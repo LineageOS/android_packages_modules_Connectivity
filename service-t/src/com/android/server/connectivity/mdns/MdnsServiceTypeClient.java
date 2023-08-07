@@ -656,7 +656,8 @@ public class MdnsServiceTypeClient {
                                 taskArgs.config.onlyUseIpv6OnIpv6OnlyNetworks,
                                 sendDiscoveryQueries,
                                 servicesToResolve,
-                                clock)
+                                clock,
+                                sharedLog)
                                 .call();
             } catch (RuntimeException e) {
                 sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",

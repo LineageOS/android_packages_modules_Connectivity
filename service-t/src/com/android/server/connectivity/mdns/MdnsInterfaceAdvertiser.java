@@ -22,7 +22,6 @@ import android.net.LinkAddress;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.HexDump;
@@ -41,8 +40,6 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     private static final boolean DBG = MdnsAdvertiser.DBG;
     @VisibleForTesting
     public static final long EXIT_ANNOUNCEMENT_DELAY_MS = 100L;
-    @NonNull
-    private final String mTag;
     @NonNull
     private final ProbingCallback mProbingCallback = new ProbingCallback();
     @NonNull
@@ -151,22 +148,30 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         /** @see MdnsReplySender */
         @NonNull
         public MdnsReplySender makeReplySender(@NonNull String interfaceTag, @NonNull Looper looper,
-                @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer) {
-            return new MdnsReplySender(interfaceTag, looper, socket, packetCreationBuffer);
+                @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer,
+                @NonNull SharedLog sharedLog) {
+            return new MdnsReplySender(looper, socket, packetCreationBuffer,
+                    sharedLog.forSubComponent(
+                            MdnsReplySender.class.getSimpleName() + "/" + interfaceTag));
         }
 
         /** @see MdnsAnnouncer */
         public MdnsAnnouncer makeMdnsAnnouncer(@NonNull String interfaceTag, @NonNull Looper looper,
                 @NonNull MdnsReplySender replySender,
-                @Nullable PacketRepeaterCallback<MdnsAnnouncer.BaseAnnouncementInfo> cb) {
-            return new MdnsAnnouncer(interfaceTag, looper, replySender, cb);
+                @Nullable PacketRepeaterCallback<MdnsAnnouncer.BaseAnnouncementInfo> cb,
+                @NonNull SharedLog sharedLog) {
+            return new MdnsAnnouncer(looper, replySender, cb,
+                    sharedLog.forSubComponent(
+                            MdnsAnnouncer.class.getSimpleName() + "/" + interfaceTag));
         }
 
         /** @see MdnsProber */
         public MdnsProber makeMdnsProber(@NonNull String interfaceTag, @NonNull Looper looper,
                 @NonNull MdnsReplySender replySender,
-                @NonNull PacketRepeaterCallback<MdnsProber.ProbingInfo> cb) {
-            return new MdnsProber(interfaceTag, looper, replySender, cb);
+                @NonNull PacketRepeaterCallback<MdnsProber.ProbingInfo> cb,
+                @NonNull SharedLog sharedLog) {
+            return new MdnsProber(looper, replySender, cb, sharedLog.forSubComponent(
+                    MdnsProber.class.getSimpleName() + "/" + interfaceTag));
         }
     }
 
@@ -182,17 +187,17 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
             @NonNull List<LinkAddress> initialAddresses, @NonNull Looper looper,
             @NonNull byte[] packetCreationBuffer, @NonNull Callback cb, @NonNull Dependencies deps,
             @NonNull String[] deviceHostName, @NonNull SharedLog sharedLog) {
-        mTag = MdnsInterfaceAdvertiser.class.getSimpleName() + "/" + sharedLog.getTag();
         mRecordRepository = deps.makeRecordRepository(looper, deviceHostName);
         mRecordRepository.updateAddresses(initialAddresses);
         mSocket = socket;
         mCb = cb;
         mCbHandler = new Handler(looper);
         mReplySender = deps.makeReplySender(sharedLog.getTag(), looper, socket,
-                packetCreationBuffer);
+                packetCreationBuffer, sharedLog);
         mAnnouncer = deps.makeMdnsAnnouncer(sharedLog.getTag(), looper, mReplySender,
-                mAnnouncingCallback);
-        mProber = deps.makeMdnsProber(sharedLog.getTag(), looper, mReplySender, mProbingCallback);
+                mAnnouncingCallback, sharedLog);
+        mProber = deps.makeMdnsProber(sharedLog.getTag(), looper, mReplySender, mProbingCallback,
+                sharedLog);
         mSharedLog = sharedLog;
     }
 
@@ -318,20 +323,18 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         try {
             packet = MdnsPacket.parse(new MdnsPacketReader(recvbuf, length));
         } catch (MdnsPacket.ParseException e) {
-            Log.e(mTag, "Error parsing mDNS packet", e);
+            mSharedLog.e("Error parsing mDNS packet", e);
             if (DBG) {
-                Log.v(
-                        mTag, "Packet: " + HexDump.toHexString(recvbuf, 0, length));
+                mSharedLog.v("Packet: " + HexDump.toHexString(recvbuf, 0, length));
             }
             return;
         }
 
         if (DBG) {
-            Log.v(mTag,
-                    "Parsed packet with " + packet.questions.size() + " questions, "
-                            + packet.answers.size() + " answers, "
-                            + packet.authorityRecords.size() + " authority, "
-                            + packet.additionalRecords.size() + " additional from " + src);
+            mSharedLog.v("Parsed packet with " + packet.questions.size() + " questions, "
+                    + packet.answers.size() + " answers, "
+                    + packet.authorityRecords.size() + " authority, "
+                    + packet.additionalRecords.size() + " additional from " + src);
         }
 
         for (int conflictServiceId : mRecordRepository.getConflictingServices(packet)) {

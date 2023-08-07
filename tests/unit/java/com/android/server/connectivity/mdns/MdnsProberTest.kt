@@ -21,6 +21,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import com.android.internal.util.HexDump
+import com.android.net.module.util.SharedLog
 import com.android.server.connectivity.mdns.MdnsProber.ProbingInfo
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
@@ -55,6 +56,7 @@ private val TEST_SERVICE_NAME_3 = arrayOf("Testservice", "_nmt", "_tcp", "local"
 class MdnsProberTest {
     private val thread = HandlerThread(MdnsProberTest::class.simpleName)
     private val socket = mock(MdnsInterfaceSocket::class.java)
+    private val sharedLog = mock(SharedLog::class.java)
     @Suppress("UNCHECKED_CAST")
     private val cb = mock(MdnsPacketRepeater.PacketRepeaterCallback::class.java)
         as MdnsPacketRepeater.PacketRepeaterCallback<ProbingInfo>
@@ -82,8 +84,9 @@ class MdnsProberTest {
     private class TestProber(
         looper: Looper,
         replySender: MdnsReplySender,
-        cb: PacketRepeaterCallback<ProbingInfo>
-    ) : MdnsProber("testiface", looper, replySender, cb) {
+        cb: PacketRepeaterCallback<ProbingInfo>,
+        sharedLog: SharedLog
+    ) : MdnsProber(looper, replySender, cb, sharedLog) {
         override fun getInitialDelay() = 0L
     }
 
@@ -116,8 +119,8 @@ class MdnsProberTest {
 
     @Test
     fun testProbe() {
-        val replySender = MdnsReplySender("testiface", thread.looper, socket, buffer)
-        val prober = TestProber(thread.looper, replySender, cb)
+        val replySender = MdnsReplySender(thread.looper, socket, buffer, sharedLog)
+        val prober = TestProber(thread.looper, replySender, cb, sharedLog)
         val probeInfo = TestProbeInfo(
                 listOf(makeServiceRecord(TEST_SERVICE_NAME_1, 37890)))
         prober.startProbing(probeInfo)
@@ -140,8 +143,8 @@ class MdnsProberTest {
 
     @Test
     fun testProbeMultipleRecords() {
-        val replySender = MdnsReplySender("testiface", thread.looper, socket, buffer)
-        val prober = TestProber(thread.looper, replySender, cb)
+        val replySender = MdnsReplySender(thread.looper, socket, buffer, sharedLog)
+        val prober = TestProber(thread.looper, replySender, cb, sharedLog)
         val probeInfo = TestProbeInfo(listOf(
                 makeServiceRecord(TEST_SERVICE_NAME_1, 37890),
                 makeServiceRecord(TEST_SERVICE_NAME_2, 37891),
@@ -178,8 +181,8 @@ class MdnsProberTest {
 
     @Test
     fun testStopProbing() {
-        val replySender = MdnsReplySender("testiface", thread.looper, socket, buffer)
-        val prober = TestProber(thread.looper, replySender, cb)
+        val replySender = MdnsReplySender(thread.looper, socket, buffer, sharedLog)
+        val prober = TestProber(thread.looper, replySender, cb, sharedLog)
         val probeInfo = TestProbeInfo(
                 listOf(makeServiceRecord(TEST_SERVICE_NAME_1, 37890)),
                 // delayMs is the delay between each probe, so does not apply to the first one

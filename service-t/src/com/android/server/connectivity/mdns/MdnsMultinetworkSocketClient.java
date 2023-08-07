@@ -25,7 +25,8 @@ import android.net.Network;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.ArrayMap;
-import android.util.Log;
+
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -46,6 +47,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
 
     @NonNull private final Handler mHandler;
     @NonNull private final MdnsSocketProvider mSocketProvider;
+    @NonNull private final SharedLog mSharedLog;
 
     private final ArrayMap<MdnsServiceBrowserListener, InterfaceSocketCallback> mRequestedNetworks =
             new ArrayMap<>();
@@ -55,9 +57,11 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     private int mReceivedPacketNumber = 0;
 
     public MdnsMultinetworkSocketClient(@NonNull Looper looper,
-            @NonNull MdnsSocketProvider provider) {
+            @NonNull MdnsSocketProvider provider,
+            @NonNull SharedLog sharedLog) {
         mHandler = new Handler(looper);
         mSocketProvider = provider;
+        mSharedLog = sharedLog;
     }
 
     private class InterfaceSocketCallback implements MdnsSocketProvider.SocketCallback {
@@ -172,7 +176,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             throw new IllegalArgumentException("Can not register duplicated listener");
         }
 
-        if (DBG) Log.d(TAG, "notifyNetworkRequested: network=" + network);
+        if (DBG) mSharedLog.v("notifyNetworkRequested: network=" + network);
         callback = new InterfaceSocketCallback(socketCreationCallback);
         mRequestedNetworks.put(listener, callback);
         mSocketProvider.requestSocket(network, callback);
@@ -184,7 +188,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         ensureRunningOnHandlerThread(mHandler);
         final InterfaceSocketCallback callback = mRequestedNetworks.get(listener);
         if (callback == null) {
-            Log.e(TAG, "Can not be unrequested with unknown listener=" + listener);
+            mSharedLog.e("Can not be unrequested with unknown listener=" + listener);
             return;
         }
         callback.onNetworkUnrequested();
@@ -222,7 +226,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
                 try {
                     socket.send(packet);
                 } catch (IOException e) {
-                    Log.e(TAG, "Failed to send a mDNS packet.", e);
+                    mSharedLog.e("Failed to send a mDNS packet.", e);
                 }
             }
         }
@@ -249,7 +253,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
             response = MdnsResponseDecoder.parseResponse(recvbuf, length);
         } catch (MdnsPacket.ParseException e) {
             if (e.code != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
-                Log.e(TAG, e.getMessage(), e);
+                mSharedLog.e(e.getMessage(), e);
                 if (mCallback != null) {
                     mCallback.onFailedToParseMdnsResponse(packetNumber, e.code, socketKey);
                 }
