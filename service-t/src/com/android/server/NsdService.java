@@ -1608,7 +1608,8 @@ public class NsdService extends INsdManager.Stub {
                 mRunningAppActiveImportanceCutoff);
 
         mMdnsSocketClient =
-                new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider);
+                new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider,
+                        LOGGER.forSubComponent("MdnsMultinetworkSocketClient"));
         mMdnsDiscoveryManager = deps.makeMdnsDiscoveryManager(new ExecutorProvider(),
                 mMdnsSocketClient, LOGGER.forSubComponent("MdnsDiscoveryManager"));
         handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));

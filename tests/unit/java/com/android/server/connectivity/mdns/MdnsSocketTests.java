@@ -21,6 +21,7 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.android.net.module.util.SharedLog;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -50,6 +51,7 @@ public class MdnsSocketTests {
     @Mock private NetworkInterfaceWrapper mockNetworkInterfaceWrapper;
     @Mock private MulticastSocket mockMulticastSocket;
     @Mock private MulticastNetworkInterfaceProvider mockMulticastNetworkInterfaceProvider;
+    @Mock private SharedLog sharedLog;
     private SocketAddress socketIPv4Address;
     private SocketAddress socketIPv6Address;
 
@@ -75,7 +77,8 @@ public class MdnsSocketTests {
 
     @Test
     public void mdnsSocket_basicFunctionality() throws IOException {
-        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket);
+        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket,
+                sharedLog);
         mdnsSocket.send(datagramPacket);
         verify(mockMulticastSocket).setNetworkInterface(networkInterface);
         verify(mockMulticastSocket).send(datagramPacket);
@@ -101,7 +104,8 @@ public class MdnsSocketTests {
         when(mockMulticastNetworkInterfaceProvider.getMulticastNetworkInterfaces())
                 .thenReturn(Collections.singletonList(mockNetworkInterfaceWrapper));
 
-        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket);
+        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket,
+                sharedLog);
 
         when(mockMulticastNetworkInterfaceProvider.isOnIpV6OnlyNetwork(
                 Collections.singletonList(mockNetworkInterfaceWrapper)))
@@ -125,7 +129,8 @@ public class MdnsSocketTests {
         when(mockMulticastNetworkInterfaceProvider.getMulticastNetworkInterfaces())
                 .thenReturn(Collections.singletonList(mockNetworkInterfaceWrapper));
 
-        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket);
+        mdnsSocket = new MdnsSocket(mockMulticastNetworkInterfaceProvider, mockMulticastSocket,
+                sharedLog);
 
         when(mockMulticastNetworkInterfaceProvider.isOnIpV6OnlyNetwork(
                 Collections.singletonList(mockNetworkInterfaceWrapper)))

@@ -24,7 +24,8 @@ import android.annotation.Nullable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
+
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,6 +46,8 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     protected final Handler mHandler;
     @Nullable
     private final PacketRepeaterCallback<T> mCb;
+    @NonNull
+    private final SharedLog mSharedLog;
 
     /**
      * Status callback from {@link MdnsPacketRepeater}.
@@ -87,12 +90,6 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         int getNumSends();
     }
 
-    /**
-     * Get the logging tag to use.
-     */
-    @NonNull
-    protected abstract String getTag();
-
     private final class ProbeHandler extends Handler {
         ProbeHandler(@NonNull Looper looper) {
             super(looper);
@@ -112,7 +109,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
 
             final MdnsPacket packet = request.getPacket(index);
             if (DBG) {
-                Log.v(getTag(), "Sending packets for iteration " + index + " out of "
+                mSharedLog.v("Sending packets for iteration " + index + " out of "
                         + request.getNumSends() + " for ID " + msg.what);
             }
             // Send to both v4 and v6 addresses; the reply sender will take care of ignoring the
@@ -121,7 +118,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
                 try {
                     mReplySender.sendNow(packet, destination);
                 } catch (IOException e) {
-                    Log.e(getTag(), "Error sending packet to " + destination, e);
+                    mSharedLog.e("Error sending packet to " + destination, e);
                 }
             }
 
@@ -133,7 +130,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
                 // likely not to be available since the device is in deep sleep anyway.
                 final long delay = request.getDelayMs(nextIndex);
                 sendMessageDelayed(obtainMessage(msg.what, nextIndex, 0, request), delay);
-                if (DBG) Log.v(getTag(), "Scheduled next packet in " + delay + "ms");
+                if (DBG) mSharedLog.v("Scheduled next packet in " + delay + "ms");
             }
 
             // Call onSent after scheduling the next run, to allow the callback to cancel it
@@ -144,15 +141,16 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     }
 
     protected MdnsPacketRepeater(@NonNull Looper looper, @NonNull MdnsReplySender replySender,
-            @Nullable PacketRepeaterCallback<T> cb) {
+            @Nullable PacketRepeaterCallback<T> cb, @NonNull SharedLog sharedLog) {
         mHandler = new ProbeHandler(looper);
         mReplySender = replySender;
         mCb = cb;
+        mSharedLog = sharedLog;
     }
 
     protected void startSending(int id, @NonNull T request, long initialDelayMs) {
         if (DBG) {
-            Log.v(getTag(), "Starting send with id " + id + ", request "
+            mSharedLog.v("Starting send with id " + id + ", request "
                     + request.getClass().getSimpleName() + ", delay " + initialDelayMs);
         }
         mHandler.sendMessageDelayed(mHandler.obtainMessage(id, 0, 0, request), initialDelayMs);
@@ -171,7 +169,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         // message cannot be cancelled.
         if (mHandler.hasMessages(id)) {
             if (DBG) {
-                Log.v(getTag(), "Stopping send on id " + id);
+                mSharedLog.v("Stopping send on id " + id);
             }
             mHandler.removeMessages(id);
             return true;
