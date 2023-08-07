@@ -15,7 +15,18 @@
  */
 package com.android.server.remoteauth.ranging;
 
+import static android.content.pm.PackageManager.FEATURE_UWB;
+
+import static com.android.server.remoteauth.ranging.RangingCapabilities.RANGING_METHOD_UWB;
+
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
+import android.os.Build;
+import android.util.Log;
+
+import androidx.core.uwb.backend.impl.internal.UwbFeatureFlags;
+import androidx.core.uwb.backend.impl.internal.UwbServiceImpl;
 
 /**
  * Manages the creation of generic device to device ranging session and obtaining device's ranging
@@ -25,16 +36,46 @@ import android.content.Context;
  * outside of this class.
  */
 public class RangingManager {
+    private static final String TAG = "RangingManager";
 
-    public RangingManager(Context context) {}
+    private Context mContext;
+    @NonNull private RangingCapabilities mCachedRangingCapabilities;
+    @NonNull private UwbServiceImpl mUwbServiceImpl;
+
+    public RangingManager(@NonNull Context context) {
+        mContext = context;
+        if (mContext.getPackageManager().hasSystemFeature(FEATURE_UWB)) {
+            initiateUwb();
+        }
+    }
+
+    /**
+     * Shutdown and stop all listeners and tasks. After shutdown, RangingManager shall not be used
+     * anymore.
+     */
+    public void shutdown() {
+        if (mUwbServiceImpl != null) {
+            mUwbServiceImpl.shutdown();
+        }
+        Log.i(TAG, "shutdown");
+    }
 
     /**
      * Gets the {@link RangingCapabilities} of this device.
      *
      * @return RangingCapabilities.
      */
+    @NonNull
     public RangingCapabilities getRangingCapabilities() {
-        return null;
+        if (mCachedRangingCapabilities == null) {
+            RangingCapabilities.Builder builder = new RangingCapabilities.Builder();
+            if (mUwbServiceImpl != null) {
+                builder.addSupportedRangingMethods(RANGING_METHOD_UWB);
+                builder.setUwbRangingCapabilities(mUwbServiceImpl.getRangingCapabilities());
+            }
+            mCachedRangingCapabilities = builder.build();
+        }
+        return mCachedRangingCapabilities;
     }
 
     /**
@@ -42,9 +83,23 @@ public class RangingManager {
      * provided based on the rangingCapabilities of the device.
      *
      * @param sessionParameters parameters used to setup the session.
-     * @return the created RangingSession.
+     * @return the created RangingSession. Null if session creation failed.
      */
-    public RangingSession createSession(SessionParameters sessionParameters) {
+    @Nullable
+    public RangingSession createSession(@NonNull SessionParameters sessionParameters) {
         return null;
+    }
+
+    /** Initiation required for ranging with UWB. */
+    private void initiateUwb() {
+        UwbFeatureFlags uwbFeatureFlags =
+                new UwbFeatureFlags.Builder()
+                        .setSkipRangingCapabilitiesCheck(
+                                Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2)
+                        .setReversedByteOrderFiraParams(
+                                Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU)
+                        .build();
+        mUwbServiceImpl = new UwbServiceImpl(mContext, uwbFeatureFlags);
+        Log.i(TAG, "RangingManager initiateUwb complete");
     }
 }
