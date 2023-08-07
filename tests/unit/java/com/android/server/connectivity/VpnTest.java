@@ -182,7 +182,6 @@ import com.android.server.IpSecService;
 import com.android.server.VpnTestBase;
 import com.android.server.vcn.util.PersistableBundleUtils;
 import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.SkipPresubmit;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -1712,7 +1711,6 @@ public class VpnTest extends VpnTestBase {
                 errorCode);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testStartPlatformVpnFailedWithRecoverableError() throws Exception {
         final IkeProtocolException exception = mock(IkeProtocolException.class);
@@ -1722,7 +1720,6 @@ public class VpnTest extends VpnTestBase {
                 VpnManager.CATEGORY_EVENT_IKE_ERROR, VpnManager.ERROR_CLASS_RECOVERABLE, errorCode);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testStartPlatformVpnFailedWithUnknownHostException() throws Exception {
         final IkeNonProtocolException exception = mock(IkeNonProtocolException.class);
@@ -1734,7 +1731,6 @@ public class VpnTest extends VpnTestBase {
                 errorCode);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testStartPlatformVpnFailedWithIkeTimeoutException() throws Exception {
         final IkeNonProtocolException exception = mock(IkeNonProtocolException.class);
@@ -1756,7 +1752,6 @@ public class VpnTest extends VpnTestBase {
                 VpnManager.ERROR_CODE_NETWORK_LOST);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testStartPlatformVpnFailedWithIOException() throws Exception {
         final IkeNonProtocolException exception = mock(IkeNonProtocolException.class);
@@ -2389,7 +2384,6 @@ public class VpnTest extends VpnTestBase {
                 true /* areLongLivedTcpConnectionsExpensive */);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testPreferredIpProtocolFromCarrierConfig_v4UDP() throws Exception {
         doTestReadCarrierConfig(createTestCellNc(),
@@ -2402,7 +2396,6 @@ public class VpnTest extends VpnTestBase {
                 false /* areLongLivedTcpConnectionsExpensive */);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testPreferredIpProtocolFromCarrierConfig_v6ESP() throws Exception {
         doTestReadCarrierConfig(createTestCellNc(),
@@ -2415,7 +2408,6 @@ public class VpnTest extends VpnTestBase {
                 false /* areLongLivedTcpConnectionsExpensive */);
     }
 
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     @Test
     public void testPreferredIpProtocolFromCarrierConfig_v6UDP() throws Exception {
         doTestReadCarrierConfig(createTestCellNc(),
