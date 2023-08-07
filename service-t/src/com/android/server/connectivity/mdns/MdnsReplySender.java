@@ -22,8 +22,8 @@ import android.annotation.NonNull;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 
+import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsRecordRepository.ReplyInfo;
 
 import java.io.IOException;
@@ -43,21 +43,21 @@ import java.util.Collections;
 public class MdnsReplySender {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final int MSG_SEND = 1;
-
-    private final String mLogTag;
     @NonNull
     private final MdnsInterfaceSocket mSocket;
     @NonNull
     private final Handler mHandler;
     @NonNull
     private final byte[] mPacketCreationBuffer;
+    @NonNull
+    private final SharedLog mSharedLog;
 
-    public MdnsReplySender(@NonNull String interfaceTag, @NonNull Looper looper,
-            @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer) {
+    public MdnsReplySender(@NonNull Looper looper, @NonNull MdnsInterfaceSocket socket,
+            @NonNull byte[] packetCreationBuffer, @NonNull SharedLog sharedLog) {
         mHandler = new SendHandler(looper);
-        mLogTag = MdnsReplySender.class.getSimpleName() + "/" +  interfaceTag;
         mSocket = socket;
         mPacketCreationBuffer = packetCreationBuffer;
+        mSharedLog = sharedLog;
     }
 
     /**
@@ -69,7 +69,7 @@ public class MdnsReplySender {
         mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_SEND, reply), reply.sendDelayMs);
 
         if (DBG) {
-            Log.v(mLogTag, "Scheduling " + reply);
+            mSharedLog.v("Scheduling " + reply);
         }
     }
 
@@ -134,7 +134,7 @@ public class MdnsReplySender {
         @Override
         public void handleMessage(@NonNull Message msg) {
             final ReplyInfo replyInfo = (ReplyInfo) msg.obj;
-            if (DBG) Log.v(mLogTag, "Sending " + replyInfo);
+            if (DBG) mSharedLog.v("Sending " + replyInfo);
 
             final int flags = 0x8400; // Response, authoritative (rfc6762 18.4)
             final MdnsPacket packet = new MdnsPacket(flags,
@@ -146,7 +146,7 @@ public class MdnsReplySender {
             try {
                 sendNow(packet, replyInfo.destination);
             } catch (IOException e) {
-                Log.e(mLogTag, "Error sending MDNS response", e);
+                mSharedLog.e("Error sending MDNS response", e);
             }
         }
     }
