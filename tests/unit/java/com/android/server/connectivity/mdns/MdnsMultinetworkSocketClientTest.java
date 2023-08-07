@@ -36,6 +36,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 
 import com.android.net.module.util.HexDump;
+import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsSocketClientBase.SocketCreationCallback;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -66,6 +67,7 @@ public class MdnsMultinetworkSocketClientTest {
     @Mock private MdnsServiceBrowserListener mListener;
     @Mock private MdnsSocketClientBase.Callback mCallback;
     @Mock private SocketCreationCallback mSocketCreationCallback;
+    @Mock private SharedLog mSharedLog;
     private MdnsMultinetworkSocketClient mSocketClient;
     private Handler mHandler;
     private SocketKey mSocketKey;
@@ -78,7 +80,7 @@ public class MdnsMultinetworkSocketClientTest {
         thread.start();
         mHandler = new Handler(thread.getLooper());
         mSocketKey = new SocketKey(1000 /* interfaceIndex */);
-        mSocketClient = new MdnsMultinetworkSocketClient(thread.getLooper(), mProvider);
+        mSocketClient = new MdnsMultinetworkSocketClient(thread.getLooper(), mProvider, mSharedLog);
         mHandler.post(() -> mSocketClient.setCallback(mCallback));
     }
 

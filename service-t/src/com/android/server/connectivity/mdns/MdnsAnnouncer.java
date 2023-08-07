@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 import android.os.Looper;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.SharedLog;
 
 import java.util.Collections;
 import java.util.List;
@@ -38,9 +39,6 @@ public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.BaseAnnounce
     // Matches delay and GoodbyeCount used by the legacy implementation
     private static final long EXIT_DELAY_MS = 2000L;
     private static final int EXIT_COUNT = 3;
-
-    @NonNull
-    private final String mLogTag;
 
     /** Base class for announcement requests to send with {@link MdnsAnnouncer}. */
     public abstract static class BaseAnnouncementInfo implements MdnsPacketRepeater.Request {
@@ -105,16 +103,11 @@ public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.BaseAnnounce
         }
     }
 
-    public MdnsAnnouncer(@NonNull String interfaceTag, @NonNull Looper looper,
+    public MdnsAnnouncer(@NonNull Looper looper,
             @NonNull MdnsReplySender replySender,
-            @Nullable PacketRepeaterCallback<BaseAnnouncementInfo> cb) {
-        super(looper, replySender, cb);
-        mLogTag = MdnsAnnouncer.class.getSimpleName() + "/" + interfaceTag;
-    }
-
-    @Override
-    protected String getTag() {
-        return mLogTag;
+            @Nullable PacketRepeaterCallback<BaseAnnouncementInfo> cb,
+            @NonNull SharedLog sharedLog) {
+        super(looper, replySender, cb, sharedLog);
     }
 
     // TODO: Notify MdnsRecordRepository that the records were announced for that service ID,
