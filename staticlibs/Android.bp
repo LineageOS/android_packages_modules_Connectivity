@@ -246,6 +246,7 @@ java_library {
         "framework-annotations-lib",
         "framework-connectivity.stubs.module_lib",
         "framework-connectivity-t.stubs.module_lib",
+        "framework-location.stubs.module_lib",
     ],
     jarjar_rules: "jarjar-rules-shared.txt",
     visibility: [
