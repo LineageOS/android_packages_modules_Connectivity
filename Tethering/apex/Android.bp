@@ -203,6 +203,8 @@ bootclasspath_fragment {
         // result in a build failure due to inconsistent flags.
         package_prefixes: [
             "android.nearby.aidl",
+            "android.remoteauth.aidl",
+            "android.remoteauth",
             "android.net.apf",
             "android.net.connectivity",
             "android.net.http.apihelpers",
