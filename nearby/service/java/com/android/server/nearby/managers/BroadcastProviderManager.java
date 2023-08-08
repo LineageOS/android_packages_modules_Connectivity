@@ -79,6 +79,12 @@ public class BroadcastProviderManager implements BleBroadcastProvider.BroadcastL
                 if (listener == null) {
                     return;
                 }
+                if (mBroadcastListener != null) {
+                    Log.i(TAG, "We do not support multi clients yet,"
+                            + " please stop previous broadcast first.");
+                    reportBroadcastStatus(listener, BroadcastCallback.STATUS_FAILURE);
+                    return;
+                }
                 if (!mNearbyConfiguration.isTestAppSupported()) {
                     NearbyConfiguration configuration = new NearbyConfiguration();
                     if (!configuration.isPresenceBroadcastLegacyEnabled()) {
