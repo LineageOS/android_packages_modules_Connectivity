@@ -16,8 +16,15 @@
 package com.android.server.remoteauth.ranging;
 
 import android.annotation.NonNull;
+import android.content.Context;
+import android.util.Log;
 
 import androidx.annotation.IntDef;
+
+import com.android.internal.util.Preconditions;
+import com.android.server.remoteauth.util.Crypto;
+
+import com.google.common.hash.Hashing;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -35,17 +42,49 @@ import java.util.concurrent.Executor;
  * <p>Ranging method specific implementation shall be implemented in the extended class.
  */
 public abstract class RangingSession {
+    private static final String TAG = "RangingSession";
 
     /** Types of ranging error. */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(
             value = {
                 RANGING_ERROR_UNKNOWN,
+                RANGING_ERROR_INVALID_PARAMETERS,
+                RANGING_ERROR_STOPPED_BY_REQUEST,
+                RANGING_ERROR_STOPPED_BY_PEER,
+                RANGING_ERROR_FAILED_TO_START,
+                RANGING_ERROR_FAILED_TO_STOP,
+                RANGING_ERROR_SYSTEM_ERROR,
+                RANGING_ERROR_SYSTEM_TIMEOUT,
             })
     public @interface RangingError {}
 
     /** Unknown ranging error type. */
     public static final int RANGING_ERROR_UNKNOWN = 0x0;
+
+    /** Ranging error due to invalid parameters. */
+    public static final int RANGING_ERROR_INVALID_PARAMETERS = 0x1;
+
+    /** Ranging error due to stopped by calling {@link #stop}. */
+    public static final int RANGING_ERROR_STOPPED_BY_REQUEST = 0x2;
+
+    /** Ranging error due to stopped by the peer device. */
+    public static final int RANGING_ERROR_STOPPED_BY_PEER = 0x3;
+
+    /** Ranging error due to failure to start ranging. */
+    public static final int RANGING_ERROR_FAILED_TO_START = 0x4;
+
+    /** Ranging error due to failure to stop ranging. */
+    public static final int RANGING_ERROR_FAILED_TO_STOP = 0x5;
+
+    /**
+     * Ranging error due to system error cause by changes such as privacy policy, power management
+     * policy, permissions, and more.
+     */
+    public static final int RANGING_ERROR_SYSTEM_ERROR = 0x6;
+
+    /** Ranging error due to system timeout in retry attempts. */
+    public static final int RANGING_ERROR_SYSTEM_TIMEOUT = 0x7;
 
     /** Interface for ranging update callbacks. */
     public interface RangingCallback {
@@ -55,7 +94,8 @@ public abstract class RangingSession {
          * @param sessionInfo info about this ranging session.
          * @param rangingReport new ranging report
          */
-        void onRangingReport(SessionInfo sessionInfo, RangingReport rangingReport);
+        void onRangingReport(
+                @NonNull SessionInfo sessionInfo, @NonNull RangingReport rangingReport);
 
         /**
          * Call upon any ranging error events.
@@ -63,7 +103,49 @@ public abstract class RangingSession {
          * @param sessionInfo info about this ranging session.
          * @param rangingError error type
          */
-        void onError(SessionInfo sessionInfo, @RangingError int rangingError);
+        void onError(@NonNull SessionInfo sessionInfo, @RangingError int rangingError);
+    }
+
+    protected Context mContext;
+    protected SessionInfo mSessionInfo;
+    protected float mLowerProximityBoundaryM;
+    protected float mUpperProximityBoundaryM;
+    protected boolean mAutoDeriveParams;
+    protected byte[] mBaseKey;
+    protected byte[] mSyncData;
+    protected int mSyncCounter;
+    protected byte[] mDerivedData;
+    protected int mDerivedDataLength;
+
+    protected RangingSession(
+            @NonNull Context context,
+            @NonNull SessionParameters sessionParameters,
+            int derivedDataLength) {
+        Preconditions.checkNotNull(context);
+        Preconditions.checkNotNull(sessionParameters);
+        mContext = context;
+        mSessionInfo =
+                new SessionInfo.Builder()
+                        .setDeviceId(sessionParameters.getDeviceId())
+                        .setRangingMethod(sessionParameters.getRangingMethod())
+                        .build();
+        mLowerProximityBoundaryM = sessionParameters.getLowerProximityBoundaryM();
+        mUpperProximityBoundaryM = sessionParameters.getUpperProximityBoundaryM();
+        mAutoDeriveParams = sessionParameters.getAutoDeriveParams();
+        Log.i(
+                TAG,
+                "Creating a new RangingSession {info = "
+                        + mSessionInfo
+                        + ", autoDeriveParams = "
+                        + mAutoDeriveParams
+                        + "}");
+        if (mAutoDeriveParams) {
+            Preconditions.checkArgument(
+                    derivedDataLength > 0, "derivedDataLength must be greater than 0");
+            mDerivedDataLength = derivedDataLength;
+            resetBaseKey(sessionParameters.getBaseKey());
+            resetSyncData(sessionParameters.getSyncData());
+        }
     }
 
     /**
@@ -75,6 +157,8 @@ public abstract class RangingSession {
      * @param rangingParameters parameters to start the ranging.
      * @param executor Executor to run the rangingCallback.
      * @param rangingCallback callback to notify of ranging events.
+     * @throws NullPointerException if params are null.
+     * @throws IllegalArgumentException if rangingParameters is invalid.
      */
     public abstract void start(
             @NonNull RangingParameters rangingParameters,
@@ -94,8 +178,22 @@ public abstract class RangingSession {
      * the secure connection between the devices is lost.
      *
      * @param baseKey new baseKey must be 16 or 32 bytes.
+     * @throws NullPointerException if baseKey is null.
+     * @throws IllegalArgumentException if baseKey has invalid length.
      */
-    public void resetBaseKey(byte[] baseKey) {}
+    public void resetBaseKey(@NonNull byte[] baseKey) {
+        if (!mAutoDeriveParams) {
+            Log.w(TAG, "autoDeriveParams is disabled, new baseKey is ignored.");
+            return;
+        }
+        Preconditions.checkNotNull(baseKey);
+        if (baseKey.length != 16 && baseKey.length != 32) {
+            throw new IllegalArgumentException("Invalid baseKey length: " + baseKey.length);
+        }
+        mBaseKey = baseKey;
+        updateDerivedData();
+        Log.i(TAG, "resetBaseKey");
+    }
 
     /**
      * Resets the synchronization by giving a new syncData used for ranging parameters derivation.
@@ -105,6 +203,52 @@ public abstract class RangingSession {
      * manner.
      *
      * @param syncData new syncData must be 16 bytes.
+     * @throws NullPointerException if baseKey is null.
+     * @throws IllegalArgumentException if syncData has invalid length.
      */
-    public void resetSyncData(byte[] syncData) {}
+    public void resetSyncData(@NonNull byte[] syncData) {
+        if (!mAutoDeriveParams) {
+            Log.w(TAG, "autoDeriveParams is disabled, new syncData is ignored.");
+            return;
+        }
+        Preconditions.checkNotNull(syncData);
+        if (syncData.length != 16) {
+            throw new IllegalArgumentException("Invalid syncData length: " + syncData.length);
+        }
+        mSyncData = syncData;
+        mSyncCounter = 0;
+        updateDerivedData();
+        Log.i(TAG, "resetSyncData");
+    }
+
+    /** Update mDerivedData */
+    protected boolean updateDerivedData() {
+        if (!mAutoDeriveParams) {
+            Log.w(TAG, "autoDeriveParams is disabled, updateDerivedData is skipped.");
+            return false;
+        }
+        if (mBaseKey == null
+                || mBaseKey.length == 0
+                || mSyncData == null
+                || mSyncData.length == 0) {
+            Log.w(TAG, "updateDerivedData: Missing baseKey/syncData");
+            return false;
+        }
+        byte[] hashedSyncData =
+                Hashing.sha256()
+                        .newHasher()
+                        .putBytes(mSyncData)
+                        .putInt(mSyncCounter)
+                        .hash()
+                        .asBytes();
+        byte[] newDerivedData = Crypto.computeHkdf(mBaseKey, hashedSyncData, mDerivedDataLength);
+        if (newDerivedData == null) {
+            Log.w(TAG, "updateDerivedData: computeHkdf failed");
+            return false;
+        }
+        mDerivedData = newDerivedData;
+        mSyncCounter++;
+        Log.i(TAG, "updateDerivedData");
+        return true;
+    }
 }
