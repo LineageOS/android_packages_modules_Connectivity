@@ -194,6 +194,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool 
 
     TetherUpstream6Key ku = {
             .iif = skb->ifindex,
+            .src64 = 0,
     };
     if (is_ethernet) __builtin_memcpy(downstream ? kd.dstMac : ku.dstMac, eth->h_dest, ETH_ALEN);
 
