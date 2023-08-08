@@ -81,9 +81,9 @@ class FakeDns(val mockResolver: DnsResolver) {
         var type = if (posType != -1) it.arguments[posType] as Int else TYPE_UNSPECIFIED
         val answer = getAnswer(hostname, type)
 
-        if (!answer?.addresses.isNullOrEmpty()) {
+        if (answer != null && !answer.addresses.isNullOrEmpty()) {
             Handler(Looper.getMainLooper()).post({ executor.execute({
-                    callback.onAnswer(answer?.addresses, 0); }) })
+                    callback.onAnswer(answer.addresses, 0); }) })
         }
     }
 
