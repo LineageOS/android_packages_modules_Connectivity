@@ -18547,12 +18547,7 @@ public class ConnectivityServiceTest {
 
         waitForIdle();
 
-        final Set<Integer> exemptUids = new ArraySet();
-        final UidRange frozenUidRange = new UidRange(TEST_FROZEN_UID, TEST_FROZEN_UID);
-        final Set<UidRange> ranges = Collections.singleton(frozenUidRange);
-
-        verify(mDestroySocketsWrapper).destroyLiveTcpSockets(eq(UidRange.toIntRanges(ranges)),
-                eq(exemptUids));
+        verify(mDestroySocketsWrapper).destroyLiveTcpSocketsByOwnerUids(Set.of(TEST_FROZEN_UID));
     }
 
     @Test
