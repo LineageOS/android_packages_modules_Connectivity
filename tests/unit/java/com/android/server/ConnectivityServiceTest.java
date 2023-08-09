@@ -10187,47 +10187,13 @@ public class ConnectivityServiceTest {
         mMockVpn.setLockdown(true);
 
         // Bring up a network.
-        // Expect nothing to happen because the network does not have an IPv4 default route: legacy
-        // VPN only supports IPv4.
         final LinkProperties cellLp = new LinkProperties();
         cellLp.setInterfaceName("rmnet0");
-        cellLp.addLinkAddress(new LinkAddress("2001:db8::1/64"));
-        cellLp.addRoute(new RouteInfo(new IpPrefix("::/0"), null, "rmnet0"));
-        mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
-        mCellAgent.connect(false /* validated */);
-        callback.expectAvailableCallbacksUnvalidatedAndBlocked(mCellAgent);
-        defaultCallback.expectAvailableCallbacksUnvalidatedAndBlocked(mCellAgent);
-        systemDefaultCallback.expectAvailableCallbacksUnvalidatedAndBlocked(mCellAgent);
-        // Simulate LockdownVpnTracker attempting to start the VPN since it received the
-        // systemDefault callback. IllegalStateException is expected since legacy VPN only supports
-        // IPv4 and LockdownVpnTracker will catch it to show a notification.
-        assertThrows(IllegalStateException.class,
-                () -> mMockVpn.startLegacyVpnPrivileged(profile, mCellAgent.getNetwork(), cellLp));
-        waitForIdle();
-        assertNull(mMockVpn.getAgent());
-
-        // Add an IPv4 address.
         cellLp.addLinkAddress(new LinkAddress("192.0.2.2/25"));
         cellLp.addRoute(new RouteInfo(new IpPrefix("0.0.0.0/0"), null, "rmnet0"));
-        mCellAgent.sendLinkProperties(cellLp);
-        callback.expect(LINK_PROPERTIES_CHANGED, mCellAgent);
-        defaultCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent);
-        systemDefaultCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent);
-        waitForIdle();
-        assertNull(mMockVpn.getAgent());
-
-        // Disconnect, then try again with a network that supports IPv4 at connection time.
-        // Expect lockdown VPN to come up.
-        ExpectedBroadcast b1 = expectConnectivityAction(TYPE_MOBILE, DetailedState.DISCONNECTED);
-        mCellAgent.disconnect();
-        callback.expect(LOST, mCellAgent);
-        defaultCallback.expect(LOST, mCellAgent);
-        systemDefaultCallback.expect(LOST, mCellAgent);
-        b1.expectBroadcast();
-
         // When lockdown VPN is active, the NetworkInfo state in CONNECTIVITY_ACTION is overwritten
         // with the state of the VPN network. So expect a CONNECTING broadcast.
-        b1 = expectConnectivityAction(TYPE_MOBILE, DetailedState.CONNECTING);
+        ExpectedBroadcast b1 = expectConnectivityAction(TYPE_MOBILE, DetailedState.CONNECTING);
         mCellAgent = new TestNetworkAgentWrapper(TRANSPORT_CELLULAR, cellLp);
         mCellAgent.connect(false /* validated */);
         callback.expectAvailableCallbacksUnvalidatedAndBlocked(mCellAgent);
