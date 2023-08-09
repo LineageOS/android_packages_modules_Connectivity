@@ -257,7 +257,7 @@ class NetworkAgentTest {
         callback: TestableNetworkCallback,
         handler: Handler
     ) {
-        mCM!!.registerBestMatchingNetworkCallback(request, callback, handler)
+        mCM.registerBestMatchingNetworkCallback(request, callback, handler)
         callbacksToCleanUp.add(callback)
     }
 
@@ -394,8 +394,8 @@ class NetworkAgentTest {
                 .setLegacyExtraInfo(legacyExtraInfo).build()
         val (agent, callback) = createConnectedNetworkAgent(initialConfig = config)
         val networkInfo = mCM.getNetworkInfo(agent.network)
-        assertEquals(subtypeLTE, networkInfo.getSubtype())
-        assertEquals(subtypeNameLTE, networkInfo.getSubtypeName())
+        assertEquals(subtypeLTE, networkInfo?.getSubtype())
+        assertEquals(subtypeNameLTE, networkInfo?.getSubtypeName())
         assertEquals(legacyExtraInfo, config.getLegacyExtraInfo())
     }
 
@@ -417,8 +417,8 @@ class NetworkAgentTest {
             val nc = NetworkCapabilities(agent.nc)
             nc.addCapability(NET_CAPABILITY_NOT_METERED)
             agent.sendNetworkCapabilities(nc)
-            callback.expectCaps(agent.network) { it.hasCapability(NET_CAPABILITY_NOT_METERED) }
-            val networkInfo = mCM.getNetworkInfo(agent.network)
+            callback.expectCaps(agent.network!!) { it.hasCapability(NET_CAPABILITY_NOT_METERED) }
+            val networkInfo = mCM.getNetworkInfo(agent.network!!)!!
             assertEquals(subtypeUMTS, networkInfo.getSubtype())
             assertEquals(subtypeNameUMTS, networkInfo.getSubtypeName())
     }
@@ -631,6 +631,7 @@ class NetworkAgentTest {
         val defaultNetwork = mCM.activeNetwork
         assertNotNull(defaultNetwork)
         val defaultNetworkCapabilities = mCM.getNetworkCapabilities(defaultNetwork)
+        assertNotNull(defaultNetworkCapabilities)
         val defaultNetworkTransports = defaultNetworkCapabilities.transportTypes
 
         val agent = createNetworkAgent(initialNc = nc)
@@ -671,7 +672,7 @@ class NetworkAgentTest {
         // This is not very accurate because the test does not control the capabilities of the
         // underlying networks, and because not congested, not roaming, and not suspended are the
         // default anyway. It's still useful as an extra check though.
-        vpnNc = mCM.getNetworkCapabilities(agent.network!!)
+        vpnNc = mCM.getNetworkCapabilities(agent.network!!)!!
         for (cap in listOf(NET_CAPABILITY_NOT_CONGESTED,
                 NET_CAPABILITY_NOT_ROAMING,
                 NET_CAPABILITY_NOT_SUSPENDED)) {
@@ -1041,8 +1042,8 @@ class NetworkAgentTest {
     }
 
     fun QosSocketInfo(agent: NetworkAgent, socket: Closeable) = when (socket) {
-        is Socket -> QosSocketInfo(agent.network, socket)
-        is DatagramSocket -> QosSocketInfo(agent.network, socket)
+        is Socket -> QosSocketInfo(checkNotNull(agent.network), socket)
+        is DatagramSocket -> QosSocketInfo(checkNotNull(agent.network), socket)
         else -> fail("unexpected socket type")
     }
 
@@ -1405,8 +1406,8 @@ class NetworkAgentTest {
         val nc = makeTestNetworkCapabilities(ifName, transports).also {
             if (transports.contains(TRANSPORT_VPN)) {
                 val sessionId = "NetworkAgentTest-${Process.myPid()}"
-                it.transportInfo = VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, sessionId,
-                    /*bypassable=*/ false, /*longLivedTcpConnectionsExpensive=*/ false)
+                it.setTransportInfo(VpnTransportInfo(VpnManager.TYPE_VPN_PLATFORM, sessionId,
+                    /*bypassable=*/ false, /*longLivedTcpConnectionsExpensive=*/ false))
                 it.underlyingNetworks = listOf()
             }
         }
