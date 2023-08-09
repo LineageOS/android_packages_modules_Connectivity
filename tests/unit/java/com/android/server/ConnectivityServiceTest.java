@@ -1495,14 +1495,6 @@ public class ConnectivityServiceTest {
         private int mVpnType = VpnManager.TYPE_VPN_SERVICE;
         private UnderlyingNetworkInfo mUnderlyingNetworkInfo;
 
-        // This ConditionVariable allow tests to wait for LegacyVpnRunner to be started.
-        // TODO: this scheme is ad-hoc and error-prone because it does not fail if, for example, the
-        // test expects two starts in a row, or even if the production code calls start twice in a
-        // row. find a better solution. Simply putting a method to create a LegacyVpnRunner into
-        // Vpn.Dependencies doesn't work because LegacyVpnRunner is not a static class and has
-        // extensive access into the internals of Vpn.
-        private ConditionVariable mStartLegacyVpnCv = new ConditionVariable();
-
         public MockVpn(int userId) {
             super(startHandlerThreadAndReturnLooper(), mServiceContext,
                     new Dependencies() {
@@ -1662,24 +1654,29 @@ public class ConnectivityServiceTest {
             mInterface = null;
         }
 
-        @Override
-        public void startLegacyVpnRunner() {
-            mStartLegacyVpnCv.open();
-        }
-
-        public void expectStartLegacyVpnRunner() {
-            assertTrue("startLegacyVpnRunner not called after " + TIMEOUT_MS + " ms",
-                    mStartLegacyVpnCv.block(TIMEOUT_MS));
+        private synchronized void startLegacyVpn() {
+            updateState(DetailedState.CONNECTING, "startLegacyVpn");
         }
 
         @Override
-        public void stopVpnRunnerPrivileged() {
-            if (mVpnRunner != null) {
-                super.stopVpnRunnerPrivileged();
-                disconnect();
-                mStartLegacyVpnCv = new ConditionVariable();
+        public void startLegacyVpnPrivileged(VpnProfile profile,
+                @Nullable Network underlying, @NonNull LinkProperties egress) {
+            switch (profile.type) {
+                case VpnProfile.TYPE_L2TP_IPSEC_PSK:
+                case VpnProfile.TYPE_L2TP_IPSEC_RSA:
+                case VpnProfile.TYPE_IPSEC_XAUTH_PSK:
+                case VpnProfile.TYPE_IPSEC_XAUTH_RSA:
+                case VpnProfile.TYPE_IPSEC_HYBRID_RSA:
+                    startLegacyVpn();
+                    break;
+                default:
+                    fail("Unknown VPN profile type");
             }
-            mVpnRunner = null;
+        }
+
+        @Override
+        public synchronized void stopVpnRunnerPrivileged() {
+            disconnect();
         }
 
         @Override
@@ -10209,20 +10206,6 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_VPN, DetailedState.BLOCKED);
         assertExtraInfoFromCmBlocked(mCellAgent);
 
-        // TODO: it would be nice if we could simply rely on the production code here, and have
-        // LockdownVpnTracker start the VPN, have the VPN code register its NetworkAgent with
-        // ConnectivityService, etc. That would require duplicating a fair bit of code from the
-        // Vpn tests around how to mock out LegacyVpnRunner. But even if we did that, this does not
-        // work for at least two reasons:
-        // 1. In this test, calling registerNetworkAgent does not actually result in an agent being
-        //    registered. This is because nothing calls onNetworkMonitorCreated, which is what
-        //    actually ends up causing handleRegisterNetworkAgent to be called. Code in this test
-        //    that wants to register an agent must use TestNetworkAgentWrapper.
-        // 2. Even if we exposed Vpn#agentConnect to the test, and made MockVpn#agentConnect call
-        //    the TestNetworkAgentWrapper code, this would deadlock because the
-        //    TestNetworkAgentWrapper code cannot be called on the handler thread since it calls
-        //    waitForIdle().
-        mMockVpn.expectStartLegacyVpnRunner();
         b1 = expectConnectivityAction(TYPE_VPN, DetailedState.CONNECTED);
         ExpectedBroadcast b2 = expectConnectivityAction(TYPE_MOBILE, DetailedState.CONNECTED);
         establishLegacyLockdownVpn(mCellAgent.getNetwork());
@@ -10269,7 +10252,7 @@ public class ConnectivityServiceTest {
         final ExpectedBroadcast b3 = expectConnectivityAction(TYPE_VPN, DetailedState.DISCONNECTED);
         mMockVpn.stopVpnRunnerPrivileged();
         mMockVpn.startLegacyVpnPrivileged(profile, mWiFiAgent.getNetwork(), wifiLp);
-        mMockVpn.expectStartLegacyVpnRunner();
+        // VPN network is disconnected (to restart)
         callback.expect(LOST, mMockVpn);
         defaultCallback.expect(LOST, mMockVpn);
         defaultCallback.expectAvailableCallbacksUnvalidatedAndBlocked(mWiFiAgent);
