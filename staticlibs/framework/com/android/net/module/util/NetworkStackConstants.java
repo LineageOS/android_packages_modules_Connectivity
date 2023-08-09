@@ -131,6 +131,7 @@ public final class NetworkStackConstants {
     public static final int IPV6_DST_ADDR_OFFSET = 24;
     public static final int IPV6_MIN_MTU = 1280;
     public static final int IPV6_FRAGMENT_HEADER_LEN = 8;
+    public static final int RFC7421_PREFIX_LENGTH = 64;
     // getSockOpt() for v6 MTU
     public static final int IPV6_MTU = 24;
     public static final Inet6Address IPV6_ADDR_ALL_NODES_MULTICAST =
