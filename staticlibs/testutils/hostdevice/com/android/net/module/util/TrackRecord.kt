@@ -213,6 +213,9 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
         private val slock = StampedLock()
         private var readHead = 0
 
+        // A special mark used to track the start of the last poll() operation.
+        private var pollMark = 0
+
         /**
          * @return the current value of the mark.
          */
@@ -223,6 +226,7 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
             val stamp = slock.tryWriteLock()
             if (0L == stamp) concurrentAccessDetected()
             readHead = v
+            pollMark = v
             slock.unlockWrite(stamp)
         }
 
@@ -261,6 +265,7 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
         fun poll(timeoutMs: Long, predicate: (E) -> Boolean = { true }): E? {
             val stamp = slock.tryWriteLock()
             if (0L == stamp) concurrentAccessDetected()
+            pollMark = readHead
             try {
                 lock.withLock {
                     val index = pollForIndexReadLocked(timeoutMs, readHead, predicate)
@@ -269,6 +274,25 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
                 }
             } finally {
                 slock.unlockWrite(stamp)
+            }
+        }
+
+        /**
+         * Returns a list of events that were observed since the last time poll() was called on this
+         * ReadHead.
+         *
+         * @return list of events since poll() was called.
+         */
+        fun backtrace(): List<E> {
+            val stamp = slock.tryReadLock()
+            if (0L == stamp) concurrentAccessDetected()
+
+            try {
+                lock.withLock {
+                    return ArrayList(subList(pollMark, mark))
+                }
+            } finally {
+                slock.unlockRead(stamp)
             }
         }
 
