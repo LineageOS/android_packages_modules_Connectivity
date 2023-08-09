@@ -17,6 +17,7 @@ package com.android.server.remoteauth.ranging;
 
 import static android.content.pm.PackageManager.FEATURE_UWB;
 
+import static com.android.server.remoteauth.ranging.RangingCapabilities.RANGING_METHOD_UNKNOWN;
 import static com.android.server.remoteauth.ranging.RangingCapabilities.RANGING_METHOD_UWB;
 
 import android.annotation.NonNull;
@@ -27,6 +28,8 @@ import android.util.Log;
 
 import androidx.core.uwb.backend.impl.internal.UwbFeatureFlags;
 import androidx.core.uwb.backend.impl.internal.UwbServiceImpl;
+
+import com.android.internal.util.Preconditions;
 
 /**
  * Manages the creation of generic device to device ranging session and obtaining device's ranging
@@ -84,9 +87,21 @@ public class RangingManager {
      *
      * @param sessionParameters parameters used to setup the session.
      * @return the created RangingSession. Null if session creation failed.
+     * @throws IllegalArgumentException if sessionParameters is invalid.
      */
     @Nullable
     public RangingSession createSession(@NonNull SessionParameters sessionParameters) {
+        Preconditions.checkNotNull(sessionParameters, "sessionParameters must not be null");
+        switch (sessionParameters.getRangingMethod()) {
+            case RANGING_METHOD_UWB:
+                if (mUwbServiceImpl == null) {
+                    Log.w(TAG, "createSession with UWB failed - UWB not supported");
+                    break;
+                }
+                return new UwbRangingSession(mContext, sessionParameters, mUwbServiceImpl);
+            case RANGING_METHOD_UNKNOWN:
+                break;
+        }
         return null;
     }
 

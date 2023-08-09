@@ -221,7 +221,7 @@ public abstract class RangingSession {
         Log.i(TAG, "resetSyncData");
     }
 
-    /** Update mDerivedData */
+    /** Recomputes mDerivedData using the latest mBaseKey, mSyncData, and mSyncCounter. */
     protected boolean updateDerivedData() {
         if (!mAutoDeriveParams) {
             Log.w(TAG, "autoDeriveParams is disabled, updateDerivedData is skipped.");

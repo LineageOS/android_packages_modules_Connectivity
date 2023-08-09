@@ -26,10 +26,13 @@ import static androidx.core.uwb.backend.impl.internal.Utils.CONFIG_PROVISIONED_U
 import static androidx.core.uwb.backend.impl.internal.Utils.CONFIG_PROVISIONED_UNICAST_DS_TWR_NO_AOA;
 
 import static com.android.server.remoteauth.ranging.RangingCapabilities.RANGING_METHOD_UWB;
+import static com.android.server.remoteauth.ranging.SessionParameters.DEVICE_ROLE_INITIATOR;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,6 +44,9 @@ import android.content.pm.PackageManager;
 import android.uwb.UwbManager;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import com.android.server.remoteauth.ranging.RangingCapabilities.RangingMethod;
+import com.android.server.remoteauth.ranging.SessionParameters.DeviceRole;
 
 import com.google.uwb.support.fira.FiraParams;
 import com.google.uwb.support.fira.FiraSpecificationParams;
@@ -68,6 +74,33 @@ public class RangingManagerTest {
     private static final GenericSpecificationParams TEST_GENERIC_SPEC =
             new GenericSpecificationParams.Builder()
                     .setFiraSpecificationParams(TEST_FIRA_SPEC)
+                    .build();
+    private static final String TEST_DEVICE_ID = "test_device_id";
+    @RangingMethod private static final int TEST_RANGING_METHOD = RANGING_METHOD_UWB;
+    @DeviceRole private static final int TEST_DEVICE_ROLE = DEVICE_ROLE_INITIATOR;
+    private static final float TEST_LOWER_PROXIMITY_BOUNDARY_M = 1.0f;
+    private static final float TEST_UPPER_PROXIMITY_BOUNDARY_M = 2.5f;
+    private static final boolean TEST_AUTO_DERIVE_PARAMS = true;
+    private static final byte[] TEST_BASE_KEY =
+            new byte[] {
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+                0x0e, 0x0f
+            };
+    private static final byte[] TEST_SYNC_DATA =
+            new byte[] {
+                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+                0x0f, 0x00
+            };
+    private static final SessionParameters TEST_SESSION_PARAMETER =
+            new SessionParameters.Builder()
+                    .setDeviceId(TEST_DEVICE_ID)
+                    .setRangingMethod(TEST_RANGING_METHOD)
+                    .setDeviceRole(TEST_DEVICE_ROLE)
+                    .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
+                    .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
+                    .setAutoDeriveParams(TEST_AUTO_DERIVE_PARAMS)
+                    .setBaseKey(TEST_BASE_KEY)
+                    .setSyncData(TEST_SYNC_DATA)
                     .build();
 
     @Mock private Context mContext;
@@ -161,5 +194,27 @@ public class RangingManagerTest {
         verify(mUwbManager, times(1)).getSpecificationInfo();
         assertEquals(capabilities1, capabilities2);
         assertEquals(capabilities2, capabilities3);
+    }
+
+    @Test
+    public void testCreateSession_nullSessionParameters() {
+        mRangingManager = new RangingManager(mContext);
+
+        assertThrows(NullPointerException.class, () -> mRangingManager.createSession(null));
+    }
+
+    @Test
+    public void testCreateSession_uwbSessionWithUwbDisabled() {
+        mRangingManager = new RangingManager(mContext);
+
+        assertNull(mRangingManager.createSession(TEST_SESSION_PARAMETER));
+    }
+
+    @Test
+    public void testCreateSession_uwbSession() {
+        when(mPackageManager.hasSystemFeature(FEATURE_UWB)).thenReturn(true);
+        mRangingManager = new RangingManager(mContext);
+
+        assertNotNull(mRangingManager.createSession(TEST_SESSION_PARAMETER));
     }
 }
