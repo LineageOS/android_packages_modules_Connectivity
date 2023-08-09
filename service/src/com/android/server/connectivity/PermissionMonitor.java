@@ -1011,9 +1011,8 @@ public class PermissionMonitor {
      * @param ranges The updated UID ranges under VPN Lockdown. This function does not treat the VPN
      *               app's UID in any special way. The caller is responsible for excluding the VPN
      *               app UID from the passed-in ranges.
-     *               Ranges can have duplications and/or contain the range that is already subject
-     *               to lockdown. However, ranges can not have overlaps with other ranges including
-     *               ranges that are currently subject to lockdown.
+     *               Ranges can have duplications, overlaps, and/or contain the range that is
+     *               already subject to lockdown.
      */
     public synchronized void updateVpnLockdownUidRanges(boolean add, UidRange[] ranges) {
         final Set<UidRange> affectedUidRanges = new HashSet<>();
@@ -1045,8 +1044,10 @@ public class PermissionMonitor {
         // exclude privileged apps from the prohibit routing rules used to implement outgoing packet
         // filtering, privileged apps can still bypass outgoing packet filtering because the
         // prohibit rules observe the protected from VPN bit.
+        // If removing a UID, we ensure it is not present anywhere in the set first.
         for (final int uid: affectedUids) {
-            if (!hasRestrictedNetworksPermission(uid)) {
+            if (!hasRestrictedNetworksPermission(uid)
+                    && (add || !UidRange.containsUid(mVpnLockdownUidRanges.getSet(), uid))) {
                 updateLockdownUidRule(uid, add);
             }
         }
