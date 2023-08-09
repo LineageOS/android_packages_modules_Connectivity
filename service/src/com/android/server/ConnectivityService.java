@@ -2985,19 +2985,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void handleFrozenUids(int[] uids, int[] frozenStates) {
-        final ArraySet<Range<Integer>> ranges = new ArraySet<>();
+        final ArraySet<Integer> ownerUids = new ArraySet<>();
 
         for (int i = 0; i < uids.length; i++) {
             if (frozenStates[i] == UID_FROZEN_STATE_FROZEN) {
-                Integer uidAsInteger = Integer.valueOf(uids[i]);
-                ranges.add(new Range(uidAsInteger, uidAsInteger));
+                ownerUids.add(uids[i]);
             }
         }
 
-        if (!ranges.isEmpty()) {
-            final Set<Integer> exemptUids = new ArraySet<>();
+        if (!ownerUids.isEmpty()) {
             try {
-                mDeps.destroyLiveTcpSockets(ranges, exemptUids);
+                mDeps.destroyLiveTcpSocketsByOwnerUids(ownerUids);
             } catch (Exception e) {
                 loge("Exception in socket destroy: " + e);
             }
