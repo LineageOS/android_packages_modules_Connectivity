@@ -33,6 +33,8 @@ using android::bpf::isAtLeastKernelVersion;
 using android::modules::sdklevel::IsAtLeastR;
 using android::modules::sdklevel::IsAtLeastS;
 using android::modules::sdklevel::IsAtLeastT;
+using android::modules::sdklevel::IsAtLeastU;
+using android::modules::sdklevel::IsAtLeastV;
 
 #define PLATFORM "/sys/fs/bpf/"
 #define TETHERING "/sys/fs/bpf/tethering/"
@@ -147,10 +149,14 @@ TEST_F(BpfExistenceTest, TestPrograms) {
     // so we should only test for the removal of stuff that was mainline'd,
     // and for the presence of mainline stuff.
 
+    // Note: Q is no longer supported by mainline
+    ASSERT_TRUE(IsAtLeastR());
+
     // R can potentially run on pre-4.9 kernel non-eBPF capable devices.
     DO_EXPECT(IsAtLeastR() && !IsAtLeastS() && isAtLeastKernelVersion(4, 9, 0), PLATFORM_ONLY_IN_R);
 
     // S requires Linux Kernel 4.9+ and thus requires eBPF support.
+    if (IsAtLeastS()) ASSERT_TRUE(isAtLeastKernelVersion(4, 9, 0));
     DO_EXPECT(IsAtLeastS(), MAINLINE_FOR_S_PLUS);
     DO_EXPECT(IsAtLeastS() && isAtLeastKernelVersion(5, 10, 0), MAINLINE_FOR_S_5_10_PLUS);
 
@@ -163,6 +169,10 @@ TEST_F(BpfExistenceTest, TestPrograms) {
     DO_EXPECT(IsAtLeastT() && isAtLeastKernelVersion(5, 15, 0), MAINLINE_FOR_T_5_15_PLUS);
 
     // U requires Linux Kernel 4.14+, but nothing (as yet) added or removed in U.
+    if (IsAtLeastU()) ASSERT_TRUE(isAtLeastKernelVersion(4, 14, 0));
+
+    // V requires Linux Kernel 4.19+, but nothing (as yet) added or removed in V.
+    if (IsAtLeastV()) ASSERT_TRUE(isAtLeastKernelVersion(4, 19, 0));
 
     for (const auto& file : mustExist) {
         EXPECT_EQ(0, access(file.c_str(), R_OK)) << file << " does not exist";
