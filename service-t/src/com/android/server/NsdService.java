@@ -1920,11 +1920,14 @@ public class NsdService extends INsdManager.Stub {
     @Override
     public INsdServiceConnector connect(INsdManagerCallback cb, boolean useJavaBackend) {
         mContext.enforceCallingOrSelfPermission(android.Manifest.permission.INTERNET, "NsdService");
+        final int uid = mDeps.getCallingUid();
+        if (cb == null) {
+            throw new IllegalArgumentException("Unknown client callback from uid=" + uid);
+        }
         if (DBG) Log.d(TAG, "New client connect. useJavaBackend=" + useJavaBackend);
         final INsdServiceConnector connector = new NsdServiceConnector();
         mNsdStateMachine.sendMessage(mNsdStateMachine.obtainMessage(NsdManager.REGISTER_CLIENT,
-                new ConnectorArgs((NsdServiceConnector) connector, cb, useJavaBackend,
-                        mDeps.getCallingUid())));
+                new ConnectorArgs((NsdServiceConnector) connector, cb, useJavaBackend, uid)));
         return connector;
     }
 
