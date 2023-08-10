@@ -17,6 +17,7 @@
 package com.android.networkstack.tethering.apishim.api30;
 
 import android.net.INetd;
+import android.net.IpPrefix;
 import android.net.MacAddress;
 import android.net.TetherStatsParcel;
 import android.os.RemoteException;
@@ -81,14 +82,14 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean startUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
-            @NonNull MacAddress inDstMac, @NonNull MacAddress outSrcMac,
-            @NonNull MacAddress outDstMac, int mtu) {
+            @NonNull IpPrefix sourcePrefix, @NonNull MacAddress inDstMac,
+            @NonNull MacAddress outSrcMac, @NonNull MacAddress outDstMac, int mtu) {
         return true;
     }
 
     @Override
-    public boolean stopUpstreamIpv6Forwarding(int downstreamIfindex,
-            int upstreamIfindex, @NonNull MacAddress inDstMac) {
+    public boolean stopUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
+            @NonNull IpPrefix sourcePrefix, @NonNull MacAddress inDstMac) {
         return true;
     }
 

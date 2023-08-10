@@ -17,7 +17,9 @@
 package com.android.networkstack.tethering.apishim.api31;
 
 import static android.net.netstats.provider.NetworkStatsProvider.QUOTA_UNLIMITED;
+import static android.net.util.NetworkConstants.RFC7421_PREFIX_LENGTH;
 
+import android.net.IpPrefix;
 import android.net.MacAddress;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -48,6 +50,9 @@ import com.android.networkstack.tethering.TetherUpstream6Key;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
 
 /**
  * Bpf coordinator class for API shims.
@@ -196,13 +201,23 @@ public class BpfCoordinatorShimImpl
         return true;
     }
 
+    @NonNull
+    private TetherUpstream6Key makeUpstream6Key(int downstreamIfindex, @NonNull MacAddress inDstMac,
+            @NonNull IpPrefix sourcePrefix) {
+        byte[] prefixBytes = Arrays.copyOf(sourcePrefix.getRawAddress(), 8);
+        long prefix64 = ByteBuffer.wrap(prefixBytes).order(ByteOrder.BIG_ENDIAN).getLong();
+        return new TetherUpstream6Key(downstreamIfindex, inDstMac, prefix64);
+    }
+
     @Override
     public boolean startUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
-            @NonNull MacAddress inDstMac, @NonNull MacAddress outSrcMac,
-            @NonNull MacAddress outDstMac, int mtu) {
+            @NonNull IpPrefix sourcePrefix, @NonNull MacAddress inDstMac,
+            @NonNull MacAddress outSrcMac, @NonNull MacAddress outDstMac, int mtu) {
         if (!isInitialized()) return false;
+        // RFC7421_PREFIX_LENGTH = 64 which is the most commonly used IPv6 subnet prefix length.
+        if (sourcePrefix.getPrefixLength() != RFC7421_PREFIX_LENGTH) return false;
 
-        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfindex, inDstMac);
+        final TetherUpstream6Key key = makeUpstream6Key(downstreamIfindex, inDstMac, sourcePrefix);
         final Tether6Value value = new Tether6Value(upstreamIfindex, outSrcMac,
                 outDstMac, OsConstants.ETH_P_IPV6, mtu);
         try {
@@ -216,10 +231,12 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean stopUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
-            @NonNull MacAddress inDstMac) {
+            @NonNull IpPrefix sourcePrefix, @NonNull MacAddress inDstMac) {
         if (!isInitialized()) return false;
+        // RFC7421_PREFIX_LENGTH = 64 which is the most commonly used IPv6 subnet prefix length.
+        if (sourcePrefix.getPrefixLength() != RFC7421_PREFIX_LENGTH) return false;
 
-        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfindex, inDstMac);
+        final TetherUpstream6Key key = makeUpstream6Key(downstreamIfindex, inDstMac, sourcePrefix);
         try {
             mBpfUpstream6Map.deleteEntry(key);
         } catch (ErrnoException e) {
