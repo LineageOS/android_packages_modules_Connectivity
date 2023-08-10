@@ -37,6 +37,7 @@ import static com.android.networkstack.tethering.util.TetheringUtils.getTetherin
 
 import android.app.usage.NetworkStatsManager;
 import android.net.INetd;
+import android.net.IpPrefix;
 import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.NetworkStats;
@@ -119,6 +120,7 @@ public class BpfCoordinator {
     private static final int DUMP_TIMEOUT_MS = 10_000;
     private static final MacAddress NULL_MAC_ADDRESS = MacAddress.fromString(
             "00:00:00:00:00:00");
+    private static final IpPrefix IPV6_ZERO_PREFIX64 = new IpPrefix("::/64");
     private static final String TETHER_DOWNSTREAM4_MAP_PATH = makeMapPath(DOWNSTREAM, 4);
     private static final String TETHER_UPSTREAM4_MAP_PATH = makeMapPath(UPSTREAM, 4);
     private static final String TETHER_DOWNSTREAM6_FS_PATH = makeMapPath(DOWNSTREAM, 6);
@@ -615,8 +617,9 @@ public class BpfCoordinator {
             final int upstream = rule.upstreamIfindex;
             // TODO: support upstream forwarding on non-point-to-point interfaces.
             // TODO: get the MTU from LinkProperties and update the rules when it changes.
-            if (!mBpfCoordinatorShim.startUpstreamIpv6Forwarding(downstream, upstream, rule.srcMac,
-                    NULL_MAC_ADDRESS, NULL_MAC_ADDRESS, NetworkStackConstants.ETHER_MTU)) {
+            if (!mBpfCoordinatorShim.startUpstreamIpv6Forwarding(downstream, upstream,
+                    IPV6_ZERO_PREFIX64, rule.srcMac, NULL_MAC_ADDRESS, NULL_MAC_ADDRESS,
+                    NetworkStackConstants.ETHER_MTU)) {
                 mLog.e("Failed to enable upstream IPv6 forwarding from "
                         + getIfName(downstream) + " to " + getIfName(upstream));
             }
@@ -657,7 +660,7 @@ public class BpfCoordinator {
             final int downstream = rule.downstreamIfindex;
             final int upstream = rule.upstreamIfindex;
             if (!mBpfCoordinatorShim.stopUpstreamIpv6Forwarding(downstream, upstream,
-                    rule.srcMac)) {
+                    IPV6_ZERO_PREFIX64, rule.srcMac)) {
                 mLog.e("Failed to disable upstream IPv6 forwarding from "
                         + getIfName(downstream) + " to " + getIfName(upstream));
             }
