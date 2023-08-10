@@ -66,7 +66,8 @@ public class NetworkNsdReportedMetrics {
                     event.getFoundServiceCount(),
                     event.getFoundCallbackCount(),
                     event.getLostCallbackCount(),
-                    event.getRepliedRequestsCount());
+                    event.getRepliedRequestsCount(),
+                    event.getSentQueryCount());
         }
     }
 
