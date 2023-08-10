@@ -1585,6 +1585,20 @@ public class NsdServiceTest {
         lockOrder.verify(mMulticastLock).release();
     }
 
+    @Test
+    public void testNullINsdManagerCallback() {
+        final NsdService service = new NsdService(mContext, mHandler, CLEANUP_DELAY_MS, mDeps) {
+            @Override
+            public INsdServiceConnector connect(INsdManagerCallback baseCb,
+                    boolean runNewMdnsBackend) {
+                // Pass null INsdManagerCallback
+                return super.connect(null /* cb */, runNewMdnsBackend);
+            }
+        };
+
+        assertThrows(IllegalArgumentException.class, () -> new NsdManager(mContext, service));
+    }
+
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mHandler, TIMEOUT_MS);
     }
