@@ -283,13 +283,16 @@ public class OffloadHardwareInterface {
 
     private int initWithHandles(NativeHandle h1, NativeHandle h2) {
         if (h1 == null || h2 == null) {
+            // Set mIOffload to null has two purposes:
+            // 1. NativeHandles can be closed after initWithHandles() fails
+            // 2. Prevent mIOffload.stopOffload() to be called in stopOffload()
+            mIOffload = null;
             mLog.e("Failed to create socket.");
             return OFFLOAD_HAL_VERSION_NONE;
         }
 
         requestSocketDump(h1);
         if (!mIOffload.initOffload(h1, h2, mOffloadHalCallback)) {
-            mIOffload.stopOffload();
             mLog.e("Failed to initialize offload.");
             return OFFLOAD_HAL_VERSION_NONE;
         }
@@ -329,9 +332,9 @@ public class OffloadHardwareInterface {
         mOffloadHalCallback = offloadCb;
         final int version = initWithHandles(h1, h2);
 
-        // Explicitly close FDs for HIDL. AIDL will pass the original FDs to the service,
-        // they shouldn't be closed here.
-        if (version < OFFLOAD_HAL_VERSION_AIDL) {
+        // Explicitly close FDs for HIDL or when mIOffload is null (cleared in initWithHandles).
+        // AIDL will pass the original FDs to the service, they shouldn't be closed here.
+        if (mIOffload == null || mIOffload.getVersion() < OFFLOAD_HAL_VERSION_AIDL) {
             maybeCloseFdInNativeHandles(h1, h2);
         }
         return version;
