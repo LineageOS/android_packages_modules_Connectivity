@@ -28,11 +28,11 @@ import static android.net.TetheringManager.TETHER_ERROR_TETHER_IFACE_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_UNTETHER_IFACE_ERROR;
 import static android.net.TetheringManager.TetheringRequest.checkStaticAddressConfiguration;
 import static android.net.dhcp.IDhcpServer.STATUS_SUCCESS;
-import static android.net.util.NetworkConstants.RFC7421_PREFIX_LENGTH;
 import static android.net.util.NetworkConstants.asByte;
 import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
+import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
 import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
 import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
 import static com.android.networkstack.tethering.util.TetheringMessageBase.BASE_IPSERVER;
