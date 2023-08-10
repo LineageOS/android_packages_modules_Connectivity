@@ -910,12 +910,16 @@ class NsdManagerTest {
         val record = NsdRegistrationRecord()
         nsdManager.registerService(si, NsdManager.PROTOCOL_DNS_SD, record)
         val addOrUpdateEvent = offloadEngine
-            .expectCallback<TestNsdOffloadEngine.OffloadEvent.AddOrUpdateEvent>()
+            .expectCallbackEventually<TestNsdOffloadEngine.OffloadEvent.AddOrUpdateEvent> {
+                it.info.key.serviceName == serviceName
+            }
         checkOffloadServiceInfo(addOrUpdateEvent.info)
 
         nsdManager.unregisterService(record)
         val unregisterEvent = offloadEngine
-            .expectCallback<TestNsdOffloadEngine.OffloadEvent.RemoveEvent>()
+            .expectCallbackEventually<TestNsdOffloadEngine.OffloadEvent.RemoveEvent> {
+                it.info.key.serviceName == serviceName
+            }
         checkOffloadServiceInfo(unregisterEvent.info)
 
         runAsShell(NETWORK_SETTINGS) {
