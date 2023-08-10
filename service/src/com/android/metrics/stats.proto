@@ -61,6 +61,9 @@ message NetworkNsdReported {
 
   // Record query service count before unregistered service
   optional int32 replied_requests_count = 11;
+
+  // Record sent query count before stopped discovery
+  optional int32 sent_query_count = 12;
 }
 
 /**
