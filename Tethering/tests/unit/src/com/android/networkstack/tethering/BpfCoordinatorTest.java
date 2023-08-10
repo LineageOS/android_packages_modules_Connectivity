@@ -641,7 +641,7 @@ public class BpfCoordinatorTest {
     private void verifyStartUpstreamIpv6Forwarding(@Nullable InOrder inOrder, int downstreamIfIndex,
             MacAddress downstreamMac, int upstreamIfindex) throws Exception {
         if (!mDeps.isAtLeastS()) return;
-        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfIndex, downstreamMac);
+        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfIndex, downstreamMac, 0);
         final Tether6Value value = new Tether6Value(upstreamIfindex,
                 MacAddress.ALL_ZEROS_ADDRESS, MacAddress.ALL_ZEROS_ADDRESS,
                 ETH_P_IPV6, NetworkStackConstants.ETHER_MTU);
@@ -652,7 +652,7 @@ public class BpfCoordinatorTest {
             MacAddress downstreamMac)
             throws Exception {
         if (!mDeps.isAtLeastS()) return;
-        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfIndex, downstreamMac);
+        final TetherUpstream6Key key = new TetherUpstream6Key(downstreamIfIndex, downstreamMac, 0);
         verifyWithOrder(inOrder, mBpfUpstream6Map).deleteEntry(key);
     }
 
@@ -2192,7 +2192,7 @@ public class BpfCoordinatorTest {
         mBpfDownstream6Map.insertEntry(rule.makeTetherDownstream6Key(), rule.makeTether6Value());
 
         final TetherUpstream6Key upstream6Key = new TetherUpstream6Key(DOWNSTREAM_IFINDEX,
-                DOWNSTREAM_MAC);
+                DOWNSTREAM_MAC, 0);
         final Tether6Value upstream6Value = new Tether6Value(UPSTREAM_IFINDEX,
                 MacAddress.ALL_ZEROS_ADDRESS, MacAddress.ALL_ZEROS_ADDRESS,
                 ETH_P_IPV6, NetworkStackConstants.ETHER_MTU);
