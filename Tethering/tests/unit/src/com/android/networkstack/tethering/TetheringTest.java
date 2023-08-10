@@ -68,6 +68,7 @@ import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.net.module.util.Inet4AddressUtils.inet4AddressToIntHTH;
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
+import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_HIDL_1_0;
 import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOAD_HAL_VERSION_NONE;
 import static com.android.networkstack.tethering.TestConnectivityManager.BROADCAST_FIRST;
@@ -157,7 +158,6 @@ import android.net.dhcp.IDhcpServer;
 import android.net.ip.DadProxy;
 import android.net.ip.IpServer;
 import android.net.ip.RouterAdvertisementDaemon;
-import android.net.util.NetworkConstants;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiManager;
@@ -559,7 +559,7 @@ public class TetheringTest {
             prop.addDnsServer(InetAddresses.parseNumericAddress("2001:db8::2"));
             prop.addLinkAddress(
                     new LinkAddress(InetAddresses.parseNumericAddress("2001:db8::"),
-                            NetworkConstants.RFC7421_PREFIX_LENGTH));
+                            RFC7421_PREFIX_LENGTH));
             prop.addRoute(new RouteInfo(new IpPrefix(Inet6Address.ANY, 0),
                     InetAddresses.parseNumericAddress("2001:db8::1"),
                     interfaceName, RTN_UNICAST));
