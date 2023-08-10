@@ -985,7 +985,7 @@ public class IpServerTest {
             throws Exception {
         if (!mBpfDeps.isAtLeastS()) return;
         final TetherUpstream6Key key = new TetherUpstream6Key(TEST_IFACE_PARAMS.index,
-                TEST_IFACE_PARAMS.macAddr);
+                TEST_IFACE_PARAMS.macAddr, 0);
         final Tether6Value value = new Tether6Value(upstreamIfindex,
                 MacAddress.ALL_ZEROS_ADDRESS, MacAddress.ALL_ZEROS_ADDRESS,
                 ETH_P_IPV6, NetworkStackConstants.ETHER_MTU);
@@ -996,7 +996,7 @@ public class IpServerTest {
             throws Exception {
         if (!mBpfDeps.isAtLeastS()) return;
         final TetherUpstream6Key key = new TetherUpstream6Key(TEST_IFACE_PARAMS.index,
-                TEST_IFACE_PARAMS.macAddr);
+                TEST_IFACE_PARAMS.macAddr, 0);
         verifyWithOrder(inOrder, mBpfUpstream6Map).deleteEntry(key);
     }
 
