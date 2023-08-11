@@ -1143,7 +1143,7 @@ public class BpfNetMaps {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static native void native_init(boolean startSkDestroyListener);
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
