@@ -237,6 +237,7 @@ java_defaults {
         "service-connectivity-tiramisu-pre-jarjar",
         "service-nearby-pre-jarjar",
         "service-remoteauth-pre-jarjar",
+        "service-thread-pre-jarjar",
     ],
     // The below libraries are not actually needed to build since no source is compiled
     // (only combining prebuilt static_libs), but they are necessary so that R8 has the right
@@ -305,6 +306,7 @@ genrule {
         ":service-connectivity-jarjar-gen",
         ":service-nearby-jarjar-gen",
         ":service-remoteauth-jarjar-gen",
+        ":service-thread-jarjar-gen",
     ],
     out: ["connectivity-jarjar-rules.txt"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
@@ -369,6 +371,24 @@ java_genrule {
     cmd: "$(location jarjar-rules-generator) " +
         "$(location :service-remoteauth-pre-jarjar{.jar}) " +
         "--prefix com.android.server.remoteauth " +
+        "--excludes $(location jarjar-excludes.txt) " +
+        "--output $(out)",
+    visibility: ["//visibility:private"],
+}
+
+java_genrule {
+    name: "service-thread-jarjar-gen",
+    tool_files: [
+        ":service-thread-pre-jarjar{.jar}",
+        "jarjar-excludes.txt",
+    ],
+    tools: [
+        "jarjar-rules-generator",
+    ],
+    out: ["service_thread_jarjar_rules.txt"],
+    cmd: "$(location jarjar-rules-generator) " +
+        "$(location :service-thread-pre-jarjar{.jar}) " +
+        "--prefix com.android.server.thread " +
         "--excludes $(location jarjar-excludes.txt) " +
         "--output $(out)",
     visibility: ["//visibility:private"],
