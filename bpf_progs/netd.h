@@ -65,8 +65,6 @@ typedef struct {
     uint64_t rxPackets;
     uint64_t txBytes;
     uint64_t txPackets;
-    uint64_t tcpRxPackets;
-    uint64_t tcpTxPackets;
 } Stats;
 
 typedef struct {
