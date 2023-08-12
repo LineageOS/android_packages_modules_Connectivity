@@ -40,26 +40,20 @@ namespace bpf {
 
 using base::Result;
 
-// This explicitly zero-initializes the relevant Stats fields.
-void InitStats(Stats* stats) {
-    stats->rxBytes = 0;
-    stats->rxPackets = 0;
-    stats->txBytes = 0;
-    stats->txPackets = 0;
-}
-
 int bpfGetUidStatsInternal(uid_t uid, Stats* stats,
                            const BpfMap<uint32_t, StatsValue>& appUidStatsMap) {
-    InitStats(stats);
     auto statsEntry = appUidStatsMap.readValue(uid);
-    if (statsEntry.ok()) {
-        stats->rxPackets = statsEntry.value().rxPackets;
-        stats->txPackets = statsEntry.value().txPackets;
-        stats->rxBytes = statsEntry.value().rxBytes;
-        stats->txBytes = statsEntry.value().txBytes;
+    if (!statsEntry.ok()) {
+        *stats = {};
+        return (statsEntry.error().code() == ENOENT) ? 0 : -statsEntry.error().code();
     }
-    return (statsEntry.ok() || statsEntry.error().code() == ENOENT) ? 0
-                                                                    : -statsEntry.error().code();
+    *stats = {
+        .rxPackets = statsEntry.value().rxPackets,
+        .txPackets = statsEntry.value().txPackets,
+        .rxBytes = statsEntry.value().rxBytes,
+        .txBytes = statsEntry.value().txBytes,
+    };
+    return 0;
 }
 
 int bpfGetUidStats(uid_t uid, Stats* stats) {
@@ -70,7 +64,7 @@ int bpfGetUidStats(uid_t uid, Stats* stats) {
 int bpfGetIfaceStatsInternal(const char* iface, Stats* stats,
                              const BpfMap<uint32_t, StatsValue>& ifaceStatsMap,
                              const BpfMap<uint32_t, IfaceValue>& ifaceNameMap) {
-    InitStats(stats);
+    *stats = {};
     int64_t unknownIfaceBytesTotal = 0;
     const auto processIfaceStats =
             [iface, stats, &ifaceNameMap, &unknownIfaceBytesTotal](
@@ -105,16 +99,18 @@ int bpfGetIfaceStats(const char* iface, Stats* stats) {
 
 int bpfGetIfIndexStatsInternal(uint32_t ifindex, Stats* stats,
                                const BpfMap<uint32_t, StatsValue>& ifaceStatsMap) {
-    InitStats(stats);
     auto statsEntry = ifaceStatsMap.readValue(ifindex);
-    if (statsEntry.ok()) {
-        stats->rxPackets = statsEntry.value().rxPackets;
-        stats->txPackets = statsEntry.value().txPackets;
-        stats->rxBytes = statsEntry.value().rxBytes;
-        stats->txBytes = statsEntry.value().txBytes;
-        return 0;
+    if (!statsEntry.ok()) {
+        *stats = {};
+        return (statsEntry.error().code() == ENOENT) ? 0 : -statsEntry.error().code();
     }
-    return (statsEntry.error().code() == ENOENT) ? 0 : -statsEntry.error().code();
+    *stats = {
+        .rxPackets = statsEntry.value().rxPackets,
+        .txPackets = statsEntry.value().txPackets,
+        .rxBytes = statsEntry.value().rxBytes,
+        .txBytes = statsEntry.value().txBytes,
+    };
+    return 0;
 }
 
 int bpfGetIfIndexStats(int ifindex, Stats* stats) {
