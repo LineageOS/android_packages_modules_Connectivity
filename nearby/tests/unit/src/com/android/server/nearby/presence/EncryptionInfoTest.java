@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertThrows;
 
+import com.android.server.nearby.presence.EncryptionInfo.EncodingScheme;
 import com.android.server.nearby.util.ArrayUtils;
 
 import org.junit.Test;
@@ -50,7 +51,7 @@ public class EncryptionInfoTest {
     public void test_getMethods_signature() {
         byte[] data = ArrayUtils.append((byte) 0b10001000, SALT);
         EncryptionInfo info = new EncryptionInfo(data);
-        assertThat(info.getEncodingScheme()).isEqualTo(EncryptionInfo.EncodingScheme.SIGNATURE);
+        assertThat(info.getEncodingScheme()).isEqualTo(EncodingScheme.SIGNATURE);
         assertThat(info.getSalt()).isEqualTo(SALT);
     }
 
@@ -58,7 +59,14 @@ public class EncryptionInfoTest {
     public void test_getMethods_mic() {
         byte[] data = ArrayUtils.append((byte) 0b10000000, SALT);
         EncryptionInfo info = new EncryptionInfo(data);
-        assertThat(info.getEncodingScheme()).isEqualTo(EncryptionInfo.EncodingScheme.MIC);
+        assertThat(info.getEncodingScheme()).isEqualTo(EncodingScheme.MIC);
+        assertThat(info.getSalt()).isEqualTo(SALT);
+    }
+    @Test
+    public void test_toBytes() {
+        byte[] data = EncryptionInfo.toByte(EncodingScheme.MIC, SALT);
+        EncryptionInfo info = new EncryptionInfo(data);
+        assertThat(info.getEncodingScheme()).isEqualTo(EncodingScheme.MIC);
         assertThat(info.getSalt()).isEqualTo(SALT);
     }
 }

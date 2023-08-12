@@ -42,7 +42,7 @@ public final class CryptorTest {
         assertThat(res2).hasLength(outputSize);
         assertThat(res1).isNotEqualTo(res2);
         assertThat(res1)
-                .isEqualTo(CryptorImpV1.computeHkdf(DATA, AUTHENTICITY_KEY, outputSize));
+                .isEqualTo(CryptorMicImp.computeHkdf(DATA, AUTHENTICITY_KEY, outputSize));
     }
 
     @Test
