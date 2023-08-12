@@ -46,8 +46,6 @@ void InitStats(Stats* stats) {
     stats->rxPackets = 0;
     stats->txBytes = 0;
     stats->txPackets = 0;
-    stats->tcpRxPackets = -1;
-    stats->tcpTxPackets = -1;
 }
 
 int bpfGetUidStatsInternal(uid_t uid, Stats* stats,

@@ -47,8 +47,8 @@ enum StatsType {
     RX_PACKETS = 1,
     TX_BYTES = 2,
     TX_PACKETS = 3,
-    TCP_RX_PACKETS = 4,
-    TCP_TX_PACKETS = 5
+    TCP_RX_PACKETS = 4,  // not supported, always returns UNKNOWN (-1)
+    TCP_TX_PACKETS = 5,  // not supported, always returns UNKNOWN (-1)
 };
 
 static uint64_t getStatsType(Stats* stats, StatsType type) {
@@ -62,9 +62,7 @@ static uint64_t getStatsType(Stats* stats, StatsType type) {
         case TX_PACKETS:
             return stats->txPackets;
         case TCP_RX_PACKETS:
-            return stats->tcpRxPackets;
         case TCP_TX_PACKETS:
-            return stats->tcpTxPackets;
         default:
             return UNKNOWN;
     }
