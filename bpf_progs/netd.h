@@ -61,13 +61,6 @@ typedef struct {
 STRUCT_SIZE(IfaceValue, 16);
 
 typedef struct {
-    uint64_t rxBytes;
-    uint64_t rxPackets;
-    uint64_t txBytes;
-    uint64_t txPackets;
-} Stats;
-
-typedef struct {
   uint64_t timestampNs;
   uint32_t ifindex;
   uint32_t length;
