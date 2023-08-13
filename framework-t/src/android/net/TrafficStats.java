@@ -1121,8 +1121,4 @@ public class TrafficStats {
     public static final int TYPE_TX_BYTES = 2;
     /** {@hide} */
     public static final int TYPE_TX_PACKETS = 3;
-    /** {@hide} */
-    public static final int TYPE_TCP_RX_PACKETS = 4;
-    /** {@hide} */
-    public static final int TYPE_TCP_TX_PACKETS = 5;
 }
