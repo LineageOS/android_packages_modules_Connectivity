@@ -75,10 +75,7 @@ int bpfGetIfaceStatsInternal(const char* iface, StatsValue* stats,
             if (!statsEntry.ok()) {
                 return statsEntry.error();
             }
-            stats->rxPackets += statsEntry.value().rxPackets;
-            stats->txPackets += statsEntry.value().txPackets;
-            stats->rxBytes += statsEntry.value().rxBytes;
-            stats->txBytes += statsEntry.value().txBytes;
+            *stats += statsEntry.value();
         }
         return Result<void>();
     };
