@@ -27,6 +27,7 @@ java_library {
     srcs: [":remoteauth-service-srcs"],
     required: ["libremoteauth_jni_rust_defaults"],
     defaults: [
+        "enable-remoteauth-targets",
         "framework-system-server-module-defaults",
     ],
     libs: [

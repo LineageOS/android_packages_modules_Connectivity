@@ -18,7 +18,10 @@ package {
 
 android_test {
     name: "RemoteAuthUnitTests",
-    defaults: ["mts-target-sdk-version-current"],
+    defaults: [
+        "enable-remoteauth-targets",
+        "mts-target-sdk-version-current"
+    ],
     sdk_version: "test_current",
     min_sdk_version: "31",
 
