@@ -195,10 +195,7 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: {
-        error_checks: ["NewApi"],
-        strict_updatability_linting: true,
-    },
+    lint: { strict_updatability_linting: true },
     visibility: [
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
@@ -264,7 +261,6 @@ java_defaults {
         proguard_flags_files: ["proguard.flags"],
     },
     lint: {
-        error_checks: ["NewApi"],
         strict_updatability_linting: true,
     },
 }
