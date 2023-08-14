@@ -19,11 +19,11 @@ package com.android.testutils
 import android.os.Build
 import androidx.test.InstrumentationRegistry
 import com.android.modules.utils.build.UnboundedSdkLevel
+import java.util.regex.Pattern
 import org.junit.Assume.assumeTrue
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
-import java.util.regex.Pattern
 
 @Deprecated("Use Build.VERSION_CODES", ReplaceWith("Build.VERSION_CODES.S_V2"))
 const val SC_V2 = Build.VERSION_CODES.S_V2
@@ -32,8 +32,22 @@ private val MAX_TARGET_SDK_ANNOTATION_RE = Pattern.compile("MaxTargetSdk([0-9]+)
 private val targetSdk = InstrumentationRegistry.getContext().applicationInfo.targetSdkVersion
 
 private fun isDevSdkInRange(minExclusive: String?, maxInclusive: String?): Boolean {
-    return (minExclusive == null || !UnboundedSdkLevel.isAtMost(minExclusive)) &&
-            (maxInclusive == null || UnboundedSdkLevel.isAtMost(maxInclusive))
+    return (minExclusive == null || !isAtMost(minExclusive)) &&
+            (maxInclusive == null || isAtMost(maxInclusive))
+}
+
+private fun isAtMost(sdkVersionOrCodename: String): Boolean {
+    // UnboundedSdkLevel does not support builds < Q, and may stop supporting Q as well since it
+    // is intended for mainline modules that are now R+.
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+        // Assume that any codename passed as argument from current code is a more recent build than
+        // Q: this util did not exist before Q, and codenames are only used before the corresponding
+        // build is finalized. This util could list 28 older codenames to check against (as per
+        // ro.build.version.known_codenames in more recent builds), but this does not seem valuable.
+        val intVersion = sdkVersionOrCodename.toIntOrNull() ?: return true
+        return Build.VERSION.SDK_INT <= intVersion
+    }
+    return UnboundedSdkLevel.isAtMost(sdkVersionOrCodename)
 }
 
 /**
