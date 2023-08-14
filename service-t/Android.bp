@@ -68,7 +68,6 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: { error_checks: ["NewApi"] },
     visibility: [
         "//frameworks/base/tests/vcn",
         "//packages/modules/Connectivity/service",
