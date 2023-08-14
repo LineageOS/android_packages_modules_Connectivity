@@ -19,7 +19,7 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-service_remoteauth_pre_jarjar_lib = "service-remoteauth-pre-jarjar"
+service_remoteauth_pre_jarjar_lib = "service-remoteauth-pre-jarjar-udc-compat"
 
 // The above variables may have different values
 // depending on the branch, and this comment helps

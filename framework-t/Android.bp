@@ -19,12 +19,12 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-framework_remoteauth_srcs = [":framework-remoteauth-java-sources"]
-framework_remoteauth_api_srcs = []
+framework_remoteauth_srcs = [":framework-remoteauth-java-sources-udc-compat"]
+framework_remoteauth_api_srcs = [":framework-remoteauth-java-sources"]
 
 java_defaults {
     name: "enable-remoteauth-targets",
-    enabled: true,
+    enabled: false,
 }
 
 // Include build rules from Sources.bp
