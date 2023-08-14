@@ -17,7 +17,8 @@
 package com.android.networkstack.tethering.apishim.api31;
 
 import static android.net.netstats.provider.NetworkStatsProvider.QUOTA_UNLIMITED;
-import static android.net.util.NetworkConstants.RFC7421_PREFIX_LENGTH;
+
+import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
 
 import android.net.IpPrefix;
 import android.net.MacAddress;
