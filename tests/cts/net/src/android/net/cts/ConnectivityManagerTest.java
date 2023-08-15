@@ -2744,7 +2744,6 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Instant apps cannot create test networks")
     @Test
-    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testSetOemNetworkPreferenceForTestOnlyPref() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
         // shims, and @IgnoreUpTo does not check that.
