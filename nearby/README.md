@@ -49,6 +49,7 @@ Then, add the jar in IDE as below.
 ```sh
 Build unbundled module using banchan
 
+$ source build/envsetup.sh
 $ banchan com.google.android.tethering mainline_modules_arm64
 $ m apps_only dist
 $ adb install out/dist/com.google.android.tethering.apex
