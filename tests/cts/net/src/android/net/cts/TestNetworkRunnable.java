@@ -95,13 +95,16 @@ public class TestNetworkRunnable implements ThrowingRunnable {
                 testIface.getFileDescriptor().close();
             }
 
-            if (tunNetworkCallback != null) {
-                sCm.unregisterNetworkCallback(tunNetworkCallback);
-            }
 
             final Network testNetwork = tunNetworkCallback.currentNetwork;
             if (testNetwork != null) {
                 tnm.teardownTestNetwork(testNetwork);
+            }
+            // Ensure test network being torn down.
+            tunNetworkCallback.waitForLost();
+
+            if (tunNetworkCallback != null) {
+                sCm.unregisterNetworkCallback(tunNetworkCallback);
             }
         }
     }
