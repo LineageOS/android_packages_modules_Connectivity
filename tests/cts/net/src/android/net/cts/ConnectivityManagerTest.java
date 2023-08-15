@@ -3205,7 +3205,6 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     public void testMobileDataPreferredUids() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
         final boolean canRunTest = mPackageManager.hasSystemFeature(FEATURE_WIFI)
