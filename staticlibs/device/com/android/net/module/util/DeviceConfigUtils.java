@@ -162,13 +162,12 @@ public final class DeviceConfigUtils {
      * This is useful to ensure that if a module install is rolled back, flags are not left fully
      * rolled out on a version where they have not been well tested.
      * @param context The global context information about an app environment.
-     * @param namespace The namespace containing the property to look up.
      * @param name The name of the property to look up.
      * @return true if this feature is enabled, or false if disabled.
      */
-    public static boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
+    public static boolean isNetworkStackFeatureEnabled(@NonNull Context context,
             @NonNull String name) {
-        return isFeatureEnabled(context, namespace, name, false /* defaultEnabled */);
+        return isNetworkStackFeatureEnabled(context, name, false /* defaultEnabled */);
     }
 
     /**
@@ -180,16 +179,16 @@ public final class DeviceConfigUtils {
      * This is useful to ensure that if a module install is rolled back, flags are not left fully
      * rolled out on a version where they have not been well tested.
      * @param context The global context information about an app environment.
-     * @param namespace The namespace containing the property to look up.
      * @param name The name of the property to look up.
      * @param defaultEnabled The value to return if the property does not exist or its value is
      *                       null.
      * @return true if this feature is enabled, or false if disabled.
      */
-    public static boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
+    public static boolean isNetworkStackFeatureEnabled(@NonNull Context context,
             @NonNull String name, boolean defaultEnabled) {
         final long packageVersion = getPackageVersion(context);
-        return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
+        return isFeatureEnabled(context, packageVersion, NAMESPACE_CONNECTIVITY, name,
+                defaultEnabled);
     }
 
     /**
