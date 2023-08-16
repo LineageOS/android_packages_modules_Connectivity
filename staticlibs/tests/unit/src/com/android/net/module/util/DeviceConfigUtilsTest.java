@@ -424,10 +424,10 @@ public class DeviceConfigUtilsTest {
     public void testIsTetheringFeatureForceDisabled() throws Exception {
         doReturn("0").when(() -> DeviceConfig.getProperty(
                 eq(NAMESPACE_TETHERING), eq(TEST_EXPERIMENT_FLAG)));
-        assertFalse(DeviceConfigUtils.isTetheringFeatureForceDisabled(TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
 
         doReturn(TEST_FLAG_VALUE_STRING).when(
                 () -> DeviceConfig.getProperty(eq(NAMESPACE_TETHERING), eq(TEST_EXPERIMENT_FLAG)));
-        assertTrue(DeviceConfigUtils.isTetheringFeatureForceDisabled(TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
     }
 }
