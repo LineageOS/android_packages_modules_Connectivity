@@ -235,8 +235,8 @@ public class NsdServiceTest {
     @After
     public void tearDown() throws Exception {
         if (mThread != null) {
-            mThread.quit();
-            mThread = null;
+            mThread.quitSafely();
+            mThread.join();
         }
     }
 
