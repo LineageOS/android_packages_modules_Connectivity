@@ -160,4 +160,45 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(durationMs, it.eventDurationMillisec)
         }
     }
+
+    @Test
+    fun testReportServiceResolved() {
+        val clientId = 99
+        val transactionId = 100
+        val durationMs = 10L
+        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
+        metrics.reportServiceResolved(transactionId, durationMs, true /* isServiceFromCache */)
+
+        val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
+        verify(deps).statsWrite(eventCaptor.capture())
+        eventCaptor.value.let {
+            assertTrue(it.isLegacy)
+            assertEquals(clientId, it.clientId)
+            assertEquals(transactionId, it.transactionId)
+            assertEquals(NsdEventType.NET_RESOLVE, it.type)
+            assertEquals(MdnsQueryResult.MQR_SERVICE_RESOLVED, it.queryResult)
+            assertTrue(it.isKnownService)
+            assertEquals(durationMs, it.eventDurationMillisec)
+        }
+    }
+
+    @Test
+    fun testReportServiceResolutionFailed() {
+        val clientId = 99
+        val transactionId = 100
+        val durationMs = 10L
+        val metrics = NetworkNsdReportedMetrics(false /* isLegacy */, clientId, deps)
+        metrics.reportServiceResolutionFailed(transactionId, durationMs)
+
+        val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
+        verify(deps).statsWrite(eventCaptor.capture())
+        eventCaptor.value.let {
+            assertFalse(it.isLegacy)
+            assertEquals(clientId, it.clientId)
+            assertEquals(transactionId, it.transactionId)
+            assertEquals(NsdEventType.NET_RESOLVE, it.type)
+            assertEquals(MdnsQueryResult.MQR_SERVICE_RESOLUTION_FAILED, it.queryResult)
+            assertEquals(durationMs, it.eventDurationMillisec)
+        }
+    }
 }
