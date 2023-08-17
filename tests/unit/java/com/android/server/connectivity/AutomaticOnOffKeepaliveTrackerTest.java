@@ -32,7 +32,6 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.longThat;
@@ -359,7 +358,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
                 .when(mDependencies)
                 .newKeepaliveStatsTracker(mCtx, mTestHandler);
 
-        doReturn(true).when(mDependencies).isFeatureEnabled(any(), anyBoolean());
+        doReturn(true).when(mDependencies).isTetheringFeatureNotChickenedOut(any());
         doReturn(0L).when(mDependencies).getElapsedRealtime();
         mAOOKeepaliveTracker =
                 new AutomaticOnOffKeepaliveTracker(mCtx, mTestHandler, mDependencies);
