@@ -55,17 +55,20 @@ typedef struct {
 } StatsValue;
 STRUCT_SIZE(StatsValue, 4 * 8);  // 32
 
+#ifdef __cplusplus
+static inline StatsValue& operator+=(StatsValue& lhs, const StatsValue& rhs) {
+    lhs.rxPackets += rhs.rxPackets;
+    lhs.rxBytes += rhs.rxBytes;
+    lhs.txPackets += rhs.txPackets;
+    lhs.txBytes += rhs.txBytes;
+    return lhs;
+}
+#endif
+
 typedef struct {
     char name[IFNAMSIZ];
 } IfaceValue;
 STRUCT_SIZE(IfaceValue, 16);
-
-typedef struct {
-    uint64_t rxBytes;
-    uint64_t rxPackets;
-    uint64_t txBytes;
-    uint64_t txPackets;
-} Stats;
 
 typedef struct {
   uint64_t timestampNs;
