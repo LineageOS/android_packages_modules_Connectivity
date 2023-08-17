@@ -1,3 +1,5 @@
+# Exclude some test prefixes, as they can't be found after being jarjared.
+com\.android\.testutils\..+
 # jarjar-gen can't handle some kotlin object expression, exclude packages that include them
 androidx\..+
 kotlin\.test\..+
