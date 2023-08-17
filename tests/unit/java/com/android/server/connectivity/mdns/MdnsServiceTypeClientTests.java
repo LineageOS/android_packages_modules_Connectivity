@@ -26,6 +26,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -645,14 +646,14 @@ public class MdnsServiceTypeClientTests {
                 SERVICE_TYPE_LABELS,
                 Collections.emptyMap(), TEST_TTL), socketKey);
 
-        verify(mockListenerOne).onServiceNameDiscovered(any());
-        verify(mockListenerOne).onServiceFound(any());
+        verify(mockListenerOne).onServiceNameDiscovered(any(), eq(false) /* isServiceFromCache */);
+        verify(mockListenerOne).onServiceFound(any(), eq(false) /* isServiceFromCache */);
 
         // File another identical query
         startSendAndReceive(mockListenerTwo, searchOptions);
 
-        verify(mockListenerTwo).onServiceNameDiscovered(any());
-        verify(mockListenerTwo).onServiceFound(any());
+        verify(mockListenerTwo).onServiceNameDiscovered(any(), eq(true) /* isServiceFromCache */);
+        verify(mockListenerTwo).onServiceFound(any(), eq(true) /* isServiceFromCache */);
 
         // This time no query is submitted, only scheduled
         assertNull(currentThreadExecutor.getAndClearSubmittedRunnable());
@@ -686,7 +687,8 @@ public class MdnsServiceTypeClientTests {
                 "service-instance-1", null /* host */, 0 /* port */,
                 SERVICE_TYPE_LABELS,
                 Collections.emptyMap(), TEST_TTL), socketKey);
-        verify(mockListenerOne).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(0),
                 "service-instance-1",
                 SERVICE_TYPE_LABELS,
@@ -697,7 +699,7 @@ public class MdnsServiceTypeClientTests {
                 Collections.emptyMap(),
                 socketKey);
 
-        verify(mockListenerOne, never()).onServiceFound(any(MdnsServiceInfo.class));
+        verify(mockListenerOne, never()).onServiceFound(any(MdnsServiceInfo.class), anyBoolean());
         verify(mockListenerOne, never()).onServiceUpdated(any(MdnsServiceInfo.class));
     }
 
@@ -718,7 +720,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceNameDiscovered was called once for the initial response.
-        verify(mockListenerOne).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(0),
                 "service-instance-1",
                 SERVICE_TYPE_LABELS,
@@ -730,7 +733,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceFound was called once for the initial response.
-        verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceFound(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         MdnsServiceInfo initialServiceInfo = serviceInfoCaptor.getAllValues().get(1);
         assertEquals(initialServiceInfo.getServiceInstanceName(), "service-instance-1");
         assertEquals(initialServiceInfo.getIpv4Address(), ipV4Address);
@@ -770,7 +774,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceNameDiscovered was called once for the initial response.
-        verify(mockListenerOne).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(0),
                 "service-instance-1",
                 SERVICE_TYPE_LABELS,
@@ -782,7 +787,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceFound was called once for the initial response.
-        verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceFound(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         MdnsServiceInfo initialServiceInfo = serviceInfoCaptor.getAllValues().get(1);
         assertEquals(initialServiceInfo.getServiceInstanceName(), "service-instance-1");
         assertEquals(initialServiceInfo.getIpv6Address(), ipV6Address);
@@ -867,7 +873,8 @@ public class MdnsServiceTypeClientTests {
         startSendAndReceive(mockListenerOne, MdnsSearchOptions.getDefaultOptions());
 
         // Verify onServiceNameDiscovered was called once for the existing response.
-        verify(mockListenerOne).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(true) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(0),
                 "service-instance-1",
                 SERVICE_TYPE_LABELS,
@@ -879,7 +886,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceFound was called once for the existing response.
-        verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        verify(mockListenerOne).onServiceFound(
+                serviceInfoCaptor.capture(), eq(true) /* isServiceFromCache */);
         MdnsServiceInfo existingServiceInfo = serviceInfoCaptor.getAllValues().get(1);
         assertEquals(existingServiceInfo.getServiceInstanceName(), "service-instance-1");
         assertEquals(existingServiceInfo.getIpv4Address(), "192.168.1.1");
@@ -897,8 +905,9 @@ public class MdnsServiceTypeClientTests {
 
         // Verify onServiceFound was not called on the newly registered listener after the existing
         // response is gone.
-        verify(mockListenerTwo, never()).onServiceNameDiscovered(any(MdnsServiceInfo.class));
-        verify(mockListenerTwo, never()).onServiceFound(any(MdnsServiceInfo.class));
+        verify(mockListenerTwo, never()).onServiceNameDiscovered(
+                any(MdnsServiceInfo.class), eq(false));
+        verify(mockListenerTwo, never()).onServiceFound(any(MdnsServiceInfo.class), anyBoolean());
     }
 
     @Test
@@ -1044,7 +1053,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceNameDiscovered was first called for the initial response.
-        inOrder.verify(mockListenerOne).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        inOrder.verify(mockListenerOne).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(0),
                 serviceName,
                 SERVICE_TYPE_LABELS,
@@ -1056,7 +1066,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify onServiceFound was second called for the second response.
-        inOrder.verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        inOrder.verify(mockListenerOne).onServiceFound(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(1),
                 serviceName,
                 SERVICE_TYPE_LABELS,
@@ -1183,10 +1194,11 @@ public class MdnsServiceTypeClientTests {
                 Collections.emptyList() /* authorityRecords */,
                 Collections.emptyList() /* additionalRecords */);
 
-        inOrder.verify(mockListenerOne, never()).onServiceNameDiscovered(any());
+        inOrder.verify(mockListenerOne, never()).onServiceNameDiscovered(any(), anyBoolean());
         processResponse(addressResponse, socketKey);
 
-        inOrder.verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        inOrder.verify(mockListenerOne).onServiceFound(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getValue(),
                 instanceName,
                 SERVICE_TYPE_LABELS,
@@ -1253,8 +1265,10 @@ public class MdnsServiceTypeClientTests {
                 Collections.emptyList() /* additionalRecords */);
         processResponse(srvTxtResponse, socketKey);
         dispatchMessage();
-        inOrder.verify(mockListenerOne).onServiceNameDiscovered(any());
-        inOrder.verify(mockListenerOne).onServiceFound(any());
+        inOrder.verify(mockListenerOne).onServiceNameDiscovered(
+                any(), eq(false) /* isServiceFromCache */);
+        inOrder.verify(mockListenerOne).onServiceFound(
+                any(), eq(false) /* isServiceFromCache */);
 
         // Expect no query on the next run
         currentThreadExecutor.getAndClearLastScheduledRunnable().run();
@@ -1355,24 +1369,29 @@ public class MdnsServiceTypeClientTests {
 
         // mockListenerOne gets notified for the requested instance
         verify(mockListenerOne).onServiceNameDiscovered(
-                matchServiceName(capitalizedRequestInstance));
-        verify(mockListenerOne).onServiceFound(matchServiceName(capitalizedRequestInstance));
+                matchServiceName(capitalizedRequestInstance), eq(false) /* isServiceFromCache */);
+        verify(mockListenerOne).onServiceFound(
+                matchServiceName(capitalizedRequestInstance), eq(false) /* isServiceFromCache */);
 
         // ...but does not get any callback for the other instance
-        verify(mockListenerOne, never()).onServiceFound(matchServiceName(otherInstance));
-        verify(mockListenerOne, never()).onServiceNameDiscovered(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceFound(
+                matchServiceName(otherInstance), anyBoolean());
+        verify(mockListenerOne, never()).onServiceNameDiscovered(
+                matchServiceName(otherInstance), anyBoolean());
         verify(mockListenerOne, never()).onServiceUpdated(matchServiceName(otherInstance));
         verify(mockListenerOne, never()).onServiceRemoved(matchServiceName(otherInstance));
 
         // mockListenerTwo gets notified for both though
         final InOrder inOrder = inOrder(mockListenerTwo);
         inOrder.verify(mockListenerTwo).onServiceNameDiscovered(
-                matchServiceName(capitalizedRequestInstance));
+                matchServiceName(capitalizedRequestInstance), eq(false) /* isServiceFromCache */);
         inOrder.verify(mockListenerTwo).onServiceFound(
-                matchServiceName(capitalizedRequestInstance));
+                matchServiceName(capitalizedRequestInstance), eq(false) /* isServiceFromCache */);
 
-        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
-        inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(
+                matchServiceName(otherInstance), eq(false) /* isServiceFromCache */);
+        inOrder.verify(mockListenerTwo).onServiceFound(
+                matchServiceName(otherInstance), eq(false) /* isServiceFromCache */);
         inOrder.verify(mockListenerTwo).onServiceUpdated(matchServiceName(otherInstance));
         inOrder.verify(mockListenerTwo).onServiceRemoved(matchServiceName(otherInstance));
     }
@@ -1439,22 +1458,30 @@ public class MdnsServiceTypeClientTests {
         final ArgumentMatcher<MdnsServiceInfo> subtypeInstanceMatcher = info ->
                 info.getServiceInstanceName().equals(matchingInstance)
                         && info.getSubtypes().equals(Collections.singletonList(subtype));
-        verify(mockListenerOne).onServiceNameDiscovered(argThat(subtypeInstanceMatcher));
-        verify(mockListenerOne).onServiceFound(argThat(subtypeInstanceMatcher));
+        verify(mockListenerOne).onServiceNameDiscovered(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
+        verify(mockListenerOne).onServiceFound(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
 
         // ...but does not get any callback for the other instance
-        verify(mockListenerOne, never()).onServiceFound(matchServiceName(otherInstance));
-        verify(mockListenerOne, never()).onServiceNameDiscovered(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceFound(
+                matchServiceName(otherInstance), anyBoolean());
+        verify(mockListenerOne, never()).onServiceNameDiscovered(
+                matchServiceName(otherInstance), anyBoolean());
         verify(mockListenerOne, never()).onServiceUpdated(matchServiceName(otherInstance));
         verify(mockListenerOne, never()).onServiceRemoved(matchServiceName(otherInstance));
 
         // mockListenerTwo gets notified for both though
         final InOrder inOrder = inOrder(mockListenerTwo);
-        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(argThat(subtypeInstanceMatcher));
-        inOrder.verify(mockListenerTwo).onServiceFound(argThat(subtypeInstanceMatcher));
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
+        inOrder.verify(mockListenerTwo).onServiceFound(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
 
-        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
-        inOrder.verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
+        inOrder.verify(mockListenerTwo).onServiceNameDiscovered(
+                matchServiceName(otherInstance), eq(false) /* isServiceFromCache */);
+        inOrder.verify(mockListenerTwo).onServiceFound(
+                matchServiceName(otherInstance), eq(false) /* isServiceFromCache */);
         inOrder.verify(mockListenerTwo).onServiceUpdated(matchServiceName(otherInstance));
         inOrder.verify(mockListenerTwo).onServiceRemoved(matchServiceName(otherInstance));
     }
@@ -1508,24 +1535,30 @@ public class MdnsServiceTypeClientTests {
         // mockListenerOne gets notified for the requested instance
         final InOrder inOrder1 = inOrder(mockListenerOne);
         inOrder1.verify(mockListenerOne).onServiceNameDiscovered(
-                matchServiceName(requestedInstance));
-        inOrder1.verify(mockListenerOne).onServiceFound(matchServiceName(requestedInstance));
+                matchServiceName(requestedInstance), eq(false) /* isServiceFromCache */);
+        inOrder1.verify(mockListenerOne).onServiceFound(
+                matchServiceName(requestedInstance), eq(false) /* isServiceFromCache */);
         inOrder1.verify(mockListenerOne).onServiceRemoved(matchServiceName(requestedInstance));
         inOrder1.verify(mockListenerOne).onServiceNameRemoved(matchServiceName(requestedInstance));
-        verify(mockListenerOne, never()).onServiceFound(matchServiceName(otherInstance));
-        verify(mockListenerOne, never()).onServiceNameDiscovered(matchServiceName(otherInstance));
+        verify(mockListenerOne, never()).onServiceFound(
+                matchServiceName(otherInstance), anyBoolean());
+        verify(mockListenerOne, never()).onServiceNameDiscovered(
+                matchServiceName(otherInstance), anyBoolean());
         verify(mockListenerOne, never()).onServiceRemoved(matchServiceName(otherInstance));
         verify(mockListenerOne, never()).onServiceNameRemoved(matchServiceName(otherInstance));
 
         // mockListenerTwo gets notified for both though
         final InOrder inOrder2 = inOrder(mockListenerTwo);
         inOrder2.verify(mockListenerTwo).onServiceNameDiscovered(
-                matchServiceName(requestedInstance));
-        inOrder2.verify(mockListenerTwo).onServiceFound(matchServiceName(requestedInstance));
+                matchServiceName(requestedInstance), eq(false) /* isServiceFromCache */);
+        inOrder2.verify(mockListenerTwo).onServiceFound(
+                matchServiceName(requestedInstance), eq(false) /* isServiceFromCache */);
         inOrder2.verify(mockListenerTwo).onServiceRemoved(matchServiceName(requestedInstance));
         inOrder2.verify(mockListenerTwo).onServiceNameRemoved(matchServiceName(requestedInstance));
-        verify(mockListenerTwo).onServiceNameDiscovered(matchServiceName(otherInstance));
-        verify(mockListenerTwo).onServiceFound(matchServiceName(otherInstance));
+        verify(mockListenerTwo).onServiceNameDiscovered(
+                matchServiceName(otherInstance), eq(false) /* isServiceFromCache */);
+        verify(mockListenerTwo).onServiceFound(
+                matchServiceName(otherInstance), eq(false) /* isServiceFromCache */);
         verify(mockListenerTwo).onServiceRemoved(matchServiceName(otherInstance));
         verify(mockListenerTwo).onServiceNameRemoved(matchServiceName(otherInstance));
     }
@@ -1547,7 +1580,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify that onServiceNameDiscovered is called.
-        inOrder.verify(mockListenerOne).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        inOrder.verify(mockListenerOne).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(0),
                 serviceName,
                 SERVICE_TYPE_LABELS,
@@ -1559,7 +1593,8 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
 
         // Verify that onServiceFound is called.
-        inOrder.verify(mockListenerOne).onServiceFound(serviceInfoCaptor.capture());
+        inOrder.verify(mockListenerOne).onServiceFound(
+                serviceInfoCaptor.capture(), eq(false) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(1),
                 serviceName,
                 SERVICE_TYPE_LABELS,
@@ -1581,7 +1616,8 @@ public class MdnsServiceTypeClientTests {
 
         // The services are cached in MdnsServiceCache, verify that onServiceNameDiscovered is
         // called immediately.
-        inOrder2.verify(mockListenerTwo).onServiceNameDiscovered(serviceInfoCaptor.capture());
+        inOrder2.verify(mockListenerTwo).onServiceNameDiscovered(
+                serviceInfoCaptor.capture(), eq(true) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(2),
                 serviceName,
                 SERVICE_TYPE_LABELS,
@@ -1594,7 +1630,8 @@ public class MdnsServiceTypeClientTests {
 
         // The services are cached in MdnsServiceCache, verify that onServiceFound is
         // called immediately.
-        inOrder2.verify(mockListenerTwo).onServiceFound(serviceInfoCaptor.capture());
+        inOrder2.verify(mockListenerTwo).onServiceFound(
+                serviceInfoCaptor.capture(), eq(true) /* isServiceFromCache */);
         verifyServiceInfo(serviceInfoCaptor.getAllValues().get(3),
                 serviceName,
                 SERVICE_TYPE_LABELS,

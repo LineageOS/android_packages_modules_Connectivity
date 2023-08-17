@@ -457,19 +457,24 @@ public class NsdServiceTest {
                 eq(interfaceIdx));
 
         final String serviceAddress = "192.0.2.123";
+        final int getAddrId = getAddrIdCaptor.getValue();
         final GetAddressInfo addressInfo = new GetAddressInfo(
-                getAddrIdCaptor.getValue(),
+                getAddrId,
                 IMDnsEventListener.SERVICE_GET_ADDR_SUCCESS,
                 SERVICE_FULL_NAME,
                 serviceAddress,
                 interfaceIdx,
                 INetd.LOCAL_NET_ID);
+        doReturn(TEST_TIME_MS + 10L).when(mClock).elapsedRealtime();
         eventListener.onGettingServiceAddressStatus(addressInfo);
         waitForIdle();
 
         final ArgumentCaptor<NsdServiceInfo> resInfoCaptor =
                 ArgumentCaptor.forClass(NsdServiceInfo.class);
         verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(resInfoCaptor.capture());
+        verify(mMetrics).reportServiceResolved(
+                getAddrId, 10L /* durationMs */, false /* isServiceFromCache */);
+
         final NsdServiceInfo resolvedService = resInfoCaptor.getValue();
         assertEquals(SERVICE_NAME, resolvedService.getServiceName());
         assertEquals("." + SERVICE_TYPE, resolvedService.getServiceType());
@@ -609,8 +614,9 @@ public class NsdServiceTest {
                 eq("local.") /* domain */, eq(IFACE_IDX_ANY));
 
         // Fail to resolve service.
+        final int resolvId = resolvIdCaptor.getValue();
         final ResolutionInfo resolutionFailedInfo = new ResolutionInfo(
-                resolvIdCaptor.getValue(),
+                resolvId,
                 IMDnsEventListener.SERVICE_RESOLUTION_FAILED,
                 null /* serviceName */,
                 null /* serviceType */,
@@ -620,9 +626,11 @@ public class NsdServiceTest {
                 0 /* port */,
                 new byte[0] /* txtRecord */,
                 IFACE_IDX_ANY);
+        doReturn(TEST_TIME_MS + 10L).when(mClock).elapsedRealtime();
         eventListener.onServiceResolutionStatus(resolutionFailedInfo);
         verify(resolveListener, timeout(TIMEOUT_MS))
                 .onResolveFailed(any(), eq(FAILURE_INTERNAL_ERROR));
+        verify(mMetrics).reportServiceResolutionFailed(resolvId, 10L /* durationMs */);
     }
 
     @Test
@@ -660,16 +668,19 @@ public class NsdServiceTest {
                 eq(IFACE_IDX_ANY));
 
         // Fail to get service address.
+        final int getAddrId = getAddrIdCaptor.getValue();
         final GetAddressInfo gettingAddrFailedInfo = new GetAddressInfo(
-                getAddrIdCaptor.getValue(),
+                getAddrId,
                 IMDnsEventListener.SERVICE_GET_ADDR_FAILED,
                 null /* hostname */,
                 null /* address */,
                 IFACE_IDX_ANY,
                 0 /* netId */);
+        doReturn(TEST_TIME_MS + 10L).when(mClock).elapsedRealtime();
         eventListener.onGettingServiceAddressStatus(gettingAddrFailedInfo);
         verify(resolveListener, timeout(TIMEOUT_MS))
                 .onResolveFailed(any(), eq(FAILURE_INTERNAL_ERROR));
+        verify(mMetrics).reportServiceResolutionFailed(getAddrId, 10L /* durationMs */);
     }
 
     @Test
@@ -828,7 +839,7 @@ public class NsdServiceTest {
                 network);
 
         // Verify onServiceFound callback
-        listener.onServiceFound(mdnsServiceInfo);
+        listener.onServiceFound(mdnsServiceInfo, false /* isServiceFromCache */);
         final ArgumentCaptor<NsdServiceInfo> updateInfoCaptor =
                 ArgumentCaptor.forClass(NsdServiceInfo.class);
         verify(serviceInfoCallback, timeout(TIMEOUT_MS).times(1))
@@ -972,7 +983,7 @@ public class NsdServiceTest {
                 network);
 
         // Verify onServiceNameDiscovered callback
-        listener.onServiceNameDiscovered(foundInfo);
+        listener.onServiceNameDiscovered(foundInfo, false /* isServiceFromCache */);
         verify(discListener, timeout(TIMEOUT_MS)).onServiceFound(argThat(info ->
                 info.getServiceName().equals(SERVICE_NAME)
                         // Service type in discovery callbacks has a dot at the end
@@ -1081,8 +1092,8 @@ public class NsdServiceTest {
         final Network network = new Network(999);
         final String serviceType = "_nsd._service._tcp";
         final String constructedServiceType = "_service._tcp.local";
-        final ArgumentCaptor<MdnsServiceBrowserListener> listenerCaptor =
-                ArgumentCaptor.forClass(MdnsServiceBrowserListener.class);
+        final ArgumentCaptor<MdnsListener> listenerCaptor =
+                ArgumentCaptor.forClass(MdnsListener.class);
         final NsdServiceInfo request = new NsdServiceInfo(SERVICE_NAME, serviceType);
         request.setNetwork(network);
         client.resolveService(request, resolveListener);
@@ -1097,7 +1108,7 @@ public class NsdServiceTest {
         // Subtypes are not used for resolution, only for discovery
         assertEquals(Collections.emptyList(), optionsCaptor.getValue().getSubtypes());
 
-        final MdnsServiceBrowserListener listener = listenerCaptor.getValue();
+        final MdnsListener listener = listenerCaptor.getValue();
         final MdnsServiceInfo mdnsServiceInfo = new MdnsServiceInfo(
                 SERVICE_NAME,
                 constructedServiceType.split("\\."),
@@ -1113,10 +1124,14 @@ public class NsdServiceTest {
                 network);
 
         // Verify onServiceFound callback
-        listener.onServiceFound(mdnsServiceInfo);
+        doReturn(TEST_TIME_MS + 10L).when(mClock).elapsedRealtime();
+        listener.onServiceFound(mdnsServiceInfo, true /* isServiceFromCache */);
         final ArgumentCaptor<NsdServiceInfo> infoCaptor =
                 ArgumentCaptor.forClass(NsdServiceInfo.class);
         verify(resolveListener, timeout(TIMEOUT_MS)).onServiceResolved(infoCaptor.capture());
+        verify(mMetrics).reportServiceResolved(
+                listener.mTransactionId, 10 /* durationMs */, true /* isServiceFromCache */);
+
         final NsdServiceInfo info = infoCaptor.getValue();
         assertEquals(SERVICE_NAME, info.getServiceName());
         assertEquals("._service._tcp", info.getServiceType());
