@@ -140,6 +140,9 @@
     },
     {
       "name": "FrameworksNetTests"
+    },
+    {
+      "name": "NetHttpCoverageTests"
     }
   ],
   "mainline-presubmit": [
