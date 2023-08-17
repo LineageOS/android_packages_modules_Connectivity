@@ -297,9 +297,9 @@ public class MdnsServiceTypeClient {
                 if (!responseMatchesOptions(existingResponse, searchOptions)) continue;
                 final MdnsServiceInfo info =
                         buildMdnsServiceInfoFromResponse(existingResponse, serviceTypeLabels);
-                listener.onServiceNameDiscovered(info);
+                listener.onServiceNameDiscovered(info, true /* isServiceFromCache */);
                 if (existingResponse.isComplete()) {
-                    listener.onServiceFound(info);
+                    listener.onServiceFound(info, true /* isServiceFromCache */);
                     hadReply = true;
                 }
             }
@@ -512,13 +512,13 @@ public class MdnsServiceTypeClient {
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             if (newServiceFound) {
                 sharedLog.log("onServiceNameDiscovered: " + serviceInfo);
-                listener.onServiceNameDiscovered(serviceInfo);
+                listener.onServiceNameDiscovered(serviceInfo, false /* isServiceFromCache */);
             }
 
             if (response.isComplete()) {
                 if (newServiceFound || serviceBecomesComplete) {
                     sharedLog.log("onServiceFound: " + serviceInfo);
-                    listener.onServiceFound(serviceInfo);
+                    listener.onServiceFound(serviceInfo, false /* isServiceFromCache */);
                 } else {
                     sharedLog.log("onServiceUpdated: " + serviceInfo);
                     listener.onServiceUpdated(serviceInfo);
