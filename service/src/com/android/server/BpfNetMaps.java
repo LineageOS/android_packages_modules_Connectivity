@@ -43,7 +43,6 @@ import android.net.INetd;
 import android.os.Build;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
-import android.provider.DeviceConfig;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.ArraySet;
@@ -95,8 +94,8 @@ public class BpfNetMaps {
     private static boolean sInitialized = false;
 
     private static Boolean sEnableJavaBpfMap = null;
-    private static final String BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP =
-            "bpf_net_maps_enable_java_bpf_map";
+    private static final String BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP =
+            "bpf_net_maps_force_disable_java_bpf_map";
 
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
     // This entry is not accessed by others.
@@ -283,9 +282,8 @@ public class BpfNetMaps {
         if (sInitialized) return;
         if (sEnableJavaBpfMap == null) {
             sEnableJavaBpfMap = SdkLevel.isAtLeastU() ||
-                    DeviceConfigUtils.isFeatureEnabled(context,
-                            DeviceConfig.NAMESPACE_TETHERING, BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP,
-                            DeviceConfigUtils.TETHERING_MODULE_NAME, false /* defaultValue */);
+                    DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                            BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP);
         }
         Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
 
