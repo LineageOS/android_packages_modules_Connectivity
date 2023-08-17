@@ -187,7 +187,7 @@ aidl_interface {
     srcs: [
         "binder/android/net/metrics/INetdEventListener.aidl",
     ],
-    versions: ["1"],
+
     backend: {
         ndk: {
             apex_available: [
@@ -205,6 +205,19 @@ aidl_interface {
             min_sdk_version: "29",
         },
     },
+    versions_with_info: [
+        {
+            version: "1",
+            imports: [],
+        },
+        {
+            version: "2",
+            imports: [],
+        },
+
+    ],
+    frozen: true,
+
 }
 
 java_library {
