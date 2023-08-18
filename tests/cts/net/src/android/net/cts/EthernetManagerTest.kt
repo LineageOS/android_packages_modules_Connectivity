@@ -277,7 +277,7 @@ class EthernetManagerTest {
 
         fun eventuallyExpect(expected: CallbackEntry) {
             val cb = events.poll(TIMEOUT_MS) { it == expected }
-            assertNotNull(cb, "Never received expected $expected")
+            assertNotNull(cb, "Never received expected $expected. Received: ${events.backtrace()}")
         }
 
         fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
