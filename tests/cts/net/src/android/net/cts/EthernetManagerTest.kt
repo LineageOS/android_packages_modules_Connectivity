@@ -275,16 +275,17 @@ class EthernetManagerTest {
             return events.poll(TIMEOUT_MS) ?: fail("Did not receive callback after ${TIMEOUT_MS}ms")
         }
 
-        fun eventuallyExpect(expected: CallbackEntry) = events.poll(TIMEOUT_MS) { it == expected }
+        fun eventuallyExpect(expected: CallbackEntry) {
+            val cb = events.poll(TIMEOUT_MS) { it == expected }
+            assertNotNull(cb, "Never received expected $expected")
+        }
 
         fun eventuallyExpect(iface: EthernetTestInterface, state: Int, role: Int) {
-            val event = createChangeEvent(iface.name, state, role)
-            assertNotNull(eventuallyExpect(event), "Never received expected $event")
+            eventuallyExpect(createChangeEvent(iface.name, state, role))
         }
 
         fun eventuallyExpect(state: Int) {
-            val event = EthernetStateChanged(state)
-            assertNotNull(eventuallyExpect(event), "Never received expected $event")
+            eventuallyExpect(EthernetStateChanged(state))
         }
 
         fun assertNoCallback() {
@@ -652,9 +653,9 @@ class EthernetManagerTest {
 
         val listener = EthernetStateListener()
         addInterfaceStateListener(listener)
-        // Note: using eventuallyExpect as there may be other interfaces present.
+        // BUG(241070589): server mode interfaces should report STATE_LINK_UP
         listener.eventuallyExpect(InterfaceStateChanged(iface.name,
-                STATE_LINK_UP, ROLE_SERVER, /* IpConfiguration */ null))
+                STATE_ABSENT, ROLE_SERVER, /* IpConfiguration */ null))
 
         releaseTetheredInterface()
         listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_CLIENT)
