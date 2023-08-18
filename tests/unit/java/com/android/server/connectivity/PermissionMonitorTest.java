@@ -100,6 +100,7 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -212,6 +213,14 @@ public class PermissionMonitorTest {
 
         doReturn(List.of()).when(mPackageManager).getInstalledPackagesAsUser(anyInt(), anyInt());
         onUserAdded(MOCK_USER1);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            mHandlerThread.join();
+        }
     }
 
     private boolean hasRestrictedNetworkPermission(String partition, int targetSdkVersion,
