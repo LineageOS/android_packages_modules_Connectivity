@@ -71,8 +71,6 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.RecorderCallback.CallbackEntry;
-import com.android.testutils.SkipMainlinePresubmit;
-import com.android.testutils.SkipPresubmit;
 import com.android.testutils.TestableNetworkCallback;
 
 import org.bouncycastle.x509.X509V1CertificateGenerator;
@@ -642,7 +640,6 @@ public class Ikev2VpnTest {
     }
 
     @Test
-    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testStartStopVpnProfileV4() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
@@ -656,14 +653,12 @@ public class Ikev2VpnTest {
     }
 
     @Test
-    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testStartStopVpnProfileV6() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
     @Test @IgnoreUpTo(SC_V2)
-    @SkipPresubmit(reason = "Out of SLO flakiness")
     public void testStartStopVpnProfileV6WithValidation() throws Exception {
         assumeTrue(TestUtils.shouldTestTApis());
         doTestStartStopVpnProfile(true /* testIpv6Only */, true /* requiresValidation */,
