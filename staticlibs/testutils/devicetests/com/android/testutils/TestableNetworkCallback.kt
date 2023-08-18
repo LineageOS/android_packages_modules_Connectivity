@@ -389,7 +389,8 @@ open class TestableNetworkCallback private constructor(
         from: Int = mark,
         crossinline predicate: (T) -> Boolean = { true }
     ): T = history.poll(timeoutMs, from) { it is T && predicate(it) }.also {
-        assertNotNull(it, "Callback ${T::class} not received within ${timeoutMs}ms")
+        assertNotNull(it, "Callback ${T::class} not received within ${timeoutMs}ms. " +
+                "Got ${history.backtrace()}")
     } as T
 
     @JvmOverloads
@@ -398,7 +399,8 @@ open class TestableNetworkCallback private constructor(
         timeoutMs: Long = defaultTimeoutMs,
         predicate: (cb: T) -> Boolean = { true }
     ) = history.poll(timeoutMs) { type.java.isInstance(it) && predicate(it as T) }.also {
-        assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms")
+        assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms. " +
+                "Got ${history.backtrace()}")
     } as T
 
     fun <T : CallbackEntry> eventuallyExpect(
@@ -407,7 +409,8 @@ open class TestableNetworkCallback private constructor(
         from: Int = mark,
         predicate: (cb: T) -> Boolean = { true }
     ) = history.poll(timeoutMs, from) { type.java.isInstance(it) && predicate(it as T) }.also {
-        assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms")
+        assertNotNull(it, "Callback ${type.java} not received within ${timeoutMs}ms. " +
+                "Got ${history.backtrace()}")
     } as T
 
     // Expects onAvailable and the callbacks that follow it. These are:
