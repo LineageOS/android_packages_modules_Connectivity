@@ -29,6 +29,10 @@
 namespace android {
 namespace bpf {
 
+using base::Result;
+using base::unique_fd;
+using std::function;
+
 // This is a class wrapper for eBPF maps. The eBPF map is a special in-kernel
 // data structure that stores data in <Key, Value> pairs. It can be read/write
 // from userspace by passing syscalls with the map file descriptor. This class
@@ -80,7 +84,7 @@ class BpfMap {
     }
 #endif
 
-    base::Result<Key> getFirstKey() const {
+    Result<Key> getFirstKey() const {
         Key firstKey;
         if (getFirstMapKey(mMapFd, &firstKey)) {
             return ErrnoErrorf("Get firstKey map {} failed", mMapFd.get());
@@ -88,7 +92,7 @@ class BpfMap {
         return firstKey;
     }
 
-    base::Result<Key> getNextKey(const Key& key) const {
+    Result<Key> getNextKey(const Key& key) const {
         Key nextKey;
         if (getNextMapKey(mMapFd, &key, &nextKey)) {
             return ErrnoErrorf("Get next key of map {} failed", mMapFd.get());
@@ -96,14 +100,14 @@ class BpfMap {
         return nextKey;
     }
 
-    base::Result<void> writeValue(const Key& key, const Value& value, uint64_t flags) {
+    Result<void> writeValue(const Key& key, const Value& value, uint64_t flags) {
         if (writeToMapEntry(mMapFd, &key, &value, flags)) {
             return ErrnoErrorf("Write to map {} failed", mMapFd.get());
         }
         return {};
     }
 
-    base::Result<Value> readValue(const Key key) const {
+    Result<Value> readValue(const Key key) const {
         Value value;
         if (findMapEntry(mMapFd, &key, &value)) {
             return ErrnoErrorf("Read value of map {} failed", mMapFd.get());
@@ -111,7 +115,7 @@ class BpfMap {
         return value;
     }
 
-    base::Result<void> deleteValue(const Key& key) {
+    Result<void> deleteValue(const Key& key) {
         if (deleteMapEntry(mMapFd, &key)) {
             return ErrnoErrorf("Delete entry from map {} failed", mMapFd.get());
         }
@@ -119,7 +123,7 @@ class BpfMap {
     }
 
   protected:
-    [[clang::reinitializes]] base::Result<void> init(const char* path, int fd) {
+    [[clang::reinitializes]] Result<void> init(const char* path, int fd) {
         mMapFd.reset(fd);
         if (!mMapFd.ok()) {
             return ErrnoErrorf("Pinned map not accessible or does not exist: ({})", path);
@@ -134,7 +138,7 @@ class BpfMap {
 
   public:
     // Function that tries to get map from a pinned path.
-    [[clang::reinitializes]] base::Result<void> init(const char* path) {
+    [[clang::reinitializes]] Result<void> init(const char* path) {
         return init(path, mapRetrieveRW(path));
     }
 
@@ -144,7 +148,7 @@ class BpfMap {
     // this should only ever be used by test code, it is equivalent to:
     //   .reset(createMap(type, keysize, valuesize, max_entries, map_flags)
     // TODO: derive map_flags from BpfMap vs BpfMapRO
-    [[clang::reinitializes]] base::Result<void> resetMap(bpf_map_type map_type,
+    [[clang::reinitializes]] Result<void> resetMap(bpf_map_type map_type,
                                                          uint32_t max_entries,
                                                          uint32_t map_flags = 0) {
         mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries, map_flags));
@@ -155,28 +159,28 @@ class BpfMap {
 
     // Iterate through the map and handle each key retrieved based on the filter
     // without modification of map content.
-    base::Result<void> iterate(
-            const std::function<base::Result<void>(const Key& key, const BpfMap<Key, Value>& map)>&
-                    filter) const;
+    Result<void> iterate(
+            const function<Result<void>(const Key& key,
+                                        const BpfMap<Key, Value>& map)>& filter) const;
 
     // Iterate through the map and get each <key, value> pair, handle each <key,
     // value> pair based on the filter without modification of map content.
-    base::Result<void> iterateWithValue(
-            const std::function<base::Result<void>(const Key& key, const Value& value,
-                                                   const BpfMap<Key, Value>& map)>& filter) const;
+    Result<void> iterateWithValue(
+            const function<Result<void>(const Key& key, const Value& value,
+                                        const BpfMap<Key, Value>& map)>& filter) const;
 
     // Iterate through the map and handle each key retrieved based on the filter
-    base::Result<void> iterate(
-            const std::function<base::Result<void>(const Key& key, BpfMap<Key, Value>& map)>&
-                    filter);
+    Result<void> iterate(
+            const function<Result<void>(const Key& key,
+                                        BpfMap<Key, Value>& map)>& filter);
 
     // Iterate through the map and get each <key, value> pair, handle each <key,
     // value> pair based on the filter.
-    base::Result<void> iterateWithValue(
-            const std::function<base::Result<void>(const Key& key, const Value& value,
-                                                   BpfMap<Key, Value>& map)>& filter);
+    Result<void> iterateWithValue(
+            const function<Result<void>(const Key& key, const Value& value,
+                                        BpfMap<Key, Value>& map)>& filter);
 
-    const base::unique_fd& getMap() const { return mMapFd; };
+    const unique_fd& getMap() const { return mMapFd; };
 
 #ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     // Copy assignment operator - due to need for fd duping, should not be used in non-test code.
@@ -197,7 +201,7 @@ class BpfMap {
         return *this;
     }
 
-    void reset(base::unique_fd fd) = delete;
+    void reset(unique_fd fd) = delete;
 
 #ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     // Note that unique_fd.reset() carefully saves and restores the errno,
@@ -216,7 +220,7 @@ class BpfMap {
 
     bool isValid() const { return mMapFd.ok(); }
 
-    base::Result<void> clear() {
+    Result<void> clear() {
         while (true) {
             auto key = getFirstKey();
             if (!key.ok()) {
@@ -233,7 +237,7 @@ class BpfMap {
         }
     }
 
-    base::Result<bool> isEmpty() const {
+    Result<bool> isEmpty() const {
         auto key = getFirstKey();
         if (!key.ok()) {
             // Return error code ENOENT means the map is empty
@@ -244,17 +248,17 @@ class BpfMap {
     }
 
   private:
-    base::unique_fd mMapFd;
+    unique_fd mMapFd;
 };
 
 template <class Key, class Value>
-base::Result<void> BpfMap<Key, Value>::iterate(
-        const std::function<base::Result<void>(const Key& key, const BpfMap<Key, Value>& map)>&
-                filter) const {
-    base::Result<Key> curKey = getFirstKey();
+Result<void> BpfMap<Key, Value>::iterate(
+        const function<Result<void>(const Key& key,
+                                    const BpfMap<Key, Value>& map)>& filter) const {
+    Result<Key> curKey = getFirstKey();
     while (curKey.ok()) {
-        const base::Result<Key>& nextKey = getNextKey(curKey.value());
-        base::Result<void> status = filter(curKey.value(), *this);
+        const Result<Key>& nextKey = getNextKey(curKey.value());
+        Result<void> status = filter(curKey.value(), *this);
         if (!status.ok()) return status;
         curKey = nextKey;
     }
@@ -263,15 +267,15 @@ base::Result<void> BpfMap<Key, Value>::iterate(
 }
 
 template <class Key, class Value>
-base::Result<void> BpfMap<Key, Value>::iterateWithValue(
-        const std::function<base::Result<void>(const Key& key, const Value& value,
-                                               const BpfMap<Key, Value>& map)>& filter) const {
-    base::Result<Key> curKey = getFirstKey();
+Result<void> BpfMap<Key, Value>::iterateWithValue(
+        const function<Result<void>(const Key& key, const Value& value,
+                                    const BpfMap<Key, Value>& map)>& filter) const {
+    Result<Key> curKey = getFirstKey();
     while (curKey.ok()) {
-        const base::Result<Key>& nextKey = getNextKey(curKey.value());
-        base::Result<Value> curValue = readValue(curKey.value());
+        const Result<Key>& nextKey = getNextKey(curKey.value());
+        Result<Value> curValue = readValue(curKey.value());
         if (!curValue.ok()) return curValue.error();
-        base::Result<void> status = filter(curKey.value(), curValue.value(), *this);
+        Result<void> status = filter(curKey.value(), curValue.value(), *this);
         if (!status.ok()) return status;
         curKey = nextKey;
     }
@@ -280,12 +284,13 @@ base::Result<void> BpfMap<Key, Value>::iterateWithValue(
 }
 
 template <class Key, class Value>
-base::Result<void> BpfMap<Key, Value>::iterate(
-        const std::function<base::Result<void>(const Key& key, BpfMap<Key, Value>& map)>& filter) {
-    base::Result<Key> curKey = getFirstKey();
+Result<void> BpfMap<Key, Value>::iterate(
+        const function<Result<void>(const Key& key,
+                                    BpfMap<Key, Value>& map)>& filter) {
+    Result<Key> curKey = getFirstKey();
     while (curKey.ok()) {
-        const base::Result<Key>& nextKey = getNextKey(curKey.value());
-        base::Result<void> status = filter(curKey.value(), *this);
+        const Result<Key>& nextKey = getNextKey(curKey.value());
+        Result<void> status = filter(curKey.value(), *this);
         if (!status.ok()) return status;
         curKey = nextKey;
     }
@@ -294,15 +299,15 @@ base::Result<void> BpfMap<Key, Value>::iterate(
 }
 
 template <class Key, class Value>
-base::Result<void> BpfMap<Key, Value>::iterateWithValue(
-        const std::function<base::Result<void>(const Key& key, const Value& value,
-                                               BpfMap<Key, Value>& map)>& filter) {
-    base::Result<Key> curKey = getFirstKey();
+Result<void> BpfMap<Key, Value>::iterateWithValue(
+        const function<Result<void>(const Key& key, const Value& value,
+                                    BpfMap<Key, Value>& map)>& filter) {
+    Result<Key> curKey = getFirstKey();
     while (curKey.ok()) {
-        const base::Result<Key>& nextKey = getNextKey(curKey.value());
-        base::Result<Value> curValue = readValue(curKey.value());
+        const Result<Key>& nextKey = getNextKey(curKey.value());
+        Result<Value> curValue = readValue(curKey.value());
         if (!curValue.ok()) return curValue.error();
-        base::Result<void> status = filter(curKey.value(), curValue.value(), *this);
+        Result<void> status = filter(curKey.value(), curValue.value(), *this);
         if (!status.ok()) return status;
         curKey = nextKey;
     }
@@ -319,7 +324,7 @@ class BpfMapRO : public BpfMap<Key, Value> {
         : BpfMap<Key, Value>(pathname, BPF_F_RDONLY) {}
 
     // Function that tries to get map from a pinned path.
-    [[clang::reinitializes]] base::Result<void> init(const char* path) {
+    [[clang::reinitializes]] Result<void> init(const char* path) {
         return BpfMap<Key,Value>::init(path, mapRetrieveRO(path));
     }
 };
