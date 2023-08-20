@@ -180,9 +180,9 @@ class BpfMap {
             const function<Result<void>(const Key& key, const Value& value,
                                         BpfMap<Key, Value>& map)>& filter);
 
+#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     const unique_fd& getMap() const { return mMapFd; };
 
-#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     // Copy assignment operator - due to need for fd duping, should not be used in non-test code.
     BpfMap<Key, Value>& operator=(const BpfMap<Key, Value>& other) {
         if (this != &other) mMapFd.reset(fcntl(other.mMapFd.get(), F_DUPFD_CLOEXEC, 0));
