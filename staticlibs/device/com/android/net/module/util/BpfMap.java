@@ -194,9 +194,11 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     }
 
     private K getNextKeyInternal(@Nullable K key) throws ErrnoException {
-        final byte[] rawKey = getNextRawKey(
-                key == null ? null : key.writeToBytes());
-        if (rawKey == null) return null;
+        byte[] rawKey = new byte[mKeySize];
+
+        if (!nativeGetNextMapKey(mMapFd.getFd(),
+                                 key == null ? null : key.writeToBytes(),
+                                 rawKey)) return null;
 
         final ByteBuffer buffer = ByteBuffer.wrap(rawKey);
         buffer.order(ByteOrder.nativeOrder());
@@ -213,13 +215,6 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public K getNextKey(@NonNull K key) throws ErrnoException {
         Objects.requireNonNull(key);
         return getNextKeyInternal(key);
-    }
-
-    private byte[] getNextRawKey(@Nullable final byte[] key) throws ErrnoException {
-        byte[] nextKey = new byte[mKeySize];
-        if (nativeGetNextMapKey(mMapFd.getFd(), key, nextKey)) return nextKey;
-
-        return null;
     }
 
     /** Get the first key of eBpf map. */
