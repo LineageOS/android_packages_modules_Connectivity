@@ -235,12 +235,9 @@ class BpfMap {
 
     base::Result<bool> isEmpty() const {
         auto key = getFirstKey();
-        if (!key.ok()) {
-            // Return error code ENOENT means the map is empty
-            if (key.error().code() == ENOENT) return true;
-            return key.error();
-        }
-        return false;
+        if (key.ok()) return false;
+        if (key.error().code() == ENOENT) return true;
+        return key.error();
     }
 
   private:
