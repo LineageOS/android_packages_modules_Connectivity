@@ -233,28 +233,21 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public boolean containsKey(@NonNull K key) throws ErrnoException {
         Objects.requireNonNull(key);
 
-        final byte[] rawValue = getRawValue(key.writeToBytes());
-        return rawValue != null;
+        byte[] rawValue = new byte[mValueSize];
+        return nativeFindMapEntry(mMapFd.getFd(), key.writeToBytes(), rawValue);
     }
 
     /** Retrieve a value from the map. Return null if there is no such key. */
     @Override
     public V getValue(@NonNull K key) throws ErrnoException {
         Objects.requireNonNull(key);
-        final byte[] rawValue = getRawValue(key.writeToBytes());
 
-        if (rawValue == null) return null;
+        byte[] rawValue = new byte[mValueSize];
+        if (!nativeFindMapEntry(mMapFd.getFd(), key.writeToBytes(), rawValue)) return null;
 
         final ByteBuffer buffer = ByteBuffer.wrap(rawValue);
         buffer.order(ByteOrder.nativeOrder());
         return Struct.parse(mValueClass, buffer);
-    }
-
-    private byte[] getRawValue(final byte[] key) throws ErrnoException {
-        byte[] value = new byte[mValueSize];
-        if (nativeFindMapEntry(mMapFd.getFd(), key, value)) return value;
-
-        return null;
     }
 
     /**
