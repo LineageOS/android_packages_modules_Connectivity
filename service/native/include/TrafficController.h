@@ -33,8 +33,6 @@ using netdutils::StatusOr;
 
 class TrafficController {
   public:
-    static constexpr char DUMP_KEYWORD[] = "trafficcontroller";
-
     /*
      * Initialize the whole controller
      */
