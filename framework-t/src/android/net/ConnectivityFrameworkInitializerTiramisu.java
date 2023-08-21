@@ -24,6 +24,8 @@ import android.net.mdns.aidl.IMDns;
 import android.net.nsd.INsdManager;
 import android.net.nsd.MDnsManager;
 import android.net.nsd.NsdManager;
+import android.net.thread.IThreadNetworkManager;
+import android.net.thread.ThreadNetworkManager;
 
 /**
  * Class for performing registration for Connectivity services which are exposed via updatable APIs
@@ -89,5 +91,14 @@ public final class ConnectivityFrameworkInitializerTiramisu {
                     return new MDnsManager(service);
                 }
         );
+
+        SystemServiceRegistry.registerContextAwareService(
+                ThreadNetworkManager.SERVICE_NAME,
+                ThreadNetworkManager.class,
+                (context, serviceBinder) -> {
+                    IThreadNetworkManager managerService =
+                            IThreadNetworkManager.Stub.asInterface(serviceBinder);
+                    return new ThreadNetworkManager(context, managerService);
+                });
     }
 }
