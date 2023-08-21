@@ -22,13 +22,24 @@ package com.android.net.module.util;
  * @hide
  */
 public class FeatureVersions {
-    public static final long MODULE_MASK = 0xFF00_000000000L;
-    public static final long VERSION_MASK = 0x0000_FFFFFFFFFL;
-    public static final long CONNECTIVITY_MODULE_ID = 0x0100_000000000L;
-    public static final long NETWORK_STACK_MODULE_ID = 0x0200_000000000L;
+    /**
+     * This constant is used to do bitwise shift operation to create module ids.
+     * The module version is composed with 9 digits which is placed in the lower 36 bits.
+     */
+    private static final int MODULE_SHIFT = 36;
+    /**
+     * The bitmask to do bitwise-and(i.e. {@code &}) operation to get the module id.
+     */
+    public static final long MODULE_MASK = 0xFF0_0000_0000L;
+    /**
+     * The bitmask to do bitwise-and(i.e. {@code &}) operation to get the module version.
+     */
+    public static final long VERSION_MASK = 0x00F_FFFF_FFFFL;
+    public static final long CONNECTIVITY_MODULE_ID = 0x01L << MODULE_SHIFT;
+    public static final long NETWORK_STACK_MODULE_ID = 0x02L << MODULE_SHIFT;
     // CLAT_ADDRESS_TRANSLATE is a feature of the network stack, which doesn't throw when system
     // try to add a NAT-T keepalive packet filter with v6 address, introduced in version
     // M-2023-Sept on July 3rd, 2023.
     public static final long FEATURE_CLAT_ADDRESS_TRANSLATE =
-            NETWORK_STACK_MODULE_ID + 340900000L;
+            NETWORK_STACK_MODULE_ID + 34_09_00_000L;
 }
