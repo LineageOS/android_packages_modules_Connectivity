@@ -144,7 +144,7 @@ public class NsdService extends INsdManager.Stub {
      * "mdns_advertiser_allowlist_othertype_version"
      * would be used to toggle MdnsDiscoveryManager / MdnsAdvertiser for each type. The flags will
      * be read with
-     * {@link DeviceConfigUtils#isFeatureEnabled(Context, String, String, String, boolean)}.
+     * {@link DeviceConfigUtils#isTetheringFeatureEnabled}
      *
      * @see #MDNS_DISCOVERY_MANAGER_ALLOWLIST_FLAG_PREFIX
      * @see #MDNS_ADVERTISER_ALLOWLIST_FLAG_PREFIX
@@ -1657,9 +1657,9 @@ public class NsdService extends INsdManager.Stub {
          * @return true if the MdnsDiscoveryManager feature is enabled.
          */
         public boolean isMdnsDiscoveryManagerEnabled(Context context) {
-            return isAtLeastU() || DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_TETHERING,
-                    MDNS_DISCOVERY_MANAGER_VERSION, DeviceConfigUtils.TETHERING_MODULE_NAME,
-                    false /* defaultEnabled */);
+            return isAtLeastU() || DeviceConfigUtils.isTetheringFeatureEnabled(context,
+                    NAMESPACE_TETHERING, MDNS_DISCOVERY_MANAGER_VERSION,
+                    DeviceConfigUtils.TETHERING_MODULE_NAME, false /* defaultEnabled */);
         }
 
         /**
@@ -1669,9 +1669,9 @@ public class NsdService extends INsdManager.Stub {
          * @return true if the MdnsAdvertiser feature is enabled.
          */
         public boolean isMdnsAdvertiserEnabled(Context context) {
-            return isAtLeastU() || DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_TETHERING,
-                    MDNS_ADVERTISER_VERSION, DeviceConfigUtils.TETHERING_MODULE_NAME,
-                    false /* defaultEnabled */);
+            return isAtLeastU() || DeviceConfigUtils.isTetheringFeatureEnabled(context,
+                    NAMESPACE_TETHERING, MDNS_ADVERTISER_VERSION,
+                    DeviceConfigUtils.TETHERING_MODULE_NAME, false /* defaultEnabled */);
         }
 
         /**
@@ -1685,10 +1685,10 @@ public class NsdService extends INsdManager.Stub {
         }
 
         /**
-         * @see DeviceConfigUtils#isFeatureEnabled(Context, String, String, String, boolean)
+         * @see DeviceConfigUtils#isTetheringFeatureEnabled
          */
         public boolean isFeatureEnabled(Context context, String feature) {
-            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_TETHERING,
+            return DeviceConfigUtils.isTetheringFeatureEnabled(context, NAMESPACE_TETHERING,
                     feature, DeviceConfigUtils.TETHERING_MODULE_NAME, false /* defaultEnabled */);
         }
 
