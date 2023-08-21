@@ -112,8 +112,8 @@ public class TetheringConfiguration {
      * config_tether_upstream_automatic when set to true.
      *
      * This flag is enabled if !=0 and less than the module APEX version: see
-     * {@link DeviceConfigUtils#isFeatureEnabled}. It is also ignored after R, as later devices
-     * should just set config_tether_upstream_automatic to true instead.
+     * {@link DeviceConfigUtils#isTetheringFeatureEnabled}. It is also ignored after R, as later
+     * devices should just set config_tether_upstream_automatic to true instead.
      */
     public static final String TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION =
             "tether_force_upstream_automatic_version";
@@ -181,7 +181,7 @@ public class TetheringConfiguration {
     public static class Dependencies {
         boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
                 @NonNull String name, @NonNull String moduleName, boolean defaultEnabled) {
-            return DeviceConfigUtils.isFeatureEnabled(context, namespace, name,
+            return DeviceConfigUtils.isTetheringFeatureEnabled(context, namespace, name,
                     moduleName, defaultEnabled);
         }
 
