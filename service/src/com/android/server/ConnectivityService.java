@@ -1414,10 +1414,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         /**
-         * @see DeviceConfigUtils#isFeatureEnabled
+         * @see DeviceConfigUtils#isTetheringFeatureEnabled
          */
         public boolean isFeatureEnabled(Context context, String name) {
-            return DeviceConfigUtils.isFeatureEnabled(context, NAMESPACE_TETHERING, name,
+            return DeviceConfigUtils.isTetheringFeatureEnabled(context, NAMESPACE_TETHERING, name,
                     TETHERING_MODULE_NAME, false /* defaultValue */);
         }
 
