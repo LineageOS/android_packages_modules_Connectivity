@@ -27,7 +27,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
 import android.util.ArrayMap;
-import android.util.ArraySet;
 import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -42,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -414,11 +414,11 @@ public class MdnsServiceTypeClient {
                 currentList.add(additionalResponse);
             }
         }
-        final Pair<ArraySet<MdnsResponse>, ArrayList<MdnsResponse>> augmentedResult =
+        final Pair<Set<MdnsResponse>, ArrayList<MdnsResponse>> augmentedResult =
                 responseDecoder.augmentResponses(packet, currentList,
                         socketKey.getInterfaceIndex(), socketKey.getNetwork());
 
-        final ArraySet<MdnsResponse> modifiedResponse = augmentedResult.first;
+        final Set<MdnsResponse> modifiedResponse = augmentedResult.first;
         final ArrayList<MdnsResponse> allResponses = augmentedResult.second;
 
         for (MdnsResponse response : allResponses) {

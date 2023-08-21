@@ -35,6 +35,7 @@ import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -59,6 +60,7 @@ import android.net.nsd.OffloadEngine;
 import android.net.nsd.OffloadServiceInfo;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -120,6 +122,7 @@ import java.util.regex.Pattern;
  *
  * @hide
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class NsdService extends INsdManager.Stub {
     private static final String TAG = "NsdService";
     private static final String MDNS_TAG = "mDnsConnector";
