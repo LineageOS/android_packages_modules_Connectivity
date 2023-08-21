@@ -63,9 +63,6 @@ class CollectionUtilsTest {
         assertEquals(0, CollectionUtils.indexOfSubArray(haystack, byteArrayOf()))
         assertEquals(-1, CollectionUtils.indexOfSubArray(byteArrayOf(), byteArrayOf(3, 2)))
         assertEquals(0, CollectionUtils.indexOfSubArray(byteArrayOf(), byteArrayOf()))
-        assertThrows(NullPointerException::class.java) {
-            CollectionUtils.indexOfSubArray(haystack, null)
-        }
     }
 
     @Test

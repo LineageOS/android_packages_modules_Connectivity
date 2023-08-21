@@ -91,7 +91,7 @@ private fun initTestNetwork(
     lp: LinkProperties?,
     setupTimeoutMs: Long = 10_000L
 ): TestNetworkTracker {
-    val tnm = context.getSystemService(TestNetworkManager::class.java)
+    val tnm = context.getSystemService(TestNetworkManager::class.java)!!
     val iface = if (isAtLeastS()) tnm.createTunInterface(linkAddrs)
     else tnm.createTunInterface(linkAddrs.toTypedArray())
     val lpWithIface = if (lp == null) null else LinkProperties(lp).apply {
@@ -112,7 +112,7 @@ class TestNetworkTracker internal constructor(
     val lp: LinkProperties?,
     setupTimeoutMs: Long
 ) : TestableNetworkCallback.HasNetwork {
-    private val cm = context.getSystemService(ConnectivityManager::class.java)
+    private val cm = context.getSystemService(ConnectivityManager::class.java)!!
     private val binder = Binder()
 
     private val networkCallback: NetworkCallback

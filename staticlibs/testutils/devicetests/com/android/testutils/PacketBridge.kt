@@ -48,8 +48,8 @@ class PacketBridge(
     private val natMap = NatMap()
     private val binder = Binder()
 
-    private val cm = context.getSystemService(ConnectivityManager::class.java)
-    private val tnm = context.getSystemService(TestNetworkManager::class.java)
+    private val cm = context.getSystemService(ConnectivityManager::class.java)!!
+    private val tnm = context.getSystemService(TestNetworkManager::class.java)!!
 
     // Create test networks.
     private val internalIface = tnm.createTunInterface(listOf(internalAddr))
