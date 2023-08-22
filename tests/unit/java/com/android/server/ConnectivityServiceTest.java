@@ -755,6 +755,9 @@ public class ConnectivityServiceTest {
             if (Context.TETHERING_SERVICE.equals(name)) return mTetheringManager;
             if (Context.ACTIVITY_SERVICE.equals(name)) return mActivityManager;
             if (Context.TELEPHONY_SUBSCRIPTION_SERVICE.equals(name)) return mSubscriptionManager;
+            // StatsManager is final and can't be mocked, and uses static methods for mostly
+            // everything. The simplest fix is to return null and not have metrics in tests.
+            if (Context.STATS_MANAGER.equals(name)) return null;
             return super.getSystemService(name);
         }
 
