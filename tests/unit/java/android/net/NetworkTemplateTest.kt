@@ -49,6 +49,7 @@ import android.os.Build
 import android.telephony.TelephonyManager
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.NonNullTestUtils
 import com.android.testutils.assertParcelSane
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -216,6 +217,19 @@ class NetworkTemplateTest {
         // Also, it should not match a template with wifiNetworkKeys that contains null.
         templateWifiKey1.assertDoesNotMatch(identWifiNullKey)
         templateNullWifiKey.assertDoesNotMatch(identWifiNullKey)
+    }
+
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
+    @Test
+    fun testBuildTemplateMobileAll_nullSubscriberId() {
+        val templateMobileAllWithNullImsi =
+                buildTemplateMobileAll(NonNullTestUtils.nullUnsafe<String>(null))
+        val setWithNull = HashSet<String?>().apply {
+            add(null)
+        }
+        val templateFromBuilder = NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES)
+                .setSubscriberIds(setWithNull).build()
+        assertEquals(templateFromBuilder, templateMobileAllWithNullImsi)
     }
 
     @Test
