@@ -95,7 +95,7 @@ private fun <T> CompletableFuture<T>.assertGet(timeoutMs: Long, message: String)
 @RunWith(AndroidJUnit4::class)
 class CaptivePortalTest {
     private val context: android.content.Context by lazy { getInstrumentation().context }
-    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
+    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val pm by lazy { context.packageManager }
     private val utils by lazy { CtsNetUtils(context) }
 

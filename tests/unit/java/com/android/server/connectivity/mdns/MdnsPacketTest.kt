@@ -59,12 +59,12 @@ class MdnsPacketTest {
         }
 
         assertEquals(InetAddresses.parseNumericAddress("192.0.2.123"),
-                (packet.authorityRecords[0] as MdnsInetAddressRecord).inet4Address)
+                (packet.authorityRecords[0] as MdnsInetAddressRecord).inet4Address!!)
         assertEquals(InetAddresses.parseNumericAddress("2001:db8::123"),
-                (packet.authorityRecords[1] as MdnsInetAddressRecord).inet6Address)
+                (packet.authorityRecords[1] as MdnsInetAddressRecord).inet6Address!!)
         assertEquals(InetAddresses.parseNumericAddress("2001:db8::456"),
-                (packet.authorityRecords[2] as MdnsInetAddressRecord).inet6Address)
+                (packet.authorityRecords[2] as MdnsInetAddressRecord).inet6Address!!)
         assertEquals(InetAddresses.parseNumericAddress("2001:db8::789"),
-                (packet.authorityRecords[3] as MdnsInetAddressRecord).inet6Address)
+                (packet.authorityRecords[3] as MdnsInetAddressRecord).inet6Address!!)
     }
 }

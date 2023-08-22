@@ -159,9 +159,9 @@ class NsdManagerTest {
     val ignoreRule = DevSdkIgnoreRule()
 
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
-    private val nsdManager by lazy { context.getSystemService(NsdManager::class.java) }
+    private val nsdManager by lazy { context.getSystemService(NsdManager::class.java)!! }
 
-    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
+    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val serviceName = "NsdTest%09d".format(Random().nextInt(1_000_000_000))
     private val serviceType = "_nmt%09d._tcp".format(Random().nextInt(1_000_000_000))
     private val handlerThread = HandlerThread(NsdManagerTest::class.java.simpleName)
@@ -397,7 +397,7 @@ class NsdManagerTest {
     }
 
     private fun createTestNetwork(): TestTapNetwork {
-        val tnm = context.getSystemService(TestNetworkManager::class.java)
+        val tnm = context.getSystemService(TestNetworkManager::class.java)!!
         val iface = tnm.createTapInterface()
         val cb = TestableNetworkCallback()
         val testNetworkSpecifier = TestNetworkSpecifier(iface.interfaceName)

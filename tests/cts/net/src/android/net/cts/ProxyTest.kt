@@ -70,7 +70,7 @@ class ProxyTest {
 
     private fun getDefaultProxy(): ProxyInfo? {
         return InstrumentationRegistry.getInstrumentation().context
-                .getSystemService(ConnectivityManager::class.java)
+                .getSystemService(ConnectivityManager::class.java)!!
                 .getDefaultProxy()
     }
 

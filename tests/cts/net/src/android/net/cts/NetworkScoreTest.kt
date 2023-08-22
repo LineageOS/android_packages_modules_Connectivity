@@ -67,7 +67,7 @@ private fun score(exiting: Boolean = false, primary: Boolean = false) =
 @RunWith(DevSdkIgnoreRunner::class)
 class NetworkScoreTest {
     private val TAG = javaClass.simpleName
-    private val mCm = testContext.getSystemService(ConnectivityManager::class.java)
+    private val mCm = testContext.getSystemService(ConnectivityManager::class.java)!!
     private val mHandlerThread = HandlerThread("$TAG handler thread")
     private val mHandler by lazy { Handler(mHandlerThread.looper) }
     private val agentsToCleanUp = Collections.synchronizedList(mutableListOf<NetworkAgent>())
@@ -111,7 +111,7 @@ class NetworkScoreTest {
     // made for ConnectivityServiceTest.
     // TODO : have TestNetworkCallback work for NetworkAgent too and remove this class.
     private class AgentWrapper(val agent: NetworkAgent) : HasNetwork {
-        override val network = agent.network
+        override val network = checkNotNull(agent.network)
         fun sendNetworkScore(s: NetworkScore) = agent.sendNetworkScore(s)
     }
 

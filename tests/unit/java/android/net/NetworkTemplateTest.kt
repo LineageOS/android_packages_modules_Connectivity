@@ -218,18 +218,6 @@ class NetworkTemplateTest {
         templateNullWifiKey.assertDoesNotMatch(identWifiNullKey)
     }
 
-    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.TIRAMISU)
-    @Test
-    fun testBuildTemplateMobileAll_nullSubscriberId() {
-        val templateMobileAllWithNullImsi = buildTemplateMobileAll(null)
-        val setWithNull = HashSet<String?>().apply {
-            add(null)
-        }
-        val templateFromBuilder = NetworkTemplate.Builder(MATCH_MOBILE).setMeteredness(METERED_YES)
-            .setSubscriberIds(setWithNull).build()
-        assertEquals(templateFromBuilder, templateMobileAllWithNullImsi)
-    }
-
     @Test
     fun testMobileMatches() {
         val templateMobileImsi1 = buildTemplateMobileAll(TEST_IMSI1)
