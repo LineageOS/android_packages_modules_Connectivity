@@ -67,7 +67,7 @@ private val PROVIDER_NAME = "NetworkProviderTest"
 class NetworkProviderTest {
     @Rule @JvmField
     val mIgnoreRule = DevSdkIgnoreRule()
-    private val mCm = context.getSystemService(ConnectivityManager::class.java)
+    private val mCm = context.getSystemService(ConnectivityManager::class.java)!!
     private val mHandlerThread = HandlerThread("${javaClass.simpleName} handler thread")
 
     @Before

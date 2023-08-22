@@ -56,6 +56,7 @@ import com.android.server.connectivity.ProxyTracker
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
@@ -291,6 +292,7 @@ class ConnectivityServiceIntegrationTest {
         val capportData = testCb.expect<LinkPropertiesChanged>(na, TEST_TIMEOUT_MS) {
             it.lp.captivePortalData != null
         }.lp.captivePortalData
+        assertNotNull(capportData)
         assertTrue(capportData.isCaptive)
         assertEquals(Uri.parse("https://login.capport.android.com"), capportData.userPortalUrl)
         assertEquals(Uri.parse("https://venueinfo.capport.android.com"), capportData.venueInfoUrl)
