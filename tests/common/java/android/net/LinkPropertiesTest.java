@@ -1260,7 +1260,7 @@ public class LinkPropertiesTest {
         assertFalse(lp.hasIpv4UnreachableDefaultRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testHasExcludeRoute() {
@@ -1273,7 +1273,7 @@ public class LinkPropertiesTest {
         assertTrue(lp.hasExcludeRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testRouteAddWithSameKey() throws Exception {
@@ -1347,14 +1347,14 @@ public class LinkPropertiesTest {
         assertExcludeRoutesVisible();
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testExcludedRoutesEnabledByCompatChange() {
         assertExcludeRoutesVisible();
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @DisableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testExcludedRoutesDisabledByCompatChange() {
