@@ -66,3 +66,8 @@ cc_test {
         "libbase",
     ],
 }
+
+cc_library_headers {
+    name: "libnetd_utils_headers",
+    export_include_dirs: ["include"],
+}
