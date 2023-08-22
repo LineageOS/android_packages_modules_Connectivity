@@ -75,10 +75,7 @@ import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPR
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE_NO_FALLBACK;
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE;
-import static android.net.ConnectivityManager.TYPE_MOBILE_FOTA;
-import static android.net.ConnectivityManager.TYPE_MOBILE_MMS;
 import static android.net.ConnectivityManager.TYPE_MOBILE_SUPL;
-import static android.net.ConnectivityManager.TYPE_PROXY;
 import static android.net.ConnectivityManager.TYPE_VPN;
 import static android.net.ConnectivityManager.TYPE_WIFI;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF;
@@ -492,6 +489,8 @@ import java.util.stream.Collectors;
  * Build, install and run with:
  *  runtest frameworks-net -c com.android.server.ConnectivityServiceTest
  */
+// TODO : move methods from this test to smaller tests in the 'connectivityservice' directory
+// to enable faster testing of smaller groups of functionality.
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
@@ -1016,6 +1015,9 @@ public class ConnectivityServiceTest {
     }
 
     private class TestNetworkAgentWrapper extends NetworkAgentWrapper {
+        // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+        // please add it in CSAgentWrapper and use subclasses of CSTest instead of adding more
+        // tools in ConnectivityServiceTest.
         private static final int VALIDATION_RESULT_INVALID = 0;
 
         private static final long DATA_STALL_TIMESTAMP = 10L;
@@ -1340,6 +1342,9 @@ public class ConnectivityServiceTest {
      * operations have been processed and test for them.
      */
     private static class MockNetworkFactory extends NetworkFactory {
+        // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+        // please add it in CSTest and use subclasses of CSTest instead of adding more
+        // tools in ConnectivityServiceTest.
         private final AtomicBoolean mNetworkStarted = new AtomicBoolean(false);
 
         static class RequestEntry {
@@ -1476,6 +1481,10 @@ public class ConnectivityServiceTest {
     }
 
     private class MockVpn extends Vpn implements TestableNetworkCallback.HasNetwork {
+        // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+        // please add it in CSTest and use subclasses of CSTest instead of adding more
+        // tools in ConnectivityServiceTest.
+
         // Careful ! This is different from mNetworkAgent, because MockNetworkAgent does
         // not inherit from NetworkAgent.
         private TestNetworkAgentWrapper mMockNetworkAgent;
@@ -1852,6 +1861,9 @@ public class ConnectivityServiceTest {
 
         MockitoAnnotations.initMocks(this);
 
+        // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+        // please add it in CSTest and use subclasses of CSTest instead of adding more
+        // tools in ConnectivityServiceTest.
         doReturn(asList(PRIMARY_USER_INFO)).when(mUserManager).getAliveUsers();
         doReturn(asList(PRIMARY_USER_HANDLE)).when(mUserManager).getUserHandles(anyBoolean());
         doReturn(PRIMARY_USER_INFO).when(mUserManager).getUserInfo(PRIMARY_USER);
@@ -1938,6 +1950,9 @@ public class ConnectivityServiceTest {
         setCaptivePortalMode(ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE_PROMPT);
         setAlwaysOnNetworks(false);
         setPrivateDnsSettings(PRIVATE_DNS_MODE_OFF, "ignored.example.com");
+        // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+        // please add it in CSTest and use subclasses of CSTest instead of adding more
+        // tools in ConnectivityServiceTest.
     }
 
     private void initMockedResources() {
@@ -1974,6 +1989,9 @@ public class ConnectivityServiceTest {
         final ConnectivityResources mConnRes;
         final ArraySet<Pair<Long, Integer>> mEnabledChangeIds = new ArraySet<>();
 
+        // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+        // please add it in CSTest and use subclasses of CSTest instead of adding more
+        // tools in ConnectivityServiceTest.
         ConnectivityServiceDependencies(final Context mockResContext) {
             mConnRes = new ConnectivityResources(mockResContext);
         }
@@ -2580,23 +2598,6 @@ public class ConnectivityServiceTest {
         // a network switch, extraInfo will likely be populated.
         // This is likely a bug in CS, but likely not one we can fix without impacting apps.
         return true;
-    }
-
-    @Test
-    public void testNetworkTypes() {
-        // Ensure that our mocks for the networkAttributes config variable work as expected. If they
-        // don't, then tests that depend on CONNECTIVITY_ACTION broadcasts for these network types
-        // will fail. Failing here is much easier to debug.
-        assertTrue(mCm.isNetworkSupported(TYPE_WIFI));
-        assertTrue(mCm.isNetworkSupported(TYPE_MOBILE));
-        assertTrue(mCm.isNetworkSupported(TYPE_MOBILE_MMS));
-        assertTrue(mCm.isNetworkSupported(TYPE_MOBILE_FOTA));
-        assertFalse(mCm.isNetworkSupported(TYPE_PROXY));
-
-        // Check that TYPE_ETHERNET is supported. Unlike the asserts above, which only validate our
-        // mocks, this assert exercises the ConnectivityService code path that ensures that
-        // TYPE_ETHERNET is supported if the ethernet service is running.
-        assertTrue(mCm.isNetworkSupported(TYPE_ETHERNET));
     }
 
     @Test
@@ -18801,4 +18802,7 @@ public class ConnectivityServiceTest {
 
         verifyClatdStop(null /* inOrder */, MOBILE_IFNAME);
     }
+
+    // Note : adding tests is ConnectivityServiceTest is deprecated, as it is too big for
+    // maintenance. Please consider adding new tests in subclasses of CSTest instead.
 }
