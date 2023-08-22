@@ -69,7 +69,8 @@ class TestNetworkStackService : Service() {
         url: URL,
         private val response: HttpResponse
     ) : HttpURLConnection(url) {
-        private val responseBytes = response.content.toByteArray(StandardCharsets.UTF_8)
+        private val responseBytes = checkNotNull(response.content)
+            .toByteArray(StandardCharsets.UTF_8)
         override fun getResponseCode() = response.responseCode
         override fun getContentLengthLong() = responseBytes.size.toLong()
         override fun getHeaderField(field: String): String? {
