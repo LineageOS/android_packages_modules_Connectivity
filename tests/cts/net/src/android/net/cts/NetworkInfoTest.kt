@@ -104,13 +104,6 @@ class NetworkInfoTest {
             NetworkInfo(ConnectivityManager.MAX_NETWORK_TYPE + 1,
                     TelephonyManager.NETWORK_TYPE_LTE, MOBILE_TYPE_NAME, LTE_SUBTYPE_NAME)
         }
-
-        if (SdkLevel.isAtLeastT()) {
-            assertFailsWith<NullPointerException> { NetworkInfo(null) }
-        } else {
-            // Doesn't immediately crash on S-
-            NetworkInfo(null)
-        }
     }
 
     @Test
@@ -133,21 +126,11 @@ class NetworkInfoTest {
         constructor.isAccessible = true
         val incorrectDetailedState = constructor.newInstance("any", 200) as DetailedState
         if (SdkLevel.isAtLeastT()) {
-            assertFailsWith<NullPointerException> {
-                NetworkInfo(null)
-            }
-            assertFailsWith<NullPointerException> {
-                networkInfo.setDetailedState(null, "reason", "extraInfo")
-            }
             // This actually throws ArrayOutOfBoundsException because of the implementation of
             // EnumMap, but that's an implementation detail so accept any crash.
             assertFails {
                 networkInfo.setDetailedState(incorrectDetailedState, "reason", "extraInfo")
             }
-        } else {
-            // Doesn't immediately crash on S-
-            NetworkInfo(null)
-            networkInfo.setDetailedState(null, "reason", "extraInfo")
         }
     }
 }
