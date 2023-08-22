@@ -135,8 +135,8 @@ private val STATIC_IP_CONFIGURATION = IpConfiguration.Builder()
 class EthernetManagerTest {
 
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
-    private val em by lazy { context.getSystemService(EthernetManager::class.java) }
-    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
+    private val em by lazy { context.getSystemService(EthernetManager::class.java)!! }
+    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val handler by lazy { Handler(Looper.getMainLooper()) }
 
     private val ifaceListener = EthernetStateListener()
@@ -160,7 +160,7 @@ class EthernetManagerTest {
 
         init {
             tnm = runAsShell(MANAGE_TEST_NETWORKS) {
-                context.getSystemService(TestNetworkManager::class.java)
+                context.getSystemService(TestNetworkManager::class.java)!!
             }
             tapInterface = runAsShell(MANAGE_TEST_NETWORKS) {
                 // Configuring a tun/tap interface always enables the carrier. If hasCarrier is
