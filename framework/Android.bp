@@ -112,6 +112,7 @@ java_library {
     static_libs: [
         "httpclient_api",
         "httpclient_impl",
+        "http_client_logging",
     ],
     libs: [
         // This cannot be in the defaults clause above because if it were, it would be used
@@ -132,6 +133,7 @@ java_defaults {
     ],
     impl_only_static_libs: [
         "httpclient_impl",
+        "http_client_logging",
     ],
 }
 
