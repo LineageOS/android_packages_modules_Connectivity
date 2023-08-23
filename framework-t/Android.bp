@@ -42,6 +42,7 @@ java_defaults {
     srcs: [
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
+        ":framework-thread-sources",
     ],
     libs: [
         "unsupportedappusage",
