@@ -5,3 +5,8 @@ file:platform/packages/modules/Connectivity:main:/OWNERS_core_networking_xts
 
 # IPsec
 per-file **IpSec* = benedictwong@google.com, nharold@google.com
+
+# For incremental changes on EthernetManagerTest to increase coverage for existing behavior and for
+# testing bug fixes.
+per-file net/src/android/net/cts/EthernetManagerTest.kt = prohr@google.com #{LAST_RESORT_SUGGESTION}
+
