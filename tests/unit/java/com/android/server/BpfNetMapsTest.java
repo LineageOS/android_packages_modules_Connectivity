@@ -16,6 +16,21 @@
 
 package com.android.server;
 
+import static android.net.BpfNetMapsConstants.CURRENT_STATS_MAP_CONFIGURATION_KEY;
+import static android.net.BpfNetMapsConstants.DOZABLE_MATCH;
+import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.IIF_MATCH;
+import static android.net.BpfNetMapsConstants.LOCKDOWN_VPN_MATCH;
+import static android.net.BpfNetMapsConstants.LOW_POWER_STANDBY_MATCH;
+import static android.net.BpfNetMapsConstants.NO_MATCH;
+import static android.net.BpfNetMapsConstants.OEM_DENY_1_MATCH;
+import static android.net.BpfNetMapsConstants.OEM_DENY_2_MATCH;
+import static android.net.BpfNetMapsConstants.OEM_DENY_3_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
+import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
+import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
+import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
@@ -33,19 +48,6 @@ import static android.net.INetd.PERMISSION_UPDATE_DEVICE_STATS;
 import static android.system.OsConstants.EINVAL;
 import static android.system.OsConstants.EPERM;
 
-import static com.android.server.BpfNetMaps.DOZABLE_MATCH;
-import static com.android.server.BpfNetMaps.HAPPY_BOX_MATCH;
-import static com.android.server.BpfNetMaps.IIF_MATCH;
-import static com.android.server.BpfNetMaps.LOCKDOWN_VPN_MATCH;
-import static com.android.server.BpfNetMaps.LOW_POWER_STANDBY_MATCH;
-import static com.android.server.BpfNetMaps.NO_MATCH;
-import static com.android.server.BpfNetMaps.OEM_DENY_1_MATCH;
-import static com.android.server.BpfNetMaps.OEM_DENY_2_MATCH;
-import static com.android.server.BpfNetMaps.OEM_DENY_3_MATCH;
-import static com.android.server.BpfNetMaps.PENALTY_BOX_MATCH;
-import static com.android.server.BpfNetMaps.POWERSAVE_MATCH;
-import static com.android.server.BpfNetMaps.RESTRICTED_MATCH;
-import static com.android.server.BpfNetMaps.STANDBY_MATCH;
 import static com.android.server.ConnectivityStatsLog.NETWORK_BPF_MAP_INFO;
 
 import static org.junit.Assert.assertEquals;
@@ -62,6 +64,7 @@ import static org.mockito.Mockito.verify;
 
 import android.app.StatsManager;
 import android.content.Context;
+import android.net.BpfNetMapsUtils;
 import android.net.INetd;
 import android.os.Build;
 import android.os.ServiceSpecificException;
@@ -112,8 +115,6 @@ public final class BpfNetMapsTest {
     private static final int NO_IIF = 0;
     private static final int NULL_IIF = 0;
     private static final String CHAINNAME = "fw_dozable";
-    private static final S32 UID_RULES_CONFIGURATION_KEY = new S32(0);
-    private static final S32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new S32(1);
     private static final List<Integer> FIREWALL_CHAINS = List.of(
             FIREWALL_CHAIN_DOZABLE,
             FIREWALL_CHAIN_STANDBY,
@@ -170,7 +171,7 @@ public final class BpfNetMapsTest {
     private long getMatch(final List<Integer> chains) {
         long match = 0;
         for (final int chain: chains) {
-            match |= mBpfNetMaps.getMatchByFirewallChain(chain);
+            match |= BpfNetMapsUtils.getMatchByFirewallChain(chain);
         }
         return match;
     }
@@ -239,7 +240,7 @@ public final class BpfNetMapsTest {
     private void doTestSetChildChain(final List<Integer> testChains) throws Exception {
         long expectedMatch = 0;
         for (final int chain: testChains) {
-            expectedMatch |= mBpfNetMaps.getMatchByFirewallChain(chain);
+            expectedMatch |= BpfNetMapsUtils.getMatchByFirewallChain(chain);
         }
 
         assertEquals(0, mConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
