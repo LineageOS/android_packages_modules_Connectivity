@@ -92,7 +92,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.test.fail
 import org.junit.After
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
@@ -254,7 +253,7 @@ class EthernetManagerTest {
         }
 
         fun <T : CallbackEntry> expectCallback(expected: T): T {
-            val event = pollOrThrow()
+            val event = events.poll(TIMEOUT_MS)
             assertEquals(expected, event)
             return event as T
         }
@@ -267,13 +266,9 @@ class EthernetManagerTest {
             expectCallback(EthernetStateChanged(state))
         }
 
-        fun createChangeEvent(iface: String, state: Int, role: Int) =
+        private fun createChangeEvent(iface: String, state: Int, role: Int) =
                 InterfaceStateChanged(iface, state, role,
                         if (state != STATE_ABSENT) DEFAULT_IP_CONFIGURATION else null)
-
-        fun pollOrThrow(): CallbackEntry {
-            return events.poll(TIMEOUT_MS) ?: fail("Did not receive callback after ${TIMEOUT_MS}ms")
-        }
 
         fun eventuallyExpect(expected: CallbackEntry) {
             val cb = events.poll(TIMEOUT_MS) { it == expected }
@@ -665,6 +660,20 @@ class EthernetManagerTest {
 
         releaseTetheredInterface()
         listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
+    }
+
+    @Test
+    fun testCallbacks_afterRemovingServerModeInterface() {
+        // do not run this test if an interface that can be used for tethering already exists.
+        assumeNoInterfaceForTetheringAvailable()
+
+        val iface = createInterface()
+        requestTetheredInterface().expectOnAvailable()
+        removeInterface(iface)
+
+        val listener = EthernetStateListener()
+        addInterfaceStateListener(listener)
+        listener.assertNoCallback()
     }
 
     @Test
