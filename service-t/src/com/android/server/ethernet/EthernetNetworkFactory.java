@@ -328,24 +328,24 @@ public class EthernetNetworkFactory {
 
             @Override
             public void onProvisioningSuccess(LinkProperties newLp) {
-                safelyPostOnHandler(() -> onIpLayerStarted(newLp));
+                safelyPostOnHandler(() -> handleOnProvisioningSuccess(newLp));
             }
 
             @Override
             public void onProvisioningFailure(LinkProperties newLp) {
                 // This cannot happen due to provisioning timeout, because our timeout is 0. It can
                 // happen due to errors while provisioning or on provisioning loss.
-                safelyPostOnHandler(() -> onIpLayerStopped());
+                safelyPostOnHandler(() -> handleOnProvisioningFailure());
             }
 
             @Override
             public void onLinkPropertiesChange(LinkProperties newLp) {
-                safelyPostOnHandler(() -> updateLinkProperties(newLp));
+                safelyPostOnHandler(() -> handleOnLinkPropertiesChange(newLp));
             }
 
             @Override
             public void onReachabilityLost(String logMsg) {
-                safelyPostOnHandler(() -> updateNeighborLostEvent(logMsg));
+                safelyPostOnHandler(() -> handleOnReachabilityLost(logMsg));
             }
 
             @Override
@@ -499,7 +499,7 @@ public class EthernetNetworkFactory {
             mIpClient.startProvisioning(createProvisioningConfiguration(mIpConfig));
         }
 
-        void onIpLayerStarted(@NonNull final LinkProperties linkProperties) {
+        private void handleOnProvisioningSuccess(@NonNull final LinkProperties linkProperties) {
             if (mNetworkAgent != null) {
                 Log.e(TAG, "Already have a NetworkAgent - aborting new request");
                 stop();
@@ -533,7 +533,7 @@ public class EthernetNetworkFactory {
             mNetworkAgent.markConnected();
         }
 
-        void onIpLayerStopped() {
+        private void handleOnProvisioningFailure() {
             // There is no point in continuing if the interface is gone as stop() will be triggered
             // by removeInterface() when processed on the handler thread and start() won't
             // work for a non-existent interface.
@@ -553,15 +553,15 @@ public class EthernetNetworkFactory {
             }
         }
 
-        void updateLinkProperties(LinkProperties linkProperties) {
+        private void handleOnLinkPropertiesChange(LinkProperties linkProperties) {
             mLinkProperties = linkProperties;
             if (mNetworkAgent != null) {
                 mNetworkAgent.sendLinkPropertiesImpl(linkProperties);
             }
         }
 
-        void updateNeighborLostEvent(String logMsg) {
-            Log.i(TAG, "updateNeighborLostEvent " + logMsg);
+        private void handleOnReachabilityLost(String logMsg) {
+            Log.i(TAG, "handleOnReachabilityLost " + logMsg);
             if (mIpConfig.getIpAssignment() == IpAssignment.STATIC) {
                 // Ignore NUD failures for static IP configurations, where restarting the IpClient
                 // will not fix connectivity.
