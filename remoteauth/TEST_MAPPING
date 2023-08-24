@@ -7,7 +7,7 @@
   // TODO(b/193602229): uncomment once it's supported.
   //"mainline-presubmit": [
   //  {
-  //    "name": "RemoteAuthUnitTests[com.google.android.tethering.apex]"
+  //    "name": "RemoteAuthUnitTests[com.google.android.remoteauth.apex]"
   //  }
   //]
 }

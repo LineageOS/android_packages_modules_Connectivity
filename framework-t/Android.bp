@@ -43,6 +43,7 @@ java_defaults {
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
         ":framework-thread-sources",
+        ":framework-remoteauth-java-sources",
     ],
     libs: [
         "unsupportedappusage",
@@ -130,8 +131,10 @@ java_sdk_library {
         "android.net",
         "android.net.nsd",
         "android.nearby",
+        "android.remoteauth",
         "com.android.connectivity",
         "com.android.nearby",
+        "com.android.remoteauth",
     ],
 
     hidden_api: {
@@ -153,6 +156,7 @@ java_sdk_library {
         "//packages/modules/Connectivity/service", // For R8 only
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/nearby:__subpackages__",
+        "//packages/modules/Connectivity/remoteauth:__subpackages__",
         "//frameworks/base",
 
         // Tests using hidden APIs
