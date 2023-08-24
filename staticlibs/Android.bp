@@ -34,6 +34,7 @@ package {
 java_library {
   name: "net-utils-device-common",
   srcs: [
+      "device/com/android/net/module/util/arp/ArpPacket.java",
       "device/com/android/net/module/util/DeviceConfigUtils.java",
       "device/com/android/net/module/util/DomainUtils.java",
       "device/com/android/net/module/util/FdEventsReader.java",
