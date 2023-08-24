@@ -25,11 +25,12 @@ java_defaults {
     ],
     min_sdk_version: "30",
     static_libs: [
-        "NetworkStackApiStableLib",
+        "DhcpPacketLib",
         "androidx.test.rules",
         "cts-net-utils",
         "mockito-target-extended-minus-junit4",
         "net-tests-utils",
+        "net-utils-device-common",
         "net-utils-device-common-bpf",
         "testables",
         "connectivity-net-module-utils-bpf",
