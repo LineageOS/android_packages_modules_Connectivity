@@ -25,7 +25,7 @@ filegroup {
     ],
     path: "java",
     visibility: [
-        "//packages/modules/Connectivity/framework:__subpackages__",
+        "//packages/modules/Connectivity/framework-t:__subpackages__",
     ],
 }
 
@@ -43,7 +43,13 @@ java_library {
     name: "framework-remoteauth-static",
     srcs: [":framework-remoteauth-java-sources"],
     sdk_version: "module_current",
-    libs: [],
-    static_libs: [],
+    libs: [
+        "androidx.annotation_annotation",
+        "framework-annotations-lib",
+        "framework-bluetooth",
+    ],
+    static_libs: [
+        "modules-utils-preconditions",
+    ],
     visibility: ["//packages/modules/Connectivity/remoteauth/tests:__subpackages__"],
 }
