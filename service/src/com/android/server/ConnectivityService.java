@@ -319,7 +319,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.lang.IllegalArgumentException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -11113,16 +11112,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         @Override
         public void onInterfaceLinkStateChanged(@NonNull String iface, boolean up) {
-            for (NetworkAgentInfo nai : mNetworkAgentInfos) {
-                nai.clatd.interfaceLinkStateChanged(iface, up);
-            }
+            mHandler.post(() -> {
+                for (NetworkAgentInfo nai : mNetworkAgentInfos) {
+                    nai.clatd.interfaceLinkStateChanged(iface, up);
+                }
+            });
         }
 
         @Override
         public void onInterfaceRemoved(@NonNull String iface) {
-            for (NetworkAgentInfo nai : mNetworkAgentInfos) {
-                nai.clatd.interfaceRemoved(iface);
-            }
+            mHandler.post(() -> {
+                for (NetworkAgentInfo nai : mNetworkAgentInfos) {
+                    nai.clatd.interfaceRemoved(iface);
+                }
+            });
         }
     }
 
