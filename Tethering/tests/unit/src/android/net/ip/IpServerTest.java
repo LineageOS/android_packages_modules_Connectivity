@@ -62,6 +62,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
@@ -80,6 +81,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.RouteInfo;
+import android.net.RoutingCoordinatorManager;
 import android.net.TetherOffloadRuleParcel;
 import android.net.TetherStatsParcel;
 import android.net.dhcp.DhcpServerCallbacks;
@@ -99,9 +101,11 @@ import androidx.annotation.Nullable;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
+import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.bpf.Tether4Key;
@@ -193,6 +197,8 @@ public class IpServerTest {
     @Mock private IpNeighborMonitor mIpNeighborMonitor;
     @Mock private IpServer.Dependencies mDependencies;
     @Mock private PrivateAddressCoordinator mAddressCoordinator;
+    private final LateSdk<RoutingCoordinatorManager> mRoutingCoordinatorManager =
+            new LateSdk<>(SdkLevel.isAtLeastS() ? mock(RoutingCoordinatorManager.class) : null);
     @Mock private NetworkStatsManager mStatsManager;
     @Mock private TetheringConfiguration mTetherConfig;
     @Mock private ConntrackMonitor mConntrackMonitor;
@@ -249,7 +255,8 @@ public class IpServerTest {
         mBpfCoordinator = spy(new BpfCoordinator(mBpfDeps));
         mIpServer = new IpServer(
                 IFACE_NAME, mLooper.getLooper(), interfaceType, mSharedLog, mNetd, mBpfCoordinator,
-                mCallback, mTetherConfig, mAddressCoordinator, mTetheringMetrics, mDependencies);
+                mRoutingCoordinatorManager, mCallback, mTetherConfig, mAddressCoordinator,
+                mTetheringMetrics, mDependencies);
         mIpServer.start();
         mNeighborEventConsumer = neighborCaptor.getValue();
 
@@ -396,8 +403,8 @@ public class IpServerTest {
         when(mDependencies.getIpNeighborMonitor(any(), any(), any()))
                 .thenReturn(mIpNeighborMonitor);
         mIpServer = new IpServer(IFACE_NAME, mLooper.getLooper(), TETHERING_BLUETOOTH, mSharedLog,
-                mNetd, mBpfCoordinator, mCallback, mTetherConfig, mAddressCoordinator,
-                mTetheringMetrics, mDependencies);
+                mNetd, mBpfCoordinator, mRoutingCoordinatorManager, mCallback, mTetherConfig,
+                mAddressCoordinator, mTetheringMetrics, mDependencies);
         mIpServer.start();
         mLooper.dispatchAll();
         verify(mCallback).updateInterfaceState(

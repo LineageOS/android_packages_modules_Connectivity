@@ -29,6 +29,7 @@ import android.annotation.CallbackExecutor;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.annotation.RequiresPermission;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
@@ -6170,6 +6171,26 @@ public class ConnectivityManager {
     public IBinder getCompanionDeviceManagerProxyService() {
         try {
             return mService.getCompanionDeviceManagerProxyService();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    private static final Object sRoutingCoordinatorManagerLock = new Object();
+    @GuardedBy("sRoutingCoordinatorManagerLock")
+    private static RoutingCoordinatorManager sRoutingCoordinatorManager = null;
+    /** @hide */
+    @RequiresApi(Build.VERSION_CODES.S)
+    public RoutingCoordinatorManager getRoutingCoordinatorManager() {
+        try {
+            synchronized (sRoutingCoordinatorManagerLock) {
+                if (null == sRoutingCoordinatorManager) {
+                    sRoutingCoordinatorManager = new RoutingCoordinatorManager(mContext,
+                            IRoutingCoordinator.Stub.asInterface(
+                                    mService.getRoutingCoordinatorService()));
+                }
+                return sRoutingCoordinatorManager;
+            }
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
