@@ -160,9 +160,10 @@ public class NetworkNsdReportedMetrics {
      * @param foundCallbackCount The count of found service callbacks before stop discovery.
      * @param lostCallbackCount The count of lost service callbacks before stop discovery.
      * @param servicesCount The count of found services.
+     * @param sentQueryCount The count of sent queries before stop discovery.
      */
     public void reportServiceDiscoveryStop(int transactionId, long durationMs,
-            int foundCallbackCount, int lostCallbackCount, int servicesCount) {
+            int foundCallbackCount, int lostCallbackCount, int servicesCount, int sentQueryCount) {
         final Builder builder = makeReportedBuilder();
         builder.setTransactionId(transactionId);
         builder.setType(NsdEventType.NET_DISCOVER);
@@ -171,6 +172,7 @@ public class NetworkNsdReportedMetrics {
         builder.setFoundCallbackCount(foundCallbackCount);
         builder.setLostCallbackCount(lostCallbackCount);
         builder.setFoundServiceCount(servicesCount);
+        builder.setSentQueryCount(sentQueryCount);
         mDependencies.statsWrite(builder.build());
     }
 
@@ -180,15 +182,17 @@ public class NetworkNsdReportedMetrics {
      * @param transactionId The transaction id of service resolution.
      * @param durationMs The duration of resolving services.
      * @param isServiceFromCache Whether the resolved service is from cache.
+     * @param sentQueryCount The count of sent queries during resolving.
      */
     public void reportServiceResolved(int transactionId, long durationMs,
-            boolean isServiceFromCache) {
+            boolean isServiceFromCache, int sentQueryCount) {
         final Builder builder = makeReportedBuilder();
         builder.setTransactionId(transactionId);
         builder.setType(NsdEventType.NET_RESOLVE);
         builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_RESOLVED);
         builder.setEventDurationMillisec(durationMs);
         builder.setIsKnownService(isServiceFromCache);
+        builder.setSentQueryCount(sentQueryCount);
         mDependencies.statsWrite(builder.build());
     }
 
@@ -219,6 +223,57 @@ public class NetworkNsdReportedMetrics {
         builder.setType(NsdEventType.NET_RESOLVE);
         builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_RESOLUTION_STOP);
         builder.setEventDurationMillisec(durationMs);
+        mDependencies.statsWrite(builder.build());
+    }
+
+    /**
+     * Report service info callback registered metric data.
+     *
+     * @param transactionId The transaction id of service info callback registration.
+     */
+    public void reportServiceInfoCallbackRegistered(int transactionId) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_SERVICE_INFO_CALLBACK);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_INFO_CALLBACK_REGISTERED);
+        mDependencies.statsWrite(builder.build());
+    }
+
+    /**
+     * Report service info callback registration failed metric data.
+     *
+     * @param transactionId The transaction id of service callback registration.
+     */
+    public void reportServiceInfoCallbackRegistrationFailed(int transactionId) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_SERVICE_INFO_CALLBACK);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_INFO_CALLBACK_REGISTRATION_FAILED);
+        mDependencies.statsWrite(builder.build());
+    }
+
+    /**
+     * Report service callback unregistered metric data.
+     *
+     * @param transactionId The transaction id of service callback registration.
+     * @param durationMs The duration of service callback stayed registered.
+     * @param updateCallbackCount The count of service update callbacks during this registration.
+     * @param lostCallbackCount The count of service lost callbacks during this registration.
+     * @param isServiceFromCache Whether the resolved service is from cache.
+     * @param sentQueryCount The count of sent queries during this registration.
+     */
+    public void reportServiceInfoCallbackUnregistered(int transactionId, long durationMs,
+            int updateCallbackCount, int lostCallbackCount, boolean isServiceFromCache,
+            int sentQueryCount) {
+        final Builder builder = makeReportedBuilder();
+        builder.setTransactionId(transactionId);
+        builder.setType(NsdEventType.NET_SERVICE_INFO_CALLBACK);
+        builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_INFO_CALLBACK_UNREGISTERED);
+        builder.setEventDurationMillisec(durationMs);
+        builder.setFoundCallbackCount(updateCallbackCount);
+        builder.setLostCallbackCount(lostCallbackCount);
+        builder.setIsKnownService(isServiceFromCache);
+        builder.setSentQueryCount(sentQueryCount);
         mDependencies.statsWrite(builder.build());
     }
 }
