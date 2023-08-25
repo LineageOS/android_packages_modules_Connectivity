@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-next_app_data = [ ":CtsHostsideNetworkTestsAppNext" ]
+next_app_data = []
 
 // The above line is put in place to prevent any future automerger merge conflict between aosp,
 // downstream branches. The CtsHostsideNetworkTestsAppNext target will not exist in
