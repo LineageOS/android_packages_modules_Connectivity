@@ -104,4 +104,24 @@ public class PresenceDeviceTest {
         assertThat(parcelDevice.getMediums()).containsExactly(MEDIUM);
         assertThat(parcelDevice.getName()).isEqualTo(DEVICE_NAME);
     }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    public void describeContents() {
+        PresenceDevice device =
+                new PresenceDevice.Builder(DEVICE_ID, SALT, SECRET_ID, ENCRYPTED_IDENTITY)
+                        .addExtendedProperty(new DataElement(KEY, VALUE))
+                        .setRssi(RSSI)
+                        .addMedium(MEDIUM)
+                        .setName(DEVICE_NAME)
+                        .build();
+        assertThat(device.describeContents()).isEqualTo(0);
+    }
+
+    @Test
+    public void testCreatorNewArray() {
+        PresenceDevice[] devices =
+                PresenceDevice.CREATOR.newArray(2);
+        assertThat(devices.length).isEqualTo(2);
+    }
 }

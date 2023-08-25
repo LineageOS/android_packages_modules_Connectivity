@@ -110,6 +110,7 @@ import static java.util.Map.Entry;
 import android.Manifest;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
 import android.app.ActivityManager.UidFrozenStateChangedCallback;
@@ -3245,6 +3246,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         sendStickyBroadcast(makeGeneralIntent(info, bcastType));
     }
 
+    // TODO(b/193460475): Remove when tooling supports SystemApi to public API.
+    @SuppressLint("NewApi")
     // TODO: Set the mini sdk to 31 and remove @TargetApi annotation when b/205923322 is addressed.
     @TargetApi(Build.VERSION_CODES.S)
     private void sendStickyBroadcast(Intent intent) {
@@ -8888,6 +8891,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // else not handled
     }
 
+    // TODO(b/193460475): Remove when tooling supports SystemApi to public API.
+    @SuppressLint("NewApi")
     private void sendIntent(PendingIntent pendingIntent, Intent intent) {
         mPendingIntentWakeLock.acquire();
         try {

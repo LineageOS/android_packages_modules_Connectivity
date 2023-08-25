@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.nearby.common.fastpair.service;
+package com.android.nearby.halfsheet.constants;
 
 /** Handles intents to {@link com.android.server.nearby.fastpair.FastPairManager}. */
 public class UserActionHandlerBase {
@@ -25,5 +25,5 @@ public class UserActionHandlerBase {
     public static final String EXTRA_COMPANION_APP = ACTION_PREFIX + "EXTRA_COMPANION_APP";
     public static final String EXTRA_MAC_ADDRESS = PREFIX + "EXTRA_MAC_ADDRESS";
 
+    public static final String ACTION_FAST_PAIR = ACTION_PREFIX + "ACTION_FAST_PAIR";
 }
-
