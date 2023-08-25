@@ -77,7 +77,7 @@ import com.android.net.module.util.ip.IpNeighborMonitor;
 import com.android.net.module.util.ip.IpNeighborMonitor.NeighborEvent;
 import com.android.networkstack.tethering.BpfCoordinator;
 import com.android.networkstack.tethering.BpfCoordinator.ClientInfo;
-import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
+import com.android.networkstack.tethering.BpfCoordinator.Ipv6DownstreamRule;
 import com.android.networkstack.tethering.PrivateAddressCoordinator;
 import com.android.networkstack.tethering.TetheringConfiguration;
 import com.android.networkstack.tethering.metrics.TetheringMetrics;
@@ -327,8 +327,8 @@ public class IpServer extends StateMachine {
 
         // IP neighbor monitor monitors the neighbor events for adding/removing offload
         // forwarding rules per client. If BPF offload is not supported, don't start listening
-        // for neighbor events. See updateIpv6ForwardingRules, addIpv6ForwardingRule,
-        // removeIpv6ForwardingRule.
+        // for neighbor events. See updateIpv6ForwardingRules, addIpv6DownstreamRule,
+        // removeIpv6DownstreamRule.
         if (mUsingBpfOffload && !mIpNeighborMonitor.start()) {
             mLog.e("Failed to create IpNeighborMonitor on " + mIfaceName);
         }
@@ -890,21 +890,21 @@ public class IpServer extends StateMachine {
         }
     }
 
-    private void addIpv6ForwardingRule(Ipv6ForwardingRule rule) {
+    private void addIpv6DownstreamRule(Ipv6DownstreamRule rule) {
         // Theoretically, we don't need this check because IP neighbor monitor doesn't start if BPF
         // offload is disabled. Add this check just in case.
         // TODO: Perhaps remove this protection check.
         if (!mUsingBpfOffload) return;
 
-        mBpfCoordinator.tetherOffloadRuleAdd(this, rule);
+        mBpfCoordinator.addIpv6DownstreamRule(this, rule);
     }
 
-    private void removeIpv6ForwardingRule(Ipv6ForwardingRule rule) {
+    private void removeIpv6DownstreamRule(Ipv6DownstreamRule rule) {
         // TODO: Perhaps remove this protection check.
-        // See the related comment in #addIpv6ForwardingRule.
+        // See the related comment in #addIpv6DownstreamRule.
         if (!mUsingBpfOffload) return;
 
-        mBpfCoordinator.tetherOffloadRuleRemove(this, rule);
+        mBpfCoordinator.removeIpv6DownstreamRule(this, rule);
     }
 
     private void clearIpv6ForwardingRules() {
@@ -915,7 +915,7 @@ public class IpServer extends StateMachine {
 
     private void updateIpv6ForwardingRule(int newIfindex) {
         // TODO: Perhaps remove this protection check.
-        // See the related comment in #addIpv6ForwardingRule.
+        // See the related comment in #addIpv6DownstreamRule.
         if (!mUsingBpfOffload) return;
 
         mBpfCoordinator.tetherOffloadRuleUpdate(this, newIfindex);
@@ -954,22 +954,22 @@ public class IpServer extends StateMachine {
         }
 
         // When deleting rules, we still need to pass a non-null MAC, even though it's ignored.
-        // Do this here instead of in the Ipv6ForwardingRule constructor to ensure that we never
-        // add rules with a null MAC, only delete them.
+        // Do this here instead of in the Ipv6DownstreamRule constructor to ensure that we
+        // never add rules with a null MAC, only delete them.
         MacAddress dstMac = e.isValid() ? e.macAddr : NULL_MAC_ADDRESS;
-        Ipv6ForwardingRule rule = new Ipv6ForwardingRule(upstreamIfindex,
-                mInterfaceParams.index, (Inet6Address) e.ip, mInterfaceParams.macAddr, dstMac);
+        Ipv6DownstreamRule rule = new Ipv6DownstreamRule(upstreamIfindex, mInterfaceParams.index,
+                (Inet6Address) e.ip, mInterfaceParams.macAddr, dstMac);
         if (e.isValid()) {
-            addIpv6ForwardingRule(rule);
+            addIpv6DownstreamRule(rule);
         } else {
-            removeIpv6ForwardingRule(rule);
+            removeIpv6DownstreamRule(rule);
         }
     }
 
     // TODO: consider moving into BpfCoordinator.
     private void updateClientInfoIpv4(NeighborEvent e) {
         // TODO: Perhaps remove this protection check.
-        // See the related comment in #addIpv6ForwardingRule.
+        // See the related comment in #addIpv6DownstreamRule.
         if (!mUsingBpfOffload) return;
 
         if (e == null) return;
