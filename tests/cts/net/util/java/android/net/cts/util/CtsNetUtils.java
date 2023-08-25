@@ -16,6 +16,7 @@
 
 package android.net.cts.util;
 
+import static android.Manifest.permission.MODIFY_PHONE_STATE;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
@@ -54,6 +55,8 @@ import android.os.ConditionVariable;
 import android.os.IBinder;
 import android.system.Os;
 import android.system.OsConstants;
+import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -564,6 +567,42 @@ public final class CtsNetUtils {
                         + " a network.",
                 testableNetworks.size() >= 1);
         return testableNetworks.toArray(new Network[0]);
+    }
+
+    /**
+     * Enables or disables the mobile data and waits for the state to change.
+     *
+     * @param enabled - true to enable, false to disable the mobile data.
+     */
+    public void setMobileDataEnabled(boolean enabled) throws InterruptedException {
+        final TelephonyManager tm =  mContext.getSystemService(TelephonyManager.class)
+                .createForSubscriptionId(SubscriptionManager.getDefaultDataSubscriptionId());
+        final NetworkRequest request = new NetworkRequest.Builder()
+                .addTransportType(TRANSPORT_CELLULAR)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .build();
+        final TestNetworkCallback callback = new TestNetworkCallback();
+        mCm.requestNetwork(request, callback);
+
+        try {
+            if (!enabled) {
+                assertNotNull("Cannot disable mobile data unless mobile data is connected",
+                        callback.waitForAvailable());
+            }
+
+            runAsShell(MODIFY_PHONE_STATE, () -> tm.setDataEnabledForReason(
+                    TelephonyManager.DATA_ENABLED_REASON_USER, enabled));
+            if (enabled) {
+                assertNotNull("Enabling mobile data did not connect mobile data",
+                        callback.waitForAvailable());
+            } else {
+                assertNotNull("Disabling mobile data did not disconnect mobile data",
+                        callback.waitForLost());
+            }
+
+        } finally {
+            mCm.unregisterNetworkCallback(callback);
+        }
     }
 
     /**
