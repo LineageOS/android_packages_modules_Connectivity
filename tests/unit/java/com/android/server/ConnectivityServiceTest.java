@@ -16390,6 +16390,15 @@ public class ConnectivityServiceTest {
         // Other callbacks will be unregistered by tearDown()
     }
 
+    private NetworkCallback requestForEnterpriseId(@NetworkCapabilities.EnterpriseId final int id) {
+        final NetworkCapabilities nc = new NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_ENTERPRISE).addEnterpriseId(id).build();
+        final NetworkRequest req = new NetworkRequest.Builder().setCapabilities(nc).build();
+        final NetworkCallback cb = new TestableNetworkCallback();
+        mCm.requestNetwork(req, cb);
+        return cb;
+    }
+
     /**
      * Make sure per profile network preferences behave as expected when multiple slices with
      * multiple different apps within same user profile is configured.
@@ -16397,8 +16406,6 @@ public class ConnectivityServiceTest {
     @Test
     public void testSetPreferenceWithMultiplePreferences()
             throws Exception {
-        final InOrder inOrder = inOrder(mMockNetd);
-
         final UserHandle testHandle = setupEnterpriseNetwork();
         mServiceContext.setWorkProfile(testHandle, true);
         registerDefaultNetworkCallbacks();
@@ -16435,6 +16442,12 @@ public class ConnectivityServiceTest {
         final TestNetworkAgentWrapper workAgent3 = makeEnterpriseNetworkAgent(NET_ENTERPRISE_ID_3);
         final TestNetworkAgentWrapper workAgent4 = makeEnterpriseNetworkAgent(NET_ENTERPRISE_ID_4);
         final TestNetworkAgentWrapper workAgent5 = makeEnterpriseNetworkAgent(NET_ENTERPRISE_ID_5);
+
+        final NetworkCallback keepupCb1 = requestForEnterpriseId(NET_ENTERPRISE_ID_1);
+        final NetworkCallback keepupCb2 = requestForEnterpriseId(NET_ENTERPRISE_ID_2);
+        final NetworkCallback keepupCb3 = requestForEnterpriseId(NET_ENTERPRISE_ID_3);
+        final NetworkCallback keepupCb4 = requestForEnterpriseId(NET_ENTERPRISE_ID_4);
+        final NetworkCallback keepupCb5 = requestForEnterpriseId(NET_ENTERPRISE_ID_5);
 
         workAgent1.connect(true);
         workAgent2.connect(true);
@@ -16593,6 +16606,12 @@ public class ConnectivityServiceTest {
         appCb2.expectAvailableCallbacksValidated(mCellAgent);
         appCb4.expectAvailableCallbacksValidated(mCellAgent);
         mCellAgent.disconnect();
+
+        mCm.unregisterNetworkCallback(keepupCb1);
+        mCm.unregisterNetworkCallback(keepupCb2);
+        mCm.unregisterNetworkCallback(keepupCb3);
+        mCm.unregisterNetworkCallback(keepupCb4);
+        mCm.unregisterNetworkCallback(keepupCb5);
 
         mCm.unregisterNetworkCallback(appCb1);
         mCm.unregisterNetworkCallback(appCb2);
