@@ -27,7 +27,7 @@ java_library {
     srcs: [":remoteauth-service-srcs"],
 
     defaults: [
-        "framework-system-server-module-defaults"
+        "framework-system-server-module-defaults",
     ],
     libs: [
         "androidx.annotation_annotation",
@@ -39,6 +39,7 @@ java_library {
         "framework-statsd",
     ],
     static_libs: [
+        "guava",
         "libprotobuf-java-lite",
         "fast-pair-lite-protos",
         "modules-utils-build",
@@ -69,7 +70,7 @@ genrule {
     name: "statslog-remoteauth-java-gen",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module remoteauth " +
-         " --javaPackage com.android.server.remoteauth.proto --javaClass RemoteAuthStatsLog" +
-         " --minApiLevel 33",
+        " --javaPackage com.android.server.remoteauth.proto --javaClass RemoteAuthStatsLog" +
+        " --minApiLevel 33",
     out: ["com/android/server/remoteauth/proto/RemoteAuthStatsLog.java"],
 }
