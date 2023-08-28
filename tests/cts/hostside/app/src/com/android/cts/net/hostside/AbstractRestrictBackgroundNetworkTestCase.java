@@ -61,6 +61,7 @@ import android.service.notification.NotificationListenerService;
 import android.util.Log;
 import android.util.Pair;
 
+import com.android.compatibility.common.util.AmUtils;
 import com.android.compatibility.common.util.BatteryUtils;
 import com.android.compatibility.common.util.DeviceConfigStateHelper;
 
@@ -719,10 +720,12 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         Log.i(TAG, "Setting Battery Saver Mode to " + enabled);
         if (enabled) {
             turnBatteryOn();
+            AmUtils.waitForBroadcastBarrier();
             executeSilentShellCommand("cmd power set-mode 1");
         } else {
             executeSilentShellCommand("cmd power set-mode 0");
             turnBatteryOff();
+            AmUtils.waitForBroadcastBarrier();
         }
     }
 
