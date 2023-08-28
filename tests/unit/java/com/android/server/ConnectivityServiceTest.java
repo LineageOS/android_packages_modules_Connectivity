@@ -413,7 +413,6 @@ import com.android.server.connectivity.ProxyTracker;
 import com.android.server.connectivity.QosCallbackTracker;
 import com.android.server.connectivity.TcpKeepaliveController;
 import com.android.server.connectivity.UidRangeUtils;
-import com.android.server.connectivity.Vpn;
 import com.android.server.connectivity.VpnProfileStore;
 import com.android.server.net.NetworkPinner;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -1493,13 +1492,8 @@ public class ConnectivityServiceTest {
         return uidRangesForUids(CollectionUtils.toIntArray(uids));
     }
 
-    private static Looper startHandlerThreadAndReturnLooper() {
-        final HandlerThread handlerThread = new HandlerThread("MockVpnThread");
-        handlerThread.start();
-        return handlerThread.getLooper();
-    }
-
-    private class MockVpn extends Vpn implements TestableNetworkCallback.HasNetwork {
+    // Helper class to mock vpn interaction.
+    private class MockVpn implements TestableNetworkCallback.HasNetwork {
         // Note : Please do not add any new instrumentation here. If you need new instrumentation,
         // please add it in CSTest and use subclasses of CSTest instead of adding more
         // tools in ConnectivityServiceTest.
@@ -1524,39 +1518,6 @@ public class ConnectivityServiceTest {
         private int mVpnType = VpnManager.TYPE_VPN_SERVICE;
         private String mSessionKey;
 
-        public MockVpn(int userId) {
-            super(startHandlerThreadAndReturnLooper(), mServiceContext,
-                    new Dependencies() {
-                        @Override
-                        public boolean isCallerSystem() {
-                            return true;
-                        }
-
-                        @Override
-                        public DeviceIdleInternal getDeviceIdleInternal() {
-                            return mDeviceIdleInternal;
-                        }
-                    },
-                    mNetworkManagementService, mMockNetd, userId, mVpnProfileStore,
-                    new SystemServices(mServiceContext) {
-                        @Override
-                        public String settingsSecureGetStringForUser(String key, int userId) {
-                            switch (key) {
-                                // Settings keys not marked as @Readable are not readable from
-                                // non-privileged apps, unless marked as testOnly=true
-                                // (atest refuses to install testOnly=true apps), even if mocked
-                                // in the content provider, because
-                                // Settings.Secure.NameValueCache#getStringForUser checks the key
-                                // before querying the mock settings provider.
-                                case Settings.Secure.ALWAYS_ON_VPN_APP:
-                                    return null;
-                                default:
-                                    return super.settingsSecureGetStringForUser(key, userId);
-                            }
-                        }
-                    }, new Ikev2SessionCreator());
-        }
-
         public void setUids(Set<UidRange> uids) {
             mNetworkCapabilities.setUids(UidRange.toIntRanges(uids));
             if (mAgentRegistered) {
@@ -1568,7 +1529,6 @@ public class ConnectivityServiceTest {
             mVpnType = vpnType;
         }
 
-        @Override
         public Network getNetwork() {
             return (mMockNetworkAgent == null) ? null : mMockNetworkAgent.getNetwork();
         }
@@ -1577,7 +1537,6 @@ public class ConnectivityServiceTest {
             return null == mMockNetworkAgent ? null : mMockNetworkAgent.getNetworkAgentConfig();
         }
 
-        @Override
         public int getActiveVpnType() {
             return mVpnType;
         }
@@ -1676,13 +1635,13 @@ public class ConnectivityServiceTest {
             mNetworkCapabilities.removeCapability(NET_CAPABILITY_INTERNET);
         }
 
-        private synchronized void startLegacyVpn() {
+        private void startLegacyVpn() {
             // Do nothing.
         }
 
         // Mock the interaction of IkeV2VpnRunner start. In the context of ConnectivityService,
         // setVpnDefaultForUids() is the main interaction and a sessionKey is stored.
-        private synchronized void startPlatformVpn() {
+        private void startPlatformVpn() {
             mSessionKey = UUID.randomUUID().toString();
             // Assuming no disallowed applications
             final Set<Range<Integer>> ranges = UidRange.toIntRanges(Set.of(PRIMARY_UIDRANGE));
@@ -1691,7 +1650,6 @@ public class ConnectivityServiceTest {
             waitForIdle();
         }
 
-        @Override
         public void startLegacyVpnPrivileged(VpnProfile profile,
                 @Nullable Network underlying, @NonNull LinkProperties egress) {
             switch (profile.type) {
@@ -1713,8 +1671,7 @@ public class ConnectivityServiceTest {
             }
         }
 
-        @Override
-        public synchronized void stopVpnRunnerPrivileged() {
+        public void stopVpnRunnerPrivileged() {
             if (mSessionKey != null) {
                 // Clear vpn network preference.
                 mCm.setVpnDefaultForUids(mSessionKey, Collections.EMPTY_LIST);
@@ -1723,8 +1680,7 @@ public class ConnectivityServiceTest {
             disconnect();
         }
 
-        @Override
-        public synchronized boolean setUnderlyingNetworks(@Nullable Network[] networks) {
+        public boolean setUnderlyingNetworks(@Nullable Network[] networks) {
             if (!mAgentRegistered) return false;
             mMockNetworkAgent.setUnderlyingNetworks(
                     (networks == null) ? null : Arrays.asList(networks));
@@ -1759,11 +1715,6 @@ public class ConnectivityServiceTest {
     private void processBroadcast(Intent intent) {
         mServiceContext.sendBroadcast(intent);
         waitForIdle();
-    }
-
-    private void mockVpn(int uid) {
-        int userId = UserHandle.getUserId(uid);
-        mMockVpn = new MockVpn(userId);
     }
 
     private void mockUidNetworkingBlocked() {
@@ -1976,7 +1927,7 @@ public class ConnectivityServiceTest {
         mService.systemReadyInternal();
         verify(mMockDnsResolver).registerUnsolicitedEventListener(any());
 
-        mockVpn(Process.myUid());
+        mMockVpn = new MockVpn();
         mCm.bindProcessToNetwork(null);
         mQosCallbackTracker = mock(QosCallbackTracker.class);
 
