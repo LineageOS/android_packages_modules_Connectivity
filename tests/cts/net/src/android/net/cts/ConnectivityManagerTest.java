@@ -1132,7 +1132,6 @@ public class ConnectivityManagerTest {
      */
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
-    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testRegisterNetworkCallback_withPendingIntent() {
         assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
 
@@ -1276,7 +1275,6 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
     @Test
-    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testRegisterNetworkRequest_identicalPendingIntents() throws Exception {
         runIdenticalPendingIntentsRequestTest(false /* useListen */);
     }
