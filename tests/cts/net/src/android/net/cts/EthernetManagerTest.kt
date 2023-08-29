@@ -385,6 +385,9 @@ class EthernetManagerTest {
         }
         registeredCallbacks.forEach { cm.unregisterNetworkCallback(it) }
         releaseTetheredInterface()
+        // Force releaseTetheredInterface() to be processed before starting the next test by calling
+        // setEthernetEnabled(true) which always waits on a callback.
+        setEthernetEnabled(true)
     }
 
     // Setting the carrier up / down relies on TUNSETCARRIER which was added in kernel version 5.0.
@@ -635,6 +638,9 @@ class EthernetManagerTest {
             // do nothing -- the TimeoutException indicates that no interface is available for
             // tethering.
             releaseTetheredInterface()
+            // Force releaseTetheredInterface() to be processed before proceeding by calling
+            // setEthernetEnabled(true) which always waits on a callback.
+            setEthernetEnabled(true)
         }
     }
 
