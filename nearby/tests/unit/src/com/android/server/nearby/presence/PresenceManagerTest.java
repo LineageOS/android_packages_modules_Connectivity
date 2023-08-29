@@ -28,8 +28,6 @@ import android.nearby.PresenceDevice;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.android.server.nearby.common.locator.LocatorContextWrapper;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -43,15 +41,13 @@ public class PresenceManagerTest {
             new byte[] {-97, 10, 107, -86, 25, 65, -54, -95, -72, 59, 54, 93, 9, 3, -24, -88};
 
     @Mock private Context mContext;
-    private LocatorContextWrapper mLocatorContextWrapper;
     private PresenceManager mPresenceManager;
 
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
 
-        mLocatorContextWrapper = new LocatorContextWrapper(mContext);
-        mPresenceManager = new PresenceManager(mLocatorContextWrapper);
+        mPresenceManager = new PresenceManager(mContext);
         when(mContext.getContentResolver())
                 .thenReturn(InstrumentationRegistry.getInstrumentation()
                         .getContext().getContentResolver());
