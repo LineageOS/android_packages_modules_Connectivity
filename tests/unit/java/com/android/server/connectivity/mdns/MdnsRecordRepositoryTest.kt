@@ -366,6 +366,58 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
+    fun testGetOffloadPacket() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME)
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+        val serviceName = arrayOf("MyTestService", "_testservice", "_tcp", "local")
+        val serviceType = arrayOf("_testservice", "_tcp", "local")
+        val offloadPacket = repository.getOffloadPacket(TEST_SERVICE_ID_1)
+        assertEquals(0x8400, offloadPacket.flags)
+        assertEquals(0, offloadPacket.questions.size)
+        assertEquals(0, offloadPacket.additionalRecords.size)
+        assertEquals(0, offloadPacket.authorityRecords.size)
+        assertContentEquals(listOf(
+            MdnsPointerRecord(
+                serviceType,
+                0L /* receiptTimeMillis */,
+                // Not a unique name owned by the announcer, so cacheFlush=false
+                false /* cacheFlush */,
+                4500000L /* ttlMillis */,
+                serviceName),
+            MdnsServiceRecord(
+                serviceName,
+                0L /* receiptTimeMillis */,
+                true /* cacheFlush */,
+                120000L /* ttlMillis */,
+                0 /* servicePriority */,
+                0 /* serviceWeight */,
+                TEST_PORT /* servicePort */,
+                TEST_HOSTNAME),
+            MdnsTextRecord(
+                serviceName,
+                0L /* receiptTimeMillis */,
+                true /* cacheFlush */,
+                4500000L /* ttlMillis */,
+                emptyList() /* entries */),
+            MdnsInetAddressRecord(TEST_HOSTNAME,
+                0L /* receiptTimeMillis */,
+                true /* cacheFlush */,
+                120000L /* ttlMillis */,
+                TEST_ADDRESSES[0].address),
+            MdnsInetAddressRecord(TEST_HOSTNAME,
+                0L /* receiptTimeMillis */,
+                true /* cacheFlush */,
+                120000L /* ttlMillis */,
+                TEST_ADDRESSES[1].address),
+            MdnsInetAddressRecord(TEST_HOSTNAME,
+                0L /* receiptTimeMillis */,
+                true /* cacheFlush */,
+                120000L /* ttlMillis */,
+                TEST_ADDRESSES[2].address),
+        ), offloadPacket.answers)
+    }
+
+    @Test
     fun testGetReverseDnsAddress() {
         val expectedV6 = "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.B.D.0.1.0.0.2.ip6.arpa"
                 .split(".").toTypedArray()
