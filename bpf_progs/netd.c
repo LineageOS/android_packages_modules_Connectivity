@@ -413,7 +413,8 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     // Always allow and never count clat traffic. Only the IPv4 traffic on the stacked
     // interface is accounted for and subject to usage restrictions.
     // CLAT IPv6 TX sockets are *always* tagged with CLAT uid, see tagSocketAsClat()
-    if (uid == AID_CLAT) return PASS;
+    // CLAT daemon receives via an untagged AF_PACKET socket.
+    if (egress && uid == AID_CLAT) return PASS;
 
     int match = bpf_owner_match(skb, sock_uid, egress, kver);
 
