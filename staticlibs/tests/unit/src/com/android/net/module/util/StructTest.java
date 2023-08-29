@@ -89,20 +89,20 @@ public class StructTest {
         return Struct.parse(clazz, buf);
     }
 
-    static class HeaderMsgWithConstructor extends Struct {
+    public static class HeaderMsgWithConstructor extends Struct {
         static int sType;
         static int sLength;
 
         @Field(order = 0, type = Type.U8, padding = 1)
-        final short mFamily;
+        public final short mFamily;
         @Field(order = 1, type = Type.U16)
-        final int mLen;
+        public final int mLen;
         @Field(order = 2, type = Type.S32)
-        final int mIfindex;
+        public final int mIfindex;
         @Field(order = 3, type = Type.U8)
-        final short mIcmpType;
+        public final short mIcmpType;
         @Field(order = 4, type = Type.U8, padding = 6)
-        final short mIcmpCode;
+        public final short mIcmpCode;
 
         HeaderMsgWithConstructor(final short family, final int len, final int ifindex,
                 final short type, final short code) {
@@ -133,20 +133,20 @@ public class StructTest {
         verifyHeaderParsing(msg);
     }
 
-    static class HeaderMsgWithoutConstructor extends Struct {
+    public static class HeaderMsgWithoutConstructor extends Struct {
         static int sType;
         static int sLength;
 
         @Field(order = 0, type = Type.U8, padding = 1)
-        short mFamily;
+        public short mFamily;
         @Field(order = 1, type = Type.U16)
-        int mLen;
+        public int mLen;
         @Field(order = 2, type = Type.S32)
-        int mIfindex;
+        public int mIfindex;
         @Field(order = 3, type = Type.U8)
-        short mIcmpType;
+        public short mIcmpType;
         @Field(order = 4, type = Type.U8, padding = 6)
-        short mIcmpCode;
+        public short mIcmpCode;
     }
 
     @Test
@@ -164,7 +164,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class HeaderMessage {
+    public static class HeaderMessage {
         @Field(order = 0, type = Type.U8, padding = 1)
         short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -183,7 +183,7 @@ public class StructTest {
         assertThrows(IllegalArgumentException.class, () -> Struct.parse(HeaderMessage.class, buf));
     }
 
-    static class HeaderMessageMissingAnnotation extends Struct {
+    public static class HeaderMessageMissingAnnotation extends Struct {
         @Field(order = 0, type = Type.U8, padding = 1)
         short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -202,15 +202,15 @@ public class StructTest {
                 () -> Struct.parse(HeaderMessageMissingAnnotation.class, buf));
     }
 
-    static class NetworkOrderMessage extends Struct {
+    public static class NetworkOrderMessage extends Struct {
         @Field(order = 0, type = Type.UBE16)
-        final int mUBE16;
+        public final int mUBE16;
         @Field(order = 1, type = Type.UBE32)
-        final long mUBE32;
+        public final long mUBE32;
         @Field(order = 2, type = Type.UBE64)
-        final BigInteger mUBE64;
+        public final BigInteger mUBE64;
         @Field(order = 3, type = Type.UBE63)
-        final long mUBE63;
+        public final long mUBE63;
 
         NetworkOrderMessage(final int be16, final long be32, final BigInteger be64,
                 final long be63) {
@@ -235,19 +235,19 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class UnsignedDataMessage extends Struct {
+    public static class UnsignedDataMessage extends Struct {
         @Field(order = 0, type = Type.U8)
-        final short mU8;
+        public final short mU8;
         @Field(order = 1, type = Type.U16)
-        final int mU16;
+        public final int mU16;
         @Field(order = 2, type = Type.U32)
-        final long mU32;
+        public final long mU32;
         @Field(order = 3, type = Type.U64)
-        final BigInteger mU64;
+        public final BigInteger mU64;
         @Field(order = 4, type = Type.U63)
-        final long mU63;
+        public final long mU63;
         @Field(order = 5, type = Type.U63)
-        final long mLU64; // represent U64 data with U63 type
+        public final long mLU64; // represent U64 data with U63 type
 
         UnsignedDataMessage(final short u8, final int u16, final long u32, final BigInteger u64,
                 final long u63, final long lu64) {
@@ -276,7 +276,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class U64DataMessage extends Struct {
+    public static class U64DataMessage extends Struct {
         @Field(order = 0, type = Type.U64) long mU64;
     }
 
@@ -290,10 +290,10 @@ public class StructTest {
     private static final String SMALL_VALUE_BIGINTEGER = "3412000000000000" + "0000000000001234"
             + "0000000000000000";
 
-    static class SmallValueBigInteger extends Struct {
-        @Field(order = 0, type = Type.U64) final BigInteger mSmallValue;
-        @Field(order = 1, type = Type.UBE64) final BigInteger mBSmallValue;
-        @Field(order = 2, type = Type.U64) final BigInteger mZero;
+    public static class SmallValueBigInteger extends Struct {
+        @Field(order = 0, type = Type.U64) public final BigInteger mSmallValue;
+        @Field(order = 1, type = Type.UBE64) public final BigInteger mBSmallValue;
+        @Field(order = 2, type = Type.U64) public final BigInteger mZero;
 
         SmallValueBigInteger(final BigInteger smallValue, final BigInteger bSmallValue,
                 final BigInteger zero) {
@@ -316,15 +316,15 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class SignedDataMessage extends Struct {
+    public static class SignedDataMessage extends Struct {
         @Field(order = 0, type = Type.S8)
-        final byte mS8;
+        public final byte mS8;
         @Field(order = 1, type = Type.S16)
-        final short mS16;
+        public final short mS16;
         @Field(order = 2, type = Type.S32)
-        final int mS32;
+        public final int mS32;
         @Field(order = 3, type = Type.S64)
-        final long mS64;
+        public final long mS64;
 
         SignedDataMessage(final byte s8, final short s16, final int s32, final long s64) {
             mS8 = s8;
@@ -362,7 +362,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class HeaderMessageWithDuplicateOrder extends Struct {
+    public static class HeaderMessageWithDuplicateOrder extends Struct {
         @Field(order = 0, type = Type.U8, padding = 1)
         short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -382,7 +382,7 @@ public class StructTest {
                 () -> Struct.parse(HeaderMessageWithDuplicateOrder.class, buf));
     }
 
-    static class HeaderMessageWithNegativeOrder extends Struct {
+    public static class HeaderMessageWithNegativeOrder extends Struct {
         @Field(order = 0, type = Type.U8, padding = 1)
         short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -402,7 +402,7 @@ public class StructTest {
                 () -> Struct.parse(HeaderMessageWithNegativeOrder.class, buf));
     }
 
-    static class HeaderMessageOutOfIndexBounds extends Struct {
+    public static class HeaderMessageOutOfIndexBounds extends Struct {
         @Field(order = 0, type = Type.U8, padding = 1)
         short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -422,7 +422,7 @@ public class StructTest {
                 () -> Struct.parse(HeaderMessageOutOfIndexBounds.class, buf));
     }
 
-    static class HeaderMessageMismatchedPrimitiveType extends Struct {
+    public static class HeaderMessageMismatchedPrimitiveType extends Struct {
         @Field(order = 0, type = Type.U8, padding = 1)
         short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -442,11 +442,11 @@ public class StructTest {
                 () -> Struct.parse(HeaderMessageMismatchedPrimitiveType.class, buf));
     }
 
-    static class PrefixMessage extends Struct {
+    public static class PrefixMessage extends Struct {
         @Field(order = 0, type = Type.UBE16)
-        final int mLifetime;
+        public final int mLifetime;
         @Field(order = 1, type = Type.ByteArray, arraysize = 12)
-        final byte[] mPrefix;
+        public final byte[] mPrefix;
 
         PrefixMessage(final int lifetime, final byte[] prefix) {
             mLifetime = lifetime;
@@ -469,7 +469,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class PrefixMessageWithZeroLengthArray extends Struct {
+    public static class PrefixMessageWithZeroLengthArray extends Struct {
         @Field(order = 0, type = Type.UBE16)
         final int mLifetime;
         @Field(order = 1, type = Type.ByteArray, arraysize = 0)
@@ -495,7 +495,7 @@ public class StructTest {
         verifyPrefixByteArrayParsing(msg);
     }
 
-    static class HeaderMessageWithMutableField extends Struct {
+    public static class HeaderMessageWithMutableField extends Struct {
         @Field(order = 0, type = Type.U8, padding = 1)
         final short mFamily;
         @Field(order = 1, type = Type.U16)
@@ -521,20 +521,20 @@ public class StructTest {
                 () -> Struct.parse(HeaderMessageWithMutableField.class, buf));
     }
 
-    static class HeaderMsgWithStaticConstant extends Struct {
+    public static class HeaderMsgWithStaticConstant extends Struct {
         private static final String TAG = "HeaderMessage";
         private static final int FIELD_COUNT = 5;
 
         @Field(order = 0, type = Type.U8, padding = 1)
-        final short mFamily;
+        public final short mFamily;
         @Field(order = 1, type = Type.U16)
-        final int mLen;
+        public final int mLen;
         @Field(order = 2, type = Type.S32)
-        final int mIfindex;
+        public final int mIfindex;
         @Field(order = 3, type = Type.U8)
-        final short mIcmpType;
+        public final short mIcmpType;
         @Field(order = 4, type = Type.U8, padding = 6)
-        final short mIcmpCode;
+        public final short mIcmpCode;
 
         HeaderMsgWithStaticConstant(final short family, final int len, final int ifindex,
                 final short type, final short code) {
@@ -561,7 +561,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
     }
 
-    static class MismatchedConstructor extends Struct {
+    public static class MismatchedConstructor extends Struct {
         @Field(order = 0, type = Type.U16) final int mInt1;
         @Field(order = 1, type = Type.U16) final int mInt2;
         MismatchedConstructor(String int1, String int2) {
@@ -577,9 +577,9 @@ public class StructTest {
                 () -> Struct.parse(MismatchedConstructor.class, buf));
     }
 
-    static class ClassWithTwoConstructors extends Struct {
-        @Field(order = 0, type = Type.U16) final int mInt1;
-        @Field(order = 1, type = Type.U16) final int mInt2;
+    public static class ClassWithTwoConstructors extends Struct {
+        @Field(order = 0, type = Type.U16) public final int mInt1;
+        @Field(order = 1, type = Type.U16) public final int mInt2;
         ClassWithTwoConstructors(String int1, String int2) {
             mInt1 = Integer.valueOf(int1);
             mInt2 = Integer.valueOf(int2);
@@ -645,14 +645,14 @@ public class StructTest {
         }
     }
 
-    static class BigEndianDataMessage extends Struct {
-        @Field(order = 0, type = Type.S32) int mInt1;
-        @Field(order = 1, type = Type.S32) int mInt2;
-        @Field(order = 2, type = Type.UBE16) int mInt3;
-        @Field(order = 3, type = Type.U16) int mInt4;
-        @Field(order = 4, type = Type.U64) BigInteger mBigInteger1;
-        @Field(order = 5, type = Type.UBE64) BigInteger mBigInteger2;
-        @Field(order = 6, type = Type.S64) long mLong;
+    public static class BigEndianDataMessage extends Struct {
+        @Field(order = 0, type = Type.S32) public int mInt1;
+        @Field(order = 1, type = Type.S32) public int mInt2;
+        @Field(order = 2, type = Type.UBE16) public int mInt3;
+        @Field(order = 3, type = Type.U16) public int mInt4;
+        @Field(order = 4, type = Type.U64) public BigInteger mBigInteger1;
+        @Field(order = 5, type = Type.UBE64) public BigInteger mBigInteger2;
+        @Field(order = 6, type = Type.S64) public long mLong;
     }
 
     private static final String BIG_ENDIAN_DATA = "00000001" + "fffffffe" + "fffe" + "fffe"
@@ -680,9 +680,9 @@ public class StructTest {
         return ByteBuffer.wrap(HexDump.hexStringToByteArray(hexString));
     }
 
-    static class MacAddressMessage extends Struct {
-        @Field(order = 0, type = Type.EUI48) final MacAddress mMac1;
-        @Field(order = 1, type = Type.EUI48) final MacAddress mMac2;
+    public static class MacAddressMessage extends Struct {
+        public @Field(order = 0, type = Type.EUI48) final MacAddress mMac1;
+        public @Field(order = 1, type = Type.EUI48) final MacAddress mMac2;
 
         MacAddressMessage(final MacAddress mac1, final MacAddress mac2) {
             this.mMac1 = mac1;
@@ -703,7 +703,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 
-    static class BadMacAddressType extends Struct {
+    public static class BadMacAddressType extends Struct {
         @Field(order = 0, type = Type.EUI48) byte[] mMac;
     }
 
@@ -742,7 +742,7 @@ public class StructTest {
         assertArrayEquals(toByteBuffer(hexString).array(), msg.writeToBytes());
     }
 
-    static class IpAddressMessage extends Struct {
+    public static class IpAddressMessage extends Struct {
         @Field(order = 0, type = Type.Ipv4Address) public final Inet4Address ipv4Address;
         @Field(order = 1, type = Type.Ipv6Address) public final Inet6Address ipv6Address;
 
@@ -765,7 +765,7 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 
-    static class WrongIpAddressType extends Struct {
+    public static class WrongIpAddressType extends Struct {
         @Field(order = 0, type = Type.Ipv4Address) public byte[] ipv4Address;
         @Field(order = 1, type = Type.Ipv6Address) public byte[] ipv6Address;
     }
@@ -777,7 +777,7 @@ public class StructTest {
                                    toByteBuffer("c0a86401" + "20010db8000300040005000600070008")));
     }
 
-    static class FullTypeMessage extends Struct {
+    public static class FullTypeMessage extends Struct {
         @Field(order = 0, type = Type.U8) public final short u8;
         @Field(order = 1, type = Type.U16) public final int u16;
         @Field(order = 2, type = Type.U32) public final long u32;
@@ -886,7 +886,7 @@ public class StructTest {
         assertTrue(msg.equals(msg1));
     }
 
-    static class FullTypeMessageWithDupType extends Struct {
+    public static class FullTypeMessageWithDupType extends Struct {
         @Field(order = 0, type = Type.U8) public final short u8;
         @Field(order = 1, type = Type.U16) public final int u16;
         @Field(order = 2, type = Type.U32) public final long u32;
@@ -1029,7 +1029,7 @@ public class StructTest {
         assertEquals(msg.hashCode(), msg1.hashCode());
     }
 
-    static class InvalidByteArray extends Struct {
+    public static class InvalidByteArray extends Struct {
         @Field(order = 0, type = Type.ByteArray, arraysize = 12) public byte[] bytes;
     }
 
