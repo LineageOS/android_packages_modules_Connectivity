@@ -29,7 +29,6 @@ import android.bluetooth.le.AdvertisingSetParameters;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.nearby.BroadcastCallback;
 import android.nearby.BroadcastRequest;
-import android.os.ParcelUuid;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -79,8 +78,7 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                 advertiseStarted = true;
                 AdvertiseData advertiseData =
                         new AdvertiseData.Builder()
-                                .addServiceData(new ParcelUuid(PRESENCE_UUID),
-                                        advertisementPackets).build();
+                                .addServiceData(PRESENCE_UUID, advertisementPackets).build();
                 try {
                     mBroadcastListener = listener;
                     switch (version) {
