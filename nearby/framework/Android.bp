@@ -53,6 +53,6 @@ java_library {
         "modules-utils-preconditions",
     ],
     visibility: [
-    "//packages/modules/Connectivity/nearby/tests:__subpackages__",
-    "//packages/modules/Connectivity/nearby/halfsheet:__subpackages__"],
+        "//packages/modules/Connectivity/nearby/tests:__subpackages__",
+    ],
 }
