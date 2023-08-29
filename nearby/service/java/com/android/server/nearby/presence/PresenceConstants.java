@@ -16,9 +16,7 @@
 
 package com.android.server.nearby.presence;
 
-import static com.android.server.nearby.common.bluetooth.fastpair.BluetoothUuids.to128BitUuid;
-
-import java.util.UUID;
+import android.os.ParcelUuid;
 
 /**
  * Constants for Nearby Presence operations.
@@ -26,5 +24,6 @@ import java.util.UUID;
 public class PresenceConstants {
 
     /** Presence advertisement service data uuid. */
-    public static final UUID PRESENCE_UUID = to128BitUuid((short) 0xFCF1);
+    public static final ParcelUuid PRESENCE_UUID =
+            ParcelUuid.fromString("0000fcf1-0000-1000-8000-00805f9b34fb");
 }

@@ -18,7 +18,6 @@ package com.android.server.nearby;
 
 import static com.android.server.SystemService.PHASE_BOOT_COMPLETED;
 import static com.android.server.SystemService.PHASE_SYSTEM_SERVICES_READY;
-import static com.android.server.SystemService.PHASE_THIRD_PARTY_APPS_CAN_START;
 
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
@@ -39,13 +38,10 @@ import android.nearby.ScanRequest;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.nearby.common.locator.LocatorContextWrapper;
-import com.android.server.nearby.fastpair.FastPairManager;
 import com.android.server.nearby.injector.ContextHubManagerAdapter;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.provider.BroadcastProviderManager;
 import com.android.server.nearby.provider.DiscoveryProviderManager;
-import com.android.server.nearby.provider.FastPairDataProvider;
 import com.android.server.nearby.util.identity.CallerIdentity;
 import com.android.server.nearby.util.permissions.BroadcastPermissions;
 import com.android.server.nearby.util.permissions.DiscoveryPermissions;
@@ -56,7 +52,6 @@ public class NearbyService extends INearbyManager.Stub {
 
     private final Context mContext;
     private Injector mInjector;
-    private final FastPairManager mFastPairManager;
     private final BroadcastReceiver mBluetoothReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -82,8 +77,6 @@ public class NearbyService extends INearbyManager.Stub {
         mInjector = new SystemInjector(context);
         mProviderManager = new DiscoveryProviderManager(context, mInjector);
         mBroadcastProviderManager = new BroadcastProviderManager(context, mInjector);
-        final LocatorContextWrapper lcw = new LocatorContextWrapper(context, null);
-        mFastPairManager = new FastPairManager(lcw);
     }
 
     @VisibleForTesting
@@ -152,10 +145,6 @@ public class NearbyService extends INearbyManager.Stub {
                     ((SystemInjector) mInjector).initializeAppOpsManager();
                 }
                 break;
-            case PHASE_THIRD_PARTY_APPS_CAN_START:
-                // Ensures that a fast pair data provider exists which will work in direct boot.
-                FastPairDataProvider.init(mContext);
-                break;
             case PHASE_BOOT_COMPLETED:
                 if (mInjector instanceof SystemInjector) {
                     // The nearby service must be functioning after this boot phase.
@@ -166,7 +155,6 @@ public class NearbyService extends INearbyManager.Stub {
                 mContext.registerReceiver(
                         mBluetoothReceiver,
                         new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
-                mFastPairManager.initiate();
                 break;
         }
     }
