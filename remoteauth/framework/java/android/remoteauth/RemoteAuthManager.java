@@ -16,14 +16,12 @@
 
 package android.remoteauth;
 
-import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
 import static android.remoteauth.DeviceDiscoveryCallback.STATE_LOST;
 import static android.remoteauth.DeviceDiscoveryCallback.STATE_SEEN;
 
 import android.annotation.CallbackExecutor;
 import android.annotation.NonNull;
 import android.annotation.SuppressLint;
-import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.annotation.UserIdInt;
 import android.content.Context;
@@ -47,7 +45,7 @@ import java.util.concurrent.Executor;
  *
  * @hide
  */
-@SystemApi(client = MODULE_LIBRARIES)
+// TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
 // TODO(b/290092977): Change to Context.REMOTE_AUTH_SERVICE after aosp/2681375
 // is automerges from aosp-main to udc-mainline-prod
 @SystemService(RemoteAuthManager.REMOTE_AUTH_SERVICE)
@@ -79,7 +77,7 @@ public class RemoteAuthManager {
      * @return true if this device can be enrolled
      * @hide
      */
-    @SystemApi(client = MODULE_LIBRARIES)
+    // TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
     // TODO(b/297301535): @RequiresPermission(MANAGE_REMOTE_AUTH)
     public boolean isRemoteAuthSupported() {
         try {
@@ -100,7 +98,7 @@ public class RemoteAuthManager {
      * @return {@code true} if discovery began successfully, {@code false} otherwise
      * @hide
      */
-    @SystemApi(client = MODULE_LIBRARIES)
+    // TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
     // TODO(b/297301535): @RequiresPermission(MANAGE_REMOTE_AUTH)
     public boolean startDiscovery(
             int timeoutMs,
@@ -149,7 +147,7 @@ public class RemoteAuthManager {
     // Suppressed lint: Registration methods should have overload that accepts delivery Executor.
     // Already have executor in startDiscovery() method.
     @SuppressLint("ExecutorRegistration")
-    @SystemApi(client = MODULE_LIBRARIES)
+    // TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
     // TODO(b/297301535): @RequiresPermission(MANAGE_REMOTE_AUTH)
     public void stopDiscovery(@NonNull DeviceDiscoveryCallback callback) {
         Preconditions.checkNotNull(callback, "invalid null scanCallback");
