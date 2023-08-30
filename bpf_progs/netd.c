@@ -92,6 +92,8 @@ DEFINE_BPF_MAP_RO_NETD(stats_map_B, HASH, StatsKey, StatsValue, STATS_MAP_SIZE)
 DEFINE_BPF_MAP_NO_NETD(iface_stats_map, HASH, uint32_t, StatsValue, IFACE_STATS_MAP_SIZE)
 DEFINE_BPF_MAP_NO_NETD(uid_owner_map, HASH, uint32_t, UidOwnerValue, UID_OWNER_MAP_SIZE)
 DEFINE_BPF_MAP_RW_NETD(uid_permission_map, HASH, uint32_t, uint8_t, UID_OWNER_MAP_SIZE)
+DEFINE_BPF_MAP_NO_NETD(ingress_discard_map, HASH, IngressDiscardKey, IngressDiscardValue,
+                       INGRESS_DISCARD_MAP_SIZE)
 
 /* never actually used from ebpf */
 DEFINE_BPF_MAP_NO_NETD(iface_index_name_map, HASH, uint32_t, IfaceValue, IFACE_INDEX_NAME_MAP_SIZE)
@@ -343,6 +345,35 @@ static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
     return *config;
 }
 
+static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
+                                                          const unsigned kver) {
+    // Require 4.19, since earlier kernels don't have bpf_skb_load_bytes_relative() which
+    // provides relative to L3 header reads.  Without that we could fetch the wrong bytes.
+    // Additionally earlier bpf verifiers are much harder to please.
+    if (kver < KVER(4, 19, 0)) return false;
+
+    IngressDiscardKey k = {};
+    if (skb->protocol == htons(ETH_P_IP)) {
+        k.daddr.s6_addr32[2] = htonl(0xFFFF);
+        (void)bpf_skb_load_bytes_net(skb, IP4_OFFSET(daddr), &k.daddr.s6_addr32[3], 4, kver);
+    } else if (skb->protocol == htons(ETH_P_IPV6)) {
+        (void)bpf_skb_load_bytes_net(skb, IP6_OFFSET(daddr), &k.daddr, sizeof(k.daddr), kver);
+    } else {
+        return false; // non IPv4/IPv6, so no IP to match on
+    }
+
+    // we didn't check for load success, because destination bytes will be zeroed if
+    // bpf_skb_load_bytes_net() fails, instead we rely on daddr of '::' and '::ffff:0.0.0.0'
+    // never being present in the map itself
+
+    IngressDiscardValue* v = bpf_ingress_discard_map_lookup_elem(&k);
+    if (!v) return false;  // lookup failure -> no protection in place -> allow
+    // if (skb->ifindex == 1) return false;  // allow 'lo', but can't happen - see callsite
+    if (skb->ifindex == v->iif[0]) return false;  // allowed interface
+    if (skb->ifindex == v->iif[1]) return false;  // allowed interface
+    return true;  // disallowed interface
+}
+
 // DROP_IF_SET is set of rules that DROP if rule is globally enabled, and per-uid bit is set
 #define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
 // DROP_IF_UNSET is set of rules that should DROP if globally enabled, and per-uid bit is NOT set
@@ -368,6 +399,7 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
     if (enabledRules & (DROP_IF_SET | DROP_IF_UNSET) & (uidRules ^ DROP_IF_UNSET)) return DROP;
 
     if (!egress && skb->ifindex != 1) {
+        if (ingress_should_discard(skb, kver)) return DROP;
         if (uidRules & IIF_MATCH) {
             if (allowed_iif && skb->ifindex != allowed_iif) {
                 // Drops packets not coming from lo nor the allowed interface
