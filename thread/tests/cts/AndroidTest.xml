@@ -47,5 +47,7 @@
 
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.net.thread.cts" />
+        <!-- Ignores tests introduced by guava-android-testlib -->
+        <option name="exclude-annotation" value="org.junit.Ignore"/>
     </test>
 </configuration>
