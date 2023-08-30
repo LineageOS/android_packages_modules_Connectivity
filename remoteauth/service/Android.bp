@@ -25,7 +25,7 @@ filegroup {
 java_library {
     name: "service-remoteauth-pre-jarjar",
     srcs: [":remoteauth-service-srcs"],
-
+    required: ["libremoteauth_jni_rust_defaults"],
     defaults: [
         "framework-system-server-module-defaults",
     ],
