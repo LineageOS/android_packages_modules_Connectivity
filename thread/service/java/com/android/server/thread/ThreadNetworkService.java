@@ -16,6 +16,7 @@
 
 package com.android.server.thread;
 
+import android.annotation.Nullable;
 import android.content.Context;
 import android.net.thread.IThreadNetworkController;
 import android.net.thread.IThreadNetworkManager;
@@ -29,16 +30,12 @@ import java.util.List;
  * Implementation of the Thread network service. This is the entry point of Android Thread feature.
  */
 public class ThreadNetworkService extends IThreadNetworkManager.Stub {
-    private final ThreadNetworkControllerService mControllerService;
+    private final Context mContext;
+    @Nullable private ThreadNetworkControllerService mControllerService;
 
     /** Creates a new {@link ThreadNetworkService} object. */
     public ThreadNetworkService(Context context) {
-        this(context, new ThreadNetworkControllerService());
-    }
-
-    private ThreadNetworkService(
-            Context context, ThreadNetworkControllerService controllerService) {
-        mControllerService = controllerService;
+        mContext = context;
     }
 
     /**
@@ -48,12 +45,16 @@ public class ThreadNetworkService extends IThreadNetworkManager.Stub {
      */
     public void onBootPhase(int phase) {
         if (phase == SystemService.PHASE_BOOT_COMPLETED) {
-            // TODO: initialize ThreadNetworkManagerService
+            mControllerService = ThreadNetworkControllerService.newInstance(mContext);
+            mControllerService.initialize();
         }
     }
 
     @Override
     public List<IThreadNetworkController> getAllThreadNetworkControllers() {
+        if (mControllerService == null) {
+            return Collections.emptyList();
+        }
         return Collections.singletonList(mControllerService);
     }
 }
