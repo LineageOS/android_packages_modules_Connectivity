@@ -95,6 +95,7 @@ static const set<string> MAINLINE_FOR_T_PLUS = {
     NETD "map_netd_cookie_tag_map",
     NETD "map_netd_iface_index_name_map",
     NETD "map_netd_iface_stats_map",
+    NETD "map_netd_ingress_discard_map",
     NETD "map_netd_stats_map_A",
     NETD "map_netd_stats_map_B",
     NETD "map_netd_uid_counterset_map",
