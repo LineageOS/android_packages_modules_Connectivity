@@ -80,6 +80,7 @@ java_defaults {
     impl_only_libs: [
         // TODO: figure out why just using "framework-tethering" uses the stubs, even though both
         // framework-connectivity and framework-tethering are in the same APEX.
+        "framework-location.stubs.module_lib",
         "framework-tethering.impl",
         "framework-wifi.stubs.module_lib",
     ],
@@ -127,6 +128,7 @@ java_library {
         // to generate the connectivity stubs. That would create a circular dependency
         // because the tethering impl depend on the connectivity stubs (e.g.,
         // TetheringRequest depends on LinkAddress).
+        "framework-location.stubs.module_lib",
         "framework-tethering.impl",
         "framework-wifi.stubs.module_lib",
     ],
