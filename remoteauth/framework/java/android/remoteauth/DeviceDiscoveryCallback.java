@@ -16,10 +16,7 @@
 
 package android.remoteauth;
 
-import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
-
 import android.annotation.NonNull;
-import android.annotation.SystemApi;
 
 import androidx.annotation.IntDef;
 
@@ -31,7 +28,7 @@ import java.lang.annotation.RetentionPolicy;
  *
  * @hide
  */
-@SystemApi(client = MODULE_LIBRARIES)
+// TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
 public interface DeviceDiscoveryCallback {
     /** The device is no longer seen in the discovery process. */
     int STATE_LOST = 0;
