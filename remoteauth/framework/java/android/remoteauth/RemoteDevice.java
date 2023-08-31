@@ -16,12 +16,9 @@
 
 package android.remoteauth;
 
-import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
-
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -35,7 +32,7 @@ import java.util.Objects;
  * @hide
  */
 // TODO(b/295407748) Change to use @DataClass
-@SystemApi(client = MODULE_LIBRARIES)
+// TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
 public final class RemoteDevice implements Parcelable {
     /** The remote device is not registered as remote authenticator. */
     public static final int STATE_NOT_REGISTERED = 0;
