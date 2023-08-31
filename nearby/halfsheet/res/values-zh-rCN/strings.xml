@@ -26,7 +26,7 @@
     <string name="fast_pair_unable_to_connect_description" msgid="3926830740860653891">"请尝试手动与该设备配对"</string>
     <string name="fast_pair_turn_on_bt_device_pairing_mode" msgid="3197372738187738030">"请尝试让设备进入配对模式"</string>
     <string name="devices_within_reach_channel_name" msgid="876280551450910440">"附近的设备"</string>
-    <string name="devices_with_your_account_channel_name" msgid="8120067812798598102">"与您的帐号相关联的设备"</string>
+    <string name="devices_with_your_account_channel_name" msgid="8120067812798598102">"与您的账号相关联的设备"</string>
     <string name="fast_pair_your_device" msgid="3662423897069320840">"您保存的设备已可供使用"</string>
     <string name="common_nearby_title" msgid="5480324514713607015">"附近"</string>
     <string name="common_devices" msgid="2635603125608104442">"设备"</string>
