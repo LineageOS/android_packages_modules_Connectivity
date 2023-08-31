@@ -283,6 +283,7 @@ public class IpServer extends StateMachine {
     private List<TetheredClient> mDhcpLeases = Collections.emptyList();
 
     private int mLastIPv6UpstreamIfindex = 0;
+    private boolean mUpstreamSupportsBpf = false;
 
     private class MyNeighborEventConsumer implements IpNeighborMonitor.NeighborEventConsumer {
         public void accept(NeighborEvent e) {
@@ -779,15 +780,15 @@ public class IpServer extends StateMachine {
 
         // If v6only is null, we pass in null to setRaParams(), which handles
         // deprecation of any existing RA data.
-
         setRaParams(params);
-        // Be aware that updateIpv6ForwardingRules use mLastIPv6LinkProperties, so this line should
-        // be eariler than updateIpv6ForwardingRules.
-        // TODO: avoid this dependencies and move this logic into BpfCoordinator.
-        mLastIPv6LinkProperties = v6only;
 
-        updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, upstreamIfIndex, null);
+        // Not support BPF on virtual upstream interface
+        final boolean upstreamSupportsBpf = upstreamIface != null && !isVcnInterface(upstreamIface);
+        updateIpv6ForwardingRules(
+                mLastIPv6UpstreamIfindex, upstreamIfIndex, upstreamSupportsBpf, null);
+        mLastIPv6LinkProperties = v6only;
         mLastIPv6UpstreamIfindex = upstreamIfIndex;
+        mUpstreamSupportsBpf = upstreamSupportsBpf;
         if (mDadProxy != null) {
             mDadProxy.setUpstreamIface(upstreamIfaceParams);
         }
@@ -921,20 +922,14 @@ public class IpServer extends StateMachine {
         mBpfCoordinator.tetherOffloadRuleUpdate(this, newIfindex);
     }
 
-    private boolean isIpv6VcnNetworkInterface() {
-        if (mLastIPv6LinkProperties == null) return false;
-
-        return isVcnInterface(mLastIPv6LinkProperties.getInterfaceName());
-    }
-
     // Handles all updates to IPv6 forwarding rules. These can currently change only if the upstream
     // changes or if a neighbor event is received.
     private void updateIpv6ForwardingRules(int prevUpstreamIfindex, int upstreamIfindex,
-            NeighborEvent e) {
-        // If no longer have an upstream or it is virtual network, clear forwarding rules and do
+            boolean upstreamSupportsBpf, NeighborEvent e) {
+        // If no longer have an upstream or upstream not supports BPF, clear forwarding rules and do
         // nothing else.
         // TODO: Rather than always clear rules, ensure whether ipv6 ever enable first.
-        if (upstreamIfindex == 0 || isIpv6VcnNetworkInterface()) {
+        if (upstreamIfindex == 0 || !upstreamSupportsBpf) {
             clearIpv6ForwardingRules();
             return;
         }
@@ -995,7 +990,8 @@ public class IpServer extends StateMachine {
         if (mInterfaceParams != null
                 && mInterfaceParams.index == e.ifindex
                 && mInterfaceParams.hasMacAddress) {
-            updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, mLastIPv6UpstreamIfindex, e);
+            updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, mLastIPv6UpstreamIfindex,
+                    mUpstreamSupportsBpf, e);
             updateClientInfoIpv4(e);
         }
     }
