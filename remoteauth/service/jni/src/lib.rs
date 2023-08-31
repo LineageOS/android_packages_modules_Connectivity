@@ -19,6 +19,7 @@
 
 mod jnames;
 mod unique_jvm;
+mod utils;
 
-//pub mod remoteauth_jni_android_protocol;
 pub mod remoteauth_jni_android_platform;
+pub mod remoteauth_jni_android_protocol;
