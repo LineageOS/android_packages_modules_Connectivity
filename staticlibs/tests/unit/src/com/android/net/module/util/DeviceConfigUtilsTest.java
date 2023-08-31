@@ -17,6 +17,7 @@
 package com.android.net.module.util;
 
 import static android.content.pm.PackageManager.MATCH_SYSTEM_ONLY;
+import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
@@ -421,7 +422,7 @@ public class DeviceConfigUtilsTest {
     }
 
     @Test
-    public void testIsTetheringFeatureForceDisabled() throws Exception {
+    public void testIsTetheringFeatureNotChickenedOut() throws Exception {
         doReturn("0").when(() -> DeviceConfig.getProperty(
                 eq(NAMESPACE_TETHERING), eq(TEST_EXPERIMENT_FLAG)));
         assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
@@ -429,5 +430,17 @@ public class DeviceConfigUtilsTest {
         doReturn(TEST_FLAG_VALUE_STRING).when(
                 () -> DeviceConfig.getProperty(eq(NAMESPACE_TETHERING), eq(TEST_EXPERIMENT_FLAG)));
         assertFalse(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
+    }
+
+    @Test
+    public void testIsNetworkStackFeatureNotChickenedOut() throws Exception {
+        doReturn("0").when(() -> DeviceConfig.getProperty(
+                eq(NAMESPACE_CONNECTIVITY), eq(TEST_EXPERIMENT_FLAG)));
+        assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
+
+        doReturn(TEST_FLAG_VALUE_STRING).when(
+                () -> DeviceConfig.getProperty(eq(NAMESPACE_CONNECTIVITY),
+                                               eq(TEST_EXPERIMENT_FLAG)));
+        assertFalse(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
     }
 }
