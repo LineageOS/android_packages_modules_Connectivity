@@ -16,7 +16,6 @@
 
 package android.remoteauth;
 
-import android.annotation.SystemApi;
 import android.app.SystemServiceRegistry;
 import android.content.Context;
 
@@ -25,7 +24,7 @@ import android.content.Context;
  *
  * @hide
  */
-@SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+// TODO(b/290092977): Add back after M-2023-11 release - @SystemApi(client = MODULE_LIBRARIES)
 public final class RemoteAuthFrameworkInitializer {
     private RemoteAuthFrameworkInitializer() {}
 
