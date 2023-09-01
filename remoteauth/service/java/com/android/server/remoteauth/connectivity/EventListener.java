@@ -21,7 +21,7 @@ import android.annotation.NonNull;
 /**
  * Listens to the events from underlying transport.
  */
-interface EventListener {
+public interface EventListener {
     /** Called when remote device is disconnected from the underlying transport. */
     void onDisconnect(@NonNull ConnectionInfo connectionInfo);
 }

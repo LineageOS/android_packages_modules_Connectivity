@@ -21,6 +21,7 @@
 package com.android.server.remoteauth.jni;
 
 import com.android.internal.annotations.Keep;
+
 /**
  * Exception thrown by native platform rust implementation of {@link
  * com.android.server.remoteauth.RemoteAuthService}.
