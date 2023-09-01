@@ -17,6 +17,7 @@
 package com.android.server.remoteauth.ranging;
 
 import static com.android.server.remoteauth.ranging.RangingCapabilities.RANGING_METHOD_UWB;
+import static com.android.server.remoteauth.ranging.SessionParameters.DEVICE_ROLE_INITIATOR;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -25,6 +26,7 @@ import static org.junit.Assert.assertThrows;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.android.server.remoteauth.ranging.RangingCapabilities.RangingMethod;
+import com.android.server.remoteauth.ranging.SessionParameters.DeviceRole;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,6 +37,7 @@ public class SessionParametersTest {
 
     private static final String TEST_DEVICE_ID = "test_device_id";
     @RangingMethod private static final int TEST_RANGING_METHOD = RANGING_METHOD_UWB;
+    @DeviceRole private static final int TEST_DEVICE_ROLE = DEVICE_ROLE_INITIATOR;
     private static final float TEST_LOWER_PROXIMITY_BOUNDARY_M = 1.0f;
     private static final float TEST_UPPER_PROXIMITY_BOUNDARY_M = 2.5f;
     private static final boolean TEST_AUTO_DERIVE_PARAMS = true;
@@ -55,6 +58,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setAutoDeriveParams(TEST_AUTO_DERIVE_PARAMS)
@@ -82,6 +86,7 @@ public class SessionParametersTest {
         final SessionParameters.Builder builder =
                 new SessionParameters.Builder()
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setBaseKey(TEST_BASE_KEY)
@@ -95,6 +100,21 @@ public class SessionParametersTest {
         final SessionParameters.Builder builder =
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
+                        .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
+                        .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
+                        .setBaseKey(TEST_BASE_KEY)
+                        .setSyncData(TEST_SYNC_DATA);
+
+        assertThrows(IllegalArgumentException.class, () -> builder.build());
+    }
+
+    @Test
+    public void testBuildingSessionParameters_invalidDeviceRole() {
+        final SessionParameters.Builder builder =
+                new SessionParameters.Builder()
+                        .setDeviceId(TEST_DEVICE_ID)
+                        .setRangingMethod(TEST_RANGING_METHOD)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setBaseKey(TEST_BASE_KEY)
@@ -109,6 +129,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(-1.0f)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setBaseKey(TEST_BASE_KEY)
@@ -123,6 +144,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M - 0.1f)
                         .setBaseKey(TEST_BASE_KEY)
@@ -138,6 +160,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setAutoDeriveParams(autoDeriveParams)
@@ -154,6 +177,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setAutoDeriveParams(TEST_AUTO_DERIVE_PARAMS)
@@ -168,6 +192,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setAutoDeriveParams(TEST_AUTO_DERIVE_PARAMS)
@@ -183,6 +208,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setAutoDeriveParams(TEST_AUTO_DERIVE_PARAMS)
@@ -197,6 +223,7 @@ public class SessionParametersTest {
                 new SessionParameters.Builder()
                         .setDeviceId(TEST_DEVICE_ID)
                         .setRangingMethod(TEST_RANGING_METHOD)
+                        .setDeviceRole(TEST_DEVICE_ROLE)
                         .setLowerProximityBoundaryM(TEST_LOWER_PROXIMITY_BOUNDARY_M)
                         .setUpperProximityBoundaryM(TEST_UPPER_PROXIMITY_BOUNDARY_M)
                         .setAutoDeriveParams(TEST_AUTO_DERIVE_PARAMS)
