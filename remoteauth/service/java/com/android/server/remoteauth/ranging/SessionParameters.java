@@ -19,8 +19,13 @@ import static com.android.server.remoteauth.ranging.RangingCapabilities.RANGING_
 
 import android.annotation.NonNull;
 
+import androidx.annotation.IntDef;
+
 import com.android.internal.util.Preconditions;
 import com.android.server.remoteauth.ranging.RangingCapabilities.RangingMethod;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * The set of parameters to create a ranging session.
@@ -31,9 +36,29 @@ import com.android.server.remoteauth.ranging.RangingCapabilities.RangingMethod;
  */
 public class SessionParameters {
 
+    /** Ranging device role. */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            value = {
+                DEVICE_ROLE_UNKNOWN,
+                DEVICE_ROLE_INITIATOR,
+                DEVICE_ROLE_RESPONDER,
+            })
+    public @interface DeviceRole {}
+
+    /** Unknown device role. */
+    public static final int DEVICE_ROLE_UNKNOWN = 0x0;
+
+    /** Device that initiates the ranging. */
+    public static final int DEVICE_ROLE_INITIATOR = 0x1;
+
+    /** Device that responds to ranging. */
+    public static final int DEVICE_ROLE_RESPONDER = 0x2;
+
     /* Required parameters */
     private final String mDeviceId;
     @RangingMethod private final int mRangingMethod;
+    @DeviceRole private final int mDeviceRole;
 
     /* Optional parameters */
     private final float mLowerProximityBoundaryM;
@@ -49,6 +74,11 @@ public class SessionParameters {
     @RangingMethod
     public int getRangingMethod() {
         return mRangingMethod;
+    }
+
+    @DeviceRole
+    public int getDeviceRole() {
+        return mDeviceRole;
     }
 
     public float getLowerProximityBoundaryM() {
@@ -74,6 +104,7 @@ public class SessionParameters {
     private SessionParameters(
             String deviceId,
             @RangingMethod int rangingMethod,
+            @DeviceRole int deviceRole,
             float lowerProximityBoundaryM,
             float upperProximityBoundaryM,
             boolean autoDeriveParams,
@@ -81,6 +112,7 @@ public class SessionParameters {
             byte[] syncData) {
         mDeviceId = deviceId;
         mRangingMethod = rangingMethod;
+        mDeviceRole = deviceRole;
         mLowerProximityBoundaryM = lowerProximityBoundaryM;
         mUpperProximityBoundaryM = upperProximityBoundaryM;
         mAutoDeriveParams = autoDeriveParams;
@@ -92,6 +124,7 @@ public class SessionParameters {
     public static final class Builder {
         private String mDeviceId = new String("");
         @RangingMethod private int mRangingMethod = RANGING_METHOD_UNKNOWN;
+        @DeviceRole private int mDeviceRole = DEVICE_ROLE_UNKNOWN;
         private float mLowerProximityBoundaryM;
         private float mUpperProximityBoundaryM;
         private boolean mAutoDeriveParams = false;
@@ -117,6 +150,12 @@ public class SessionParameters {
          */
         public Builder setRangingMethod(@RangingMethod int rangingMethod) {
             mRangingMethod = rangingMethod;
+            return this;
+        }
+
+        /** Sets the {@link DeviceRole} to be used for the {@link RangingSession}. */
+        public Builder setDeviceRole(@DeviceRole int deviceRole) {
+            mDeviceRole = deviceRole;
             return this;
         }
 
@@ -191,6 +230,7 @@ public class SessionParameters {
             Preconditions.checkArgument(!mDeviceId.isEmpty(), "deviceId must not be empty.");
             Preconditions.checkArgument(
                     mRangingMethod != RANGING_METHOD_UNKNOWN, "Unknown rangingMethod");
+            Preconditions.checkArgument(mDeviceRole != DEVICE_ROLE_UNKNOWN, "Unknown deviceRole");
             Preconditions.checkArgument(
                     mLowerProximityBoundaryM >= 0,
                     "Negative lowerProximityBoundaryM: " + mLowerProximityBoundaryM);
@@ -212,6 +252,7 @@ public class SessionParameters {
             return new SessionParameters(
                     mDeviceId,
                     mRangingMethod,
+                    mDeviceRole,
                     mLowerProximityBoundaryM,
                     mUpperProximityBoundaryM,
                     mAutoDeriveParams,
