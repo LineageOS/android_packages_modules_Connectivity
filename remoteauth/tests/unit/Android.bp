@@ -35,12 +35,19 @@ android_test {
     static_libs: [
         "androidx.test.ext.junit",
         "androidx.test.rules",
+        "com.uwb.support.generic",
         "framework-remoteauth-static",
         "junit",
         "libprotobuf-java-lite",
+        "mockito-target-extended-minus-junit4",
         "platform-test-annotations",
         "service-remoteauth-pre-jarjar",
         "truth-prebuilt",
+    ],
+    // these are needed for Extended Mockito
+    jni_libs: [
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
     ],
     test_suites: [
         "general-tests",

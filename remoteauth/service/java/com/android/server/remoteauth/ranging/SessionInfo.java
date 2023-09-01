@@ -41,6 +41,16 @@ public class SessionInfo {
         mRangingMethod = rangingMethod;
     }
 
+    @Override
+    public String toString() {
+        return "SessionInfo { "
+                + "DeviceId = "
+                + mDeviceId
+                + "RangingMethod = "
+                + mRangingMethod
+                + " }";
+    }
+
     /** Builder class for {@link SessionInfo}. */
     public static final class Builder {
         private String mDeviceId = "";
