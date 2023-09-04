@@ -48,7 +48,7 @@ abstract class HostsideNetworkTestCase extends BaseHostJUnit4Test {
     @BeforeClassWithInfo
     public static void setUpOnceBase(TestInformation testInfo) throws Exception {
         DeviceSdkLevel deviceSdkLevel = new DeviceSdkLevel(testInfo.getDevice());
-        String testApk = deviceSdkLevel.isDeviceAtLeastT() ? TEST_APK_NEXT : TEST_APK;
+        String testApk = deviceSdkLevel.isDeviceAtLeastV() ? TEST_APK_NEXT : TEST_APK;
 
         uninstallPackage(testInfo, TEST_PKG, false);
         installPackage(testInfo, testApk);
