@@ -934,6 +934,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private final Map<String, ApplicationSelfCertifiedNetworkCapabilities>
             mSelfCertifiedCapabilityCache = new HashMap<>();
 
+    // Flag to enable the feature of closing frozen app sockets.
+    private final boolean mDestroyFrozenSockets;
+
+    // Flag to optimize closing frozen app sockets by waiting for the cellular modem to wake up.
+    private final boolean mDelayDestroyFrozenSockets;
+
+    // Uids that ConnectivityService is pending to close sockets of.
+    private final Set<Integer> mPendingFrozenUids = new ArraySet<>();
+
     /**
      * Implements support for the legacy "one network per network type" model.
      *
@@ -1772,8 +1781,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mCdmps = null;
         }
 
-        if (mDeps.isAtLeastU()
-                && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION)) {
+        mDestroyFrozenSockets = mDeps.isAtLeastU()
+                && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION);
+        mDelayDestroyFrozenSockets = mDeps.isAtLeastU()
+                && mDeps.isFeatureEnabled(context, DELAY_DESTROY_FROZEN_SOCKETS_VERSION);
+        if (mDestroyFrozenSockets) {
             final UidFrozenStateChangedCallback frozenStateChangedCallback =
                     new UidFrozenStateChangedCallback() {
                 @Override
@@ -2983,26 +2995,109 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    /**
+     * Check if the cell network is idle.
+     * @return true if the cell network state is idle
+     *         false if the cell network state is active or unknown
+     */
+    private boolean isCellNetworkIdle() {
+        final NetworkAgentInfo defaultNai = getDefaultNetwork();
+        if (defaultNai == null
+                || !defaultNai.networkCapabilities.hasTransport(TRANSPORT_CELLULAR)) {
+            // mNetworkActivityTracker only tracks the activity of the default network. So if the
+            // cell network is not the default network, cell network state is unknown.
+            // TODO(b/279380356): Track cell network state when the cell is not the default network
+            return false;
+        }
+
+        return !mNetworkActivityTracker.isDefaultNetworkActive();
+    }
+
     private void handleFrozenUids(int[] uids, int[] frozenStates) {
         final ArraySet<Integer> ownerUids = new ArraySet<>();
 
         for (int i = 0; i < uids.length; i++) {
             if (frozenStates[i] == UID_FROZEN_STATE_FROZEN) {
                 ownerUids.add(uids[i]);
+            } else {
+                mPendingFrozenUids.remove(uids[i]);
             }
         }
 
-        if (!ownerUids.isEmpty()) {
+        if (ownerUids.isEmpty()) {
+            return;
+        }
+
+        if (mDelayDestroyFrozenSockets && isCellNetworkIdle()) {
+            // Delay closing sockets to avoid waking the cell modem up.
+            // Wi-Fi network state is not considered since waking Wi-Fi modem up is much cheaper
+            // than waking cell modem up.
+            mPendingFrozenUids.addAll(ownerUids);
+        } else {
             try {
                 mDeps.destroyLiveTcpSocketsByOwnerUids(ownerUids);
-            } catch (Exception e) {
+            } catch (SocketException | InterruptedIOException | ErrnoException e) {
                 loge("Exception in socket destroy: " + e);
             }
         }
     }
 
+    private void closePendingFrozenSockets() {
+        ensureRunningOnConnectivityServiceThread();
+
+        try {
+            mDeps.destroyLiveTcpSocketsByOwnerUids(mPendingFrozenUids);
+        } catch (SocketException | InterruptedIOException | ErrnoException e) {
+            loge("Failed to close pending frozen app sockets: " + e);
+        }
+        mPendingFrozenUids.clear();
+    }
+
+    private void handleReportNetworkActivity(final NetworkActivityParams params) {
+        mNetworkActivityTracker.handleReportNetworkActivity(params);
+
+        if (mDelayDestroyFrozenSockets
+                && params.isActive
+                && params.label == TRANSPORT_CELLULAR
+                && !mPendingFrozenUids.isEmpty()) {
+            closePendingFrozenSockets();
+        }
+    }
+
+    /**
+     * If the cellular network is no longer the default network, close pending frozen sockets.
+     *
+     * @param newNetwork new default network
+     * @param oldNetwork old default network
+     */
+    private void maybeClosePendingFrozenSockets(NetworkAgentInfo newNetwork,
+            NetworkAgentInfo oldNetwork) {
+        final boolean isOldNetworkCellular = oldNetwork != null
+                && oldNetwork.networkCapabilities.hasTransport(TRANSPORT_CELLULAR);
+        final boolean isNewNetworkCellular = newNetwork != null
+                && newNetwork.networkCapabilities.hasTransport(TRANSPORT_CELLULAR);
+
+        if (isOldNetworkCellular
+                && !isNewNetworkCellular
+                && !mPendingFrozenUids.isEmpty()) {
+            closePendingFrozenSockets();
+        }
+    }
+
+    private void dumpCloseFrozenAppSockets(IndentingPrintWriter pw) {
+        pw.println("CloseFrozenAppSockets:");
+        pw.increaseIndent();
+        pw.print("mDestroyFrozenSockets="); pw.println(mDestroyFrozenSockets);
+        pw.print("mDelayDestroyFrozenSockets="); pw.println(mDelayDestroyFrozenSockets);
+        pw.print("mPendingFrozenUids="); pw.println(mPendingFrozenUids);
+        pw.decreaseIndent();
+    }
+
     @VisibleForTesting
     static final String KEY_DESTROY_FROZEN_SOCKETS_VERSION = "destroy_frozen_sockets_version";
+    @VisibleForTesting
+    static final String DELAY_DESTROY_FROZEN_SOCKETS_VERSION =
+            "delay_destroy_frozen_sockets_version";
 
     private void enforceInternetPermission() {
         mContext.enforceCallingOrSelfPermission(
@@ -3603,6 +3698,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         pw.println();
         dumpAvoidBadWifiSettings(pw);
+
+        pw.println();
+        dumpCloseFrozenAppSockets(pw);
 
         pw.println();
 
@@ -4671,6 +4769,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     //  incorrect) behavior.
                     mNetworkActivityTracker.updateDataActivityTracking(
                             null /* newNetwork */, nai);
+                    maybeClosePendingFrozenSockets(null /* newNetwork */, nai);
                     ensureNetworkTransitionWakelock(nai.toShortString());
                 }
             }
@@ -5877,7 +5976,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
                 case EVENT_REPORT_NETWORK_ACTIVITY:
                     final NetworkActivityParams arg = (NetworkActivityParams) msg.obj;
-                    mNetworkActivityTracker.handleReportNetworkActivity(arg);
+                    handleReportNetworkActivity(arg);
                     break;
                 case EVENT_MOBILE_DATA_PREFERRED_UIDS_CHANGED:
                     handleMobileDataPreferredUidsChanged();
@@ -9117,6 +9216,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mLingerMonitor.noteLingerDefaultNetwork(oldDefaultNetwork, newDefaultNetwork);
         }
         mNetworkActivityTracker.updateDataActivityTracking(newDefaultNetwork, oldDefaultNetwork);
+        maybeClosePendingFrozenSockets(newDefaultNetwork, oldDefaultNetwork);
         mProxyTracker.setDefaultProxy(null != newDefaultNetwork
                 ? newDefaultNetwork.linkProperties.getHttpProxy() : null);
         resetHttpProxyForNonDefaultNetwork(oldDefaultNetwork);
