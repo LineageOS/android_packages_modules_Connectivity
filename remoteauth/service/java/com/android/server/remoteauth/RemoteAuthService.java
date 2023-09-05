@@ -27,6 +27,7 @@ import com.android.internal.util.Preconditions;
 /** Service implementing remoteauth functionality. */
 public class RemoteAuthService extends IRemoteAuthService.Stub {
     public static final String TAG = "RemoteAuthService";
+    public static final String SERVICE_NAME = Context.REMOTE_AUTH_SERVICE;
 
     public RemoteAuthService(Context context) {
         Preconditions.checkNotNull(context);
