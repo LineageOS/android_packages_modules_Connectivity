@@ -19,6 +19,14 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+framework_remoteauth_srcs = [":framework-remoteauth-java-sources"]
+framework_remoteauth_api_srcs = []
+
+java_defaults {
+    name: "enable-remoteauth-targets",
+    enabled: true,
+}
+
 // Include build rules from Sources.bp
 build = ["Sources.bp"]
 
@@ -43,8 +51,7 @@ java_defaults {
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
         ":framework-thread-sources",
-        ":framework-remoteauth-java-sources",
-    ],
+    ] + framework_remoteauth_srcs,
     libs: [
         "unsupportedappusage",
         "app-compat-annotations",
@@ -115,6 +122,7 @@ java_sdk_library {
         "framework-connectivity-t-defaults",
         "enable-framework-connectivity-t-targets",
     ],
+    api_srcs: framework_remoteauth_api_srcs,
     // Do not add static_libs to this library: put them in framework-connectivity instead.
     // The jarjar rules are only so that references to jarjared utils in
     // framework-connectivity-pre-jarjar match at runtime.
