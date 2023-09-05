@@ -182,7 +182,7 @@ class MdnsRecordRepositoryTest {
                 MdnsPointerRecord(
                         arrayOf("_testservice", "_tcp", "local"),
                         0L /* receiptTimeMillis */,
-                        true /* cacheFlush */,
+                        false /* cacheFlush */,
                         0L /* ttlMillis */,
                         arrayOf("MyTestService", "_testservice", "_tcp", "local"))
         ), packet.answers)
@@ -211,13 +211,13 @@ class MdnsRecordRepositoryTest {
                 MdnsPointerRecord(
                         arrayOf("_testservice", "_tcp", "local"),
                         0L /* receiptTimeMillis */,
-                        true /* cacheFlush */,
+                        false /* cacheFlush */,
                         0L /* ttlMillis */,
                         arrayOf("MyTestService", "_testservice", "_tcp", "local")),
                 MdnsPointerRecord(
                         arrayOf("_subtype", "_sub", "_testservice", "_tcp", "local"),
                         0L /* receiptTimeMillis */,
-                        true /* cacheFlush */,
+                        false /* cacheFlush */,
                         0L /* ttlMillis */,
                         arrayOf("MyTestService", "_testservice", "_tcp", "local")),
         ), packet.answers)

@@ -384,7 +384,9 @@ public class MdnsRecordRepository {
                 r -> new MdnsPointerRecord(
                         r.record.getName(),
                         0L /* receiptTimeMillis */,
-                        true /* cacheFlush */,
+                        // RFC6762#10.1, the cache flush bit should be false for existing
+                        // announcement. Otherwise, the record will be deleted immediately.
+                        false /* cacheFlush */,
                         0L /* ttlMillis */,
                         r.record.getPointer()));
 
