@@ -1191,7 +1191,7 @@ public class NsdService extends INsdManager.Stub {
                         // TODO: Limits the number of registrations created by a given class.
                         mOffloadEngines.register(offloadEngineInfo.mOffloadEngine,
                                 offloadEngineInfo);
-                        // TODO: Sends all the existing OffloadServiceInfos back.
+                        sendAllOffloadServiceInfos(offloadEngineInfo);
                         break;
                     case NsdManager.UNREGISTER_OFFLOAD_ENGINE:
                         mOffloadEngines.unregister((IOffloadEngine) msg.obj);
@@ -1877,6 +1877,21 @@ public class NsdService extends INsdManager.Stub {
         }
     }
 
+    private void sendAllOffloadServiceInfos(@NonNull OffloadEngineInfo offloadEngineInfo) {
+        final String targetInterface = offloadEngineInfo.mInterfaceName;
+        final IOffloadEngine offloadEngine = offloadEngineInfo.mOffloadEngine;
+        final List<MdnsAdvertiser.OffloadServiceInfoWrapper> offloadWrappers =
+                mAdvertiser.getAllInterfaceOffloadServiceInfos(targetInterface);
+        for (MdnsAdvertiser.OffloadServiceInfoWrapper wrapper : offloadWrappers) {
+            try {
+                offloadEngine.onOffloadServiceUpdated(wrapper.mOffloadServiceInfo);
+            } catch (RemoteException e) {
+                // Can happen in regular cases, do not log a stacktrace
+                Log.i(TAG, "Failed to send offload callback, remote died: " + e.getMessage());
+            }
+        }
+    }
+
     private void sendOffloadServiceInfosUpdate(@NonNull String targetInterfaceName,
             @NonNull OffloadServiceInfo offloadServiceInfo, boolean isRemove) {
         final int count = mOffloadEngines.beginBroadcast();
@@ -1900,7 +1915,7 @@ public class NsdService extends INsdManager.Stub {
                     }
                 } catch (RemoteException e) {
                     // Can happen in regular cases, do not log a stacktrace
-                    Log.i(TAG, "Failed to send offload callback, remote died", e);
+                    Log.i(TAG, "Failed to send offload callback, remote died: " + e.getMessage());
                 }
             }
         } finally {
