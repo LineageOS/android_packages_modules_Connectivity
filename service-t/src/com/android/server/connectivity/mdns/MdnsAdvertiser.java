@@ -37,6 +37,7 @@ import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -115,6 +116,17 @@ public class MdnsAdvertiser {
             return new String[] {
                     "Android_" + UUID.randomUUID().toString().replace("-", ""), LOCAL_TLD };
         }
+    }
+
+    /**
+     * Gets the current status of the OffloadServiceInfos per interface.
+     * @param interfaceName the target interfaceName
+     * @return the list of current offloaded services.
+     */
+    @NonNull
+    public List<OffloadServiceInfoWrapper> getAllInterfaceOffloadServiceInfos(
+            @NonNull String interfaceName) {
+        return mInterfaceOffloadServices.getOrDefault(interfaceName, Collections.emptyList());
     }
 
     private final MdnsInterfaceAdvertiser.Callback mInterfaceAdvertiserCb =
@@ -385,9 +397,12 @@ public class MdnsAdvertiser {
         }
     }
 
-    private static class OffloadServiceInfoWrapper {
-        private final @NonNull OffloadServiceInfo mOffloadServiceInfo;
-        private final int mServiceId;
+    /**
+     * The wrapper class for OffloadServiceInfo including the serviceId.
+     */
+    public static class OffloadServiceInfoWrapper {
+        public final @NonNull OffloadServiceInfo mOffloadServiceInfo;
+        public final int mServiceId;
 
         OffloadServiceInfoWrapper(int serviceId, OffloadServiceInfo offloadServiceInfo) {
             mOffloadServiceInfo = offloadServiceInfo;
