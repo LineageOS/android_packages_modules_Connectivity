@@ -17,7 +17,6 @@
 package com.android.server;
 
 import android.content.Context;
-import android.remoteauth.RemoteAuthManager;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
@@ -90,8 +89,8 @@ public final class ConnectivityServiceInitializer extends SystemService {
         }
 
         if (mRemoteAuthService != null) {
-            Log.i(TAG, "Registering " + RemoteAuthManager.REMOTE_AUTH_SERVICE);
-            publishBinderService(RemoteAuthManager.REMOTE_AUTH_SERVICE, mRemoteAuthService,
+            Log.i(TAG, "Registering " + RemoteAuthService.SERVICE_NAME);
+            publishBinderService(RemoteAuthService.SERVICE_NAME, mRemoteAuthService,
                     /* allowIsolated= */ false);
         }
     }
@@ -157,8 +156,7 @@ public final class ConnectivityServiceInitializer extends SystemService {
         } catch (UnsupportedOperationException e) {
             // RemoteAuth is not yet supported in all branches
             // TODO: remove catch clause when it is available.
-            Log.i(TAG, "Skipping unsupported service "
-                    + RemoteAuthManager.REMOTE_AUTH_SERVICE);
+            Log.i(TAG, "Skipping unsupported service " + RemoteAuthService.SERVICE_NAME);
             return null;
         }
     }
