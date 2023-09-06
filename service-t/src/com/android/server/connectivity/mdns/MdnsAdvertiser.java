@@ -146,9 +146,12 @@ public class MdnsAdvertiser {
                             interfaceName, k -> new ArrayList<>());
             // Remove existing offload services from cache for update.
             existingOffloadServiceInfoWrappers.removeIf(item -> item.mServiceId == serviceId);
+
+            byte[] rawOffloadPacket = advertiser.getRawOffloadPayload(serviceId);
             final OffloadServiceInfoWrapper newOffloadServiceInfoWrapper = createOffloadService(
                     serviceId,
-                    registration);
+                    registration,
+                    rawOffloadPacket);
             existingOffloadServiceInfoWrappers.add(newOffloadServiceInfoWrapper);
             mCb.onOffloadStartOrUpdate(interfaceName,
                     newOffloadServiceInfoWrapper.mOffloadServiceInfo);
@@ -393,7 +396,29 @@ public class MdnsAdvertiser {
         public void onAddressesChanged(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket, @NonNull List<LinkAddress> addresses) {
             final MdnsInterfaceAdvertiser advertiser = mAdvertisers.get(socket);
-            if (advertiser != null) advertiser.updateAddresses(addresses);
+            if (advertiser == null)  {
+                return;
+            }
+            advertiser.updateAddresses(addresses);
+            // Update address should trigger offload packet update.
+            final String interfaceName = advertiser.getSocketInterfaceName();
+            final List<OffloadServiceInfoWrapper> existingOffloadServiceInfoWrappers =
+                    mInterfaceOffloadServices.get(interfaceName);
+            if (existingOffloadServiceInfoWrappers == null) {
+                return;
+            }
+            final List<OffloadServiceInfoWrapper> updatedOffloadServiceInfoWrappers =
+                    new ArrayList<>(existingOffloadServiceInfoWrappers.size());
+            for (OffloadServiceInfoWrapper oldWrapper : existingOffloadServiceInfoWrappers) {
+                OffloadServiceInfoWrapper newWrapper = new OffloadServiceInfoWrapper(
+                        oldWrapper.mServiceId,
+                        oldWrapper.mOffloadServiceInfo.withOffloadPayload(
+                                advertiser.getRawOffloadPayload(oldWrapper.mServiceId))
+                );
+                updatedOffloadServiceInfoWrappers.add(newWrapper);
+                mCb.onOffloadStartOrUpdate(interfaceName, newWrapper.mOffloadServiceInfo);
+            }
+            mInterfaceOffloadServices.put(interfaceName, updatedOffloadServiceInfoWrappers);
         }
     }
 
@@ -630,9 +655,9 @@ public class MdnsAdvertiser {
     }
 
     private OffloadServiceInfoWrapper createOffloadService(int serviceId,
-            @NonNull Registration registration) {
+            @NonNull Registration registration, byte[] rawOffloadPacket) {
         final NsdServiceInfo nsdServiceInfo = registration.getServiceInfo();
-        List<String> subTypes = new ArrayList<>();
+        final List<String> subTypes = new ArrayList<>();
         String subType = registration.getSubtype();
         if (subType != null) {
             subTypes.add(subType);
@@ -642,7 +667,7 @@ public class MdnsAdvertiser {
                         nsdServiceInfo.getServiceType()),
                 subTypes,
                 String.join(".", mDeviceHostName),
-                null /* rawOffloadPacket */,
+                rawOffloadPacket,
                 // TODO: define overlayable resources in
                 // ServiceConnectivityResources that set the priority based on
                 // service type.
@@ -651,5 +676,4 @@ public class MdnsAdvertiser {
                 OffloadEngine.OFFLOAD_TYPE_REPLY);
         return new OffloadServiceInfoWrapper(serviceId, offloadServiceInfo);
     }
-
 }
