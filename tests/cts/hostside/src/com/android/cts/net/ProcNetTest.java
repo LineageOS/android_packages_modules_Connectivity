@@ -16,11 +16,19 @@
 
 package android.security.cts;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.testtype.DeviceTestCase;
+import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.IBuildReceiver;
 import com.android.tradefed.testtype.IDeviceTest;
+import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +39,8 @@ import java.util.List;
  *
  * These tests analyze /proc/net to verify that certain networking properties are correct.
  */
-public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDeviceTest {
+@RunWith(DeviceJUnit4ClassRunner.class)
+public class ProcNetTest extends BaseHostJUnit4Test implements IBuildReceiver, IDeviceTest {
     private static final String SPI_TIMEOUT_SYSCTL = "/proc/sys/net/core/xfrm_acq_expires";
     private static final int MIN_ACQ_EXPIRES = 3600;
     // Global sysctls. Must be present and set to 1.
@@ -70,13 +79,12 @@ public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDevi
      */
     @Override
     public void setDevice(ITestDevice device) {
-        super.setDevice(device);
         mDevice = device;
     }
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    /** Run before each test case. */
+    @Before
+    public void setUp() throws Exception {
         mSysctlDirs = getSysctlDirs();
     }
 
@@ -111,6 +119,7 @@ public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDevi
     /**
      * Checks that SPI default timeouts are overridden, and set to a reasonable length of time
      */
+    @Test
     public void testMinAcqExpires() throws Exception {
         int value = readIntFromPath(SPI_TIMEOUT_SYSCTL);
         assertAtLeast(SPI_TIMEOUT_SYSCTL, value, MIN_ACQ_EXPIRES);
@@ -120,6 +129,7 @@ public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDevi
      * Checks that the sysctls for multinetwork kernel features are present and
      * enabled.
      */
+    @Test
     public void testProcSysctls() throws Exception {
         for (String sysctl : GLOBAL_SYSCTLS) {
             int value = readIntFromPath(sysctl);
@@ -136,6 +146,7 @@ public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDevi
     /**
      * Verify that accept_ra_rt_info_{min,max}_plen exists and is set to the expected value
      */
+    @Test
     public void testAcceptRaRtInfoMinMaxPlen() throws Exception {
         for (String interfaceDir : mSysctlDirs) {
             String path = IPV6_SYSCTL_DIR + "/" + interfaceDir + "/" + "accept_ra_rt_info_min_plen";
@@ -151,6 +162,7 @@ public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDevi
      * Verify that router_solicitations exists and is set to the expected value
      * and verify that router_solicitation_max_interval exists and is in an acceptable interval.
      */
+    @Test
     public void testRouterSolicitations() throws Exception {
         for (String interfaceDir : mSysctlDirs) {
             String path = IPV6_SYSCTL_DIR + "/" + interfaceDir + "/" + "router_solicitations";
@@ -170,6 +182,7 @@ public class ProcNetTest extends DeviceTestCase implements IBuildReceiver, IDevi
      * (This repeats the VTS test, and is here for good performance of the internet as a whole.)
      * TODO: revisit this once a better CC algorithm like BBR2 is available.
      */
+    @Test
     public void testCongestionControl() throws Exception {
         String path = "/proc/sys/net/ipv4/tcp_congestion_control";
         String value = mDevice.executeAdbCommand("shell", "cat", path).trim();
