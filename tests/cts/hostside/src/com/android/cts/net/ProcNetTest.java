@@ -18,7 +18,9 @@ package android.security.cts;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
+import com.android.modules.utils.build.testing.DeviceSdkLevel;
 import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
@@ -184,6 +186,9 @@ public class ProcNetTest extends BaseHostJUnit4Test implements IBuildReceiver, I
      */
     @Test
     public void testCongestionControl() throws Exception {
+        final DeviceSdkLevel dsl = new DeviceSdkLevel(mDevice);
+        assumeTrue(dsl.isDeviceAtLeastV());
+
         String path = "/proc/sys/net/ipv4/tcp_congestion_control";
         String value = mDevice.executeAdbCommand("shell", "cat", path).trim();
         assertEquals(value, "cubic");
