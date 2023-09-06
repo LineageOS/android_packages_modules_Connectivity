@@ -21,12 +21,15 @@ import android.stats.connectivity.MdnsQueryResult
 import android.stats.connectivity.NsdEventType
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 
@@ -34,6 +37,12 @@ import org.mockito.Mockito.verify
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
 class NetworkNsdReportedMetricsTest {
     private val deps = mock(NetworkNsdReportedMetrics.Dependencies::class.java)
+    private val random = mock(Random::class.java)
+
+    @Before
+    fun setUp() {
+        doReturn(random).`when`(deps).makeRandomGenerator()
+    }
 
     @Test
     fun testReportServiceRegistrationSucceeded() {
@@ -80,8 +89,13 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
+        val repliedRequestsCount = 25
+        val sentPacketCount = 50
+        val conflictDuringProbingCount = 2
+        val conflictAfterProbingCount = 1
         val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceUnregistration(transactionId, durationMs)
+        metrics.reportServiceUnregistration(transactionId, durationMs, repliedRequestsCount,
+                sentPacketCount, conflictDuringProbingCount, conflictAfterProbingCount)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -92,6 +106,10 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_REGISTER, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_UNREGISTERED, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
+            assertEquals(repliedRequestsCount, it.repliedRequestsCount)
+            assertEquals(sentPacketCount, it.sentPacketCount)
+            assertEquals(conflictDuringProbingCount, it.conflictDuringProbingCount)
+            assertEquals(conflictAfterProbingCount, it.conflictAfterProbingCount)
         }
     }
 
