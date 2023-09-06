@@ -788,6 +788,101 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
+    public void testOnUserAddedAndRemoved_restrictedUser() throws Exception {
+        final InOrder order = inOrder(mMockNetworkAgent);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final Set<Range<Integer>> initialRange = rangeSet(PRIMARY_USER_RANGE);
+        // Note since mVpnProfile is a Ikev2VpnProfile, this starts an IkeV2VpnRunner.
+        startLegacyVpn(vpn, mVpnProfile);
+        // Set an initial Uid range and mock the network agent
+        vpn.mNetworkCapabilities.setUids(initialRange);
+        vpn.mNetworkAgent = mMockNetworkAgent;
+
+        // Add the restricted user
+        setMockedUsers(PRIMARY_USER, RESTRICTED_PROFILE_A);
+        vpn.onUserAdded(RESTRICTED_PROFILE_A.id);
+        // Expect restricted user range to be added to the NetworkCapabilities.
+        final Set<Range<Integer>> expectRestrictedRange =
+                rangeSet(PRIMARY_USER_RANGE, uidRangeForUser(RESTRICTED_PROFILE_A.id));
+        assertEquals(expectRestrictedRange, vpn.mNetworkCapabilities.getUids());
+        order.verify(mMockNetworkAgent).doSendNetworkCapabilities(
+                argThat(nc -> expectRestrictedRange.equals(nc.getUids())));
+
+        // Remove the restricted user
+        vpn.onUserRemoved(RESTRICTED_PROFILE_A.id);
+        // Expect restricted user range to be removed from the NetworkCapabilities.
+        assertEquals(initialRange, vpn.mNetworkCapabilities.getUids());
+        order.verify(mMockNetworkAgent).doSendNetworkCapabilities(
+                argThat(nc -> initialRange.equals(nc.getUids())));
+    }
+
+    @Test
+    public void testOnUserAddedAndRemoved_restrictedUserLockdown() throws Exception {
+        final UidRangeParcel[] primaryUserRangeParcel = new UidRangeParcel[] {
+                new UidRangeParcel(PRIMARY_USER_RANGE.getLower(), PRIMARY_USER_RANGE.getUpper())};
+        final Range<Integer> restrictedUserRange = uidRangeForUser(RESTRICTED_PROFILE_A.id);
+        final UidRangeParcel[] restrictedUserRangeParcel = new UidRangeParcel[] {
+                new UidRangeParcel(restrictedUserRange.getLower(), restrictedUserRange.getUpper())};
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+
+        // Set lockdown calls setRequireVpnForUids
+        vpn.setLockdown(true);
+        verify(mConnectivityManager).setRequireVpnForUids(true, toRanges(primaryUserRangeParcel));
+
+        // Add the restricted user
+        doReturn(true).when(mUserManager).canHaveRestrictedProfile();
+        setMockedUsers(PRIMARY_USER, RESTRICTED_PROFILE_A);
+        vpn.onUserAdded(RESTRICTED_PROFILE_A.id);
+
+        // Expect restricted user range to be added.
+        verify(mConnectivityManager).setRequireVpnForUids(true,
+                toRanges(restrictedUserRangeParcel));
+
+        // Mark as partial indicates that the user is removed, mUserManager.getAliveUsers() does not
+        // return the restricted user but it is still returned in mUserManager.getUserInfo().
+        RESTRICTED_PROFILE_A.partial = true;
+        // Remove the restricted user
+        vpn.onUserRemoved(RESTRICTED_PROFILE_A.id);
+        verify(mConnectivityManager).setRequireVpnForUids(false,
+                toRanges(restrictedUserRangeParcel));
+        // reset to avoid affecting other tests since RESTRICTED_PROFILE_A is static.
+        RESTRICTED_PROFILE_A.partial = false;
+    }
+
+    @Test
+    public void testOnUserAddedAndRemoved_restrictedUserAlwaysOn() throws Exception {
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+
+        // setAlwaysOnPackage() calls setRequireVpnForUids()
+        assertTrue(vpn.setAlwaysOnPackage(
+                PKGS[0], true /* lockdown */, null /* lockdownAllowlist */));
+        final List<Integer> excludedUids = List.of(PKG_UIDS[0]);
+        final List<Range<Integer>> primaryRanges =
+                makeVpnUidRange(PRIMARY_USER.id, excludedUids);
+        verify(mConnectivityManager).setRequireVpnForUids(true, primaryRanges);
+
+        // Add the restricted user
+        doReturn(true).when(mUserManager).canHaveRestrictedProfile();
+        setMockedUsers(PRIMARY_USER, RESTRICTED_PROFILE_A);
+        vpn.onUserAdded(RESTRICTED_PROFILE_A.id);
+
+        final List<Range<Integer>> restrictedRanges =
+                makeVpnUidRange(RESTRICTED_PROFILE_A.id, excludedUids);
+        // Expect restricted user range to be added.
+        verify(mConnectivityManager).setRequireVpnForUids(true, restrictedRanges);
+
+        // Mark as partial indicates that the user is removed, mUserManager.getAliveUsers() does not
+        // return the restricted user but it is still returned in mUserManager.getUserInfo().
+        RESTRICTED_PROFILE_A.partial = true;
+        // Remove the restricted user
+        vpn.onUserRemoved(RESTRICTED_PROFILE_A.id);
+        verify(mConnectivityManager).setRequireVpnForUids(false, restrictedRanges);
+
+        // reset to avoid affecting other tests since RESTRICTED_PROFILE_A is static.
+        RESTRICTED_PROFILE_A.partial = false;
+    }
+
+    @Test
     public void testPrepare_throwSecurityExceptionWhenGivenPackageDoesNotBelongToTheCaller()
             throws Exception {
         mTestDeps.mIgnoreCallingUidChecks = false;
@@ -1002,12 +1097,12 @@ public class VpnTest extends VpnTestBase {
 
         // List in keystore is not changed, but UID for the removed packages is no longer exempted.
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
-        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
                 vpn.mNetworkCapabilities.getUids());
         ArgumentCaptor<NetworkCapabilities> ncCaptor =
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
         verify(mMockNetworkAgent).doSendNetworkCapabilities(ncCaptor.capture());
-        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
                 ncCaptor.getValue().getUids());
 
         reset(mMockNetworkAgent);
@@ -1019,14 +1114,14 @@ public class VpnTest extends VpnTestBase {
 
         // List in keystore is not changed and the uid list should be updated in the net cap.
         assertEquals(Arrays.asList(PKGS), vpn.getAppExclusionList(TEST_VPN_PKG));
-        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
                 vpn.mNetworkCapabilities.getUids());
         verify(mMockNetworkAgent).doSendNetworkCapabilities(ncCaptor.capture());
-        assertEquals(makeVpnUidRange(PRIMARY_USER.id, newExcludedUids),
+        assertEquals(makeVpnUidRangeSet(PRIMARY_USER.id, newExcludedUids),
                 ncCaptor.getValue().getUids());
     }
 
-    private Set<Range<Integer>> makeVpnUidRange(int userId, List<Integer> excludedList) {
+    private List<Range<Integer>> makeVpnUidRange(int userId, List<Integer> excludedList) {
         final SortedSet<Integer> list = new TreeSet<>();
 
         final int userBase = userId * UserHandle.PER_USER_RANGE;
@@ -1038,7 +1133,7 @@ public class VpnTest extends VpnTestBase {
 
         final int minUid = userBase;
         final int maxUid = userBase + UserHandle.PER_USER_RANGE - 1;
-        final Set<Range<Integer>> ranges = new ArraySet<>();
+        final List<Range<Integer>> ranges = new ArrayList<>();
 
         // Iterate the list to create the ranges between each uid.
         int start = minUid;
@@ -1057,6 +1152,10 @@ public class VpnTest extends VpnTestBase {
         }
 
         return ranges;
+    }
+
+    private Set<Range<Integer>> makeVpnUidRangeSet(int userId, List<Integer> excludedList) {
+        return new ArraySet<>(makeVpnUidRange(userId, excludedList));
     }
 
     @Test
