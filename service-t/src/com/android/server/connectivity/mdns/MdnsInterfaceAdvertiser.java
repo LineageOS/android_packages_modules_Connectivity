@@ -28,6 +28,7 @@ import com.android.net.module.util.HexDump;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsAnnouncer.BaseAnnouncementInfo;
 import com.android.server.connectivity.mdns.MdnsPacketRepeater.PacketRepeaterCallback;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -351,7 +352,25 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         mReplySender.queueReply(answers);
     }
 
+    /**
+     * Get the socket interface name.
+     */
     public String getSocketInterfaceName() {
         return mSocket.getInterface().getName();
+    }
+
+    /**
+     * Gets the offload MdnsPacket.
+     * @param serviceId The serviceId.
+     * @return the raw offload payload
+     */
+    public byte[] getRawOffloadPayload(int serviceId) {
+        try {
+            return MdnsUtils.createRawDnsPacket(mReplySender.getPacketCreationBuffer(),
+                    mRecordRepository.getOffloadPacket(serviceId));
+        } catch (IOException | IllegalArgumentException e) {
+            mSharedLog.wtf("Cannot create rawOffloadPacket: " + e.getMessage());
+            return new byte[0];
+        }
     }
 }

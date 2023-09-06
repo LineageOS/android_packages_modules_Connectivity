@@ -56,7 +56,9 @@ private const val LONG_SERVICE_ID_2 = 4
 private const val CASE_INSENSITIVE_TEST_SERVICE_ID = 5
 private const val TIMEOUT_MS = 10_000L
 private val TEST_ADDR = parseNumericAddress("2001:db8::123")
+private val TEST_ADDR2 = parseNumericAddress("2001:db8::124")
 private val TEST_LINKADDR = LinkAddress(TEST_ADDR, 64 /* prefixLength */)
+private val TEST_LINKADDR2 = LinkAddress(TEST_ADDR2, 64 /* prefixLength */)
 private val TEST_NETWORK_1 = mock(Network::class.java)
 private val TEST_SOCKETKEY_1 = SocketKey(1001 /* interfaceIndex */)
 private val TEST_SOCKETKEY_2 = SocketKey(1002 /* interfaceIndex */)
@@ -64,6 +66,8 @@ private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 private const val TEST_SUBTYPE = "_subtype"
 private val TEST_INTERFACE1 = "test_iface1"
 private val TEST_INTERFACE2 = "test_iface2"
+private val TEST_OFFLOAD_PACKET1 = byteArrayOf(0x01, 0x02, 0x03)
+private val TEST_OFFLOAD_PACKET2 = byteArrayOf(0x02, 0x03, 0x04)
 
 private val SERVICE_1 = NsdServiceInfo("TestServiceName", "_advertisertest._tcp").apply {
     port = 12345
@@ -102,7 +106,7 @@ private val OFFLOAD_SERVICEINFO = OffloadServiceInfo(
     OffloadServiceInfo.Key("TestServiceName", "_advertisertest._tcp"),
     listOf(TEST_SUBTYPE),
     "Android_test.local",
-    null, /* rawOffloadPacket */
+    TEST_OFFLOAD_PACKET1,
     0, /* priority */
     OffloadEngine.OFFLOAD_TYPE_REPLY.toLong()
 )
@@ -111,7 +115,16 @@ private val OFFLOAD_SERVICEINFO_NO_SUBTYPE = OffloadServiceInfo(
     OffloadServiceInfo.Key("TestServiceName", "_advertisertest._tcp"),
     listOf(),
     "Android_test.local",
-    null, /* rawOffloadPacket */
+    TEST_OFFLOAD_PACKET1,
+    0, /* priority */
+    OffloadEngine.OFFLOAD_TYPE_REPLY.toLong()
+)
+
+private val OFFLOAD_SERVICEINFO_NO_SUBTYPE2 = OffloadServiceInfo(
+    OffloadServiceInfo.Key("TestServiceName", "_advertisertest._tcp"),
+    listOf(),
+    "Android_test.local",
+    TEST_OFFLOAD_PACKET2,
     0, /* priority */
     OffloadEngine.OFFLOAD_TYPE_REPLY.toLong()
 )
@@ -147,6 +160,10 @@ class MdnsAdvertiserTest {
         doReturn(createEmptyNetworkInterface()).`when`(mockSocket2).getInterface()
         doReturn(TEST_INTERFACE1).`when`(mockInterfaceAdvertiser1).socketInterfaceName
         doReturn(TEST_INTERFACE2).`when`(mockInterfaceAdvertiser2).socketInterfaceName
+        doReturn(TEST_OFFLOAD_PACKET1).`when`(mockInterfaceAdvertiser1).getRawOffloadPayload(
+            SERVICE_ID_1)
+        doReturn(TEST_OFFLOAD_PACKET1).`when`(mockInterfaceAdvertiser2).getRawOffloadPayload(
+            SERVICE_ID_1)
     }
 
     @After
@@ -189,10 +206,23 @@ class MdnsAdvertiserTest {
         verify(cb).onRegisterServiceSucceeded(eq(SERVICE_ID_1), argThat { it.matches(SERVICE_1) })
         verify(cb).onOffloadStartOrUpdate(eq(TEST_INTERFACE1), eq(OFFLOAD_SERVICEINFO_NO_SUBTYPE))
 
+        doReturn(TEST_OFFLOAD_PACKET2).`when`(mockInterfaceAdvertiser1)
+            .getRawOffloadPayload(
+                SERVICE_ID_1
+            )
+        postSync {
+            socketCb.onAddressesChanged(
+                TEST_SOCKETKEY_1,
+                mockSocket1,
+                listOf(TEST_LINKADDR2)
+            )
+        }
+        verify(cb).onOffloadStartOrUpdate(eq(TEST_INTERFACE1), eq(OFFLOAD_SERVICEINFO_NO_SUBTYPE2))
+
         postSync { socketCb.onInterfaceDestroyed(TEST_SOCKETKEY_1, mockSocket1) }
         verify(mockInterfaceAdvertiser1).destroyNow()
         postSync { intAdvCbCaptor.value.onDestroyed(mockSocket1) }
-        verify(cb).onOffloadStop(eq(TEST_INTERFACE1), eq(OFFLOAD_SERVICEINFO_NO_SUBTYPE))
+        verify(cb).onOffloadStop(eq(TEST_INTERFACE1), eq(OFFLOAD_SERVICEINFO_NO_SUBTYPE2))
     }
 
     @Test

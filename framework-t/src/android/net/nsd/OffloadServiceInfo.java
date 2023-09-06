@@ -161,6 +161,23 @@ public final class OffloadServiceInfo implements Parcelable {
     }
 
     /**
+     * Create a new OffloadServiceInfo with payload updated.
+     *
+     * @hide
+     */
+    @NonNull
+    public OffloadServiceInfo withOffloadPayload(@NonNull byte[] offloadPayload) {
+        return new OffloadServiceInfo(
+                this.getKey(),
+                this.getSubtypes(),
+                this.getHostname(),
+                offloadPayload,
+                this.getPriority(),
+                this.getOffloadType()
+        );
+    }
+
+    /**
      * Get the offloadType.
      * <p>
      * For example, if the {@link com.android.server.NsdService} requests the OffloadEngine to both
