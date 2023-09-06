@@ -736,6 +736,38 @@ public class MdnsRecordRepository {
     }
 
     /**
+     * Gets the offload MdnsPacket.
+     * @param serviceId The serviceId.
+     * @return The offload {@link MdnsPacket} that contains PTR/SRV/TXT/A/AAAA records.
+     */
+    public MdnsPacket getOffloadPacket(int serviceId) throws IllegalArgumentException {
+        final ServiceRegistration registration = mServices.get(serviceId);
+        if (registration == null) throw new IllegalArgumentException(
+                "Service is not registered: " + serviceId);
+
+        final ArrayList<MdnsRecord> answers = new ArrayList<>();
+
+        // Adds all PTR, SRV, TXT, A/AAAA records.
+        for (RecordInfo<MdnsPointerRecord> ptrRecord : registration.ptrRecords) {
+            answers.add(ptrRecord.record);
+        }
+        answers.add(registration.srvRecord.record);
+        answers.add(registration.txtRecord.record);
+        for (RecordInfo<?> record : mGeneralRecords) {
+            if (record.record instanceof MdnsInetAddressRecord) {
+                answers.add(record.record);
+            }
+        }
+
+        final int flags = 0x8400; // Response, authoritative (rfc6762 18.4)
+        return new MdnsPacket(flags,
+                Collections.emptyList() /* questions */,
+                answers,
+                Collections.emptyList() /* authorityRecords */,
+                Collections.emptyList() /* additionalRecords */);
+    }
+
+    /**
      * Get the service IDs of services conflicting with a received packet.
      */
     public Set<Integer> getConflictingServices(MdnsPacket packet) {
