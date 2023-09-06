@@ -44,6 +44,9 @@ import java.util.Collections;
 public class MdnsReplySender {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final int MSG_SEND = 1;
+    private static final int PACKET_NOT_SENT = 0;
+    private static final int PACKET_SENT = 1;
+
     @NonNull
     private final MdnsInterfaceSocket mSocket;
     @NonNull
@@ -79,16 +82,17 @@ public class MdnsReplySender {
      *
      * Must be called on the looper thread used by the {@link MdnsReplySender}.
      */
-    public void sendNow(@NonNull MdnsPacket packet, @NonNull InetSocketAddress destination)
+    public int sendNow(@NonNull MdnsPacket packet, @NonNull InetSocketAddress destination)
             throws IOException {
         ensureRunningOnHandlerThread(mHandler);
         if (!((destination.getAddress() instanceof Inet6Address && mSocket.hasJoinedIpv6())
                 || (destination.getAddress() instanceof Inet4Address && mSocket.hasJoinedIpv4()))) {
             // Skip sending if the socket has not joined the v4/v6 group (there was no address)
-            return;
+            return PACKET_NOT_SENT;
         }
         final byte[] outBuffer = MdnsUtils.createRawDnsPacket(mPacketCreationBuffer, packet);
         mSocket.send(new DatagramPacket(outBuffer, 0, outBuffer.length, destination));
+        return PACKET_SENT;
     }
 
     /** Get the packetCreationBuffer */

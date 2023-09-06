@@ -253,7 +253,7 @@ class MdnsAnnouncerTest {
 
         val captor = ArgumentCaptor.forClass(DatagramPacket::class.java)
         repeat(FIRST_ANNOUNCES_COUNT) { i ->
-            verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(i, request)
+            verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(i, request, 1 /* sentPacketCount */)
             verify(socket, atLeast(i + 1)).send(any())
             val now = SystemClock.elapsedRealtime()
             assertTrue(now > timeStart + startDelay + i * FIRST_ANNOUNCES_DELAY)
