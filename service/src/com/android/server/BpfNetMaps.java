@@ -295,13 +295,6 @@ public class BpfNetMaps {
             return ConnectivityStatsLog.buildStatsEvent(NETWORK_BPF_MAP_INFO, cookieTagMapSize,
                     uidOwnerMapSize, uidPermissionMapSize);
         }
-
-        /**
-         * Call native_dump
-         */
-        public void nativeDump(final FileDescriptor fd, final boolean verbose) {
-            native_dump(fd, verbose);
-        }
     }
 
     /** Constructor used after T that doesn't need to use netd anymore. */
@@ -1030,7 +1023,8 @@ public class BpfNetMaps {
                     EOPNOTSUPP, "dumpsys connectivity trafficcontroller dump not available on pre-T"
                     + " devices, use dumpsys netd trafficcontroller instead.");
         }
-        mDeps.nativeDump(fd, verbose);
+
+        pw.println("TrafficController");  // required by CTS testDumpBpfNetMaps
 
         pw.println();
         pw.println("sEnableJavaBpfMap: " + sEnableJavaBpfMap);
@@ -1104,9 +1098,6 @@ public class BpfNetMaps {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private native void native_setPermissionForUids(int permissions, int[] uids);
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private static native void native_dump(FileDescriptor fd, boolean verbose);
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static native int native_synchronizeKernelRCU();
