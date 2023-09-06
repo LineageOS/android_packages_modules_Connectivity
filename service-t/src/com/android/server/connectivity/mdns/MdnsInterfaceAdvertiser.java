@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.LinkAddress;
@@ -92,8 +94,11 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     /**
      * Callbacks from {@link MdnsProber}.
      */
-    private class ProbingCallback implements
-            PacketRepeaterCallback<MdnsProber.ProbingInfo> {
+    private class ProbingCallback implements PacketRepeaterCallback<MdnsProber.ProbingInfo> {
+        @Override
+        public void onSent(int index, @NonNull MdnsProber.ProbingInfo info, int sentPacketCount) {
+            mRecordRepository.onProbingSent(info.getServiceId(), sentPacketCount);
+        }
         @Override
         public void onFinished(MdnsProber.ProbingInfo info) {
             final MdnsAnnouncer.AnnouncementInfo announcementInfo;
@@ -117,8 +122,8 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      */
     private class AnnouncingCallback implements PacketRepeaterCallback<BaseAnnouncementInfo> {
         @Override
-        public void onSent(int index, @NonNull BaseAnnouncementInfo info) {
-            mRecordRepository.onAdvertisementSent(info.getServiceId());
+        public void onSent(int index, @NonNull BaseAnnouncementInfo info, int sentPacketCount) {
+            mRecordRepository.onAdvertisementSent(info.getServiceId(), sentPacketCount);
         }
 
         @Override
@@ -256,6 +261,22 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
                 destroyNow();
             }
         }
+    }
+
+    /**
+     * Get the replied request count from given service id.
+     */
+    public int getServiceRepliedRequestsCount(int id) {
+        if (!mRecordRepository.hasActiveService(id)) return NO_PACKET;
+        return mRecordRepository.getServiceRepliedRequestsCount(id);
+    }
+
+    /**
+     * Get the total sent packet count from given service id.
+     */
+    public int getSentPacketCount(int id) {
+        if (!mRecordRepository.hasActiveService(id)) return NO_PACKET;
+        return mRecordRepository.getSentPacketCount(id);
     }
 
     /**
