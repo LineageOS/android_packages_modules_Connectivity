@@ -59,7 +59,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         /**
          * Called when a packet was sent.
          */
-        default void onSent(int index, @NonNull T info) {}
+        default void onSent(int index, @NonNull T info, int sentPacketCount) {}
 
         /**
          * Called when the {@link MdnsPacketRepeater} is done sending packets.
@@ -114,9 +114,10 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
             }
             // Send to both v4 and v6 addresses; the reply sender will take care of ignoring the
             // send when the socket has not joined the relevant group.
+            int sentPacketCount = 0;
             for (InetSocketAddress destination : ALL_ADDRS) {
                 try {
-                    mReplySender.sendNow(packet, destination);
+                    sentPacketCount += mReplySender.sendNow(packet, destination);
                 } catch (IOException e) {
                     mSharedLog.e("Error sending packet to " + destination, e);
                 }
@@ -135,7 +136,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
 
             // Call onSent after scheduling the next run, to allow the callback to cancel it
             if (mCb != null) {
-                mCb.onSent(index, request);
+                mCb.onSent(index, request, sentPacketCount);
             }
         }
     }
