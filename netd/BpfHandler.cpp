@@ -76,6 +76,19 @@ static Status checkProgramAccessible(const char* programPath) {
 }
 
 static Status initPrograms(const char* cg2_path) {
+    // This code was mainlined in T, so this should be trivially satisfied.
+    if (!modules::sdklevel::IsAtLeastT()) abort();
+
+    // S requires eBPF support which was only added in 4.9, so this should be satisfied.
+    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) abort();
+
+    // U bumps the kernel requirement up to 4.14
+    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) abort();
+
+    // V bumps the kernel requirement up to 4.19
+    if (modules::sdklevel::IsAtLeastV() && !bpf::isAtLeastKernelVersion(4, 19, 0)) abort();
+
+    // U mandates this mount point (though it should also be the case on T)
     if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) abort();
 
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
