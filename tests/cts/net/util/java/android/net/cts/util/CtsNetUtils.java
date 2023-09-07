@@ -65,6 +65,7 @@ import androidx.annotation.Nullable;
 import com.android.compatibility.common.util.PollingCheck;
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.compatibility.common.util.SystemUtil;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ConnectivitySettingsUtils;
 import com.android.testutils.ConnectUtil;
 
@@ -590,8 +591,12 @@ public final class CtsNetUtils {
                         callback.waitForAvailable());
             }
 
-            runAsShell(MODIFY_PHONE_STATE, () -> tm.setDataEnabledForReason(
-                    TelephonyManager.DATA_ENABLED_REASON_USER, enabled));
+            if (SdkLevel.isAtLeastS()) {
+                runAsShell(MODIFY_PHONE_STATE, () -> tm.setDataEnabledForReason(
+                        TelephonyManager.DATA_ENABLED_REASON_USER, enabled));
+            } else {
+                runAsShell(MODIFY_PHONE_STATE, () -> tm.setDataEnabled(enabled));
+            }
             if (enabled) {
                 assertNotNull("Enabling mobile data did not connect mobile data",
                         callback.waitForAvailable());
