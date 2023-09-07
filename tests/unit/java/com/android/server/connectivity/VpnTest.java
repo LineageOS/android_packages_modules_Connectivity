@@ -2041,6 +2041,8 @@ public class VpnTest extends VpnTestBase {
 
         // Check if allowBypass is set or not.
         assertTrue(nacCaptor.getValue().isBypassableVpn());
+        // Check if extra info for VPN is set.
+        assertTrue(nacCaptor.getValue().getLegacyExtraInfo().contains(TEST_VPN_PKG));
         final VpnTransportInfo info = (VpnTransportInfo) ncCaptor.getValue().getTransportInfo();
         assertTrue(info.isBypassable());
         assertEquals(areLongLivedTcpConnectionsExpensive,
