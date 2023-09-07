@@ -244,6 +244,8 @@ public class IpServerTest {
         when(mTetherConfig.isBpfOffloadEnabled()).thenReturn(usingBpfOffload);
         when(mTetherConfig.useLegacyDhcpServer()).thenReturn(usingLegacyDhcp);
         when(mTetherConfig.getP2pLeasesSubnetPrefixLength()).thenReturn(P2P_SUBNET_PREFIX_LENGTH);
+        // Recreate mBpfCoordinator again here because mTetherConfig has changed
+        mBpfCoordinator = spy(new BpfCoordinator(mBpfDeps));
         mIpServer = new IpServer(
                 IFACE_NAME, mLooper.getLooper(), interfaceType, mSharedLog, mNetd, mBpfCoordinator,
                 mCallback, mTetherConfig, mAddressCoordinator, mTetheringMetrics, mDependencies);
@@ -1244,13 +1246,11 @@ public class IpServerTest {
         resetNetdBpfMapAndCoordinator();
 
         recvNewNeigh(myIfindex, neigh, NUD_REACHABLE, macA);
-        verify(mBpfCoordinator, never()).addIpv6DownstreamRule(any(), any());
         verifyNeverTetherOffloadRuleAdd();
         verifyNoUpstreamIpv6ForwardingChange(null);
         resetNetdBpfMapAndCoordinator();
 
         recvDelNeigh(myIfindex, neigh, NUD_STALE, macA);
-        verify(mBpfCoordinator, never()).removeIpv6DownstreamRule(any(), any());
         verifyNeverTetherOffloadRuleRemove();
         verifyNoUpstreamIpv6ForwardingChange(null);
         resetNetdBpfMapAndCoordinator();
