@@ -252,7 +252,6 @@ public class IpServer extends StateMachine {
     private final int mInterfaceType;
     private final LinkProperties mLinkProperties;
     private final boolean mUsingLegacyDhcp;
-    private final boolean mUsingBpfOffload;
     private final int mP2pLeasesSubnetPrefixLength;
 
     private final Dependencies mDeps;
@@ -314,7 +313,6 @@ public class IpServer extends StateMachine {
         mInterfaceType = interfaceType;
         mLinkProperties = new LinkProperties();
         mUsingLegacyDhcp = config.useLegacyDhcpServer();
-        mUsingBpfOffload = config.isBpfOffloadEnabled();
         mP2pLeasesSubnetPrefixLength = config.getP2pLeasesSubnetPrefixLength();
         mPrivateAddressCoordinator = addressCoordinator;
         mDeps = deps;
@@ -326,11 +324,9 @@ public class IpServer extends StateMachine {
         mIpNeighborMonitor = mDeps.getIpNeighborMonitor(getHandler(), mLog,
                 new MyNeighborEventConsumer());
 
-        // IP neighbor monitor monitors the neighbor events for adding/removing offload
-        // forwarding rules per client. If BPF offload is not supported, don't start listening
-        // for neighbor events. See updateIpv6ForwardingRules, addIpv6DownstreamRule,
-        // removeIpv6DownstreamRule.
-        if (mUsingBpfOffload && !mIpNeighborMonitor.start()) {
+        // IP neighbor monitor monitors the neighbor events for adding/removing IPv6 downstream rule
+        // per client. If BPF offload is not supported, don't start listening for neighbor events.
+        if (mBpfCoordinator.isUsingBpfOffload() && !mIpNeighborMonitor.start()) {
             mLog.e("Failed to create IpNeighborMonitor on " + mIfaceName);
         }
 
@@ -891,37 +887,6 @@ public class IpServer extends StateMachine {
         }
     }
 
-    private void addIpv6DownstreamRule(Ipv6DownstreamRule rule) {
-        // Theoretically, we don't need this check because IP neighbor monitor doesn't start if BPF
-        // offload is disabled. Add this check just in case.
-        // TODO: Perhaps remove this protection check.
-        if (!mUsingBpfOffload) return;
-
-        mBpfCoordinator.addIpv6DownstreamRule(this, rule);
-    }
-
-    private void removeIpv6DownstreamRule(Ipv6DownstreamRule rule) {
-        // TODO: Perhaps remove this protection check.
-        // See the related comment in #addIpv6DownstreamRule.
-        if (!mUsingBpfOffload) return;
-
-        mBpfCoordinator.removeIpv6DownstreamRule(this, rule);
-    }
-
-    private void clearIpv6ForwardingRules() {
-        if (!mUsingBpfOffload) return;
-
-        mBpfCoordinator.tetherOffloadRuleClear(this);
-    }
-
-    private void updateIpv6ForwardingRule(int newIfindex) {
-        // TODO: Perhaps remove this protection check.
-        // See the related comment in #addIpv6DownstreamRule.
-        if (!mUsingBpfOffload) return;
-
-        mBpfCoordinator.tetherOffloadRuleUpdate(this, newIfindex);
-    }
-
     // Handles all updates to IPv6 forwarding rules. These can currently change only if the upstream
     // changes or if a neighbor event is received.
     private void updateIpv6ForwardingRules(int prevUpstreamIfindex, int upstreamIfindex,
@@ -930,14 +895,14 @@ public class IpServer extends StateMachine {
         // nothing else.
         // TODO: Rather than always clear rules, ensure whether ipv6 ever enable first.
         if (upstreamIfindex == 0 || !upstreamSupportsBpf) {
-            clearIpv6ForwardingRules();
+            mBpfCoordinator.tetherOffloadRuleClear(this);
             return;
         }
 
         // If the upstream interface has changed, remove all rules and re-add them with the new
         // upstream interface.
         if (prevUpstreamIfindex != upstreamIfindex) {
-            updateIpv6ForwardingRule(upstreamIfindex);
+            mBpfCoordinator.tetherOffloadRuleUpdate(this, upstreamIfindex);
         }
 
         // If we're here to process a NeighborEvent, do so now.
@@ -955,18 +920,14 @@ public class IpServer extends StateMachine {
         Ipv6DownstreamRule rule = new Ipv6DownstreamRule(upstreamIfindex, mInterfaceParams.index,
                 (Inet6Address) e.ip, mInterfaceParams.macAddr, dstMac);
         if (e.isValid()) {
-            addIpv6DownstreamRule(rule);
+            mBpfCoordinator.addIpv6DownstreamRule(this, rule);
         } else {
-            removeIpv6DownstreamRule(rule);
+            mBpfCoordinator.removeIpv6DownstreamRule(this, rule);
         }
     }
 
     // TODO: consider moving into BpfCoordinator.
     private void updateClientInfoIpv4(NeighborEvent e) {
-        // TODO: Perhaps remove this protection check.
-        // See the related comment in #addIpv6DownstreamRule.
-        if (!mUsingBpfOffload) return;
-
         if (e == null) return;
         if (!(e.ip instanceof Inet4Address) || e.ip.isMulticastAddress()
                 || e.ip.isLoopbackAddress() || e.ip.isLinkLocalAddress()) {
@@ -1342,7 +1303,7 @@ public class IpServer extends StateMachine {
 
             for (String ifname : mUpstreamIfaceSet.ifnames) cleanupUpstreamInterface(ifname);
             mUpstreamIfaceSet = null;
-            clearIpv6ForwardingRules();
+            mBpfCoordinator.tetherOffloadRuleClear(IpServer.this);
         }
 
         private void cleanupUpstreamInterface(String upstreamIface) {
