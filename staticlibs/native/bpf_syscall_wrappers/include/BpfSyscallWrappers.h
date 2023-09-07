@@ -175,8 +175,8 @@ inline int runProgram(const BPF_FD_TYPE prog_fd, const void* data,
     return bpf(BPF_PROG_RUN, {
                                      .test = {
                                              .prog_fd = BPF_FD_TO_U32(prog_fd),
-                                             .data_in = ptr_to_u64(data),
                                              .data_size_in = data_size,
+                                             .data_in = ptr_to_u64(data),
                                      },
                              });
 }
