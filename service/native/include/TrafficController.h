@@ -22,7 +22,6 @@
 #include "android-base/thread_annotations.h"
 #include "bpf/BpfMap.h"
 #include "netd.h"
-#include "netdutils/DumpWriter.h"
 #include "netdutils/NetlinkListener.h"
 #include "netdutils/StatusOr.h"
 
@@ -54,8 +53,6 @@ class TrafficController {
 
     netdutils::Status updateOwnerMapEntry(UidOwnerMatchType match, uid_t uid, FirewallRule rule,
                                           FirewallType type) EXCLUDES(mMutex);
-
-    void dump(int fd, bool verbose) EXCLUDES(mMutex);
 
     netdutils::Status replaceRulesInMap(UidOwnerMatchType match, const std::vector<int32_t>& uids)
             EXCLUDES(mMutex);
