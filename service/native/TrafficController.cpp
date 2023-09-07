@@ -576,13 +576,5 @@ void TrafficController::setPermissionForUids(int permission, const std::vector<u
     }
 }
 
-void TrafficController::dump(int fd, bool verbose __unused) {
-    std::lock_guard guard(mMutex);
-    DumpWriter dw(fd);
-
-    ScopedIndent indentTop(dw);
-    dw.println("TrafficController");
-}
-
 }  // namespace net
 }  // namespace android
