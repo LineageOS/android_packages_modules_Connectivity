@@ -523,6 +523,18 @@ public class BpfCoordinator {
         mLog.i("Polling stopped");
     }
 
+    /**
+     * Return whether BPF offload is supported
+     */
+    public boolean isUsingBpfOffload() {
+        return isUsingBpf();
+    }
+
+    // This is identical to isUsingBpfOffload above but is only used internally.
+    // The reason for having two separate methods is that the code calls isUsingBpf
+    // very often. But the tests call verifyNoMoreInteractions, which will check all
+    // calls to public methods. If isUsingBpf were public, the test would need to
+    // verify all calls to it, which would clutter the test.
     private boolean isUsingBpf() {
         return mIsBpfEnabled && mBpfCoordinatorShim.isInitialized();
     }
