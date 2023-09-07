@@ -18,8 +18,6 @@ package com.android.net.module.util.structs;
 
 import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IAPREFIX;
 
-import androidx.annotation.VisibleForTesting;
-
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
@@ -69,7 +67,6 @@ public class IaPrefixOption extends Struct {
     @Field(order = 5, type = Type.ByteArray, arraysize = 16)
     public final byte[] prefix;
 
-    @VisibleForTesting
     public IaPrefixOption(final short code, final short length, final long preferred,
             final long valid, final byte prefixLen, final byte[] prefix) {
         this.code = code;
