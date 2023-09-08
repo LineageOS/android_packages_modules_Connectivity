@@ -91,6 +91,7 @@ cronet_origin_files = glob(
         # Note: Only used for tests.
         "third_party/googletest/**",
         "third_party/icu/**",
+        "third_party/jni_zero/**",
         "third_party/libc++/**",
         "third_party/libc++abi/**",
         "third_party/libevent/**",
@@ -101,7 +102,6 @@ cronet_origin_files = glob(
         "third_party/metrics_proto/**",
         "third_party/modp_b64/**",
         "third_party/protobuf/**",
-        "third_party/jni_zero/**",
         # Note: Only used for tests.
         "third_party/quic_trace/**",
         # Note: Cronet currently uses Android's zlib
