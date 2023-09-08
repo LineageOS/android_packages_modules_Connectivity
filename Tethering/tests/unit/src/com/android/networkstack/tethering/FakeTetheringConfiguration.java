@@ -28,15 +28,19 @@ public class FakeTetheringConfiguration extends TetheringConfiguration {
     FakeTetheringConfiguration(Context ctx, SharedLog log, int id) {
         super(ctx, log, id, new Dependencies() {
             @Override
-            boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
-                    @NonNull String name, @NonNull String moduleName, boolean defaultEnabled) {
-                return defaultEnabled;
+            boolean isFeatureEnabled(@NonNull Context context, @NonNull String name) {
+                return false;
             }
 
             @Override
             boolean getDeviceConfigBoolean(@NonNull String namespace, @NonNull String name,
                     boolean defaultValue) {
                 return defaultValue;
+            }
+
+            @Override
+            boolean isTetherForceUpstreamAutomaticFeatureEnabled() {
+                return false;
             }
         });
     }
