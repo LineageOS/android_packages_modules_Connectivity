@@ -240,6 +240,8 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
             return TC_ACT_SHOT;
     }
 
+    try_make_writable(skb, l2_header_size + sizeof(struct iphdr));
+
     // bpf_skb_change_proto() invalidates all pointers - reload them.
     data = (void*)(long)skb->data;
     data_end = (void*)(long)skb->data_end;
