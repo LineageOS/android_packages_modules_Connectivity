@@ -32,6 +32,7 @@ import android.text.TextUtils;
 import android.util.SparseBooleanArray;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.CollectionUtils;
 
 import libcore.util.EmptyArray;
@@ -1245,18 +1246,21 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
      * Return total statistics grouped by {@link #iface}; doesn't mutate the
      * original structure.
      * @hide
+     * @deprecated Use {@link #mapKeysNotNull(Function)} instead.
      */
+    @Deprecated
     public NetworkStats groupedByIface() {
+        if (SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("groupedByIface is not supported");
+        }
         // Keep backward compatibility where the method filtered out tagged stats and keep the
         // operation counts as 0. The method used to deal with uid snapshot where tagged and
         // non-tagged stats were mixed. And this method was also in Android O API list,
         // so it is possible OEM can access it.
-        final NetworkStats copiedStats = this.clone();
-        copiedStats.filter(e -> e.getTag() == TAG_NONE);
-
         final Entry temp = new Entry();
-        final NetworkStats mappedStats = copiedStats.map(entry -> temp.setKeys(entry.getIface(),
-                UID_ALL, SET_ALL, TAG_NONE, METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL));
+        final NetworkStats mappedStats = this.mapKeysNotNull(entry -> entry.getTag() != TAG_NONE
+                ? null : temp.setKeys(entry.getIface(), UID_ALL,
+                SET_ALL, TAG_NONE, METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL));
 
         for (int i = 0; i < mappedStats.size; i++) {
             mappedStats.operations[i] = 0L;
@@ -1268,17 +1272,20 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
      * Return total statistics grouped by {@link #uid}; doesn't mutate the
      * original structure.
      * @hide
+     * @deprecated Use {@link #mapKeysNotNull(Function)} instead.
      */
+    @Deprecated
     public NetworkStats groupedByUid() {
+        if (SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("groupedByUid is not supported");
+        }
         // Keep backward compatibility where the method filtered out tagged stats. The method used
         // to deal with uid snapshot where tagged and non-tagged stats were mixed. And
         // this method is also in Android O API list, so it is possible OEM can access it.
-        final NetworkStats copiedStats = this.clone();
-        copiedStats.filter(e -> e.getTag() == TAG_NONE);
-
         final Entry temp = new Entry();
-        return copiedStats.map(entry -> temp.setKeys(IFACE_ALL,
-                entry.getUid(), SET_ALL, TAG_NONE, METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL));
+        return this.mapKeysNotNull(entry ->  entry.getTag() != TAG_NONE
+                ? null : temp.setKeys(IFACE_ALL, entry.getUid(),
+                SET_ALL, TAG_NONE, METERED_ALL, ROAMING_ALL, DEFAULT_NETWORK_ALL));
     }
 
     /**
@@ -1304,14 +1311,14 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
     }
 
     /**
-     * Removes the interface name from all entries.
-     * This returns a newly constructed object instead of mutating the original structure.
+     * Returns a copy of this NetworkStats, replacing iface with IFACE_ALL in all entries.
+     *
      * @hide
      */
     @NonNull
-    public NetworkStats clearInterfaces() {
+    public NetworkStats withoutInterfaces() {
         final Entry temp = new Entry();
-        return map(entry -> temp.setKeys(IFACE_ALL, entry.getUid(), entry.getSet(),
+        return mapKeysNotNull(entry -> temp.setKeys(IFACE_ALL, entry.getUid(), entry.getSet(),
                 entry.getTag(), entry.getMetered(), entry.getRoaming(), entry.getDefaultNetwork()));
     }
 
@@ -1321,13 +1328,16 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
      * Note that because NetworkStats is more akin to a map than to a list,
      * the entries will be grouped after they are mapped by the key fields,
      * e.g. uid, set, tag, defaultNetwork.
-     * Value fields with the same keys will be added together.
+     * Only the key returned by the function is used ; values will be forcefully
+     * copied from the original entry. Entries that map to the same set of keys
+     * will be added together.
      */
     @NonNull
-    private NetworkStats map(@NonNull Function<Entry, Entry> f) {
+    private NetworkStats mapKeysNotNull(@NonNull Function<Entry, Entry> f) {
         final NetworkStats ret = new NetworkStats(0, 1);
         for (Entry e : this) {
             final NetworkStats.Entry transformed = f.apply(e);
+            if (transformed == null) continue;
             if (transformed == e) {
                 throw new IllegalStateException("A new entry must be created.");
             }
