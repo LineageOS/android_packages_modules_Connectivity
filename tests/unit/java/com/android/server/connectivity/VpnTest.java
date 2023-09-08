@@ -736,6 +736,37 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
+    public void testLockdownSystemUser() throws Exception {
+        final Vpn vpn = createVpn(SYSTEM_USER_ID);
+
+        // Uid 0 is always excluded and PKG_UIDS[1] is the uid of the VPN.
+        final List<Integer> excludedUids = new ArrayList<>(List.of(0, PKG_UIDS[1]));
+        final List<Range<Integer>> ranges = makeVpnUidRange(SYSTEM_USER_ID, excludedUids);
+
+        // Set always-on with lockdown.
+        assertTrue(vpn.setAlwaysOnPackage(
+                PKGS[1], true /* lockdown */, null /* lockdownAllowlist */));
+        verify(mConnectivityManager).setRequireVpnForUids(true, ranges);
+
+        // Disable always-on with lockdown.
+        assertTrue(vpn.setAlwaysOnPackage(
+                null /* packageName */, false /* lockdown */, null /* lockdownAllowlist */));
+        verify(mConnectivityManager).setRequireVpnForUids(false, ranges);
+
+        // Set always-on with lockdown and allow the app PKGS[2].
+        excludedUids.add(PKG_UIDS[2]);
+        final List<Range<Integer>> ranges2 = makeVpnUidRange(SYSTEM_USER_ID, excludedUids);
+        assertTrue(vpn.setAlwaysOnPackage(
+                PKGS[1], true /* lockdown */, Collections.singletonList(PKGS[2])));
+        verify(mConnectivityManager).setRequireVpnForUids(true, ranges2);
+
+        // Disable always-on with lockdown.
+        assertTrue(vpn.setAlwaysOnPackage(
+                null /* packageName */, false /* lockdown */, null /* lockdownAllowlist */));
+        verify(mConnectivityManager).setRequireVpnForUids(false, ranges2);
+    }
+
+    @Test
     public void testLockdownRuleRepeatability() throws Exception {
         final Vpn vpn = createVpn(PRIMARY_USER.id);
         final UidRangeParcel[] primaryUserRangeParcel = new UidRangeParcel[] {
@@ -1133,14 +1164,16 @@ public class VpnTest extends VpnTestBase {
                 ncCaptor.getValue().getUids());
     }
 
-    private List<Range<Integer>> makeVpnUidRange(int userId, List<Integer> excludedList) {
+    private List<Range<Integer>> makeVpnUidRange(int userId, List<Integer> excludedAppIdList) {
         final SortedSet<Integer> list = new TreeSet<>();
 
         final int userBase = userId * UserHandle.PER_USER_RANGE;
-        for (int uid : excludedList) {
-            final int applicationUid = UserHandle.getUid(userId, uid);
-            list.add(applicationUid);
-            list.add(Process.toSdkSandboxUid(applicationUid)); // Add Sdk Sandbox UID
+        for (int appId : excludedAppIdList) {
+            final int uid = UserHandle.getUid(userId, appId);
+            list.add(uid);
+            if (Process.isApplicationUid(uid)) {
+                list.add(Process.toSdkSandboxUid(uid)); // Add Sdk Sandbox UID
+            }
         }
 
         final int minUid = userBase;
@@ -1166,8 +1199,8 @@ public class VpnTest extends VpnTestBase {
         return ranges;
     }
 
-    private Set<Range<Integer>> makeVpnUidRangeSet(int userId, List<Integer> excludedList) {
-        return new ArraySet<>(makeVpnUidRange(userId, excludedList));
+    private Set<Range<Integer>> makeVpnUidRangeSet(int userId, List<Integer> excludedAppIdList) {
+        return new ArraySet<>(makeVpnUidRange(userId, excludedAppIdList));
     }
 
     @Test
