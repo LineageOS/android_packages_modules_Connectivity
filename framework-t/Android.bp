@@ -93,6 +93,9 @@ filegroup {
 
 // The filegroup lists files that are necessary for verifying building mdns as a standalone,
 // for use with service-connectivity-mdns-standalone-build-test
+// This filegroup should never be included in anywhere in the module build. It is only used for
+// building service-connectivity-mdns-standalone-build-test target. The files will be renamed by
+// copybara to prevent them from being shadowed by the bootclasspath copies.
 filegroup {
     name: "framework-connectivity-t-mdns-standalone-build-sources",
     srcs: [
