@@ -78,6 +78,7 @@ public class MdnsAdvertiser {
     @NonNull private final SharedLog mSharedLog;
     private final Map<String, List<OffloadServiceInfoWrapper>> mInterfaceOffloadServices =
             new ArrayMap<>();
+    private final MdnsFeatureFlags mMdnsFeatureFlags;
 
     /**
      * Dependencies for {@link MdnsAdvertiser}, useful for testing.
@@ -140,22 +141,21 @@ public class MdnsAdvertiser {
                 mSharedLog.wtf("Register succeeded for unknown registration");
                 return;
             }
+            if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled) {
+                final String interfaceName = advertiser.getSocketInterfaceName();
+                final List<OffloadServiceInfoWrapper> existingOffloadServiceInfoWrappers =
+                        mInterfaceOffloadServices.computeIfAbsent(interfaceName,
+                                k -> new ArrayList<>());
+                // Remove existing offload services from cache for update.
+                existingOffloadServiceInfoWrappers.removeIf(item -> item.mServiceId == serviceId);
 
-            final String interfaceName = advertiser.getSocketInterfaceName();
-            final List<OffloadServiceInfoWrapper> existingOffloadServiceInfoWrappers =
-                    mInterfaceOffloadServices.computeIfAbsent(
-                            interfaceName, k -> new ArrayList<>());
-            // Remove existing offload services from cache for update.
-            existingOffloadServiceInfoWrappers.removeIf(item -> item.mServiceId == serviceId);
-
-            byte[] rawOffloadPacket = advertiser.getRawOffloadPayload(serviceId);
-            final OffloadServiceInfoWrapper newOffloadServiceInfoWrapper = createOffloadService(
-                    serviceId,
-                    registration,
-                    rawOffloadPacket);
-            existingOffloadServiceInfoWrappers.add(newOffloadServiceInfoWrapper);
-            mCb.onOffloadStartOrUpdate(interfaceName,
-                    newOffloadServiceInfoWrapper.mOffloadServiceInfo);
+                byte[] rawOffloadPacket = advertiser.getRawOffloadPayload(serviceId);
+                final OffloadServiceInfoWrapper newOffloadServiceInfoWrapper = createOffloadService(
+                        serviceId, registration, rawOffloadPacket);
+                existingOffloadServiceInfoWrappers.add(newOffloadServiceInfoWrapper);
+                mCb.onOffloadStartOrUpdate(interfaceName,
+                        newOffloadServiceInfoWrapper.mOffloadServiceInfo);
+            }
 
             // Wait for all current interfaces to be done probing before notifying of success.
             if (any(mAllAdvertisers, (k, a) -> a.isProbing(serviceId))) return;
@@ -188,7 +188,9 @@ public class MdnsAdvertiser {
                     if (!a.maybeRestartProbingForConflict(serviceId)) {
                         return;
                     }
-                    maybeSendOffloadStop(a.getSocketInterfaceName(), serviceId);
+                    if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled) {
+                        maybeSendOffloadStop(a.getSocketInterfaceName(), serviceId);
+                    }
                 });
                 return;
             }
@@ -280,12 +282,12 @@ public class MdnsAdvertiser {
          */
         boolean onAdvertiserDestroyed(@NonNull MdnsInterfaceSocket socket) {
             final MdnsInterfaceAdvertiser removedAdvertiser = mAdvertisers.remove(socket);
-            if (removedAdvertiser != null) {
+            if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled && removedAdvertiser != null) {
                 final String interfaceName = removedAdvertiser.getSocketInterfaceName();
-                // If the interface is destroyed, stop all hardware offloading on that interface.
+                // If the interface is destroyed, stop all hardware offloading on that
+                // interface.
                 final List<OffloadServiceInfoWrapper> offloadServiceInfoWrappers =
-                        mInterfaceOffloadServices.remove(
-                                interfaceName);
+                        mInterfaceOffloadServices.remove(interfaceName);
                 if (offloadServiceInfoWrappers != null) {
                     for (OffloadServiceInfoWrapper offloadServiceInfoWrapper :
                             offloadServiceInfoWrappers) {
@@ -359,7 +361,9 @@ public class MdnsAdvertiser {
                 final MdnsInterfaceAdvertiser advertiser = mAdvertisers.valueAt(i);
                 advertiser.removeService(id);
 
-                maybeSendOffloadStop(advertiser.getSocketInterfaceName(), id);
+                if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled) {
+                    maybeSendOffloadStop(advertiser.getSocketInterfaceName(), id);
+                }
             }
         }
 
@@ -419,25 +423,28 @@ public class MdnsAdvertiser {
                 return;
             }
             advertiser.updateAddresses(addresses);
-            // Update address should trigger offload packet update.
-            final String interfaceName = advertiser.getSocketInterfaceName();
-            final List<OffloadServiceInfoWrapper> existingOffloadServiceInfoWrappers =
-                    mInterfaceOffloadServices.get(interfaceName);
-            if (existingOffloadServiceInfoWrappers == null) {
-                return;
+
+            if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled) {
+                // Update address should trigger offload packet update.
+                final String interfaceName = advertiser.getSocketInterfaceName();
+                final List<OffloadServiceInfoWrapper> existingOffloadServiceInfoWrappers =
+                        mInterfaceOffloadServices.get(interfaceName);
+                if (existingOffloadServiceInfoWrappers == null) {
+                    return;
+                }
+                final List<OffloadServiceInfoWrapper> updatedOffloadServiceInfoWrappers =
+                        new ArrayList<>(existingOffloadServiceInfoWrappers.size());
+                for (OffloadServiceInfoWrapper oldWrapper : existingOffloadServiceInfoWrappers) {
+                    OffloadServiceInfoWrapper newWrapper = new OffloadServiceInfoWrapper(
+                            oldWrapper.mServiceId,
+                            oldWrapper.mOffloadServiceInfo.withOffloadPayload(
+                                    advertiser.getRawOffloadPayload(oldWrapper.mServiceId))
+                    );
+                    updatedOffloadServiceInfoWrappers.add(newWrapper);
+                    mCb.onOffloadStartOrUpdate(interfaceName, newWrapper.mOffloadServiceInfo);
+                }
+                mInterfaceOffloadServices.put(interfaceName, updatedOffloadServiceInfoWrappers);
             }
-            final List<OffloadServiceInfoWrapper> updatedOffloadServiceInfoWrappers =
-                    new ArrayList<>(existingOffloadServiceInfoWrappers.size());
-            for (OffloadServiceInfoWrapper oldWrapper : existingOffloadServiceInfoWrappers) {
-                OffloadServiceInfoWrapper newWrapper = new OffloadServiceInfoWrapper(
-                        oldWrapper.mServiceId,
-                        oldWrapper.mOffloadServiceInfo.withOffloadPayload(
-                                advertiser.getRawOffloadPayload(oldWrapper.mServiceId))
-                );
-                updatedOffloadServiceInfoWrappers.add(newWrapper);
-                mCb.onOffloadStartOrUpdate(interfaceName, newWrapper.mOffloadServiceInfo);
-            }
-            mInterfaceOffloadServices.put(interfaceName, updatedOffloadServiceInfoWrappers);
         }
     }
 
@@ -595,20 +602,22 @@ public class MdnsAdvertiser {
     }
 
     public MdnsAdvertiser(@NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
-            @NonNull AdvertiserCallback cb, @NonNull SharedLog sharedLog) {
-        this(looper, socketProvider, cb, new Dependencies(), sharedLog);
+            @NonNull AdvertiserCallback cb, @NonNull SharedLog sharedLog,
+            @NonNull MdnsFeatureFlags mDnsFeatureFlags) {
+        this(looper, socketProvider, cb, new Dependencies(), sharedLog, mDnsFeatureFlags);
     }
 
     @VisibleForTesting
     MdnsAdvertiser(@NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
             @NonNull AdvertiserCallback cb, @NonNull Dependencies deps,
-            @NonNull SharedLog sharedLog) {
+            @NonNull SharedLog sharedLog, @NonNull MdnsFeatureFlags mDnsFeatureFlags) {
         mLooper = looper;
         mCb = cb;
         mSocketProvider = socketProvider;
         mDeps = deps;
         mDeviceHostName = deps.generateHostname();
         mSharedLog = sharedLog;
+        mMdnsFeatureFlags = mDnsFeatureFlags;
     }
 
     private void checkThread() {
