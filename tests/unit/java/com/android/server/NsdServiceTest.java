@@ -35,17 +35,14 @@ import static android.net.connectivity.ConnectivityCompatChanges.RUN_NATIVE_NSD_
 import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
-
 import static com.android.networkstack.apishim.api33.ConstantsShim.REGISTER_NSD_OFFLOAD_ENGINE;
 import static com.android.server.NsdService.DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF;
 import static com.android.server.NsdService.MdnsListener;
 import static com.android.server.NsdService.NO_TRANSACTION;
 import static com.android.server.NsdService.parseTypeAndSubtype;
 import static com.android.testutils.ContextUtils.mockService;
-
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
 import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
-
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -229,7 +226,7 @@ public class NsdServiceTest {
         doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any(), any());
         doReturn(DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF).when(mDeps).getDeviceConfigInt(
                 eq(NsdService.MDNS_CONFIG_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF), anyInt());
-        doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any());
+        doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any());
         doReturn(mMetrics).when(mDeps).makeNetworkNsdReportedMetrics(anyBoolean(), anyInt());
         doReturn(mClock).when(mDeps).makeClock();
         doReturn(TEST_TIME_MS).when(mClock).elapsedRealtime();
@@ -1289,7 +1286,7 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any());
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1339,7 +1336,7 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any());
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, "invalid_type");
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1365,7 +1362,7 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any());
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("a".repeat(70), SERVICE_TYPE);
         regInfo.setHost(parseNumericAddress("192.0.2.123"));

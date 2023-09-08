@@ -26,7 +26,6 @@ import static android.net.nsd.NsdManager.MDNS_DISCOVERY_MANAGER_EVENT;
 import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 import static android.net.nsd.NsdManager.RESOLVE_SERVICE_SUCCEEDED;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
-
 import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
 import static com.android.networkstack.apishim.ConstantsShim.REGISTER_NSD_OFFLOAD_ENGINE;
 import static com.android.server.connectivity.mdns.MdnsAdvertiser.AdvertiserMetrics;
@@ -89,6 +88,7 @@ import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.ExecutorProvider;
 import com.android.server.connectivity.mdns.MdnsAdvertiser;
 import com.android.server.connectivity.mdns.MdnsDiscoveryManager;
+import com.android.server.connectivity.mdns.MdnsFeatureFlags;
 import com.android.server.connectivity.mdns.MdnsInterfaceSocket;
 import com.android.server.connectivity.mdns.MdnsMultinetworkSocketClient;
 import com.android.server.connectivity.mdns.MdnsSearchOptions;
@@ -1695,8 +1695,11 @@ public class NsdService extends INsdManager.Stub {
         mMdnsDiscoveryManager = deps.makeMdnsDiscoveryManager(new ExecutorProvider(),
                 mMdnsSocketClient, LOGGER.forSubComponent("MdnsDiscoveryManager"));
         handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));
+        MdnsFeatureFlags flags = new MdnsFeatureFlags.Builder().setIsMdnsOffloadFeatureEnabled(
+                mDeps.isTetheringFeatureNotChickenedOut(
+                        MdnsFeatureFlags.NSD_FORCE_DISABLE_MDNS_OFFLOAD)).build();
         mAdvertiser = deps.makeMdnsAdvertiser(handler.getLooper(), mMdnsSocketProvider,
-                new AdvertiserCallback(), LOGGER.forSubComponent("MdnsAdvertiser"));
+                new AdvertiserCallback(), LOGGER.forSubComponent("MdnsAdvertiser"), flags);
         mClock = deps.makeClock();
     }
 
@@ -1745,6 +1748,13 @@ public class NsdService extends INsdManager.Stub {
         }
 
         /**
+         * @see DeviceConfigUtils#isTetheringFeatureNotChickenedOut
+         */
+        public boolean isTetheringFeatureNotChickenedOut(String feature) {
+            return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(feature);
+        }
+
+        /**
          * @see MdnsDiscoveryManager
          */
         public MdnsDiscoveryManager makeMdnsDiscoveryManager(
@@ -1758,8 +1768,9 @@ public class NsdService extends INsdManager.Stub {
          */
         public MdnsAdvertiser makeMdnsAdvertiser(
                 @NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
-                @NonNull MdnsAdvertiser.AdvertiserCallback cb, @NonNull SharedLog sharedLog) {
-            return new MdnsAdvertiser(looper, socketProvider, cb, sharedLog);
+                @NonNull MdnsAdvertiser.AdvertiserCallback cb, @NonNull SharedLog sharedLog,
+                MdnsFeatureFlags featureFlags) {
+            return new MdnsAdvertiser(looper, socketProvider, cb, sharedLog, featureFlags);
         }
 
         /**
