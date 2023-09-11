@@ -155,7 +155,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
             builder.setFastPairSupported(version != ChreCommunication.INVALID_NANO_APP_VERSION);
             try {
                 callback.onQueryComplete(builder.build());
-            } catch (RemoteException e) {
+            } catch (RemoteException | NullPointerException e) {
                 e.printStackTrace();
             }
         });
