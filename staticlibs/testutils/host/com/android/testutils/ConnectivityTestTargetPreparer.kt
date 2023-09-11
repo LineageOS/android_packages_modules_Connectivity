@@ -32,6 +32,10 @@ private const val CONNECTIVITY_CHECK_CLASS = "$CONNECTIVITY_PKG_NAME.Connectivit
 private const val CONNECTIVITY_CHECK_RUNNER_NAME = "androidx.test.runner.AndroidJUnitRunner"
 private const val IGNORE_CONN_CHECK_OPTION = "ignore-connectivity-check"
 
+// The default updater package names, which might be updating packages while the CTS
+// are running
+private val UPDATER_PKGS = arrayOf("com.google.android.gms", "com.android.vending")
+
 /**
  * A target preparer that sets up and verifies a device for connectivity tests.
  *
@@ -45,35 +49,42 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
     @Option(name = IGNORE_CONN_CHECK_OPTION,
             description = "Disables the check for mobile data and wifi")
     private var ignoreConnectivityCheck = false
+    // The default value is never used, but false is a reasonable default
+    private var originalTestChainEnabled = false
+    private val originalUpdaterPkgsStatus = HashMap<String, Boolean>()
 
-    override fun setUp(testInformation: TestInformation) {
+    override fun setUp(testInfo: TestInformation) {
         if (isDisabled) return
-        disableGmsUpdate(testInformation)
-        runPreparerApk(testInformation)
+        disableGmsUpdate(testInfo)
+        originalTestChainEnabled = getTestChainEnabled(testInfo)
+        originalUpdaterPkgsStatus.putAll(getUpdaterPkgsStatus(testInfo))
+        setUpdaterNetworkingEnabled(testInfo, enableChain = true,
+                enablePkgs = UPDATER_PKGS.associateWith { false })
+        runPreparerApk(testInfo)
     }
 
-    private fun runPreparerApk(testInformation: TestInformation) {
+    private fun runPreparerApk(testInfo: TestInformation) {
         installer.setCleanApk(true)
         installer.addTestFileName(CONNECTIVITY_CHECKER_APK)
         installer.setShouldGrantPermission(true)
-        installer.setUp(testInformation)
+        installer.setUp(testInfo)
 
         val runner = DefaultRemoteAndroidTestRunner(
                 CONNECTIVITY_PKG_NAME,
                 CONNECTIVITY_CHECK_RUNNER_NAME,
-                testInformation.device.iDevice)
+                testInfo.device.iDevice)
         runner.runOptions = "--no-hidden-api-checks"
 
         val receiver = CollectingTestListener()
-        if (!testInformation.device.runInstrumentationTests(runner, receiver)) {
+        if (!testInfo.device.runInstrumentationTests(runner, receiver)) {
             throw TargetSetupError("Device state check failed to complete",
-                    testInformation.device.deviceDescriptor)
+                    testInfo.device.deviceDescriptor)
         }
 
         val runResult = receiver.currentRunResults
         if (runResult.isRunFailure) {
             throw TargetSetupError("Failed to check device state before the test: " +
-                    runResult.runFailureMessage, testInformation.device.deviceDescriptor)
+                    runResult.runFailureMessage, testInfo.device.deviceDescriptor)
         }
 
         val ignoredTestClasses = mutableSetOf<String>()
@@ -92,25 +103,50 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
         if (errorMsg.isBlank()) return
 
         throw TargetSetupError("Device setup checks failed. Check the test bench: \n$errorMsg",
-                testInformation.device.deviceDescriptor)
+                testInfo.device.deviceDescriptor)
     }
 
-    private fun disableGmsUpdate(testInformation: TestInformation) {
+    private fun disableGmsUpdate(testInfo: TestInformation) {
         // This will be a no-op on devices without root (su) or not using gservices, but that's OK.
-        testInformation.device.executeShellCommand("su 0 am broadcast " +
+        testInfo.exec("su 0 am broadcast " +
                 "-a com.google.gservices.intent.action.GSERVICES_OVERRIDE " +
                 "-e finsky.play_services_auto_update_enabled false")
     }
 
-    private fun clearGmsUpdateOverride(testInformation: TestInformation) {
-        testInformation.device.executeShellCommand("su 0 am broadcast " +
+    private fun clearGmsUpdateOverride(testInfo: TestInformation) {
+        testInfo.exec("su 0 am broadcast " +
                 "-a com.google.gservices.intent.action.GSERVICES_OVERRIDE " +
                 "--esn finsky.play_services_auto_update_enabled")
     }
 
-    override fun tearDown(testInformation: TestInformation, e: Throwable?) {
+    private fun setUpdaterNetworkingEnabled(
+            testInfo: TestInformation,
+            enableChain: Boolean,
+            enablePkgs: Map<String, Boolean>
+    ) {
+        // Build.VERSION_CODES.S = 31 where this is not available, then do nothing.
+        if (testInfo.device.getApiLevel() < 31) return
+        testInfo.exec("cmd connectivity set-chain3-enabled $enableChain")
+        enablePkgs.forEach { (pkg, allow) ->
+            testInfo.exec("cmd connectivity set-package-networking-enabled $pkg $allow")
+        }
+    }
+
+    private fun getTestChainEnabled(testInfo: TestInformation) =
+            testInfo.exec("cmd connectivity get-chain3-enabled").contains("chain:enabled")
+
+    private fun getUpdaterPkgsStatus(testInfo: TestInformation) =
+            UPDATER_PKGS.associateWith { pkg ->
+                !testInfo.exec("cmd connectivity get-package-networking-enabled $pkg")
+                        .contains(":deny")
+            }
+
+    override fun tearDown(testInfo: TestInformation, e: Throwable?) {
         if (isTearDownDisabled) return
-        installer.tearDown(testInformation, e)
-        clearGmsUpdateOverride(testInformation)
+        installer.tearDown(testInfo, e)
+        setUpdaterNetworkingEnabled(testInfo,
+                enableChain = originalTestChainEnabled,
+                enablePkgs = originalUpdaterPkgsStatus)
+        clearGmsUpdateOverride(testInfo)
     }
 }
