@@ -34,10 +34,10 @@ public interface INativeRemoteAuthService {
          * @param connectionId connection ID of the {@link android.remoteauth.RemoteAuthenticator}
          * @param request payload of the request
          * @param callback to be used to pass the response result
-         *
+         * @return true if succeeded, false otherwise.
          * @hide
          */
-        void sendRequest(int connectionId, byte[] request, ResponseCallback callback);
+        boolean sendRequest(int connectionId, byte[] request, ResponseCallback callback);
 
         /**
          * Interface for a callback to send a response back.
@@ -49,7 +49,6 @@ public interface INativeRemoteAuthService {
              * Invoked when message sending succeeds.
              *
              * @param response contains response
-             *
              * @hide
              */
             void onSuccess(byte[] response);
@@ -58,7 +57,6 @@ public interface INativeRemoteAuthService {
              * Invoked when message sending fails.
              *
              * @param errorCode indicating the error
-             *
              * @hide
              */
             void onFailure(int errorCode);
