@@ -31,7 +31,6 @@ import java.lang.annotation.RetentionPolicy;
  * the filter criteria (device type, name or peer address).
  */
 public final class DiscoveryFilter {
-
     /** Device type WATCH. */
     public static final int WATCH = 0;
 
@@ -86,7 +85,7 @@ public final class DiscoveryFilter {
         private Builder() {}
 
         /** Static method to create a new builder */
-        public static Builder newInstance() {
+        public static Builder builder() {
             return new Builder();
         }
 
