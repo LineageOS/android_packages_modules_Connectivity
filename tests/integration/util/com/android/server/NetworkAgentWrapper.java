@@ -64,6 +64,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
+    // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+    // please add it in CSAgentWrapper and use subclasses of CSTest instead of adding more
+    // tools in ConnectivityServiceTest.
     private final NetworkCapabilities mNetworkCapabilities;
     private final HandlerThread mHandlerThread;
     private final Context mContext;
@@ -468,4 +471,8 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
     public boolean isBypassableVpn() {
         return mNetworkAgentConfig.isBypassableVpn();
     }
+
+    // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+    // please add it in CSAgentWrapper and use subclasses of CSTest instead of adding more
+    // tools in ConnectivityServiceTest.
 }
