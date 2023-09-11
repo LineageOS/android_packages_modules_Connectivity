@@ -34,11 +34,11 @@ import java.util.Objects;
 // TODO(b/295407748): Change to use @DataClass.
 // TODO(b/296625303): Change to VANILLA_ICE_CREAM when AssociationInfo is available in V.
 @TargetApi(Build.VERSION_CODES.TIRAMISU)
-public final class CdmConnectionInfo extends ConnectionInfo {
+public final class CdmConnectionInfo extends ConnectionInfo<AssociationInfo> {
     @NonNull private final AssociationInfo mAssociationInfo;
 
     public CdmConnectionInfo(int connectionId, @NonNull AssociationInfo associationInfo) {
-       super(connectionId);
+        super(connectionId);
         mAssociationInfo = associationInfo;
     }
 
@@ -78,10 +78,6 @@ public final class CdmConnectionInfo extends ConnectionInfo {
         out.writeTypedObject(mAssociationInfo, 0);
     }
 
-    public AssociationInfo getAssociationInfo() {
-        return mAssociationInfo;
-    }
-
     /** Returns a string representation of ConnectionInfo. */
     @Override
     public String toString() {
@@ -98,11 +94,16 @@ public final class CdmConnectionInfo extends ConnectionInfo {
         }
 
         CdmConnectionInfo other = (CdmConnectionInfo) o;
-        return mAssociationInfo.equals(other.getAssociationInfo());
+        return super.equals(o) && mAssociationInfo.equals(other.getConnectionParams());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(mAssociationInfo);
+    }
+
+    @Override
+    public AssociationInfo getConnectionParams() {
+        return mAssociationInfo;
     }
 }
