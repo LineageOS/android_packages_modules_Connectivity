@@ -260,6 +260,19 @@ public final class NetworkCapabilities implements Parcelable {
     private int mEnterpriseId;
 
     /**
+     * Gets the enterprise IDs as an int. Internal callers only.
+     *
+     * DO NOT USE THIS if not immediately collapsing back into a scalar. Instead,
+     * prefer getEnterpriseIds/hasEnterpriseId.
+     *
+     * @return the internal, version-dependent int representing enterprise ids
+     * @hide
+     */
+    public int getEnterpriseIdsInternal() {
+        return mEnterpriseId;
+    }
+
+    /**
      * Get enteprise identifiers set.
      *
      * Get all the enterprise capabilities identifier set on this {@code NetworkCapability}
@@ -741,8 +754,10 @@ public final class NetworkCapabilities implements Parcelable {
 
     /**
      * Capabilities that are managed by ConnectivityService.
+     * @hide
      */
-    private static final long CONNECTIVITY_MANAGED_CAPABILITIES =
+    @VisibleForTesting
+    public static final long CONNECTIVITY_MANAGED_CAPABILITIES =
             BitUtils.packBitList(
                     NET_CAPABILITY_VALIDATED,
                     NET_CAPABILITY_CAPTIVE_PORTAL,
@@ -856,6 +871,19 @@ public final class NetworkCapabilities implements Parcelable {
             removeCapability(capability);
         }
         return this;
+    }
+
+    /**
+     * Gets the capabilities as an int. Internal callers only.
+     *
+     * DO NOT USE THIS if not immediately collapsing back into a scalar. Instead,
+     * prefer getCapabilities/hasCapability.
+     *
+     * @return an internal, version-dependent int representing the capabilities
+     * @hide
+     */
+    public long getCapabilitiesInternal() {
+        return mNetworkCapabilities;
     }
 
     /**
