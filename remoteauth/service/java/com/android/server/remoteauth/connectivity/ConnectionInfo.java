@@ -28,9 +28,10 @@ import java.util.Objects;
  * <p>Connection information captures the details of underlying connection such as connection id,
  * type of connection and peer device mac address.
  *
+ * @param <T> connection params per connection type.
  */
 // TODO(b/295407748) Change to use @DataClass.
-public abstract class ConnectionInfo implements Parcelable {
+public abstract class ConnectionInfo<T> implements Parcelable {
     int mConnectionId;
 
     public ConnectionInfo(int connectionId) {
@@ -85,4 +86,9 @@ public abstract class ConnectionInfo implements Parcelable {
     public int hashCode() {
         return Objects.hash(mConnectionId);
     }
+
+    /**
+     * Returns connection related parameters.
+     */
+    public abstract T getConnectionParams();
 }
