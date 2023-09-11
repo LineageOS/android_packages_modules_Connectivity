@@ -1105,6 +1105,11 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      *         already present.
      */
     public boolean addRequest(NetworkRequest networkRequest) {
+        if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on ConnectivityService thread: "
+                            + Thread.currentThread().getName());
+        }
         NetworkRequest existing = mNetworkRequests.get(networkRequest.requestId);
         if (existing == networkRequest) return false;
         if (existing != null) {
@@ -1123,6 +1128,11 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * Remove the specified request from this network.
      */
     public void removeRequest(int requestId) {
+        if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on ConnectivityService thread: "
+                            + Thread.currentThread().getName());
+        }
         NetworkRequest existing = mNetworkRequests.get(requestId);
         if (existing == null) return;
         updateRequestCounts(REMOVE, existing);
@@ -1144,6 +1154,11 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * network.
      */
     public NetworkRequest requestAt(int index) {
+        if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on ConnectivityService thread: "
+                            + Thread.currentThread().getName());
+        }
         return mNetworkRequests.valueAt(index);
     }
 
@@ -1174,6 +1189,11 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * Returns the number of requests of any type currently satisfied by this network.
      */
     public int numNetworkRequests() {
+        if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on ConnectivityService thread: "
+                            + Thread.currentThread().getName());
+        }
         return mNetworkRequests.size();
     }
 
