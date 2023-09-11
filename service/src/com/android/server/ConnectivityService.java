@@ -77,6 +77,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PAID;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_OEM_PRIVATE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_PARTIAL_CONNECTIVITY;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_5;
@@ -102,6 +103,7 @@ import static com.android.net.module.util.PermissionUtils.checkAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermission;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermissionOr;
+import static com.android.server.ConnectivityStatsLog.CONNECTIVITY_STATE_SAMPLE;
 
 import static java.util.Map.Entry;
 
@@ -236,6 +238,9 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
+import android.stats.connectivity.MeteredState;
+import android.stats.connectivity.RequestType;
+import android.stats.connectivity.ValidatedState;
 import android.sysprop.NetworkProperties;
 import android.system.ErrnoException;
 import android.telephony.TelephonyManager;
@@ -248,6 +253,7 @@ import android.util.Pair;
 import android.util.Range;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
+import android.util.StatsEvent;
 
 import androidx.annotation.RequiresApi;
 
@@ -256,6 +262,16 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.MessageUtils;
+import com.android.metrics.ConnectionDurationForTransports;
+import com.android.metrics.ConnectionDurationPerTransports;
+import com.android.metrics.ConnectivitySampleMetricsHelper;
+import com.android.metrics.ConnectivityStateSample;
+import com.android.metrics.NetworkCountForTransports;
+import com.android.metrics.NetworkCountPerTransports;
+import com.android.metrics.NetworkDescription;
+import com.android.metrics.NetworkList;
+import com.android.metrics.NetworkRequestCount;
+import com.android.metrics.RequestCountForType;
 import com.android.modules.utils.BasicShellCommandHandler;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
@@ -338,6 +354,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -2341,6 +2358,134 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return out;
     }
 
+    // Because StatsEvent is not usable in tests (everything inside it is hidden), this
+    // method is used to convert a ConnectivityStateSample into a StatsEvent, so that tests
+    // can call sampleConnectivityState and make the checks on it.
+    @NonNull
+    private StatsEvent sampleConnectivityStateToStatsEvent() {
+        final ConnectivityStateSample sample = sampleConnectivityState();
+        return ConnectivityStatsLog.buildStatsEvent(
+                ConnectivityStatsLog.CONNECTIVITY_STATE_SAMPLE,
+                sample.getNetworkCountPerTransports().toByteArray(),
+                sample.getConnectionDurationPerTransports().toByteArray(),
+                sample.getNetworkRequestCount().toByteArray(),
+                sample.getNetworks().toByteArray());
+    }
+
+    /**
+     * Gather and return a snapshot of the current connectivity state, to be used as a sample.
+     *
+     * This is used for metrics. These snapshots will be sampled and constitute a base for
+     * statistics about connectivity state of devices.
+     */
+    @VisibleForTesting
+    @NonNull
+    public ConnectivityStateSample sampleConnectivityState() {
+        ensureRunningOnConnectivityServiceThread();
+        final ConnectivityStateSample.Builder builder = ConnectivityStateSample.newBuilder();
+        builder.setNetworkCountPerTransports(sampleNetworkCount(mNetworkAgentInfos));
+        builder.setConnectionDurationPerTransports(sampleConnectionDuration(mNetworkAgentInfos));
+        builder.setNetworkRequestCount(sampleNetworkRequestCount(mNetworkRequests.values()));
+        builder.setNetworks(sampleNetworks(mNetworkAgentInfos));
+        return builder.build();
+    }
+
+    private static NetworkCountPerTransports sampleNetworkCount(
+            @NonNull final ArraySet<NetworkAgentInfo> nais) {
+        final SparseIntArray countPerTransports = new SparseIntArray();
+        for (final NetworkAgentInfo nai : nais) {
+            int transports = (int) nai.networkCapabilities.getTransportTypesInternal();
+            countPerTransports.put(transports, 1 + countPerTransports.get(transports, 0));
+        }
+        final NetworkCountPerTransports.Builder builder = NetworkCountPerTransports.newBuilder();
+        for (int i = countPerTransports.size() - 1; i >= 0; --i) {
+            final NetworkCountForTransports.Builder c = NetworkCountForTransports.newBuilder();
+            c.setTransportTypes(countPerTransports.keyAt(i));
+            c.setNetworkCount(countPerTransports.valueAt(i));
+            builder.addNetworkCountForTransports(c);
+        }
+        return builder.build();
+    }
+
+    private static ConnectionDurationPerTransports sampleConnectionDuration(
+            @NonNull final ArraySet<NetworkAgentInfo> nais) {
+        final ConnectionDurationPerTransports.Builder builder =
+                ConnectionDurationPerTransports.newBuilder();
+        for (final NetworkAgentInfo nai : nais) {
+            final ConnectionDurationForTransports.Builder c =
+                    ConnectionDurationForTransports.newBuilder();
+            c.setTransportTypes((int) nai.networkCapabilities.getTransportTypesInternal());
+            final long durationMillis = SystemClock.elapsedRealtime() - nai.getConnectedTime();
+            final long millisPerSecond = TimeUnit.SECONDS.toMillis(1);
+            // Add millisPerSecond/2 to round up or down to the nearest value
+            c.setDurationSec((int) ((durationMillis + millisPerSecond / 2) / millisPerSecond));
+            builder.addConnectionDurationForTransports(c);
+        }
+        return builder.build();
+    }
+
+    private static NetworkRequestCount sampleNetworkRequestCount(
+            @NonNull final Collection<NetworkRequestInfo> nris) {
+        final NetworkRequestCount.Builder builder = NetworkRequestCount.newBuilder();
+        final SparseIntArray countPerType = new SparseIntArray();
+        for (final NetworkRequestInfo nri : nris) {
+            final int type;
+            if (Process.SYSTEM_UID == nri.mAsUid) {
+                // The request is filed "as" the system, so it's the system on its own behalf.
+                type = RequestType.RT_SYSTEM.getNumber();
+            } else if (Process.SYSTEM_UID == nri.mUid) {
+                // The request is filed by the system as some other app, so it's the system on
+                // behalf of an app.
+                type = RequestType.RT_SYSTEM_ON_BEHALF_OF_APP.getNumber();
+            } else {
+                // Not the system, so it's an app requesting on its own behalf.
+                type = RequestType.RT_APP.getNumber();
+            }
+            countPerType.put(type, countPerType.get(type, 0));
+        }
+        for (int i = countPerType.size() - 1; i >= 0; --i) {
+            final RequestCountForType.Builder r = RequestCountForType.newBuilder();
+            r.setRequestType(RequestType.forNumber(countPerType.keyAt(i)));
+            r.setRequestCount(countPerType.valueAt(i));
+            builder.addRequestCountForType(r);
+        }
+        return builder.build();
+    }
+
+    private static NetworkList sampleNetworks(@NonNull final ArraySet<NetworkAgentInfo> nais) {
+        final NetworkList.Builder builder = NetworkList.newBuilder();
+        for (final NetworkAgentInfo nai : nais) {
+            final NetworkCapabilities nc = nai.networkCapabilities;
+            final NetworkDescription.Builder d = NetworkDescription.newBuilder();
+            d.setTransportTypes((int) nc.getTransportTypesInternal());
+            final MeteredState meteredState;
+            if (nc.hasCapability(NET_CAPABILITY_TEMPORARILY_NOT_METERED)) {
+                meteredState = MeteredState.METERED_TEMPORARILY_UNMETERED;
+            } else if (nc.hasCapability(NET_CAPABILITY_NOT_METERED)) {
+                meteredState = MeteredState.METERED_NO;
+            } else {
+                meteredState = MeteredState.METERED_YES;
+            }
+            d.setMeteredState(meteredState);
+            final ValidatedState validatedState;
+            if (nc.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL)) {
+                validatedState = ValidatedState.VS_PORTAL;
+            } else if (nc.hasCapability(NET_CAPABILITY_PARTIAL_CONNECTIVITY)) {
+                validatedState = ValidatedState.VS_PARTIAL;
+            } else if (nc.hasCapability(NET_CAPABILITY_VALIDATED)) {
+                validatedState = ValidatedState.VS_VALID;
+            } else {
+                validatedState = ValidatedState.VS_INVALID;
+            }
+            d.setValidatedState(validatedState);
+            d.setScorePolicies(nai.getScore().getPoliciesInternal());
+            d.setCapabilities(nc.getCapabilitiesInternal());
+            d.setEnterpriseId(nc.getEnterpriseIdsInternal());
+            builder.addNetworkDescription(d);
+        }
+        return builder.build();
+    }
+
     @Override
     public boolean isNetworkSupported(int networkType) {
         enforceAccessPermission();
@@ -3456,6 +3601,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (mDeps.isAtLeastT()) {
             mBpfNetMaps.setPullAtomCallback(mContext);
         }
+        ConnectivitySampleMetricsHelper.start(mContext, mHandler,
+                CONNECTIVITY_STATE_SAMPLE, this::sampleConnectivityStateToStatsEvent);
         // Wait PermissionMonitor to finish the permission update. Then MultipathPolicyTracker won't
         // have permission problem. While CV#block() is unbounded in time and can in principle block
         // forever, this replaces a synchronous call to PermissionMonitor#startMonitoring, which
