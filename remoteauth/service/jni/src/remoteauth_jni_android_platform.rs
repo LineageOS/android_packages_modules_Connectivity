@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Implementation of JNI platform functionality.
 use crate::jnames::{SEND_REQUEST_MNAME, SEND_REQUEST_MSIG};
 use crate::unique_jvm;
 use anyhow::anyhow;
@@ -73,11 +74,15 @@ fn insert_platform_handle(handle: i64, item: Arc<Mutex<JavaPlatform>>) {
     HANDLE_MAPPING.lock().unwrap().insert(handle, Arc::clone(&item));
 }
 
+/// Reports a response from remote device.
 pub trait ResponseCallback {
+    /// Invoked upon successful response
     fn on_response(&mut self, response: Vec<u8>);
+    /// Invoked upon failure
     fn on_error(&mut self, error_code: i32);
 }
 
+/// Trait to platform functionality
 pub trait Platform {
     /// Send a binary message to the remote with the given connection id and return the response.
     fn send_request(
@@ -89,6 +94,7 @@ pub trait Platform {
 }
 //////////////////////////////////
 
+/// Implementation of Platform trait
 pub struct JavaPlatform {
     platform_handle: i64,
     vm: &'static Arc<JavaVM>,
@@ -99,7 +105,7 @@ pub struct JavaPlatform {
 }
 
 impl JavaPlatform {
-    // Method to create JavaPlatform
+    /// Creates JavaPlatform and associates with unique handle id
     pub fn create(
         java_platform_native: JObject<'_>,
     ) -> Result<Arc<Mutex<impl Platform>>, JNIError> {
@@ -219,6 +225,7 @@ impl JavaPlatform {
     }
 }
 
+/// Returns successful response from remote device
 #[no_mangle]
 pub extern "system" fn Java_com_android_server_remoteauth_jni_NativeRemoteAuthJavaPlatform_native_on_send_request_success(
     env: JNIEnv,
@@ -250,6 +257,7 @@ fn native_on_send_request_success(
     }
 }
 
+/// Notifies about failure to receive a response from remote device
 #[no_mangle]
 pub extern "system" fn Java_com_android_server_remoteauth_jni_NativeRemoteAuthJavaPlatform_native_on_send_request_error(
     env: JNIEnv,
