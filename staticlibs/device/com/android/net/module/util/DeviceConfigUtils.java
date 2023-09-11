@@ -162,13 +162,12 @@ public final class DeviceConfigUtils {
      * This is useful to ensure that if a module install is rolled back, flags are not left fully
      * rolled out on a version where they have not been well tested.
      * @param context The global context information about an app environment.
-     * @param namespace The namespace containing the property to look up.
      * @param name The name of the property to look up.
      * @return true if this feature is enabled, or false if disabled.
      */
-    public static boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
+    public static boolean isNetworkStackFeatureEnabled(@NonNull Context context,
             @NonNull String name) {
-        return isFeatureEnabled(context, namespace, name, false /* defaultEnabled */);
+        return isNetworkStackFeatureEnabled(context, name, false /* defaultEnabled */);
     }
 
     /**
@@ -180,16 +179,16 @@ public final class DeviceConfigUtils {
      * This is useful to ensure that if a module install is rolled back, flags are not left fully
      * rolled out on a version where they have not been well tested.
      * @param context The global context information about an app environment.
-     * @param namespace The namespace containing the property to look up.
      * @param name The name of the property to look up.
      * @param defaultEnabled The value to return if the property does not exist or its value is
      *                       null.
      * @return true if this feature is enabled, or false if disabled.
      */
-    public static boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
+    public static boolean isNetworkStackFeatureEnabled(@NonNull Context context,
             @NonNull String name, boolean defaultEnabled) {
         final long packageVersion = getPackageVersion(context);
-        return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
+        return isFeatureEnabled(context, packageVersion, NAMESPACE_CONNECTIVITY, name,
+                defaultEnabled);
     }
 
     /**
@@ -200,24 +199,20 @@ public final class DeviceConfigUtils {
      *
      * This is useful to ensure that if a module install is rolled back, flags are not left fully
      * rolled out on a version where they have not been well tested.
+     *
+     * If the feature is disabled by default and enabled by flag push, this method should be used.
+     * If the feature is enabled by default and disabled by flag push (kill switch),
+     * {@link #isTetheringFeatureNotChickenedOut(String)} should be used.
+     *
      * @param context The global context information about an app environment.
-     * @param namespace The namespace containing the property to look up.
      * @param name The name of the property to look up.
-     * @param moduleName The mainline module name which is released as apex.
-     * @param defaultEnabled The value to return if the property does not exist or its value is
-     *                       null.
      * @return true if this feature is enabled, or false if disabled.
      */
     public static boolean isTetheringFeatureEnabled(@NonNull Context context,
-            @NonNull String namespace, @NonNull String name, @NonNull String moduleName,
-            boolean defaultEnabled) {
-        // TODO: migrate callers to a non-generic isTetheringFeatureEnabled method.
-        if (!TETHERING_MODULE_NAME.equals(moduleName)) {
-            throw new IllegalArgumentException(
-                    "This method is only usable by the tethering module");
-        }
+            @NonNull String name) {
         final long packageVersion = getTetheringModuleVersion(context);
-        return isFeatureEnabled(context, packageVersion, namespace, name, defaultEnabled);
+        return isFeatureEnabled(context, packageVersion, NAMESPACE_TETHERING, name,
+                false /* defaultEnabled */);
     }
 
     private static boolean isFeatureEnabled(@NonNull Context context, long packageVersion,

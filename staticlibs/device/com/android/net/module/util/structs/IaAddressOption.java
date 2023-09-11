@@ -16,74 +16,69 @@
 
 package com.android.net.module.util.structs;
 
-import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IAPREFIX;
+import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IA_ADDR;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
+import java.net.Inet6Address;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * DHCPv6 IA Prefix Option.
+ * DHCPv6 IA Address option.
  * https://tools.ietf.org/html/rfc8415. This does not contain any option.
  *
  * 0                   1                   2                   3
  * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |        OPTION_IAPREFIX        |           option-len          |
+ * |          OPTION_IAADDR        |          option-len           |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                                                               |
+ * |                         IPv6-address                          |
+ * |                                                               |
+ * |                                                               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                      preferred-lifetime                       |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                        valid-lifetime                         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * | prefix-length |                                               |
- * +-+-+-+-+-+-+-+-+          IPv6-prefix                          |
- * |                           (16 octets)                         |
- * |                                                               |
- * |                                                               |
- * |                                                               |
- * |               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |               |                                               .
- * +-+-+-+-+-+-+-+-+                                               .
- * .                       IAprefix-options                        .
+ * .                                                               .
+ * .                        IAaddr-options                         .
  * .                                                               .
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class IaPrefixOption extends Struct {
-    public static final int LENGTH = 25; // option length excluding IAprefix-options
+public class IaAddressOption extends Struct {
+    public static final int LENGTH = 24; // option length excluding IAaddr-options
 
     @Field(order = 0, type = Type.S16)
     public final short code;
     @Field(order = 1, type = Type.S16)
     public final short length;
-    @Field(order = 2, type = Type.U32)
-    public final long preferred;
+    @Field(order = 2, type = Type.Ipv6Address)
+    public final Inet6Address address;
     @Field(order = 3, type = Type.U32)
+    public final long preferred;
+    @Field(order = 4, type = Type.U32)
     public final long valid;
-    @Field(order = 4, type = Type.S8)
-    public final byte prefixLen;
-    @Field(order = 5, type = Type.ByteArray, arraysize = 16)
-    public final byte[] prefix;
 
-    public IaPrefixOption(final short code, final short length, final long preferred,
-            final long valid, final byte prefixLen, final byte[] prefix) {
+    IaAddressOption(final short code, final short length, final Inet6Address address,
+            final long preferred, final long valid) {
         this.code = code;
         this.length = length;
+        this.address = address;
         this.preferred = preferred;
         this.valid = valid;
-        this.prefixLen = prefixLen;
-        this.prefix = prefix.clone();
     }
 
     /**
-     * Build an IA_PD prefix option with given specific parameters.
+     * Build an IA Address option from the required specific parameters.
      */
-    public static ByteBuffer build(final short length, final long preferred, final long valid,
-            final byte prefixLen, final byte[] prefix) {
-        final IaPrefixOption option = new IaPrefixOption((byte) DHCP6_OPTION_IAPREFIX,
-                length /* 25 + IAPrefix options length */, preferred, valid, prefixLen, prefix);
+    public static ByteBuffer build(final short length, final long id, final Inet6Address address,
+            final long preferred, final long valid) {
+        final IaAddressOption option = new IaAddressOption((short) DHCP6_OPTION_IA_ADDR,
+                length /* 24 + IAaddr-options length */, address, preferred, valid);
         return ByteBuffer.wrap(option.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 }
