@@ -931,12 +931,6 @@ public class ConnectivityServiceTest {
         return appUid + (firstSdkSandboxUid - Process.FIRST_APPLICATION_UID);
     }
 
-    // This function assumes the UID range for user 0 ([1, 99999])
-    private static UidRangeParcel[] uidRangeParcelsExcludingUids(Integer... excludedUids) {
-        final List<Integer> uids = Arrays.asList(excludedUids);
-        return intToUidRangeStableParcels(intRangesPrimaryExcludingUids(uids));
-    }
-
     // Create the list of ranges for the primary user (User 0), excluding excludedUids.
     private static List<Range<Integer>> intRangesPrimaryExcludingUids(List<Integer> excludedUids) {
         final List<Integer> excludedUidsList = new ArrayList<>(excludedUids);
@@ -9479,8 +9473,16 @@ public class ConnectivityServiceTest {
         assertNotNull(mCm.getActiveNetworkForUid(restrictedUid));
 
         // Enable always-on VPN lockdown. The main user loses network access because no VPN is up.
-        final ArrayList<String> allowList = new ArrayList<>();
-        mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, true /* lockdown */, allowList);
+        // Coverage in VpnTest.
+        final List<Integer> excludedUids = new ArrayList<>();
+        excludedUids.add(VPN_UID);
+        if (mDeps.isAtLeastT()) {
+            // On T onwards, the corresponding SDK sandbox UID should also be excluded
+            excludedUids.add(toSdkSandboxUid(VPN_UID));
+        }
+        final List<Range<Integer>> primaryRanges = intRangesPrimaryExcludingUids(excludedUids);
+        mCm.setRequireVpnForUids(true, primaryRanges);
+
         waitForIdle();
         assertNull(mCm.getActiveNetworkForUid(uid));
         // This is arguably overspecified: a UID that is not running doesn't have an active network.
@@ -9492,12 +9494,6 @@ public class ConnectivityServiceTest {
         // TODO: check that VPN app within restricted profile still has access, etc.
         // Add a restricted user.
         // This is equivalent to `mMockVpn.onUserAdded(RESTRICTED_USER);`, coverage in VpnTest.
-        final List<Integer> excludedUids = new ArrayList<Integer>();
-        excludedUids.add(VPN_UID);
-        if (mDeps.isAtLeastT()) {
-            // On T onwards, the corresponding SDK sandbox UID should also be excluded
-            excludedUids.add(toSdkSandboxUid(VPN_UID));
-        }
         final List<Range<Integer>> restrictedRanges =
                 intRangesExcludingUids(RESTRICTED_USER, excludedUids);
         mCm.setRequireVpnForUids(true, restrictedRanges);
@@ -9515,7 +9511,8 @@ public class ConnectivityServiceTest {
         assertNull(mCm.getActiveNetworkForUid(uid));
         assertNotNull(mCm.getActiveNetworkForUid(restrictedUid));
 
-        mMockVpn.setAlwaysOnPackage(null, false /* lockdown */, allowList);
+        mCm.setRequireVpnForUids(false, primaryRanges);
+
         waitForIdle();
     }
 
@@ -9968,18 +9965,20 @@ public class ConnectivityServiceTest {
                 new Handler(ConnectivityThread.getInstanceLooper()));
 
         final int uid = Process.myUid();
-        final ArrayList<String> allowList = new ArrayList<>();
-        mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, true /* lockdown */, allowList);
-        waitForIdle();
 
-        final Set<Integer> excludedUids = new ArraySet<Integer>();
+        // Enable always-on VPN lockdown, coverage in VpnTest.
+        final List<Integer> excludedUids = new ArrayList<Integer>();
         excludedUids.add(VPN_UID);
         if (mDeps.isAtLeastT()) {
             // On T onwards, the corresponding SDK sandbox UID should also be excluded
             excludedUids.add(toSdkSandboxUid(VPN_UID));
         }
-        final UidRangeParcel[] uidRangeParcels = uidRangeParcelsExcludingUids(
-                excludedUids.toArray(new Integer[0]));
+
+        final List<Range<Integer>> primaryRanges = intRangesPrimaryExcludingUids(excludedUids);
+        mCm.setRequireVpnForUids(true, primaryRanges);
+        waitForIdle();
+
+        final UidRangeParcel[] uidRangeParcels = intToUidRangeStableParcels(primaryRanges);
         InOrder inOrder = inOrder(mMockNetd);
         expectNetworkRejectNonSecureVpn(inOrder, true, uidRangeParcels);
 
@@ -9999,7 +9998,8 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_WIFI, DetailedState.BLOCKED);
 
         // Disable lockdown, expect to see the network unblocked.
-        mMockVpn.setAlwaysOnPackage(null, false /* lockdown */, allowList);
+        mCm.setRequireVpnForUids(false, primaryRanges);
+        waitForIdle();
         callback.expect(BLOCKED_STATUS, mWiFiAgent, cb -> !cb.getBlocked());
         defaultCallback.expect(BLOCKED_STATUS, mWiFiAgent, cb -> !cb.getBlocked());
         vpnUidCallback.assertNoCallback();
@@ -10012,22 +10012,25 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_MOBILE, DetailedState.DISCONNECTED);
         assertNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
 
-        // Add our UID to the allowlist and re-enable lockdown, expect network is not blocked.
-        allowList.add(TEST_PACKAGE_NAME);
-        mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, true /* lockdown */, allowList);
+        // Add our UID to the allowlist, expect network is not blocked. Coverage in VpnTest.
+        excludedUids.add(uid);
+        if (mDeps.isAtLeastT()) {
+            // On T onwards, the corresponding SDK sandbox UID should also be excluded
+            excludedUids.add(toSdkSandboxUid(uid));
+        }
+        final List<Range<Integer>> primaryRangesExcludingUid =
+                intRangesPrimaryExcludingUids(excludedUids);
+        mCm.setRequireVpnForUids(true, primaryRangesExcludingUid);
+        waitForIdle();
+
         callback.assertNoCallback();
         defaultCallback.assertNoCallback();
         vpnUidCallback.assertNoCallback();
         vpnUidDefaultCallback.assertNoCallback();
         vpnDefaultCallbackAsUid.assertNoCallback();
 
-        excludedUids.add(uid);
-        if (mDeps.isAtLeastT()) {
-            // On T onwards, the corresponding SDK sandbox UID should also be excluded
-            excludedUids.add(toSdkSandboxUid(uid));
-        }
-        final UidRangeParcel[] uidRangeParcelsAlsoExcludingUs = uidRangeParcelsExcludingUids(
-                excludedUids.toArray(new Integer[0]));
+        final UidRangeParcel[] uidRangeParcelsAlsoExcludingUs =
+                intToUidRangeStableParcels(primaryRangesExcludingUid);
         expectNetworkRejectNonSecureVpn(inOrder, true, uidRangeParcelsAlsoExcludingUs);
         assertEquals(mWiFiAgent.getNetwork(), mCm.getActiveNetworkForUid(VPN_UID));
         assertEquals(mWiFiAgent.getNetwork(), mCm.getActiveNetwork());
@@ -10050,15 +10053,15 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_MOBILE, DetailedState.DISCONNECTED);
         assertNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
 
-        // Disable lockdown, remove our UID from the allowlist, and re-enable lockdown.
-        // Everything should now be blocked.
-        mMockVpn.setAlwaysOnPackage(null, false /* lockdown */, allowList);
+        // Disable lockdown
+        mCm.setRequireVpnForUids(false, primaryRangesExcludingUid);
         waitForIdle();
         expectNetworkRejectNonSecureVpn(inOrder, false, uidRangeParcelsAlsoExcludingUs);
-        allowList.clear();
-        mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, true /* lockdown */, allowList);
+        // Remove our UID from the allowlist, and re-enable lockdown.
+        mCm.setRequireVpnForUids(true, primaryRanges);
         waitForIdle();
         expectNetworkRejectNonSecureVpn(inOrder, true, uidRangeParcels);
+        // Everything should now be blocked.
         defaultCallback.expect(BLOCKED_STATUS, mWiFiAgent, cb -> cb.getBlocked());
         assertBlockedCallbackInAnyOrder(callback, true, mWiFiAgent, mCellAgent);
         vpnUidCallback.assertNoCallback();
@@ -10071,7 +10074,7 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_WIFI, DetailedState.BLOCKED);
 
         // Disable lockdown. Everything is unblocked.
-        mMockVpn.setAlwaysOnPackage(null, false /* lockdown */, allowList);
+        mCm.setRequireVpnForUids(false, primaryRanges);
         defaultCallback.expect(BLOCKED_STATUS, mWiFiAgent, cb -> !cb.getBlocked());
         assertBlockedCallbackInAnyOrder(callback, false, mWiFiAgent, mCellAgent);
         vpnUidCallback.assertNoCallback();
@@ -10084,7 +10087,7 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
 
         // Enable lockdown and connect a VPN. The VPN is not blocked.
-        mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, true /* lockdown */, allowList);
+        mCm.setRequireVpnForUids(true, primaryRanges);
         defaultCallback.expect(BLOCKED_STATUS, mWiFiAgent, cb -> cb.getBlocked());
         assertBlockedCallbackInAnyOrder(callback, true, mWiFiAgent, mCellAgent);
         vpnUidCallback.assertNoCallback();
