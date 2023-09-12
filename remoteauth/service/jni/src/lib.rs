@@ -21,5 +21,7 @@ mod jnames;
 mod unique_jvm;
 mod utils;
 
+/// Implementation of JNI platform functionality.
 pub mod remoteauth_jni_android_platform;
+/// Implementation of JNI protocol functionality.
 pub mod remoteauth_jni_android_protocol;

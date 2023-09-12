@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+//! Implementation of JNI protocol functionality.
 use crate::unique_jvm;
 use crate::utils::get_boolean_result;
 use jni::objects::JObject;
 use jni::sys::jboolean;
 use jni::JNIEnv;
 
+/// Initialize native library. Captures Java VM:
 #[no_mangle]
 pub extern "system" fn Java_com_android_server_remoteauth_jni_NativeRemoteAuthJavaPlatform_native_init(
     env: JNIEnv,
