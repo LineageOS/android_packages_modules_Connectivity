@@ -168,12 +168,12 @@ TEST_F(NetworkTraceHandlerTest, BasicBundling) {
   config.set_aggregation_threshold(10);
 
   std::vector<PacketTrace> input = {
-      PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
-      PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
-      PacketTrace{.uid = 123, .timestampNs = 4, .length = 300},
+      PacketTrace{.timestampNs = 2, .length = 200, .uid = 123},
+      PacketTrace{.timestampNs = 1, .length = 100, .uid = 123},
+      PacketTrace{.timestampNs = 4, .length = 300, .uid = 123},
 
-      PacketTrace{.uid = 456, .timestampNs = 2, .length = 400},
-      PacketTrace{.uid = 456, .timestampNs = 4, .length = 100},
+      PacketTrace{.timestampNs = 2, .length = 400, .uid = 456},
+      PacketTrace{.timestampNs = 4, .length = 100, .uid = 456},
   };
 
   std::vector<TracePacket> events;
@@ -203,12 +203,12 @@ TEST_F(NetworkTraceHandlerTest, AggregationThreshold) {
   config.set_aggregation_threshold(3);
 
   std::vector<PacketTrace> input = {
-      PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
-      PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
-      PacketTrace{.uid = 123, .timestampNs = 4, .length = 300},
+      PacketTrace{.timestampNs = 2, .length = 200, .uid = 123},
+      PacketTrace{.timestampNs = 1, .length = 100, .uid = 123},
+      PacketTrace{.timestampNs = 4, .length = 300, .uid = 123},
 
-      PacketTrace{.uid = 456, .timestampNs = 2, .length = 400},
-      PacketTrace{.uid = 456, .timestampNs = 4, .length = 100},
+      PacketTrace{.timestampNs = 2, .length = 400, .uid = 456},
+      PacketTrace{.timestampNs = 4, .length = 100, .uid = 456},
   };
 
   std::vector<TracePacket> events;
@@ -239,10 +239,10 @@ TEST_F(NetworkTraceHandlerTest, DropLocalPort) {
   __be16 b = htons(10001);
   std::vector<PacketTrace> input = {
       // Recall that local is `src` for egress and `dst` for ingress.
-      PacketTrace{.timestampNs = 1, .length = 2, .egress = true, .sport = a},
-      PacketTrace{.timestampNs = 2, .length = 4, .egress = false, .dport = a},
-      PacketTrace{.timestampNs = 3, .length = 6, .egress = true, .sport = b},
-      PacketTrace{.timestampNs = 4, .length = 8, .egress = false, .dport = b},
+      PacketTrace{.timestampNs = 1, .length = 2, .sport = a, .egress = true},
+      PacketTrace{.timestampNs = 2, .length = 4, .dport = a, .egress = false},
+      PacketTrace{.timestampNs = 3, .length = 6, .sport = b, .egress = true},
+      PacketTrace{.timestampNs = 4, .length = 8, .dport = b, .egress = false},
   };
 
   std::vector<TracePacket> events;
@@ -274,10 +274,10 @@ TEST_F(NetworkTraceHandlerTest, DropRemotePort) {
   __be16 b = htons(80);
   std::vector<PacketTrace> input = {
       // Recall that remote is `dst` for egress and `src` for ingress.
-      PacketTrace{.timestampNs = 1, .length = 2, .egress = true, .dport = a},
-      PacketTrace{.timestampNs = 2, .length = 4, .egress = false, .sport = a},
-      PacketTrace{.timestampNs = 3, .length = 6, .egress = true, .dport = b},
-      PacketTrace{.timestampNs = 4, .length = 8, .egress = false, .sport = b},
+      PacketTrace{.timestampNs = 1, .length = 2, .dport = a, .egress = true},
+      PacketTrace{.timestampNs = 2, .length = 4, .sport = a, .egress = false},
+      PacketTrace{.timestampNs = 3, .length = 6, .dport = b, .egress = true},
+      PacketTrace{.timestampNs = 4, .length = 8, .sport = b, .egress = false},
   };
 
   std::vector<TracePacket> events;
@@ -306,10 +306,10 @@ TEST_F(NetworkTraceHandlerTest, DropTcpFlags) {
   config.set_aggregation_threshold(10);
 
   std::vector<PacketTrace> input = {
-      PacketTrace{.timestampNs = 1, .uid = 123, .length = 1, .tcpFlags = 1},
-      PacketTrace{.timestampNs = 2, .uid = 123, .length = 2, .tcpFlags = 2},
-      PacketTrace{.timestampNs = 3, .uid = 456, .length = 3, .tcpFlags = 1},
-      PacketTrace{.timestampNs = 4, .uid = 456, .length = 4, .tcpFlags = 2},
+      PacketTrace{.timestampNs = 1, .length = 1, .uid = 123, .tcpFlags = 1},
+      PacketTrace{.timestampNs = 2, .length = 2, .uid = 123, .tcpFlags = 2},
+      PacketTrace{.timestampNs = 3, .length = 3, .uid = 456, .tcpFlags = 1},
+      PacketTrace{.timestampNs = 4, .length = 4, .uid = 456, .tcpFlags = 2},
   };
 
   std::vector<TracePacket> events;
