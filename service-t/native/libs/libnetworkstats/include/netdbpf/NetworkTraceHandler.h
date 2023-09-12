@@ -32,7 +32,7 @@ namespace bpf {
 
 // BundleKey encodes a PacketTrace minus timestamp and length. The key should
 // match many packets over time for interning. For convenience, sport/dport
-// are parsed here as either local/remote port.
+// are parsed here as either local/remote port or icmp type/code.
 struct BundleKey {
   explicit BundleKey(const PacketTrace& pkt);
 
@@ -47,6 +47,8 @@ struct BundleKey {
   std::optional<uint8_t> tcpFlags;
   std::optional<uint16_t> localPort;
   std::optional<uint16_t> remotePort;
+  std::optional<uint8_t> icmpType;
+  std::optional<uint8_t> icmpCode;
 };
 
 // BundleKeys are hashed using a simple hash combine.
