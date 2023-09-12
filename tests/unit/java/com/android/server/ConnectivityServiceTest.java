@@ -1716,6 +1716,14 @@ public class ConnectivityServiceTest {
                 UnderlyingNetworkInfo underlyingNetworkInfo) {
             mUnderlyingNetworkInfo = underlyingNetworkInfo;
         }
+
+        @Override
+        public synchronized boolean setUnderlyingNetworks(@Nullable Network[] networks) {
+            if (!mAgentRegistered) return false;
+            mMockNetworkAgent.setUnderlyingNetworks(
+                    (networks == null) ? null : Arrays.asList(networks));
+            return true;
+        }
     }
 
     private UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
