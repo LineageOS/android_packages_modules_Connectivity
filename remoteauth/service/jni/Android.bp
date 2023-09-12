@@ -30,6 +30,12 @@ rust_defaults {
     host_supported: true,
 }
 
+rust_ffi_shared {
+    name: "libremoteauth_jni_rust",
+    defaults: ["libremoteauth_jni_rust_defaults"],
+    rustlibs: [],
+}
+
 rust_test {
     name: "libremoteauth_jni_rust_tests",
     defaults: ["libremoteauth_jni_rust_defaults"],

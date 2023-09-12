@@ -16,6 +16,8 @@
 
 package com.android.server.remoteauth.jni;
 
+import android.util.Log;
+
 import com.android.internal.annotations.Keep;
 import com.android.server.remoteauth.jni.INativeRemoteAuthService.IPlatform;
 
@@ -53,12 +55,13 @@ public class NativeRemoteAuthService {
      *     platform
      * @param platformHandle a handle associated with the platform object, used to pass the response
      *     to the specific platform
-     *
      * @hide
      */
     @Keep
     public void sendRequest(
             int connectionId, byte[] request, long responseHandle, long platformHandle) {
+        Log.d(TAG, String.format("sendRequest with connectionId: %d, rh: %d, ph: %d",
+                connectionId, responseHandle, platformHandle));
         mPlatform.sendRequest(
                 connectionId,
                 request,
