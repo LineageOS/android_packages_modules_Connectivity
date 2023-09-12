@@ -10206,7 +10206,8 @@ public class ConnectivityServiceTest {
         // Init lockdown state to simulate LockdownVpnTracker behavior.
         mCm.setLegacyLockdownVpnEnabled(true);
         mMockVpn.setEnableTeardown(false);
-        mMockVpn.setLockdown(true);
+        final Set<Range<Integer>> ranges = UidRange.toIntRanges(Set.of(PRIMARY_UIDRANGE));
+        mCm.setRequireVpnForUids(true /* requireVpn */, ranges);
 
         // Bring up a network.
         final LinkProperties cellLp = new LinkProperties();
