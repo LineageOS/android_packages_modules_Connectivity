@@ -49,8 +49,8 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceRegistrationSucceeded(transactionId, durationMs)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceRegistrationSucceeded(true /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -69,8 +69,8 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(false /* isLegacy */, clientId, deps)
-        metrics.reportServiceRegistrationFailed(transactionId, durationMs)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceRegistrationFailed(false /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -93,9 +93,10 @@ class NetworkNsdReportedMetricsTest {
         val sentPacketCount = 50
         val conflictDuringProbingCount = 2
         val conflictAfterProbingCount = 1
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceUnregistration(transactionId, durationMs, repliedRequestsCount,
-                sentPacketCount, conflictDuringProbingCount, conflictAfterProbingCount)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceUnregistration(true /* isLegacy */, transactionId, durationMs,
+                repliedRequestsCount, sentPacketCount, conflictDuringProbingCount,
+                conflictAfterProbingCount)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -117,8 +118,8 @@ class NetworkNsdReportedMetricsTest {
     fun testReportServiceDiscoveryStarted() {
         val clientId = 99
         val transactionId = 100
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceDiscoveryStarted(transactionId)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceDiscoveryStarted(true /* isLegacy */, transactionId)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -136,8 +137,8 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(false /* isLegacy */, clientId, deps)
-        metrics.reportServiceDiscoveryFailed(transactionId, durationMs)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceDiscoveryFailed(false /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -160,9 +161,9 @@ class NetworkNsdReportedMetricsTest {
         val lostCallbackCount = 49
         val servicesCount = 75
         val sentQueryCount = 150
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceDiscoveryStop(transactionId, durationMs, foundCallbackCount,
-                lostCallbackCount, servicesCount, sentQueryCount)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceDiscoveryStop(true /* isLegacy */, transactionId, durationMs,
+                foundCallbackCount, lostCallbackCount, servicesCount, sentQueryCount)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -187,9 +188,9 @@ class NetworkNsdReportedMetricsTest {
         val transactionId = 100
         val durationMs = 10L
         val sentQueryCount = 0
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceResolved(transactionId, durationMs, true /* isServiceFromCache */,
-                sentQueryCount)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceResolved(true /* isLegacy */, transactionId, durationMs,
+                true /* isServiceFromCache */, sentQueryCount)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -210,8 +211,8 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(false /* isLegacy */, clientId, deps)
-        metrics.reportServiceResolutionFailed(transactionId, durationMs)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceResolutionFailed(false /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -230,8 +231,8 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
-        metrics.reportServiceResolutionStop(transactionId, durationMs)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        metrics.reportServiceResolutionStop(true /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -249,7 +250,7 @@ class NetworkNsdReportedMetricsTest {
     fun testReportServiceInfoCallbackRegistered() {
         val clientId = 99
         val transactionId = 100
-        val metrics = NetworkNsdReportedMetrics(false /* isLegacy */, clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
         metrics.reportServiceInfoCallbackRegistered(transactionId)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -267,13 +268,13 @@ class NetworkNsdReportedMetricsTest {
     fun testReportServiceInfoCallbackRegistrationFailed() {
         val clientId = 99
         val transactionId = 100
-        val metrics = NetworkNsdReportedMetrics(true /* isLegacy */, clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
         metrics.reportServiceInfoCallbackRegistrationFailed(transactionId)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
         eventCaptor.value.let {
-            assertTrue(it.isLegacy)
+            assertFalse(it.isLegacy)
             assertEquals(clientId, it.clientId)
             assertEquals(transactionId, it.transactionId)
             assertEquals(NsdEventType.NET_SERVICE_INFO_CALLBACK, it.type)
@@ -290,7 +291,7 @@ class NetworkNsdReportedMetricsTest {
         val updateCallbackCount = 100
         val lostCallbackCount = 10
         val sentQueryCount = 150
-        val metrics = NetworkNsdReportedMetrics(false /* isLegacy */, clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps)
         metrics.reportServiceInfoCallbackUnregistered(transactionId, durationMs,
                 updateCallbackCount, lostCallbackCount, false /* isServiceFromCache */,
                 sentQueryCount)
