@@ -124,6 +124,7 @@ java_sdk_library {
     defaults: [
         "framework-connectivity-t-defaults",
         "enable-framework-connectivity-t-targets",
+        "FlaggedApiDefaults",
     ],
     api_srcs: framework_remoteauth_api_srcs,
     // Do not add static_libs to this library: put them in framework-connectivity instead.
