@@ -46,7 +46,6 @@
 
 #include "TrafficController.h"
 #include "bpf/BpfMap.h"
-#include "netdutils/DumpWriter.h"
 
 namespace android {
 namespace net {
@@ -55,10 +54,8 @@ using base::StringPrintf;
 using base::unique_fd;
 using bpf::BpfMap;
 using bpf::synchronizeKernelRCU;
-using netdutils::DumpWriter;
 using netdutils::NetlinkListener;
 using netdutils::NetlinkListenerInterface;
-using netdutils::ScopedIndent;
 using netdutils::Slice;
 using netdutils::sSyscalls;
 using netdutils::Status;
