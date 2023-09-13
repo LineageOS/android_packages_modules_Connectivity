@@ -20,7 +20,6 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 import android.util.ArrayMap;
-import android.util.ArraySet;
 import android.util.Pair;
 
 import com.android.server.connectivity.mdns.util.MdnsUtils;
@@ -29,6 +28,7 @@ import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /** A class that decodes mDNS responses from UDP packets. */
 public class MdnsResponseDecoder {
@@ -125,7 +125,7 @@ public class MdnsResponseDecoder {
      *                     2) A copy of the original responses with some of them have records
      *                     update or only contains receive time updated.
      */
-    public Pair<ArraySet<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
+    public Pair<Set<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
             @NonNull MdnsPacket mdnsPacket,
             @NonNull Collection<MdnsResponse> existingResponses, int interfaceIndex,
             @Nullable Network network) {
@@ -136,7 +136,7 @@ public class MdnsResponseDecoder {
         records.addAll(mdnsPacket.authorityRecords);
         records.addAll(mdnsPacket.additionalRecords);
 
-        final ArraySet<MdnsResponse> modified = new ArraySet<>();
+        final Set<MdnsResponse> modified = MdnsUtils.newSet();
         final ArrayList<MdnsResponse> responses = new ArrayList<>(existingResponses.size());
         final ArrayMap<MdnsResponse, MdnsResponse> augmentedToOriginal = new ArrayMap<>();
         for (MdnsResponse existing : existingResponses) {
