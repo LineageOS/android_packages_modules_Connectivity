@@ -27,12 +27,9 @@ import static android.system.OsConstants.IPPROTO_IP;
 import static android.system.OsConstants.IPPROTO_IPV6;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
-
 import static com.android.net.module.util.DnsPacket.ANSECTION;
-import static com.android.net.module.util.DnsPacket.ARSECTION;
 import static com.android.net.module.util.DnsPacket.DnsHeader;
 import static com.android.net.module.util.DnsPacket.DnsRecord;
-import static com.android.net.module.util.DnsPacket.NSSECTION;
 import static com.android.net.module.util.DnsPacket.QDSECTION;
 import static com.android.net.module.util.HexDump.dumpHexString;
 import static com.android.net.module.util.IpUtils.icmpChecksum;
@@ -56,7 +53,6 @@ import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ALL_NO
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_OVERRIDE;
 import static com.android.net.module.util.NetworkStackConstants.NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED;
 import static com.android.net.module.util.NetworkStackConstants.TCPHDR_SYN;
-
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
