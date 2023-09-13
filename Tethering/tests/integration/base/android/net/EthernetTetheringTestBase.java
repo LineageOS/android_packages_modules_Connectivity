@@ -31,14 +31,12 @@ import static android.net.TetheringTester.isAddressIpv4;
 import static android.net.TetheringTester.isExpectedIcmpPacket;
 import static android.net.TetheringTester.isExpectedTcpPacket;
 import static android.net.TetheringTester.isExpectedUdpPacket;
-
 import static com.android.net.module.util.HexDump.dumpHexString;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
 import static com.android.net.module.util.NetworkStackConstants.TCPHDR_ACK;
 import static com.android.net.module.util.NetworkStackConstants.TCPHDR_SYN;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -163,6 +161,10 @@ public abstract class EthernetTetheringTestBase {
     private TestNetworkInterface mDownstreamIface;
     private TapPacketReader mDownstreamReader;
     private MyTetheringEventCallback mTetheringEventCallback;
+
+    public Context getContext() {
+        return mContext;
+    }
 
     @BeforeClass
     public static void setUpOnce() throws Exception {

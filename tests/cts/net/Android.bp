@@ -56,6 +56,7 @@ java_defaults {
         "modules-utils-build",
         "net-utils-framework-common",
         "truth-prebuilt",
+        "TetheringIntegrationTestsBaseLib",
     ],
 
     // uncomment when b/13249961 is fixed
