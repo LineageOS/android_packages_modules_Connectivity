@@ -19,6 +19,8 @@ package com.android.server.connectivity.mdns;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningOnHandlerThread;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -41,6 +43,7 @@ import java.util.Collections;
  *
  * TODO: implement sending after a delay, combining queued replies and duplicate answer suppression
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsReplySender {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final int MSG_SEND = 1;

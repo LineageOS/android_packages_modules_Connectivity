@@ -91,6 +91,10 @@ java_library {
 java_library {
     name: "service-connectivity-mdns-standalone-build-test",
     sdk_version: "core_platform",
+    min_sdk_version: "21",
+    lint: {
+        error_checks: ["NewApi"],
+    },
     srcs: [
         "src/com/android/server/connectivity/mdns/**/*.java",
         ":framework-connectivity-t-mdns-standalone-build-sources",
