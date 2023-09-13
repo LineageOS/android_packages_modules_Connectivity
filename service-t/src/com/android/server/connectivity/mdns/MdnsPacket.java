@@ -18,7 +18,6 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.util.Log;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -206,9 +205,6 @@ public class MdnsPacket {
 
             default: {
                 try {
-                    if (MdnsAdvertiser.DBG) {
-                        Log.i(TAG, "Skipping parsing of record of unhandled type " + type);
-                    }
                     skipMdnsRecord(reader, isQuestion);
                     return null;
                 } catch (IOException e) {

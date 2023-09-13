@@ -20,8 +20,10 @@ import static com.android.server.connectivity.mdns.MdnsSocket.MULTICAST_IPV4_ADD
 import static com.android.server.connectivity.mdns.MdnsSocket.MULTICAST_IPV6_ADDRESS;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
 import android.net.LinkAddress;
 import android.net.util.SocketUtils;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
@@ -49,6 +51,7 @@ import java.util.List;
  * @see MulticastSocket for javadoc of each public method.
  * @see MulticastSocket for javadoc of each public method.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsInterfaceSocket {
     private static final String TAG = MdnsInterfaceSocket.class.getSimpleName();
     @NonNull private final MulticastSocket mMulticastSocket;
