@@ -176,7 +176,7 @@ public class NsdService extends INsdManager.Stub {
             "mdns_advertiser_allowlist_";
     private static final String MDNS_ALLOWLIST_FLAG_SUFFIX = "_version";
 
-
+    private static final String FORCE_ENABLE_FLAG_FOR_TEST_PREFIX = "test_";
 
     @VisibleForTesting
     static final String MDNS_CONFIG_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF =
@@ -1739,6 +1739,10 @@ public class NsdService extends INsdManager.Stub {
                         mContext, MdnsFeatureFlags.NSD_LIMIT_LABEL_COUNT))
                 .setIsKnownAnswerSuppressionEnabled(mDeps.isFeatureEnabled(
                         mContext, MdnsFeatureFlags.NSD_KNOWN_ANSWER_SUPPRESSION))
+                .setIsUnicastReplyEnabled(mDeps.isFeatureEnabled(
+                        mContext, MdnsFeatureFlags.NSD_UNICAST_REPLY_ENABLED))
+                .setOverrideProvider(flag -> mDeps.isFeatureEnabled(
+                        mContext, FORCE_ENABLE_FLAG_FOR_TEST_PREFIX + flag))
                 .build();
         mMdnsSocketClient =
                 new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider,
