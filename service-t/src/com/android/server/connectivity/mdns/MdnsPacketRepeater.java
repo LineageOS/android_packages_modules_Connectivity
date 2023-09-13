@@ -21,6 +21,8 @@ import static com.android.server.connectivity.mdns.MdnsRecordRepository.IPV6_ADD
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -34,6 +36,7 @@ import java.net.InetSocketAddress;
  * A class used to send several packets at given time intervals.
  * @param <T> The type of the request providing packet repeating parameters.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final InetSocketAddress[] ALL_ADDRS = new InetSocketAddress[] {

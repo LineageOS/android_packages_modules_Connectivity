@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns.util;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
+import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.ArraySet;
@@ -34,6 +35,8 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Mdns utility functions.
@@ -55,6 +58,17 @@ public class MdnsUtils {
             outChars[i] = toDnsLowerCase(string.charAt(i));
         }
         return new String(outChars);
+    }
+
+    /**
+     * Create a ArraySet or HashSet based on the sdk version.
+     */
+    public static <Type> Set<Type> newSet() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return new ArraySet<>();
+        } else {
+            return new HashSet<>();
+        }
     }
 
     /**
@@ -142,7 +156,7 @@ public class MdnsUtils {
 
     /*** Check whether the target network matches any of the current networks */
     public static boolean isAnyNetworkMatched(@Nullable Network targetNetwork,
-            ArraySet<Network> currentNetworks) {
+            Set<Network> currentNetworks) {
         if (targetNetwork == null) {
             return !currentNetworks.isEmpty();
         }
