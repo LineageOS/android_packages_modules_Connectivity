@@ -42,4 +42,10 @@ public class FeatureVersions {
     // M-2023-Sept on July 3rd, 2023.
     public static final long FEATURE_CLAT_ADDRESS_TRANSLATE =
             NETWORK_STACK_MODULE_ID + 34_09_00_000L;
+
+    // IS_UID_NETWORKING_BLOCKED is a feature in ConnectivityManager,
+    // which provides an API to access BPF maps to check whether the networking is blocked
+    // by BPF for the given uid and conditions, introduced in version M-2024-Feb on Nov 6, 2023.
+    public static final long FEATURE_IS_UID_NETWORKING_BLOCKED =
+            CONNECTIVITY_MODULE_ID + 34_14_00_000L;
 }
