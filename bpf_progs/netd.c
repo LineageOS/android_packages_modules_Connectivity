@@ -319,6 +319,7 @@ static __always_inline inline void do_packet_tracing(
     pkt->dport = dport;
 
     pkt->egress = egress;
+    pkt->wakeup = !egress && (skb->mark & 0x80000000);  // Fwmark.ingress_cpu_wakeup
     pkt->ipProto = proto;
     pkt->tcpFlags = flags;
     pkt->ipVersion = ipVersion;
