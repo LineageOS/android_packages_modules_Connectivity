@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns;
 import static com.android.server.connectivity.mdns.MdnsServiceTypeClient.INVALID_TRANSACTION_ID;
 
 import android.annotation.NonNull;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.Pair;
 
@@ -220,7 +221,9 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             throws IOException {
         DatagramPacket packet = packetWriter.getPacket(address);
         if (expectUnicastResponse) {
-            if (requestSender instanceof MdnsMultinetworkSocketClient) {
+            // MdnsMultinetworkSocketClient is only available on T+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    && requestSender instanceof MdnsMultinetworkSocketClient) {
                 ((MdnsMultinetworkSocketClient) requestSender).sendPacketRequestingUnicastResponse(
                         packet, socketKey, onlyUseIpv6OnIpv6OnlyNetworks);
             } else {
@@ -228,7 +231,8 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
                         packet, onlyUseIpv6OnIpv6OnlyNetworks);
             }
         } else {
-            if (requestSender instanceof MdnsMultinetworkSocketClient) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    && requestSender instanceof MdnsMultinetworkSocketClient) {
                 ((MdnsMultinetworkSocketClient) requestSender)
                         .sendPacketRequestingMulticastResponse(
                                 packet, socketKey, onlyUseIpv6OnIpv6OnlyNetworks);

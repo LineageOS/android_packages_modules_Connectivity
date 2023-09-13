@@ -20,8 +20,10 @@ import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningO
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.net.LinkAddress;
 import android.net.Network;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.ArrayMap;
@@ -40,6 +42,7 @@ import java.util.List;
  *
  *  * <p>This class is not thread safe.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     private static final String TAG = MdnsMultinetworkSocketClient.class.getSimpleName();
     private static final boolean DBG = MdnsDiscoveryManager.DBG;

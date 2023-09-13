@@ -18,6 +18,8 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Looper;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -31,6 +33,7 @@ import java.util.List;
  *
  * This allows maintaining other hosts' caches up-to-date. See RFC6762 8.3.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.BaseAnnouncementInfo> {
     private static final long ANNOUNCEMENT_INITIAL_DELAY_MS = 1000L;
     @VisibleForTesting

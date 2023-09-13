@@ -21,12 +21,14 @@ import static com.android.server.connectivity.mdns.MdnsRecord.MAX_LABEL_LENGTH;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.net.LinkAddress;
 import android.net.Network;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.net.nsd.OffloadEngine;
 import android.net.nsd.OffloadServiceInfo;
+import android.os.Build;
 import android.os.Looper;
 import android.util.ArrayMap;
 import android.util.Log;
@@ -50,6 +52,7 @@ import java.util.function.Consumer;
  *
  * All methods except the constructor must be called on the looper thread.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsAdvertiser {
     private static final String TAG = MdnsAdvertiser.class.getSimpleName();
     static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
