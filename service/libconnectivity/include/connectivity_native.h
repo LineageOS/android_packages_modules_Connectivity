@@ -78,7 +78,7 @@ int AConnectivityNative_unblockAllPortsForBind() __INTRODUCED_IN(__ANDROID_API_U
  * @param count Pointer to the size of the ports array; the value will be set to the total number of
  *              blocked ports, which may be larger than the ports array that was filled.
  */
-int AConnectivityNative_getPortsBlockedForBind(in_port_t *ports, size_t *count)
+int AConnectivityNative_getPortsBlockedForBind(in_port_t* _Nonnull ports, size_t* _Nonnull count)
     __INTRODUCED_IN(__ANDROID_API_U__);
 
 __END_DECLS
