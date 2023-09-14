@@ -288,8 +288,12 @@ public class ChreDiscoveryProviderTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testOnNearbyDeviceDiscoveredWithTestDataElements() {
+        // The feature only supports user-debug builds.
+        if (!Build.isDebuggable()) {
+            return;
+        }
         // Enables the setting of test app support
         boolean isSupportedTestApp = getDeviceConfigBoolean(
                 NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
