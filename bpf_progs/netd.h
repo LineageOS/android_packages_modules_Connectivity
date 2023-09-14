@@ -81,7 +81,8 @@ typedef struct {
   __be16 sport;
   __be16 dport;
 
-  bool egress;
+  bool egress:1,
+       wakeup:1;
   uint8_t ipProto;
   uint8_t tcpFlags;
   uint8_t ipVersion; // 4=IPv4, 6=IPv6, 0=unknown
