@@ -2899,12 +2899,10 @@ public class TetheringTest {
         inOrder.verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NONE);
         sendUsbBroadcast(true, true, -1 /* function */);
         mLooper.dispatchAll();
+        inOrder.verify(mNetd).tetherInterfaceRemove(TEST_RNDIS_IFNAME);
 
         // verify restart usb tethering
         inOrder.verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
-        // Catching the issue here where setting USB tethering to true while the IP server is
-        // still disabling.
-        inOrder.verify(mNetd).tetherInterfaceRemove(TEST_RNDIS_IFNAME);
 
         sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
         mLooper.dispatchAll();
