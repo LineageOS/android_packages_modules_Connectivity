@@ -96,6 +96,7 @@ java_library {
     srcs: [
     "framework/**/DnsPacket.java",
     "framework/**/DnsPacketUtils.java",
+    "framework/**/DnsSvcbPacket.java",
     "framework/**/DnsSvcbRecord.java",
     "framework/**/HexDump.java",
     "framework/**/NetworkStackConstants.java",
