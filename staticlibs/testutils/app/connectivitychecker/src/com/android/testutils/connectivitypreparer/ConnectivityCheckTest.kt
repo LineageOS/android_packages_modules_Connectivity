@@ -18,17 +18,10 @@ package com.android.testutils.connectivitypreparer
 
 import android.content.pm.PackageManager.FEATURE_TELEPHONY
 import android.content.pm.PackageManager.FEATURE_WIFI
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
-import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
-import android.net.NetworkRequest
 import android.telephony.TelephonyManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.testutils.ConnectUtil
-import com.android.testutils.RecorderCallback
-import com.android.testutils.TestableNetworkCallback
-import com.android.testutils.tryTest
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.Test
@@ -36,8 +29,9 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ConnectivityCheckTest {
-    val context by lazy { InstrumentationRegistry.getInstrumentation().context }
-    val pm by lazy { context.packageManager }
+    private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
+    private val pm by lazy { context.packageManager }
+    private val connectUtil by lazy { ConnectUtil(context) }
 
     @Test
     fun testCheckConnectivity() {
@@ -47,7 +41,7 @@ class ConnectivityCheckTest {
 
     private fun checkWifiSetup() {
         if (!pm.hasSystemFeature(FEATURE_WIFI)) return
-        ConnectUtil(context).ensureWifiConnected()
+        connectUtil.ensureWifiValidated()
     }
 
     private fun checkTelephonySetup() {
@@ -69,20 +63,6 @@ class ConnectivityCheckTest {
         assertTrue(tm.isDataConnectivityPossible,
             "The device is not setup with a SIM card that supports data connectivity. " +
                     commonError)
-        val cb = TestableNetworkCallback()
-        val cm = context.getSystemService(ConnectivityManager::class.java)
-                ?: fail("Could not get ConnectivityManager")
-        cm.requestNetwork(
-                NetworkRequest.Builder()
-                        .addTransportType(TRANSPORT_CELLULAR)
-                        .addCapability(NET_CAPABILITY_INTERNET).build(), cb)
-        tryTest {
-            cb.poll { it is RecorderCallback.CallbackEntry.Available }
-                    ?: fail("The device does not have mobile data available. Check that it is " +
-                            "setup with a SIM card that has a working data plan, and that the " +
-                            "APN configuration is valid.")
-        } cleanup {
-            cm.unregisterNetworkCallback(cb)
-        }
+        connectUtil.ensureCellularValidated()
     }
 }
