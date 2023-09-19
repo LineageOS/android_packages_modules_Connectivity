@@ -213,6 +213,7 @@ bootclasspath_fragment {
             "android.net.http.apihelpers",
             "android.net.netstats.provider",
             "android.net.nsd",
+            "android.net.thread",
             "android.net.wear",
         ],
     },
