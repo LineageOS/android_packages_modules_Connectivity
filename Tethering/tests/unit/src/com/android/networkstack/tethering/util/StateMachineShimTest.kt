@@ -78,6 +78,10 @@ class StateMachineShimTest {
             shimUsingSyncSM.sendMessageDelayedToAsyncSM(what, 1000 /* delayMillis */)
         }
 
+        assertFailsWith(IllegalStateException::class) {
+            shimUsingSyncSM.sendMessageAtFrontOfQueueToAsyncSM(what, arg1)
+        }
+
         shimUsingSyncSM.sendSelfMessageToSyncSM(what, obj)
         inOrder.verify(mSyncSM).sendSelfMessage(what, 0, 0, obj)
 
@@ -118,6 +122,9 @@ class StateMachineShimTest {
 
         shimUsingAsyncSM.sendMessageDelayedToAsyncSM(what, 1000 /* delayMillis */)
         inOrder.verify(mAsyncSM).sendMessageDelayed(what, 1000)
+
+        shimUsingAsyncSM.sendMessageAtFrontOfQueueToAsyncSM(what, arg1)
+        inOrder.verify(mAsyncSM).sendMessageAtFrontOfQueueToAsyncSM(what, arg1)
 
         assertFailsWith(IllegalStateException::class) {
             shimUsingAsyncSM.sendSelfMessageToSyncSM(what, obj)
