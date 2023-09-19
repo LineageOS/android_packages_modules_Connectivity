@@ -140,8 +140,8 @@ public class SyncStateMachine {
         ensureCorrectThread();
         ensureExistingState(initialState);
 
-        mCurrentState = initialState;
         mDestState = initialState;
+        performTransitions();
     }
 
     /**
@@ -149,6 +149,8 @@ public class SyncStateMachine {
      */
     public final void processMessage(int what, int arg1, int arg2, @Nullable Object obj) {
         ensureCorrectThread();
+
+        performTransitions();
     }
 
     /**
@@ -171,6 +173,65 @@ public class SyncStateMachine {
         } else {
             throw new IllegalStateException("Destination already specified");
         }
+    }
+
+    private void performTransitions() {
+        // 1. Determine the common ancestor state of current/destination states
+        // 2. Invoke state exit list from current state to common ancestor state.
+        // 3. Invoke state enter list from common ancestor state to destState by going
+        // through mEnterStateStack.
+        if (mDestState == mCurrentState) return;
+
+        final StateInfo commonAncestor = getLastActiveAncestor(mStateInfo.get(mDestState));
+
+        executeExitMethods(commonAncestor, mStateInfo.get(mCurrentState));
+        executeEnterMethods(commonAncestor, mStateInfo.get(mDestState));
+        mCurrentState = mDestState;
+    }
+
+    // Null is the root of all states.
+    private StateInfo getLastActiveAncestor(@Nullable final StateInfo start) {
+        if (null == start || start.mActive) return start;
+
+        return getLastActiveAncestor(mStateInfo.get(start.parent));
+    }
+
+    // Call the exit method from current state to common ancestor state.
+    // Both the commonAncestor and exitingState StateInfo can be null because null is the ancestor
+    // of all states.
+    // For example: When transitioning from state1 to state2, the
+    // executeExitMethods(commonAncestor, exitingState) function will be called twice, once with
+    // null and state1 as the argument, and once with null and null as the argument.
+    //              root
+    //              |   \
+    // current <- state1 state2 -> destination
+    private void executeExitMethods(@Nullable StateInfo commonAncestor,
+            @Nullable StateInfo exitingState) {
+        if (commonAncestor == exitingState) return;
+
+        if (mDbg) Log.d(mName, exitingState.state + " exit()");
+        exitingState.state.exit();
+        exitingState.mActive = false;
+        executeExitMethods(commonAncestor, mStateInfo.get(exitingState.parent));
+    }
+
+    // Call the enter method from common ancestor state to destination state.
+    // Both the commonAncestor and enteringState StateInfo can be null because null is the ancestor
+    // of all states.
+    // For example: When transitioning from state1 to state2, the
+    // executeEnterMethods(commonAncestor, enteringState) function will be called twice, once with
+    // null and state2 as the argument, and once with null and null as the argument.
+    //              root
+    //              |   \
+    // current <- state1 state2 -> destination
+    private void executeEnterMethods(@Nullable StateInfo commonAncestor,
+            @Nullable StateInfo enteringState) {
+        if (enteringState == commonAncestor) return;
+
+        executeEnterMethods(commonAncestor, mStateInfo.get(enteringState.parent));
+        if (mDbg) Log.d(mName, enteringState.state + " enter()");
+        enteringState.state.enter();
+        enteringState.mActive = true;
     }
 
     private void ensureCorrectThread() {
