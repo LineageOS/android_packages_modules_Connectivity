@@ -2908,7 +2908,6 @@ public class ConnectivityManagerTest {
 
     @AppModeFull(reason = "WRITE_DEVICE_CONFIG permission can't be granted to instant apps")
     @Test
-    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testRejectPartialConnectivity_TearDownNetwork() throws Exception {
         assumeTrue(TestUtils.shouldTestSApis());
         assumeTrue("testAcceptPartialConnectivity_validatedNetwork cannot execute"
