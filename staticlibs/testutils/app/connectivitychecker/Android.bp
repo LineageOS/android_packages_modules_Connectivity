@@ -20,9 +20,9 @@ android_test_helper_app {
     name: "ConnectivityTestPreparer",
     srcs: ["src/**/*.kt"],
     sdk_version: "system_current",
-    // Allow running the test on any device with SDK Q+, even when built from a branch that uses
+    // Allow running the test on any device with SDK R+, even when built from a branch that uses
     // an unstable SDK, by targeting a stable SDK regardless of the build SDK.
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     target_sdk_version: "30",
     static_libs: [
         "androidx.test.rules",

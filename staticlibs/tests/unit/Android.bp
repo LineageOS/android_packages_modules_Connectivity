@@ -9,7 +9,7 @@ package {
 android_library {
     name: "NetworkStaticLibTestsLib",
     srcs: ["src/**/*.java","src/**/*.kt"],
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     defaults: ["framework-connectivity-test-defaults"],
     static_libs: [
         "androidx.test.rules",
