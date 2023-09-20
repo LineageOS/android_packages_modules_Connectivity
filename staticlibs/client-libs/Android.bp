@@ -6,7 +6,7 @@ java_library {
     name: "netd-client",
     srcs: ["netd/**/*"],
     sdk_version: "system_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     apex_available: [
         "//apex_available:platform",
         "com.android.tethering",
