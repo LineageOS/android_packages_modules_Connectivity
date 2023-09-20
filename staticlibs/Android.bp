@@ -48,7 +48,7 @@ java_library {
       // "src_devicecommon/**/*.kt",
   ],
   sdk_version: "module_current",
-  min_sdk_version: "29",
+  min_sdk_version: "30",
   target_sdk_version: "30",
   apex_available: [
       "//apex_available:anyapex",
@@ -128,7 +128,7 @@ java_library {
         "framework/com/android/net/module/util/HexDump.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
         "//packages/modules/NetworkStack:__subpackages__",
@@ -153,7 +153,7 @@ java_library {
         "device/com/android/net/module/util/structs/*.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
         "//packages/modules/NetworkStack:__subpackages__",
@@ -178,7 +178,7 @@ java_library {
         "device/com/android/net/module/util/netlink/*.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
         "//packages/modules/NetworkStack:__subpackages__",
@@ -204,7 +204,7 @@ java_library {
         "device/com/android/net/module/util/ip/*.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
         "//packages/modules/NetworkStack:__subpackages__",
@@ -232,7 +232,7 @@ java_library {
         ":net-utils-framework-common-srcs",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     libs: [
         "androidx.annotation_annotation",
         "framework-annotations-lib",
@@ -310,7 +310,7 @@ java_library {
         "device/com/android/net/module/util/async/*.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
     ],
@@ -332,7 +332,7 @@ java_library {
         "device/com/android/net/module/util/wear/*.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
     ],
