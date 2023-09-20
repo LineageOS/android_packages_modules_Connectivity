@@ -233,46 +233,51 @@ class NsdServiceInfoCallbackRecord : NsdManager.ServiceInfoCallback,
     }
 }
 
+private fun getMdnsPayload(packet: ByteArray) = packet.copyOfRange(
+    ETHER_HEADER_LEN + IPV6_HEADER_LEN + UDP_HEADER_LEN, packet.size)
+
 fun TapPacketReader.pollForMdnsPacket(
     timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS,
     predicate: (TestDnsPacket) -> Boolean
-): ByteArray? {
+): TestDnsPacket? {
     val mdnsProbeFilter = IPv6UdpFilter(srcPort = MDNS_PORT, dstPort = MDNS_PORT).and {
-        val mdnsPayload = it.copyOfRange(
-            ETHER_HEADER_LEN + IPV6_HEADER_LEN + UDP_HEADER_LEN, it.size
-        )
+        val mdnsPayload = getMdnsPayload(it)
         try {
             predicate(TestDnsPacket(mdnsPayload))
         } catch (e: DnsPacket.ParseException) {
             false
         }
     }
-    return poll(timeoutMs, mdnsProbeFilter)
+    return poll(timeoutMs, mdnsProbeFilter)?.let { TestDnsPacket(getMdnsPayload(it)) }
 }
 
 fun TapPacketReader.pollForProbe(
     serviceName: String,
     serviceType: String,
     timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS
-): ByteArray? = pollForMdnsPacket(timeoutMs) { it.isProbeFor("$serviceName.$serviceType.local") }
+): TestDnsPacket? = pollForMdnsPacket(timeoutMs) {
+    it.isProbeFor("$serviceName.$serviceType.local")
+}
 
 fun TapPacketReader.pollForAdvertisement(
     serviceName: String,
     serviceType: String,
     timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS
-): ByteArray? = pollForMdnsPacket(timeoutMs) { it.isReplyFor("$serviceName.$serviceType.local") }
+): TestDnsPacket? = pollForMdnsPacket(timeoutMs) {
+    it.isReplyFor("$serviceName.$serviceType.local")
+}
 
 fun TapPacketReader.pollForQuery(
     recordName: String,
-    recordType: Int,
+    vararg requiredTypes: Int,
     timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS
-): ByteArray? = pollForMdnsPacket(timeoutMs) { it.isQueryFor(recordName, recordType) }
+): TestDnsPacket? = pollForMdnsPacket(timeoutMs) { it.isQueryFor(recordName, *requiredTypes) }
 
 fun TapPacketReader.pollForReply(
     serviceName: String,
     serviceType: String,
     timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS
-): ByteArray? = pollForMdnsPacket(timeoutMs) {
+): TestDnsPacket? = pollForMdnsPacket(timeoutMs) {
     it.isReplyFor("$serviceName.$serviceType.local")
 }
 
@@ -289,7 +294,9 @@ class TestDnsPacket(data: ByteArray) : DnsPacket(data) {
         it.dName == name && it.nsType == DnsResolver.TYPE_SRV
     }
 
-    fun isQueryFor(name: String, type: Int): Boolean = mRecords[QDSECTION].any {
-        it.dName == name && it.nsType == type
+    fun isQueryFor(name: String, vararg requiredTypes: Int): Boolean = requiredTypes.all { type ->
+        mRecords[QDSECTION].any {
+            it.dName == name && it.nsType == type
+        }
     }
 }
