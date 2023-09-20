@@ -18,12 +18,14 @@ package com.android.networkstack.tethering.util;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.os.Message;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
 
 import com.android.internal.util.State;
 
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -48,6 +50,14 @@ public class SyncStateMachine {
     // mDestState only be null before state machine starts and must only be touched on mMyThread.
     @Nullable private State mCurrentState;
     @Nullable private State mDestState;
+    private final ArrayDeque<Message> mSelfMsgQueue = new ArrayDeque<Message>();
+
+    // MIN_VALUE means not currently processing any message.
+    private int mCurrentlyProcessing = Integer.MIN_VALUE;
+    // Indicates whether automaton can send self message. Self messages can only be sent by
+    // automaton from State#enter, State#exit, or State#processMessage. Calling from outside
+    // of State is not allowed.
+    private boolean mSelfMsgAllowed = false;
 
     /**
      * A information class about a state and its parent. Used to maintain the state hierarchy.
@@ -141,16 +151,87 @@ public class SyncStateMachine {
         ensureExistingState(initialState);
 
         mDestState = initialState;
+        mSelfMsgAllowed = true;
         performTransitions();
+        mSelfMsgAllowed = false;
+        // If sendSelfMessage was called inside initialState#enter(), mSelfMsgQueue must be
+        // processed.
+        maybeProcessSelfMessageQueue();
     }
 
     /**
-     * Process the message synchronously then perform state transition.
+     * Process the message synchronously then perform state transition. This method is used
+     * externally to the automaton to request that the automaton process the given message.
+     * The message is processed sequentially, so calling this method recursively is not permitted.
+     * In other words, using this method inside State#enter, State#exit, or State#processMessage
+     * is incorrect and will result in an IllegalStateException.
      */
     public final void processMessage(int what, int arg1, int arg2, @Nullable Object obj) {
         ensureCorrectThread();
 
+        if (mCurrentlyProcessing != Integer.MIN_VALUE) {
+            throw new IllegalStateException("Message(" + mCurrentlyProcessing
+                    + ") is still being processed");
+        }
+
+        // mCurrentlyProcessing tracks the external message request and it prevents this method to
+        // be called recursively. Once this message is processed and the transitions have been
+        // performed, the automaton will process the self message queue. The messages in the self
+        // message queue are added from within the automaton during processing external message.
+        // mCurrentlyProcessing is still the original external one and it will not prevent self
+        // messages from being processed.
+        mCurrentlyProcessing = what;
+        final Message msg = Message.obtain(null, what, arg1, arg2, obj);
+        currentStateProcessMessageThenPerformTransitions(msg);
+        msg.recycle();
+        maybeProcessSelfMessageQueue();
+
+        mCurrentlyProcessing = Integer.MIN_VALUE;
+    }
+
+    private void maybeProcessSelfMessageQueue() {
+        while (!mSelfMsgQueue.isEmpty()) {
+            currentStateProcessMessageThenPerformTransitions(mSelfMsgQueue.poll());
+        }
+    }
+
+    private void currentStateProcessMessageThenPerformTransitions(@NonNull final Message msg) {
+        mSelfMsgAllowed = true;
+        StateInfo consideredState = mStateInfo.get(mCurrentState);
+        while (null != consideredState) {
+            // Ideally this should compare with IState.HANDLED, but it is not public field so just
+            // checking whether the return value is true (IState.HANDLED = true).
+            if (consideredState.state.processMessage(msg)) {
+                if (mDbg) {
+                    Log.d(mName, "State " + consideredState.state
+                            + " processed message " + msg.what);
+                }
+                break;
+            }
+            consideredState = mStateInfo.get(consideredState.parent);
+        }
+        if (null == consideredState) {
+            Log.wtf(mName, "Message " + msg.what + " was not handled");
+        }
+
         performTransitions();
+        mSelfMsgAllowed = false;
+    }
+
+    /**
+     * Send self message during state transition.
+     *
+     * Must only be used inside State processMessage, enter or exit. The typical use case is
+     * something wrong happens during state transition, sending an error message which would be
+     * handled after finishing current state transitions.
+     */
+    public final void sendSelfMessage(int what, int arg1, int arg2, Object obj) {
+        if (!mSelfMsgAllowed) {
+            throw new IllegalStateException("sendSelfMessage can only be called inside "
+                    + "State#enter, State#exit or State#processMessage");
+        }
+
+        mSelfMsgQueue.add(Message.obtain(null, what, arg1, arg2, obj));
     }
 
     /**
