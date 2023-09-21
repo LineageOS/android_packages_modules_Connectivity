@@ -37,7 +37,8 @@ import java.util.concurrent.Executor;
  * <p>A session can be started and stopped multiple times. After starting, updates ({@link
  * RangingReport}, {@link RangingError}, etc) will be reported via the provided {@link
  * RangingCallback}. BaseKey and SyncData are used for auto derivation of supported ranging
- * parameters, which will be implementation specific.
+ * parameters, which will be implementation specific. All session creation shall only be conducted
+ * via {@link RangingManager#createSession}.
  *
  * <p>Ranging method specific implementation shall be implemented in the extended class.
  */
