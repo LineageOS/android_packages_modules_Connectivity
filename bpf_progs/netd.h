@@ -235,3 +235,17 @@ STRUCT_SIZE(IngressDiscardValue, 2 * 4);  // 8
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 1
 
 #undef STRUCT_SIZE
+
+// DROP_IF_SET is set of rules that DROP if rule is globally enabled, and per-uid bit is set
+#define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
+// DROP_IF_UNSET is set of rules that should DROP if globally enabled, and per-uid bit is NOT set
+#define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH | LOW_POWER_STANDBY_MATCH)
+
+// Warning: funky bit-wise arithmetic: in parallel, for all DROP_IF_SET/UNSET rules
+// check whether the rules are globally enabled, and if so whether the rules are
+// set/unset for the specific uid.  DROP if that is the case for ANY of the rules.
+// We achieve this by masking out only the bits/rules we're interested in checking,
+// and negating (via bit-wise xor) the bits/rules that should drop if unset.
+static inline bool isBlockedByUidRules(BpfConfig enabledRules, uint32_t uidRules) {
+    return enabledRules & (DROP_IF_SET | DROP_IF_UNSET) & (uidRules ^ DROP_IF_UNSET);
+}
