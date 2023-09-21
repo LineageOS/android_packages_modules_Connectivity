@@ -401,11 +401,6 @@ static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
     return true;  // disallowed interface
 }
 
-// DROP_IF_SET is set of rules that DROP if rule is globally enabled, and per-uid bit is set
-#define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
-// DROP_IF_UNSET is set of rules that should DROP if globally enabled, and per-uid bit is NOT set
-#define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH | LOW_POWER_STANDBY_MATCH)
-
 static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid,
                                                   bool egress, const unsigned kver) {
     if (is_system_uid(uid)) return PASS;
@@ -418,12 +413,7 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
     uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
     uint32_t allowed_iif = uidEntry ? uidEntry->iif : 0;
 
-    // Warning: funky bit-wise arithmetic: in parallel, for all DROP_IF_SET/UNSET rules
-    // check whether the rules are globally enabled, and if so whether the rules are
-    // set/unset for the specific uid.  DROP if that is the case for ANY of the rules.
-    // We achieve this by masking out only the bits/rules we're interested in checking,
-    // and negating (via bit-wise xor) the bits/rules that should drop if unset.
-    if (enabledRules & (DROP_IF_SET | DROP_IF_UNSET) & (uidRules ^ DROP_IF_UNSET)) return DROP;
+    if (isBlockedByUidRules(enabledRules, uidRules)) return DROP;
 
     if (!egress && skb->ifindex != 1) {
         if (ingress_should_discard(skb, kver)) return DROP;
