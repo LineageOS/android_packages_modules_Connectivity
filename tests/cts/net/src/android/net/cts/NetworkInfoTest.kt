@@ -16,12 +16,12 @@
 
 package android.net.cts
 
-import android.os.Build
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.net.NetworkInfo.DetailedState
 import android.net.NetworkInfo.State
+import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -29,16 +29,17 @@ import androidx.test.runner.AndroidJUnit4
 import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
+import com.android.testutils.NonNullTestUtils
+import kotlin.reflect.jvm.isAccessible
+import kotlin.test.assertFails
+import kotlin.test.assertFailsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
-import org.junit.runner.RunWith
 import org.junit.Test
-import kotlin.reflect.jvm.isAccessible
-import kotlin.test.assertFails
-import kotlin.test.assertFailsWith
+import org.junit.runner.RunWith
 
 const val TYPE_MOBILE = ConnectivityManager.TYPE_MOBILE
 const val TYPE_WIFI = ConnectivityManager.TYPE_WIFI
@@ -106,10 +107,12 @@ class NetworkInfoTest {
         }
 
         if (SdkLevel.isAtLeastT()) {
-            assertFailsWith<NullPointerException> { NetworkInfo(null) }
+            assertFailsWith<NullPointerException> {
+                NetworkInfo(NonNullTestUtils.nullUnsafe<NetworkInfo>(null))
+            }
         } else {
             // Doesn't immediately crash on S-
-            NetworkInfo(null)
+            NetworkInfo(NonNullTestUtils.nullUnsafe<NetworkInfo>(null))
         }
     }
 
@@ -134,10 +137,11 @@ class NetworkInfoTest {
         val incorrectDetailedState = constructor.newInstance("any", 200) as DetailedState
         if (SdkLevel.isAtLeastT()) {
             assertFailsWith<NullPointerException> {
-                NetworkInfo(null)
+                NetworkInfo(NonNullTestUtils.nullUnsafe<NetworkInfo>(null))
             }
             assertFailsWith<NullPointerException> {
-                networkInfo.setDetailedState(null, "reason", "extraInfo")
+                networkInfo.setDetailedState(NonNullTestUtils.nullUnsafe<DetailedState>(null),
+                        "reason", "extraInfo")
             }
             // This actually throws ArrayOutOfBoundsException because of the implementation of
             // EnumMap, but that's an implementation detail so accept any crash.
@@ -146,8 +150,9 @@ class NetworkInfoTest {
             }
         } else {
             // Doesn't immediately crash on S-
-            NetworkInfo(null)
-            networkInfo.setDetailedState(null, "reason", "extraInfo")
+            NetworkInfo(NonNullTestUtils.nullUnsafe<NetworkInfo>(null))
+            networkInfo.setDetailedState(NonNullTestUtils.nullUnsafe<DetailedState>(null),
+                    "reason", "extraInfo")
         }
     }
 }

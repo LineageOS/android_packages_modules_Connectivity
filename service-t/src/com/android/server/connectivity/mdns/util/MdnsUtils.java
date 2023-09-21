@@ -19,18 +19,24 @@ package com.android.server.connectivity.mdns.util;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
+import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.ArraySet;
 
 import com.android.server.connectivity.mdns.MdnsConstants;
+import com.android.server.connectivity.mdns.MdnsPacket;
+import com.android.server.connectivity.mdns.MdnsPacketWriter;
 import com.android.server.connectivity.mdns.MdnsRecord;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Mdns utility functions.
@@ -52,6 +58,17 @@ public class MdnsUtils {
             outChars[i] = toDnsLowerCase(string.charAt(i));
         }
         return new String(outChars);
+    }
+
+    /**
+     * Create a ArraySet or HashSet based on the sdk version.
+     */
+    public static <Type> Set<Type> newSet() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return new ArraySet<>();
+        } else {
+            return new HashSet<>();
+        }
     }
 
     /**
@@ -139,7 +156,7 @@ public class MdnsUtils {
 
     /*** Check whether the target network matches any of the current networks */
     public static boolean isAnyNetworkMatched(@Nullable Network targetNetwork,
-            ArraySet<Network> currentNetworks) {
+            Set<Network> currentNetworks) {
         if (targetNetwork == null) {
             return !currentNetworks.isEmpty();
         }
@@ -162,6 +179,41 @@ public class MdnsUtils {
         // return code here, this method truncates the name on purpose).
         encoder.encode(CharBuffer.wrap(originalName), out, true /* endOfInput */);
         return new String(out.array(), 0, out.position(), utf8);
+    }
+
+    /**
+     * Create a raw DNS packet.
+     */
+    public static byte[] createRawDnsPacket(@NonNull byte[] packetCreationBuffer,
+            @NonNull MdnsPacket packet) throws IOException {
+        // TODO: support packets over size (send in multiple packets with TC bit set)
+        final MdnsPacketWriter writer = new MdnsPacketWriter(packetCreationBuffer);
+
+        writer.writeUInt16(0); // Transaction ID (advertisement: 0)
+        writer.writeUInt16(packet.flags); // Response, authoritative (rfc6762 18.4)
+        writer.writeUInt16(packet.questions.size()); // questions count
+        writer.writeUInt16(packet.answers.size()); // answers count
+        writer.writeUInt16(packet.authorityRecords.size()); // authority entries count
+        writer.writeUInt16(packet.additionalRecords.size()); // additional records count
+
+        for (MdnsRecord record : packet.questions) {
+            // Questions do not have TTL or data
+            record.writeHeaderFields(writer);
+        }
+        for (MdnsRecord record : packet.answers) {
+            record.write(writer, 0L);
+        }
+        for (MdnsRecord record : packet.authorityRecords) {
+            record.write(writer, 0L);
+        }
+        for (MdnsRecord record : packet.additionalRecords) {
+            record.write(writer, 0L);
+        }
+
+        final int len = writer.getWritePosition();
+        final byte[] outBuffer = new byte[len];
+        System.arraycopy(packetCreationBuffer, 0, outBuffer, 0, len);
+        return outBuffer;
     }
 
     /**

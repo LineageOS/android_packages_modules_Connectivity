@@ -76,6 +76,19 @@ static Status checkProgramAccessible(const char* programPath) {
 }
 
 static Status initPrograms(const char* cg2_path) {
+    // This code was mainlined in T, so this should be trivially satisfied.
+    if (!modules::sdklevel::IsAtLeastT()) abort();
+
+    // S requires eBPF support which was only added in 4.9, so this should be satisfied.
+    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) abort();
+
+    // U bumps the kernel requirement up to 4.14
+    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) abort();
+
+    // V bumps the kernel requirement up to 4.19
+    if (modules::sdklevel::IsAtLeastV() && !bpf::isAtLeastKernelVersion(4, 19, 0)) abort();
+
+    // U mandates this mount point (though it should also be the case on T)
     if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) abort();
 
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
@@ -210,8 +223,8 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
     };
     auto configuration = mConfigurationMap.readValue(CURRENT_STATS_MAP_CONFIGURATION_KEY);
     if (!configuration.ok()) {
-        ALOGE("Failed to get current configuration: %s, fd: %d",
-              strerror(configuration.error().code()), mConfigurationMap.getMap().get());
+        ALOGE("Failed to get current configuration: %s",
+              strerror(configuration.error().code()));
         return -configuration.error().code();
     }
     if (configuration.value() != SELECT_MAP_A && configuration.value() != SELECT_MAP_B) {
@@ -224,7 +237,7 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
     // HACK: mStatsMapB becomes RW BpfMap here, but countUidStatsEntries doesn't modify so it works
     base::Result<void> res = currentMap.iterate(countUidStatsEntries);
     if (!res.ok()) {
-        ALOGE("Failed to count the stats entry in map %d: %s", currentMap.getMap().get(),
+        ALOGE("Failed to count the stats entry in map: %s",
               strerror(res.error().code()));
         return -res.error().code();
     }
@@ -243,8 +256,7 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
     // should be fine to concurrently update the map while eBPF program is running.
     res = mCookieTagMap.writeValue(sock_cookie, newKey, BPF_ANY);
     if (!res.ok()) {
-        ALOGE("Failed to tag the socket: %s, fd: %d", strerror(res.error().code()),
-              mCookieTagMap.getMap().get());
+        ALOGE("Failed to tag the socket: %s", strerror(res.error().code()));
         return -res.error().code();
     }
     ALOGD("Socket with cookie %" PRIu64 " tagged successfully with tag %" PRIu32 " uid %u "

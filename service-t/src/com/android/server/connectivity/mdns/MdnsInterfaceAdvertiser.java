@@ -16,10 +16,14 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.net.LinkAddress;
 import android.net.nsd.NsdServiceInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -28,6 +32,7 @@ import com.android.net.module.util.HexDump;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsAnnouncer.BaseAnnouncementInfo;
 import com.android.server.connectivity.mdns.MdnsPacketRepeater.PacketRepeaterCallback;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,6 +41,7 @@ import java.util.List;
 /**
  * A class that handles advertising services on a {@link MdnsInterfaceSocket} tied to an interface.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHandler {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     @VisibleForTesting
@@ -92,8 +98,11 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     /**
      * Callbacks from {@link MdnsProber}.
      */
-    private class ProbingCallback implements
-            PacketRepeaterCallback<MdnsProber.ProbingInfo> {
+    private class ProbingCallback implements PacketRepeaterCallback<MdnsProber.ProbingInfo> {
+        @Override
+        public void onSent(int index, @NonNull MdnsProber.ProbingInfo info, int sentPacketCount) {
+            mRecordRepository.onProbingSent(info.getServiceId(), sentPacketCount);
+        }
         @Override
         public void onFinished(MdnsProber.ProbingInfo info) {
             final MdnsAnnouncer.AnnouncementInfo announcementInfo;
@@ -117,8 +126,8 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      */
     private class AnnouncingCallback implements PacketRepeaterCallback<BaseAnnouncementInfo> {
         @Override
-        public void onSent(int index, @NonNull BaseAnnouncementInfo info) {
-            mRecordRepository.onAdvertisementSent(info.getServiceId());
+        public void onSent(int index, @NonNull BaseAnnouncementInfo info, int sentPacketCount) {
+            mRecordRepository.onAdvertisementSent(info.getServiceId(), sentPacketCount);
         }
 
         @Override
@@ -259,6 +268,22 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     }
 
     /**
+     * Get the replied request count from given service id.
+     */
+    public int getServiceRepliedRequestsCount(int id) {
+        if (!mRecordRepository.hasActiveService(id)) return NO_PACKET;
+        return mRecordRepository.getServiceRepliedRequestsCount(id);
+    }
+
+    /**
+     * Get the total sent packet count from given service id.
+     */
+    public int getSentPacketCount(int id) {
+        if (!mRecordRepository.hasActiveService(id)) return NO_PACKET;
+        return mRecordRepository.getSentPacketCount(id);
+    }
+
+    /**
      * Update interface addresses used to advertise.
      *
      * This causes new address records to be announced.
@@ -351,7 +376,25 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         mReplySender.queueReply(answers);
     }
 
+    /**
+     * Get the socket interface name.
+     */
     public String getSocketInterfaceName() {
         return mSocket.getInterface().getName();
+    }
+
+    /**
+     * Gets the offload MdnsPacket.
+     * @param serviceId The serviceId.
+     * @return the raw offload payload
+     */
+    public byte[] getRawOffloadPayload(int serviceId) {
+        try {
+            return MdnsUtils.createRawDnsPacket(mReplySender.getPacketCreationBuffer(),
+                    mRecordRepository.getOffloadPacket(serviceId));
+        } catch (IOException | IllegalArgumentException e) {
+            mSharedLog.wtf("Cannot create rawOffloadPacket: " + e.getMessage());
+            return new byte[0];
+        }
     }
 }

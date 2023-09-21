@@ -19,6 +19,14 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+framework_remoteauth_srcs = [":framework-remoteauth-java-sources"]
+framework_remoteauth_api_srcs = []
+
+java_defaults {
+    name: "enable-remoteauth-targets",
+    enabled: true,
+}
+
 // Include build rules from Sources.bp
 build = ["Sources.bp"]
 
@@ -42,7 +50,8 @@ java_defaults {
     srcs: [
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
-    ],
+        ":framework-thread-sources",
+    ] + framework_remoteauth_srcs,
     libs: [
         "unsupportedappusage",
         "app-compat-annotations",
@@ -84,6 +93,9 @@ filegroup {
 
 // The filegroup lists files that are necessary for verifying building mdns as a standalone,
 // for use with service-connectivity-mdns-standalone-build-test
+// This filegroup should never be included in anywhere in the module build. It is only used for
+// building service-connectivity-mdns-standalone-build-test target. The files will be renamed by
+// copybara to prevent them from being shadowed by the bootclasspath copies.
 filegroup {
     name: "framework-connectivity-t-mdns-standalone-build-sources",
     srcs: [
@@ -112,7 +124,9 @@ java_sdk_library {
     defaults: [
         "framework-connectivity-t-defaults",
         "enable-framework-connectivity-t-targets",
+        "FlaggedApiDefaults",
     ],
+    api_srcs: framework_remoteauth_api_srcs,
     // Do not add static_libs to this library: put them in framework-connectivity instead.
     // The jarjar rules are only so that references to jarjared utils in
     // framework-connectivity-pre-jarjar match at runtime.
@@ -129,8 +143,10 @@ java_sdk_library {
         "android.net",
         "android.net.nsd",
         "android.nearby",
+        "android.remoteauth",
         "com.android.connectivity",
         "com.android.nearby",
+        "com.android.remoteauth",
     ],
 
     hidden_api: {
@@ -152,6 +168,7 @@ java_sdk_library {
         "//packages/modules/Connectivity/service", // For R8 only
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/nearby:__subpackages__",
+        "//packages/modules/Connectivity/remoteauth:__subpackages__",
         "//frameworks/base",
 
         // Tests using hidden APIs
@@ -162,11 +179,11 @@ java_sdk_library {
         "//frameworks/base/core/tests/benchmarks",
         "//frameworks/base/core/tests/utillib",
         "//frameworks/base/tests/vcn",
-        "//frameworks/libs/net/common/testutils",
-        "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/opt/net/ethernet/tests:__subpackages__",
         "//frameworks/opt/telephony/tests/telephonytests",
         "//packages/modules/CaptivePortalLogin/tests",
+        "//packages/modules/Connectivity/staticlibs/testutils",
+        "//packages/modules/Connectivity/staticlibs/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",

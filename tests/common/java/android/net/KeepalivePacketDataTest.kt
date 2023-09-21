@@ -22,6 +22,7 @@ import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
+import com.android.testutils.NonNullTestUtils
 import java.net.InetAddress
 import java.util.Arrays
 import org.junit.Assert.assertEquals
@@ -55,43 +56,42 @@ class KeepalivePacketDataTest {
         dstAddress: InetAddress? = TEST_DST_ADDRV4,
         dstPort: Int = TEST_DST_PORT,
         data: ByteArray = TESTBYTES
-    ) : KeepalivePacketData(srcAddress, srcPort, dstAddress, dstPort, data)
+    ) : KeepalivePacketData(NonNullTestUtils.nullUnsafe(srcAddress), srcPort,
+            NonNullTestUtils.nullUnsafe(dstAddress), dstPort, data)
 
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testConstructor() {
-        var data: TestKeepalivePacketData
-
         try {
-            data = TestKeepalivePacketData(srcAddress = null)
+            TestKeepalivePacketData(srcAddress = null)
             fail("Null src address should cause exception")
         } catch (e: InvalidPacketException) {
             assertEquals(e.error, ERROR_INVALID_IP_ADDRESS)
         }
 
         try {
-            data = TestKeepalivePacketData(dstAddress = null)
+            TestKeepalivePacketData(dstAddress = null)
             fail("Null dst address should cause exception")
         } catch (e: InvalidPacketException) {
             assertEquals(e.error, ERROR_INVALID_IP_ADDRESS)
         }
 
         try {
-            data = TestKeepalivePacketData(dstAddress = TEST_ADDRV6)
+            TestKeepalivePacketData(dstAddress = TEST_ADDRV6)
             fail("Ip family mismatched should cause exception")
         } catch (e: InvalidPacketException) {
             assertEquals(e.error, ERROR_INVALID_IP_ADDRESS)
         }
 
         try {
-            data = TestKeepalivePacketData(srcPort = INVALID_PORT)
+            TestKeepalivePacketData(srcPort = INVALID_PORT)
             fail("Invalid srcPort should cause exception")
         } catch (e: InvalidPacketException) {
             assertEquals(e.error, ERROR_INVALID_PORT)
         }
 
         try {
-            data = TestKeepalivePacketData(dstPort = INVALID_PORT)
+            TestKeepalivePacketData(dstPort = INVALID_PORT)
             fail("Invalid dstPort should cause exception")
         } catch (e: InvalidPacketException) {
             assertEquals(e.error, ERROR_INVALID_PORT)

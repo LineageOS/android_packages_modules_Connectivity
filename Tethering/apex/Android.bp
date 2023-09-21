@@ -96,6 +96,7 @@ apex {
     },
     binaries: [
         "clatd",
+        "ot-daemon",
     ],
     canned_fs_config: "canned_fs_config",
     bpfs: [
@@ -110,9 +111,11 @@ apex {
     ],
     apps: [
         "ServiceConnectivityResources",
-        "HalfSheetUX",
     ],
-    prebuilts: ["current_sdkinfo"],
+    prebuilts: [
+        "ot-daemon.init.34rc",
+        "current_sdkinfo",
+    ],
     manifest: "manifest.json",
     key: "com.android.tethering.key",
     // Indicates that pre-installed version of this apex can be compressed.
@@ -203,11 +206,14 @@ bootclasspath_fragment {
         // result in a build failure due to inconsistent flags.
         package_prefixes: [
             "android.nearby.aidl",
+            "android.remoteauth.aidl",
+            "android.remoteauth",
             "android.net.apf",
             "android.net.connectivity",
             "android.net.http.apihelpers",
             "android.net.netstats.provider",
             "android.net.nsd",
+            "android.net.thread",
             "android.net.wear",
         ],
     },

@@ -16,6 +16,18 @@
 
 package com.android.server;
 
+import static android.net.BpfNetMapsConstants.CONFIGURATION_MAP_PATH;
+import static android.net.BpfNetMapsConstants.COOKIE_TAG_MAP_PATH;
+import static android.net.BpfNetMapsConstants.CURRENT_STATS_MAP_CONFIGURATION_KEY;
+import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.IIF_MATCH;
+import static android.net.BpfNetMapsConstants.LOCKDOWN_VPN_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.UID_OWNER_MAP_PATH;
+import static android.net.BpfNetMapsConstants.UID_PERMISSION_MAP_PATH;
+import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
+import static android.net.BpfNetMapsUtils.getMatchByFirewallChain;
+import static android.net.BpfNetMapsUtils.matchToString;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
@@ -43,7 +55,6 @@ import android.net.INetd;
 import android.os.Build;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
-import android.provider.DeviceConfig;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.ArraySet;
@@ -95,8 +106,8 @@ public class BpfNetMaps {
     private static boolean sInitialized = false;
 
     private static Boolean sEnableJavaBpfMap = null;
-    private static final String BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP =
-            "bpf_net_maps_enable_java_bpf_map";
+    private static final String BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP =
+            "bpf_net_maps_force_disable_java_bpf_map";
 
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
     // This entry is not accessed by others.
@@ -108,16 +119,6 @@ public class BpfNetMaps {
     // BpfNetMaps is an only writer of this entry.
     private static final Object sCurrentStatsMapConfigLock = new Object();
 
-    private static final String CONFIGURATION_MAP_PATH =
-            "/sys/fs/bpf/netd_shared/map_netd_configuration_map";
-    private static final String UID_OWNER_MAP_PATH =
-            "/sys/fs/bpf/netd_shared/map_netd_uid_owner_map";
-    private static final String UID_PERMISSION_MAP_PATH =
-            "/sys/fs/bpf/netd_shared/map_netd_uid_permission_map";
-    private static final String COOKIE_TAG_MAP_PATH =
-            "/sys/fs/bpf/netd_shared/map_netd_cookie_tag_map";
-    private static final S32 UID_RULES_CONFIGURATION_KEY = new S32(0);
-    private static final S32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new S32(1);
     private static final long UID_RULES_DEFAULT_CONFIGURATION = 0;
     private static final long STATS_SELECT_MAP_A = 0;
     private static final long STATS_SELECT_MAP_B = 1;
@@ -128,39 +129,9 @@ public class BpfNetMaps {
     private static IBpfMap<S32, U8> sUidPermissionMap = null;
     private static IBpfMap<CookieTagMapKey, CookieTagMapValue> sCookieTagMap = null;
 
-    // LINT.IfChange(match_type)
-    @VisibleForTesting public static final long NO_MATCH = 0;
-    @VisibleForTesting public static final long HAPPY_BOX_MATCH = (1 << 0);
-    @VisibleForTesting public static final long PENALTY_BOX_MATCH = (1 << 1);
-    @VisibleForTesting public static final long DOZABLE_MATCH = (1 << 2);
-    @VisibleForTesting public static final long STANDBY_MATCH = (1 << 3);
-    @VisibleForTesting public static final long POWERSAVE_MATCH = (1 << 4);
-    @VisibleForTesting public static final long RESTRICTED_MATCH = (1 << 5);
-    @VisibleForTesting public static final long LOW_POWER_STANDBY_MATCH = (1 << 6);
-    @VisibleForTesting public static final long IIF_MATCH = (1 << 7);
-    @VisibleForTesting public static final long LOCKDOWN_VPN_MATCH = (1 << 8);
-    @VisibleForTesting public static final long OEM_DENY_1_MATCH = (1 << 9);
-    @VisibleForTesting public static final long OEM_DENY_2_MATCH = (1 << 10);
-    @VisibleForTesting public static final long OEM_DENY_3_MATCH = (1 << 11);
-    // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/netd.h)
-
     private static final List<Pair<Integer, String>> PERMISSION_LIST = Arrays.asList(
             Pair.create(PERMISSION_INTERNET, "PERMISSION_INTERNET"),
             Pair.create(PERMISSION_UPDATE_DEVICE_STATS, "PERMISSION_UPDATE_DEVICE_STATS")
-    );
-    private static final List<Pair<Long, String>> MATCH_LIST = Arrays.asList(
-            Pair.create(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"),
-            Pair.create(PENALTY_BOX_MATCH, "PENALTY_BOX_MATCH"),
-            Pair.create(DOZABLE_MATCH, "DOZABLE_MATCH"),
-            Pair.create(STANDBY_MATCH, "STANDBY_MATCH"),
-            Pair.create(POWERSAVE_MATCH, "POWERSAVE_MATCH"),
-            Pair.create(RESTRICTED_MATCH, "RESTRICTED_MATCH"),
-            Pair.create(LOW_POWER_STANDBY_MATCH, "LOW_POWER_STANDBY_MATCH"),
-            Pair.create(IIF_MATCH, "IIF_MATCH"),
-            Pair.create(LOCKDOWN_VPN_MATCH, "LOCKDOWN_VPN_MATCH"),
-            Pair.create(OEM_DENY_1_MATCH, "OEM_DENY_1_MATCH"),
-            Pair.create(OEM_DENY_2_MATCH, "OEM_DENY_2_MATCH"),
-            Pair.create(OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH")
     );
 
     /**
@@ -283,9 +254,8 @@ public class BpfNetMaps {
         if (sInitialized) return;
         if (sEnableJavaBpfMap == null) {
             sEnableJavaBpfMap = SdkLevel.isAtLeastU() ||
-                    DeviceConfigUtils.isFeatureEnabled(context,
-                            DeviceConfig.NAMESPACE_TETHERING, BPF_NET_MAPS_ENABLE_JAVA_BPF_MAP,
-                            DeviceConfigUtils.TETHERING_MODULE_NAME, false /* defaultValue */);
+                    DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                            BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP);
         }
         Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
 
@@ -325,13 +295,6 @@ public class BpfNetMaps {
             return ConnectivityStatsLog.buildStatsEvent(NETWORK_BPF_MAP_INFO, cookieTagMapSize,
                     uidOwnerMapSize, uidPermissionMapSize);
         }
-
-        /**
-         * Call native_dump
-         */
-        public void nativeDump(final FileDescriptor fd, final boolean verbose) {
-            native_dump(fd, verbose);
-        }
     }
 
     /** Constructor used after T that doesn't need to use netd anymore. */
@@ -352,33 +315,6 @@ public class BpfNetMaps {
         }
         mNetd = netd;
         mDeps = deps;
-    }
-
-    /**
-     * Get corresponding match from firewall chain.
-     */
-    @VisibleForTesting
-    public long getMatchByFirewallChain(final int chain) {
-        switch (chain) {
-            case FIREWALL_CHAIN_DOZABLE:
-                return DOZABLE_MATCH;
-            case FIREWALL_CHAIN_STANDBY:
-                return STANDBY_MATCH;
-            case FIREWALL_CHAIN_POWERSAVE:
-                return POWERSAVE_MATCH;
-            case FIREWALL_CHAIN_RESTRICTED:
-                return RESTRICTED_MATCH;
-            case FIREWALL_CHAIN_LOW_POWER_STANDBY:
-                return LOW_POWER_STANDBY_MATCH;
-            case FIREWALL_CHAIN_OEM_DENY_1:
-                return OEM_DENY_1_MATCH;
-            case FIREWALL_CHAIN_OEM_DENY_2:
-                return OEM_DENY_2_MATCH;
-            case FIREWALL_CHAIN_OEM_DENY_3:
-                return OEM_DENY_3_MATCH;
-            default:
-                throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
-        }
     }
 
     /**
@@ -1051,26 +987,6 @@ public class BpfNetMaps {
         return sj.toString();
     }
 
-    private String matchToString(long matchMask) {
-        if (matchMask == NO_MATCH) {
-            return "NO_MATCH";
-        }
-
-        final StringJoiner sj = new StringJoiner(" ");
-        for (Pair<Long, String> match: MATCH_LIST) {
-            final long matchFlag = match.first;
-            final String matchName = match.second;
-            if ((matchMask & matchFlag) != 0) {
-                sj.add(matchName);
-                matchMask &= ~matchFlag;
-            }
-        }
-        if (matchMask != 0) {
-            sj.add("UNKNOWN_MATCH(" + matchMask + ")");
-        }
-        return sj.toString();
-    }
-
     private void dumpOwnerMatchConfig(final IndentingPrintWriter pw) {
         try {
             final long match = sConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val;
@@ -1107,7 +1023,8 @@ public class BpfNetMaps {
                     EOPNOTSUPP, "dumpsys connectivity trafficcontroller dump not available on pre-T"
                     + " devices, use dumpsys netd trafficcontroller instead.");
         }
-        mDeps.nativeDump(fd, verbose);
+
+        pw.println("TrafficController");  // required by CTS testDumpBpfNetMaps
 
         pw.println();
         pw.println("sEnableJavaBpfMap: " + sEnableJavaBpfMap);
@@ -1181,9 +1098,6 @@ public class BpfNetMaps {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private native void native_setPermissionForUids(int permissions, int[] uids);
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private static native void native_dump(FileDescriptor fd, boolean verbose);
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static native int native_synchronizeKernelRCU();

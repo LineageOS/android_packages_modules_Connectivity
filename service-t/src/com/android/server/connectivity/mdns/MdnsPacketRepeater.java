@@ -21,6 +21,8 @@ import static com.android.server.connectivity.mdns.MdnsRecordRepository.IPV6_ADD
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -34,6 +36,7 @@ import java.net.InetSocketAddress;
  * A class used to send several packets at given time intervals.
  * @param <T> The type of the request providing packet repeating parameters.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final InetSocketAddress[] ALL_ADDRS = new InetSocketAddress[] {
@@ -59,7 +62,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         /**
          * Called when a packet was sent.
          */
-        default void onSent(int index, @NonNull T info) {}
+        default void onSent(int index, @NonNull T info, int sentPacketCount) {}
 
         /**
          * Called when the {@link MdnsPacketRepeater} is done sending packets.
@@ -114,9 +117,10 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
             }
             // Send to both v4 and v6 addresses; the reply sender will take care of ignoring the
             // send when the socket has not joined the relevant group.
+            int sentPacketCount = 0;
             for (InetSocketAddress destination : ALL_ADDRS) {
                 try {
-                    mReplySender.sendNow(packet, destination);
+                    sentPacketCount += mReplySender.sendNow(packet, destination);
                 } catch (IOException e) {
                     mSharedLog.e("Error sending packet to " + destination, e);
                 }
@@ -135,7 +139,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
 
             // Call onSent after scheduling the next run, to allow the callback to cancel it
             if (mCb != null) {
-                mCb.onSent(index, request);
+                mCb.onSent(index, request, sentPacketCount);
             }
         }
     }

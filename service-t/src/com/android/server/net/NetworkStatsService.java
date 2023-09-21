@@ -1745,7 +1745,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             // information. This is because no caller needs this information for now, and it
             // makes it easier to change the implementation later by using the histories in the
             // recorder.
-            return stats.clearInterfaces();
+            return stats.withoutInterfaces();
         } catch (RemoteException e) {
             Log.wtf(TAG, "Error compiling UID stats", e);
             return new NetworkStats(0L, 0);

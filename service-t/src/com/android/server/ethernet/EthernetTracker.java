@@ -325,7 +325,7 @@ public class EthernetTracker {
     protected void unicastInterfaceStateChange(@NonNull IEthernetServiceListener listener,
             @NonNull String iface) {
         ensureRunningOnEthernetServiceThread();
-        final int state = mFactory.getInterfaceState(iface);
+        final int state = getInterfaceState(iface);
         final int role = getInterfaceRole(iface);
         final IpConfiguration config = getIpConfigurationForCallback(iface, state);
         try {

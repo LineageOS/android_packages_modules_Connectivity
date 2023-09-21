@@ -19,12 +19,15 @@ package com.android.server.connectivity.mdns;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningOnHandlerThread;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.MdnsRecordRepository.ReplyInfo;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -40,9 +43,13 @@ import java.util.Collections;
  *
  * TODO: implement sending after a delay, combining queued replies and duplicate answer suppression
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsReplySender {
     private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final int MSG_SEND = 1;
+    private static final int PACKET_NOT_SENT = 0;
+    private static final int PACKET_SENT = 1;
+
     @NonNull
     private final MdnsInterfaceSocket mSocket;
     @NonNull
@@ -78,44 +85,22 @@ public class MdnsReplySender {
      *
      * Must be called on the looper thread used by the {@link MdnsReplySender}.
      */
-    public void sendNow(@NonNull MdnsPacket packet, @NonNull InetSocketAddress destination)
+    public int sendNow(@NonNull MdnsPacket packet, @NonNull InetSocketAddress destination)
             throws IOException {
         ensureRunningOnHandlerThread(mHandler);
         if (!((destination.getAddress() instanceof Inet6Address && mSocket.hasJoinedIpv6())
                 || (destination.getAddress() instanceof Inet4Address && mSocket.hasJoinedIpv4()))) {
             // Skip sending if the socket has not joined the v4/v6 group (there was no address)
-            return;
+            return PACKET_NOT_SENT;
         }
+        final byte[] outBuffer = MdnsUtils.createRawDnsPacket(mPacketCreationBuffer, packet);
+        mSocket.send(new DatagramPacket(outBuffer, 0, outBuffer.length, destination));
+        return PACKET_SENT;
+    }
 
-        // TODO: support packets over size (send in multiple packets with TC bit set)
-        final MdnsPacketWriter writer = new MdnsPacketWriter(mPacketCreationBuffer);
-
-        writer.writeUInt16(0); // Transaction ID (advertisement: 0)
-        writer.writeUInt16(packet.flags); // Response, authoritative (rfc6762 18.4)
-        writer.writeUInt16(packet.questions.size()); // questions count
-        writer.writeUInt16(packet.answers.size()); // answers count
-        writer.writeUInt16(packet.authorityRecords.size()); // authority entries count
-        writer.writeUInt16(packet.additionalRecords.size()); // additional records count
-
-        for (MdnsRecord record : packet.questions) {
-            // Questions do not have TTL or data
-            record.writeHeaderFields(writer);
-        }
-        for (MdnsRecord record : packet.answers) {
-            record.write(writer, 0L);
-        }
-        for (MdnsRecord record : packet.authorityRecords) {
-            record.write(writer, 0L);
-        }
-        for (MdnsRecord record : packet.additionalRecords) {
-            record.write(writer, 0L);
-        }
-
-        final int len = writer.getWritePosition();
-        final byte[] outBuffer = new byte[len];
-        System.arraycopy(mPacketCreationBuffer, 0, outBuffer, 0, len);
-
-        mSocket.send(new DatagramPacket(outBuffer, 0, len, destination));
+    /** Get the packetCreationBuffer */
+    public byte[] getPacketCreationBuffer() {
+        return mPacketCreationBuffer;
     }
 
     /**

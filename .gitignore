@@ -6,3 +6,7 @@
 **/.idea
 **/*.iml
 **/*.ipr
+
+# VS Code project
+**/.vscode
+**/*.code-workspace

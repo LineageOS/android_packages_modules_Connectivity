@@ -128,9 +128,13 @@ public class MdnsSocket {
      * cannot be determined, returns -1.
      */
     public int getInterfaceIndex() {
+        if (multicastSocket.isClosed()) {
+            sharedLog.e("Socket is closed");
+            return -1;
+        }
         try {
             return multicastSocket.getNetworkInterface().getIndex();
-        } catch (SocketException e) {
+        } catch (SocketException | NullPointerException e) {
             sharedLog.e("Failed to retrieve interface index for socket.", e);
             return -1;
         }
