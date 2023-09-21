@@ -15,5 +15,67 @@
  */
 package com.android.server.remoteauth.ranging;
 
-/** The set of parameters to start ranging. */
-public class RangingParameters {}
+import androidx.core.uwb.backend.impl.internal.UwbAddress;
+
+/** The set of parameters to initiate {@link RangingSession#start}. */
+public class RangingParameters {
+
+    /** Parameters for {@link UwbRangingSession}. */
+    private final UwbAddress mUwbLocalAddress;
+
+    private final androidx.core.uwb.backend.impl.internal.RangingParameters mUwbRangingParameters;
+
+    public UwbAddress getUwbLocalAddress() {
+        return mUwbLocalAddress;
+    }
+
+    public androidx.core.uwb.backend.impl.internal.RangingParameters getUwbRangingParameters() {
+        return mUwbRangingParameters;
+    }
+
+    private RangingParameters(
+            UwbAddress uwbLocalAddress,
+            androidx.core.uwb.backend.impl.internal.RangingParameters uwbRangingParameters) {
+        mUwbLocalAddress = uwbLocalAddress;
+        mUwbRangingParameters = uwbRangingParameters;
+    }
+
+    /** Builder class for {@link RangingParameters}. */
+    public static final class Builder {
+        private UwbAddress mUwbLocalAddress;
+        private androidx.core.uwb.backend.impl.internal.RangingParameters mUwbRangingParameters;
+
+        /**
+         * Sets the uwb local address.
+         *
+         * <p>Only required if {@link SessionParameters#getRangingMethod}=={@link
+         * RANGING_METHOD_UWB} and {@link SessionParameters#getAutoDeriveParams} == false
+         */
+        public Builder setUwbLocalAddress(UwbAddress uwbLocalAddress) {
+            mUwbLocalAddress = uwbLocalAddress;
+            return this;
+        }
+
+        /**
+         * Sets the uwb ranging parameters.
+         *
+         * <p>Only required if {@link SessionParameters#getRangingMethod}=={@link
+         * RANGING_METHOD_UWB}.
+         *
+         * <p>If {@link SessionParameters#getAutoDeriveParams} == true, all required uwb parameters
+         * including uwbLocalAddress, complexChannel, peerAddresses, and sessionKeyInfo will be
+         * automatically derived, so unnecessary to provide and the other uwb parameters are
+         * optional.
+         */
+        public Builder setUwbRangingParameters(
+                androidx.core.uwb.backend.impl.internal.RangingParameters uwbRangingParameters) {
+            mUwbRangingParameters = uwbRangingParameters;
+            return this;
+        }
+
+        /** Builds {@link RangingParameters}. */
+        public RangingParameters build() {
+            return new RangingParameters(mUwbLocalAddress, mUwbRangingParameters);
+        }
+    }
+}
