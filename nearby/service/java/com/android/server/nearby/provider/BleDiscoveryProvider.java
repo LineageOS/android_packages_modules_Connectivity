@@ -68,15 +68,6 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
     @GuardedBy("mLock")
     @Nullable
     private List<android.nearby.ScanFilter> mScanFilters;
-    private android.bluetooth.le.ScanCallback mScanCallbackLegacy =
-            new android.bluetooth.le.ScanCallback() {
-                @Override
-                public void onScanResult(int callbackType, ScanResult scanResult) {
-                }
-                @Override
-                public void onScanFailed(int errorCode) {
-                }
-            };
     private android.bluetooth.le.ScanCallback mScanCallback =
             new android.bluetooth.le.ScanCallback() {
                 @Override
@@ -170,7 +161,6 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
         if (isBleAvailable()) {
             Log.d(TAG, "BleDiscoveryProvider started");
             startScan(getScanFilters(), getScanSettings(/* legacy= */ false), mScanCallback);
-            startScan(getScanFilters(), getScanSettings(/* legacy= */ true), mScanCallbackLegacy);
             return;
         }
         Log.w(TAG, "Cannot start BleDiscoveryProvider because Ble is not available.");
@@ -187,7 +177,6 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
         }
         Log.v(TAG, "Ble scan stopped.");
         bluetoothLeScanner.stopScan(mScanCallback);
-        bluetoothLeScanner.stopScan(mScanCallbackLegacy);
         synchronized (mLock) {
             if (mScanFilters != null) {
                 mScanFilters = null;
