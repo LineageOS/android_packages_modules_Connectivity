@@ -20,7 +20,7 @@
     <string name="tethered_notification_message" msgid="2338023450330652098">"Тууралоо үчүн басыңыз."</string>
     <string name="disable_tether_notification_title" msgid="3183576627492925522">"Модем режими өчүк"</string>
     <string name="disable_tether_notification_message" msgid="6655882039707534929">"Кеңири маалымат үчүн администраторуңузга кайрылыңыз"</string>
-    <string name="notification_channel_tethering_status" msgid="7030733422705019001">"Хотспот жана байланыш түйүнүүн статусу"</string>
+    <string name="notification_channel_tethering_status" msgid="7030733422705019001">"Байланыш түйүнү жана байланыш түйүнүүн статусу"</string>
     <string name="no_upstream_notification_title" msgid="2052743091868702475"></string>
     <string name="no_upstream_notification_message" msgid="6932020551635470134"></string>
     <string name="no_upstream_notification_disable_button" msgid="8836277213343697023"></string>
