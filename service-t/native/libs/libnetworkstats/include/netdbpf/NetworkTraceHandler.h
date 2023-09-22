@@ -30,15 +30,33 @@
 namespace android {
 namespace bpf {
 
-// BundleKeys are PacketTraces where timestamp and length are ignored.
-using BundleKey = PacketTrace;
+// BundleKey encodes a PacketTrace minus timestamp and length. The key should
+// match many packets over time for interning. For convenience, sport/dport
+// are parsed here as either local/remote port or icmp type/code.
+struct BundleKey {
+  explicit BundleKey(const PacketTrace& pkt);
 
-// BundleKeys are hashed using all fields except timestamp/length.
+  uint32_t ifindex;
+  uint32_t uid;
+  uint32_t tag;
+
+  bool egress;
+  uint8_t ipProto;
+  uint8_t ipVersion;
+
+  std::optional<uint8_t> tcpFlags;
+  std::optional<uint16_t> localPort;
+  std::optional<uint16_t> remotePort;
+  std::optional<uint8_t> icmpType;
+  std::optional<uint8_t> icmpCode;
+};
+
+// BundleKeys are hashed using a simple hash combine.
 struct BundleHash {
   std::size_t operator()(const BundleKey& a) const;
 };
 
-// BundleKeys are equal if all fields except timestamp/length are equal.
+// BundleKeys are equal if all fields are equal.
 struct BundleEq {
   bool operator()(const BundleKey& a, const BundleKey& b) const;
 };
@@ -84,13 +102,13 @@ class NetworkTraceHandler
              NetworkTraceHandler::TraceContext& ctx);
 
  private:
-  // Convert a PacketTrace into a Perfetto trace packet.
-  void Fill(const PacketTrace& src,
+  // Fills in contextual information from a bundle without interning.
+  void Fill(const BundleKey& src,
             ::perfetto::protos::pbzero::NetworkPacketEvent* event);
 
   // Fills in contextual information either inline or via interning.
   ::perfetto::protos::pbzero::NetworkPacketBundle* FillWithInterning(
-      NetworkTraceState* state, const BundleKey& key,
+      NetworkTraceState* state, const BundleKey& src,
       ::perfetto::protos::pbzero::TracePacket* dst);
 
   static internal::NetworkTracePoller sPoller;
