@@ -58,4 +58,4 @@ class DisableConfigSyncTargetPreparer : BaseTargetPreparer() {
     }
 }
 
-private fun TestInformation.exec(cmd: String) = this.device.executeShellCommand(cmd)
+fun TestInformation.exec(cmd: String) = this.device.executeShellCommand(cmd)
