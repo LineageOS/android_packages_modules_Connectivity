@@ -18,10 +18,10 @@
 
 #include <linux/bpf.h>
 
+#include <android/log.h>
 #include <android-base/result.h>
 #include <android-base/stringprintf.h>
 #include <android-base/unique_fd.h>
-#include <utils/Log.h>
 
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
