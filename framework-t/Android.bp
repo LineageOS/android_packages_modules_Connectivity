@@ -51,7 +51,7 @@ java_defaults {
         ":framework-connectivity-tiramisu-updatable-sources",
         ":framework-nearby-java-sources",
         ":framework-thread-sources",
-    ] + framework_remoteauth_srcs,
+    ],
     libs: [
         "unsupportedappusage",
         "app-compat-annotations",
@@ -126,7 +126,6 @@ java_sdk_library {
         "enable-framework-connectivity-t-targets",
         "FlaggedApiDefaults",
     ],
-    api_srcs: framework_remoteauth_api_srcs,
     // Do not add static_libs to this library: put them in framework-connectivity instead.
     // The jarjar rules are only so that references to jarjared utils in
     // framework-connectivity-pre-jarjar match at runtime.
@@ -143,10 +142,8 @@ java_sdk_library {
         "android.net",
         "android.net.nsd",
         "android.nearby",
-        "android.remoteauth",
         "com.android.connectivity",
         "com.android.nearby",
-        "com.android.remoteauth",
     ],
 
     hidden_api: {

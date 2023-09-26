@@ -28,7 +28,6 @@ import com.android.server.connectivity.ConnectivityNativeService;
 import com.android.server.ethernet.EthernetService;
 import com.android.server.ethernet.EthernetServiceImpl;
 import com.android.server.nearby.NearbyService;
-import com.android.server.remoteauth.RemoteAuthService;
 import com.android.server.thread.ThreadNetworkService;
 
 /**
@@ -43,7 +42,6 @@ public final class ConnectivityServiceInitializer extends SystemService {
     private final NsdService mNsdService;
     private final NearbyService mNearbyService;
     private final EthernetServiceImpl mEthernetServiceImpl;
-    private final RemoteAuthService mRemoteAuthService;
     private final ThreadNetworkService mThreadNetworkService;
 
     public ConnectivityServiceInitializer(Context context) {
@@ -56,7 +54,6 @@ public final class ConnectivityServiceInitializer extends SystemService {
         mConnectivityNative = createConnectivityNativeService(context);
         mNsdService = createNsdService(context);
         mNearbyService = createNearbyService(context);
-        mRemoteAuthService = createRemoteAuthService(context);
         mThreadNetworkService = createThreadNetworkService(context);
     }
 
@@ -91,12 +88,6 @@ public final class ConnectivityServiceInitializer extends SystemService {
         if (mNearbyService != null) {
             Log.i(TAG, "Registering " + ConstantsShim.NEARBY_SERVICE);
             publishBinderService(ConstantsShim.NEARBY_SERVICE, mNearbyService,
-                    /* allowIsolated= */ false);
-        }
-
-        if (mRemoteAuthService != null) {
-            Log.i(TAG, "Registering " + RemoteAuthService.SERVICE_NAME);
-            publishBinderService(RemoteAuthService.SERVICE_NAME, mRemoteAuthService,
                     /* allowIsolated= */ false);
         }
 
@@ -160,19 +151,6 @@ public final class ConnectivityServiceInitializer extends SystemService {
             // Nearby is not yet supported in all branches
             // TODO: remove catch clause when it is available.
             Log.i(TAG, "Skipping unsupported service " + ConstantsShim.NEARBY_SERVICE);
-            return null;
-        }
-    }
-
-    /** Return RemoteAuth service instance */
-    private RemoteAuthService createRemoteAuthService(final Context context) {
-        if (!SdkLevel.isAtLeastV()) return null;
-        try {
-            return new RemoteAuthService(context);
-        } catch (UnsupportedOperationException e) {
-            // RemoteAuth is not yet supported in all branches
-            // TODO: remove catch clause when it is available.
-            Log.i(TAG, "Skipping unsupported service " + RemoteAuthService.SERVICE_NAME);
             return null;
         }
     }
