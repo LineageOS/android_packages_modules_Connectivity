@@ -21,6 +21,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static com.android.server.connectivity.ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -134,6 +135,15 @@ public class CarrierPrivilegeAuthenticator {
                             public void onCarrierPrivilegesChanged(
                                     @NonNull List<String> privilegedPackageNames,
                                     @NonNull int[] privilegedUids) {
+                                // Re-trigger the synchronous check (which is also very cheap due
+                                // to caching in CarrierPrivilegesTracker). This allows consistency
+                                // with the onSubscriptionsChangedListener and broadcasts.
+                                updateCarrierServiceUid();
+                            }
+                            @Override
+                            public void onCarrierServiceChanged(
+                                    @Nullable final String carrierServicePackageName,
+                                    final int carrierServiceUid) {
                                 // Re-trigger the synchronous check (which is also very cheap due
                                 // to caching in CarrierPrivilegesTracker). This allows consistency
                                 // with the onSubscriptionsChangedListener and broadcasts.
