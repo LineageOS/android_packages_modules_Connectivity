@@ -340,8 +340,9 @@ public class NetworkDiagnostics {
     @TargetApi(Build.VERSION_CODES.S)
     private int getMtuForTarget(InetAddress target) {
         final int family = target instanceof Inet4Address ? AF_INET : AF_INET6;
+        FileDescriptor socket = null;
         try {
-            final FileDescriptor socket = Os.socket(family, SOCK_DGRAM, 0);
+            socket = Os.socket(family, SOCK_DGRAM, 0);
             mNetwork.bindSocket(socket);
             Os.connect(socket, target, 0);
             if (family == AF_INET) {
@@ -352,6 +353,8 @@ public class NetworkDiagnostics {
         } catch (ErrnoException | IOException e) {
             Log.e(TAG, "Can't get MTU for destination " + target, e);
             return -1;
+        } finally {
+            IoUtils.closeQuietly(socket);
         }
     }
 
