@@ -483,8 +483,9 @@ public class Nat464Xlat {
 
     /**
      * Adds stacked link on base link and transitions to RUNNING state.
+     * Must be called on the handler thread.
      */
-    private void handleInterfaceLinkStateChanged(String iface, boolean up) {
+    public void handleInterfaceLinkStateChanged(String iface, boolean up) {
         // TODO: if we call start(), then stop(), then start() again, and the
         // interfaceLinkStateChanged notification for the first start is delayed past the first
         // stop, then the code becomes out of sync with system state and will behave incorrectly.
@@ -499,6 +500,7 @@ public class Nat464Xlat {
         // Once this code is converted to StateMachine, it will be possible to use deferMessage to
         // ensure it stays in STARTING state until the interfaceLinkStateChanged notification fires,
         // and possibly use a timeout (or provide some guarantees at the lower layer) to address #1.
+        ensureRunningOnHandlerThread();
         if (!isStarting() || !up || !Objects.equals(mIface, iface)) {
             return;
         }
@@ -519,8 +521,10 @@ public class Nat464Xlat {
 
     /**
      * Removes stacked link on base link and transitions to IDLE state.
+     * Must be called on the handler thread.
      */
-    private void handleInterfaceRemoved(String iface) {
+    public void handleInterfaceRemoved(String iface) {
+        ensureRunningOnHandlerThread();
         if (!Objects.equals(mIface, iface)) {
             return;
         }
@@ -534,14 +538,6 @@ public class Nat464Xlat {
         // stop() will also update LinkProperties, and if clatd crashed, the LinkProperties update
         // will cause ConnectivityService to call start() again.
         stop();
-    }
-
-    public void interfaceLinkStateChanged(String iface, boolean up) {
-        mNetwork.handler().post(() -> { handleInterfaceLinkStateChanged(iface, up); });
-    }
-
-    public void interfaceRemoved(String iface) {
-        mNetwork.handler().post(() -> handleInterfaceRemoved(iface));
     }
 
     /**

@@ -86,7 +86,6 @@ public class Nat464XlatTest {
     @Mock ClatCoordinator mClatCoordinator;
 
     TestLooper mLooper;
-    Handler mHandler;
     NetworkAgentConfig mAgentConfig = new NetworkAgentConfig();
 
     Nat464Xlat makeNat464Xlat(boolean isCellular464XlatEnabled) {
@@ -95,6 +94,14 @@ public class Nat464XlatTest {
                 return mClatCoordinator;
             }
         };
+
+        // The test looper needs to be created here on the test case thread and not in setUp,
+        // because setUp and test cases are run in different threads. Creating the test looper in
+        // setUp would make Looper.getThread() return the setUp thread, which does not match the
+        // test case thread that is actually used to process the messages.
+        mLooper = new TestLooper();
+        final Handler handler = new Handler(mLooper.getLooper());
+        doReturn(handler).when(mNai).handler();
 
         return new Nat464Xlat(mNai, mNetd, mDnsResolver, deps) {
             @Override protected int getNetId() {
@@ -117,9 +124,6 @@ public class Nat464XlatTest {
 
     @Before
     public void setUp() throws Exception {
-        mLooper = new TestLooper();
-        mHandler = new Handler(mLooper.getLooper());
-
         MockitoAnnotations.initMocks(this);
 
         mNai.linkProperties = new LinkProperties();
@@ -130,7 +134,6 @@ public class Nat464XlatTest {
         markNetworkConnected();
         when(mNai.connService()).thenReturn(mConnectivity);
         when(mNai.netAgentConfig()).thenReturn(mAgentConfig);
-        when(mNai.handler()).thenReturn(mHandler);
         final InterfaceConfigurationParcel mConfig = new InterfaceConfigurationParcel();
         when(mNetd.interfaceGetCfg(eq(STACKED_IFACE))).thenReturn(mConfig);
         mConfig.ipv4Addr = ADDR.getAddress().getHostAddress();
@@ -272,8 +275,7 @@ public class Nat464XlatTest {
         verifyClatdStart(null /* inOrder */);
 
         // Stacked interface up notification arrives.
-        nat.interfaceLinkStateChanged(STACKED_IFACE, true);
-        mLooper.dispatchNext();
+        nat.handleInterfaceLinkStateChanged(STACKED_IFACE, true);
 
         verify(mNetd).interfaceGetCfg(eq(STACKED_IFACE));
         verify(mConnectivity).handleUpdateLinkProperties(eq(mNai), c.capture());
@@ -294,8 +296,7 @@ public class Nat464XlatTest {
         // Verify the generated v6 is reset when clat is stopped.
         assertNull(nat.mIPv6Address);
         // Stacked interface removed notification arrives and is ignored.
-        nat.interfaceRemoved(STACKED_IFACE);
-        mLooper.dispatchNext();
+        nat.handleInterfaceRemoved(STACKED_IFACE);
 
         verifyNoMoreInteractions(mNetd, mConnectivity);
     }
@@ -324,8 +325,7 @@ public class Nat464XlatTest {
         verifyClatdStart(inOrder);
 
         // Stacked interface up notification arrives.
-        nat.interfaceLinkStateChanged(STACKED_IFACE, true);
-        mLooper.dispatchNext();
+        nat.handleInterfaceLinkStateChanged(STACKED_IFACE, true);
 
         inOrder.verify(mConnectivity).handleUpdateLinkProperties(eq(mNai), c.capture());
         assertFalse(c.getValue().getStackedLinks().isEmpty());
@@ -344,10 +344,8 @@ public class Nat464XlatTest {
 
         if (interfaceRemovedFirst) {
             // Stacked interface removed notification arrives and is ignored.
-            nat.interfaceRemoved(STACKED_IFACE);
-            mLooper.dispatchNext();
-            nat.interfaceLinkStateChanged(STACKED_IFACE, false);
-            mLooper.dispatchNext();
+            nat.handleInterfaceRemoved(STACKED_IFACE);
+            nat.handleInterfaceLinkStateChanged(STACKED_IFACE, false);
         }
 
         assertTrue(c.getValue().getStackedLinks().isEmpty());
@@ -361,15 +359,12 @@ public class Nat464XlatTest {
 
         if (!interfaceRemovedFirst) {
             // Stacked interface removed notification arrives and is ignored.
-            nat.interfaceRemoved(STACKED_IFACE);
-            mLooper.dispatchNext();
-            nat.interfaceLinkStateChanged(STACKED_IFACE, false);
-            mLooper.dispatchNext();
+            nat.handleInterfaceRemoved(STACKED_IFACE);
+            nat.handleInterfaceLinkStateChanged(STACKED_IFACE, false);
         }
 
         // Stacked interface up notification arrives.
-        nat.interfaceLinkStateChanged(STACKED_IFACE, true);
-        mLooper.dispatchNext();
+        nat.handleInterfaceLinkStateChanged(STACKED_IFACE, true);
 
         inOrder.verify(mConnectivity).handleUpdateLinkProperties(eq(mNai), c.capture());
         assertFalse(c.getValue().getStackedLinks().isEmpty());
@@ -411,8 +406,7 @@ public class Nat464XlatTest {
         verifyClatdStart(null /* inOrder */);
 
         // Stacked interface up notification arrives.
-        nat.interfaceLinkStateChanged(STACKED_IFACE, true);
-        mLooper.dispatchNext();
+        nat.handleInterfaceLinkStateChanged(STACKED_IFACE, true);
 
         verify(mNetd).interfaceGetCfg(eq(STACKED_IFACE));
         verify(mConnectivity, times(1)).handleUpdateLinkProperties(eq(mNai), c.capture());
@@ -421,8 +415,7 @@ public class Nat464XlatTest {
         assertRunning(nat);
 
         // Stacked interface removed notification arrives (clatd crashed, ...).
-        nat.interfaceRemoved(STACKED_IFACE);
-        mLooper.dispatchNext();
+        nat.handleInterfaceRemoved(STACKED_IFACE);
 
         verifyClatdStop(null /* inOrder */);
         verify(mConnectivity, times(2)).handleUpdateLinkProperties(eq(mNai), c.capture());
@@ -457,12 +450,10 @@ public class Nat464XlatTest {
         assertIdle(nat);
 
         // In-flight interface up notification arrives: no-op
-        nat.interfaceLinkStateChanged(STACKED_IFACE, true);
-        mLooper.dispatchNext();
+        nat.handleInterfaceLinkStateChanged(STACKED_IFACE, true);
 
         // Interface removed notification arrives after stopClatd() takes effect: no-op.
-        nat.interfaceRemoved(STACKED_IFACE);
-        mLooper.dispatchNext();
+        nat.handleInterfaceRemoved(STACKED_IFACE);
 
         assertIdle(nat);
 
