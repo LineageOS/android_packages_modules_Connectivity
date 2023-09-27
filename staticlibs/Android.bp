@@ -74,7 +74,10 @@ java_library {
       "framework-configinfrastructure",
       "framework-connectivity.stubs.module_lib",
   ],
-  lint: { strict_updatability_linting: true },
+  lint: {
+      strict_updatability_linting: true,
+      error_checks: ["NewApi"],
+  },
 }
 
 java_defaults {
@@ -141,7 +144,10 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 java_library {
@@ -169,7 +175,10 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 java_library {
@@ -194,7 +203,10 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 java_library {
@@ -223,7 +235,10 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 java_library {
@@ -258,7 +273,10 @@ java_library {
         "//packages/modules/Wifi/framework/tests:__subpackages__",
         "//packages/apps/Settings",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
     errorprone: {
         enabled: true,
         // Error-prone checking only warns of problems when building. To make the build fail with
@@ -301,7 +319,10 @@ java_library {
         "//packages/modules/Bluetooth/android/app",
         "//packages/modules/Wifi/service:__subpackages__",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 java_library {
@@ -323,7 +344,10 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 java_library {
@@ -346,7 +370,10 @@ java_library {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 // Limited set of utilities for use by service-connectivity-mdns-standalone-build-test, to make sure
