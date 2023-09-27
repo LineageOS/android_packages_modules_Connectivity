@@ -189,7 +189,7 @@ public class MdnsUtils {
         // TODO: support packets over size (send in multiple packets with TC bit set)
         final MdnsPacketWriter writer = new MdnsPacketWriter(packetCreationBuffer);
 
-        writer.writeUInt16(0); // Transaction ID (advertisement: 0)
+        writer.writeUInt16(packet.transactionId); // Transaction ID (advertisement: 0)
         writer.writeUInt16(packet.flags); // Response, authoritative (rfc6762 18.4)
         writer.writeUInt16(packet.questions.size()); // questions count
         writer.writeUInt16(packet.answers.size()); // answers count

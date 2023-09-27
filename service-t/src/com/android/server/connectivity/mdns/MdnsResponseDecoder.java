@@ -90,14 +90,14 @@ public class MdnsResponseDecoder {
 
         final MdnsPacket mdnsPacket;
         try {
-            reader.readUInt16(); // transaction ID (not used)
+            final int transactionId = reader.readUInt16();
             int flags = reader.readUInt16();
             if ((flags & MdnsConstants.FLAGS_RESPONSE_MASK) != MdnsConstants.FLAGS_RESPONSE) {
                 throw new MdnsPacket.ParseException(
                         MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE, "Not a response", null);
             }
 
-            mdnsPacket = MdnsPacket.parseRecordsSection(reader, flags);
+            mdnsPacket = MdnsPacket.parseRecordsSection(reader, flags, transactionId);
             if (mdnsPacket.answers.size() < 1) {
                 throw new MdnsPacket.ParseException(
                         MdnsResponseErrorCode.ERROR_NO_ANSWERS, "Response has no answers",
