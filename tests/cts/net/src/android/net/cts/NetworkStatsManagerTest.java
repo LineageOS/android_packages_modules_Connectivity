@@ -387,6 +387,7 @@ public class NetworkStatsManagerTest {
                 now = System.currentTimeMillis();
             }
         }
+        mCm.unregisterNetworkCallback(callback);
         if (callback.success) {
             mNetworkInterfacesToTest[networkTypeIndex].setMetered(callback.metered);
             mNetworkInterfacesToTest[networkTypeIndex].setRoaming(callback.roaming);
