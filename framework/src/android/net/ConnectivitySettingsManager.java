@@ -176,7 +176,9 @@ public class ConnectivitySettingsManager {
 
     /**
      * When detecting a captive portal, immediately disconnect from the
-     * network and do not reconnect to that network in the future.
+     * network and do not reconnect to that network in the future; except
+     * on Wear platform companion proxy networks (transport BLUETOOTH)
+     * will stay behind captive portal.
      */
     public static final int CAPTIVE_PORTAL_MODE_AVOID = 2;
 
