@@ -4408,7 +4408,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 updateCapabilitiesForNetwork(nai);
             } else if (portalChanged) {
                 if (portal && ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE_AVOID
-                        == getCaptivePortalMode()) {
+                        == getCaptivePortalMode(nai)) {
                     if (DBG) log("Avoiding captive portal network: " + nai.toShortString());
                     nai.onPreventAutomaticReconnect();
                     teardownUnneededNetwork(nai);
@@ -4444,7 +4444,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
-        private int getCaptivePortalMode() {
+        private int getCaptivePortalMode(@NonNull NetworkAgentInfo nai) {
+            if (nai.networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) &&
+                    mContext.getPackageManager().hasSystemFeature(FEATURE_WATCH)) {
+                // Do not avoid captive portal when network is wear proxy.
+                return ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE_PROMPT;
+            }
+
             return Settings.Global.getInt(mContext.getContentResolver(),
                     ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE,
                     ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE_PROMPT);
