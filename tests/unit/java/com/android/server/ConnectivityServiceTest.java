@@ -128,6 +128,7 @@ import static android.net.NetworkCapabilities.REDACT_FOR_ACCESS_FINE_LOCATION;
 import static android.net.NetworkCapabilities.REDACT_FOR_LOCAL_MAC_ADDRESS;
 import static android.net.NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
 import static android.net.NetworkCapabilities.REDACT_NONE;
+import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
@@ -4868,6 +4869,34 @@ public class ConnectivityServiceTest {
         mWiFiAgent.expectPreventReconnectReceived();
 
         assertNoCallbacks(captivePortalCallback, validatedCallback);
+    }
+
+    @Test
+    public void testNoAvoidCaptivePortalOnWearProxy() throws Exception {
+        // Bring up a BLUETOOTH network which is companion proxy on wear
+        // then set captive portal.
+        mockHasSystemFeature(PackageManager.FEATURE_WATCH, true);
+        setCaptivePortalMode(ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE_AVOID);
+        TestNetworkAgentWrapper btAgent = new TestNetworkAgentWrapper(TRANSPORT_BLUETOOTH);
+        final String firstRedirectUrl = "http://example.com/firstPath";
+
+        btAgent.connectWithCaptivePortal(firstRedirectUrl, false /* privateDnsProbeSent */);
+        btAgent.assertNotDisconnected(TIMEOUT_MS);
+    }
+
+    @Test
+    public void testAvoidCaptivePortalOnBluetooth() throws Exception {
+        // When not on Wear, BLUETOOTH is just regular network,
+        // then set captive portal.
+        mockHasSystemFeature(PackageManager.FEATURE_WATCH, false);
+        setCaptivePortalMode(ConnectivitySettingsManager.CAPTIVE_PORTAL_MODE_AVOID);
+        TestNetworkAgentWrapper btAgent = new TestNetworkAgentWrapper(TRANSPORT_BLUETOOTH);
+        final String firstRedirectUrl = "http://example.com/firstPath";
+
+        btAgent.connectWithCaptivePortal(firstRedirectUrl, false /* privateDnsProbeSent */);
+
+        btAgent.expectDisconnected();
+        btAgent.expectPreventReconnectReceived();
     }
 
     @Test
