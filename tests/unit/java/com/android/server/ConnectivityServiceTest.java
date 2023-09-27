@@ -10772,6 +10772,8 @@ public class ConnectivityServiceTest {
         final RouteInfo ipv4Subnet = new RouteInfo(myIpv4, null, MOBILE_IFNAME);
         final RouteInfo stackedDefault =
                 new RouteInfo((IpPrefix) null, myIpv4.getAddress(), CLAT_MOBILE_IFNAME);
+        final BaseNetdUnsolicitedEventListener netdUnsolicitedListener =
+                getRegisteredNetdUnsolicitedEventListener();
 
         final NetworkRequest networkRequest = new NetworkRequest.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
@@ -10839,7 +10841,6 @@ public class ConnectivityServiceTest {
         assertRoutesRemoved(cellNetId, ipv4Subnet);
 
         // When NAT64 prefix discovery succeeds, LinkProperties are updated and clatd is started.
-        Nat464Xlat clat = getNat464Xlat(mCellAgent);
         assertNull(mCm.getLinkProperties(mCellAgent.getNetwork()).getNat64Prefix());
         mService.mResolverUnsolEventCallback.onNat64PrefixEvent(
                 makeNat64PrefixEvent(cellNetId, PREFIX_OPERATION_ADDED, kNat64PrefixString, 96));
@@ -10850,7 +10851,8 @@ public class ConnectivityServiceTest {
         verifyClatdStart(null /* inOrder */, MOBILE_IFNAME, cellNetId, kNat64Prefix.toString());
 
         // Clat iface comes up. Expect stacked link to be added.
-        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
+        netdUnsolicitedListener.onInterfaceLinkStateChanged(
+                CLAT_MOBILE_IFNAME, true);
         networkCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent);
         List<LinkProperties> stackedLps = mCm.getLinkProperties(mCellAgent.getNetwork())
                 .getStackedLinks();
@@ -10896,7 +10898,7 @@ public class ConnectivityServiceTest {
                 kOtherNat64Prefix.toString());
         networkCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent,
                 cb -> cb.getLp().getNat64Prefix().equals(kOtherNat64Prefix));
-        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
+        netdUnsolicitedListener.onInterfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
         networkCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent,
                 cb -> cb.getLp().getStackedLinks().size() == 1);
         assertRoutesAdded(cellNetId, stackedDefault);
@@ -10924,7 +10926,7 @@ public class ConnectivityServiceTest {
         assertRoutesRemoved(cellNetId, stackedDefault);
 
         // The interface removed callback happens but has no effect after stop is called.
-        clat.interfaceRemoved(CLAT_MOBILE_IFNAME);
+        netdUnsolicitedListener.onInterfaceRemoved(CLAT_MOBILE_IFNAME);
         networkCallback.assertNoCallback();
         verify(mMockNetd, times(1)).networkRemoveInterface(cellNetId, CLAT_MOBILE_IFNAME);
 
@@ -10961,7 +10963,7 @@ public class ConnectivityServiceTest {
         verifyClatdStart(null /* inOrder */, MOBILE_IFNAME, cellNetId, kNat64Prefix.toString());
 
         // Clat iface comes up. Expect stacked link to be added.
-        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
+        netdUnsolicitedListener.onInterfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true);
         networkCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent,
                 cb -> cb.getLp().getStackedLinks().size() == 1
                         && cb.getLp().getNat64Prefix() != null);
@@ -11029,8 +11031,7 @@ public class ConnectivityServiceTest {
 
         // Clatd is started and clat iface comes up. Expect stacked link to be added.
         verifyClatdStart(null /* inOrder */, MOBILE_IFNAME, cellNetId, kNat64Prefix.toString());
-        clat = getNat464Xlat(mCellAgent);
-        clat.interfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true /* up */);
+        netdUnsolicitedListener.onInterfaceLinkStateChanged(CLAT_MOBILE_IFNAME, true /* up */);
         networkCallback.expect(LINK_PROPERTIES_CHANGED, mCellAgent,
                 cb -> cb.getLp().getStackedLinks().size() == 1
                         && cb.getLp().getNat64Prefix().equals(kNat64Prefix));

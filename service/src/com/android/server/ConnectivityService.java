@@ -11423,7 +11423,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public void onInterfaceLinkStateChanged(@NonNull String iface, boolean up) {
             mHandler.post(() -> {
                 for (NetworkAgentInfo nai : mNetworkAgentInfos) {
-                    nai.clatd.interfaceLinkStateChanged(iface, up);
+                    nai.clatd.handleInterfaceLinkStateChanged(iface, up);
                 }
             });
         }
@@ -11432,7 +11432,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public void onInterfaceRemoved(@NonNull String iface) {
             mHandler.post(() -> {
                 for (NetworkAgentInfo nai : mNetworkAgentInfos) {
-                    nai.clatd.interfaceRemoved(iface);
+                    nai.clatd.handleInterfaceRemoved(iface);
                 }
             });
         }
