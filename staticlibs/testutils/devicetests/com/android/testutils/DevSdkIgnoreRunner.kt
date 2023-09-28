@@ -19,6 +19,7 @@ package com.android.testutils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
+import java.lang.reflect.Modifier
 import org.junit.runner.Description
 import org.junit.runner.Runner
 import org.junit.runner.manipulation.Filter
@@ -27,7 +28,7 @@ import org.junit.runner.manipulation.NoTestsRemainException
 import org.junit.runner.manipulation.Sortable
 import org.junit.runner.manipulation.Sorter
 import org.junit.runner.notification.RunNotifier
-import kotlin.jvm.Throws
+import org.junit.runners.Parameterized
 
 /**
  * A runner that can skip tests based on the development SDK as defined in [DevSdkIgnoreRule].
@@ -41,6 +42,9 @@ import kotlin.jvm.Throws
  * the whole class if they do not match the development SDK as defined in [DevSdkIgnoreRule].
  * Otherwise, it will delegate to [AndroidJUnit4] to run the test as usual.
  *
+ * This class automatically uses the Parameterized runner as its base runner, so the
+ * @Parameterized.Parameters annotation and its friends can be used in tests using this runner.
+ *
  * Example usage:
  *
  *     @RunWith(DevSdkIgnoreRunner::class)
@@ -48,12 +52,33 @@ import kotlin.jvm.Throws
  *     class MyTestClass { ... }
  */
 class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, Sortable {
-    private val baseRunner = klass.let {
+    // Inference correctly infers Runner & Filterable & Sortable for |baseRunner|, but the
+    // Java bytecode doesn't have a way to express this. Give this type a name by wrapping it.
+    private class RunnerWrapper<T>(private val wrapped: T) :
+            Runner(), Filterable by wrapped, Sortable by wrapped
+            where T : Runner, T : Filterable, T : Sortable {
+        override fun getDescription(): Description = wrapped.description
+        override fun run(notifier: RunNotifier?) = wrapped.run(notifier)
+    }
+
+    private val baseRunner: RunnerWrapper<*>? = klass.let {
         val ignoreAfter = it.getAnnotation(IgnoreAfter::class.java)
         val ignoreUpTo = it.getAnnotation(IgnoreUpTo::class.java)
 
-        if (isDevSdkInRange(ignoreUpTo, ignoreAfter)) AndroidJUnit4(klass) else null
+        if (!isDevSdkInRange(ignoreUpTo, ignoreAfter)) {
+            null
+        } else if (it.hasParameterizedMethod()) {
+            // Parameterized throws if there is no static method annotated with @Parameters, which
+            // isn't too useful. Use if it there are, otherwise use its base AndroidJUnit4 runner.
+            RunnerWrapper(Parameterized(klass))
+        } else {
+            RunnerWrapper(AndroidJUnit4(klass))
+        }
     }
+
+    private fun <T> Class<T>.hasParameterizedMethod(): Boolean = methods.any {
+        Modifier.isStatic(it.modifiers) &&
+                it.isAnnotationPresent(Parameterized.Parameters::class.java) }
 
     override fun run(notifier: RunNotifier) {
         if (baseRunner != null) {
