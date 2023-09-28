@@ -23,6 +23,7 @@ import android.net.TetheringManager.TETHERING_ETHERNET
 import android.net.TetheringManager.TetheringRequest
 import android.net.nsd.NsdManager
 import android.os.Build
+import android.platform.test.annotations.AppModeFull
 import androidx.test.filters.SmallTest
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
@@ -41,6 +42,7 @@ import org.junit.runner.RunWith
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @ConnectivityModuleTest
+@AppModeFull(reason = "WifiManager cannot be obtained in instant mode")
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class NsdManagerDownstreamTetheringTest : EthernetTetheringTestBase() {
     private val nsdManager by lazy { context.getSystemService(NsdManager::class.java)!! }
