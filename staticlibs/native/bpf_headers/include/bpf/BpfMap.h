@@ -48,41 +48,32 @@ using std::function;
 // is not safe to iterate over a map while another thread or process is deleting
 // from it. In this case the iteration can return duplicate entries.
 template <class Key, class Value>
-class BpfMap {
+class BpfMapRO {
   public:
-    BpfMap<Key, Value>() {};
+    BpfMapRO<Key, Value>() {};
 
     // explicitly force no copy constructor, since it would need to dup the fd
     // (later on, for testing, we still make available a copy assignment operator)
-    BpfMap<Key, Value>(const BpfMap<Key, Value>&) = delete;
+    BpfMapRO<Key, Value>(const BpfMapRO<Key, Value>&) = delete;
 
-  private:
-    void abortOnKeyOrValueSizeMismatch() {
+  protected:
+    void abortOnMismatch(bool writable) const {
         if (!mMapFd.ok()) abort();
         if (isAtLeastKernelVersion(4, 14, 0)) {
+            int flags = bpfGetFdMapFlags(mMapFd);
+            if (flags < 0) abort();
+            if (flags & BPF_F_WRONLY) abort();
+            if (writable && (flags & BPF_F_RDONLY)) abort();
             if (bpfGetFdKeySize(mMapFd) != sizeof(Key)) abort();
             if (bpfGetFdValueSize(mMapFd) != sizeof(Value)) abort();
         }
     }
 
-  protected:
-    // flag must be within BPF_OBJ_FLAG_MASK, ie. 0, BPF_F_RDONLY, BPF_F_WRONLY
-    BpfMap<Key, Value>(const char* pathname, uint32_t flags) {
-        mMapFd.reset(mapRetrieve(pathname, flags));
-        abortOnKeyOrValueSizeMismatch();
-    }
-
   public:
-    explicit BpfMap<Key, Value>(const char* pathname) : BpfMap<Key, Value>(pathname, 0) {}
-
-#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
-    // All bpf maps should be created by the bpfloader, so this constructor
-    // is reserved for tests
-    BpfMap<Key, Value>(bpf_map_type map_type, uint32_t max_entries, uint32_t map_flags = 0) {
-        mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries, map_flags));
-        if (!mMapFd.ok()) abort();
+    explicit BpfMapRO<Key, Value>(const char* pathname) {
+        mMapFd.reset(mapRetrieveRO(pathname));
+        abortOnMismatch(/* writable */ false);
     }
-#endif
 
     Result<Key> getFirstKey() const {
         Key firstKey;
@@ -100,19 +91,161 @@ class BpfMap {
         return nextKey;
     }
 
-    Result<void> writeValue(const Key& key, const Value& value, uint64_t flags) {
-        if (writeToMapEntry(mMapFd, &key, &value, flags)) {
-            return ErrnoErrorf("Write to map {} failed", mMapFd.get());
-        }
-        return {};
-    }
-
     Result<Value> readValue(const Key key) const {
         Value value;
         if (findMapEntry(mMapFd, &key, &value)) {
             return ErrnoErrorf("Read value of map {} failed", mMapFd.get());
         }
         return value;
+    }
+
+  protected:
+    [[clang::reinitializes]] Result<void> init(const char* path, int fd, bool writable) {
+        mMapFd.reset(fd);
+        if (!mMapFd.ok()) {
+            return ErrnoErrorf("Pinned map not accessible or does not exist: ({})", path);
+        }
+        // Normally we should return an error here instead of calling abort,
+        // but this cannot happen at runtime without a massive code bug (K/V type mismatch)
+        // and as such it's better to just blow the system up and let the developer fix it.
+        // Crashes are much more likely to be noticed than logs and missing functionality.
+        abortOnMismatch(writable);
+        return {};
+    }
+
+  public:
+    // Function that tries to get map from a pinned path.
+    [[clang::reinitializes]] Result<void> init(const char* path) {
+        return init(path, mapRetrieveRO(path), /* writable */ false);
+    }
+
+    // Iterate through the map and handle each key retrieved based on the filter
+    // without modification of map content.
+    Result<void> iterate(
+            const function<Result<void>(const Key& key,
+                                        const BpfMapRO<Key, Value>& map)>& filter) const;
+
+    // Iterate through the map and get each <key, value> pair, handle each <key,
+    // value> pair based on the filter without modification of map content.
+    Result<void> iterateWithValue(
+            const function<Result<void>(const Key& key, const Value& value,
+                                        const BpfMapRO<Key, Value>& map)>& filter) const;
+
+#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
+    const unique_fd& getMap() const { return mMapFd; };
+
+    // Copy assignment operator - due to need for fd duping, should not be used in non-test code.
+    BpfMapRO<Key, Value>& operator=(const BpfMapRO<Key, Value>& other) {
+        if (this != &other) mMapFd.reset(fcntl(other.mMapFd.get(), F_DUPFD_CLOEXEC, 0));
+        return *this;
+    }
+#else
+    BpfMapRO<Key, Value>& operator=(const BpfMapRO<Key, Value>&) = delete;
+#endif
+
+    // Move assignment operator
+    BpfMapRO<Key, Value>& operator=(BpfMapRO<Key, Value>&& other) noexcept {
+        if (this != &other) {
+            mMapFd = std::move(other.mMapFd);
+            other.reset();
+        }
+        return *this;
+    }
+
+#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
+    // Note that unique_fd.reset() carefully saves and restores the errno,
+    // and BpfMap.reset() won't touch the errno if passed in fd is negative either,
+    // hence you can do something like BpfMap.reset(systemcall()) and then
+    // check BpfMap.isValid() and look at errno and see why systemcall() failed.
+    [[clang::reinitializes]] void reset(int fd) {
+        mMapFd.reset(fd);
+        if (mMapFd.ok()) abortOnMismatch(/* writable */ false);  // false isn't ideal
+    }
+
+    // unique_fd has an implicit int conversion defined, which combined with the above
+    // reset(int) would result in double ownership of the fd, hence we either need a custom
+    // implementation of reset(unique_fd), or to delete it and thus cause compile failures
+    // to catch this and prevent it.
+    void reset(unique_fd fd) = delete;
+#endif
+
+    [[clang::reinitializes]] void reset() {
+        mMapFd.reset();
+    }
+
+    bool isValid() const { return mMapFd.ok(); }
+
+    Result<bool> isEmpty() const {
+        auto key = getFirstKey();
+        if (key.ok()) return false;
+        if (key.error().code() == ENOENT) return true;
+        return key.error();
+    }
+
+  protected:
+    unique_fd mMapFd;
+};
+
+template <class Key, class Value>
+Result<void> BpfMapRO<Key, Value>::iterate(
+        const function<Result<void>(const Key& key,
+                                    const BpfMapRO<Key, Value>& map)>& filter) const {
+    Result<Key> curKey = getFirstKey();
+    while (curKey.ok()) {
+        const Result<Key>& nextKey = getNextKey(curKey.value());
+        Result<void> status = filter(curKey.value(), *this);
+        if (!status.ok()) return status;
+        curKey = nextKey;
+    }
+    if (curKey.error().code() == ENOENT) return {};
+    return curKey.error();
+}
+
+template <class Key, class Value>
+Result<void> BpfMapRO<Key, Value>::iterateWithValue(
+        const function<Result<void>(const Key& key, const Value& value,
+                                    const BpfMapRO<Key, Value>& map)>& filter) const {
+    Result<Key> curKey = getFirstKey();
+    while (curKey.ok()) {
+        const Result<Key>& nextKey = getNextKey(curKey.value());
+        Result<Value> curValue = readValue(curKey.value());
+        if (!curValue.ok()) return curValue.error();
+        Result<void> status = filter(curKey.value(), curValue.value(), *this);
+        if (!status.ok()) return status;
+        curKey = nextKey;
+    }
+    if (curKey.error().code() == ENOENT) return {};
+    return curKey.error();
+}
+
+template <class Key, class Value>
+class BpfMap : public BpfMapRO<Key, Value> {
+  protected:
+    using BpfMapRO<Key, Value>::mMapFd;
+    using BpfMapRO<Key, Value>::abortOnMismatch;
+
+  public:
+    using BpfMapRO<Key, Value>::getFirstKey;
+    using BpfMapRO<Key, Value>::getNextKey;
+    using BpfMapRO<Key, Value>::readValue;
+
+    BpfMap<Key, Value>() {};
+
+    explicit BpfMap<Key, Value>(const char* pathname) {
+        mMapFd.reset(mapRetrieveRW(pathname));
+        abortOnMismatch(/* writable */ true);
+    }
+
+    // Function that tries to get map from a pinned path.
+    [[clang::reinitializes]] Result<void> init(const char* path) {
+        return BpfMapRO<Key,Value>::init(path, mapRetrieveRW(path), /* writable */ true);
+    }
+
+    Result<void> writeValue(const Key& key, const Value& value, uint64_t flags) {
+        if (writeToMapEntry(mMapFd, &key, &value, flags)) {
+            return ErrnoErrorf("Write to map {} failed", mMapFd.get());
+        }
+        return {};
     }
 
     Result<void> deleteValue(const Key& key) {
@@ -122,37 +255,33 @@ class BpfMap {
         return {};
     }
 
-  protected:
-    [[clang::reinitializes]] Result<void> init(const char* path, int fd) {
-        mMapFd.reset(fd);
-        if (!mMapFd.ok()) {
-            return ErrnoErrorf("Pinned map not accessible or does not exist: ({})", path);
+    Result<void> clear() {
+        while (true) {
+            auto key = getFirstKey();
+            if (!key.ok()) {
+                if (key.error().code() == ENOENT) return {};  // empty: success
+                return key.error();                           // Anything else is an error
+            }
+            auto res = deleteValue(key.value());
+            if (!res.ok()) {
+                // Someone else could have deleted the key, so ignore ENOENT
+                if (res.error().code() == ENOENT) continue;
+                ALOGE("Failed to delete data %s", strerror(res.error().code()));
+                return res.error();
+            }
         }
-        // Normally we should return an error here instead of calling abort,
-        // but this cannot happen at runtime without a massive code bug (K/V type mismatch)
-        // and as such it's better to just blow the system up and let the developer fix it.
-        // Crashes are much more likely to be noticed than logs and missing functionality.
-        abortOnKeyOrValueSizeMismatch();
-        return {};
     }
-
-  public:
-    // Function that tries to get map from a pinned path.
-    [[clang::reinitializes]] Result<void> init(const char* path) {
-        return init(path, mapRetrieveRW(path));
-    }
-
 
 #ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
-    // due to Android SELinux limitations which prevent map creation by anyone besides the bpfloader
-    // this should only ever be used by test code, it is equivalent to:
-    //   .reset(createMap(type, keysize, valuesize, max_entries, map_flags)
-    // TODO: derive map_flags from BpfMap vs BpfMapRO
     [[clang::reinitializes]] Result<void> resetMap(bpf_map_type map_type,
-                                                         uint32_t max_entries,
-                                                         uint32_t map_flags = 0) {
-        mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries, map_flags));
+                                                   uint32_t max_entries,
+                                                   uint32_t map_flags = 0) {
+        if (map_flags & BPF_F_WRONLY) abort();
+        if (map_flags & BPF_F_RDONLY) abort();
+        mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries,
+                               map_flags));
         if (!mMapFd.ok()) return ErrnoErrorf("Unable to create map.");
+        abortOnMismatch(/* writable */ true);
         return {};
     }
 #endif
@@ -180,72 +309,6 @@ class BpfMap {
             const function<Result<void>(const Key& key, const Value& value,
                                         BpfMap<Key, Value>& map)>& filter);
 
-#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
-    const unique_fd& getMap() const { return mMapFd; };
-
-    // Copy assignment operator - due to need for fd duping, should not be used in non-test code.
-    BpfMap<Key, Value>& operator=(const BpfMap<Key, Value>& other) {
-        if (this != &other) mMapFd.reset(fcntl(other.mMapFd.get(), F_DUPFD_CLOEXEC, 0));
-        return *this;
-    }
-#else
-    BpfMap<Key, Value>& operator=(const BpfMap<Key, Value>&) = delete;
-#endif
-
-    // Move assignment operator
-    BpfMap<Key, Value>& operator=(BpfMap<Key, Value>&& other) noexcept {
-        if (this != &other) {
-            mMapFd = std::move(other.mMapFd);
-            other.reset();
-        }
-        return *this;
-    }
-
-    void reset(unique_fd fd) = delete;
-
-#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
-    // Note that unique_fd.reset() carefully saves and restores the errno,
-    // and BpfMap.reset() won't touch the errno if passed in fd is negative either,
-    // hence you can do something like BpfMap.reset(systemcall()) and then
-    // check BpfMap.isValid() and look at errno and see why systemcall() failed.
-    [[clang::reinitializes]] void reset(int fd) {
-        mMapFd.reset(fd);
-        if (mMapFd.ok()) abortOnKeyOrValueSizeMismatch();
-    }
-#endif
-
-    [[clang::reinitializes]] void reset() {
-        mMapFd.reset();
-    }
-
-    bool isValid() const { return mMapFd.ok(); }
-
-    Result<void> clear() {
-        while (true) {
-            auto key = getFirstKey();
-            if (!key.ok()) {
-                if (key.error().code() == ENOENT) return {};  // empty: success
-                return key.error();                           // Anything else is an error
-            }
-            auto res = deleteValue(key.value());
-            if (!res.ok()) {
-                // Someone else could have deleted the key, so ignore ENOENT
-                if (res.error().code() == ENOENT) continue;
-                ALOGE("Failed to delete data %s", strerror(res.error().code()));
-                return res.error();
-            }
-        }
-    }
-
-    Result<bool> isEmpty() const {
-        auto key = getFirstKey();
-        if (key.ok()) return false;
-        if (key.error().code() == ENOENT) return true;
-        return key.error();
-    }
-
-  private:
-    unique_fd mMapFd;
 };
 
 template <class Key, class Value>
@@ -311,20 +374,6 @@ Result<void> BpfMap<Key, Value>::iterateWithValue(
     if (curKey.error().code() == ENOENT) return {};
     return curKey.error();
 }
-
-template <class Key, class Value>
-class BpfMapRO : public BpfMap<Key, Value> {
-  public:
-    BpfMapRO<Key, Value>() {};
-
-    explicit BpfMapRO<Key, Value>(const char* pathname)
-        : BpfMap<Key, Value>(pathname, BPF_F_RDONLY) {}
-
-    // Function that tries to get map from a pinned path.
-    [[clang::reinitializes]] Result<void> init(const char* path) {
-        return BpfMap<Key,Value>::init(path, mapRetrieveRO(path));
-    }
-};
 
 }  // namespace bpf
 }  // namespace android
