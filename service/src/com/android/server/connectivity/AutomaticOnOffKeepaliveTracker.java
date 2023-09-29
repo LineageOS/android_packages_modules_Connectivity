@@ -974,7 +974,7 @@ public class AutomaticOnOffKeepaliveTracker {
          * @return whether the feature is enabled
          */
         public boolean isTetheringFeatureNotChickenedOut(@NonNull final String name) {
-            return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(name);
+            return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(mContext, name);
         }
 
         /**
