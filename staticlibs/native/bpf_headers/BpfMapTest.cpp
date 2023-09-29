@@ -107,12 +107,14 @@ TEST_F(BpfMapTest, constructor) {
     BpfMap<uint32_t, uint32_t> testMap1;
     checkMapInvalid(testMap1);
 
-    BpfMap<uint32_t, uint32_t> testMap2(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap2;
+    ASSERT_RESULT_OK(testMap2.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     checkMapValid(testMap2);
 }
 
 TEST_F(BpfMapTest, basicHelpers) {
-    BpfMap<uint32_t, uint32_t> testMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap;
+    ASSERT_RESULT_OK(testMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     uint32_t key = TEST_KEY1;
     uint32_t value_write = TEST_VALUE1;
     writeToMapAndCheck(testMap, key, value_write);
@@ -126,7 +128,8 @@ TEST_F(BpfMapTest, basicHelpers) {
 }
 
 TEST_F(BpfMapTest, reset) {
-    BpfMap<uint32_t, uint32_t> testMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap;
+    ASSERT_RESULT_OK(testMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     uint32_t key = TEST_KEY1;
     uint32_t value_write = TEST_VALUE1;
     writeToMapAndCheck(testMap, key, value_write);
@@ -138,7 +141,8 @@ TEST_F(BpfMapTest, reset) {
 }
 
 TEST_F(BpfMapTest, moveConstructor) {
-    BpfMap<uint32_t, uint32_t> testMap1(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap1;
+    ASSERT_RESULT_OK(testMap1.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     BpfMap<uint32_t, uint32_t> testMap2;
     testMap2 = std::move(testMap1);
     uint32_t key = TEST_KEY1;
@@ -149,7 +153,8 @@ TEST_F(BpfMapTest, moveConstructor) {
 
 TEST_F(BpfMapTest, SetUpMap) {
     EXPECT_NE(0, access(PINNED_MAP_PATH, R_OK));
-    BpfMap<uint32_t, uint32_t> testMap1(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap1;
+    ASSERT_RESULT_OK(testMap1.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     ASSERT_EQ(0, bpfFdPin(testMap1.getMap(), PINNED_MAP_PATH));
     EXPECT_EQ(0, access(PINNED_MAP_PATH, R_OK));
     checkMapValid(testMap1);
@@ -164,7 +169,8 @@ TEST_F(BpfMapTest, SetUpMap) {
 }
 
 TEST_F(BpfMapTest, iterate) {
-    BpfMap<uint32_t, uint32_t> testMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap;
+    ASSERT_RESULT_OK(testMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     populateMap(TEST_MAP_SIZE, testMap);
     int totalCount = 0;
     int totalSum = 0;
@@ -182,7 +188,8 @@ TEST_F(BpfMapTest, iterate) {
 }
 
 TEST_F(BpfMapTest, iterateWithValue) {
-    BpfMap<uint32_t, uint32_t> testMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap;
+    ASSERT_RESULT_OK(testMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     populateMap(TEST_MAP_SIZE, testMap);
     int totalCount = 0;
     int totalSum = 0;
@@ -202,7 +209,8 @@ TEST_F(BpfMapTest, iterateWithValue) {
 }
 
 TEST_F(BpfMapTest, mapIsEmpty) {
-    BpfMap<uint32_t, uint32_t> testMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap;
+    ASSERT_RESULT_OK(testMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC));
     expectMapEmpty(testMap);
     uint32_t key = TEST_KEY1;
     uint32_t value_write = TEST_VALUE1;
@@ -232,7 +240,8 @@ TEST_F(BpfMapTest, mapIsEmpty) {
 }
 
 TEST_F(BpfMapTest, mapClear) {
-    BpfMap<uint32_t, uint32_t> testMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, BPF_F_NO_PREALLOC);
+    BpfMap<uint32_t, uint32_t> testMap;
+    ASSERT_RESULT_OK(testMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE));
     populateMap(TEST_MAP_SIZE, testMap);
     Result<bool> isEmpty = testMap.isEmpty();
     ASSERT_RESULT_OK(isEmpty);
