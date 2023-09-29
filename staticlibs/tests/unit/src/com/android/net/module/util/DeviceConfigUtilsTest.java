@@ -228,27 +228,57 @@ public class DeviceConfigUtilsTest {
     }
 
     @Test
-    public void testIsNetworkStackFeatureEnabled() {
+    public void testIsFeatureEnabled() {
         doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
                 TEST_EXPERIMENT_FLAG));
-        assertTrue(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
-    }
-
-    @Test
-    public void testIsTetheringFeatureEnabled() {
         doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isTetheringFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
     }
-
     @Test
-    public void testFeatureDefaultEnabled() {
+    public void testIsFeatureEnabledFeatureDefaultDisabled() throws Exception {
         doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
                 TEST_EXPERIMENT_FLAG));
         doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isTetheringFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
+
+        // If the flag is unset, package info is not queried
+        verify(mContext, never()).getPackageManager();
+        verify(mContext, never()).getPackageName();
+        verify(mPm, never()).getPackageInfo(anyString(), anyInt());
+    }
+
+    @Test
+    public void testIsFeatureEnabledFeatureForceEnabled() throws Exception {
+        doReturn("1").when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
+                TEST_EXPERIMENT_FLAG));
+        doReturn("1").when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
+                TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isTetheringFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
+
+        // If the feature is force enabled, package info is not queried
+        verify(mContext, never()).getPackageManager();
+        verify(mContext, never()).getPackageName();
+        verify(mPm, never()).getPackageInfo(anyString(), anyInt());
+    }
+
+    @Test
+    public void testIsFeatureEnabledFeatureForceDisabled() throws Exception {
+        doReturn("-1").when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
+                TEST_EXPERIMENT_FLAG));
+        doReturn("-1").when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
+                TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isTetheringFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
+
+        // If the feature is force disabled, package info is not queried
+        verify(mContext, never()).getPackageManager();
+        verify(mContext, never()).getPackageName();
+        verify(mPm, never()).getPackageInfo(anyString(), anyInt());
     }
 
     @Test
@@ -415,25 +445,65 @@ public class DeviceConfigUtilsTest {
     }
 
     @Test
-    public void testIsTetheringFeatureNotChickenedOut() throws Exception {
-        doReturn("0").when(() -> DeviceConfig.getProperty(
-                eq(NAMESPACE_TETHERING), eq(TEST_EXPERIMENT_FLAG)));
-        assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
-
-        doReturn(TEST_FLAG_VALUE_STRING).when(
-                () -> DeviceConfig.getProperty(eq(NAMESPACE_TETHERING), eq(TEST_EXPERIMENT_FLAG)));
-        assertFalse(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
+    public void testIsFeatureNotChickenedOut() {
+        doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
+                TEST_EXPERIMENT_FLAG));
+        doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
+                TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
     }
 
     @Test
-    public void testIsNetworkStackFeatureNotChickenedOut() throws Exception {
-        doReturn("0").when(() -> DeviceConfig.getProperty(
-                eq(NAMESPACE_CONNECTIVITY), eq(TEST_EXPERIMENT_FLAG)));
-        assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
+    public void testIsFeatureNotChickenedOutFeatureDefaultEnabled() throws Exception {
+        doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
+                TEST_EXPERIMENT_FLAG));
+        doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
+                TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
 
-        doReturn(TEST_FLAG_VALUE_STRING).when(
-                () -> DeviceConfig.getProperty(eq(NAMESPACE_CONNECTIVITY),
-                                               eq(TEST_EXPERIMENT_FLAG)));
-        assertFalse(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(TEST_EXPERIMENT_FLAG));
+        // If the flag is unset, package info is not queried
+        verify(mContext, never()).getPackageManager();
+        verify(mContext, never()).getPackageName();
+        verify(mPm, never()).getPackageInfo(anyString(), anyInt());
+    }
+
+    @Test
+    public void testIsFeatureNotChickenedOutFeatureForceEnabled() throws Exception {
+        doReturn("1").when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
+                TEST_EXPERIMENT_FLAG));
+        doReturn("1").when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
+                TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+
+        // If the feature is force enabled, package info is not queried
+        verify(mContext, never()).getPackageManager();
+        verify(mContext, never()).getPackageName();
+        verify(mPm, never()).getPackageInfo(anyString(), anyInt());
+    }
+
+    @Test
+    public void testIsFeatureNotChickenedOutFeatureForceDisabled() throws Exception {
+        doReturn("-1").when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
+                TEST_EXPERIMENT_FLAG));
+        doReturn("-1").when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
+                TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+
+        // If the feature is force disabled, package info is not queried
+        verify(mContext, never()).getPackageManager();
+        verify(mContext, never()).getPackageName();
+        verify(mPm, never()).getPackageInfo(anyString(), anyInt());
     }
 }

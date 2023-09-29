@@ -993,7 +993,7 @@ public class KeepaliveTracker {
          */
         public boolean isAddressTranslationEnabled(@NonNull Context context) {
             return DeviceConfigUtils.isFeatureSupported(context, FEATURE_CLAT_ADDRESS_TRANSLATE)
-                    && DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                    && DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context,
                             CONFIG_DISABLE_CLAT_ADDRESS_TRANSLATE);
         }
     }
