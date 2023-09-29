@@ -88,6 +88,11 @@ public class NetlinkUtilsTest {
         if (SdkLevel.isAtLeastT() && targetSdk > 31) {
             var ctxt = new String(Files.readAllBytes(Paths.get("/proc/thread-self/attr/current")));
             assumeFalse("must not be platform app", ctxt.startsWith("u:r:platform_app:s0:"));
+            // NetworkStackCoverageTests uses the same UID with NetworkStack module, which
+            // still has the permission to send RTM_GETNEIGH message (sepolicy just blocks the
+            // access from untrusted_apps), also exclude the NetworkStackCoverageTests.
+            assumeFalse("network_stack context is expected to have permission to send RTM_GETNEIGH",
+                    ctxt.startsWith("u:r:network_stack:s0"));
             try {
                 NetlinkUtils.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS);
                 fail("RTM_GETNEIGH is not allowed for apps targeting SDK > 31 on T+ platforms,"
