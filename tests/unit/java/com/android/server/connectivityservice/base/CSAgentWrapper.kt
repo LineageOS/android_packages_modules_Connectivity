@@ -131,4 +131,8 @@ class CSAgentWrapper(
         }
         mgr.unregisterNetworkCallback(cb)
     }
+
+    fun disconnect() {
+        agent.unregister()
+    }
 }
