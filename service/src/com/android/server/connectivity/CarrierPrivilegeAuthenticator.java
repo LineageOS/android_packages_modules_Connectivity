@@ -16,8 +16,9 @@
 
 package com.android.server.connectivity;
 
-import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+
+import static com.android.server.connectivity.ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK;
 
 import android.annotation.NonNull;
 import android.content.BroadcastReceiver;
@@ -44,6 +45,7 @@ import com.android.networkstack.apishim.TelephonyManagerShimImpl;
 import com.android.networkstack.apishim.common.TelephonyManagerShim;
 import com.android.networkstack.apishim.common.TelephonyManagerShim.CarrierPrivilegesListenerShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
+import com.android.server.ConnectivityService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +57,7 @@ import java.util.concurrent.Executor;
  * carrier privileged app that provides the carrier config
  * @hide
  */
-public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
+public class CarrierPrivilegeAuthenticator {
     private static final String TAG = CarrierPrivilegeAuthenticator.class.getSimpleName();
     private static final boolean DBG = true;
 
@@ -68,63 +70,58 @@ public class CarrierPrivilegeAuthenticator extends BroadcastReceiver {
     @GuardedBy("mLock")
     private int mModemCount = 0;
     private final Object mLock = new Object();
-    private final HandlerThread mThread;
     private final Handler mHandler;
     @NonNull
+    @GuardedBy("mLock")
     private final List<CarrierPrivilegesListenerShim> mCarrierPrivilegesChangedListeners =
             new ArrayList<>();
+    private final boolean mUseCallbacksForServiceChanged;
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
+            @NonNull final ConnectivityService.Dependencies deps,
             @NonNull final TelephonyManager t,
             @NonNull final TelephonyManagerShim telephonyManagerShim) {
         mContext = c;
         mTelephonyManager = t;
         mTelephonyManagerShim = telephonyManagerShim;
-        mThread = new HandlerThread(TAG);
-        mThread.start();
-        mHandler = new Handler(mThread.getLooper()) {};
+        final HandlerThread thread = new HandlerThread(TAG);
+        thread.start();
+        mHandler = new Handler(thread.getLooper());
+        mUseCallbacksForServiceChanged = deps.isFeatureEnabled(
+                c, CARRIER_SERVICE_CHANGED_USE_CALLBACK);
+        final IntentFilter filter = new IntentFilter();
+        filter.addAction(TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED);
         synchronized (mLock) {
-            mModemCount = mTelephonyManager.getActiveModemCount();
-            registerForCarrierChanges();
-            updateCarrierServiceUid();
+            // Never unregistered because the system server never stops
+            c.registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(final Context context, final Intent intent) {
+                    switch (intent.getAction()) {
+                        case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
+                            simConfigChanged();
+                            break;
+                        default:
+                            Log.d(TAG, "Unknown intent received, action: " + intent.getAction());
+                    }
+                }
+            }, filter, null, mHandler);
+            simConfigChanged();
         }
     }
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
+            @NonNull final ConnectivityService.Dependencies deps,
             @NonNull final TelephonyManager t) {
-        this(c, t, TelephonyManagerShimImpl.newInstance(t));
+        this(c, deps, t, TelephonyManagerShimImpl.newInstance(t));
     }
 
-    /**
-     * Broadcast receiver for ACTION_MULTI_SIM_CONFIG_CHANGED
-     *
-     * <p>The broadcast receiver is registered with mHandler
-     */
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        switch (intent.getAction()) {
-            case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
-                handleActionMultiSimConfigChanged(context, intent);
-                break;
-            default:
-                Log.d(TAG, "Unknown intent received with action: " + intent.getAction());
-        }
-    }
-
-    private void handleActionMultiSimConfigChanged(Context context, Intent intent) {
-        unregisterCarrierPrivilegesListeners();
+    private void simConfigChanged() {
         synchronized (mLock) {
+            unregisterCarrierPrivilegesListeners();
             mModemCount = mTelephonyManager.getActiveModemCount();
+            registerCarrierPrivilegesListeners();
+            updateCarrierServiceUid();
         }
-        registerCarrierPrivilegesListeners();
-        updateCarrierServiceUid();
-    }
-
-    private void registerForCarrierChanges() {
-        final IntentFilter filter = new IntentFilter();
-        filter.addAction(TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED);
-        mContext.registerReceiver(this, filter, null, mHandler);
-        registerCarrierPrivilegesListeners();
     }
 
     private void registerCarrierPrivilegesListeners() {

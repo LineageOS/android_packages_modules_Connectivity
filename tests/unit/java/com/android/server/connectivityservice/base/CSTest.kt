@@ -135,8 +135,10 @@ open class CSTest {
         override fun makeHandlerThread() = csHandlerThread
         override fun makeProxyTracker(context: Context, connServiceHandler: Handler) = proxyTracker
 
-        override fun makeCarrierPrivilegeAuthenticator(context: Context, tm: TelephonyManager) =
-                if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
+        override fun makeCarrierPrivilegeAuthenticator(
+                context: Context,
+                tm: TelephonyManager
+        ) = if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
 
         private inner class AOOKTDeps(c: Context) : AutomaticOnOffKeepaliveTracker.Dependencies(c) {
             override fun isTetheringFeatureNotChickenedOut(name: String): Boolean {
