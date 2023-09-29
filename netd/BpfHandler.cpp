@@ -214,7 +214,7 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
     // which might toggle the live stats map and clean it.
     const auto countUidStatsEntries = [chargeUid, &totalEntryCount, &perUidEntryCount](
                                               const StatsKey& key,
-                                              const BpfMap<StatsKey, StatsValue>&) {
+                                              const BpfMapRO<StatsKey, StatsValue>&) {
         if (key.uid == chargeUid) {
             perUidEntryCount++;
         }
@@ -232,9 +232,8 @@ int BpfHandler::tagSocket(int sockFd, uint32_t tag, uid_t chargeUid, uid_t realU
         return -EINVAL;
     }
 
-    BpfMap<StatsKey, StatsValue>& currentMap =
+    BpfMapRO<StatsKey, StatsValue>& currentMap =
             (configuration.value() == SELECT_MAP_A) ? mStatsMapA : mStatsMapB;
-    // HACK: mStatsMapB becomes RW BpfMap here, but countUidStatsEntries doesn't modify so it works
     base::Result<void> res = currentMap.iterate(countUidStatsEntries);
     if (!res.ok()) {
         ALOGE("Failed to count the stats entry in map: %s",
