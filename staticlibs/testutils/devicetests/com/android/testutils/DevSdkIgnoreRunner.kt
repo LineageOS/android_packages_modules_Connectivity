@@ -42,7 +42,7 @@ import org.junit.runners.Parameterized
  * the whole class if they do not match the development SDK as defined in [DevSdkIgnoreRule].
  * Otherwise, it will delegate to [AndroidJUnit4] to run the test as usual.
  *
- * This class automatically uses the Parameterized runner as its base runner, so the
+ * This class automatically uses the Parameterized runner as its base runner when needed, so the
  * @Parameterized.Parameters annotation and its friends can be used in tests using this runner.
  *
  * Example usage:
@@ -69,7 +69,7 @@ class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, So
             null
         } else if (it.hasParameterizedMethod()) {
             // Parameterized throws if there is no static method annotated with @Parameters, which
-            // isn't too useful. Use if it there are, otherwise use its base AndroidJUnit4 runner.
+            // isn't too useful. Use it if there are, otherwise use its base AndroidJUnit4 runner.
             RunnerWrapper(Parameterized(klass))
         } else {
             RunnerWrapper(AndroidJUnit4(klass))
