@@ -158,6 +158,8 @@ public class CarrierPrivilegeAuthenticatorTest {
         assertNotNull(initialListeners.get(1));
         assertEquals(2, initialListeners.size());
 
+        initialListeners.get(0).onCarrierServiceChanged(null, mCarrierConfigPkgUid);
+
         final NetworkCapabilities.Builder ncBuilder = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
                 .setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
@@ -194,6 +196,8 @@ public class CarrierPrivilegeAuthenticatorTest {
         assertNotNull(newListeners.get(0));
         assertEquals(1, newListeners.size());
 
+        newListeners.get(0).onCarrierServiceChanged(null, mCarrierConfigPkgUid);
+
         final TelephonyNetworkSpecifier specifier = new TelephonyNetworkSpecifier(0);
         final NetworkCapabilities nc = new NetworkCapabilities.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
@@ -219,6 +223,7 @@ public class CarrierPrivilegeAuthenticatorTest {
         applicationInfo.uid = mCarrierConfigPkgUid + 1;
         doReturn(applicationInfo).when(mPackageManager).getApplicationInfo(eq(mTestPkg), anyInt());
         listener.onCarrierPrivilegesChanged(Collections.emptyList(), new int[] {});
+        listener.onCarrierServiceChanged(null, applicationInfo.uid);
 
         assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
                 mCarrierConfigPkgUid, nc));
@@ -228,6 +233,9 @@ public class CarrierPrivilegeAuthenticatorTest {
 
     @Test
     public void testDefaultSubscription() throws Exception {
+        final CarrierPrivilegesListenerShim listener = getCarrierPrivilegesListeners().get(0);
+        listener.onCarrierServiceChanged(null, mCarrierConfigPkgUid);
+
         final NetworkCapabilities.Builder ncBuilder = new NetworkCapabilities.Builder();
         ncBuilder.addTransportType(TRANSPORT_CELLULAR);
         assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
