@@ -129,6 +129,16 @@ static const set<string> MAINLINE_FOR_T_5_15_PLUS = {
     SHARED "prog_dscpPolicy_schedcls_set_dscp_ether",
 };
 
+// Provided by *current* mainline module for U+ devices
+static const set<string> MAINLINE_FOR_U_PLUS = {
+    NETD "map_netd_packet_trace_enabled_map",
+};
+
+// Provided by *current* mainline module for U+ devices with 5.10+ kernels
+static const set<string> MAINLINE_FOR_U_5_10_PLUS = {
+    NETD "map_netd_packet_trace_ringbuf",
+};
+
 static void addAll(set<string>& a, const set<string>& b) {
     a.insert(b.begin(), b.end());
 }
@@ -171,6 +181,8 @@ TEST_F(BpfExistenceTest, TestPrograms) {
 
     // U requires Linux Kernel 4.14+, but nothing (as yet) added or removed in U.
     if (IsAtLeastU()) ASSERT_TRUE(isAtLeastKernelVersion(4, 14, 0));
+    DO_EXPECT(IsAtLeastU(), MAINLINE_FOR_U_PLUS);
+    DO_EXPECT(IsAtLeastU() && isAtLeastKernelVersion(5, 10, 0), MAINLINE_FOR_U_5_10_PLUS);
 
     // V requires Linux Kernel 4.19+, but nothing (as yet) added or removed in V.
     if (IsAtLeastV()) ASSERT_TRUE(isAtLeastKernelVersion(4, 19, 0));
