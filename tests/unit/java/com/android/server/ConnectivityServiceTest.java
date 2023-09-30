@@ -30,6 +30,7 @@ import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_SETUP_WIZARD;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD;
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_FROZEN;
 import static android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_UNFROZEN;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
@@ -153,6 +154,7 @@ import static android.os.Process.INVALID_UID;
 import static android.system.OsConstants.IPPROTO_TCP;
 
 import static com.android.server.ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION;
+import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
 import static com.android.server.ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION;
 import static com.android.server.ConnectivityService.MAX_NETWORK_REQUESTS_PER_SYSTEM_UID;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED;
@@ -251,6 +253,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.ModuleInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -1904,6 +1907,7 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(CONTROL_OEM_PAID_NETWORK_PREFERENCE, PERMISSION_GRANTED);
         mServiceContext.setPermission(PACKET_KEEPALIVE_OFFLOAD, PERMISSION_GRANTED);
         mServiceContext.setPermission(CONNECTIVITY_USE_RESTRICTED_NETWORKS, PERMISSION_GRANTED);
+        mServiceContext.setPermission(READ_DEVICE_CONFIG, PERMISSION_GRANTED);
 
         mAlarmManagerThread = new HandlerThread("TestAlarmManager");
         mAlarmManagerThread.start();
@@ -2059,7 +2063,8 @@ public class ConnectivityServiceTest {
 
         @Override
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
-                @NonNull final Context context, @NonNull final TelephonyManager tm) {
+                @NonNull final Context context,
+                @NonNull final TelephonyManager tm) {
             return mDeps.isAtLeastT() ? mCarrierPrivilegeAuthenticator : null;
         }
 
@@ -2151,6 +2156,7 @@ public class ConnectivityServiceTest {
         public boolean isFeatureEnabled(Context context, String name) {
             switch (name) {
                 case ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER:
+                case ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK:
                     return true;
                 case KEY_DESTROY_FROZEN_SOCKETS_VERSION:
                     return true;
@@ -2405,6 +2411,7 @@ public class ConnectivityServiceTest {
         final String myPackageName = mContext.getPackageName();
         final PackageInfo myPackageInfo = mContext.getPackageManager().getPackageInfo(
                 myPackageName, PackageManager.GET_PERMISSIONS);
+        myPackageInfo.setLongVersionCode(9_999_999L);
         doReturn(new String[] {myPackageName}).when(mPackageManager)
                 .getPackagesForUid(Binder.getCallingUid());
         doReturn(myPackageInfo).when(mPackageManager).getPackageInfoAsUser(
@@ -2415,6 +2422,13 @@ public class ConnectivityServiceTest {
                 buildPackageInfo(/* SYSTEM */ false, APP2_UID),
                 buildPackageInfo(/* SYSTEM */ false, VPN_UID)
         })).when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
+
+        final ModuleInfo moduleInfo = new ModuleInfo();
+        moduleInfo.setPackageName(TETHERING_MODULE_NAME);
+        doReturn(moduleInfo).when(mPackageManager)
+                .getModuleInfo(TETHERING_MODULE_NAME, PackageManager.MODULE_APEX_NAME);
+        doReturn(myPackageInfo).when(mPackageManager)
+                .getPackageInfo(TETHERING_MODULE_NAME, PackageManager.MATCH_APEX);
 
         // Create a fake always-on VPN package.
         final int userId = UserHandle.getCallingUserId();

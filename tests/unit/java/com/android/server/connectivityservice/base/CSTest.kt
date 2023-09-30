@@ -24,13 +24,16 @@ import android.net.NetworkScore
 import android.net.PacProxyManager
 import android.net.RouteInfo
 import android.net.networkstack.NetworkStackClientBase
+import android.os.BatteryStatsManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.UserHandle
 import android.os.UserManager
 import android.telephony.TelephonyManager
 import android.testing.TestableContext
+import android.util.ArraySet
 import androidx.test.platform.app.InstrumentationRegistry
+import com.android.internal.app.IBatteryStats
 import com.android.internal.util.test.BroadcastInterceptingContext
 import com.android.modules.utils.build.SdkLevel
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException
@@ -41,6 +44,7 @@ import com.android.server.connectivity.ConnectivityFlags
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies
 import com.android.server.connectivity.ProxyTracker
+import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import org.mockito.AdditionalAnswers.delegatesTo
 import org.mockito.Mockito.doAnswer
@@ -71,7 +75,7 @@ open class CSTest {
     init {
         if (!SdkLevel.isAtLeastS()) {
             throw UnsupportedApiLevelException("CSTest subclasses must be annotated to only " +
-                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)");
+                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)")
         }
     }
 
@@ -112,6 +116,7 @@ open class CSTest {
     val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
     val alarmManager = makeMockAlarmManager()
     val systemConfigManager = makeMockSystemConfigManager()
+    val batteryManager = BatteryStatsManager(mock<IBatteryStats>())
     val telephonyManager = mock<TelephonyManager>().also {
         doReturn(true).`when`(it).isDataCapable()
     }
@@ -130,8 +135,10 @@ open class CSTest {
         override fun makeHandlerThread() = csHandlerThread
         override fun makeProxyTracker(context: Context, connServiceHandler: Handler) = proxyTracker
 
-        override fun makeCarrierPrivilegeAuthenticator(context: Context, tm: TelephonyManager) =
-                if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
+        override fun makeCarrierPrivilegeAuthenticator(
+                context: Context,
+                tm: TelephonyManager
+        ) = if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
 
         private inner class AOOKTDeps(c: Context) : AutomaticOnOffKeepaliveTracker.Dependencies(c) {
             override fun isTetheringFeatureNotChickenedOut(name: String): Boolean {
@@ -150,6 +157,25 @@ open class CSTest {
         // checking permissions.
         override fun isFeatureEnabled(context: Context?, name: String?) =
                 enabledFeatures[name] ?: fail("Unmocked feature $name, see CSTest.enabledFeatures")
+
+        // Mocked change IDs
+        private val enabledChangeIds = ArraySet<Long>()
+        fun setChangeIdEnabled(enabled: Boolean, changeId: Long) {
+            // enabledChangeIds is read on the handler thread and maybe the test thread, so
+            // make sure both threads see it before continuing.
+            visibleOnHandlerThread(csHandler) {
+                if (enabled) {
+                    enabledChangeIds.add(changeId)
+                } else {
+                    enabledChangeIds.remove(changeId)
+                }
+            }
+        }
+
+        override fun isChangeEnabled(changeId: Long, pkg: String, user: UserHandle) =
+                changeId in enabledChangeIds
+        override fun isChangeEnabled(changeId: Long, uid: Int) =
+                changeId in enabledChangeIds
     }
 
     inner class CSContext(base: Context) : BroadcastInterceptingContext(base) {
@@ -196,6 +222,7 @@ open class CSTest {
             Context.ACTIVITY_SERVICE -> activityManager
             Context.SYSTEM_CONFIG_SERVICE -> systemConfigManager
             Context.TELEPHONY_SERVICE -> telephonyManager
+            Context.BATTERY_STATS_SERVICE -> batteryManager
             Context.STATS_MANAGER -> null // Stats manager is final and can't be mocked
             else -> super.getSystemService(serviceName)
         }

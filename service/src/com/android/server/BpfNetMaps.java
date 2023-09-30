@@ -254,7 +254,7 @@ public class BpfNetMaps {
         if (sInitialized) return;
         if (sEnableJavaBpfMap == null) {
             sEnableJavaBpfMap = SdkLevel.isAtLeastU() ||
-                    DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                    DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context,
                             BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP);
         }
         Log.d(TAG, "BpfNetMaps is initialized with sEnableJavaBpfMap=" + sEnableJavaBpfMap);
