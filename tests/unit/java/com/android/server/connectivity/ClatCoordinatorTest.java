@@ -508,10 +508,10 @@ public class ClatCoordinatorTest {
         // Expected mtu is that the detected mtu minus MTU_DELTA(28).
         assertEquals(1372, ClatCoordinator.adjustMtu(1400));
         assertEquals(1472, ClatCoordinator.adjustMtu(ETHER_MTU));
-        assertEquals(65508, ClatCoordinator.adjustMtu(CLAT_MAX_MTU));
+        assertEquals(1500, ClatCoordinator.adjustMtu(CLAT_MAX_MTU));
 
-        // Expected mtu is that CLAT_MAX_MTU(65536) minus MTU_DELTA(28).
-        assertEquals(65508, ClatCoordinator.adjustMtu(CLAT_MAX_MTU + 1 /* over maximum mtu */));
+        // Expected mtu is that CLAT_MAX_MTU(1528) minus MTU_DELTA(28).
+        assertEquals(1500, ClatCoordinator.adjustMtu(CLAT_MAX_MTU + 1 /* over maximum mtu */));
     }
 
     private void verifyDump(final ClatCoordinator coordinator, boolean clatStarted) {
