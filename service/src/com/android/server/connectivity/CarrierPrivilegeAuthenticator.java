@@ -21,6 +21,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static com.android.server.connectivity.ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -72,9 +73,7 @@ public class CarrierPrivilegeAuthenticator {
     private final Object mLock = new Object();
     private final Handler mHandler;
     @NonNull
-    @GuardedBy("mLock")
-    private final List<CarrierPrivilegesListenerShim> mCarrierPrivilegesChangedListeners =
-            new ArrayList<>();
+    private final List<PrivilegeListener> mCarrierPrivilegesChangedListeners = new ArrayList<>();
     private final boolean mUseCallbacksForServiceChanged;
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
@@ -119,32 +118,49 @@ public class CarrierPrivilegeAuthenticator {
         synchronized (mLock) {
             unregisterCarrierPrivilegesListeners();
             mModemCount = mTelephonyManager.getActiveModemCount();
-            registerCarrierPrivilegesListeners();
-            updateCarrierServiceUid();
+            registerCarrierPrivilegesListeners(mModemCount);
+            if (!mUseCallbacksForServiceChanged) updateCarrierServiceUid();
         }
     }
 
-    private void registerCarrierPrivilegesListeners() {
-        final HandlerExecutor executor = new HandlerExecutor(mHandler);
-        int modemCount;
-        synchronized (mLock) {
-            modemCount = mModemCount;
+    private class PrivilegeListener implements CarrierPrivilegesListenerShim {
+        public final int mLogicalSlot;
+        PrivilegeListener(final int logicalSlot) {
+            mLogicalSlot = logicalSlot;
         }
+
+        @Override public void onCarrierPrivilegesChanged(
+                @NonNull List<String> privilegedPackageNames,
+                @NonNull int[] privilegedUids) {
+            if (mUseCallbacksForServiceChanged) return;
+            // Re-trigger the synchronous check (which is also very cheap due
+            // to caching in CarrierPrivilegesTracker). This allows consistency
+            // with the onSubscriptionsChangedListener and broadcasts.
+            updateCarrierServiceUid();
+        }
+
+        @Override
+        public void onCarrierServiceChanged(@Nullable final String carrierServicePackageName,
+                final int carrierServiceUid) {
+            if (!mUseCallbacksForServiceChanged) {
+                // Re-trigger the synchronous check (which is also very cheap due
+                // to caching in CarrierPrivilegesTracker). This allows consistency
+                // with the onSubscriptionsChangedListener and broadcasts.
+                updateCarrierServiceUid();
+                return;
+            }
+            synchronized (mLock) {
+                mCarrierServiceUid.put(mLogicalSlot, carrierServiceUid);
+            }
+        }
+    }
+
+    private void registerCarrierPrivilegesListeners(final int modemCount) {
+        final HandlerExecutor executor = new HandlerExecutor(mHandler);
         try {
             for (int i = 0; i < modemCount; i++) {
-                CarrierPrivilegesListenerShim carrierPrivilegesListener =
-                        new CarrierPrivilegesListenerShim() {
-                            @Override
-                            public void onCarrierPrivilegesChanged(
-                                    @NonNull List<String> privilegedPackageNames,
-                                    @NonNull int[] privilegedUids) {
-                                // Re-trigger the synchronous check (which is also very cheap due
-                                // to caching in CarrierPrivilegesTracker). This allows consistency
-                                // with the onSubscriptionsChangedListener and broadcasts.
-                                updateCarrierServiceUid();
-                            }
-                        };
-                addCarrierPrivilegesListener(i, executor, carrierPrivilegesListener);
+                PrivilegeListener carrierPrivilegesListener = new PrivilegeListener(i);
+                addCarrierPrivilegesListener(executor, carrierPrivilegesListener);
                 mCarrierPrivilegesChangedListeners.add(carrierPrivilegesListener);
             }
         } catch (IllegalArgumentException e) {
@@ -152,24 +168,13 @@ public class CarrierPrivilegeAuthenticator {
         }
     }
 
-    private void addCarrierPrivilegesListener(int logicalSlotIndex, Executor executor,
-            CarrierPrivilegesListenerShim listener) {
-        try {
-            mTelephonyManagerShim.addCarrierPrivilegesListener(
-                    logicalSlotIndex, executor, listener);
-        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
-            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
-            Log.e(TAG, "addCarrierPrivilegesListener API is not available");
+    @GuardedBy("mLock")
+    private void unregisterCarrierPrivilegesListeners() {
+        for (PrivilegeListener carrierPrivilegesListener : mCarrierPrivilegesChangedListeners) {
+            removeCarrierPrivilegesListener(carrierPrivilegesListener);
+            mCarrierServiceUid.delete(carrierPrivilegesListener.mLogicalSlot);
         }
-    }
-
-    private void removeCarrierPrivilegesListener(CarrierPrivilegesListenerShim listener) {
-        try {
-            mTelephonyManagerShim.removeCarrierPrivilegesListener(listener);
-        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
-            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
-            Log.e(TAG, "removeCarrierPrivilegesListener API is not available");
-        }
+        mCarrierPrivilegesChangedListeners.clear();
     }
 
     private String getCarrierServicePackageNameForLogicalSlot(int logicalSlotIndex) {
@@ -181,14 +186,6 @@ public class CarrierPrivilegeAuthenticator {
             Log.e(TAG, "getCarrierServicePackageNameForLogicalSlot API is not available");
         }
         return null;
-    }
-
-    private void unregisterCarrierPrivilegesListeners() {
-        for (CarrierPrivilegesListenerShim carrierPrivilegesListener :
-                mCarrierPrivilegesChangedListeners) {
-            removeCarrierPrivilegesListener(carrierPrivilegesListener);
-        }
-        mCarrierPrivilegesChangedListeners.clear();
     }
 
     /**
@@ -272,5 +269,27 @@ public class CarrierPrivilegeAuthenticator {
     @VisibleForTesting
     int getCarrierServicePackageUidForSlot(int slotId) {
         return getUidForPackage(getCarrierServicePackageNameForLogicalSlot(slotId));
+    }
+
+    // Helper methods to avoid having to deal with UnsupportedApiLevelException.
+
+    private void addCarrierPrivilegesListener(@NonNull final Executor executor,
+            @NonNull final PrivilegeListener listener) {
+        try {
+            mTelephonyManagerShim.addCarrierPrivilegesListener(listener.mLogicalSlot, executor,
+                    listener);
+        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
+            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
+            Log.e(TAG, "addCarrierPrivilegesListener API is not available");
+        }
+    }
+
+    private void removeCarrierPrivilegesListener(PrivilegeListener listener) {
+        try {
+            mTelephonyManagerShim.removeCarrierPrivilegesListener(listener);
+        } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
+            // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
+            Log.e(TAG, "removeCarrierPrivilegesListener API is not available");
+        }
     }
 }
