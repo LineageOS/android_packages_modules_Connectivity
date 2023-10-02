@@ -33,7 +33,7 @@
 	BPF_REJECT
 
 // *TWO* instructions: compare and if none of the bits are set jump over the reject statement
-#define BPF2_REJECT_IF_ANY_BITS_SET(v) \
+#define BPF2_REJECT_IF_ANY_MASKED_BITS_SET(v) \
 	BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, (v), 0, 1), \
 	BPF_REJECT
 
