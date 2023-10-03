@@ -93,14 +93,6 @@ constexpr bpf_prog_type kTetheringApexAllowedProgTypes[] = {
         BPF_PROG_TYPE_XDP,
 };
 
-// see b/162057235. For arbitrary program types, the concern is that due to the lack of
-// SELinux access controls over BPF program attachpoints, we have no way to control the
-// attachment of programs to shared resources (or to detect when a shared resource
-// has one BPF program replace another that is attached there)
-constexpr bpf_prog_type kVendorAllowedProgTypes[] = {
-        BPF_PROG_TYPE_SOCKET_FILTER,
-};
-
 
 const android::bpf::Location locations[] = {
         // S+ Tethering mainline module (network_stack): tether offload
@@ -144,14 +136,6 @@ const android::bpf::Location locations[] = {
                 .allowedDomainBitmask = kTetheringApexDomainBitmask,
                 .allowedProgTypes = kTetheringApexAllowedProgTypes,
                 .allowedProgTypesLength = arraysize(kTetheringApexAllowedProgTypes),
-        },
-        // Vendor operating system
-        {
-                .dir = "/vendor/etc/bpf/",
-                .prefix = "vendor/",
-                .allowedDomainBitmask = domainToBitmask(domain::vendor),
-                .allowedProgTypes = kVendorAllowedProgTypes,
-                .allowedProgTypesLength = arraysize(kVendorAllowedProgTypes),
         },
 };
 
