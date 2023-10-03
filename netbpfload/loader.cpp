@@ -98,7 +98,6 @@ static unsigned int page_size = static_cast<unsigned int>(getpagesize());
 constexpr const char* lookupSelinuxContext(const domain d, const char* const unspecified = "") {
     switch (d) {
         case domain::unspecified:   return unspecified;
-        case domain::platform:      return "fs_bpf";
         case domain::tethering:     return "fs_bpf_tethering";
         case domain::net_private:   return "fs_bpf_net_private";
         case domain::net_shared:    return "fs_bpf_net_shared";
@@ -130,7 +129,6 @@ domain getDomainFromSelinuxContext(const char s[BPF_SELINUX_CONTEXT_CHAR_ARRAY_S
 constexpr const char* lookupPinSubdir(const domain d, const char* const unspecified = "") {
     switch (d) {
         case domain::unspecified:   return unspecified;
-        case domain::platform:      return "/";
         case domain::tethering:     return "tethering/";
         case domain::net_private:   return "net_private/";
         case domain::net_shared:    return "net_shared/";

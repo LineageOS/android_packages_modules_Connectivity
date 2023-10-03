@@ -39,7 +39,6 @@ namespace bpf {
 enum class domain : int {
     unrecognized = -1,  // invalid for this version of the bpfloader
     unspecified = 0,    // means just use the default for that specific pin location
-    platform,           //      fs_bpf               /sys/fs/bpf
     tethering,          // (S+) fs_bpf_tethering     /sys/fs/bpf/tethering
     net_private,        // (T+) fs_bpf_net_private   /sys/fs/bpf/net_private
     net_shared,         // (T+) fs_bpf_net_shared    /sys/fs/bpf/net_shared
@@ -52,7 +51,6 @@ enum class domain : int {
 // Note: this does not include domain::unrecognized, but does include domain::unspecified
 static constexpr domain AllDomains[] = {
     domain::unspecified,
-    domain::platform,
     domain::tethering,
     domain::net_private,
     domain::net_shared,
