@@ -87,6 +87,14 @@ static inline __always_inline void try_make_writable(struct __sk_buff* skb, int 
     if (skb->data_end - skb->data < len) bpf_skb_pull_data(skb, len);
 }
 
+// constants for passing in to 'bool shared' (for maps)
+static const bool PRIVATE = false;
+static const bool SHARED = true;
+
+// constants for passing in to 'bool optional' (for programs)
+static const bool MANDATORY = false;
+static const bool OPTIONAL = true;
+
 // constants for passing in to 'bool egress'
 static const bool INGRESS = false;
 static const bool EGRESS = true;
