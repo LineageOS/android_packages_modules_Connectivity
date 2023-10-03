@@ -167,7 +167,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean addIpv6UpstreamRule(@NonNull final Ipv6UpstreamRule rule) {
-        if (!isInitialized()) return false;
         // RFC7421_PREFIX_LENGTH = 64 which is the most commonly used IPv6 subnet prefix length.
         if (rule.sourcePrefix.getPrefixLength() != RFC7421_PREFIX_LENGTH) return false;
 
@@ -185,7 +184,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean removeIpv6UpstreamRule(@NonNull final Ipv6UpstreamRule rule) {
-        if (!isInitialized()) return false;
         // RFC7421_PREFIX_LENGTH = 64 which is the most commonly used IPv6 subnet prefix length.
         if (rule.sourcePrefix.getPrefixLength() != RFC7421_PREFIX_LENGTH) return false;
 
@@ -200,8 +198,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean addIpv6DownstreamRule(@NonNull final Ipv6DownstreamRule rule) {
-        if (!isInitialized()) return false;
-
         final TetherDownstream6Key key = rule.makeTetherDownstream6Key();
         final Tether6Value value = rule.makeTether6Value();
 
@@ -217,8 +213,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean removeIpv6DownstreamRule(@NonNull final Ipv6DownstreamRule rule) {
-        if (!isInitialized()) return false;
-
         try {
             mBpfDownstream6Map.deleteEntry(rule.makeTetherDownstream6Key());
         } catch (ErrnoException e) {
@@ -234,8 +228,6 @@ public class BpfCoordinatorShimImpl
     @Override
     @Nullable
     public SparseArray<TetherStatsValue> tetherOffloadGetStats() {
-        if (!isInitialized()) return null;
-
         final SparseArray<TetherStatsValue> tetherStatsList = new SparseArray<TetherStatsValue>();
         try {
             // The reported tether stats are total data usage for all currently-active upstream
@@ -250,8 +242,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean tetherOffloadSetInterfaceQuota(int ifIndex, long quotaBytes) {
-        if (!isInitialized()) return false;
-
         // The common case is an update, where the stats already exist,
         // hence we read first, even though writing with BPF_NOEXIST
         // first would make the code simpler.
@@ -307,8 +297,6 @@ public class BpfCoordinatorShimImpl
     @Override
     @Nullable
     public TetherStatsValue tetherOffloadGetAndClearStats(int ifIndex) {
-        if (!isInitialized()) return null;
-
         // getAndClearTetherOffloadStats is called after all offload rules have already been
         // deleted for the given upstream interface. Before starting to do cleanup stuff in this
         // function, use synchronizeKernelRCU to make sure that all the current running eBPF
@@ -354,8 +342,6 @@ public class BpfCoordinatorShimImpl
     @Override
     public boolean tetherOffloadRuleAdd(boolean downstream, @NonNull Tether4Key key,
             @NonNull Tether4Value value) {
-        if (!isInitialized()) return false;
-
         try {
             if (downstream) {
                 mBpfDownstream4Map.insertEntry(key, value);
@@ -379,8 +365,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean tetherOffloadRuleRemove(boolean downstream, @NonNull Tether4Key key) {
-        if (!isInitialized()) return false;
-
         try {
             if (downstream) {
                 if (!mBpfDownstream4Map.deleteEntry(key)) return false;  // Rule did not exist
@@ -413,8 +397,6 @@ public class BpfCoordinatorShimImpl
     @Override
     public void tetherOffloadRuleForEach(boolean downstream,
             @NonNull ThrowingBiConsumer<Tether4Key, Tether4Value> action) {
-        if (!isInitialized()) return;
-
         try {
             if (downstream) {
                 mBpfDownstream4Map.forEach(action);
@@ -428,8 +410,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean attachProgram(String iface, boolean downstream, boolean ipv4) {
-        if (!isInitialized()) return false;
-
         try {
             BpfUtils.attachProgram(iface, downstream, ipv4);
         } catch (IOException e) {
@@ -441,8 +421,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean detachProgram(String iface, boolean ipv4) {
-        if (!isInitialized()) return false;
-
         try {
             BpfUtils.detachProgram(iface, ipv4);
         } catch (IOException e) {
@@ -460,8 +438,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean addDevMap(int ifIndex) {
-        if (!isInitialized()) return false;
-
         try {
             mBpfDevMap.updateEntry(new TetherDevKey(ifIndex), new TetherDevValue(ifIndex));
         } catch (ErrnoException e) {
@@ -473,8 +449,6 @@ public class BpfCoordinatorShimImpl
 
     @Override
     public boolean removeDevMap(int ifIndex) {
-        if (!isInitialized()) return false;
-
         try {
             mBpfDevMap.deleteEntry(new TetherDevKey(ifIndex));
         } catch (ErrnoException e) {
