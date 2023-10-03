@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
- * Android BPF library - public API
+ * Copyright (C) 2018-2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,27 +38,21 @@ namespace bpf {
 enum class domain : int {
     unrecognized = -1,  // invalid for this version of the bpfloader
     unspecified = 0,    // means just use the default for that specific pin location
-    platform,           //      fs_bpf               /sys/fs/bpf
     tethering,          // (S+) fs_bpf_tethering     /sys/fs/bpf/tethering
     net_private,        // (T+) fs_bpf_net_private   /sys/fs/bpf/net_private
     net_shared,         // (T+) fs_bpf_net_shared    /sys/fs/bpf/net_shared
     netd_readonly,      // (T+) fs_bpf_netd_readonly /sys/fs/bpf/netd_readonly
     netd_shared,        // (T+) fs_bpf_netd_shared   /sys/fs/bpf/netd_shared
-    vendor,             // (T+) fs_bpf_vendor        /sys/fs/bpf/vendor
-    loader,             // (U+) fs_bpf_loader        /sys/fs/bpf/loader
 };
 
 // Note: this does not include domain::unrecognized, but does include domain::unspecified
 static constexpr domain AllDomains[] = {
     domain::unspecified,
-    domain::platform,
     domain::tethering,
     domain::net_private,
     domain::net_shared,
     domain::netd_readonly,
     domain::netd_shared,
-    domain::vendor,
-    domain::loader,
 };
 
 static constexpr bool unrecognized(domain d) {
