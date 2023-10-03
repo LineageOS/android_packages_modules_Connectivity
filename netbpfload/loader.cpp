@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2018-2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "LibBpfLoader"
+#define LOG_TAG "NetBpfLoader"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -98,14 +98,11 @@ static unsigned int page_size = static_cast<unsigned int>(getpagesize());
 constexpr const char* lookupSelinuxContext(const domain d, const char* const unspecified = "") {
     switch (d) {
         case domain::unspecified:   return unspecified;
-        case domain::platform:      return "fs_bpf";
         case domain::tethering:     return "fs_bpf_tethering";
         case domain::net_private:   return "fs_bpf_net_private";
         case domain::net_shared:    return "fs_bpf_net_shared";
         case domain::netd_readonly: return "fs_bpf_netd_readonly";
         case domain::netd_shared:   return "fs_bpf_netd_shared";
-        case domain::vendor:        return "fs_bpf_vendor";
-        case domain::loader:        return "fs_bpf_loader";
         default:                    return "(unrecognized)";
     }
 }
@@ -130,14 +127,11 @@ domain getDomainFromSelinuxContext(const char s[BPF_SELINUX_CONTEXT_CHAR_ARRAY_S
 constexpr const char* lookupPinSubdir(const domain d, const char* const unspecified = "") {
     switch (d) {
         case domain::unspecified:   return unspecified;
-        case domain::platform:      return "/";
         case domain::tethering:     return "tethering/";
         case domain::net_private:   return "net_private/";
         case domain::net_shared:    return "net_shared/";
         case domain::netd_readonly: return "netd_readonly/";
         case domain::netd_shared:   return "netd_shared/";
-        case domain::vendor:        return "vendor/";
-        case domain::loader:        return "loader/";
         default:                    return "(unrecognized)";
     }
 };
