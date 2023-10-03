@@ -87,6 +87,14 @@ static inline __always_inline void try_make_writable(struct __sk_buff* skb, int 
     if (skb->data_end - skb->data < len) bpf_skb_pull_data(skb, len);
 }
 
+// constants for passing in to 'bool shared' (for maps)
+static const bool PRIVATE = false;
+static const bool SHARED = true;
+
+// constants for passing in to 'bool optional' (for programs)
+static const bool MANDATORY = false;
+static const bool OPTIONAL = true;
+
 // constants for passing in to 'bool egress'
 static const bool INGRESS = false;
 static const bool EGRESS = true;
@@ -104,12 +112,11 @@ static const bool NO_UPDATETIME = false;
 static const bool UPDATETIME = true;
 
 // constants for passing in to ignore_on_eng / ignore_on_user / ignore_on_userdebug
-// define's instead of static const due to tm-mainline-prod compiler static_assert limitations
-#define LOAD_ON_ENG false
-#define LOAD_ON_USER false
-#define LOAD_ON_USERDEBUG false
-#define IGNORE_ON_ENG true
-#define IGNORE_ON_USER true
-#define IGNORE_ON_USERDEBUG true
+static const bool LOAD_ON_ENG = false;
+static const bool LOAD_ON_USER = false;
+static const bool LOAD_ON_USERDEBUG = false;
+static const bool IGNORE_ON_ENG = true;
+static const bool IGNORE_ON_USER = true;
+static const bool IGNORE_ON_USERDEBUG = true;
 
 #define KVER_4_14 KVER(4, 14, 0)
