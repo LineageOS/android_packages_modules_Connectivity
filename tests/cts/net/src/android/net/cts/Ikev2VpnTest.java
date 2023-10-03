@@ -35,12 +35,14 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
+import static org.junit.Assume.assumeFalse;
 
 import android.Manifest;
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.Ikev2VpnProfile;
 import android.net.IpSecAlgorithm;
@@ -72,6 +74,7 @@ import com.android.testutils.TestableNetworkCallback;
 
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -198,6 +201,12 @@ public class Ikev2VpnTest {
         // Build certificates
         mServerRootCa = generateRandomCertAndKeyPair().cert;
         mUserCertKey = generateRandomCertAndKeyPair();
+    }
+
+    @Before
+    public void setUp() {
+        assumeFalse("Skipping test because watches don't support VPN",
+            sContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH));
     }
 
     @After
