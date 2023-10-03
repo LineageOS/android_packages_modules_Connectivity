@@ -305,15 +305,12 @@ public class DeviceConfigUtilsTest {
         assertFalse(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isTetheringFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
 
-        // Follow defaultEnabled if the flag is not set
+        // If the flag is not set feature is disabled
         doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_CONNECTIVITY,
                 TEST_EXPERIMENT_FLAG));
         doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
-        assertFalse(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG,
-                false /* defaultEnabled */));
-        assertTrue(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG,
-                true /* defaultEnabled */));
+        assertFalse(DeviceConfigUtils.isNetworkStackFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isTetheringFeatureEnabled(mContext, TEST_EXPERIMENT_FLAG));
     }
 
