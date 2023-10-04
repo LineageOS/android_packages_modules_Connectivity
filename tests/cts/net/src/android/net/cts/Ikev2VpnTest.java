@@ -216,6 +216,15 @@ public class Ikev2VpnTest {
         }
         setAppop(AppOpsManager.OP_ACTIVATE_VPN, false);
         setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, false);
+
+        // Make sure the VpnProfile is not provisioned already.
+        sVpnMgr.stopProvisionedVpnProfile();
+
+        try {
+            sVpnMgr.startProvisionedVpnProfile();
+            fail("Expected SecurityException for missing consent");
+        } catch (SecurityException expected) {
+        }
     }
 
     /**
