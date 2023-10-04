@@ -27,7 +27,7 @@ static void throwIOException(JNIEnv *env, const char *msg, int error) {
 }
 
 static jboolean com_android_net_module_util_TcUtils_isEthernet(JNIEnv *env,
-                                                               jobject clazz,
+                                                               jclass clazz,
                                                                jstring iface) {
   ScopedUtfChars interface(env, iface);
   bool result = false;
@@ -43,7 +43,7 @@ static jboolean com_android_net_module_util_TcUtils_isEthernet(JNIEnv *env,
 // tc filter add dev .. in/egress prio 1 protocol ipv6/ip bpf object-pinned
 // /sys/fs/bpf/... direct-action
 static void com_android_net_module_util_TcUtils_tcFilterAddDevBpf(
-    JNIEnv *env, jobject clazz, jint ifIndex, jboolean ingress, jshort prio,
+    JNIEnv *env, jclass clazz, jint ifIndex, jboolean ingress, jshort prio,
     jshort proto, jstring bpfProgPath) {
   ScopedUtfChars pathname(env, bpfProgPath);
   int error = tcAddBpfFilter(ifIndex, ingress, prio, proto, pathname.c_str());
@@ -59,7 +59,7 @@ static void com_android_net_module_util_TcUtils_tcFilterAddDevBpf(
 //     action bpf object-pinned .. \
 //     drop
 static void com_android_net_module_util_TcUtils_tcFilterAddDevIngressPolice(
-    JNIEnv *env, jobject clazz, jint ifIndex, jshort prio, jshort proto,
+    JNIEnv *env, jclass clazz, jint ifIndex, jshort prio, jshort proto,
     jint rateInBytesPerSec, jstring bpfProgPath) {
   ScopedUtfChars pathname(env, bpfProgPath);
   int error = tcAddIngressPoliceFilter(ifIndex, prio, proto, rateInBytesPerSec,
@@ -74,7 +74,7 @@ static void com_android_net_module_util_TcUtils_tcFilterAddDevIngressPolice(
 
 // tc filter del dev .. in/egress prio .. protocol ..
 static void com_android_net_module_util_TcUtils_tcFilterDelDev(
-    JNIEnv *env, jobject clazz, jint ifIndex, jboolean ingress, jshort prio,
+    JNIEnv *env, jclass clazz, jint ifIndex, jboolean ingress, jshort prio,
     jshort proto) {
   int error = tcDeleteFilter(ifIndex, ingress, prio, proto);
   if (error) {
@@ -86,7 +86,7 @@ static void com_android_net_module_util_TcUtils_tcFilterDelDev(
 
 // tc qdisc add dev .. clsact
 static void com_android_net_module_util_TcUtils_tcQdiscAddDevClsact(JNIEnv *env,
-                                                                    jobject clazz,
+                                                                    jclass clazz,
                                                                     jint ifIndex) {
   int error = tcAddQdiscClsact(ifIndex);
   if (error) {
