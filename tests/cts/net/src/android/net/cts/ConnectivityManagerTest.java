@@ -47,6 +47,7 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DEFAULT;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE;
 import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
@@ -3591,6 +3592,15 @@ public class ConnectivityManagerTest {
         }
     }
 
+    private void setUidFirewallRule(final int chain, final int uid, final int rule) {
+        try {
+            mCm.setUidFirewallRule(chain, uid, rule);
+        } catch (IllegalStateException ignored) {
+            // Removing match causes an exception when the rule entry for the uid does
+            // not exist. But this is fine and can be ignored.
+        }
+    }
+
     private static final boolean EXPECT_OPEN = false;
     private static final boolean EXPECT_CLOSE = true;
 
@@ -3599,6 +3609,8 @@ public class ConnectivityManagerTest {
         runWithShellPermissionIdentity(() -> {
             // Firewall chain status will be restored after the test.
             final boolean wasChainEnabled = mCm.getFirewallChainEnabled(chain);
+            final int myUid = Process.myUid();
+            final int previousMyUidFirewallRule = mCm.getUidFirewallRule(chain, myUid);
             final int previousUidFirewallRule = mCm.getUidFirewallRule(chain, targetUid);
             final Socket socket = new Socket(TEST_HOST, HTTP_PORT);
             socket.setSoTimeout(NETWORK_REQUEST_TIMEOUT_MS);
@@ -3606,12 +3618,12 @@ public class ConnectivityManagerTest {
                 mCm.setFirewallChainEnabled(chain, false /* enable */);
                 assertSocketOpen(socket);
 
-                try {
-                    mCm.setUidFirewallRule(chain, targetUid, rule);
-                } catch (IllegalStateException ignored) {
-                    // Removing match causes an exception when the rule entry for the uid does
-                    // not exist. But this is fine and can be ignored.
+                setUidFirewallRule(chain, targetUid, rule);
+                if (targetUid != myUid) {
+                    // If this test does not set rule on myUid, remove existing rule on myUid
+                    setUidFirewallRule(chain, myUid, FIREWALL_RULE_DEFAULT);
                 }
+
                 mCm.setFirewallChainEnabled(chain, true /* enable */);
 
                 if (expectClose) {
@@ -3624,11 +3636,9 @@ public class ConnectivityManagerTest {
                     mCm.setFirewallChainEnabled(chain, wasChainEnabled);
                 }, /* cleanup */ () -> {
                     // Restore the uid firewall rule status
-                    try {
-                        mCm.setUidFirewallRule(chain, targetUid, previousUidFirewallRule);
-                    } catch (IllegalStateException ignored) {
-                        // Removing match causes an exception when the rule entry for the uid does
-                        // not exist. But this is fine and can be ignored.
+                    setUidFirewallRule(chain, targetUid, previousUidFirewallRule);
+                    if (targetUid != myUid) {
+                        setUidFirewallRule(chain, myUid, previousMyUidFirewallRule);
                     }
                 }, /* cleanup */ () -> {
                     socket.close();
