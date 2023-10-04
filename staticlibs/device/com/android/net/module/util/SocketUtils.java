@@ -19,6 +19,8 @@ package com.android.net.module.util;
 import static android.net.util.SocketUtils.closeSocket;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.system.NetlinkSocketAddress;
 
 import java.io.FileDescriptor;
@@ -39,7 +41,7 @@ public class SocketUtils {
     /**
      * Make a socket address to communicate with netlink.
      */
-    @NonNull
+    @NonNull @RequiresApi(Build.VERSION_CODES.S)
     public static SocketAddress makeNetlinkSocketAddress(int portId, int groupsMask) {
         return new NetlinkSocketAddress(portId, groupsMask);
     }
