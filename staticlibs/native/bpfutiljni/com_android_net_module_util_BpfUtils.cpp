@@ -32,7 +32,7 @@ using base::unique_fd;
 
 // If attach fails throw error and return false.
 static jboolean com_android_net_module_util_BpfUtil_attachProgramToCgroup(JNIEnv *env,
-        jobject clazz, jint type, jstring bpfProgPath, jstring cgroupPath, jint flags) {
+        jclass clazz, jint type, jstring bpfProgPath, jstring cgroupPath, jint flags) {
 
     ScopedUtfChars dirPath(env, cgroupPath);
     unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
@@ -62,7 +62,7 @@ static jboolean com_android_net_module_util_BpfUtil_attachProgramToCgroup(JNIEnv
 
 // If detach fails throw error and return false.
 static jboolean com_android_net_module_util_BpfUtil_detachProgramFromCgroup(JNIEnv *env,
-        jobject clazz, jint type, jstring cgroupPath) {
+        jclass clazz, jint type, jstring cgroupPath) {
 
     ScopedUtfChars dirPath(env, cgroupPath);
     unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
@@ -83,7 +83,7 @@ static jboolean com_android_net_module_util_BpfUtil_detachProgramFromCgroup(JNIE
 
 // If detach single program fails throw error and return false.
 static jboolean com_android_net_module_util_BpfUtil_detachSingleProgramFromCgroup(JNIEnv *env,
-        jobject clazz, jint type, jstring bpfProgPath, jstring cgroupPath) {
+        jclass clazz, jint type, jstring bpfProgPath, jstring cgroupPath) {
 
     ScopedUtfChars dirPath(env, cgroupPath);
     unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
