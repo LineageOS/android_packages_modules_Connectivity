@@ -44,6 +44,11 @@ inline int bpf(enum bpf_cmd cmd, const bpf_attr& attr) {
     return syscall(__NR_bpf, cmd, &attr, sizeof(attr));
 }
 
+// this version is meant for use with cmd's which mutate the argument
+inline int bpf(enum bpf_cmd cmd, bpf_attr *attr) {
+    return syscall(__NR_bpf, cmd, attr, sizeof(*attr));
+}
+
 inline int createMap(bpf_map_type map_type, uint32_t key_size, uint32_t value_size,
                      uint32_t max_entries, uint32_t map_flags) {
     return bpf(BPF_MAP_CREATE, {
@@ -158,6 +163,27 @@ inline int detachProgram(bpf_attach_type type, const BPF_FD_TYPE cg_fd) {
                                         .target_fd = BPF_FD_TO_U32(cg_fd),
                                         .attach_type = type,
                                 });
+}
+
+inline int queryProgram(const BPF_FD_TYPE cg_fd,
+                        enum bpf_attach_type attach_type,
+                        __u32 query_flags = 0,
+                        __u32 attach_flags = 0) {
+    int prog_id = -1;  // equivalent to an array of one integer.
+    bpf_attr arg = {
+            .query = {
+                    .target_fd = BPF_FD_TO_U32(cg_fd),
+                    .attach_type = attach_type,
+                    .query_flags = query_flags,
+                    .attach_flags = attach_flags,
+                    .prog_ids = ptr_to_u64(&prog_id),  // pointer to output array
+                    .prog_cnt = 1,  // in: space - nr of ints in the array, out: used
+            }
+    };
+    int v = bpf(BPF_PROG_QUERY, &arg);
+    if (v) return v;  // error case
+    if (!arg.query.prog_cnt) return 0;  // no program, kernel never returns zero id
+    return prog_id;  // return actual id
 }
 
 inline int detachSingleProgram(bpf_attach_type type, const BPF_FD_TYPE prog_fd,
