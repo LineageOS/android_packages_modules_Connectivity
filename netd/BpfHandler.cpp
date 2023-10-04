@@ -129,6 +129,15 @@ static Status initPrograms(const char* cg2_path) {
         RETURN_IF_NOT_OK(
                 attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
     }
+
+    // This should trivially pass, since we just attached up above,
+    // but BPF_PROG_QUERY is only implemented on 4.19+ kernels.
+    if (bpf::isAtLeastKernelVersion(4, 19, 0)) {
+        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_EGRESS) <= 0) abort();
+        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_INGRESS) <= 0) abort();
+        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_CREATE) <= 0) abort();
+    }
+
     return netdutils::status::ok;
 }
 
