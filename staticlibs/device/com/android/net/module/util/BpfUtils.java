@@ -66,4 +66,6 @@ public class BpfUtils {
             throws IOException;
     private static native boolean native_detachSingleProgramFromCgroup(int type,
             String programPath, String cgroupPath) throws IOException;
+    private static native int native_getProgramIdFromCgroup(int type, String cgroupPath)
+            throws IOException;
 }
