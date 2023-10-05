@@ -10784,6 +10784,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         Log.d(TAG, "Reevaluating network " + nai.network);
                         reportNetworkConnectivity(nai.network, !nai.isValidated());
                         return 0;
+                    case "bpf-get-cgroup-program-id": {
+                        // Usage : adb shell cmd connectivity bpf-get-cgroup-program-id <type>
+                        // Get cgroup bpf program Id for the given type. See BpfUtils#getProgramId
+                        // for more detail.
+                        // If type can't be parsed, this throws NumberFormatException, which
+                        // is passed back to adb who prints it.
+                        final int type = Integer.parseInt(getNextArg());
+                        final int ret = BpfUtils.getProgramId(type, BpfUtils.CGROUP_PATH);
+                        pw.println(ret);
+                        return 0;
+                    }
                     default:
                         return handleDefaultCommands(cmd);
                 }
