@@ -32,7 +32,7 @@ using base::unique_fd;
 
 // If attach fails throw error and return false.
 static jboolean com_android_net_module_util_BpfUtil_attachProgramToCgroup(JNIEnv *env,
-        jobject clazz, jint type, jstring bpfProgPath, jstring cgroupPath, jint flags) {
+        jclass clazz, jint type, jstring bpfProgPath, jstring cgroupPath, jint flags) {
 
     ScopedUtfChars dirPath(env, cgroupPath);
     unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
@@ -62,7 +62,7 @@ static jboolean com_android_net_module_util_BpfUtil_attachProgramToCgroup(JNIEnv
 
 // If detach fails throw error and return false.
 static jboolean com_android_net_module_util_BpfUtil_detachProgramFromCgroup(JNIEnv *env,
-        jobject clazz, jint type, jstring cgroupPath) {
+        jclass clazz, jint type, jstring cgroupPath) {
 
     ScopedUtfChars dirPath(env, cgroupPath);
     unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
@@ -83,7 +83,7 @@ static jboolean com_android_net_module_util_BpfUtil_detachProgramFromCgroup(JNIE
 
 // If detach single program fails throw error and return false.
 static jboolean com_android_net_module_util_BpfUtil_detachSingleProgramFromCgroup(JNIEnv *env,
-        jobject clazz, jint type, jstring bpfProgPath, jstring cgroupPath) {
+        jclass clazz, jint type, jstring bpfProgPath, jstring cgroupPath) {
 
     ScopedUtfChars dirPath(env, cgroupPath);
     unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
@@ -110,6 +110,29 @@ static jboolean com_android_net_module_util_BpfUtil_detachSingleProgramFromCgrou
     return true;
 }
 
+static jint com_android_net_module_util_BpfUtil_getProgramIdFromCgroup(JNIEnv *env,
+        jclass clazz, jint type, jstring cgroupPath) {
+
+    ScopedUtfChars dirPath(env, cgroupPath);
+    unique_fd cg_fd(open(dirPath.c_str(), O_DIRECTORY | O_RDONLY | O_CLOEXEC));
+    if (cg_fd == -1) {
+        jniThrowExceptionFmt(env, "java/io/IOException",
+                             "Failed to open the cgroup directory %s: %s",
+                             dirPath.c_str(), strerror(errno));
+        return -1;
+    }
+
+    int id = bpf::queryProgram(cg_fd, (bpf_attach_type) type);
+    if (id < 0) {
+        jniThrowExceptionFmt(env, "java/io/IOException",
+                             "Failed to query bpf program %d at %s: %s",
+                             type, dirPath.c_str(), strerror(errno));
+        return -1;
+    }
+    return id;  // may return 0 meaning none
+}
+
+
 /*
  * JNI registration.
  */
@@ -121,6 +144,8 @@ static const JNINativeMethod gMethods[] = {
         (void*) com_android_net_module_util_BpfUtil_detachProgramFromCgroup },
     { "native_detachSingleProgramFromCgroup", "(ILjava/lang/String;Ljava/lang/String;)Z",
         (void*) com_android_net_module_util_BpfUtil_detachSingleProgramFromCgroup },
+    { "native_getProgramIdFromCgroup", "(ILjava/lang/String;)I",
+        (void*) com_android_net_module_util_BpfUtil_getProgramIdFromCgroup },
 };
 
 int register_com_android_net_module_util_BpfUtils(JNIEnv* env, char const* class_name) {
