@@ -199,7 +199,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     protected void tearDown() throws Exception {
         executeShellCommand("cmd netpolicy stop-watching");
         mServiceClient.unbind();
-        if (mLock.isHeld()) mLock.release();
+        final PowerManager.WakeLock lock = mLock;
+        if (null != lock && lock.isHeld()) lock.release();
     }
 
     protected int getUid(String packageName) throws Exception {
