@@ -129,9 +129,10 @@ class CSAgentWrapper(
 
     fun connect() {
         val mgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val request = NetworkRequest.Builder().clearCapabilities()
-                .addTransportType(nc.transportTypes[0])
-                .build()
+        val request = NetworkRequest.Builder().apply {
+            clearCapabilities()
+            if (nc.transportTypes.isNotEmpty()) addTransportType(nc.transportTypes[0])
+        }.build()
         val cb = TestableNetworkCallback()
         mgr.registerNetworkCallback(request, cb)
         agent.markConnected()
