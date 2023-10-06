@@ -125,7 +125,7 @@ DEFINE_BPF_MAP_GRW(tether_upstream6_map, HASH, TetherUpstream6Key, Tether6Value,
                    TETHERING_GID)
 
 static inline __always_inline int do_forward6(struct __sk_buff* skb, const bool is_ethernet,
-        const bool downstream, const unsigned kver) {
+        const bool downstream, const struct kver_uint kver) {
     // Must be meta-ethernet IPv6 frame
     if (skb->protocol != htons(ETH_P_IPV6)) return TC_ACT_PIPE;
 
@@ -358,7 +358,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
         const int l2_header_size, void* data, const void* data_end,
         struct ethhdr* eth, struct iphdr* ip, const bool is_ethernet,
         const bool downstream, const bool updatetime, const bool is_tcp,
-        const unsigned kver) {
+        const struct kver_uint kver) {
     struct tcphdr* tcph = is_tcp ? (void*)(ip + 1) : NULL;
     struct udphdr* udph = is_tcp ? NULL : (void*)(ip + 1);
 
@@ -548,7 +548,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
 }
 
 static inline __always_inline int do_forward4(struct __sk_buff* skb, const bool is_ethernet,
-        const bool downstream, const bool updatetime, const unsigned kver) {
+        const bool downstream, const bool updatetime, const struct kver_uint kver) {
     // Require ethernet dst mac address to be our unicast address.
     if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 

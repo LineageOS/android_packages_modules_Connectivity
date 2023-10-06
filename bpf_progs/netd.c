@@ -179,7 +179,7 @@ static __always_inline int is_system_uid(uint32_t uid) {
     static __always_inline inline void update_##the_stats_map(const struct __sk_buff* const skb, \
                                                               const TypeOfKey* const key,        \
                                                               const bool egress,                 \
-                                                              const unsigned kver) {             \
+                                                              const struct kver_uint kver) {     \
         StatsValue* value = bpf_##the_stats_map##_lookup_elem(key);                              \
         if (!value) {                                                                            \
             StatsValue newValue = {};                                                            \
@@ -219,7 +219,7 @@ static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff*
                                                          const int L3_off,
                                                          void* const to,
                                                          const int len,
-                                                         const unsigned kver) {
+                                                         const struct kver_uint kver) {
     // 'kver' (here and throughout) is the compile time guaranteed minimum kernel version,
     // ie. we're building (a version of) the bpf program for kver (or newer!) kernels.
     //
@@ -236,16 +236,16 @@ static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff*
     //
     // For similar reasons this will fail with non-offloaded VLAN tags on < 4.19 kernels,
     // since those extend the ethernet header from 14 to 18 bytes.
-    return kver >= KVER(4, 19, 0)
+    return KVER_IS_AT_LEAST(kver, 4, 19, 0)
         ? bpf_skb_load_bytes_relative(skb, L3_off, to, len, BPF_HDR_START_NET)
         : bpf_skb_load_bytes(skb, L3_off, to, len);
 }
 
 static __always_inline inline void do_packet_tracing(
         const struct __sk_buff* const skb, const bool egress, const uint32_t uid,
-        const uint32_t tag, const bool enable_tracing, const unsigned kver) {
+        const uint32_t tag, const bool enable_tracing, const struct kver_uint kver) {
     if (!enable_tracing) return;
-    if (kver < KVER(5, 8, 0)) return;
+    if (!KVER_IS_AT_LEAST(kver, 5, 8, 0)) return;
 
     uint32_t mapKey = 0;
     bool* traceConfig = bpf_packet_trace_enabled_map_lookup_elem(&mapKey);
@@ -327,7 +327,7 @@ static __always_inline inline void do_packet_tracing(
 }
 
 static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool egress,
-                                                    const unsigned kver) {
+                                                    const struct kver_uint kver) {
     uint32_t flag = 0;
     if (skb->protocol == htons(ETH_P_IP)) {
         uint8_t proto;
@@ -372,11 +372,11 @@ static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
 }
 
 static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
-                                                          const unsigned kver) {
+                                                          const struct kver_uint kver) {
     // Require 4.19, since earlier kernels don't have bpf_skb_load_bytes_relative() which
     // provides relative to L3 header reads.  Without that we could fetch the wrong bytes.
     // Additionally earlier bpf verifiers are much harder to please.
-    if (kver < KVER(4, 19, 0)) return false;
+    if (!KVER_IS_AT_LEAST(kver, 4, 19, 0)) return false;
 
     IngressDiscardKey k = {};
     if (skb->protocol == htons(ETH_P_IP)) {
@@ -401,7 +401,7 @@ static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
 }
 
 static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid,
-                                                  bool egress, const unsigned kver) {
+                                                  bool egress, const struct kver_uint kver) {
     if (is_system_uid(uid)) return PASS;
 
     if (skip_owner_match(skb, egress, kver)) return PASS;
@@ -435,7 +435,7 @@ static __always_inline inline void update_stats_with_config(const uint32_t selec
                                                             const struct __sk_buff* const skb,
                                                             const StatsKey* const key,
                                                             const bool egress,
-                                                            const unsigned kver) {
+                                                            const struct kver_uint kver) {
     if (selectedMap == SELECT_MAP_A) {
         update_stats_map_A(skb, key, egress, kver);
     } else {
@@ -445,7 +445,7 @@ static __always_inline inline void update_stats_with_config(const uint32_t selec
 
 static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, bool egress,
                                                       const bool enable_tracing,
-                                                      const unsigned kver) {
+                                                      const struct kver_uint kver) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     uint64_t cookie = bpf_get_socket_cookie(skb);
     UidTagValue* utag = bpf_cookie_tag_map_lookup_elem(&cookie);
