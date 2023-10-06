@@ -105,6 +105,7 @@ class MdnsRecordRepositoryTest {
         assertEquals(TEST_SERVICE_ID_1, probingInfo.serviceId)
         val packet = probingInfo.getPacket(0)
 
+        assertEquals(0, packet.transactionId)
         assertEquals(MdnsConstants.FLAGS_QUERY, packet.flags)
         assertEquals(0, packet.answers.size)
         assertEquals(0, packet.additionalRecords.size)
@@ -173,6 +174,7 @@ class MdnsRecordRepositoryTest {
         assertEquals(1, repository.servicesCount)
         val packet = exitAnnouncement.getPacket(0)
 
+        assertEquals(0, packet.transactionId)
         assertEquals(0x8400 /* response, authoritative */, packet.flags)
         assertEquals(0, packet.questions.size)
         assertEquals(0, packet.authorityRecords.size)
@@ -202,6 +204,7 @@ class MdnsRecordRepositoryTest {
         assertEquals(1, repository.servicesCount)
         val packet = exitAnnouncement.getPacket(0)
 
+        assertEquals(0, packet.transactionId)
         assertEquals(0x8400 /* response, authoritative */, packet.flags)
         assertEquals(0, packet.questions.size)
         assertEquals(0, packet.authorityRecords.size)
@@ -249,6 +252,7 @@ class MdnsRecordRepositoryTest {
         repository.onAdvertisementSent(TEST_SERVICE_ID_1, 2 /* sentPacketCount */)
         val packet = announcementInfo.getPacket(0)
 
+        assertEquals(0, packet.transactionId)
         assertEquals(0x8400 /* response, authoritative */, packet.flags)
         assertEquals(0, packet.questions.size)
         assertEquals(0, packet.authorityRecords.size)
@@ -372,6 +376,7 @@ class MdnsRecordRepositoryTest {
         val serviceName = arrayOf("MyTestService", "_testservice", "_tcp", "local")
         val serviceType = arrayOf("_testservice", "_tcp", "local")
         val offloadPacket = repository.getOffloadPacket(TEST_SERVICE_ID_1)
+        assertEquals(0, offloadPacket.transactionId)
         assertEquals(0x8400, offloadPacket.flags)
         assertEquals(0, offloadPacket.questions.size)
         assertEquals(0, offloadPacket.additionalRecords.size)
