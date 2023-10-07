@@ -170,13 +170,13 @@
 // HOPOPTS/DSTOPS follow up with 'u8 len', counting 8 byte units, (0->8, 1->16)
 // *THREE* instructions
 #define BPF3_LOAD_NETX_RELATIVE_V6EXTHDR_LEN \
-    BPF_LOAD_NETX_RELATIVE_L4_U8(1) \
-    BPF_STMT(BPF_ALU | BPF_ADD | BPF_K, 1) \
+    BPF_LOAD_NETX_RELATIVE_L4_U8(1), \
+    BPF_STMT(BPF_ALU | BPF_ADD | BPF_K, 1), \
     BPF_STMT(BPF_ALU | BPF_LSH | BPF_K, 3)
 
 // *TWO* instructions: A += X; X := A
 #define BPF2_ADD_A_TO_X \
-    BPF_STMT(BPF_ALU | BPF_ADD | BPF_X, 0) \
+    BPF_STMT(BPF_ALU | BPF_ADD | BPF_X, 0), \
     BPF_STMT(BPF_MISC | BPF_TAX, 0)
 
 // UDP/UDPLITE/TCP/SCTP/DCCP all start with be16 srcport, dstport
