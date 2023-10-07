@@ -125,13 +125,18 @@ struct optional_bool { bool optional; };
 #define MANDATORY ((struct optional_bool){ .optional = false })
 #define OPTIONAL ((struct optional_bool){ .optional = true })
 
-// constants for passing in to ignore_on_eng / ignore_on_user / ignore_on_userdebug
-static const bool LOAD_ON_ENG = false;
-static const bool LOAD_ON_USER = false;
-static const bool LOAD_ON_USERDEBUG = false;
-static const bool IGNORE_ON_ENG = true;
-static const bool IGNORE_ON_USER = true;
-static const bool IGNORE_ON_USERDEBUG = true;
+// for both maps and programs:
+struct ignore_on_eng_bool { bool ignore_on_eng; };
+#define LOAD_ON_ENG ((struct ignore_on_eng_bool){ .ignore_on_eng = false })
+#define IGNORE_ON_ENG ((struct ignore_on_eng_bool){ .ignore_on_eng = true })
+
+struct ignore_on_user_bool { bool ignore_on_user; };
+#define LOAD_ON_USER ((struct ignore_on_user_bool){ .ignore_on_user = false })
+#define IGNORE_ON_USER ((struct ignore_on_user_bool){ .ignore_on_user = true })
+
+struct ignore_on_userdebug_bool { bool ignore_on_userdebug; };
+#define LOAD_ON_USERDEBUG ((struct ignore_on_userdebug_bool){ .ignore_on_userdebug = false })
+#define IGNORE_ON_USERDEBUG ((struct ignore_on_userdebug_bool){ .ignore_on_userdebug = true })
 
 
 // Length of strings (incl. selinux_context and pin_subdir)
