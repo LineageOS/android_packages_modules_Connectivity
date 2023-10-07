@@ -114,6 +114,24 @@ _Static_assert(__alignof__(unsigned long long) == 8, "__alignof__ unsigned long 
 // BPF wants 8, but 32-bit x86 wants 4
 //_Static_assert(_Alignof(unsigned long long) == 8, "_Alignof unsigned long long != 8");
 
+
+// constants for passing in to 'bool shared' (for maps)
+static const bool PRIVATE = false;
+static const bool SHARED = true;
+
+// constants for passing in to 'bool optional' (for programs)
+static const bool MANDATORY = false;
+static const bool OPTIONAL = true;
+
+// constants for passing in to ignore_on_eng / ignore_on_user / ignore_on_userdebug
+static const bool LOAD_ON_ENG = false;
+static const bool LOAD_ON_USER = false;
+static const bool LOAD_ON_USERDEBUG = false;
+static const bool IGNORE_ON_ENG = true;
+static const bool IGNORE_ON_USER = true;
+static const bool IGNORE_ON_USERDEBUG = true;
+
+
 // Length of strings (incl. selinux_context and pin_subdir)
 // in the bpf_map_def and bpf_prog_def structs.
 //
