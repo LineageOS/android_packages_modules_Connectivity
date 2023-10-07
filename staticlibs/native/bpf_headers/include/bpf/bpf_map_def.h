@@ -115,9 +115,10 @@ _Static_assert(__alignof__(unsigned long long) == 8, "__alignof__ unsigned long 
 //_Static_assert(_Alignof(unsigned long long) == 8, "_Alignof unsigned long long != 8");
 
 
-// constants for passing in to 'bool shared' (for maps)
-static const bool PRIVATE = false;
-static const bool SHARED = true;
+// for maps:
+struct shared_bool { bool shared; };
+#define PRIVATE ((struct shared_bool){ .shared = false })
+#define SHARED ((struct shared_bool){ .shared = true })
 
 // constants for passing in to 'bool optional' (for programs)
 static const bool MANDATORY = false;
