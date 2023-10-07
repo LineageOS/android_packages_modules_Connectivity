@@ -46,10 +46,6 @@ public class ConnectivityNativeService extends ConnectivityNative.Stub {
 
     private static final String TAG = ConnectivityNativeService.class.getSimpleName();
     private static final String CGROUP_PATH = "/sys/fs/cgroup";
-    private static final String V4_PROG_PATH =
-            "/sys/fs/bpf/net_shared/prog_block_bind4_block_port";
-    private static final String V6_PROG_PATH =
-            "/sys/fs/bpf/net_shared/prog_block_bind6_block_port";
     private static final String BLOCKED_PORTS_MAP_PATH =
             "/sys/fs/bpf/net_shared/map_block_blocked_ports_map";
 
@@ -95,7 +91,6 @@ public class ConnectivityNativeService extends ConnectivityNative.Stub {
     protected ConnectivityNativeService(final Context context, @NonNull Dependencies deps) {
         mContext = context;
         mBpfBlockedPortsMap = deps.getBlockPortsMap();
-        attachProgram();
     }
 
     @Override
@@ -154,24 +149,5 @@ public class ConnectivityNativeService extends ConnectivityNative.Stub {
     @Override
     public String getInterfaceHash() {
         return this.HASH;
-    }
-
-    /**
-     * Attach BPF program
-     */
-    private void attachProgram() {
-        try {
-            BpfUtils.attachProgram(BPF_CGROUP_INET4_BIND, V4_PROG_PATH, CGROUP_PATH, 0);
-        } catch (IOException e) {
-            throw new UnsupportedOperationException("Unable to attach to BPF_CGROUP_INET4_BIND: "
-                    + e);
-        }
-        try {
-            BpfUtils.attachProgram(BPF_CGROUP_INET6_BIND, V6_PROG_PATH, CGROUP_PATH, 0);
-        } catch (IOException e) {
-            throw new UnsupportedOperationException("Unable to attach to BPF_CGROUP_INET6_BIND: "
-                    + e);
-        }
-        Log.d(TAG, "Attached BPF_CGROUP_INET4_BIND and BPF_CGROUP_INET6_BIND programs");
     }
 }
