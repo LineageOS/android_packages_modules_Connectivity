@@ -120,9 +120,10 @@ struct shared_bool { bool shared; };
 #define PRIVATE ((struct shared_bool){ .shared = false })
 #define SHARED ((struct shared_bool){ .shared = true })
 
-// constants for passing in to 'bool optional' (for programs)
-static const bool MANDATORY = false;
-static const bool OPTIONAL = true;
+// for programs:
+struct optional_bool { bool optional; };
+#define MANDATORY ((struct optional_bool){ .optional = false })
+#define OPTIONAL ((struct optional_bool){ .optional = true })
 
 // constants for passing in to ignore_on_eng / ignore_on_user / ignore_on_userdebug
 static const bool LOAD_ON_ENG = false;
