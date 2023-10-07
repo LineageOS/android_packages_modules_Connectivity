@@ -24,8 +24,8 @@
 
 #include "bpf_helpers.h"
 
-#define ALLOW 1
-#define DISALLOW 0
+static const int ALLOW = 1;
+static const int DISALLOW = 0;
 
 DEFINE_BPF_MAP_GRW(blocked_ports_map, ARRAY, int, uint64_t,
         1024 /* 64K ports -> 1024 u64s */, AID_SYSTEM)
@@ -57,14 +57,18 @@ static inline __always_inline int block_port(struct bpf_sock_addr *ctx) {
     return ALLOW;
 }
 
-DEFINE_BPF_PROG_KVER("bind4/block_port", AID_ROOT, AID_SYSTEM,
-                     bind4_block_port, KVER(5, 4, 0))
+// the program need to be accessible/loadable by netd (from netd updatable plugin)
+#define DEFINE_NETD_RO_BPF_PROG(SECTION_NAME, the_prog, min_kver) \
+    DEFINE_BPF_PROG_EXT(SECTION_NAME, AID_ROOT, AID_ROOT, the_prog, min_kver, KVER_INF,  \
+                        BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, MANDATORY, \
+                        "", "netd_readonly/", LOAD_ON_ENG, LOAD_ON_USER, LOAD_ON_USERDEBUG)
+
+DEFINE_NETD_RO_BPF_PROG("bind4/block_port", bind4_block_port, KVER(4, 19, 0))
 (struct bpf_sock_addr *ctx) {
     return block_port(ctx);
 }
 
-DEFINE_BPF_PROG_KVER("bind6/block_port", AID_ROOT, AID_SYSTEM,
-                     bind6_block_port, KVER(5, 4, 0))
+DEFINE_NETD_RO_BPF_PROG("bind6/block_port", bind6_block_port, KVER(4, 19, 0))
 (struct bpf_sock_addr *ctx) {
     return block_port(ctx);
 }
