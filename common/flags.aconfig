@@ -1,0 +1,8 @@
+package: "com.android.net.flags"
+
+flag {
+  name: "track_multiple_network_activities"
+  namespace: "android_core_networking"
+  description: "NetworkActivityTracker tracks multiple networks including non default networks"
+  bug: "267870186"
+}
