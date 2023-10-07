@@ -24,8 +24,8 @@
 
 #include "bpf_helpers.h"
 
-#define ALLOW 1
-#define DISALLOW 0
+static const int ALLOW = 1;
+static const int DISALLOW = 0;
 
 DEFINE_BPF_MAP_GRW(blocked_ports_map, ARRAY, int, uint64_t,
         1024 /* 64K ports -> 1024 u64s */, AID_SYSTEM)
