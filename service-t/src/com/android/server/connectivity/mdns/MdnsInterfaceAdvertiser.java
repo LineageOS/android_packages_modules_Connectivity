@@ -161,7 +161,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
                 @NonNull SharedLog sharedLog) {
             return new MdnsReplySender(looper, socket, packetCreationBuffer,
                     sharedLog.forSubComponent(
-                            MdnsReplySender.class.getSimpleName() + "/" + interfaceTag));
+                            MdnsReplySender.class.getSimpleName() + "/" + interfaceTag), DBG);
         }
 
         /** @see MdnsAnnouncer */
@@ -370,7 +370,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         // happen when the incoming packet has answer records (not a question), so there will be no
         // answer. One exception is simultaneous probe tiebreaking (rfc6762 8.2), in which case the
         // conflicting service is still probing and won't reply either.
-        final MdnsRecordRepository.ReplyInfo answers = mRecordRepository.getReply(packet, src);
+        final MdnsReplyInfo answers = mRecordRepository.getReply(packet, src);
 
         if (answers == null) return;
         mReplySender.queueReply(answers);
