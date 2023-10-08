@@ -110,7 +110,7 @@ public class MdnsAnnouncer extends MdnsPacketRepeater<MdnsAnnouncer.BaseAnnounce
             @NonNull MdnsReplySender replySender,
             @Nullable PacketRepeaterCallback<BaseAnnouncementInfo> cb,
             @NonNull SharedLog sharedLog) {
-        super(looper, replySender, cb, sharedLog);
+        super(looper, replySender, cb, sharedLog, MdnsAdvertiser.DBG);
     }
 
     // TODO: Notify MdnsRecordRepository that the records were announced for that service ID,
