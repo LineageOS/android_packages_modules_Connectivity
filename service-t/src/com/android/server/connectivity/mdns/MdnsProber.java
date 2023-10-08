@@ -40,9 +40,8 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
     private static final long CONFLICT_RETRY_DELAY_MS = 5_000L;
 
     public MdnsProber(@NonNull Looper looper, @NonNull MdnsReplySender replySender,
-            @NonNull PacketRepeaterCallback<ProbingInfo> cb,
-            @NonNull SharedLog sharedLog) {
-        super(looper, replySender, cb, sharedLog);
+            @NonNull PacketRepeaterCallback<ProbingInfo> cb, @NonNull SharedLog sharedLog) {
+        super(looper, replySender, cb, sharedLog, MdnsAdvertiser.DBG);
     }
 
     /** Probing request to send with {@link MdnsProber}. */

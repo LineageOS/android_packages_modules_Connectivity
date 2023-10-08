@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsConstants.IPV4_SOCKET_ADDR;
+import static com.android.server.connectivity.mdns.MdnsConstants.IPV6_SOCKET_ADDR;
 import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
 
 import android.annotation.NonNull;
@@ -78,11 +80,6 @@ public class MdnsRecordRepository {
     // Service type for service enumeration (RFC6763 9.)
     private static final String[] DNS_SD_SERVICE_TYPE =
             new String[] { "_services", "_dns-sd", "_udp", LOCAL_TLD };
-
-    public static final InetSocketAddress IPV6_ADDR = new InetSocketAddress(
-            MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT);
-    public static final InetSocketAddress IPV4_ADDR = new InetSocketAddress(
-            MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
 
     @NonNull
     private final Random mDelayGenerator = new Random();
@@ -455,44 +452,13 @@ public class MdnsRecordRepository {
     }
 
     /**
-     * Info about a reply to be sent.
-     */
-    public static class ReplyInfo {
-        @NonNull
-        public final List<MdnsRecord> answers;
-        @NonNull
-        public final List<MdnsRecord> additionalAnswers;
-        public final long sendDelayMs;
-        @NonNull
-        public final InetSocketAddress destination;
-
-        public ReplyInfo(
-                @NonNull List<MdnsRecord> answers,
-                @NonNull List<MdnsRecord> additionalAnswers,
-                long sendDelayMs,
-                @NonNull InetSocketAddress destination) {
-            this.answers = answers;
-            this.additionalAnswers = additionalAnswers;
-            this.sendDelayMs = sendDelayMs;
-            this.destination = destination;
-        }
-
-        @Override
-        public String toString() {
-            return "{ReplyInfo to " + destination + ", answers: " + answers.size()
-                    + ", additionalAnswers: " + additionalAnswers.size()
-                    + ", sendDelayMs " + sendDelayMs + "}";
-        }
-    }
-
-    /**
      * Get the reply to send to an incoming packet.
      *
      * @param packet The incoming packet.
      * @param src The source address of the incoming packet.
      */
     @Nullable
-    public ReplyInfo getReply(MdnsPacket packet, InetSocketAddress src) {
+    public MdnsReplyInfo getReply(MdnsPacket packet, InetSocketAddress src) {
         final long now = SystemClock.elapsedRealtime();
         final boolean replyUnicast = (packet.flags & MdnsConstants.QCLASS_UNICAST) != 0;
         final ArrayList<MdnsRecord> additionalAnswerRecords = new ArrayList<>();
@@ -543,9 +509,9 @@ public class MdnsRecordRepository {
         if (replyUnicast) {
             dest = src;
         } else if (src.getAddress() instanceof Inet4Address) {
-            dest = IPV4_ADDR;
+            dest = IPV4_SOCKET_ADDR;
         } else {
-            dest = IPV6_ADDR;
+            dest = IPV6_SOCKET_ADDR;
         }
 
         // Build the list of answer records from their RecordInfo
@@ -559,7 +525,7 @@ public class MdnsRecordRepository {
             answerRecords.add(info.record);
         }
 
-        return new ReplyInfo(answerRecords, additionalAnswerRecords, delayMs, dest);
+        return new MdnsReplyInfo(answerRecords, additionalAnswerRecords, delayMs, dest);
     }
 
     /**
