@@ -190,8 +190,8 @@ class MdnsInterfaceAdvertiserTest {
     fun testReplyToQuery() {
         addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
-        val mockReply = mock(MdnsRecordRepository.ReplyInfo::class.java)
-        doReturn(mockReply).`when`(repository).getReply(any(), any())
+        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 0, InetSocketAddress(0))
+        doReturn(testReply).`when`(repository).getReply(any(), any())
 
         // Query obtained with:
         // scapy.raw(scapy.DNS(
@@ -216,7 +216,7 @@ class MdnsInterfaceAdvertiserTest {
             assertContentEquals(arrayOf("_testservice", "_tcp", "local"), it.questions[0].name)
         }
 
-        verify(replySender).queueReply(mockReply)
+        verify(replySender).queueReply(testReply)
     }
 
     @Test
