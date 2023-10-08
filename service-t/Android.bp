@@ -102,7 +102,12 @@ java_library {
     ],
     exclude_srcs: [
         "src/com/android/server/connectivity/mdns/internal/SocketNetlinkMonitor.java",
-        "src/com/android/server/connectivity/mdns/SocketNetLinkMonitorFactory.java"
+        "src/com/android/server/connectivity/mdns/SocketNetLinkMonitorFactory.java",
+        "src/com/android/server/connectivity/mdns/MdnsAdvertiser.java",
+        "src/com/android/server/connectivity/mdns/MdnsAnnouncer.java",
+        "src/com/android/server/connectivity/mdns/MdnsInterfaceAdvertiser.java",
+        "src/com/android/server/connectivity/mdns/MdnsProber.java",
+        "src/com/android/server/connectivity/mdns/MdnsRecordRepository.java",
     ],
     static_libs: [
         "net-utils-device-common-mdns-standalone-build-test",
