@@ -56,7 +56,7 @@ DEFINE_BPF_MAP_GRW(clat_ingress6_map, HASH, ClatIngress6Key, ClatIngress6Value, 
 
 static inline __always_inline int nat64(struct __sk_buff* skb,
                                         const bool is_ethernet,
-                                        const unsigned kver) {
+                                        const struct kver_uint kver) {
     // Require ethernet dst mac address to be our unicast address.
     if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 
@@ -115,7 +115,7 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
 
     if (proto == IPPROTO_FRAGMENT) {
         // Fragment handling requires bpf_skb_adjust_room which is 4.14+
-        if (kver < KVER_4_14) return TC_ACT_PIPE;
+        if (!KVER_IS_AT_LEAST(kver, 4, 14, 0)) return TC_ACT_PIPE;
 
         // Must have (ethernet and) ipv6 header and ipv6 fragment extension header
         if (data + l2_header_size + sizeof(*ip6) + sizeof(struct frag_hdr) > data_end)
@@ -233,7 +233,7 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
     //
     // Note: we currently have no TreeHugger coverage for 4.9-T devices (there are no such
     // Pixel or cuttlefish devices), so likely you won't notice for months if this breaks...
-    if (kver >= KVER_4_14 && frag_off != htons(IP_DF)) {
+    if (KVER_IS_AT_LEAST(kver, 4, 14, 0) && frag_off != htons(IP_DF)) {
         // If we're converting an IPv6 Fragment, we need to trim off 8 more bytes
         // We're beyond recovery on error here... but hard to imagine how this could fail.
         if (bpf_skb_adjust_room(skb, -(__s32)sizeof(struct frag_hdr), BPF_ADJ_ROOM_NET, /*flags*/0))
