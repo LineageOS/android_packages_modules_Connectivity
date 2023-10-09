@@ -87,17 +87,17 @@ static inline __always_inline void try_make_writable(struct __sk_buff* skb, int 
     if (skb->data_end - skb->data < len) bpf_skb_pull_data(skb, len);
 }
 
-// constants for passing in to 'bool egress'
-static const bool INGRESS = false;
-static const bool EGRESS = true;
+struct egress_bool { bool egress; };
+#define INGRESS ((struct egress_bool){ .egress = false })
+#define EGRESS ((struct egress_bool){ .egress = true })
 
 // constants for passing in to 'bool downstream'
 static const bool UPSTREAM = false;
 static const bool DOWNSTREAM = true;
 
-// constants for passing in to 'bool is_ethernet'
-static const bool RAWIP = false;
-static const bool ETHER = true;
+struct rawip_bool { bool rawip; };
+#define ETHER ((struct rawip_bool){ .rawip = false })
+#define RAWIP ((struct rawip_bool){ .rawip = true })
 
 // constants for passing in to 'bool updatetime'
 static const bool NO_UPDATETIME = false;
