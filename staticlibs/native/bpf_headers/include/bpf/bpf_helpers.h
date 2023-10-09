@@ -188,10 +188,12 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
         __attribute__ ((section(".maps." #name), used)) \
                 ____btf_map_##name = { }
 
-#define BPF_ASSERT_LOADER_VERSION(min_loader, ignore_eng, ignore_user, ignore_userdebug)  \
-    _Static_assert(                                                                       \
-        (min_loader) >= BPFLOADER_IGNORED_ON_VERSION ||                                   \
-            !((ignore_eng) || (ignore_user) || (ignore_userdebug)),                       \
+#define BPF_ASSERT_LOADER_VERSION(min_loader, ignore_eng, ignore_user, ignore_userdebug) \
+    _Static_assert(                                                                      \
+        (min_loader) >= BPFLOADER_IGNORED_ON_VERSION ||                                  \
+            !((ignore_eng).ignore_on_eng ||                                              \
+              (ignore_user).ignore_on_user ||                                            \
+              (ignore_userdebug).ignore_on_userdebug),                                   \
         "bpfloader min version must be >= 0.33 in order to use ignored_on");
 
 #define DEFINE_BPF_MAP_BASE(the_map, TYPE, keysize, valuesize, num_entries, \
@@ -213,10 +215,10 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
         .max_kver = (maxkver),                                              \
         .selinux_context = (selinux),                                       \
         .pin_subdir = (pindir),                                             \
-        .shared = (share),                                                  \
-        .ignore_on_eng = (ignore_eng),                                      \
-        .ignore_on_user = (ignore_user),                                    \
-        .ignore_on_userdebug = (ignore_userdebug),                          \
+        .shared = (share).shared,                                           \
+        .ignore_on_eng = (ignore_eng).ignore_on_eng,                        \
+        .ignore_on_user = (ignore_user).ignore_on_user,                     \
+        .ignore_on_userdebug = (ignore_userdebug).ignore_on_userdebug,      \
     };                                                                      \
     BPF_ASSERT_LOADER_VERSION(minloader, ignore_eng, ignore_user, ignore_userdebug);
 
@@ -364,14 +366,14 @@ static long (*bpf_get_current_comm)(void* buf, uint32_t buf_size) = (void*) BPF_
         .gid = (prog_gid),                                                               \
         .min_kver = (min_kv),                                                            \
         .max_kver = (max_kv),                                                            \
-        .optional = (opt),                                                               \
+        .optional = (opt).optional,                                                      \
         .bpfloader_min_ver = (min_loader),                                               \
         .bpfloader_max_ver = (max_loader),                                               \
         .selinux_context = (selinux),                                                    \
         .pin_subdir = (pindir),                                                          \
-        .ignore_on_eng = (ignore_eng),                                                   \
-        .ignore_on_user = (ignore_user),                                                 \
-        .ignore_on_userdebug = (ignore_userdebug),                                       \
+        .ignore_on_eng = (ignore_eng).ignore_on_eng,                                     \
+        .ignore_on_user = (ignore_user).ignore_on_user,                                  \
+        .ignore_on_userdebug = (ignore_userdebug).ignore_on_userdebug,                   \
     };                                                                                   \
     SECTION(SECTION_NAME)                                                                \
     int the_prog
