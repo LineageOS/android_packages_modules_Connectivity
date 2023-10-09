@@ -38,7 +38,7 @@ android_test {
         "compatibility-device-util-axt",
         "ctstestrunner-axt",
         "net-tests-utils",
-        "truth-prebuilt",
+        "truth",
     ],
     libs: [
         "android.test.base",
