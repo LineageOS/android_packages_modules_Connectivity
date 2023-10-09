@@ -62,11 +62,19 @@ public final class LocalNetworkConfig implements Parcelable {
         return mUpstreamSelector;
     }
 
-    public @NonNull MulticastRoutingConfig getUpstreamMulticastRoutingConfig() {
+    /**
+     * Get the upstream multicast routing config
+     */
+    @NonNull
+    public MulticastRoutingConfig getUpstreamMulticastRoutingConfig() {
         return mUpstreamMulticastRoutingConfig;
     }
 
-    public @NonNull MulticastRoutingConfig getDownstreamMulticastRoutingConfig() {
+    /**
+     * Get the downstream multicast routing config
+     */
+    @NonNull
+    public MulticastRoutingConfig getDownstreamMulticastRoutingConfig() {
         return mDownstreamMulticastRoutingConfig;
     }
 
@@ -109,13 +117,13 @@ public final class LocalNetworkConfig implements Parcelable {
 
     public static final class Builder {
         @Nullable
-        NetworkRequest mUpstreamSelector;
+        private NetworkRequest mUpstreamSelector;
 
         @Nullable
-        MulticastRoutingConfig mUpstreamMulticastRoutingConfig;
+        private MulticastRoutingConfig mUpstreamMulticastRoutingConfig;
 
         @Nullable
-        MulticastRoutingConfig mDownstreamMulticastRoutingConfig;
+        private MulticastRoutingConfig mDownstreamMulticastRoutingConfig;
 
         /**
          * Create a Builder
