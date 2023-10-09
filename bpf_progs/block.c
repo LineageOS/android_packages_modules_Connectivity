@@ -63,12 +63,12 @@ static inline __always_inline int block_port(struct bpf_sock_addr *ctx) {
                         BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, MANDATORY, \
                         "", "netd_readonly/", LOAD_ON_ENG, LOAD_ON_USER, LOAD_ON_USERDEBUG)
 
-DEFINE_NETD_RO_BPF_PROG("bind4/block_port", bind4_block_port, KVER(4, 19, 0))
+DEFINE_NETD_RO_BPF_PROG("bind4/block_port", bind4_block_port, KVER_4_19)
 (struct bpf_sock_addr *ctx) {
     return block_port(ctx);
 }
 
-DEFINE_NETD_RO_BPF_PROG("bind6/block_port", bind6_block_port, KVER(4, 19, 0))
+DEFINE_NETD_RO_BPF_PROG("bind6/block_port", bind6_block_port, KVER_4_19)
 (struct bpf_sock_addr *ctx) {
     return block_port(ctx);
 }
