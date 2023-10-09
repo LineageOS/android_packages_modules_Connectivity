@@ -95,9 +95,9 @@ struct egress_bool { bool egress; };
 static const bool UPSTREAM = false;
 static const bool DOWNSTREAM = true;
 
-// constants for passing in to 'bool is_ethernet'
-static const bool RAWIP = false;
-static const bool ETHER = true;
+struct rawip_bool { bool rawip; };
+#define ETHER ((struct rawip_bool){ .rawip = false })
+#define RAWIP ((struct rawip_bool){ .rawip = true })
 
 // constants for passing in to 'bool updatetime'
 static const bool NO_UPDATETIME = false;
