@@ -178,7 +178,7 @@ static __always_inline int is_system_uid(uint32_t uid) {
 #define DEFINE_UPDATE_STATS(the_stats_map, TypeOfKey)                                            \
     static __always_inline inline void update_##the_stats_map(const struct __sk_buff* const skb, \
                                                               const TypeOfKey* const key,        \
-                                                              const bool egress,                 \
+                                                              const struct egress_bool egress,   \
                                                               const struct kver_uint kver) {     \
         StatsValue* value = bpf_##the_stats_map##_lookup_elem(key);                              \
         if (!value) {                                                                            \
@@ -199,7 +199,7 @@ static __always_inline int is_system_uid(uint32_t uid) {
                 packets = (payload + mss - 1) / mss;                                             \
                 bytes = tcp_overhead * packets + payload;                                        \
             }                                                                                    \
-            if (egress) {                                                                        \
+            if (egress.egress) {                                                                 \
                 __sync_fetch_and_add(&value->txPackets, packets);                                \
                 __sync_fetch_and_add(&value->txBytes, bytes);                                    \
             } else {                                                                             \
@@ -242,7 +242,7 @@ static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff*
 }
 
 static __always_inline inline void do_packet_tracing(
-        const struct __sk_buff* const skb, const bool egress, const uint32_t uid,
+        const struct __sk_buff* const skb, const struct egress_bool egress, const uint32_t uid,
         const uint32_t tag, const bool enable_tracing, const struct kver_uint kver) {
     if (!enable_tracing) return;
     if (!KVER_IS_AT_LEAST(kver, 5, 8, 0)) return;
@@ -317,8 +317,8 @@ static __always_inline inline void do_packet_tracing(
     pkt->sport = sport;
     pkt->dport = dport;
 
-    pkt->egress = egress;
-    pkt->wakeup = !egress && (skb->mark & 0x80000000);  // Fwmark.ingress_cpu_wakeup
+    pkt->egress = egress.egress;
+    pkt->wakeup = !egress.egress && (skb->mark & 0x80000000);  // Fwmark.ingress_cpu_wakeup
     pkt->ipProto = proto;
     pkt->tcpFlags = flags;
     pkt->ipVersion = ipVersion;
@@ -326,7 +326,8 @@ static __always_inline inline void do_packet_tracing(
     bpf_packet_trace_ringbuf_submit(pkt);
 }
 
-static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool egress,
+static __always_inline inline bool skip_owner_match(struct __sk_buff* skb,
+                                                    const struct egress_bool egress,
                                                     const struct kver_uint kver) {
     uint32_t flag = 0;
     if (skb->protocol == htons(ETH_P_IP)) {
@@ -358,7 +359,7 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool 
         return false;
     }
     // Always allow RST's, and additionally allow ingress FINs
-    return flag & (TCP_FLAG_RST | (egress ? 0 : TCP_FLAG_FIN));  // false on read failure
+    return flag & (TCP_FLAG_RST | (egress.egress ? 0 : TCP_FLAG_FIN));  // false on read failure
 }
 
 static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
@@ -401,7 +402,8 @@ static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
 }
 
 static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid,
-                                                  bool egress, const struct kver_uint kver) {
+                                                  const struct egress_bool egress,
+                                                  const struct kver_uint kver) {
     if (is_system_uid(uid)) return PASS;
 
     if (skip_owner_match(skb, egress, kver)) return PASS;
@@ -414,7 +416,7 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
 
     if (isBlockedByUidRules(enabledRules, uidRules)) return DROP;
 
-    if (!egress && skb->ifindex != 1) {
+    if (!egress.egress && skb->ifindex != 1) {
         if (ingress_should_discard(skb, kver)) return DROP;
         if (uidRules & IIF_MATCH) {
             if (allowed_iif && skb->ifindex != allowed_iif) {
@@ -434,7 +436,7 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
 static __always_inline inline void update_stats_with_config(const uint32_t selectedMap,
                                                             const struct __sk_buff* const skb,
                                                             const StatsKey* const key,
-                                                            const bool egress,
+                                                            const struct egress_bool egress,
                                                             const struct kver_uint kver) {
     if (selectedMap == SELECT_MAP_A) {
         update_stats_map_A(skb, key, egress, kver);
@@ -443,7 +445,8 @@ static __always_inline inline void update_stats_with_config(const uint32_t selec
     }
 }
 
-static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, bool egress,
+static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb,
+                                                      const struct egress_bool egress,
                                                       const bool enable_tracing,
                                                       const struct kver_uint kver) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
@@ -462,7 +465,7 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     // interface is accounted for and subject to usage restrictions.
     // CLAT IPv6 TX sockets are *always* tagged with CLAT uid, see tagSocketAsClat()
     // CLAT daemon receives via an untagged AF_PACKET socket.
-    if (egress && uid == AID_CLAT) return PASS;
+    if (egress.egress && uid == AID_CLAT) return PASS;
 
     int match = bpf_owner_match(skb, sock_uid, egress, kver);
 
@@ -478,7 +481,7 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     }
 
     // If an outbound packet is going to be dropped, we do not count that traffic.
-    if (egress && (match == DROP)) return DROP;
+    if (egress.egress && (match == DROP)) return DROP;
 
     StatsKey key = {.uid = uid, .tag = tag, .counterSet = 0, .ifaceIndex = skb->ifindex};
 

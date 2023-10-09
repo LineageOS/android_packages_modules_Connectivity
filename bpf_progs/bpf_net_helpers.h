@@ -87,9 +87,9 @@ static inline __always_inline void try_make_writable(struct __sk_buff* skb, int 
     if (skb->data_end - skb->data < len) bpf_skb_pull_data(skb, len);
 }
 
-// constants for passing in to 'bool egress'
-static const bool INGRESS = false;
-static const bool EGRESS = true;
+struct egress_bool { bool egress; };
+#define INGRESS ((struct egress_bool){ .egress = false })
+#define EGRESS ((struct egress_bool){ .egress = true })
 
 // constants for passing in to 'bool downstream'
 static const bool UPSTREAM = false;
