@@ -76,8 +76,6 @@ struct Location {
     const char* const dir = "";
     const char* const prefix = "";
     unsigned long long allowedDomainBitmask = 0;
-    const bpf_prog_type* allowedProgTypes = nullptr;
-    size_t allowedProgTypesLength = 0;
 };
 
 // BPF loader implementation. Loads an eBPF ELF object
