@@ -44,12 +44,11 @@
 #include <android-base/stringprintf.h>
 #include <android-base/strings.h>
 #include <android-base/unique_fd.h>
-#include <libbpf_android.h>
 #include <log/log.h>
-#include <netdutils/Misc.h>
-#include <netdutils/Slice.h>
+
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
+#include "loader.h"
 
 using android::base::EndsWith;
 using android::bpf::domain;

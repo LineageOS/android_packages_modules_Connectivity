@@ -43,7 +43,7 @@
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
 #include "bpf/bpf_map_def.h"
-#include "include/libbpf_android.h"
+#include "loader.h"
 
 #if BPFLOADER_VERSION < COMPILE_FOR_BPFLOADER_VERSION
 #error "BPFLOADER_VERSION is less than COMPILE_FOR_BPFLOADER_VERSION"
