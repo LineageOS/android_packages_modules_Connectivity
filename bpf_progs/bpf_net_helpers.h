@@ -102,5 +102,3 @@ static const bool ETHER = true;
 // constants for passing in to 'bool updatetime'
 static const bool NO_UPDATETIME = false;
 static const bool UPDATETIME = true;
-
-#define KVER_4_14 KVER(4, 14, 0)

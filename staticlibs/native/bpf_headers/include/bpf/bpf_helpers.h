@@ -105,9 +105,19 @@
  * implemented in the kernel sources.
  */
 
-#define KVER_NONE 0
-#define KVER(a, b, c) (((a) << 24) + ((b) << 16) + (c))
-#define KVER_INF 0xFFFFFFFFu
+struct kver_uint { unsigned int kver; };
+#define KVER_(v) ((struct kver_uint){ .kver = (v) })
+#define KVER(a, b, c) KVER_(((a) << 24) + ((b) << 16) + (c))
+#define KVER_NONE KVER_(0)
+#define KVER_4_14 KVER(4, 14, 0)
+#define KVER_4_19 KVER(4, 19, 0)
+#define KVER_5_4 KVER(5, 4, 0)
+#define KVER_5_8 KVER(5, 8, 0)
+#define KVER_5_9 KVER(5, 9, 0)
+#define KVER_5_15 KVER(5, 15, 0)
+#define KVER_INF KVER_(0xFFFFFFFFu)
+
+#define KVER_IS_AT_LEAST(kver, a, b, c) ((kver).kver >= KVER(a, b, c).kver)
 
 /*
  * BPFFS (ie. /sys/fs/bpf) labelling is as follows:
@@ -211,8 +221,8 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
         .mode = (md),                                                       \
         .bpfloader_min_ver = (minloader),                                   \
         .bpfloader_max_ver = (maxloader),                                   \
-        .min_kver = (minkver),                                              \
-        .max_kver = (maxkver),                                              \
+        .min_kver = (minkver).kver,                                         \
+        .max_kver = (maxkver).kver,                                         \
         .selinux_context = (selinux),                                       \
         .pin_subdir = (pindir),                                             \
         .shared = (share).shared,                                           \
@@ -232,7 +242,7 @@ static void (*bpf_ringbuf_submit_unsafe)(const void* data, __u64 flags) = (void*
                                selinux, pindir, share, min_loader, max_loader, \
                                ignore_eng, ignore_user, ignore_userdebug)      \
     DEFINE_BPF_MAP_BASE(the_map, RINGBUF, 0, 0, size_bytes, usr, grp, md,      \
-                        selinux, pindir, share, KVER(5, 8, 0), KVER_INF,       \
+                        selinux, pindir, share, KVER_5_8, KVER_INF,            \
                         min_loader, max_loader, ignore_eng, ignore_user,       \
                         ignore_userdebug);                                     \
                                                                                \
@@ -364,8 +374,8 @@ static long (*bpf_get_current_comm)(void* buf, uint32_t buf_size) = (void*) BPF_
     const struct bpf_prog_def SECTION("progs") the_prog##_def = {                        \
         .uid = (prog_uid),                                                               \
         .gid = (prog_gid),                                                               \
-        .min_kver = (min_kv),                                                            \
-        .max_kver = (max_kv),                                                            \
+        .min_kver = (min_kv).kver,                                                       \
+        .max_kver = (max_kv).kver,                                                       \
         .optional = (opt).optional,                                                      \
         .bpfloader_min_ver = (min_loader),                                               \
         .bpfloader_max_ver = (max_loader),                                               \
@@ -423,8 +433,8 @@ static long (*bpf_get_current_comm)(void* buf, uint32_t buf_size) = (void*) BPF_
 
 // programs with no kernel version requirements
 #define DEFINE_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
-    DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, 0, KVER_INF, \
+    DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, KVER_NONE, KVER_INF, \
                                    MANDATORY)
 #define DEFINE_OPTIONAL_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
-    DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, 0, KVER_INF, \
+    DEFINE_BPF_PROG_KVER_RANGE_OPT(SECTION_NAME, prog_uid, prog_gid, the_prog, KVER_NONE, KVER_INF, \
                                    OPTIONAL)
