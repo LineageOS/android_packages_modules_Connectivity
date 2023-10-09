@@ -55,8 +55,10 @@ struct frag_hdr {
 DEFINE_BPF_MAP_GRW(clat_ingress6_map, HASH, ClatIngress6Key, ClatIngress6Value, 16, AID_SYSTEM)
 
 static inline __always_inline int nat64(struct __sk_buff* skb,
-                                        const bool is_ethernet,
+                                        const struct rawip_bool rawip,
                                         const struct kver_uint kver) {
+    const bool is_ethernet = !rawip.rawip;
+
     // Require ethernet dst mac address to be our unicast address.
     if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 
