@@ -178,8 +178,8 @@ static __always_inline int is_system_uid(uint32_t uid) {
 #define DEFINE_UPDATE_STATS(the_stats_map, TypeOfKey)                                            \
     static __always_inline inline void update_##the_stats_map(const struct __sk_buff* const skb, \
                                                               const TypeOfKey* const key,        \
-                                                              const bool egress,                 \
-                                                              const unsigned kver) {             \
+                                                              const struct egress_bool egress,   \
+                                                              const struct kver_uint kver) {     \
         StatsValue* value = bpf_##the_stats_map##_lookup_elem(key);                              \
         if (!value) {                                                                            \
             StatsValue newValue = {};                                                            \
@@ -199,7 +199,7 @@ static __always_inline int is_system_uid(uint32_t uid) {
                 packets = (payload + mss - 1) / mss;                                             \
                 bytes = tcp_overhead * packets + payload;                                        \
             }                                                                                    \
-            if (egress) {                                                                        \
+            if (egress.egress) {                                                                 \
                 __sync_fetch_and_add(&value->txPackets, packets);                                \
                 __sync_fetch_and_add(&value->txBytes, bytes);                                    \
             } else {                                                                             \
@@ -219,7 +219,7 @@ static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff*
                                                          const int L3_off,
                                                          void* const to,
                                                          const int len,
-                                                         const unsigned kver) {
+                                                         const struct kver_uint kver) {
     // 'kver' (here and throughout) is the compile time guaranteed minimum kernel version,
     // ie. we're building (a version of) the bpf program for kver (or newer!) kernels.
     //
@@ -236,16 +236,16 @@ static __always_inline inline int bpf_skb_load_bytes_net(const struct __sk_buff*
     //
     // For similar reasons this will fail with non-offloaded VLAN tags on < 4.19 kernels,
     // since those extend the ethernet header from 14 to 18 bytes.
-    return kver >= KVER(4, 19, 0)
+    return KVER_IS_AT_LEAST(kver, 4, 19, 0)
         ? bpf_skb_load_bytes_relative(skb, L3_off, to, len, BPF_HDR_START_NET)
         : bpf_skb_load_bytes(skb, L3_off, to, len);
 }
 
 static __always_inline inline void do_packet_tracing(
-        const struct __sk_buff* const skb, const bool egress, const uint32_t uid,
-        const uint32_t tag, const bool enable_tracing, const unsigned kver) {
+        const struct __sk_buff* const skb, const struct egress_bool egress, const uint32_t uid,
+        const uint32_t tag, const bool enable_tracing, const struct kver_uint kver) {
     if (!enable_tracing) return;
-    if (kver < KVER(5, 8, 0)) return;
+    if (!KVER_IS_AT_LEAST(kver, 5, 8, 0)) return;
 
     uint32_t mapKey = 0;
     bool* traceConfig = bpf_packet_trace_enabled_map_lookup_elem(&mapKey);
@@ -317,8 +317,8 @@ static __always_inline inline void do_packet_tracing(
     pkt->sport = sport;
     pkt->dport = dport;
 
-    pkt->egress = egress;
-    pkt->wakeup = !egress && (skb->mark & 0x80000000);  // Fwmark.ingress_cpu_wakeup
+    pkt->egress = egress.egress;
+    pkt->wakeup = !egress.egress && (skb->mark & 0x80000000);  // Fwmark.ingress_cpu_wakeup
     pkt->ipProto = proto;
     pkt->tcpFlags = flags;
     pkt->ipVersion = ipVersion;
@@ -326,8 +326,9 @@ static __always_inline inline void do_packet_tracing(
     bpf_packet_trace_ringbuf_submit(pkt);
 }
 
-static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool egress,
-                                                    const unsigned kver) {
+static __always_inline inline bool skip_owner_match(struct __sk_buff* skb,
+                                                    const struct egress_bool egress,
+                                                    const struct kver_uint kver) {
     uint32_t flag = 0;
     if (skb->protocol == htons(ETH_P_IP)) {
         uint8_t proto;
@@ -358,7 +359,7 @@ static __always_inline inline bool skip_owner_match(struct __sk_buff* skb, bool 
         return false;
     }
     // Always allow RST's, and additionally allow ingress FINs
-    return flag & (TCP_FLAG_RST | (egress ? 0 : TCP_FLAG_FIN));  // false on read failure
+    return flag & (TCP_FLAG_RST | (egress.egress ? 0 : TCP_FLAG_FIN));  // false on read failure
 }
 
 static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
@@ -372,11 +373,11 @@ static __always_inline inline BpfConfig getConfig(uint32_t configKey) {
 }
 
 static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
-                                                          const unsigned kver) {
+                                                          const struct kver_uint kver) {
     // Require 4.19, since earlier kernels don't have bpf_skb_load_bytes_relative() which
     // provides relative to L3 header reads.  Without that we could fetch the wrong bytes.
     // Additionally earlier bpf verifiers are much harder to please.
-    if (kver < KVER(4, 19, 0)) return false;
+    if (!KVER_IS_AT_LEAST(kver, 4, 19, 0)) return false;
 
     IngressDiscardKey k = {};
     if (skb->protocol == htons(ETH_P_IP)) {
@@ -401,7 +402,8 @@ static __always_inline inline bool ingress_should_discard(struct __sk_buff* skb,
 }
 
 static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_t uid,
-                                                  bool egress, const unsigned kver) {
+                                                  const struct egress_bool egress,
+                                                  const struct kver_uint kver) {
     if (is_system_uid(uid)) return PASS;
 
     if (skip_owner_match(skb, egress, kver)) return PASS;
@@ -414,7 +416,7 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
 
     if (isBlockedByUidRules(enabledRules, uidRules)) return DROP;
 
-    if (!egress && skb->ifindex != 1) {
+    if (!egress.egress && skb->ifindex != 1) {
         if (ingress_should_discard(skb, kver)) return DROP;
         if (uidRules & IIF_MATCH) {
             if (allowed_iif && skb->ifindex != allowed_iif) {
@@ -434,8 +436,8 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
 static __always_inline inline void update_stats_with_config(const uint32_t selectedMap,
                                                             const struct __sk_buff* const skb,
                                                             const StatsKey* const key,
-                                                            const bool egress,
-                                                            const unsigned kver) {
+                                                            const struct egress_bool egress,
+                                                            const struct kver_uint kver) {
     if (selectedMap == SELECT_MAP_A) {
         update_stats_map_A(skb, key, egress, kver);
     } else {
@@ -443,9 +445,10 @@ static __always_inline inline void update_stats_with_config(const uint32_t selec
     }
 }
 
-static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, bool egress,
+static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb,
+                                                      const struct egress_bool egress,
                                                       const bool enable_tracing,
-                                                      const unsigned kver) {
+                                                      const struct kver_uint kver) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     uint64_t cookie = bpf_get_socket_cookie(skb);
     UidTagValue* utag = bpf_cookie_tag_map_lookup_elem(&cookie);
@@ -462,7 +465,7 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     // interface is accounted for and subject to usage restrictions.
     // CLAT IPv6 TX sockets are *always* tagged with CLAT uid, see tagSocketAsClat()
     // CLAT daemon receives via an untagged AF_PACKET socket.
-    if (egress && uid == AID_CLAT) return PASS;
+    if (egress.egress && uid == AID_CLAT) return PASS;
 
     int match = bpf_owner_match(skb, sock_uid, egress, kver);
 
@@ -478,7 +481,7 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
     }
 
     // If an outbound packet is going to be dropped, we do not count that traffic.
-    if (egress && (match == DROP)) return DROP;
+    if (egress.egress && (match == DROP)) return DROP;
 
     StatsKey key = {.uid = uid, .tag = tag, .counterSet = 0, .ifaceIndex = skb->ifindex};
 
@@ -505,64 +508,64 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb, boo
 
 // This program is optional, and enables tracing on Android U+, 5.8+ on user builds.
 DEFINE_BPF_PROG_EXT("cgroupskb/ingress/stats$trace_user", AID_ROOT, AID_SYSTEM,
-                    bpf_cgroup_ingress_trace_user, KVER(5, 8, 0), KVER_INF,
+                    bpf_cgroup_ingress_trace_user, KVER_5_8, KVER_INF,
                     BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, OPTIONAL,
                     "fs_bpf_netd_readonly", "",
                     IGNORE_ON_ENG, LOAD_ON_USER, IGNORE_ON_USERDEBUG)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, INGRESS, TRACE_ON, KVER(5, 8, 0));
+    return bpf_traffic_account(skb, INGRESS, TRACE_ON, KVER_5_8);
 }
 
 // This program is required, and enables tracing on Android U+, 5.8+, userdebug/eng.
 DEFINE_BPF_PROG_EXT("cgroupskb/ingress/stats$trace", AID_ROOT, AID_SYSTEM,
-                    bpf_cgroup_ingress_trace, KVER(5, 8, 0), KVER_INF,
+                    bpf_cgroup_ingress_trace, KVER_5_8, KVER_INF,
                     BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, MANDATORY,
                     "fs_bpf_netd_readonly", "",
                     LOAD_ON_ENG, IGNORE_ON_USER, LOAD_ON_USERDEBUG)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, INGRESS, TRACE_ON, KVER(5, 8, 0));
+    return bpf_traffic_account(skb, INGRESS, TRACE_ON, KVER_5_8);
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/ingress/stats$4_19", AID_ROOT, AID_SYSTEM,
-                                bpf_cgroup_ingress_4_19, KVER(4, 19, 0), KVER_INF)
+                                bpf_cgroup_ingress_4_19, KVER_4_19, KVER_INF)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, INGRESS, TRACE_OFF, KVER(4, 19, 0));
+    return bpf_traffic_account(skb, INGRESS, TRACE_OFF, KVER_4_19);
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/ingress/stats$4_14", AID_ROOT, AID_SYSTEM,
-                                bpf_cgroup_ingress_4_14, KVER_NONE, KVER(4, 19, 0))
+                                bpf_cgroup_ingress_4_14, KVER_NONE, KVER_4_19)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, INGRESS, TRACE_OFF, KVER_NONE);
 }
 
 // This program is optional, and enables tracing on Android U+, 5.8+ on user builds.
 DEFINE_BPF_PROG_EXT("cgroupskb/egress/stats$trace_user", AID_ROOT, AID_SYSTEM,
-                    bpf_cgroup_egress_trace_user, KVER(5, 8, 0), KVER_INF,
+                    bpf_cgroup_egress_trace_user, KVER_5_8, KVER_INF,
                     BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, OPTIONAL,
                     "fs_bpf_netd_readonly", "",
                     LOAD_ON_ENG, IGNORE_ON_USER, LOAD_ON_USERDEBUG)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, EGRESS, TRACE_ON, KVER(5, 8, 0));
+    return bpf_traffic_account(skb, EGRESS, TRACE_ON, KVER_5_8);
 }
 
 // This program is required, and enables tracing on Android U+, 5.8+, userdebug/eng.
 DEFINE_BPF_PROG_EXT("cgroupskb/egress/stats$trace", AID_ROOT, AID_SYSTEM,
-                    bpf_cgroup_egress_trace, KVER(5, 8, 0), KVER_INF,
+                    bpf_cgroup_egress_trace, KVER_5_8, KVER_INF,
                     BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, MANDATORY,
                     "fs_bpf_netd_readonly", "",
                     LOAD_ON_ENG, IGNORE_ON_USER, LOAD_ON_USERDEBUG)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, EGRESS, TRACE_ON, KVER(5, 8, 0));
+    return bpf_traffic_account(skb, EGRESS, TRACE_ON, KVER_5_8);
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/egress/stats$4_19", AID_ROOT, AID_SYSTEM,
-                                bpf_cgroup_egress_4_19, KVER(4, 19, 0), KVER_INF)
+                                bpf_cgroup_egress_4_19, KVER_4_19, KVER_INF)
 (struct __sk_buff* skb) {
-    return bpf_traffic_account(skb, EGRESS, TRACE_OFF, KVER(4, 19, 0));
+    return bpf_traffic_account(skb, EGRESS, TRACE_OFF, KVER_4_19);
 }
 
 DEFINE_NETD_BPF_PROG_KVER_RANGE("cgroupskb/egress/stats$4_14", AID_ROOT, AID_SYSTEM,
-                                bpf_cgroup_egress_4_14, KVER_NONE, KVER(4, 19, 0))
+                                bpf_cgroup_egress_4_14, KVER_NONE, KVER_4_19)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, EGRESS, TRACE_OFF, KVER_NONE);
 }
@@ -637,9 +640,7 @@ DEFINE_XTBPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_den
     return BPF_NOMATCH;
 }
 
-DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
-                          KVER(4, 14, 0))
-(struct bpf_sock* sk) {
+static __always_inline inline uint8_t get_app_permissions() {
     uint64_t gid_uid = bpf_get_current_uid_gid();
     /*
      * A given app is guaranteed to have the same app ID in all the profiles in
@@ -649,13 +650,15 @@ DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_soc
      */
     uint32_t appId = (gid_uid & 0xffffffff) % AID_USER_OFFSET;  // == PER_USER_RANGE == 100000
     uint8_t* permissions = bpf_uid_permission_map_lookup_elem(&appId);
-    if (!permissions) {
-        // UID not in map. Default to just INTERNET permission.
-        return 1;
-    }
+    // if UID not in map, then default to just INTERNET permission.
+    return permissions ? *permissions : BPF_PERMISSION_INTERNET;
+}
 
+DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
+                          KVER_4_14)
+(struct bpf_sock* sk) {
     // A return value of 1 means allow, everything else means deny.
-    return (*permissions & BPF_PERMISSION_INTERNET) == BPF_PERMISSION_INTERNET;
+    return (get_app_permissions() & BPF_PERMISSION_INTERNET) ? 1 : 0;
 }
 
 LICENSE("Apache 2.0");
