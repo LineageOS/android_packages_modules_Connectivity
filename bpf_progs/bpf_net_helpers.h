@@ -91,9 +91,9 @@ struct egress_bool { bool egress; };
 #define INGRESS ((struct egress_bool){ .egress = false })
 #define EGRESS ((struct egress_bool){ .egress = true })
 
-// constants for passing in to 'bool downstream'
-static const bool UPSTREAM = false;
-static const bool DOWNSTREAM = true;
+struct stream_bool { bool down; };
+#define UPSTREAM ((struct stream_bool){ .down = false })
+#define DOWNSTREAM ((struct stream_bool){ .down = true })
 
 struct rawip_bool { bool rawip; };
 #define ETHER ((struct rawip_bool){ .rawip = false })
