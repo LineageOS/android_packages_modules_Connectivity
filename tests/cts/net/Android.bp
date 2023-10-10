@@ -55,7 +55,7 @@ java_defaults {
         "junit-params",
         "modules-utils-build",
         "net-utils-framework-common",
-        "truth-prebuilt",
+        "truth",
         "TetheringIntegrationTestsBaseLib",
     ],
 
@@ -74,7 +74,10 @@ java_defaults {
 // devices.
 android_test {
     name: "CtsNetTestCases",
-    defaults: ["CtsNetTestCasesDefaults", "ConnectivityNextEnableDefaults"],
+    defaults: [
+        "CtsNetTestCasesDefaults",
+        "ConnectivityNextEnableDefaults",
+    ],
     static_libs: [
         "DhcpPacketLib",
         "NetworkStackApiCurrentShims",
@@ -129,7 +132,7 @@ java_defaults {
 }
 
 android_test {
-    name: "CtsNetTestCasesMaxTargetSdk33",  // Must match CtsNetTestCasesMaxTargetSdk33 annotation.
+    name: "CtsNetTestCasesMaxTargetSdk33", // Must match CtsNetTestCasesMaxTargetSdk33 annotation.
     defaults: ["CtsNetTestCasesMaxTargetSdkDefaults"],
     target_sdk_version: "33",
     package_name: "android.net.cts.maxtargetsdk33",
@@ -137,17 +140,17 @@ android_test {
 }
 
 android_test {
-    name: "CtsNetTestCasesMaxTargetSdk31",  // Must match CtsNetTestCasesMaxTargetSdk31 annotation.
+    name: "CtsNetTestCasesMaxTargetSdk31", // Must match CtsNetTestCasesMaxTargetSdk31 annotation.
     defaults: ["CtsNetTestCasesMaxTargetSdkDefaults"],
     target_sdk_version: "31",
-    package_name: "android.net.cts.maxtargetsdk31",  // CTS package names must be unique.
+    package_name: "android.net.cts.maxtargetsdk31", // CTS package names must be unique.
     instrumentation_target_package: "android.net.cts.maxtargetsdk31",
 }
 
 android_test {
-    name: "CtsNetTestCasesMaxTargetSdk30",  // Must match CtsNetTestCasesMaxTargetSdk30 annotation.
+    name: "CtsNetTestCasesMaxTargetSdk30", // Must match CtsNetTestCasesMaxTargetSdk30 annotation.
     defaults: ["CtsNetTestCasesMaxTargetSdkDefaults"],
     target_sdk_version: "30",
-    package_name: "android.net.cts.maxtargetsdk30",  // CTS package names must be unique.
+    package_name: "android.net.cts.maxtargetsdk30", // CTS package names must be unique.
     instrumentation_target_package: "android.net.cts.maxtargetsdk30",
 }
