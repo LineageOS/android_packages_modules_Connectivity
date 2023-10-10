@@ -96,6 +96,7 @@ apex {
     },
     binaries: [
         "clatd",
+        "netbpfload",
         "ot-daemon",
     ],
     canned_fs_config: "canned_fs_config",
