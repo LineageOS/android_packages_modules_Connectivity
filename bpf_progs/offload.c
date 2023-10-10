@@ -361,8 +361,8 @@ DEFINE_BPF_MAP_GRW(tether_upstream4_map, HASH, Tether4Key, Tether4Value, 1024, T
 static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
         const int l2_header_size, void* data, const void* data_end,
         struct ethhdr* eth, struct iphdr* ip, const struct rawip_bool rawip,
-        const bool downstream, const bool updatetime, const bool is_tcp,
-        const struct kver_uint kver) {
+        const bool downstream, const struct updatetime_bool updatetime,
+        const bool is_tcp, const struct kver_uint kver) {
     const bool is_ethernet = !rawip.rawip;
     struct tcphdr* tcph = is_tcp ? (void*)(ip + 1) : NULL;
     struct udphdr* udph = is_tcp ? NULL : (void*)(ip + 1);
@@ -538,7 +538,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
 
     // This requires the bpf_ktime_get_boot_ns() helper which was added in 5.8,
     // and backported to all Android Common Kernel 4.14+ trees.
-    if (updatetime) v->last_used = bpf_ktime_get_boot_ns();
+    if (updatetime.updatetime) v->last_used = bpf_ktime_get_boot_ns();
 
     __sync_fetch_and_add(downstream ? &stat_v->rxPackets : &stat_v->txPackets, packets);
     __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
@@ -555,7 +555,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
 static inline __always_inline int do_forward4(struct __sk_buff* skb,
                                               const struct rawip_bool rawip,
                                               const bool downstream,
-                                              const bool updatetime,
+                                              const struct updatetime_bool updatetime,
                                               const struct kver_uint kver) {
     const bool is_ethernet = !rawip.rawip;
 
@@ -616,16 +616,16 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb,
     // in such a situation we can only support TCP.  This also has the added nice benefit of
     // using a separate error counter, and thus making it obvious which version of the program
     // is loaded.
-    if (!updatetime && ip->protocol != IPPROTO_TCP) TC_PUNT(NON_TCP);
+    if (!updatetime.updatetime && ip->protocol != IPPROTO_TCP) TC_PUNT(NON_TCP);
 
     // We do not support offloading anything besides IPv4 TCP and UDP, due to need for NAT,
     // but no need to check this if !updatetime due to check immediately above.
-    if (updatetime && (ip->protocol != IPPROTO_TCP) && (ip->protocol != IPPROTO_UDP))
+    if (updatetime.updatetime && (ip->protocol != IPPROTO_TCP) && (ip->protocol != IPPROTO_UDP))
         TC_PUNT(NON_TCP_UDP);
 
     // We want to make sure that the compiler will, in the !updatetime case, entirely optimize
     // out all the non-tcp logic.  Also note that at this point is_udp === !is_tcp.
-    const bool is_tcp = !updatetime || (ip->protocol == IPPROTO_TCP);
+    const bool is_tcp = !updatetime.updatetime || (ip->protocol == IPPROTO_TCP);
 
     // This is a bit of a hack to make things easier on the bpf verifier.
     // (In particular I believe the Linux 4.14 kernel's verifier can get confused later on about
