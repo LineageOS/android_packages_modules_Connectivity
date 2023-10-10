@@ -26,19 +26,14 @@ import android.content.res.Resources
 import android.net.ConnectivityManager
 import android.net.INetd
 import android.net.InetAddresses
-import android.net.IpPrefix
-import android.net.LinkAddress
 import android.net.LinkProperties
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkPolicyManager
 import android.net.NetworkProvider
 import android.net.NetworkScore
 import android.net.PacProxyManager
-import android.net.RouteInfo
 import android.net.networkstack.NetworkStackClientBase
 import android.os.BatteryStatsManager
 import android.os.Handler
@@ -75,6 +70,14 @@ internal const val WIFI_WOL_IFNAME = "test_wlan_wol"
 internal val LOCAL_IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1")
 
 open class FromS<Type>(val value: Type)
+
+internal const val VERSION_UNMOCKED = -1
+internal const val VERSION_R = 1
+internal const val VERSION_S = 2
+internal const val VERSION_T = 3
+internal const val VERSION_U = 4
+internal const val VERSION_V = 5
+internal const val VERSION_MAX = VERSION_V
 
 /**
  * Base class for tests testing ConnectivityService and its satellites.
@@ -193,6 +196,24 @@ open class CSTest {
                 changeId in enabledChangeIds
         override fun isChangeEnabled(changeId: Long, uid: Int) =
                 changeId in enabledChangeIds
+
+        // In AOSP, build version codes are all over the place (e.g. at the time of this writing
+        // U == V). Define custom ones.
+        private var sdkLevel = VERSION_UNMOCKED
+        private val isSdkUnmocked get() = sdkLevel == VERSION_UNMOCKED
+
+        fun setBuildSdk(sdkLevel: Int) {
+            require(sdkLevel <= VERSION_MAX) {
+                "setBuildSdk must not be called with Build.VERSION constants but " +
+                        "CsTest.VERSION_* constants"
+            }
+            visibleOnHandlerThread(csHandler) { this.sdkLevel = sdkLevel }
+        }
+
+        override fun isAtLeastS() = if (isSdkUnmocked) super.isAtLeastS() else sdkLevel >= VERSION_S
+        override fun isAtLeastT() = if (isSdkUnmocked) super.isAtLeastT() else sdkLevel >= VERSION_T
+        override fun isAtLeastU() = if (isSdkUnmocked) super.isAtLeastU() else sdkLevel >= VERSION_U
+        override fun isAtLeastV() = if (isSdkUnmocked) super.isAtLeastV() else sdkLevel >= VERSION_V
     }
 
     inner class CSContext(base: Context) : BroadcastInterceptingContext(base) {
@@ -247,19 +268,6 @@ open class CSTest {
 
     // Utility methods for subclasses to use
     fun waitForIdle() = csHandlerThread.waitForIdle(HANDLER_TIMEOUT_MS)
-
-    private fun emptyAgentConfig() = NetworkAgentConfig.Builder().build()
-    private fun defaultNc() = NetworkCapabilities.Builder()
-            // Add sensible defaults for agents that don't want to care
-            .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
-            .addCapability(NET_CAPABILITY_NOT_ROAMING)
-            .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
-            .build()
-    private fun defaultScore() = FromS<NetworkScore>(NetworkScore.Builder().build())
-    private fun defaultLp() = LinkProperties().apply {
-        addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
-        addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
-    }
 
     // Network agents. See CSAgentWrapper. This class contains utility methods to simplify
     // creation.
