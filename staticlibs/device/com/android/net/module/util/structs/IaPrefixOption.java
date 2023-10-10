@@ -18,6 +18,8 @@ package com.android.net.module.util.structs;
 
 import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IAPREFIX;
 
+import android.util.Log;
+
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
@@ -52,6 +54,7 @@ import java.nio.ByteOrder;
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 public class IaPrefixOption extends Struct {
+    private static final String TAG = IaPrefixOption.class.getSimpleName();
     public static final int LENGTH = 25; // option length excluding IAprefix-options
 
     @Field(order = 0, type = Type.S16)
@@ -75,6 +78,33 @@ public class IaPrefixOption extends Struct {
         this.valid = valid;
         this.prefixLen = prefixLen;
         this.prefix = prefix.clone();
+    }
+
+    /**
+     * Check whether or not IA Prefix option in IA_PD option is valid per RFC8415#section-21.22.
+     */
+    public boolean isValid(int t2) {
+        if (preferred < 0 || valid < 0) {
+            Log.w(TAG, "IA_PD option with invalid lifetime, preferred lifetime " + preferred
+                    + ", valid lifetime " + valid);
+            return false;
+        }
+        if (preferred > valid) {
+            Log.w(TAG, "IA_PD option with preferred lifetime " + preferred
+                    + " greater than valid lifetime " + valid);
+            return false;
+        }
+        if (prefixLen > 64) {
+            Log.w(TAG, "IA_PD option with prefix length " + prefixLen
+                    + " longer than 64");
+            return false;
+        }
+        // Either preferred lifetime or t2 might be 0 which is valid, then ignore it.
+        if (preferred != 0 && t2 != 0 && preferred < t2) {
+            Log.w(TAG, "preferred lifetime " + preferred + " is smaller than T2 " + t2);
+            return false;
+        }
+        return true;
     }
 
     /**
