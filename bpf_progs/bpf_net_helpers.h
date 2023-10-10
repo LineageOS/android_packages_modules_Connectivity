@@ -99,6 +99,6 @@ struct rawip_bool { bool rawip; };
 #define ETHER ((struct rawip_bool){ .rawip = false })
 #define RAWIP ((struct rawip_bool){ .rawip = true })
 
-// constants for passing in to 'bool updatetime'
-static const bool NO_UPDATETIME = false;
-static const bool UPDATETIME = true;
+struct updatetime_bool { bool updatetime; };
+#define NO_UPDATETIME ((struct updatetime_bool){ .updatetime = false })
+#define UPDATETIME ((struct updatetime_bool){ .updatetime = true })
