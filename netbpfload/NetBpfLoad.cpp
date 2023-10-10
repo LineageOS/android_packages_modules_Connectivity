@@ -44,12 +44,11 @@
 #include <android-base/stringprintf.h>
 #include <android-base/strings.h>
 #include <android-base/unique_fd.h>
-#include <libbpf_android.h>
 #include <log/log.h>
-#include <netdutils/Misc.h>
-#include <netdutils/Slice.h>
+
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
+#include "loader.h"
 
 using android::base::EndsWith;
 using android::bpf::domain;
@@ -73,26 +72,6 @@ constexpr unsigned long long kTetheringApexDomainBitmask =
         domainToBitmask(domain::netd_readonly) |
         domainToBitmask(domain::netd_shared);
 
-// Programs shipped inside the tethering apex should be limited to networking stuff,
-// as KPROBE, PERF_EVENT, TRACEPOINT are dangerous to use from mainline updatable code,
-// since they are less stable abi/api and may conflict with platform uses of bpf.
-constexpr bpf_prog_type kTetheringApexAllowedProgTypes[] = {
-        BPF_PROG_TYPE_CGROUP_SKB,
-        BPF_PROG_TYPE_CGROUP_SOCK,
-        BPF_PROG_TYPE_CGROUP_SOCKOPT,
-        BPF_PROG_TYPE_CGROUP_SOCK_ADDR,
-        BPF_PROG_TYPE_CGROUP_SYSCTL,
-        BPF_PROG_TYPE_LWT_IN,
-        BPF_PROG_TYPE_LWT_OUT,
-        BPF_PROG_TYPE_LWT_SEG6LOCAL,
-        BPF_PROG_TYPE_LWT_XMIT,
-        BPF_PROG_TYPE_SCHED_ACT,
-        BPF_PROG_TYPE_SCHED_CLS,
-        BPF_PROG_TYPE_SOCKET_FILTER,
-        BPF_PROG_TYPE_SOCK_OPS,
-        BPF_PROG_TYPE_XDP,
-};
-
 
 const android::bpf::Location locations[] = {
         // S+ Tethering mainline module (network_stack): tether offload
@@ -100,8 +79,6 @@ const android::bpf::Location locations[] = {
                 .dir = "/apex/com.android.tethering/etc/bpf/",
                 .prefix = "tethering/",
                 .allowedDomainBitmask = kTetheringApexDomainBitmask,
-                .allowedProgTypes = kTetheringApexAllowedProgTypes,
-                .allowedProgTypesLength = arraysize(kTetheringApexAllowedProgTypes),
         },
         // T+ Tethering mainline module (shared with netd & system server)
         // netutils_wrapper (for iptables xt_bpf) has access to programs
@@ -109,8 +86,6 @@ const android::bpf::Location locations[] = {
                 .dir = "/apex/com.android.tethering/etc/bpf/netd_shared/",
                 .prefix = "netd_shared/",
                 .allowedDomainBitmask = kTetheringApexDomainBitmask,
-                .allowedProgTypes = kTetheringApexAllowedProgTypes,
-                .allowedProgTypesLength = arraysize(kTetheringApexAllowedProgTypes),
         },
         // T+ Tethering mainline module (shared with netd & system server)
         // netutils_wrapper has no access, netd has read only access
@@ -118,24 +93,18 @@ const android::bpf::Location locations[] = {
                 .dir = "/apex/com.android.tethering/etc/bpf/netd_readonly/",
                 .prefix = "netd_readonly/",
                 .allowedDomainBitmask = kTetheringApexDomainBitmask,
-                .allowedProgTypes = kTetheringApexAllowedProgTypes,
-                .allowedProgTypesLength = arraysize(kTetheringApexAllowedProgTypes),
         },
         // T+ Tethering mainline module (shared with system server)
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/net_shared/",
                 .prefix = "net_shared/",
                 .allowedDomainBitmask = kTetheringApexDomainBitmask,
-                .allowedProgTypes = kTetheringApexAllowedProgTypes,
-                .allowedProgTypesLength = arraysize(kTetheringApexAllowedProgTypes),
         },
         // T+ Tethering mainline module (not shared, just network_stack)
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/net_private/",
                 .prefix = "net_private/",
                 .allowedDomainBitmask = kTetheringApexDomainBitmask,
-                .allowedProgTypes = kTetheringApexAllowedProgTypes,
-                .allowedProgTypesLength = arraysize(kTetheringApexAllowedProgTypes),
         },
 };
 
