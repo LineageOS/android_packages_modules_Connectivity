@@ -197,8 +197,8 @@ open class CSTest {
         override fun isChangeEnabled(changeId: Long, uid: Int) =
                 changeId in enabledChangeIds
 
-        // In AOSP, build version codes are all over the place (e.g. at the time of this writing
-        // U == V). Define custom ones.
+        // In AOSP, build version codes can't always distinguish between some versions (e.g. at the
+        // time of this writing U == V). Define custom ones.
         private var sdkLevel = VERSION_UNMOCKED
         private val isSdkUnmocked get() = sdkLevel == VERSION_UNMOCKED
 
