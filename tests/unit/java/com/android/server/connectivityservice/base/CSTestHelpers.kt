@@ -30,6 +30,13 @@ import android.content.pm.UserInfo
 import android.content.res.Resources
 import android.net.IDnsResolver
 import android.net.INetd
+import android.net.IpPrefix
+import android.net.LinkAddress
+import android.net.LinkProperties
+import android.net.NetworkAgentConfig
+import android.net.NetworkCapabilities
+import android.net.NetworkScore
+import android.net.RouteInfo
 import android.net.metrics.IpConnectivityLog
 import android.os.Handler
 import android.os.HandlerThread
@@ -59,6 +66,22 @@ import kotlin.test.fail
 
 internal inline fun <reified T> mock() = Mockito.mock(T::class.java)
 internal inline fun <reified T> any() = any(T::class.java)
+
+internal fun emptyAgentConfig() = NetworkAgentConfig.Builder().build()
+
+internal fun defaultNc() = NetworkCapabilities.Builder()
+        // Add sensible defaults for agents that don't want to care
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
+        .build()
+
+internal fun defaultScore() = FromS(NetworkScore.Builder().build())
+
+internal fun defaultLp() = LinkProperties().apply {
+    addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
+    addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
+}
 
 internal fun makeMockContentResolver(context: Context) = MockContentResolver(context).apply {
     addProvider(Settings.AUTHORITY, FakeSettingsProvider())
