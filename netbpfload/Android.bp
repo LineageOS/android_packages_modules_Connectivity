@@ -36,6 +36,4 @@ cc_binary {
         "loader.cpp",
         "NetBpfLoad.cpp",
     ],
-
-    init_rc: ["netbpfload.rc"],
 }
