@@ -127,6 +127,7 @@ open class CSTest {
     val packageManager = makeMockPackageManager()
     val connResources = makeMockConnResources(sysResources, packageManager)
 
+    val netd = mock<INetd>()
     val bpfNetMaps = mock<BpfNetMaps>()
     val clatCoordinator = mock<ClatCoordinator>()
     val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
@@ -138,7 +139,7 @@ open class CSTest {
     }
 
     val deps = CSDeps()
-    val service = makeConnectivityService(context, deps).also { it.systemReadyInternal() }
+    val service = makeConnectivityService(context, netd, deps).also { it.systemReadyInternal() }
     val cm = ConnectivityManager(context, service)
     val csHandler = Handler(csHandlerThread.looper)
 
