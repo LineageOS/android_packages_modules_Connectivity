@@ -64,18 +64,9 @@ static constexpr bool specified(domain d) {
     return d != domain::unspecified;
 }
 
-static constexpr unsigned long long domainToBitmask(domain d) {
-    return specified(d) ? 1uLL << (static_cast<int>(d) - 1) : 0;
-}
-
-static constexpr bool inDomainBitmask(domain d, unsigned long long v) {
-    return domainToBitmask(d) & v;
-}
-
 struct Location {
     const char* const dir = "";
     const char* const prefix = "";
-    unsigned long long allowedDomainBitmask = 0;
 };
 
 // BPF loader implementation. Loads an eBPF ELF object
