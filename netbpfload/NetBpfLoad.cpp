@@ -65,46 +65,34 @@ bool exists(const char* const path) {
     abort();  // can only hit this if permissions (likely selinux) are screwed up
 }
 
-constexpr unsigned long long kTetheringApexDomainBitmask =
-        domainToBitmask(domain::tethering) |
-        domainToBitmask(domain::net_private) |
-        domainToBitmask(domain::net_shared) |
-        domainToBitmask(domain::netd_readonly) |
-        domainToBitmask(domain::netd_shared);
-
 
 const android::bpf::Location locations[] = {
         // S+ Tethering mainline module (network_stack): tether offload
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/",
                 .prefix = "tethering/",
-                .allowedDomainBitmask = kTetheringApexDomainBitmask,
         },
         // T+ Tethering mainline module (shared with netd & system server)
         // netutils_wrapper (for iptables xt_bpf) has access to programs
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/netd_shared/",
                 .prefix = "netd_shared/",
-                .allowedDomainBitmask = kTetheringApexDomainBitmask,
         },
         // T+ Tethering mainline module (shared with netd & system server)
         // netutils_wrapper has no access, netd has read only access
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/netd_readonly/",
                 .prefix = "netd_readonly/",
-                .allowedDomainBitmask = kTetheringApexDomainBitmask,
         },
         // T+ Tethering mainline module (shared with system server)
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/net_shared/",
                 .prefix = "net_shared/",
-                .allowedDomainBitmask = kTetheringApexDomainBitmask,
         },
         // T+ Tethering mainline module (not shared, just network_stack)
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/net_private/",
                 .prefix = "net_private/",
-                .allowedDomainBitmask = kTetheringApexDomainBitmask,
         },
 };
 
@@ -246,13 +234,6 @@ int main(int argc, char** argv) {
     for (const auto& location : locations) {
         if (createSysFsBpfSubDir(location.prefix)) return 1;
     }
-
-    // Note: there's no actual src dir for fs_bpf_loader .o's,
-    // so it is not listed in 'locations[].prefix'.
-    // This is because this is primarily meant for triggering genfscon rules,
-    // and as such this will likely always be the case.
-    // Thus we need to manually create the /sys/fs/bpf/loader subdirectory.
-    if (createSysFsBpfSubDir("loader")) return 1;
 
     // Load all ELF objects, create programs and maps, and pin them
     for (const auto& location : locations) {
