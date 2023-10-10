@@ -621,8 +621,7 @@ static bool mapMatchesExpectations(const unique_fd& fd, const string& mapName,
 }
 
 static int createMaps(const char* elfPath, ifstream& elfFile, vector<unique_fd>& mapFds,
-                      const char* prefix, const unsigned long long allowedDomainBitmask,
-                      const size_t sizeOfBpfMapDef) {
+                      const char* prefix, const size_t sizeOfBpfMapDef) {
     int ret;
     vector<char> mdData;
     vector<struct bpf_map_def> md;
@@ -733,11 +732,6 @@ static int createMaps(const char* elfPath, ifstream& elfFile, vector<unique_fd>&
 
         domain selinux_context = getDomainFromSelinuxContext(md[i].selinux_context);
         if (specified(selinux_context)) {
-            if (!inDomainBitmask(selinux_context, allowedDomainBitmask)) {
-                ALOGE("map %s has invalid selinux_context of %d (allowed bitmask 0x%llx)",
-                      mapNames[i].c_str(), selinux_context, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("map %s selinux_context [%-32s] -> %d -> '%s' (%s)", mapNames[i].c_str(),
                   md[i].selinux_context, selinux_context, lookupSelinuxContext(selinux_context),
                   lookupPinSubdir(selinux_context));
@@ -746,11 +740,6 @@ static int createMaps(const char* elfPath, ifstream& elfFile, vector<unique_fd>&
         domain pin_subdir = getDomainFromPinSubdir(md[i].pin_subdir);
         if (unrecognized(pin_subdir)) return -ENOTDIR;
         if (specified(pin_subdir)) {
-            if (!inDomainBitmask(pin_subdir, allowedDomainBitmask)) {
-                ALOGE("map %s has invalid pin_subdir of %d (allowed bitmask 0x%llx)",
-                      mapNames[i].c_str(), pin_subdir, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("map %s pin_subdir [%-32s] -> %d -> '%s'", mapNames[i].c_str(), md[i].pin_subdir,
                   pin_subdir, lookupPinSubdir(pin_subdir));
         }
@@ -921,7 +910,7 @@ static void applyMapRelo(ifstream& elfFile, vector<unique_fd> &mapFds, vector<co
 }
 
 static int loadCodeSections(const char* elfPath, vector<codeSection>& cs, const string& license,
-                            const char* prefix, const unsigned long long allowedDomainBitmask) {
+                            const char* prefix) {
     unsigned kvers = kernelVersion();
 
     if (!kvers) {
@@ -980,22 +969,12 @@ static int loadCodeSections(const char* elfPath, vector<codeSection>& cs, const 
         if (unrecognized(pin_subdir)) return -ENOTDIR;
 
         if (specified(selinux_context)) {
-            if (!inDomainBitmask(selinux_context, allowedDomainBitmask)) {
-                ALOGE("prog %s has invalid selinux_context of %d (allowed bitmask 0x%llx)",
-                      name.c_str(), selinux_context, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("prog %s selinux_context [%-32s] -> %d -> '%s' (%s)", name.c_str(),
                   cs[i].prog_def->selinux_context, selinux_context,
                   lookupSelinuxContext(selinux_context), lookupPinSubdir(selinux_context));
         }
 
         if (specified(pin_subdir)) {
-            if (!inDomainBitmask(pin_subdir, allowedDomainBitmask)) {
-                ALOGE("prog %s has invalid pin_subdir of %d (allowed bitmask 0x%llx)", name.c_str(),
-                      pin_subdir, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("prog %s pin_subdir [%-32s] -> %d -> '%s'", name.c_str(),
                   cs[i].prog_def->pin_subdir, pin_subdir, lookupPinSubdir(pin_subdir));
         }
@@ -1185,8 +1164,7 @@ int loadProg(const char* elfPath, bool* isCritical, const Location& location) {
     /* Just for future debugging */
     if (0) dumpAllCs(cs);
 
-    ret = createMaps(elfPath, elfFile, mapFds, location.prefix, location.allowedDomainBitmask,
-                     sizeOfBpfMapDef);
+    ret = createMaps(elfPath, elfFile, mapFds, location.prefix, sizeOfBpfMapDef);
     if (ret) {
         ALOGE("Failed to create maps: (ret=%d) in %s", ret, elfPath);
         return ret;
@@ -1197,8 +1175,7 @@ int loadProg(const char* elfPath, bool* isCritical, const Location& location) {
 
     applyMapRelo(elfFile, mapFds, cs);
 
-    ret = loadCodeSections(elfPath, cs, string(license.data()), location.prefix,
-                           location.allowedDomainBitmask);
+    ret = loadCodeSections(elfPath, cs, string(license.data()), location.prefix);
     if (ret) ALOGE("Failed to load programs, loadCodeSections ret=%d", ret);
 
     return ret;
