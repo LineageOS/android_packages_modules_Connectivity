@@ -126,7 +126,7 @@ DEFINE_BPF_MAP_GRW(tether_upstream6_map, HASH, TetherUpstream6Key, Tether6Value,
 
 static inline __always_inline int do_forward6(struct __sk_buff* skb,
                                               const struct rawip_bool rawip,
-                                              const bool downstream,
+                                              const struct stream_bool stream,
                                               const struct kver_uint kver) {
     const bool is_ethernet = !rawip.rawip;
 
@@ -188,7 +188,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb,
         TC_PUNT(NON_GLOBAL_DST);
 
     // In the upstream direction do not forward traffic within the same /64 subnet.
-    if (!downstream && (src32 == dst32) && (ip6->saddr.s6_addr32[1] == ip6->daddr.s6_addr32[1]))
+    if (!stream.down && (src32 == dst32) && (ip6->saddr.s6_addr32[1] == ip6->daddr.s6_addr32[1]))
         TC_PUNT(LOCAL_SRC_DST);
 
     TetherDownstream6Key kd = {
@@ -200,15 +200,15 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb,
             .iif = skb->ifindex,
             .src64 = 0,
     };
-    if (is_ethernet) __builtin_memcpy(downstream ? kd.dstMac : ku.dstMac, eth->h_dest, ETH_ALEN);
+    if (is_ethernet) __builtin_memcpy(stream.down ? kd.dstMac : ku.dstMac, eth->h_dest, ETH_ALEN);
 
-    Tether6Value* v = downstream ? bpf_tether_downstream6_map_lookup_elem(&kd)
-                                 : bpf_tether_upstream6_map_lookup_elem(&ku);
+    Tether6Value* v = stream.down ? bpf_tether_downstream6_map_lookup_elem(&kd)
+                                  : bpf_tether_upstream6_map_lookup_elem(&ku);
 
     // If we don't find any offload information then simply let the core stack handle it...
     if (!v) return TC_ACT_PIPE;
 
-    uint32_t stat_and_limit_k = downstream ? skb->ifindex : v->oif;
+    uint32_t stat_and_limit_k = stream.down ? skb->ifindex : v->oif;
 
     TetherStatsValue* stat_v = bpf_tether_stats_map_lookup_elem(&stat_and_limit_k);
 
@@ -253,7 +253,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb,
         // We do this even if TX interface is RAWIP and thus does not need an ethernet header,
         // because this is easier and the kernel will strip extraneous ethernet header.
         if (bpf_skb_change_head(skb, sizeof(struct ethhdr), /*flags*/ 0)) {
-            __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
+            __sync_fetch_and_add(stream.down ? &stat_v->rxErrors : &stat_v->txErrors, 1);
             TC_PUNT(CHANGE_HEAD_FAILED);
         }
 
@@ -265,7 +265,7 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb,
 
         // I do not believe this can ever happen, but keep the verifier happy...
         if (data + sizeof(struct ethhdr) + sizeof(*ip6) > data_end) {
-            __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
+            __sync_fetch_and_add(stream.down ? &stat_v->rxErrors : &stat_v->txErrors, 1);
             TC_DROP(TOO_SHORT);
         }
     };
@@ -285,8 +285,8 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb,
     // (-ENOTSUPP) if it isn't.
     bpf_csum_update(skb, 0xFFFF - ntohs(old_hl) + ntohs(new_hl));
 
-    __sync_fetch_and_add(downstream ? &stat_v->rxPackets : &stat_v->txPackets, packets);
-    __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
+    __sync_fetch_and_add(stream.down ? &stat_v->rxPackets : &stat_v->txPackets, packets);
+    __sync_fetch_and_add(stream.down ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
 
     // Overwrite any mac header with the new one
     // For a rawip tx interface it will simply be a bunch of zeroes and later stripped.
@@ -361,7 +361,7 @@ DEFINE_BPF_MAP_GRW(tether_upstream4_map, HASH, Tether4Key, Tether4Value, 1024, T
 static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
         const int l2_header_size, void* data, const void* data_end,
         struct ethhdr* eth, struct iphdr* ip, const struct rawip_bool rawip,
-        const bool downstream, const struct updatetime_bool updatetime,
+        const struct stream_bool stream, const struct updatetime_bool updatetime,
         const bool is_tcp, const struct kver_uint kver) {
     const bool is_ethernet = !rawip.rawip;
     struct tcphdr* tcph = is_tcp ? (void*)(ip + 1) : NULL;
@@ -421,13 +421,13 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
     };
     if (is_ethernet) __builtin_memcpy(k.dstMac, eth->h_dest, ETH_ALEN);
 
-    Tether4Value* v = downstream ? bpf_tether_downstream4_map_lookup_elem(&k)
-                                 : bpf_tether_upstream4_map_lookup_elem(&k);
+    Tether4Value* v = stream.down ? bpf_tether_downstream4_map_lookup_elem(&k)
+                                  : bpf_tether_upstream4_map_lookup_elem(&k);
 
     // If we don't find any offload information then simply let the core stack handle it...
     if (!v) return TC_ACT_PIPE;
 
-    uint32_t stat_and_limit_k = downstream ? skb->ifindex : v->oif;
+    uint32_t stat_and_limit_k = stream.down ? skb->ifindex : v->oif;
 
     TetherStatsValue* stat_v = bpf_tether_stats_map_lookup_elem(&stat_and_limit_k);
 
@@ -472,7 +472,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
         // We do this even if TX interface is RAWIP and thus does not need an ethernet header,
         // because this is easier and the kernel will strip extraneous ethernet header.
         if (bpf_skb_change_head(skb, sizeof(struct ethhdr), /*flags*/ 0)) {
-            __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
+            __sync_fetch_and_add(stream.down ? &stat_v->rxErrors : &stat_v->txErrors, 1);
             TC_PUNT(CHANGE_HEAD_FAILED);
         }
 
@@ -486,7 +486,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
 
         // I do not believe this can ever happen, but keep the verifier happy...
         if (data + sizeof(struct ethhdr) + sizeof(*ip) + (is_tcp ? sizeof(*tcph) : sizeof(*udph)) > data_end) {
-            __sync_fetch_and_add(downstream ? &stat_v->rxErrors : &stat_v->txErrors, 1);
+            __sync_fetch_and_add(stream.down ? &stat_v->rxErrors : &stat_v->txErrors, 1);
             TC_DROP(TOO_SHORT);
         }
     };
@@ -540,8 +540,8 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
     // and backported to all Android Common Kernel 4.14+ trees.
     if (updatetime.updatetime) v->last_used = bpf_ktime_get_boot_ns();
 
-    __sync_fetch_and_add(downstream ? &stat_v->rxPackets : &stat_v->txPackets, packets);
-    __sync_fetch_and_add(downstream ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
+    __sync_fetch_and_add(stream.down ? &stat_v->rxPackets : &stat_v->txPackets, packets);
+    __sync_fetch_and_add(stream.down ? &stat_v->rxBytes : &stat_v->txBytes, L3_bytes);
 
     // Redirect to forwarded interface.
     //
@@ -554,7 +554,7 @@ static inline __always_inline int do_forward4_bottom(struct __sk_buff* skb,
 
 static inline __always_inline int do_forward4(struct __sk_buff* skb,
                                               const struct rawip_bool rawip,
-                                              const bool downstream,
+                                              const struct stream_bool stream,
                                               const struct updatetime_bool updatetime,
                                               const struct kver_uint kver) {
     const bool is_ethernet = !rawip.rawip;
@@ -646,10 +646,10 @@ static inline __always_inline int do_forward4(struct __sk_buff* skb,
     // if the underlying requisite kernel support (bpf_ktime_get_boot_ns) was backported.
     if (is_tcp) {
       return do_forward4_bottom(skb, l2_header_size, data, data_end, eth, ip,
-                                rawip, downstream, updatetime, /* is_tcp */ true, kver);
+                                rawip, stream, updatetime, /* is_tcp */ true, kver);
     } else {
       return do_forward4_bottom(skb, l2_header_size, data, data_end, eth, ip,
-                                rawip, downstream, updatetime, /* is_tcp */ false, kver);
+                                rawip, stream, updatetime, /* is_tcp */ false, kver);
     }
 }
 
@@ -808,16 +808,17 @@ DEFINE_BPF_PROG_KVER_RANGE("schedcls/tether_upstream4_ether$stub", TETHERING_UID
 DEFINE_BPF_MAP_GRW(tether_dev_map, DEVMAP_HASH, uint32_t, uint32_t, 64, TETHERING_GID)
 
 static inline __always_inline int do_xdp_forward6(struct xdp_md *ctx, const struct rawip_bool rawip,
-        const bool downstream) {
+        const struct stream_bool stream) {
     return XDP_PASS;
 }
 
 static inline __always_inline int do_xdp_forward4(struct xdp_md *ctx, const struct rawip_bool rawip,
-        const bool downstream) {
+        const struct stream_bool stream) {
     return XDP_PASS;
 }
 
-static inline __always_inline int do_xdp_forward_ether(struct xdp_md *ctx, const bool downstream) {
+static inline __always_inline int do_xdp_forward_ether(struct xdp_md *ctx,
+                                                       const struct stream_bool stream) {
     const void* data = (void*)(long)ctx->data;
     const void* data_end = (void*)(long)ctx->data_end;
     const struct ethhdr* eth = data;
@@ -826,15 +827,16 @@ static inline __always_inline int do_xdp_forward_ether(struct xdp_md *ctx, const
     if ((void*)(eth + 1) > data_end) return XDP_PASS;
 
     if (eth->h_proto == htons(ETH_P_IPV6))
-        return do_xdp_forward6(ctx, ETHER, downstream);
+        return do_xdp_forward6(ctx, ETHER, stream);
     if (eth->h_proto == htons(ETH_P_IP))
-        return do_xdp_forward4(ctx, ETHER, downstream);
+        return do_xdp_forward4(ctx, ETHER, stream);
 
     // Anything else we don't know how to handle...
     return XDP_PASS;
 }
 
-static inline __always_inline int do_xdp_forward_rawip(struct xdp_md *ctx, const bool downstream) {
+static inline __always_inline int do_xdp_forward_rawip(struct xdp_md *ctx,
+                                                       const struct stream_bool stream) {
     const void* data = (void*)(long)ctx->data;
     const void* data_end = (void*)(long)ctx->data_end;
 
@@ -842,8 +844,8 @@ static inline __always_inline int do_xdp_forward_rawip(struct xdp_md *ctx, const
     if (data_end - data < 1) return XDP_PASS;
     const uint8_t v = (*(uint8_t*)data) >> 4;
 
-    if (v == 6) return do_xdp_forward6(ctx, RAWIP, downstream);
-    if (v == 4) return do_xdp_forward4(ctx, RAWIP, downstream);
+    if (v == 6) return do_xdp_forward6(ctx, RAWIP, stream);
+    if (v == 4) return do_xdp_forward4(ctx, RAWIP, stream);
 
     // Anything else we don't know how to handle...
     return XDP_PASS;
