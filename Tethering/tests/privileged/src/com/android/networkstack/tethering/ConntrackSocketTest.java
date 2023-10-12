@@ -44,6 +44,7 @@ import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -82,6 +83,14 @@ public class ConntrackSocketTest {
 
         mDeps = new OffloadHardwareInterface.Dependencies(mHandler, mLog);
         mOffloadHw = new OffloadHardwareInterface(mHandler, mLog, mDeps);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            mHandlerThread.join();
+        }
     }
 
     void findConnectionOrThrow(FileDescriptor fd, InetSocketAddress local, InetSocketAddress remote)
