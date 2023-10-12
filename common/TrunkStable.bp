@@ -19,3 +19,8 @@ aconfig_declarations {
     package: "com.android.net.flags",
     srcs: ["flags.aconfig"],
 }
+
+java_aconfig_library {
+    name: "connectivity_flags_aconfig_lib",
+    aconfig_declarations: "com.android.net.flags-aconfig",
+}
