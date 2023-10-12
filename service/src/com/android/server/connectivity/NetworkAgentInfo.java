@@ -453,6 +453,8 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * apply to the allowedUids field.
      * They also should not mutate immutable capabilities, although for backward-compatibility
      * this is not enforced and limited to just a log.
+     * Forbidden capabilities also make no sense for networks, so they are disallowed and
+     * will be ignored with a warning.
      *
      * @param carrierPrivilegeAuthenticator the authenticator, to check access UIDs.
      */
@@ -461,6 +463,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         final NetworkCapabilities nc = new NetworkCapabilities(mDeclaredCapabilitiesUnsanitized);
         if (nc.hasConnectivityManagedCapability()) {
             Log.wtf(TAG, "BUG: " + this + " has CS-managed capability.");
+            nc.removeAllForbiddenCapabilities();
         }
         if (networkCapabilities.getOwnerUid() != nc.getOwnerUid()) {
             Log.e(TAG, toShortString() + ": ignoring attempt to change owner from "
