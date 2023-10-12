@@ -38,6 +38,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkScore
 import android.net.RouteInfo
 import android.net.metrics.IpConnectivityLog
+import android.os.Binder
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
@@ -54,20 +55,23 @@ import com.android.server.ConnectivityService.Dependencies
 import com.android.server.connectivity.ConnectivityResources
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.argThat
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito
 import org.mockito.Mockito.doAnswer
-import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.doNothing
+import org.mockito.Mockito.doReturn
 import kotlin.test.fail
 
 internal inline fun <reified T> mock() = Mockito.mock(T::class.java)
 internal inline fun <reified T> any() = any(T::class.java)
 
-internal fun emptyAgentConfig() = NetworkAgentConfig.Builder().build()
+internal fun emptyAgentConfig(legacyType: Int) = NetworkAgentConfig.Builder()
+        .setLegacyType(legacyType)
+        .build()
 
 internal fun defaultNc() = NetworkCapabilities.Builder()
         // Add sensible defaults for agents that don't want to care
@@ -98,9 +102,22 @@ internal fun makeActivityManager() = mock<ActivityManager>().also {
     }
 }
 
-internal fun makeMockPackageManager() = mock<PackageManager>().also { pm ->
+internal fun makeMockPackageManager(realContext: Context) = mock<PackageManager>().also { pm ->
     val supported = listOf(FEATURE_WIFI, FEATURE_WIFI_DIRECT, FEATURE_BLUETOOTH, FEATURE_ETHERNET)
     doReturn(true).`when`(pm).hasSystemFeature(argThat { supported.contains(it) })
+    val myPackageName = realContext.packageName
+    val myPackageInfo = realContext.packageManager.getPackageInfo(myPackageName,
+            PackageManager.GET_PERMISSIONS)
+    // Very high version code so that the checks for the module version will always
+    // say that it is recent enough. This is the most sensible default, but if some
+    // test needs to test with different version codes they can re-mock this with a
+    // different value.
+    myPackageInfo.longVersionCode = 9999999L
+    doReturn(arrayOf(myPackageName)).`when`(pm).getPackagesForUid(Binder.getCallingUid())
+    doReturn(myPackageInfo).`when`(pm).getPackageInfoAsUser(
+            eq(myPackageName), anyInt(), eq(UserHandle.getCallingUserId()))
+    doReturn(listOf(myPackageInfo)).`when`(pm)
+            .getInstalledPackagesAsUser(eq(PackageManager.GET_PERMISSIONS), anyInt())
 }
 
 internal fun makeMockConnResources(resources: Resources, pm: PackageManager) = mock<Context>().let {

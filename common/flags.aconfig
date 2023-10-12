@@ -6,3 +6,10 @@ flag {
   description: "NetworkActivityTracker tracks multiple networks including non default networks"
   bug: "267870186"
 }
+
+flag {
+  name: "forbidden_capability"
+  namespace: "android_core_networking"
+  description: "This flag controls the forbidden capability API"
+  bug: "302997505"
+}
