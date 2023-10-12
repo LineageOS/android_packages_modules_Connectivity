@@ -30,6 +30,12 @@ import android.net.LinkProperties
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED
+import android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH
+import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
+import android.net.NetworkCapabilities.TRANSPORT_TEST
+import android.net.NetworkCapabilities.TRANSPORT_VPN
+import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkPolicyManager
 import android.net.NetworkProvider
 import android.net.NetworkScore
@@ -79,6 +85,17 @@ internal const val VERSION_U = 4
 internal const val VERSION_V = 5
 internal const val VERSION_MAX = VERSION_V
 
+private fun NetworkCapabilities.getLegacyType() =
+        when (transportTypes.getOrElse(0) { TRANSPORT_WIFI }) {
+            TRANSPORT_BLUETOOTH -> ConnectivityManager.TYPE_BLUETOOTH
+            TRANSPORT_CELLULAR -> ConnectivityManager.TYPE_MOBILE
+            TRANSPORT_ETHERNET -> ConnectivityManager.TYPE_ETHERNET
+            TRANSPORT_TEST -> ConnectivityManager.TYPE_TEST
+            TRANSPORT_VPN -> ConnectivityManager.TYPE_VPN
+            TRANSPORT_WIFI -> ConnectivityManager.TYPE_WIFI
+            else -> ConnectivityManager.TYPE_NONE
+        }
+
 /**
  * Base class for tests testing ConnectivityService and its satellites.
  *
@@ -127,7 +144,7 @@ open class CSTest {
     val networkStack = mock<NetworkStackClientBase>()
     val csHandlerThread = HandlerThread("CSTestHandler")
     val sysResources = mock<Resources>().also { initMockedResources(it) }
-    val packageManager = makeMockPackageManager()
+    val packageManager = makeMockPackageManager(instrumentationContext)
     val connResources = makeMockConnResources(sysResources, packageManager)
 
     val netd = mock<INetd>()
@@ -272,12 +289,12 @@ open class CSTest {
     // Network agents. See CSAgentWrapper. This class contains utility methods to simplify
     // creation.
     fun Agent(
-            nac: NetworkAgentConfig = emptyAgentConfig(),
             nc: NetworkCapabilities = defaultNc(),
+            nac: NetworkAgentConfig = emptyAgentConfig(nc.getLegacyType()),
             lp: LinkProperties = defaultLp(),
             score: FromS<NetworkScore> = defaultScore(),
             provider: NetworkProvider? = null
-    ) = CSAgentWrapper(context, csHandlerThread, networkStack, nac, nc, lp, score, provider)
+    ) = CSAgentWrapper(context, deps, csHandlerThread, networkStack, nac, nc, lp, score, provider)
 
     fun Agent(vararg transports: Int, lp: LinkProperties = defaultLp()): CSAgentWrapper {
         val nc = NetworkCapabilities.Builder().apply {
