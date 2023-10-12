@@ -31,6 +31,7 @@ import static android.net.NetworkStats.UID_ALL;
 import static android.net.NetworkTemplate.MATCH_BLUETOOTH;
 import static android.net.NetworkTemplate.MATCH_ETHERNET;
 import static android.net.NetworkTemplate.MATCH_MOBILE;
+import static android.net.NetworkTemplate.MATCH_PROXY;
 import static android.net.NetworkTemplate.MATCH_WIFI;
 import static android.net.TrafficStats.UID_REMOVED;
 import static android.text.format.DateUtils.WEEK_IN_MILLIS;
@@ -784,6 +785,7 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
         dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_WIFI).build(), "wifi");
         dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_ETHERNET).build(), "eth");
         dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_BLUETOOTH).build(), "bt");
+        dumpCheckin(pw, start, end, new NetworkTemplate.Builder(MATCH_PROXY).build(), "proxy");
     }
 
     /**
