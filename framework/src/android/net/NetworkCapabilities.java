@@ -453,6 +453,7 @@ public final class NetworkCapabilities implements Parcelable {
             NET_CAPABILITY_MMTEL,
             NET_CAPABILITY_PRIORITIZE_LATENCY,
             NET_CAPABILITY_PRIORITIZE_BANDWIDTH,
+            NET_CAPABILITY_LOCAL_NETWORK,
     })
     public @interface NetCapability { }
 
@@ -714,7 +715,21 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
 
-    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
+    /**
+     * This is a local network, e.g. a tethering downstream or a P2P direct network.
+     *
+     * <p>
+     * Note that local networks are not sent to callbacks by default. To receive callbacks about
+     * them, the {@link NetworkRequest} instance must be prepared to see them, either by
+     * adding the capability with {@link NetworkRequest.Builder#addCapability}, by removing
+     * this forbidden capability with {@link NetworkRequest.Builder#removeForbiddenCapability},
+     * or by clearing all capabilites with {@link NetworkRequest.Builder#clearCapabilities()}.
+     * </p>
+     * @hide
+     */
+    public static final int NET_CAPABILITY_LOCAL_NETWORK = 36;
+
+    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_LOCAL_NETWORK;
 
     // Set all bits up to the MAX_NET_CAPABILITY-th bit
     private static final long ALL_VALID_CAPABILITIES = (2L << MAX_NET_CAPABILITY) - 1;
@@ -859,7 +874,7 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
-     * Removes (if found) the given forbidden capability from this {@code NetworkCapability}
+     * Removes (if found) the given forbidden capability from this {@link NetworkCapabilities}
      * instance that were added via addForbiddenCapability(int) or setCapabilities(int[], int[]).
      *
      * @param capability the capability to be removed.
@@ -869,6 +884,16 @@ public final class NetworkCapabilities implements Parcelable {
     public @NonNull NetworkCapabilities removeForbiddenCapability(@NetCapability int capability) {
         checkValidCapability(capability);
         mForbiddenNetworkCapabilities &= ~(1L << capability);
+        return this;
+    }
+
+    /**
+     * Removes all forbidden capabilities from this {@link NetworkCapabilities} instance.
+     * @return This NetworkCapabilities instance, to facilitate chaining.
+     * @hide
+     */
+    public @NonNull NetworkCapabilities removeAllForbiddenCapabilities() {
+        mForbiddenNetworkCapabilities = 0;
         return this;
     }
 
@@ -1039,11 +1064,12 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
-     * Check if this NetworkCapabilities has system managed capabilities or not.
+     * Check if this NetworkCapabilities has connectivity-managed capabilities or not.
      * @hide
      */
     public boolean hasConnectivityManagedCapability() {
-        return ((mNetworkCapabilities & CONNECTIVITY_MANAGED_CAPABILITIES) != 0);
+        return (mNetworkCapabilities & CONNECTIVITY_MANAGED_CAPABILITIES) != 0
+                || mForbiddenNetworkCapabilities != 0;
     }
 
     /**
@@ -2523,6 +2549,7 @@ public final class NetworkCapabilities implements Parcelable {
             case NET_CAPABILITY_MMTEL:                return "MMTEL";
             case NET_CAPABILITY_PRIORITIZE_LATENCY:          return "PRIORITIZE_LATENCY";
             case NET_CAPABILITY_PRIORITIZE_BANDWIDTH:        return "PRIORITIZE_BANDWIDTH";
+            case NET_CAPABILITY_LOCAL_NETWORK:        return "LOCAL_NETWORK";
             default:                                  return Integer.toString(capability);
         }
     }

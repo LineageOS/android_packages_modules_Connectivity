@@ -45,7 +45,8 @@ public final class NetworkScore implements Parcelable {
     @IntDef(value = {
             KEEP_CONNECTED_NONE,
             KEEP_CONNECTED_FOR_HANDOVER,
-            KEEP_CONNECTED_FOR_TEST
+            KEEP_CONNECTED_FOR_TEST,
+            KEEP_CONNECTED_DOWNSTREAM_NETWORK
     })
     public @interface KeepConnectedReason { }
 
@@ -64,6 +65,12 @@ public final class NetworkScore implements Parcelable {
      * @hide
      */
     public static final int KEEP_CONNECTED_FOR_TEST = 2;
+    /**
+     * Keep this network connected even if there is no outstanding request for it, because
+     * it is a downstream network.
+     * @hide
+     */
+    public static final int KEEP_CONNECTED_DOWNSTREAM_NETWORK = 3;
 
     // Agent-managed policies
     // This network should lose to a wifi that has ever been validated
