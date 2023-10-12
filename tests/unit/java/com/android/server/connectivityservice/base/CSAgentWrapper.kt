@@ -98,7 +98,7 @@ class CSAgentWrapper(
                 nmCbCaptor.capture())
 
         // Create the actual agent. NetworkAgent is abstract, so make an anonymous subclass.
-        if (SdkLevel.isAtLeastS()) {
+        if (deps.isAtLeastS()) {
             agent = object : NetworkAgent(context, csHandlerThread.looper, TAG,
                     nc, lp, score.value, nac, provider) {}
         } else {
@@ -112,7 +112,7 @@ class CSAgentWrapper(
     }
 
     private fun onValidationRequested() {
-        if (SdkLevel.isAtLeastT()) {
+        if (deps.isAtLeastT()) {
             verify(networkMonitor).notifyNetworkConnectedParcel(any())
         } else {
             verify(networkMonitor).notifyNetworkConnected(any(), any())
