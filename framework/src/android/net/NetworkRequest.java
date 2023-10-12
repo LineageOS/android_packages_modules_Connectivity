@@ -20,6 +20,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
@@ -283,6 +284,15 @@ public class NetworkRequest implements Parcelable {
                 NET_CAPABILITY_TRUSTED,
                 NET_CAPABILITY_VALIDATED);
 
+        /**
+         * Capabilities that are forbidden by default.
+         * Forbidden capabilities only make sense in NetworkRequest, not for network agents.
+         * Therefore these capabilities are only in NetworkRequest.
+         */
+        private static final int[] DEFAULT_FORBIDDEN_CAPABILITIES = new int[] {
+            NET_CAPABILITY_LOCAL_NETWORK
+        };
+
         private final NetworkCapabilities mNetworkCapabilities;
 
         // A boolean that represents whether the NOT_VCN_MANAGED capability should be deduced when
@@ -298,6 +308,16 @@ public class NetworkRequest implements Parcelable {
             // it for apps that do not have the NETWORK_SETTINGS permission.
             mNetworkCapabilities = new NetworkCapabilities();
             mNetworkCapabilities.setSingleUid(Process.myUid());
+            // Default forbidden capabilities are foremost meant to help with backward
+            // compatibility. When adding new types of network identified by a capability that
+            // might confuse older apps, a default forbidden capability will have apps not see
+            // these networks unless they explicitly ask for it.
+            // If the app called clearCapabilities() it will see everything, but then it
+            // can be argued that it's fair to send them too, since it asked for everything
+            // explicitly.
+            for (final int forbiddenCap : DEFAULT_FORBIDDEN_CAPABILITIES) {
+                mNetworkCapabilities.addForbiddenCapability(forbiddenCap);
+            }
         }
 
         /**
