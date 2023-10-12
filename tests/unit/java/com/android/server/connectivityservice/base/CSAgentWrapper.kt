@@ -35,6 +35,7 @@ import android.net.networkstack.NetworkStackClientBase
 import android.os.HandlerThread
 import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
+import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
@@ -46,6 +47,8 @@ import org.mockito.stubbing.Answer
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.fail
+
+const val SHORT_TIMEOUT_MS = 200L
 
 private inline fun <reified T> ArgumentCaptor() = ArgumentCaptor.forClass(T::class.java)
 
@@ -60,6 +63,7 @@ private fun nextAgentId() = agentCounter.getAndIncrement()
  */
 class CSAgentWrapper(
         val context: Context,
+        val deps: ConnectivityService.Dependencies,
         csHandlerThread: HandlerThread,
         networkStack: NetworkStackClientBase,
         nac: NetworkAgentConfig,
@@ -125,9 +129,10 @@ class CSAgentWrapper(
 
     fun connect() {
         val mgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val request = NetworkRequest.Builder().clearCapabilities()
-                .addTransportType(nc.transportTypes[0])
-                .build()
+        val request = NetworkRequest.Builder().apply {
+            clearCapabilities()
+            if (nc.transportTypes.isNotEmpty()) addTransportType(nc.transportTypes[0])
+        }.build()
         val cb = TestableNetworkCallback()
         mgr.registerNetworkCallback(request, cb)
         agent.markConnected()
@@ -149,6 +154,15 @@ class CSAgentWrapper(
     }
 
     fun disconnect() {
+        val mgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val request = NetworkRequest.Builder().apply {
+            clearCapabilities()
+            if (nc.transportTypes.isNotEmpty()) addTransportType(nc.transportTypes[0])
+        }.build()
+        val cb = TestableNetworkCallback(timeoutMs = SHORT_TIMEOUT_MS)
+        mgr.registerNetworkCallback(request, cb)
+        cb.eventuallyExpect<Available> { it.network == agent.network }
         agent.unregister()
+        cb.eventuallyExpect<Lost> { it.network == agent.network }
     }
 }

@@ -104,6 +104,23 @@ public class NetworkRequestTest {
         verifyNoCapabilities(nr);
     }
 
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    public void testForbiddenCapabilities() {
+        final NetworkRequest.Builder builder = new NetworkRequest.Builder();
+        builder.addForbiddenCapability(NET_CAPABILITY_MMS);
+        assertTrue(builder.build().hasForbiddenCapability(NET_CAPABILITY_MMS));
+        builder.removeForbiddenCapability(NET_CAPABILITY_MMS);
+        assertFalse(builder.build().hasCapability(NET_CAPABILITY_MMS));
+        builder.addCapability(NET_CAPABILITY_MMS);
+        assertFalse(builder.build().hasForbiddenCapability(NET_CAPABILITY_MMS));
+        assertTrue(builder.build().hasCapability(NET_CAPABILITY_MMS));
+        builder.addForbiddenCapability(NET_CAPABILITY_MMS);
+        assertTrue(builder.build().hasForbiddenCapability(NET_CAPABILITY_MMS));
+        assertFalse(builder.build().hasCapability(NET_CAPABILITY_MMS));
+        builder.clearCapabilities();
+        verifyNoCapabilities(builder.build());
+    }
+
     @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
     public void testTemporarilyNotMeteredCapability() {
         assertTrue(new NetworkRequest.Builder()
