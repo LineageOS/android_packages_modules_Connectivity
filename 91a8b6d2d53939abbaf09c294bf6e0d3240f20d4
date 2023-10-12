@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "879dfc95_003aa450",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2023-10-12T19:07:33Z",
+      "side": 1,
+      "message": "This change also moves the setting from LineageSettings back to AOSP. Using this as-is would require an adaptation of this migration change: https://review.calyxos.org/c/CalyxOS/platform_calyx-sdk/+/10716",
+      "revId": "91a8b6d2d53939abbaf09c294bf6e0d3240f20d4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
