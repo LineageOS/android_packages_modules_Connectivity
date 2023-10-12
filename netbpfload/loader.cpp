@@ -43,7 +43,7 @@
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
 #include "bpf/bpf_map_def.h"
-#include "include/libbpf_android.h"
+#include "loader.h"
 
 #if BPFLOADER_VERSION < COMPILE_FOR_BPFLOADER_VERSION
 #error "BPFLOADER_VERSION is less than COMPILE_FOR_BPFLOADER_VERSION"
@@ -59,9 +59,9 @@
 
 #include <android-base/cmsg.h>
 #include <android-base/file.h>
+#include <android-base/properties.h>
 #include <android-base/strings.h>
 #include <android-base/unique_fd.h>
-#include <cutils/properties.h>
 
 #define BPF_FS_PATH "/sys/fs/bpf/"
 
@@ -79,17 +79,11 @@ using std::optional;
 using std::string;
 using std::vector;
 
-static std::string getBuildTypeInternal() {
-    char value[PROPERTY_VALUE_MAX] = {};
-    (void)property_get("ro.build.type", value, "unknown");  // ignore length
-    return value;
-}
-
 namespace android {
 namespace bpf {
 
 const std::string& getBuildType() {
-    static std::string t = getBuildTypeInternal();
+    static std::string t = android::base::GetProperty("ro.build.type", "unknown");
     return t;
 }
 
@@ -178,6 +172,10 @@ typedef struct {
  *
  * However, be aware that you should not be directly using the SECTION() macro.
  * Instead use the DEFINE_(BPF|XDP)_(PROG|MAP)... & LICENSE/CRITICAL macros.
+ *
+ * Programs shipped inside the tethering apex should be limited to networking stuff,
+ * as KPROBE, PERF_EVENT, TRACEPOINT are dangerous to use from mainline updatable code,
+ * since they are less stable abi/api and may conflict with platform uses of bpf.
  */
 sectionType sectionNameTypes[] = {
         {"bind4/",         BPF_PROG_TYPE_CGROUP_SOCK_ADDR, BPF_CGROUP_INET4_BIND},
@@ -189,13 +187,10 @@ sectionType sectionNameTypes[] = {
         {"egress/",        BPF_PROG_TYPE_CGROUP_SKB,       BPF_CGROUP_INET_EGRESS},
         {"getsockopt/",    BPF_PROG_TYPE_CGROUP_SOCKOPT,   BPF_CGROUP_GETSOCKOPT},
         {"ingress/",       BPF_PROG_TYPE_CGROUP_SKB,       BPF_CGROUP_INET_INGRESS},
-        {"kprobe/",        BPF_PROG_TYPE_KPROBE,           BPF_ATTACH_TYPE_UNSPEC},
-        {"kretprobe/",     BPF_PROG_TYPE_KPROBE,           BPF_ATTACH_TYPE_UNSPEC},
         {"lwt_in/",        BPF_PROG_TYPE_LWT_IN,           BPF_ATTACH_TYPE_UNSPEC},
         {"lwt_out/",       BPF_PROG_TYPE_LWT_OUT,          BPF_ATTACH_TYPE_UNSPEC},
         {"lwt_seg6local/", BPF_PROG_TYPE_LWT_SEG6LOCAL,    BPF_ATTACH_TYPE_UNSPEC},
         {"lwt_xmit/",      BPF_PROG_TYPE_LWT_XMIT,         BPF_ATTACH_TYPE_UNSPEC},
-        {"perf_event/",    BPF_PROG_TYPE_PERF_EVENT,       BPF_ATTACH_TYPE_UNSPEC},
         {"postbind4/",     BPF_PROG_TYPE_CGROUP_SOCK,      BPF_CGROUP_INET4_POST_BIND},
         {"postbind6/",     BPF_PROG_TYPE_CGROUP_SOCK,      BPF_CGROUP_INET6_POST_BIND},
         {"recvmsg4/",      BPF_PROG_TYPE_CGROUP_SOCK_ADDR, BPF_CGROUP_UDP4_RECVMSG},
@@ -208,9 +203,6 @@ sectionType sectionNameTypes[] = {
         {"skfilter/",      BPF_PROG_TYPE_SOCKET_FILTER,    BPF_ATTACH_TYPE_UNSPEC},
         {"sockops/",       BPF_PROG_TYPE_SOCK_OPS,         BPF_CGROUP_SOCK_OPS},
         {"sysctl",         BPF_PROG_TYPE_CGROUP_SYSCTL,    BPF_CGROUP_SYSCTL},
-        {"tracepoint/",    BPF_PROG_TYPE_TRACEPOINT,       BPF_ATTACH_TYPE_UNSPEC},
-        {"uprobe/",        BPF_PROG_TYPE_KPROBE,           BPF_ATTACH_TYPE_UNSPEC},
-        {"uretprobe/",     BPF_PROG_TYPE_KPROBE,           BPF_ATTACH_TYPE_UNSPEC},
         {"xdp/",           BPF_PROG_TYPE_XDP,              BPF_ATTACH_TYPE_UNSPEC},
 };
 
@@ -393,18 +385,9 @@ static int readSymTab(ifstream& elfFile, int sort, vector<Elf64_Sym>& data) {
     return 0;
 }
 
-static enum bpf_prog_type getFuseProgType() {
-    int result = BPF_PROG_TYPE_UNSPEC;
-    ifstream("/sys/fs/fuse/bpf_prog_type_fuse") >> result;
-    return static_cast<bpf_prog_type>(result);
-}
-
 static enum bpf_prog_type getSectionType(string& name) {
     for (auto& snt : sectionNameTypes)
         if (StartsWith(name, snt.name)) return snt.type;
-
-    // TODO Remove this code when fuse-bpf is upstream and this BPF_PROG_TYPE_FUSE is fixed
-    if (StartsWith(name, "fuse/")) return getFuseProgType();
 
     return BPF_PROG_TYPE_UNSPEC;
 }
@@ -415,6 +398,7 @@ static enum bpf_attach_type getExpectedAttachType(string& name) {
     return BPF_ATTACH_TYPE_UNSPEC;
 }
 
+/*
 static string getSectionName(enum bpf_prog_type type)
 {
     for (auto& snt : sectionNameTypes)
@@ -423,6 +407,7 @@ static string getSectionName(enum bpf_prog_type type)
 
     return "UNKNOWN SECTION NAME " + std::to_string(type);
 }
+*/
 
 static int readProgDefs(ifstream& elfFile, vector<struct bpf_prog_def>& pd,
                         size_t sizeOfBpfProgDef) {
@@ -502,22 +487,8 @@ static int getSectionSymNames(ifstream& elfFile, const string& sectionName, vect
     return 0;
 }
 
-static bool IsAllowed(bpf_prog_type type, const bpf_prog_type* allowed, size_t numAllowed) {
-    if (allowed == nullptr) return true;
-
-    for (size_t i = 0; i < numAllowed; i++) {
-        if (allowed[i] == BPF_PROG_TYPE_UNSPEC) {
-            if (type == getFuseProgType()) return true;
-        } else if (type == allowed[i])
-            return true;
-    }
-
-    return false;
-}
-
 /* Read a section by its index - for ex to get sec hdr strtab blob */
-static int readCodeSections(ifstream& elfFile, vector<codeSection>& cs, size_t sizeOfBpfProgDef,
-                            const bpf_prog_type* allowed, size_t numAllowed) {
+static int readCodeSections(ifstream& elfFile, vector<codeSection>& cs, size_t sizeOfBpfProgDef) {
     vector<Elf64_Shdr> shTable;
     int entries, ret = 0;
 
@@ -543,11 +514,6 @@ static int readCodeSections(ifstream& elfFile, vector<codeSection>& cs, size_t s
         enum bpf_prog_type ptype = getSectionType(name);
 
         if (ptype == BPF_PROG_TYPE_UNSPEC) continue;
-
-        if (!IsAllowed(ptype, allowed, numAllowed)) {
-            ALOGE("Program type %s not permitted here", getSectionName(ptype).c_str());
-            return -1;
-        }
 
         // This must be done before '/' is replaced with '_'.
         cs_temp.expected_attach_type = getExpectedAttachType(name);
@@ -655,8 +621,7 @@ static bool mapMatchesExpectations(const unique_fd& fd, const string& mapName,
 }
 
 static int createMaps(const char* elfPath, ifstream& elfFile, vector<unique_fd>& mapFds,
-                      const char* prefix, const unsigned long long allowedDomainBitmask,
-                      const size_t sizeOfBpfMapDef) {
+                      const char* prefix, const size_t sizeOfBpfMapDef) {
     int ret;
     vector<char> mdData;
     vector<struct bpf_map_def> md;
@@ -767,11 +732,6 @@ static int createMaps(const char* elfPath, ifstream& elfFile, vector<unique_fd>&
 
         domain selinux_context = getDomainFromSelinuxContext(md[i].selinux_context);
         if (specified(selinux_context)) {
-            if (!inDomainBitmask(selinux_context, allowedDomainBitmask)) {
-                ALOGE("map %s has invalid selinux_context of %d (allowed bitmask 0x%llx)",
-                      mapNames[i].c_str(), selinux_context, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("map %s selinux_context [%-32s] -> %d -> '%s' (%s)", mapNames[i].c_str(),
                   md[i].selinux_context, selinux_context, lookupSelinuxContext(selinux_context),
                   lookupPinSubdir(selinux_context));
@@ -780,11 +740,6 @@ static int createMaps(const char* elfPath, ifstream& elfFile, vector<unique_fd>&
         domain pin_subdir = getDomainFromPinSubdir(md[i].pin_subdir);
         if (unrecognized(pin_subdir)) return -ENOTDIR;
         if (specified(pin_subdir)) {
-            if (!inDomainBitmask(pin_subdir, allowedDomainBitmask)) {
-                ALOGE("map %s has invalid pin_subdir of %d (allowed bitmask 0x%llx)",
-                      mapNames[i].c_str(), pin_subdir, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("map %s pin_subdir [%-32s] -> %d -> '%s'", mapNames[i].c_str(), md[i].pin_subdir,
                   pin_subdir, lookupPinSubdir(pin_subdir));
         }
@@ -955,7 +910,7 @@ static void applyMapRelo(ifstream& elfFile, vector<unique_fd> &mapFds, vector<co
 }
 
 static int loadCodeSections(const char* elfPath, vector<codeSection>& cs, const string& license,
-                            const char* prefix, const unsigned long long allowedDomainBitmask) {
+                            const char* prefix) {
     unsigned kvers = kernelVersion();
 
     if (!kvers) {
@@ -1014,22 +969,12 @@ static int loadCodeSections(const char* elfPath, vector<codeSection>& cs, const 
         if (unrecognized(pin_subdir)) return -ENOTDIR;
 
         if (specified(selinux_context)) {
-            if (!inDomainBitmask(selinux_context, allowedDomainBitmask)) {
-                ALOGE("prog %s has invalid selinux_context of %d (allowed bitmask 0x%llx)",
-                      name.c_str(), selinux_context, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("prog %s selinux_context [%-32s] -> %d -> '%s' (%s)", name.c_str(),
                   cs[i].prog_def->selinux_context, selinux_context,
                   lookupSelinuxContext(selinux_context), lookupPinSubdir(selinux_context));
         }
 
         if (specified(pin_subdir)) {
-            if (!inDomainBitmask(pin_subdir, allowedDomainBitmask)) {
-                ALOGE("prog %s has invalid pin_subdir of %d (allowed bitmask 0x%llx)", name.c_str(),
-                      pin_subdir, allowedDomainBitmask);
-                return -EINVAL;
-            }
             ALOGI("prog %s pin_subdir [%-32s] -> %d -> '%s'", name.c_str(),
                   cs[i].prog_def->pin_subdir, pin_subdir, lookupPinSubdir(pin_subdir));
         }
@@ -1210,8 +1155,7 @@ int loadProg(const char* elfPath, bool* isCritical, const Location& location) {
         return -1;
     }
 
-    ret = readCodeSections(elfFile, cs, sizeOfBpfProgDef, location.allowedProgTypes,
-                           location.allowedProgTypesLength);
+    ret = readCodeSections(elfFile, cs, sizeOfBpfProgDef);
     if (ret) {
         ALOGE("Couldn't read all code sections in %s", elfPath);
         return ret;
@@ -1220,8 +1164,7 @@ int loadProg(const char* elfPath, bool* isCritical, const Location& location) {
     /* Just for future debugging */
     if (0) dumpAllCs(cs);
 
-    ret = createMaps(elfPath, elfFile, mapFds, location.prefix, location.allowedDomainBitmask,
-                     sizeOfBpfMapDef);
+    ret = createMaps(elfPath, elfFile, mapFds, location.prefix, sizeOfBpfMapDef);
     if (ret) {
         ALOGE("Failed to create maps: (ret=%d) in %s", ret, elfPath);
         return ret;
@@ -1232,8 +1175,7 @@ int loadProg(const char* elfPath, bool* isCritical, const Location& location) {
 
     applyMapRelo(elfFile, mapFds, cs);
 
-    ret = loadCodeSections(elfPath, cs, string(license.data()), location.prefix,
-                           location.allowedDomainBitmask);
+    ret = loadCodeSections(elfPath, cs, string(license.data()), location.prefix);
     if (ret) ALOGE("Failed to load programs, loadCodeSections ret=%d", ret);
 
     return ret;

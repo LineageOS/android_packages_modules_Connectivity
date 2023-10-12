@@ -20,7 +20,7 @@ android_test {
     name: "RemoteAuthUnitTests",
     defaults: [
         "enable-remoteauth-targets",
-        "mts-target-sdk-version-current"
+        "mts-target-sdk-version-current",
     ],
     sdk_version: "test_current",
     min_sdk_version: "31",
@@ -48,7 +48,7 @@ android_test {
         "mockito-target-minus-junit4",
         "platform-test-annotations",
         "service-remoteauth-pre-jarjar",
-        "truth-prebuilt",
+        "truth",
     ],
     // these are needed for Extended Mockito
     jni_libs: [

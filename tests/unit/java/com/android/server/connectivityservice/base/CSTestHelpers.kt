@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:JvmName("CsTestHelpers")
 
 package com.android.server
@@ -14,6 +30,13 @@ import android.content.pm.UserInfo
 import android.content.res.Resources
 import android.net.IDnsResolver
 import android.net.INetd
+import android.net.IpPrefix
+import android.net.LinkAddress
+import android.net.LinkProperties
+import android.net.NetworkAgentConfig
+import android.net.NetworkCapabilities
+import android.net.NetworkScore
+import android.net.RouteInfo
 import android.net.metrics.IpConnectivityLog
 import android.os.Handler
 import android.os.HandlerThread
@@ -43,6 +66,22 @@ import kotlin.test.fail
 
 internal inline fun <reified T> mock() = Mockito.mock(T::class.java)
 internal inline fun <reified T> any() = any(T::class.java)
+
+internal fun emptyAgentConfig() = NetworkAgentConfig.Builder().build()
+
+internal fun defaultNc() = NetworkCapabilities.Builder()
+        // Add sensible defaults for agents that don't want to care
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
+        .build()
+
+internal fun defaultScore() = FromS(NetworkScore.Builder().build())
+
+internal fun defaultLp() = LinkProperties().apply {
+    addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
+    addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
+}
 
 internal fun makeMockContentResolver(context: Context) = MockContentResolver(context).apply {
     addProvider(Settings.AUTHORITY, FakeSettingsProvider())
@@ -129,12 +168,13 @@ internal fun initMockedResources(res: Resources) {
 
 private val TEST_LINGER_DELAY_MS = 400
 private val TEST_NASCENT_DELAY_MS = 300
-internal fun makeConnectivityService(context: Context, deps: Dependencies) = ConnectivityService(
-        context,
-        mock<IDnsResolver>(),
-        mock<IpConnectivityLog>(),
-        mock<INetd>(),
-        deps).also {
-    it.mLingerDelayMs = TEST_LINGER_DELAY_MS
-    it.mNascentDelayMs = TEST_NASCENT_DELAY_MS
-}
+internal fun makeConnectivityService(context: Context, netd: INetd, deps: Dependencies) =
+        ConnectivityService(
+                context,
+                mock<IDnsResolver>(),
+                mock<IpConnectivityLog>(),
+                netd,
+                deps).also {
+            it.mLingerDelayMs = TEST_LINGER_DELAY_MS
+            it.mNascentDelayMs = TEST_NASCENT_DELAY_MS
+        }
