@@ -60,6 +60,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import lineageos.providers.LineageSettings;
+
 
 /**
  * A class to centralize all the network and link properties information
@@ -92,7 +94,6 @@ public class UpstreamNetworkMonitor {
 
     // Copied from frameworks/base/core/java/android/provider/Settings.java
     private static final String ALWAYS_ON_VPN_LOCKDOWN = "always_on_vpn_lockdown";
-    private static final String TETHERING_ALLOW_VPN_UPSTREAMS = "tethering_allow_vpn_upstreams";
 
     public static final int EVENT_ON_CAPABILITIES   = 1;
     public static final int EVENT_ON_LINKPROPERTIES = 2;
@@ -228,8 +229,8 @@ public class UpstreamNetworkMonitor {
     }
 
     private boolean isAllowedToUseVpnUpstreams() {
-        return Settings.Secure.getInt(mContext.getContentResolver(),
-                TETHERING_ALLOW_VPN_UPSTREAMS, 0) == 1;
+        return LineageSettings.Secure.getInt(mContext.getContentResolver(),
+                LineageSettings.Secure.TETHERING_ALLOW_VPN_UPSTREAMS, 0) == 1;
     }
 
     private void reevaluateUpstreamRequirements(boolean tryCell, boolean autoUpstream,
