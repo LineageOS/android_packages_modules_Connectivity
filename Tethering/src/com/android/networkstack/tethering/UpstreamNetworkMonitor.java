@@ -38,7 +38,6 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Handler;
 import android.os.Process;
-import android.provider.Settings;
 import android.util.Log;
 import android.util.Range;
 import android.util.SparseIntArray;
@@ -59,6 +58,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+
+import lineageos.providers.LineageSettings;
 
 
 /**
@@ -89,9 +90,6 @@ public class UpstreamNetworkMonitor {
     private static final String TAG = UpstreamNetworkMonitor.class.getSimpleName();
     private static final boolean DBG = false;
     private static final boolean VDBG = false;
-
-    // Copied from frameworks/base/core/java/android/provider/Settings.java
-    private static final String TETHERING_ALLOW_VPN_UPSTREAMS = "tethering_allow_vpn_upstreams";
 
     public static final int EVENT_ON_CAPABILITIES   = 1;
     public static final int EVENT_ON_LINKPROPERTIES = 2;
@@ -227,8 +225,8 @@ public class UpstreamNetworkMonitor {
     }
 
     private boolean isAllowedToUseVpnUpstreams() {
-        return Settings.Secure.getInt(mContext.getContentResolver(),
-                TETHERING_ALLOW_VPN_UPSTREAMS, 0) == 1;
+        return LineageSettings.Secure.getInt(mContext.getContentResolver(),
+                LineageSettings.Secure.TETHERING_ALLOW_VPN_UPSTREAMS, 0) == 1;
     }
 
     private void reevaluateUpstreamRequirements(boolean tryCell, boolean autoUpstream,
