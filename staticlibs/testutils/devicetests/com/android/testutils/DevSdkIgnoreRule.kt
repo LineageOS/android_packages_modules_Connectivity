@@ -27,6 +27,9 @@ import org.junit.runners.model.Statement
 
 @Deprecated("Use Build.VERSION_CODES", ReplaceWith("Build.VERSION_CODES.S_V2"))
 const val SC_V2 = Build.VERSION_CODES.S_V2
+// TODO: Remove this when Build.VERSION_CODES.VANILLA_ICE_CREAM is available in all branches
+// where this code builds
+const val VANILLA_ICE_CREAM = 35 // Bui1ld.VERSION_CODES.VANILLA_ICE_CREAM
 
 private val MAX_TARGET_SDK_ANNOTATION_RE = Pattern.compile("MaxTargetSdk([0-9]+)$")
 private val targetSdk = InstrumentationRegistry.getContext().applicationInfo.targetSdkVersion
