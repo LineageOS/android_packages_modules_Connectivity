@@ -152,6 +152,8 @@ import com.android.networkstack.tethering.util.TetheringUtils;
 import com.android.networkstack.tethering.util.VersionedBroadcastListener;
 import com.android.networkstack.tethering.wear.WearableConnectionManager;
 
+import lineageos.providers.LineageSettings;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -176,9 +178,6 @@ public class Tethering {
     private static final String TAG = Tethering.class.getSimpleName();
     private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     private static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
-
-    // Copied from frameworks/base/core/java/android/provider/Settings.java
-    private static final String TETHERING_ALLOW_VPN_UPSTREAMS = "tethering_allow_vpn_upstreams";
 
     private static final Class[] sMessageClasses = {
             Tethering.class, TetherMainSM.class, IpServer.class
@@ -508,8 +507,8 @@ public class Tethering {
                 mUpstreamNetworkMonitor.maybeUpdateDefaultNetworkCallback();
             }
         };
-        mContext.getContentResolver().registerContentObserver(Settings.Secure.getUriFor(
-                TETHERING_ALLOW_VPN_UPSTREAMS), false, vpnSettingObserver);
+        mContext.getContentResolver().registerContentObserver(LineageSettings.Secure.getUriFor(
+                LineageSettings.Secure.TETHERING_ALLOW_VPN_UPSTREAMS), false, vpnSettingObserver);
     }
 
     private class TetheringThreadExecutor implements Executor {

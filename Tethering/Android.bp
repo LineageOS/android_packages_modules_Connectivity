@@ -78,6 +78,7 @@ java_defaults {
         "net-utils-device-common-struct-base",
         "netd-client",
         "tetheringstatsprotos",
+        "org.lineageos.platform.lineagesettings",
     ],
     defaults: ["TetheringExternalLibs"],
     libs: [
