@@ -16,6 +16,24 @@
       "message": "This change also moves the setting from LineageSettings back to AOSP. Using this as-is would require an adaptation of this migration change: https://review.calyxos.org/c/CalyxOS/platform_calyx-sdk/+/10716",
       "revId": "91a8b6d2d53939abbaf09c294bf6e0d3240f20d4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7bb76939_d06adf48",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2023-10-13T17:48:26Z",
+      "side": 1,
+      "message": "I did 369566: Use Lineage Setting for capability to allow tethering to use VPN upstreams | https://review.lineageos.org/c/LineageOS/android_packages_modules_Connectivity/+/369566",
+      "parentUuid": "879dfc95_003aa450",
+      "revId": "91a8b6d2d53939abbaf09c294bf6e0d3240f20d4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
