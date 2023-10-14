@@ -27,7 +27,6 @@ import android.net.INetworkOfferCallback;
 import android.net.IQosCallback;
 import android.net.ISocketKeepaliveCallback;
 import android.net.LinkProperties;
-import android.net.LocalNetworkConfig;
 import android.net.Network;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
@@ -147,8 +146,7 @@ interface IConnectivityManager
     void declareNetworkRequestUnfulfillable(in NetworkRequest request);
 
     Network registerNetworkAgent(in INetworkAgent na, in NetworkInfo ni, in LinkProperties lp,
-            in NetworkCapabilities nc, in NetworkScore score,
-            in LocalNetworkConfig localNetworkConfig, in NetworkAgentConfig config,
+            in NetworkCapabilities nc, in NetworkScore score, in NetworkAgentConfig config,
             in int factorySerialNumber);
 
     NetworkRequest requestNetwork(int uid, in NetworkCapabilities networkCapabilities, int reqType,

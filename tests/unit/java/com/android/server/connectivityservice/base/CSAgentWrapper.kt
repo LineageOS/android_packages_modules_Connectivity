@@ -21,7 +21,6 @@ import android.net.ConnectivityManager
 import android.net.INetworkMonitor
 import android.net.INetworkMonitorCallbacks
 import android.net.LinkProperties
-import android.net.LocalNetworkConfig
 import android.net.Network
 import android.net.NetworkAgent
 import android.net.NetworkAgentConfig
@@ -70,7 +69,6 @@ class CSAgentWrapper(
         nac: NetworkAgentConfig,
         val nc: NetworkCapabilities,
         val lp: LinkProperties,
-        val lnc: LocalNetworkConfig?,
         val score: FromS<NetworkScore>,
         val provider: NetworkProvider?
 ) : TestableNetworkCallback.HasNetwork {
@@ -102,7 +100,7 @@ class CSAgentWrapper(
         // Create the actual agent. NetworkAgent is abstract, so make an anonymous subclass.
         if (deps.isAtLeastS()) {
             agent = object : NetworkAgent(context, csHandlerThread.looper, TAG,
-                    nc, lp, lnc, score.value, nac, provider) {}
+                    nc, lp, score.value, nac, provider) {}
         } else {
             agent = object : NetworkAgent(context, csHandlerThread.looper, TAG,
                     nc, lp, 50 /* score */, nac, provider) {}
@@ -167,6 +165,4 @@ class CSAgentWrapper(
         agent.unregister()
         cb.eventuallyExpect<Lost> { it.network == agent.network }
     }
-
-    fun sendLocalNetworkConfig(lnc: LocalNetworkConfig) = agent.sendLocalNetworkConfig(lnc)
 }
