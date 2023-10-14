@@ -3811,28 +3811,11 @@ public class ConnectivityManager {
     @RequiresPermission(anyOf = {
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
             android.Manifest.permission.NETWORK_FACTORY})
-    public Network registerNetworkAgent(@NonNull INetworkAgent na, @NonNull NetworkInfo ni,
-            @NonNull LinkProperties lp, @NonNull NetworkCapabilities nc,
-            @NonNull NetworkScore score, @NonNull NetworkAgentConfig config, int providerId) {
-        return registerNetworkAgent(na, ni, lp, nc, null /* localNetworkConfig */, score, config,
-                providerId);
-    }
-
-    /**
-     * @hide
-     * Register a NetworkAgent with ConnectivityService.
-     * @return Network corresponding to NetworkAgent.
-     */
-    @RequiresPermission(anyOf = {
-            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
-            android.Manifest.permission.NETWORK_FACTORY})
-    public Network registerNetworkAgent(@NonNull INetworkAgent na, @NonNull NetworkInfo ni,
-            @NonNull LinkProperties lp, @NonNull NetworkCapabilities nc,
-            @Nullable LocalNetworkConfig localNetworkConfig, @NonNull NetworkScore score,
-            @NonNull NetworkAgentConfig config, int providerId) {
+    public Network registerNetworkAgent(INetworkAgent na, NetworkInfo ni, LinkProperties lp,
+            NetworkCapabilities nc, @NonNull NetworkScore score, NetworkAgentConfig config,
+            int providerId) {
         try {
-            return mService.registerNetworkAgent(na, ni, lp, nc, score, localNetworkConfig, config,
-                    providerId);
+            return mService.registerNetworkAgent(na, ni, lp, nc, score, config, providerId);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
