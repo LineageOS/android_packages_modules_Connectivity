@@ -3004,15 +3004,8 @@ public class VpnTest extends VpnTestBase {
         profile.mppe = useMppe;
 
         doReturn(new Network[] { new Network(101) }).when(mConnectivityManager).getAllNetworks();
-        doReturn(new Network(102)).when(mConnectivityManager).registerNetworkAgent(
-                any(), // INetworkAgent
-                any(), // NetworkInfo
-                any(), // LinkProperties
-                any(), // NetworkCapabilities
-                any(), // LocalNetworkConfig
-                any(), // NetworkScore
-                any(), // NetworkAgentConfig
-                anyInt()); // provider ID
+        doReturn(new Network(102)).when(mConnectivityManager).registerNetworkAgent(any(), any(),
+                any(), any(), any(), any(), anyInt());
 
         final Vpn vpn = startLegacyVpn(createVpn(PRIMARY_USER.id), profile);
         final TestDeps deps = (TestDeps) vpn.mDeps;
@@ -3034,15 +3027,8 @@ public class VpnTest extends VpnTestBase {
                 assertEquals("nomppe", mtpdArgs[argsPrefix.length]);
             }
 
-            verify(mConnectivityManager, timeout(10_000)).registerNetworkAgent(
-                    any(), // INetworkAgent
-                    any(), // NetworkInfo
-                    any(), // LinkProperties
-                    any(), // NetworkCapabilities
-                    any(), // LocalNetworkConfig
-                    any(), // NetworkScore
-                    any(), // NetworkAgentConfig
-                    anyInt()); // provider ID
+            verify(mConnectivityManager, timeout(10_000)).registerNetworkAgent(any(), any(),
+                    any(), any(), any(), any(), anyInt());
         }, () -> { // Cleanup
                 vpn.mVpnRunner.exitVpnRunner();
                 deps.getStateFile().delete(); // set to delete on exit, but this deletes it earlier
@@ -3067,7 +3053,7 @@ public class VpnTest extends VpnTestBase {
             .thenReturn(new Network[] { new Network(101) });
 
         when(mConnectivityManager.registerNetworkAgent(any(), any(), any(), any(),
-                any(), any(), any(), anyInt())).thenAnswer(invocation -> {
+                any(), any(), anyInt())).thenAnswer(invocation -> {
                     // The runner has registered an agent and is now ready.
                     legacyRunnerReady.open();
                     return new Network(102);
@@ -3093,7 +3079,7 @@ public class VpnTest extends VpnTestBase {
             ArgumentCaptor<NetworkCapabilities> ncCaptor =
                     ArgumentCaptor.forClass(NetworkCapabilities.class);
             verify(mConnectivityManager, timeout(10_000)).registerNetworkAgent(any(), any(),
-                    lpCaptor.capture(), ncCaptor.capture(), any(), any(), any(), anyInt());
+                    lpCaptor.capture(), ncCaptor.capture(), any(), any(), anyInt());
 
             // In this test the expected address is always v4 so /32.
             // Note that the interface needs to be specified because RouteInfo objects stored in
