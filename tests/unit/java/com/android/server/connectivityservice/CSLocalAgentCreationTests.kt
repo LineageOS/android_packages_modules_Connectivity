@@ -18,7 +18,6 @@ package com.android.server
 
 import android.content.pm.PackageManager.FEATURE_LEANBACK
 import android.net.INetd
-import android.net.LocalNetworkConfig
 import android.net.NativeNetworkConfig
 import android.net.NativeNetworkType
 import android.net.NetworkCapabilities
@@ -48,8 +47,6 @@ private const val NO_CALLBACK_TIMEOUT_MS = 200L
 
 private fun keepConnectedScore() =
         FromS(NetworkScore.Builder().setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST).build())
-
-private fun defaultLnc() = LocalNetworkConfig.Builder().build()
 
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
@@ -96,9 +93,9 @@ class CSLocalAgentCreationTests(
             addCapability(NET_CAPABILITY_LOCAL_NETWORK)
         }.build()
         val localAgent = if (sdkLevel >= VERSION_V || sdkLevel == VERSION_U && isTv) {
-            Agent(nc = ncTemplate, score = keepConnectedScore(), lnc = defaultLnc())
+            Agent(nc = ncTemplate, score = keepConnectedScore())
         } else {
-            assertFailsWith<IllegalArgumentException> { Agent(nc = ncTemplate, lnc = defaultLnc()) }
+            assertFailsWith<IllegalArgumentException> { Agent(nc = ncTemplate) }
             netdInOrder.verify(netd, never()).networkCreate(any())
             return
         }
@@ -113,19 +110,5 @@ class CSLocalAgentCreationTests(
         cm.unregisterNetworkCallback(allNetworksCb)
         localAgent.disconnect()
         netdInOrder.verify(netd, timeout(TIMEOUT_MS)).networkDestroy(localAgent.network.netId)
-    }
-
-    @Test
-    fun testBadAgents() {
-        assertFailsWith<IllegalArgumentException> {
-            Agent(nc = NetworkCapabilities.Builder()
-                    .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
-                    .build(),
-                    lnc = null)
-        }
-        assertFailsWith<IllegalArgumentException> {
-            Agent(nc = NetworkCapabilities.Builder().build(),
-                    lnc = LocalNetworkConfig.Builder().build())
-        }
     }
 }
