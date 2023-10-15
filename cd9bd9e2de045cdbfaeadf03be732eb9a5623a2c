@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "e4156515_b20a4b8a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 6360
+      },
+      "writtenOn": "2023-10-15T13:55:22Z",
+      "side": 1,
+      "message": "packages/modules/Connectivity/Tethering/src/com/android/networkstack/tethering/UpstreamNetworkMonitor.java:365: error: cannot find symbol\n                    ALWAYS_ON_VPN_LOCKDOWN, 0) \u003d\u003d 1) {\n                    ^\n  symbol:   variable ALWAYS_ON_VPN_LOCKDOWN\n  location: class UpstreamNetworkMonitor\npackages/modules/Connectivity/Tethering/src/com/android/networkstack/tethering/UpstreamNetworkMonitor.java:364: error: package Settings does not exist\n            } else if (Settings.Secure.getInt(mContext.getContentResolver(),\n                               ^\n2 errors",
+      "revId": "cd9bd9e2de045cdbfaeadf03be732eb9a5623a2c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
