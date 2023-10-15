@@ -19,7 +19,6 @@ package com.android.server;
 import static android.Manifest.permission.RECEIVE_DATA_ACTIVITY_CHANGE;
 import static android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_FROZEN;
 import static android.content.pm.PackageManager.FEATURE_BLUETOOTH;
-import static android.content.pm.PackageManager.FEATURE_LEANBACK;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
@@ -68,7 +67,6 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
@@ -161,7 +159,6 @@ import android.net.InetAddresses;
 import android.net.IpMemoryStore;
 import android.net.IpPrefix;
 import android.net.LinkProperties;
-import android.net.LocalNetworkConfig;
 import android.net.MatchAllNetworkSpecifier;
 import android.net.NativeNetworkConfig;
 import android.net.NativeNetworkType;
@@ -1776,7 +1773,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mNoServiceNetwork = new NetworkAgentInfo(null,
                 new Network(INetd.UNREACHABLE_NET_ID),
                 new NetworkInfo(TYPE_NONE, 0, "", ""),
-                new LinkProperties(), new NetworkCapabilities(), null /* localNetworkConfig */,
+                new LinkProperties(), new NetworkCapabilities(),
                 new NetworkScore.Builder().setLegacyInt(0).build(), mContext, null,
                 new NetworkAgentConfig(), this, null, null, 0, INVALID_UID,
                 mLingerDelayMs, mQosCallbackTracker, mDeps);
@@ -4124,11 +4121,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     updateNetworkInfo(nai, info);
                     break;
                 }
-                case NetworkAgent.EVENT_LOCAL_NETWORK_CONFIG_CHANGED: {
-                    final LocalNetworkConfig config = (LocalNetworkConfig) arg.second;
-                    updateLocalNetworkConfig(nai, config);
-                    break;
-                }
                 case NetworkAgent.EVENT_NETWORK_SCORE_CHANGED: {
                     updateNetworkScore(nai, (NetworkScore) arg.second);
                     break;
@@ -5014,10 +5006,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         !nai.networkAgentConfig.allowBypass /* secure */,
                         getVpnType(nai), nai.networkAgentConfig.excludeLocalRouteVpn);
             } else {
-                final boolean hasLocalCap =
-                        nai.networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK);
-                config = new NativeNetworkConfig(nai.network.getNetId(),
-                        hasLocalCap ? NativeNetworkType.PHYSICAL_LOCAL : NativeNetworkType.PHYSICAL,
+                config = new NativeNetworkConfig(nai.network.getNetId(), NativeNetworkType.PHYSICAL,
                         getNetworkPermission(nai.networkCapabilities),
                         false /* secure */,
                         VpnManager.TYPE_VPN_NONE,
@@ -8068,18 +8057,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     /**
-     * Returns whether local agents are supported on this device.
-     *
-     * Local agents are supported from U on TVs, and from V on all devices.
-     */
-    @VisibleForTesting
-    public boolean areLocalAgentsSupported() {
-        final PackageManager pm = mContext.getPackageManager();
-        // Local agents are supported starting on U on TVs and on V on everything else.
-        return mDeps.isAtLeastV() || (mDeps.isAtLeastU() && pm.hasSystemFeature(FEATURE_LEANBACK));
-    }
-
-    /**
      * Register a new agent with ConnectivityService to handle a network.
      *
      * @param na a reference for ConnectivityService to contact the agent asynchronously.
@@ -8090,18 +8067,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * @param networkCapabilities the initial capabilites of this network. They can be updated
      *         later : see {@link #updateCapabilities}.
      * @param initialScore the initial score of the network. See {@link NetworkAgentInfo#getScore}.
-     * @param localNetworkConfig config about this local network, or null if not a local network
      * @param networkAgentConfig metadata about the network. This is never updated.
      * @param providerId the ID of the provider owning this NetworkAgent.
      * @return the network created for this agent.
      */
-    public Network registerNetworkAgent(INetworkAgent na,
-            NetworkInfo networkInfo,
-            LinkProperties linkProperties,
-            NetworkCapabilities networkCapabilities,
-            @NonNull NetworkScore initialScore,
-            @Nullable LocalNetworkConfig localNetworkConfig,
-            NetworkAgentConfig networkAgentConfig,
+    public Network registerNetworkAgent(INetworkAgent na, NetworkInfo networkInfo,
+            LinkProperties linkProperties, NetworkCapabilities networkCapabilities,
+            @NonNull NetworkScore initialScore, NetworkAgentConfig networkAgentConfig,
             int providerId) {
         Objects.requireNonNull(networkInfo, "networkInfo must not be null");
         Objects.requireNonNull(linkProperties, "linkProperties must not be null");
@@ -8113,26 +8085,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } else {
             enforceNetworkFactoryPermission();
         }
-        final boolean hasLocalCap =
-                networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK);
-        if (hasLocalCap && !areLocalAgentsSupported()) {
-            // Before U, netd doesn't support PHYSICAL_LOCAL networks so this can't work.
-            throw new IllegalArgumentException("Local agents are not supported in this version");
-        }
-        final boolean hasLocalNetworkConfig = null != localNetworkConfig;
-        if (hasLocalCap != hasLocalNetworkConfig) {
-            throw new IllegalArgumentException(null != localNetworkConfig
-                    ? "Only local network agents can have a LocalNetworkConfig"
-                    : "Local network agents must have a LocalNetworkConfig"
-            );
-        }
 
         final int uid = mDeps.getCallingUid();
         final long token = Binder.clearCallingIdentity();
         try {
             return registerNetworkAgentInternal(na, networkInfo, linkProperties,
-                    networkCapabilities, initialScore, networkAgentConfig, localNetworkConfig,
-                    providerId, uid);
+                    networkCapabilities, initialScore, networkAgentConfig, providerId, uid);
         } finally {
             Binder.restoreCallingIdentity(token);
         }
@@ -8140,8 +8098,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private Network registerNetworkAgentInternal(INetworkAgent na, NetworkInfo networkInfo,
             LinkProperties linkProperties, NetworkCapabilities networkCapabilities,
-            NetworkScore currentScore, NetworkAgentConfig networkAgentConfig,
-            @Nullable LocalNetworkConfig localNetworkConfig, int providerId,
+            NetworkScore currentScore, NetworkAgentConfig networkAgentConfig, int providerId,
             int uid) {
 
         // Make a copy of the passed NI, LP, NC as the caller may hold a reference to them
@@ -8149,7 +8106,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final NetworkInfo niCopy = new NetworkInfo(networkInfo);
         final NetworkCapabilities ncCopy = new NetworkCapabilities(networkCapabilities);
         final LinkProperties lpCopy = new LinkProperties(linkProperties);
-        // No need to copy |localNetworkConfiguration| as it is immutable.
 
         // At this point the capabilities/properties are untrusted and unverified, e.g. checks that
         // the capabilities' access UIDs comply with security limitations. They will be sanitized
@@ -8157,9 +8113,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // because some of the checks must happen on the handler thread.
         final NetworkAgentInfo nai = new NetworkAgentInfo(na,
                 new Network(mNetIdManager.reserveNetId()), niCopy, lpCopy, ncCopy,
-                localNetworkConfig, currentScore, mContext, mTrackerHandler,
-                new NetworkAgentConfig(networkAgentConfig), this, mNetd, mDnsResolver, providerId,
-                uid, mLingerDelayMs, mQosCallbackTracker, mDeps);
+                currentScore, mContext, mTrackerHandler, new NetworkAgentConfig(networkAgentConfig),
+                this, mNetd, mDnsResolver, providerId, uid, mLingerDelayMs,
+                mQosCallbackTracker, mDeps);
 
         final String extraInfo = niCopy.getExtraInfo();
         final String name = TextUtils.isEmpty(extraInfo)
@@ -8894,16 +8850,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         updateCapabilities(nai.getScore(), nai, nai.networkCapabilities);
     }
 
-    private void updateLocalNetworkConfig(@NonNull final NetworkAgentInfo nai,
-            @NonNull final LocalNetworkConfig config) {
-        if (!nai.networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK)) {
-            Log.wtf(TAG, "Ignoring update of a local network info on non-local network " + nai);
-            return;
-        }
-        // TODO : actually apply the diff.
-        nai.localNetworkConfig = config;
-    }
-
     /**
      * Returns the interface which requires VPN isolation (ingress interface filtering).
      *
@@ -9244,7 +9190,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // are Type.LISTEN, but should not have NetworkCallbacks invoked.
             return;
         }
-        final Bundle bundle = new Bundle();
+        Bundle bundle = new Bundle();
         // TODO b/177608132: make sure callbacks are indexed by NRIs and not NetworkRequest objects.
         // TODO: check if defensive copies of data is needed.
         final NetworkRequest nrForCallback = nri.getNetworkRequestForCallback();
