@@ -579,6 +579,18 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
+    public void testAlwaysOnWithoutLockdown() throws Exception {
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        assertTrue(vpn.setAlwaysOnPackage(
+                PKGS[1], false /* lockdown */, null /* lockdownAllowlist */));
+        verify(mConnectivityManager, never()).setRequireVpnForUids(anyBoolean(), any());
+
+        assertTrue(vpn.setAlwaysOnPackage(
+                null /* packageName */, false /* lockdown */, null /* lockdownAllowlist */));
+        verify(mConnectivityManager, never()).setRequireVpnForUids(anyBoolean(), any());
+    }
+
+    @Test
     public void testLockdownChangingPackage() throws Exception {
         final Vpn vpn = createVpn(PRIMARY_USER.id);
         final Range<Integer> user = PRIMARY_USER_RANGE;

@@ -10083,34 +10083,6 @@ public class ConnectivityServiceTest {
         assertNetworkInfo(TYPE_MOBILE, DetailedState.DISCONNECTED);
         assertNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
 
-        // Enable and disable an always-on VPN package without lockdown. Expect no changes.
-        reset(mMockNetd);
-        mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, false /* lockdown */, allowList);
-        inOrder.verify(mMockNetd, never()).networkRejectNonSecureVpn(anyBoolean(), any());
-        callback.assertNoCallback();
-        defaultCallback.assertNoCallback();
-        vpnUidCallback.assertNoCallback();
-        vpnUidDefaultCallback.assertNoCallback();
-        vpnDefaultCallbackAsUid.assertNoCallback();
-        assertEquals(mWiFiAgent.getNetwork(), mCm.getActiveNetworkForUid(VPN_UID));
-        assertEquals(mWiFiAgent.getNetwork(), mCm.getActiveNetwork());
-        assertActiveNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
-        assertNetworkInfo(TYPE_MOBILE, DetailedState.DISCONNECTED);
-        assertNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
-
-        mMockVpn.setAlwaysOnPackage(null, false /* lockdown */, allowList);
-        inOrder.verify(mMockNetd, never()).networkRejectNonSecureVpn(anyBoolean(), any());
-        callback.assertNoCallback();
-        defaultCallback.assertNoCallback();
-        vpnUidCallback.assertNoCallback();
-        vpnUidDefaultCallback.assertNoCallback();
-        vpnDefaultCallbackAsUid.assertNoCallback();
-        assertEquals(mWiFiAgent.getNetwork(), mCm.getActiveNetworkForUid(VPN_UID));
-        assertEquals(mWiFiAgent.getNetwork(), mCm.getActiveNetwork());
-        assertActiveNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
-        assertNetworkInfo(TYPE_MOBILE, DetailedState.DISCONNECTED);
-        assertNetworkInfo(TYPE_WIFI, DetailedState.CONNECTED);
-
         // Enable lockdown and connect a VPN. The VPN is not blocked.
         mMockVpn.setAlwaysOnPackage(ALWAYS_ON_PACKAGE, true /* lockdown */, allowList);
         defaultCallback.expect(BLOCKED_STATUS, mWiFiAgent, cb -> cb.getBlocked());
