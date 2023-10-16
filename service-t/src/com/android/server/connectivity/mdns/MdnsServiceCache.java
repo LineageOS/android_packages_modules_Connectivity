@@ -42,7 +42,7 @@ import java.util.Objects;
  *  to their default value (0, false or null).
  */
 public class MdnsServiceCache {
-    private static class CacheKey {
+    static class CacheKey {
         @NonNull final String mLowercaseServiceType;
         @NonNull final SocketKey mSocketKey;
 
@@ -72,6 +72,12 @@ public class MdnsServiceCache {
      */
     @NonNull
     private final ArrayMap<CacheKey, List<MdnsResponse>> mCachedServices = new ArrayMap<>();
+    /**
+     * A map of service expire callbacks. Key is composed of service type and socket and value is
+     * the callback listener.
+     */
+    @NonNull
+    private final ArrayMap<CacheKey, ServiceExpiredCallback> mCallbacks = new ArrayMap<>();
     @NonNull
     private final Handler mHandler;
 
@@ -82,17 +88,14 @@ public class MdnsServiceCache {
     /**
      * Get the cache services which are queried from given service type and socket.
      *
-     * @param serviceType the target service type.
-     * @param socketKey the target socket
+     * @param cacheKey the target CacheKey.
      * @return the set of services which matches the given service type.
      */
     @NonNull
-    public List<MdnsResponse> getCachedServices(@NonNull String serviceType,
-            @NonNull SocketKey socketKey) {
+    public List<MdnsResponse> getCachedServices(@NonNull CacheKey cacheKey) {
         ensureRunningOnHandlerThread(mHandler);
-        final CacheKey key = new CacheKey(serviceType, socketKey);
-        return mCachedServices.containsKey(key)
-                ? Collections.unmodifiableList(new ArrayList<>(mCachedServices.get(key)))
+        return mCachedServices.containsKey(cacheKey)
+                ? Collections.unmodifiableList(new ArrayList<>(mCachedServices.get(cacheKey)))
                 : Collections.emptyList();
     }
 
@@ -117,16 +120,13 @@ public class MdnsServiceCache {
      * Get the cache service.
      *
      * @param serviceName the target service name.
-     * @param serviceType the target service type.
-     * @param socketKey the target socket
+     * @param cacheKey the target CacheKey.
      * @return the service which matches given conditions.
      */
     @Nullable
-    public MdnsResponse getCachedService(@NonNull String serviceName,
-            @NonNull String serviceType, @NonNull SocketKey socketKey) {
+    public MdnsResponse getCachedService(@NonNull String serviceName, @NonNull CacheKey cacheKey) {
         ensureRunningOnHandlerThread(mHandler);
-        final List<MdnsResponse> responses =
-                mCachedServices.get(new CacheKey(serviceType, socketKey));
+        final List<MdnsResponse> responses = mCachedServices.get(cacheKey);
         if (responses == null) {
             return null;
         }
@@ -137,15 +137,13 @@ public class MdnsServiceCache {
     /**
      * Add or update a service.
      *
-     * @param serviceType the service type.
-     * @param socketKey the target socket
+     * @param cacheKey the target CacheKey.
      * @param response the response of the discovered service.
      */
-    public void addOrUpdateService(@NonNull String serviceType, @NonNull SocketKey socketKey,
-            @NonNull MdnsResponse response) {
+    public void addOrUpdateService(@NonNull CacheKey cacheKey, @NonNull MdnsResponse response) {
         ensureRunningOnHandlerThread(mHandler);
         final List<MdnsResponse> responses = mCachedServices.computeIfAbsent(
-                new CacheKey(serviceType, socketKey), key -> new ArrayList<>());
+                cacheKey, key -> new ArrayList<>());
         // Remove existing service if present.
         final MdnsResponse existing =
                 findMatchedResponse(responses, response.getServiceInstanceName());
@@ -157,15 +155,12 @@ public class MdnsServiceCache {
      * Remove a service which matches the given service name, type and socket.
      *
      * @param serviceName the target service name.
-     * @param serviceType the target service type.
-     * @param socketKey the target socket.
+     * @param cacheKey the target CacheKey.
      */
     @Nullable
-    public MdnsResponse removeService(@NonNull String serviceName, @NonNull String serviceType,
-            @NonNull SocketKey socketKey) {
+    public MdnsResponse removeService(@NonNull String serviceName, @NonNull CacheKey cacheKey) {
         ensureRunningOnHandlerThread(mHandler);
-        final List<MdnsResponse> responses =
-                mCachedServices.get(new CacheKey(serviceType, socketKey));
+        final List<MdnsResponse> responses = mCachedServices.get(cacheKey);
         if (responses == null) {
             return null;
         }
@@ -178,6 +173,38 @@ public class MdnsServiceCache {
             }
         }
         return null;
+    }
+
+    /**
+     * Register a callback to listen to service expiration.
+     *
+     * <p> Registering the same callback instance twice is a no-op, since MdnsServiceTypeClient
+     * relies on this.
+     *
+     * @param cacheKey the target CacheKey.
+     * @param callback the callback that notify the service is expired.
+     */
+    public void registerServiceExpiredCallback(@NonNull CacheKey cacheKey,
+            @NonNull ServiceExpiredCallback callback) {
+        ensureRunningOnHandlerThread(mHandler);
+        mCallbacks.put(cacheKey, callback);
+    }
+
+    /**
+     * Unregister the service expired callback.
+     *
+     * @param cacheKey the CacheKey that is registered to listen service expiration before.
+     */
+    public void unregisterServiceExpiredCallback(@NonNull CacheKey cacheKey) {
+        ensureRunningOnHandlerThread(mHandler);
+        mCallbacks.remove(cacheKey);
+    }
+
+    /*** Callbacks for listening service expiration */
+    public interface ServiceExpiredCallback {
+        /*** Notify the service is expired */
+        void onServiceRecordExpired(@NonNull MdnsResponse previousResponse,
+                @Nullable MdnsResponse newResponse);
     }
 
     // TODO: check ttl expiration for each service and notify to the clients.
