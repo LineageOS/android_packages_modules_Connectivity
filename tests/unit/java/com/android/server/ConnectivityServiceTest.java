@@ -1720,6 +1720,14 @@ public class ConnectivityServiceTest {
                 UnderlyingNetworkInfo underlyingNetworkInfo) {
             mUnderlyingNetworkInfo = underlyingNetworkInfo;
         }
+
+        @Override
+        public synchronized boolean setUnderlyingNetworks(@Nullable Network[] networks) {
+            if (!mAgentRegistered) return false;
+            mMockNetworkAgent.setUnderlyingNetworks(
+                    (networks == null) ? null : Arrays.asList(networks));
+            return true;
+        }
     }
 
     private UidRangeParcel[] toUidRangeStableParcels(final @NonNull Set<UidRange> ranges) {
@@ -10249,7 +10257,8 @@ public class ConnectivityServiceTest {
         // Init lockdown state to simulate LockdownVpnTracker behavior.
         mCm.setLegacyLockdownVpnEnabled(true);
         mMockVpn.setEnableTeardown(false);
-        mMockVpn.setLockdown(true);
+        final Set<Range<Integer>> ranges = UidRange.toIntRanges(Set.of(PRIMARY_UIDRANGE));
+        mCm.setRequireVpnForUids(true /* requireVpn */, ranges);
 
         // Bring up a network.
         final LinkProperties cellLp = new LinkProperties();
