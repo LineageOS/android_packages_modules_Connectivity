@@ -29,6 +29,7 @@ android_test {
         "src/**/*.kt",
         "src/**/*.aidl",
     ],
+    asset_dirs: ["assets"],
     static_libs: [
         "androidx.test.rules",
         "mockito-target-minus-junit4",
