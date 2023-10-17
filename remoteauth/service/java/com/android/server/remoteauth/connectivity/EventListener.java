@@ -18,9 +18,7 @@ package com.android.server.remoteauth.connectivity;
 
 import android.annotation.NonNull;
 
-/**
- * Listens to the events from underlying transport.
- */
+/** Listens to the events from underlying transport. */
 public interface EventListener {
     /** Called when remote device is disconnected from the underlying transport. */
     void onDisconnect(@NonNull ConnectionInfo connectionInfo);
