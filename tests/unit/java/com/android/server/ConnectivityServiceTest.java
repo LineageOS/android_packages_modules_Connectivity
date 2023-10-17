@@ -1522,7 +1522,6 @@ public class ConnectivityServiceTest {
         private boolean mAgentRegistered = false;
 
         private int mVpnType = VpnManager.TYPE_VPN_SERVICE;
-        private UnderlyingNetworkInfo mUnderlyingNetworkInfo;
         private String mSessionKey;
 
         public MockVpn(int userId) {
@@ -1592,14 +1591,11 @@ public class ConnectivityServiceTest {
         private void registerAgent(boolean isAlwaysMetered, Set<UidRange> uids, LinkProperties lp)
                 throws Exception {
             if (mAgentRegistered) throw new IllegalStateException("already registered");
-            updateState(NetworkInfo.DetailedState.CONNECTING, "registerAgent");
-            mConfig = new VpnConfig();
-            mConfig.session = "MySession12345";
+            final String session = "MySession12345";
             setUids(uids);
             if (!isAlwaysMetered) mNetworkCapabilities.addCapability(NET_CAPABILITY_NOT_METERED);
-            mInterface = VPN_IFNAME;
             mNetworkCapabilities.setTransportInfo(new VpnTransportInfo(getActiveVpnType(),
-                    mConfig.session));
+                    session));
             mMockNetworkAgent = new TestNetworkAgentWrapper(TRANSPORT_VPN, lp,
                     mNetworkCapabilities);
             mMockNetworkAgent.waitForIdle(TIMEOUT_MS);
@@ -1613,9 +1609,7 @@ public class ConnectivityServiceTest {
             mAgentRegistered = true;
             verify(mMockNetd).networkCreate(nativeNetworkConfigVpn(getNetwork().netId,
                     !mMockNetworkAgent.isBypassableVpn(), mVpnType));
-            updateState(NetworkInfo.DetailedState.CONNECTED, "registerAgent");
             mNetworkCapabilities.set(mMockNetworkAgent.getNetworkCapabilities());
-            mNetworkAgent = mMockNetworkAgent.getNetworkAgent();
         }
 
         private void registerAgent(Set<UidRange> uids) throws Exception {
@@ -1675,23 +1669,20 @@ public class ConnectivityServiceTest {
         public void disconnect() {
             if (mMockNetworkAgent != null) {
                 mMockNetworkAgent.disconnect();
-                updateState(NetworkInfo.DetailedState.DISCONNECTED, "disconnect");
             }
             mAgentRegistered = false;
             setUids(null);
             // Remove NET_CAPABILITY_INTERNET or MockNetworkAgent will refuse to connect later on.
             mNetworkCapabilities.removeCapability(NET_CAPABILITY_INTERNET);
-            mInterface = null;
         }
 
         private synchronized void startLegacyVpn() {
-            updateState(DetailedState.CONNECTING, "startLegacyVpn");
+            // Do nothing.
         }
 
         // Mock the interaction of IkeV2VpnRunner start. In the context of ConnectivityService,
         // setVpnDefaultForUids() is the main interaction and a sessionKey is stored.
         private synchronized void startPlatformVpn() {
-            updateState(DetailedState.CONNECTING, "startPlatformVpn");
             mSessionKey = UUID.randomUUID().toString();
             // Assuming no disallowed applications
             final Set<Range<Integer>> ranges = UidRange.toIntRanges(Set.of(PRIMARY_UIDRANGE));
@@ -1730,18 +1721,6 @@ public class ConnectivityServiceTest {
                 mSessionKey = null;
             }
             disconnect();
-        }
-
-        @Override
-        public synchronized UnderlyingNetworkInfo getUnderlyingNetworkInfo() {
-            if (mUnderlyingNetworkInfo != null) return mUnderlyingNetworkInfo;
-
-            return super.getUnderlyingNetworkInfo();
-        }
-
-        private synchronized void setUnderlyingNetworkInfo(
-                UnderlyingNetworkInfo underlyingNetworkInfo) {
-            mUnderlyingNetworkInfo = underlyingNetworkInfo;
         }
 
         @Override
@@ -10232,7 +10211,6 @@ public class ConnectivityServiceTest {
 
         // Init lockdown state to simulate LockdownVpnTracker behavior.
         mCm.setLegacyLockdownVpnEnabled(true);
-        mMockVpn.setEnableTeardown(false);
         final List<Range<Integer>> ranges =
                 intRangesPrimaryExcludingUids(Collections.EMPTY_LIST /* excludedeUids */);
         mCm.setRequireVpnForUids(true /* requireVpn */, ranges);
@@ -12559,9 +12537,6 @@ public class ConnectivityServiceTest {
         mMockVpn.establish(new LinkProperties(), vpnOwnerUid, vpnRange);
         assertVpnUidRangesUpdated(true, vpnRange, vpnOwnerUid);
 
-        final UnderlyingNetworkInfo underlyingNetworkInfo =
-                new UnderlyingNetworkInfo(vpnOwnerUid, VPN_IFNAME, new ArrayList<>());
-        mMockVpn.setUnderlyingNetworkInfo(underlyingNetworkInfo);
         mDeps.setConnectionOwnerUid(42);
     }
 
