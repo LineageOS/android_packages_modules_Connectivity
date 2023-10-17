@@ -1507,6 +1507,18 @@ public class ConnectivityServiceTest {
         // Careful ! This is different from mNetworkAgent, because MockNetworkAgent does
         // not inherit from NetworkAgent.
         private TestNetworkAgentWrapper mMockNetworkAgent;
+        // Initialize a stored NetworkCapabilities following the defaults of VPN. The TransportInfo
+        // should at least be updated to a valid VPN type before usage, see registerAgent(...).
+        private NetworkCapabilities mNetworkCapabilities = new NetworkCapabilities.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
+                .setTransportInfo(new VpnTransportInfo(
+                        VpnManager.TYPE_VPN_NONE,
+                        null /* sessionId */,
+                        false /* bypassable */,
+                        false /* longLivedTcpConnectionsExpensive */))
+                .build();
         private boolean mAgentRegistered = false;
 
         private int mVpnType = VpnManager.TYPE_VPN_SERVICE;
