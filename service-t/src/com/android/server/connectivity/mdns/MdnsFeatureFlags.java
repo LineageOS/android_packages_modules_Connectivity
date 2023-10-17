@@ -24,14 +24,26 @@ public class MdnsFeatureFlags {
      */
     public static final String NSD_FORCE_DISABLE_MDNS_OFFLOAD = "nsd_force_disable_mdns_offload";
 
+    /**
+     * The feature flag for controlling whether the probing question should include
+     * InetAddressRecords or not.
+     */
+    public static final String INCLUDE_INET_ADDRESS_RECORDS_IN_PROBING =
+            "include_inet_address_records_in_probing";
+
     // Flag for offload feature
     public final boolean mIsMdnsOffloadFeatureEnabled;
+
+    // Flag for including InetAddressRecords in probing questions.
+    public final boolean mIncludeInetAddressRecordsInProbing;
 
     /**
      * The constructor for {@link MdnsFeatureFlags}.
      */
-    public MdnsFeatureFlags(boolean isOffloadFeatureEnabled) {
+    public MdnsFeatureFlags(boolean isOffloadFeatureEnabled,
+            boolean includeInetAddressRecordsInProbing) {
         mIsMdnsOffloadFeatureEnabled = isOffloadFeatureEnabled;
+        mIncludeInetAddressRecordsInProbing = includeInetAddressRecordsInProbing;
     }
 
 
@@ -44,12 +56,14 @@ public class MdnsFeatureFlags {
     public static final class Builder {
 
         private boolean mIsMdnsOffloadFeatureEnabled;
+        private boolean mIncludeInetAddressRecordsInProbing;
 
         /**
          * The constructor for {@link Builder}.
          */
         public Builder() {
             mIsMdnsOffloadFeatureEnabled = false;
+            mIncludeInetAddressRecordsInProbing = false;
         }
 
         /**
@@ -61,10 +75,20 @@ public class MdnsFeatureFlags {
         }
 
         /**
+         * Set if the probing question should include InetAddressRecords.
+         */
+        public Builder setIncludeInetAddressRecordsInProbing(
+                boolean includeInetAddressRecordsInProbing) {
+            mIncludeInetAddressRecordsInProbing = includeInetAddressRecordsInProbing;
+            return this;
+        }
+
+        /**
          * Builds a {@link MdnsFeatureFlags} with the arguments supplied to this builder.
          */
         public MdnsFeatureFlags build() {
-            return new MdnsFeatureFlags(mIsMdnsOffloadFeatureEnabled);
+            return new MdnsFeatureFlags(
+                    mIsMdnsOffloadFeatureEnabled, mIncludeInetAddressRecordsInProbing);
         }
 
     }

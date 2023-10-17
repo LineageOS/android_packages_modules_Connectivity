@@ -96,10 +96,11 @@ public class MdnsAdvertiser {
                 @NonNull Looper looper, @NonNull byte[] packetCreationBuffer,
                 @NonNull MdnsInterfaceAdvertiser.Callback cb,
                 @NonNull String[] deviceHostName,
-                @NonNull SharedLog sharedLog) {
+                @NonNull SharedLog sharedLog,
+                @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
             // Note NetworkInterface is final and not mockable
             return new MdnsInterfaceAdvertiser(socket, initialAddresses, looper,
-                    packetCreationBuffer, cb, deviceHostName, sharedLog);
+                    packetCreationBuffer, cb, deviceHostName, sharedLog, mdnsFeatureFlags);
         }
 
         /**
@@ -394,7 +395,8 @@ public class MdnsAdvertiser {
             if (advertiser == null) {
                 advertiser = mDeps.makeAdvertiser(socket, addresses, mLooper, mPacketCreationBuffer,
                         mInterfaceAdvertiserCb, mDeviceHostName,
-                        mSharedLog.forSubComponent(socket.getInterface().getName()));
+                        mSharedLog.forSubComponent(socket.getInterface().getName()),
+                        mMdnsFeatureFlags);
                 mAllAdvertisers.put(socket, advertiser);
                 advertiser.start();
             }

@@ -150,8 +150,8 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         /** @see MdnsRecordRepository */
         @NonNull
         public MdnsRecordRepository makeRecordRepository(@NonNull Looper looper,
-                @NonNull String[] deviceHostName) {
-            return new MdnsRecordRepository(looper, deviceHostName);
+                @NonNull String[] deviceHostName, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
+            return new MdnsRecordRepository(looper, deviceHostName, mdnsFeatureFlags);
         }
 
         /** @see MdnsReplySender */
@@ -187,16 +187,18 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     public MdnsInterfaceAdvertiser(@NonNull MdnsInterfaceSocket socket,
             @NonNull List<LinkAddress> initialAddresses, @NonNull Looper looper,
             @NonNull byte[] packetCreationBuffer, @NonNull Callback cb,
-            @NonNull String[] deviceHostName, @NonNull SharedLog sharedLog) {
+            @NonNull String[] deviceHostName, @NonNull SharedLog sharedLog,
+            @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
         this(socket, initialAddresses, looper, packetCreationBuffer, cb,
-                new Dependencies(), deviceHostName, sharedLog);
+                new Dependencies(), deviceHostName, sharedLog, mdnsFeatureFlags);
     }
 
     public MdnsInterfaceAdvertiser(@NonNull MdnsInterfaceSocket socket,
             @NonNull List<LinkAddress> initialAddresses, @NonNull Looper looper,
             @NonNull byte[] packetCreationBuffer, @NonNull Callback cb, @NonNull Dependencies deps,
-            @NonNull String[] deviceHostName, @NonNull SharedLog sharedLog) {
-        mRecordRepository = deps.makeRecordRepository(looper, deviceHostName);
+            @NonNull String[] deviceHostName, @NonNull SharedLog sharedLog,
+            @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
+        mRecordRepository = deps.makeRecordRepository(looper, deviceHostName, mdnsFeatureFlags);
         mRecordRepository.updateAddresses(initialAddresses);
         mSocket = socket;
         mCb = cb;
