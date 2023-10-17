@@ -54,6 +54,7 @@ import androidx.test.filters.SmallTest;
 import com.android.frameworks.tests.net.R;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
+import com.android.testutils.SkipPresubmit;
 
 import org.junit.After;
 import org.junit.Test;
@@ -343,6 +344,7 @@ public class NetworkStatsHistoryTest {
 
     }
 
+    @SkipPresubmit(reason = "Flaky: b/302325928; add to presubmit after fixing")
     @Test
     public void testFuzzing() throws Exception {
         try {
