@@ -19,6 +19,7 @@ package com.android.server;
 import static android.Manifest.permission.RECEIVE_DATA_ACTIVITY_CHANGE;
 import static android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_FROZEN;
 import static android.content.pm.PackageManager.FEATURE_BLUETOOTH;
+import static android.content.pm.PackageManager.FEATURE_LEANBACK;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
@@ -67,6 +68,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
@@ -5015,7 +5017,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         !nai.networkAgentConfig.allowBypass /* secure */,
                         getVpnType(nai), nai.networkAgentConfig.excludeLocalRouteVpn);
             } else {
-                config = new NativeNetworkConfig(nai.network.getNetId(), NativeNetworkType.PHYSICAL,
+                final boolean hasLocalCap =
+                        nai.networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK);
+                config = new NativeNetworkConfig(nai.network.getNetId(),
+                        hasLocalCap ? NativeNetworkType.PHYSICAL_LOCAL : NativeNetworkType.PHYSICAL,
                         getNetworkPermission(nai.networkCapabilities),
                         false /* secure */,
                         VpnManager.TYPE_VPN_NONE,
@@ -8066,6 +8071,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     /**
+     * Returns whether local agents are supported on this device.
+     *
+     * Local agents are supported from U on TVs, and from V on all devices.
+     */
+    @VisibleForTesting
+    public boolean areLocalAgentsSupported() {
+        final PackageManager pm = mContext.getPackageManager();
+        // Local agents are supported starting on U on TVs and on V on everything else.
+        return mDeps.isAtLeastV() || (mDeps.isAtLeastU() && pm.hasSystemFeature(FEATURE_LEANBACK));
+    }
+
+    /**
      * Register a new agent with ConnectivityService to handle a network.
      *
      * @param na a reference for ConnectivityService to contact the agent asynchronously.
@@ -8093,6 +8110,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             enforceAnyPermissionOf(mContext, Manifest.permission.MANAGE_TEST_NETWORKS);
         } else {
             enforceNetworkFactoryPermission();
+        }
+        final boolean hasLocalCap =
+                networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK);
+        if (hasLocalCap && !areLocalAgentsSupported()) {
+            // Before U, netd doesn't support PHYSICAL_LOCAL networks so this can't work.
+            throw new IllegalArgumentException("Local agents are not supported in this version");
         }
 
         final int uid = mDeps.getCallingUid();
@@ -9199,7 +9222,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // are Type.LISTEN, but should not have NetworkCallbacks invoked.
             return;
         }
-        Bundle bundle = new Bundle();
+        final Bundle bundle = new Bundle();
         // TODO b/177608132: make sure callbacks are indexed by NRIs and not NetworkRequest objects.
         // TODO: check if defensive copies of data is needed.
         final NetworkRequest nrForCallback = nri.getNetworkRequestForCallback();
