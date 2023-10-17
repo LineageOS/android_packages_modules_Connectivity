@@ -1709,9 +1709,14 @@ public class NsdService extends INsdManager.Stub {
         mMdnsDiscoveryManager = deps.makeMdnsDiscoveryManager(new ExecutorProvider(),
                 mMdnsSocketClient, LOGGER.forSubComponent("MdnsDiscoveryManager"));
         handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));
-        MdnsFeatureFlags flags = new MdnsFeatureFlags.Builder().setIsMdnsOffloadFeatureEnabled(
-                mDeps.isTetheringFeatureNotChickenedOut(mContext,
-                        MdnsFeatureFlags.NSD_FORCE_DISABLE_MDNS_OFFLOAD)).build();
+        MdnsFeatureFlags flags = new MdnsFeatureFlags.Builder()
+                .setIsMdnsOffloadFeatureEnabled(
+                        mDeps.isTetheringFeatureNotChickenedOut(
+                                mContext, MdnsFeatureFlags.NSD_FORCE_DISABLE_MDNS_OFFLOAD))
+                .setIncludeInetAddressRecordsInProbing(
+                        mDeps.isFeatureEnabled(
+                                mContext, MdnsFeatureFlags.INCLUDE_INET_ADDRESS_RECORDS_IN_PROBING))
+                .build();
         mAdvertiser = deps.makeMdnsAdvertiser(handler.getLooper(), mMdnsSocketProvider,
                 new AdvertiserCallback(), LOGGER.forSubComponent("MdnsAdvertiser"), flags);
         mClock = deps.makeClock();
