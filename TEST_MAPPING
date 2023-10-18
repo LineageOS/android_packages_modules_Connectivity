@@ -5,6 +5,9 @@
       "options": [
         {
           "exclude-annotation": "com.android.testutils.NetworkStackModuleTest"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
         }
       ]
     },
