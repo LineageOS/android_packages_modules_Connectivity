@@ -933,22 +933,43 @@ public class ConnectivityServiceTest {
 
     // This function assumes the UID range for user 0 ([1, 99999])
     private static UidRangeParcel[] uidRangeParcelsExcludingUids(Integer... excludedUids) {
-        int start = 1;
-        Arrays.sort(excludedUids);
-        List<UidRangeParcel> parcels = new ArrayList<UidRangeParcel>();
+        final List<Integer> uids = Arrays.asList(excludedUids);
+        return intToUidRangeStableParcels(intRangesPrimaryExcludingUids(uids));
+    }
+
+    // Create the list of ranges for the primary user (User 0), excluding excludedUids.
+    private static List<Range<Integer>> intRangesPrimaryExcludingUids(List<Integer> excludedUids) {
+        final List<Integer> excludedUidsList = new ArrayList<>(excludedUids);
+        // Uid 0 is always excluded
+        if (!excludedUidsList.contains(0)) {
+            excludedUidsList.add(0);
+        }
+        return intRangesExcludingUids(PRIMARY_USER, excludedUidsList);
+    }
+
+    private static List<Range<Integer>> intRangesExcludingUids(int userId,
+            List<Integer> excludedAppIds) {
+        final List<Integer> excludedUids = CollectionUtils.map(excludedAppIds,
+                appId -> UserHandle.getUid(userId, appId));
+        final int userBase = userId * UserHandle.PER_USER_RANGE;
+        final int maxUid = userBase + UserHandle.PER_USER_RANGE - 1;
+
+        int start = userBase;
+        Collections.sort(excludedUids);
+        final List<Range<Integer>> ranges = new ArrayList<>();
         for (int excludedUid : excludedUids) {
             if (excludedUid == start) {
                 start++;
             } else {
-                parcels.add(new UidRangeParcel(start, excludedUid - 1));
+                ranges.add(new Range<>(start, excludedUid - 1));
                 start = excludedUid + 1;
             }
         }
-        if (start <= 99999) {
-            parcels.add(new UidRangeParcel(start, 99999));
+        if (start <= maxUid) {
+            ranges.add(new Range<>(start, maxUid));
         }
 
-        return parcels.toArray(new UidRangeParcel[0]);
+        return ranges;
     }
 
     private void waitForIdle() {
@@ -1733,6 +1754,12 @@ public class ConnectivityServiceTest {
 
     private UidRangeParcel[] intToUidRangeStableParcels(final @NonNull Set<Integer> ranges) {
         return ranges.stream().map(r -> new UidRangeParcel(r, r)).toArray(UidRangeParcel[]::new);
+    }
+
+    private static UidRangeParcel[] intToUidRangeStableParcels(
+            final @NonNull List<Range<Integer>> ranges) {
+        return ranges.stream().map(
+                r -> new UidRangeParcel(r.getLower(), r.getUpper())).toArray(UidRangeParcel[]::new);
     }
 
     private void assertVpnTransportInfo(NetworkCapabilities nc, int type) {
@@ -10214,7 +10241,8 @@ public class ConnectivityServiceTest {
         // Init lockdown state to simulate LockdownVpnTracker behavior.
         mCm.setLegacyLockdownVpnEnabled(true);
         mMockVpn.setEnableTeardown(false);
-        final Set<Range<Integer>> ranges = UidRange.toIntRanges(Set.of(PRIMARY_UIDRANGE));
+        final List<Range<Integer>> ranges =
+                intRangesPrimaryExcludingUids(Collections.EMPTY_LIST /* excludedeUids */);
         mCm.setRequireVpnForUids(true /* requireVpn */, ranges);
 
         // Bring up a network.
@@ -10420,7 +10448,8 @@ public class ConnectivityServiceTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testLockdownSetFirewallUidRule() throws Exception {
-        final Set<Range<Integer>> lockdownRange = UidRange.toIntRanges(Set.of(PRIMARY_UIDRANGE));
+        final List<Range<Integer>> lockdownRange =
+                intRangesPrimaryExcludingUids(Collections.EMPTY_LIST /* excludedeUids */);
         // Enable Lockdown
         mCm.setRequireVpnForUids(true /* requireVpn */, lockdownRange);
         waitForIdle();
