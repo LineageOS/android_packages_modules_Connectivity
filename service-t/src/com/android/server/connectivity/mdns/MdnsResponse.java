@@ -33,6 +33,7 @@ import java.util.Objects;
 
 /** An mDNS response. */
 public class MdnsResponse {
+    public static final long EXPIRATION_NEVER = Long.MAX_VALUE;
     private final List<MdnsRecord> records;
     private final List<MdnsPointerRecord> pointerRecords;
     private MdnsServiceRecord serviceRecord;
@@ -347,6 +348,21 @@ public class MdnsResponse {
     @NonNull
     public String[] getServiceName() {
         return serviceName;
+    }
+
+    /** Get the min remaining ttl time from received records */
+    public long getMinRemainingTtl(long now) {
+        long minRemainingTtl = EXPIRATION_NEVER;
+        // TODO: Check other records(A, AAAA, TXT) ttl time.
+        if (!hasServiceRecord()) {
+            return EXPIRATION_NEVER;
+        }
+        // Check ttl time.
+        long remainingTtl = serviceRecord.getRemainingTTL(now);
+        if (remainingTtl < minRemainingTtl) {
+            minRemainingTtl = remainingTtl;
+        }
+        return minRemainingTtl;
     }
 
     /**
