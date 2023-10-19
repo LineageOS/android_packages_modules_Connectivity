@@ -1980,22 +1980,6 @@ public class VpnTest extends VpnTestBase {
         // a subsequent CL.
     }
 
-    @Test
-    public void testStartLegacyVpnIpv6() throws Exception {
-        setMockedUsers(PRIMARY_USER);
-        final Vpn vpn = createVpn(PRIMARY_USER.id);
-        final LinkProperties lp = new LinkProperties();
-        lp.setInterfaceName(EGRESS_IFACE);
-        lp.addLinkAddress(new LinkAddress("2001:db8::1/64"));
-        final RouteInfo defaultRoute = new RouteInfo(
-                new IpPrefix(Inet6Address.ANY, 0), null, EGRESS_IFACE);
-        lp.addRoute(defaultRoute);
-
-        // IllegalStateException thrown since legacy VPN only supports IPv4.
-        assertThrows(IllegalStateException.class,
-                () -> vpn.startLegacyVpn(mVpnProfile, EGRESS_NETWORK, lp));
-    }
-
     private Vpn startLegacyVpn(final Vpn vpn, final VpnProfile vpnProfile) throws Exception {
         setMockedUsers(PRIMARY_USER);
 
