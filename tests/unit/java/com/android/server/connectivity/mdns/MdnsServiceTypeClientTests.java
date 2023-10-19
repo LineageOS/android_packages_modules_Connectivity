@@ -193,7 +193,8 @@ public class MdnsServiceTypeClientTests {
         thread = new HandlerThread("MdnsServiceTypeClientTests");
         thread.start();
         handler = new Handler(thread.getLooper());
-        serviceCache = new MdnsServiceCache(thread.getLooper());
+        serviceCache = new MdnsServiceCache(
+                thread.getLooper(), MdnsFeatureFlags.newBuilder().build());
 
         doAnswer(inv -> {
             latestDelayMs = 0;
