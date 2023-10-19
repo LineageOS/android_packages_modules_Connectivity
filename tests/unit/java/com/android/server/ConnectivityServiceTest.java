@@ -2276,6 +2276,11 @@ public class ConnectivityServiceTest {
         }
 
         @Override
+        public int getBpfProgramId(final int attachType, @NonNull final String cgroupPath) {
+            return 0;
+        }
+
+        @Override
         public BroadcastOptionsShim makeBroadcastOptionsShim(BroadcastOptions options) {
             reset(mBroadcastOptionsShim);
             return mBroadcastOptionsShim;
