@@ -106,7 +106,7 @@ public class MdnsDiscoveryManagerTests {
         doReturn(thread.getLooper()).when(socketClient).getLooper();
         doReturn(true).when(socketClient).supportsRequestingSpecificNetworks();
         discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient,
-                sharedLog) {
+                sharedLog, MdnsFeatureFlags.newBuilder().build()) {
                     @Override
                     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
                             @NonNull SocketKey socketKey) {

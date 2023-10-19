@@ -13,3 +13,10 @@ flag {
   description: "This flag controls the forbidden capability API"
   bug: "302997505"
 }
+
+flag {
+  name: "nsd_expired_services_removal"
+  namespace: "android_core_networking"
+  description: "Remove expired services from MdnsServiceCache"
+  bug: "304649384"
+}
