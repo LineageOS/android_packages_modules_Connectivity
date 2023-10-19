@@ -100,6 +100,11 @@ import static android.system.OsConstants.ETH_P_ALL;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET4_BIND;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET6_BIND;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_EGRESS;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_INGRESS;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_SOCK_CREATE;
 import static com.android.net.module.util.NetworkMonitorUtils.isPrivateDnsValidationRequired;
 import static com.android.net.module.util.PermissionUtils.checkAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceAnyPermissionOf;
@@ -279,6 +284,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.BinderUtils;
 import com.android.net.module.util.BitUtils;
+import com.android.net.module.util.BpfUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.InterfaceParams;
@@ -1525,6 +1531,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 loge("TcUtils.tcFilterDelDev(ifaceIndex=" + params.index
                         + ", ingress=true, PRIO_POLICE, ETH_P_ALL) failure: ", e);
             }
+        }
+
+        /**
+         * Get BPF program Id from CGROUP. See {@link BpfUtils#getProgramId}.
+         */
+        public int getBpfProgramId(final int attachType, @NonNull final String cgroupPath)
+                throws IOException {
+            return BpfUtils.getProgramId(attachType, cgroupPath);
         }
 
         /**
@@ -3251,6 +3265,26 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.decreaseIndent();
     }
 
+    private void dumpBpfProgramStatus(IndentingPrintWriter pw) {
+        pw.println("Bpf Program Status:");
+        pw.increaseIndent();
+        try {
+            pw.print("CGROUP_INET_INGRESS: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_INGRESS, BpfUtils.CGROUP_PATH));
+            pw.print("CGROUP_INET_EGRESS: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_EGRESS, BpfUtils.CGROUP_PATH));
+            pw.print("CGROUP_INET_SOCK_CREATE: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_SOCK_CREATE, BpfUtils.CGROUP_PATH));
+            pw.print("CGROUP_INET4_BIND: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET4_BIND, BpfUtils.CGROUP_PATH));
+            pw.print("CGROUP_INET6_BIND: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET6_BIND, BpfUtils.CGROUP_PATH));
+        } catch (IOException e) {
+            pw.println("  IOException");
+        }
+        pw.decreaseIndent();
+    }
+
     @VisibleForTesting
     static final String KEY_DESTROY_FROZEN_SOCKETS_VERSION = "destroy_frozen_sockets_version";
     @VisibleForTesting
@@ -3863,6 +3897,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         pw.println();
         dumpCloseFrozenAppSockets(pw);
+
+        pw.println();
+        dumpBpfProgramStatus(pw);
 
         pw.println();
 
