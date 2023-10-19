@@ -23,9 +23,7 @@ import android.annotation.Nullable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-/**
- * Performs discovery and triggers a connection to an associated device.
- */
+/** Performs discovery and triggers a connection to an associated device. */
 public interface ConnectivityManager {
     /**
      * Starts device discovery.
@@ -63,8 +61,12 @@ public interface ConnectivityManager {
 
     /** Reason codes for connect failure. */
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({ERROR_REASON_UNKNOWN, ERROR_CONNECTION_TIMED_OUT, ERROR_CONNECTION_REFUSED,
-            ERROR_DEVICE_UNAVAILABLE})
+    @IntDef({
+        ERROR_REASON_UNKNOWN,
+        ERROR_CONNECTION_TIMED_OUT,
+        ERROR_CONNECTION_REFUSED,
+        ERROR_DEVICE_UNAVAILABLE
+    })
     @interface ReasonCode {}
 
     /**
