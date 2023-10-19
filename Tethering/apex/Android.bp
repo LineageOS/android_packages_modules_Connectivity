@@ -96,6 +96,7 @@ apex {
     },
     binaries: [
         "clatd",
+        "ethtool",
         "netbpfload",
         "ot-daemon",
     ],
