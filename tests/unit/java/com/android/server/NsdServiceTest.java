@@ -35,14 +35,17 @@ import static android.net.connectivity.ConnectivityCompatChanges.RUN_NATIVE_NSD_
 import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
+
 import static com.android.networkstack.apishim.api33.ConstantsShim.REGISTER_NSD_OFFLOAD_ENGINE;
 import static com.android.server.NsdService.DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF;
 import static com.android.server.NsdService.MdnsListener;
 import static com.android.server.NsdService.NO_TRANSACTION;
 import static com.android.server.NsdService.parseTypeAndSubtype;
 import static com.android.testutils.ContextUtils.mockService;
+
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
 import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -220,7 +223,7 @@ public class NsdServiceTest {
                 anyInt(), anyString(), anyString(), anyString(), anyInt());
         doReturn(false).when(mDeps).isMdnsDiscoveryManagerEnabled(any(Context.class));
         doReturn(mDiscoveryManager).when(mDeps)
-                .makeMdnsDiscoveryManager(any(), any(), any());
+                .makeMdnsDiscoveryManager(any(), any(), any(), any());
         doReturn(mMulticastLock).when(mWifiManager).createMulticastLock(any());
         doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any(), any());
         doReturn(DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF).when(mDeps).getDeviceConfigInt(
