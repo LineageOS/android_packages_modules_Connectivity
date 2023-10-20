@@ -517,11 +517,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                     break;
                 }
                 case MSG_NOTIFY_NETWORK_STATUS: {
-                    // If no cached states, ignore.
-                    if (mLastNetworkStateSnapshots == null) break;
-                    // TODO (b/181642673): Protect mDefaultNetworks from concurrent accessing.
-                    handleNotifyNetworkStatus(
-                            mDefaultNetworks, mLastNetworkStateSnapshots, mActiveIface);
+                    synchronized (mStatsLock) {
+                        // If no cached states, ignore.
+                        if (mLastNetworkStateSnapshots == null) break;
+                        handleNotifyNetworkStatus(
+                                mDefaultNetworks, mLastNetworkStateSnapshots, mActiveIface);
+                    }
                     break;
                 }
                 case MSG_PERFORM_POLL_REGISTER_ALERT: {
