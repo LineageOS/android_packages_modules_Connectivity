@@ -108,6 +108,13 @@ public class IaPrefixOption extends Struct {
     }
 
     /**
+     * Check whether or not IA Prefix option has 0 preferred and valid lifetimes.
+     */
+    public boolean withZeroLifetimes() {
+        return preferred == 0 && valid == 0;
+    }
+
+    /**
      * Build an IA_PD prefix option with given specific parameters.
      */
     public static ByteBuffer build(final short length, final long preferred, final long valid,
