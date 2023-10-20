@@ -17,6 +17,7 @@ package android.net;
 
 import android.net.DscpPolicy;
 import android.net.LinkProperties;
+import android.net.LocalNetworkConfig;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
@@ -34,6 +35,7 @@ oneway interface INetworkAgentRegistry {
     void sendLinkProperties(in LinkProperties lp);
     // TODO: consider replacing this by "markConnected()" and removing
     void sendNetworkInfo(in NetworkInfo info);
+    void sendLocalNetworkConfig(in LocalNetworkConfig config);
     void sendScore(in NetworkScore score);
     void sendExplicitlySelected(boolean explicitlySelected, boolean acceptPartial);
     void sendSocketKeepaliveEvent(int slot, int reason);
