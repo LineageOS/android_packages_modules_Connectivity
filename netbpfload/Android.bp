@@ -45,4 +45,6 @@ cc_binary {
     // module "netbpfload" variant "android_x86_apex30": should support
     // min_sdk_version(30) for "com.android.tethering": newer SDK(34).
     min_sdk_version: "30",
+
+    // init_rc: ["netbpfload.rc"],
 }
