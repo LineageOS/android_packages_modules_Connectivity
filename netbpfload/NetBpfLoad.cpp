@@ -257,10 +257,5 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (android::base::SetProperty("bpf.progs_loaded", "1") == false) {
-        ALOGE("Failed to set bpf.progs_loaded property");
-        return 1;
-    }
-
     return 0;
 }
