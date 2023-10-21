@@ -60,7 +60,7 @@ public class BpfNetMapsConstants {
     public static final long OEM_DENY_1_MATCH = (1 << 9);
     public static final long OEM_DENY_2_MATCH = (1 << 10);
     public static final long OEM_DENY_3_MATCH = (1 << 11);
-    // LINT.ThenChange(packages/modules/Connectivity/bpf_progs/netd.h)
+    // LINT.ThenChange(../../../../bpf_progs/netd.h)
 
     public static final List<Pair<Long, String>> MATCH_LIST = Arrays.asList(
             Pair.create(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"),
