@@ -168,7 +168,7 @@ int writeProcSysFile(const char *filename, const char *value) {
     return 0;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv, char * const envp[]) {
     (void)argc;
     android::base::InitLogging(argv, &android::base::KernelLogger);
 
@@ -257,10 +257,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (android::base::SetProperty("bpf.progs_loaded", "1") == false) {
-        ALOGE("Failed to set bpf.progs_loaded property");
-        return 1;
+    ALOGI("done, transferring control to platform bpfloader.");
+
+    const char * args[] = { "/system/bin/bpfloader", NULL, };
+    if (execve(args[0], (char**)args, envp)) {
+        ALOGE("FATAL: execve('/system/bin/bpfloader'): %d[%s]", errno, strerror(errno));
     }
 
-    return 0;
+    return 1;
 }
