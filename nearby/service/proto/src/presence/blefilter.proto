@@ -115,6 +115,7 @@ message BleFilterResult {
   repeated DataElement data_element = 7;
   optional bytes ble_service_data = 8;
   optional ResultType result_type = 9;
+  optional uint64 discovery_timestamp = 10; // Timestamp when the device is discovered.
 }
 
 message BleFilterResults {

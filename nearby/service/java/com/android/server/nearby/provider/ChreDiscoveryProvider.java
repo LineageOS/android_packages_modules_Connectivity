@@ -350,7 +350,10 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                                             DataElement.DataType.ACTION,
                                             new byte[]{(byte) filterResult.getIntent()}));
                         }
-
+                        if (filterResult.hasDiscoveryTimestamp()) {
+                            presenceDeviceBuilder.setDiscoveryTimestampMillis(
+                                    filterResult.getDiscoveryTimestamp());
+                        }
                         PublicCredential publicCredential =
                                 new PublicCredential.Builder(
                                         secretId,
