@@ -190,7 +190,7 @@ enum UidOwnerMatchType {
     OEM_DENY_2_MATCH = (1 << 10),
     OEM_DENY_3_MATCH = (1 << 11),
 };
-// LINT.ThenChange(packages/modules/Connectivity/service/src/com/android/server/BpfNetMaps.java)
+// LINT.ThenChange(../framework/src/android/net/BpfNetMapsConstants.java)
 
 enum BpfPermissionMatch {
     BPF_PERMISSION_INTERNET = 1 << 2,
