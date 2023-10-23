@@ -240,6 +240,8 @@ interface IConnectivityManager
 
     void setTestAllowBadWifiUntil(long timeMs);
 
+    void setDataSaverEnabled(boolean enable);
+
     void updateMeteredNetworkAllowList(int uid, boolean add);
 
     void updateMeteredNetworkDenyList(int uid, boolean add);
