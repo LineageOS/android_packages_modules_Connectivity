@@ -26,7 +26,6 @@ import static android.net.NetworkRequest.Type.TRACK_SYSTEM_DEFAULT;
 import static android.net.QosCallback.QosCallbackRegistrationException;
 
 import android.annotation.CallbackExecutor;
-import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -115,14 +114,6 @@ import java.util.concurrent.RejectedExecutionException;
 public class ConnectivityManager {
     private static final String TAG = "ConnectivityManager";
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
-
-    // TODO : remove this class when udc-mainline-prod is abandoned and android.net.flags.Flags is
-    // available here
-    /** @hide */
-    public static class Flags {
-        static final String SET_DATA_SAVER_VIA_CM =
-                "com.android.net.flags.set_data_saver_via_cm";
-    }
 
     /**
      * A change in network connectivity has occurred. A default connection has either
@@ -5964,28 +5955,6 @@ public class ConnectivityManager {
     @NonNull
     public static Range<Integer> getIpSecNetIdRange() {
         return new Range(TUN_INTF_NETID_START, TUN_INTF_NETID_START + TUN_INTF_NETID_RANGE - 1);
-    }
-
-    /**
-     * Sets data saver switch.
-     *
-     * @param enable True if enable.
-     * @throws IllegalStateException if failed.
-     * @hide
-     */
-    @FlaggedApi(Flags.SET_DATA_SAVER_VIA_CM)
-    @SystemApi(client = MODULE_LIBRARIES)
-    @RequiresPermission(anyOf = {
-            android.Manifest.permission.NETWORK_SETTINGS,
-            android.Manifest.permission.NETWORK_STACK,
-            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
-    })
-    public void setDataSaverEnabled(final boolean enable) {
-        try {
-            mService.setDataSaverEnabled(enable);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
-        }
     }
 
     /**
