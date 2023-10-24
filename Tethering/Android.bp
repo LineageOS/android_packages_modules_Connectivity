@@ -95,6 +95,7 @@ android_library {
     ],
     static_libs: [
         "NetworkStackApiCurrentShims",
+        "net-utils-device-common-struct",
     ],
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
@@ -109,6 +110,7 @@ android_library {
     ],
     static_libs: [
         "NetworkStackApiStableShims",
+        "net-utils-device-common-struct",
     ],
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-package com.android.server;
+package android.net;
 
 import com.android.net.module.util.Struct;
 
-/** Value type for per uid traffic control configuration map  */
+/**
+ * Value type for per uid traffic control configuration map.
+ *
+ * @hide
+ */
 public class UidOwnerValue extends Struct {
     // Allowed interface index. Only applicable if IIF_MATCH is set in the rule bitmask below.
     @Field(order = 0, type = Type.S32)
