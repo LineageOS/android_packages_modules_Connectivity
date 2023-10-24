@@ -46,5 +46,6 @@ cc_binary {
     // min_sdk_version(30) for "com.android.tethering": newer SDK(34).
     min_sdk_version: "30",
 
-    // init_rc: ["netbpfload.rc"],
+    init_rc: ["netbpfload.rc"],
+    required: ["bpfloader"],
 }
