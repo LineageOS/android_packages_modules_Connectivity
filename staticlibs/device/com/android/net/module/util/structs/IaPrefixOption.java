@@ -18,12 +18,17 @@ package com.android.net.module.util.structs;
 
 import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IAPREFIX;
 
+import android.net.IpPrefix;
 import android.util.Log;
 
 import com.android.net.module.util.Struct;
+import com.android.net.module.util.Struct.Computed;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -70,6 +75,9 @@ public class IaPrefixOption extends Struct {
     @Field(order = 5, type = Type.ByteArray, arraysize = 16)
     public final byte[] prefix;
 
+    @Computed
+    private final IpPrefix mIpPrefix;
+
     // Constructor used by Struct.parse()
     protected IaPrefixOption(final short code, final short length, final long preferred,
             final long valid, final byte prefixLen, final byte[] prefix) {
@@ -79,6 +87,16 @@ public class IaPrefixOption extends Struct {
         this.valid = valid;
         this.prefixLen = prefixLen;
         this.prefix = prefix.clone();
+
+        try {
+            final Inet6Address addr = (Inet6Address) InetAddress.getByAddress(prefix);
+            mIpPrefix = new IpPrefix(addr, prefixLen);
+        } catch (UnknownHostException | ClassCastException e) {
+            // UnknownHostException should never happen unless prefix is null.
+            // ClassCastException can occur when prefix is an IPv6 mapped IPv4 address.
+            // Both scenarios should throw an exception in the context of Struct#parse().
+            throw new IllegalArgumentException(e);
+        }
     }
 
     public IaPrefixOption(final short length, final long preferred, final long valid,
