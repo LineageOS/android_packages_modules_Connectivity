@@ -61,6 +61,11 @@ class NetworkTracePoller {
   void PollAndSchedule(perfetto::base::TaskRunner* runner, uint32_t poll_ms);
   bool ConsumeAllLocked() REQUIRES(mMutex);
 
+  // Record sparse iface stats via atrace. This queries the per-iface stats maps
+  // for any iface present in the vector of packets. This is inexact, but should
+  // have sufficient coverage given these are cumulative counters.
+  void TraceIfaces(const std::vector<PacketTrace>& packets) REQUIRES(mMutex);
+
   std::mutex mMutex;
 
   // Records the number of successfully started active sessions so that only the
