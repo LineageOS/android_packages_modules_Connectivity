@@ -43,6 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TestBpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V> {
     private final ConcurrentHashMap<K, V> mMap = new ConcurrentHashMap<>();
 
+    public TestBpfMap() {}
+
     // TODO: Remove this constructor
     public TestBpfMap(final Class<K> key, final Class<V> value) {
     }
