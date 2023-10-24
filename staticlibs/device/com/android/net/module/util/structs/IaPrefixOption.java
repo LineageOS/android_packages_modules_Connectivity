@@ -110,19 +110,20 @@ public class IaPrefixOption extends Struct {
      * Note: an expired prefix can still be valid.
      */
     public boolean isValid() {
-        if (preferred < 0 || valid < 0) {
-            Log.w(TAG, "IA_PD option with invalid lifetime, preferred lifetime " + preferred
-                    + ", valid lifetime " + valid);
+        if (preferred < 0) {
+            Log.w(TAG, "Invalid preferred lifetime: " + this);
+            return false;
+        }
+        if (valid < 0) {
+            Log.w(TAG, "Invalid valid lifetime: " + this);
             return false;
         }
         if (preferred > valid) {
-            Log.w(TAG, "IA_PD option with preferred lifetime " + preferred
-                    + " greater than valid lifetime " + valid);
+            Log.w(TAG, "Invalid lifetime. Preferred lifetime > valid lifetime: " + this);
             return false;
         }
         if (prefixLen > 64) {
-            Log.w(TAG, "IA_PD option with prefix length " + prefixLen
-                    + " longer than 64");
+            Log.w(TAG, "Invalid prefix length: " + this);
             return false;
         }
         return true;
@@ -143,5 +144,11 @@ public class IaPrefixOption extends Struct {
         final IaPrefixOption option = new IaPrefixOption(
                 length /* 25 + IAPrefix options length */, preferred, valid, prefixLen, prefix);
         return ByteBuffer.wrap(option.writeToBytes(ByteOrder.BIG_ENDIAN));
+    }
+
+    @Override
+    public String toString() {
+        return "IA Prefix, length " + length + ": " + mIpPrefix + ", pref " + preferred + ", valid "
+                + valid;
     }
 }
