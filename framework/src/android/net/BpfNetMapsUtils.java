@@ -39,6 +39,8 @@ import static android.system.OsConstants.EINVAL;
 import android.os.ServiceSpecificException;
 import android.util.Pair;
 
+import com.android.modules.utils.build.SdkLevel;
+
 import java.util.StringJoiner;
 
 /**
@@ -123,5 +125,16 @@ public class BpfNetMapsUtils {
             sj.add("UNKNOWN_MATCH(" + matchMask + ")");
         }
         return sj.toString();
+    }
+
+    public static final boolean PRE_T = !SdkLevel.isAtLeastT();
+
+    /**
+     * Throw UnsupportedOperationException if SdkLevel is before T.
+     */
+    public static void throwIfPreT(final String msg) {
+        if (PRE_T) {
+            throw new UnsupportedOperationException(msg);
+        }
     }
 }
