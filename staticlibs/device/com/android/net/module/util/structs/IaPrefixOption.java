@@ -88,8 +88,10 @@ public class IaPrefixOption extends Struct {
 
     /**
      * Check whether or not IA Prefix option in IA_PD option is valid per RFC8415#section-21.22.
+     *
+     * Note: an expired prefix can still be valid.
      */
-    public boolean isValid(int t2) {
+    public boolean isValid() {
         if (preferred < 0 || valid < 0) {
             Log.w(TAG, "IA_PD option with invalid lifetime, preferred lifetime " + preferred
                     + ", valid lifetime " + valid);
@@ -103,11 +105,6 @@ public class IaPrefixOption extends Struct {
         if (prefixLen > 64) {
             Log.w(TAG, "IA_PD option with prefix length " + prefixLen
                     + " longer than 64");
-            return false;
-        }
-        // Either preferred lifetime or t2 might be 0 which is valid, then ignore it.
-        if (preferred != 0 && t2 != 0 && preferred < t2) {
-            Log.w(TAG, "preferred lifetime " + preferred + " is smaller than T2 " + t2);
             return false;
         }
         return true;
