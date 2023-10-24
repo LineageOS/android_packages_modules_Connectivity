@@ -66,6 +66,7 @@ import android.app.StatsManager;
 import android.content.Context;
 import android.net.BpfNetMapsUtils;
 import android.net.INetd;
+import android.net.UidOwnerValue;
 import android.os.Build;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
