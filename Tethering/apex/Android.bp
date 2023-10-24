@@ -117,8 +117,9 @@ apex {
         "ServiceConnectivityResources",
     ],
     prebuilts: [
-        "ot-daemon.init.34rc",
         "current_sdkinfo",
+        "netbpfload.mainline.rc",
+        "ot-daemon.init.34rc",
     ],
     manifest: "manifest.json",
     key: "com.android.tethering.key",

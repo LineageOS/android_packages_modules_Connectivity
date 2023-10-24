@@ -49,3 +49,16 @@ cc_binary {
     init_rc: ["netbpfload.rc"],
     required: ["bpfloader"],
 }
+
+// Versioned netbpfload init rc: init system will process it only on api V/35+ devices
+// (TODO: consider reducing to T/33+ - adjust the comment up above in line 43 as well)
+// Note: S[31] Sv2[32] T[33] U[34] V[35])
+//
+// For details of versioned rc files see:
+// https://android.googlesource.com/platform/system/core/+/HEAD/init/README.md#versioned-rc-files-within-apexs
+prebuilt_etc {
+    name: "netbpfload.mainline.rc",
+    src: "netbpfload.mainline.rc",
+    filename: "netbpfload.35rc",
+    installable: false,
+}
