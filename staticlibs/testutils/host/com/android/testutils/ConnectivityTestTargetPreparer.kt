@@ -128,7 +128,7 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
         if (testInfo.device.getApiLevel() < 31) return
         testInfo.exec("cmd connectivity set-chain3-enabled $enableChain")
         enablePkgs.forEach { (pkg, allow) ->
-            testInfo.exec("cmd connectivity set-package-networking-enabled $pkg $allow")
+            testInfo.exec("cmd connectivity set-package-networking-enabled $allow $pkg")
         }
     }
 
