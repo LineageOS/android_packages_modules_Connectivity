@@ -23,6 +23,7 @@ package {
 // as the above target may not exist
 // depending on the branch
 
+// The library requires the final artifact to contain net-utils-device-common-struct.
 java_library {
     name: "connectivity-net-module-utils-bpf",
     srcs: [
@@ -38,8 +39,9 @@ java_library {
     libs: [
         "androidx.annotation_annotation",
         "framework-connectivity.stubs.module_lib",
-    ],
-    static_libs: [
+        // For libraries which are statically linked in framework-connectivity, do not
+        // statically link here because callers of this library might already have a static
+        // version linked.
         "net-utils-device-common-struct",
     ],
     apex_available: [
