@@ -12545,6 +12545,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     @Override
+    public void setDataSaverEnabled(final boolean enable) {
+        enforceNetworkStackOrSettingsPermission();
+        try {
+            final boolean ret = mNetd.bandwidthEnableDataSaver(enable);
+            if (!ret) {
+                throw new IllegalStateException("Error when changing iptables: " + enable);
+            }
+        } catch (RemoteException e) {
+            // Lack of permission or binder errors.
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
     public void updateMeteredNetworkAllowList(final int uid, final boolean add) {
         enforceNetworkStackOrSettingsPermission();
 
