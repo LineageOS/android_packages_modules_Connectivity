@@ -146,6 +146,14 @@ public class Struct {
         int arraysize() default 0;
     }
 
+    /**
+     * Indicates that this field contains a computed value and is ignored for the purposes of Struct
+     * parsing.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.FIELD)
+    public @interface Computed {}
+
     private static class FieldInfo {
         @NonNull
         public final Field annotation;
@@ -533,6 +541,7 @@ public class Struct {
         final FieldInfo[] annotationFields = new FieldInfo[getAnnotationFieldCount(clazz)];
         for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers())) continue;
+            if (field.getAnnotation(Computed.class) != null) continue;
 
             final Field annotation = field.getAnnotation(Field.class);
             if (annotation == null) {
