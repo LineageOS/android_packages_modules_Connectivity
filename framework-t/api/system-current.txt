@@ -417,12 +417,12 @@ package android.net.nsd {
 
 package android.net.thread {
 
-  public class ThreadNetworkController {
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkController {
     method public int getThreadVersion();
     field public static final int THREAD_VERSION_1_3 = 4; // 0x4
   }
 
-  public class ThreadNetworkManager {
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkManager {
     method @NonNull public java.util.List<android.net.thread.ThreadNetworkController> getAllThreadNetworkControllers();
   }
 
