@@ -85,6 +85,7 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                         case BroadcastRequest.PRESENCE_VERSION_V0:
                             bluetoothLeAdvertiser.startAdvertising(getAdvertiseSettings(),
                                     advertiseData, this);
+                            Log.v(TAG, "Start to broadcast V0 advertisement.");
                             break;
                         case BroadcastRequest.PRESENCE_VERSION_V1:
                             if (adapter.isLeExtendedAdvertisingSupported()) {
@@ -92,6 +93,7 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                                         getAdvertisingSetParameters(),
                                         advertiseData,
                                         null, null, null, mAdvertisingSetCallback);
+                                Log.v(TAG, "Start to broadcast V1 advertisement.");
                             } else {
                                 Log.w(TAG, "Failed to start advertising set because the chipset"
                                         + " does not supports LE Extended Advertising feature.");
