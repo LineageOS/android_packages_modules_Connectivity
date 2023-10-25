@@ -19,27 +19,26 @@ package {
 }
 
 android_test {
-    name: "CtsThreadNetworkTestCases",
-    defaults: ["cts_defaults"],
+    name: "ThreadNetworkUnitTests",
     min_sdk_version: "33",
-    sdk_version: "test_current",
+    sdk_version: "module_current",
     manifest: "AndroidManifest.xml",
     test_config: "AndroidTest.xml",
     srcs: [
         "src/**/*.java",
     ],
     test_suites: [
-        "cts",
         "general-tests",
-        "mts-tethering",
     ],
     static_libs: [
         "androidx.test.ext.junit",
         "compatibility-device-util-axt",
         "ctstestrunner-axt",
+        "framework-connectivity-pre-jarjar",
+        "framework-connectivity-t-pre-jarjar",
         "guava-android-testlib",
         "net-tests-utils",
-        "truth",
+        "truth-prebuilt",
     ],
     libs: [
         "android.test.base",
