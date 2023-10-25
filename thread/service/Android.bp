@@ -34,6 +34,7 @@ java_library {
     srcs: [":service-thread-sources"],
     libs: [
         "framework-connectivity-t-pre-jarjar",
+        "service-connectivity-pre-jarjar",
     ],
     static_libs: [
         "net-utils-device-common",
