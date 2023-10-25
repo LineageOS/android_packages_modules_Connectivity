@@ -417,6 +417,81 @@ package android.net.nsd {
 
 package android.net.thread {
 
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class ActiveOperationalDataset implements android.os.Parcelable {
+    method @NonNull public static android.net.thread.ActiveOperationalDataset createRandomDataset();
+    method public int describeContents();
+    method @NonNull public static android.net.thread.ActiveOperationalDataset fromThreadTlvs(@NonNull byte[]);
+    method @NonNull public android.net.thread.OperationalDatasetTimestamp getActiveTimestamp();
+    method @IntRange(from=0, to=65535) public int getChannel();
+    method @NonNull @Size(min=1) public android.util.SparseArray<byte[]> getChannelMask();
+    method @IntRange(from=0, to=255) public int getChannelPage();
+    method @NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_EXTENDED_PAN_ID) public byte[] getExtendedPanId();
+    method @NonNull public android.net.IpPrefix getMeshLocalPrefix();
+    method @NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_NETWORK_KEY) public byte[] getNetworkKey();
+    method @NonNull @Size(min=android.net.thread.ActiveOperationalDataset.LENGTH_MIN_NETWORK_NAME_BYTES, max=android.net.thread.ActiveOperationalDataset.LENGTH_MAX_NETWORK_NAME_BYTES) public String getNetworkName();
+    method @IntRange(from=0, to=65534) public int getPanId();
+    method @NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_PSKC) public byte[] getPskc();
+    method @NonNull public android.net.thread.ActiveOperationalDataset.SecurityPolicy getSecurityPolicy();
+    method @NonNull public byte[] toThreadTlvs();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field public static final int CHANNEL_MAX_24_GHZ = 26; // 0x1a
+    field public static final int CHANNEL_MIN_24_GHZ = 11; // 0xb
+    field public static final int CHANNEL_PAGE_24_GHZ = 0; // 0x0
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.thread.ActiveOperationalDataset> CREATOR;
+    field public static final int LENGTH_EXTENDED_PAN_ID = 8; // 0x8
+    field public static final int LENGTH_MAX_DATASET_TLVS = 254; // 0xfe
+    field public static final int LENGTH_MAX_NETWORK_NAME_BYTES = 16; // 0x10
+    field public static final int LENGTH_MESH_LOCAL_PREFIX_BITS = 64; // 0x40
+    field public static final int LENGTH_MIN_NETWORK_NAME_BYTES = 1; // 0x1
+    field public static final int LENGTH_NETWORK_KEY = 16; // 0x10
+    field public static final int LENGTH_PSKC = 16; // 0x10
+  }
+
+  public static final class ActiveOperationalDataset.Builder {
+    ctor public ActiveOperationalDataset.Builder(@NonNull android.net.thread.ActiveOperationalDataset);
+    ctor public ActiveOperationalDataset.Builder();
+    method @NonNull public android.net.thread.ActiveOperationalDataset build();
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setActiveTimestamp(@NonNull android.net.thread.OperationalDatasetTimestamp);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setChannel(@IntRange(from=0, to=255) int, @IntRange(from=0, to=65535) int);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setChannelMask(@NonNull @Size(min=1) android.util.SparseArray<byte[]>);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setExtendedPanId(@NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_EXTENDED_PAN_ID) byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setMeshLocalPrefix(@NonNull android.net.IpPrefix);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setNetworkKey(@NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_NETWORK_KEY) byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setNetworkName(@NonNull @Size(min=android.net.thread.ActiveOperationalDataset.LENGTH_MIN_NETWORK_NAME_BYTES, max=android.net.thread.ActiveOperationalDataset.LENGTH_MAX_NETWORK_NAME_BYTES) String);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setPanId(@IntRange(from=0, to=65534) int);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setPskc(@NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_PSKC) byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setSecurityPolicy(@NonNull android.net.thread.ActiveOperationalDataset.SecurityPolicy);
+  }
+
+  public static final class ActiveOperationalDataset.SecurityPolicy {
+    ctor public ActiveOperationalDataset.SecurityPolicy(@IntRange(from=1, to=65535) int, @NonNull @Size(min=android.net.thread.ActiveOperationalDataset.SecurityPolicy.LENGTH_MIN_SECURITY_POLICY_FLAGS) byte[]);
+    method @NonNull @Size(min=android.net.thread.ActiveOperationalDataset.SecurityPolicy.LENGTH_MIN_SECURITY_POLICY_FLAGS) public byte[] getFlags();
+    method @IntRange(from=1, to=65535) public int getRotationTimeHours();
+    field public static final int DEFAULT_ROTATION_TIME_HOURS = 672; // 0x2a0
+    field public static final int LENGTH_MIN_SECURITY_POLICY_FLAGS = 1; // 0x1
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class OperationalDatasetTimestamp {
+    ctor public OperationalDatasetTimestamp(@IntRange(from=0, to=281474976710655L) long, @IntRange(from=0, to=32767) int, boolean);
+    method @NonNull public static android.net.thread.OperationalDatasetTimestamp fromInstant(@NonNull java.time.Instant);
+    method @IntRange(from=0, to=281474976710655L) public long getSeconds();
+    method @IntRange(from=0, to=32767) public int getTicks();
+    method public boolean isAuthoritativeSource();
+    method @NonNull public java.time.Instant toInstant();
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class PendingOperationalDataset implements android.os.Parcelable {
+    ctor public PendingOperationalDataset(@NonNull android.net.thread.ActiveOperationalDataset, @NonNull android.net.thread.OperationalDatasetTimestamp, @NonNull java.time.Duration);
+    method public int describeContents();
+    method @NonNull public static android.net.thread.PendingOperationalDataset fromThreadTlvs(@NonNull byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset getActiveOperationalDataset();
+    method @NonNull public java.time.Duration getDelayTimer();
+    method @NonNull public android.net.thread.OperationalDatasetTimestamp getPendingTimestamp();
+    method @NonNull public byte[] toThreadTlvs();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.thread.PendingOperationalDataset> CREATOR;
+  }
+
   @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkController {
     method public int getThreadVersion();
     field public static final int THREAD_VERSION_1_3 = 4; // 0x4
