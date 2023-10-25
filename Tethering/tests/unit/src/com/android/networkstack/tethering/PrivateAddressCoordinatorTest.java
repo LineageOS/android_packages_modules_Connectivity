@@ -126,16 +126,17 @@ public final class PrivateAddressCoordinatorTest {
 
         final LinkAddress newAddress = requestDownstreamAddress(mHotspotIpServer,
                 CONNECTIVITY_SCOPE_GLOBAL, false /* useLastAddress */);
-        final IpPrefix testDupRequest = asIpPrefix(newAddress);
-        assertNotEquals(hotspotPrefix, testDupRequest);
-        assertNotEquals(bluetoothPrefix, testDupRequest);
-        mPrivateAddressCoordinator.releaseDownstream(mHotspotIpServer);
+        final IpPrefix newHotspotPrefix = asIpPrefix(newAddress);
+        assertNotEquals(hotspotPrefix, newHotspotPrefix);
+        assertNotEquals(bluetoothPrefix, newHotspotPrefix);
 
         final LinkAddress usbAddress = requestDownstreamAddress(mUsbIpServer,
                 CONNECTIVITY_SCOPE_GLOBAL, false /* useLastAddress */);
         final IpPrefix usbPrefix = asIpPrefix(usbAddress);
         assertNotEquals(usbPrefix, bluetoothPrefix);
-        assertNotEquals(usbPrefix, hotspotPrefix);
+        assertNotEquals(usbPrefix, newHotspotPrefix);
+
+        mPrivateAddressCoordinator.releaseDownstream(mHotspotIpServer);
         mPrivateAddressCoordinator.releaseDownstream(mUsbIpServer);
     }
 
