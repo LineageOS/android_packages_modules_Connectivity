@@ -34,6 +34,7 @@ import android.os.SystemClock;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
@@ -725,6 +726,15 @@ public class KeepaliveStatsTracker {
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported = buildAndResetMetrics();
         mDependencies.writeStats(dailyKeepaliveInfoReported);
+    }
+
+    /** Dump KeepaliveStatsTracker state. */
+    public void dump(IndentingPrintWriter pw) {
+        ensureRunningOnHandlerThread();
+        pw.println("KeepaliveStatsTracker enabled: " + isEnabled());
+        pw.increaseIndent();
+        pw.println(buildKeepaliveMetrics().toString());
+        pw.decreaseIndent();
     }
 
     private void ensureRunningOnHandlerThread() {
