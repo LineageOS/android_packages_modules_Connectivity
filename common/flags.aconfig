@@ -20,3 +20,10 @@ flag {
   description: "Remove expired services from MdnsServiceCache"
   bug: "304649384"
 }
+
+flag {
+  name: "set_data_saver_via_cm"
+  namespace: "android_core_networking"
+  description: "Set data saver through ConnectivityManager API"
+  bug: "297836825"
+}
