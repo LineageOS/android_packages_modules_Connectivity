@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <android/api-level.h>
 #include <android-base/logging.h>
 #include <android-base/macros.h>
 #include <android-base/properties.h>
@@ -172,6 +173,9 @@ int main(int argc, char** argv, char * const envp[]) {
     (void)argc;
     android::base::InitLogging(argv, &android::base::KernelLogger);
 
+    const int device_api_level = android_get_device_api_level();
+    const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
+
     if (!android::bpf::isAtLeastKernelVersion(4, 19, 0)) {
         ALOGE("Android U QPR2 requires kernel 4.19.");
         return 1;
@@ -208,24 +212,27 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
-    // Linux 5.16-rc1 changed the default to 2 (disabled but changeable), but we need 0 (enabled)
-    // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on pre-5.13,
-    // on 5.13+ it depends on CONFIG_BPF_UNPRIV_DEFAULT_OFF)
-    if (writeProcSysFile("/proc/sys/kernel/unprivileged_bpf_disabled", "0\n") &&
-        android::bpf::isAtLeastKernelVersion(5, 13, 0)) return 1;
+    if (isAtLeastU) {
+        // Linux 5.16-rc1 changed the default to 2 (disabled but changeable),
+        // but we need 0 (enabled)
+        // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on
+        // pre-5.13, on 5.13+ it depends on CONFIG_BPF_UNPRIV_DEFAULT_OFF)
+        if (writeProcSysFile("/proc/sys/kernel/unprivileged_bpf_disabled", "0\n") &&
+            android::bpf::isAtLeastKernelVersion(5, 13, 0)) return 1;
 
-    // Enable the eBPF JIT -- but do note that on 64-bit kernels it is likely
-    // already force enabled by the kernel config option BPF_JIT_ALWAYS_ON.
-    // (Note: this (open) will fail with ENOENT 'No such file or directory' if
-    //  kernel does not have CONFIG_BPF_JIT=y)
-    // BPF_JIT is required by R VINTF (which means 4.14/4.19/5.4 kernels),
-    // but 4.14/4.19 were released with P & Q, and only 5.4 is new in R+.
-    if (writeProcSysFile("/proc/sys/net/core/bpf_jit_enable", "1\n")) return 1;
+        // Enable the eBPF JIT -- but do note that on 64-bit kernels it is likely
+        // already force enabled by the kernel config option BPF_JIT_ALWAYS_ON.
+        // (Note: this (open) will fail with ENOENT 'No such file or directory' if
+        //  kernel does not have CONFIG_BPF_JIT=y)
+        // BPF_JIT is required by R VINTF (which means 4.14/4.19/5.4 kernels),
+        // but 4.14/4.19 were released with P & Q, and only 5.4 is new in R+.
+        if (writeProcSysFile("/proc/sys/net/core/bpf_jit_enable", "1\n")) return 1;
 
-    // Enable JIT kallsyms export for privileged users only
-    // (Note: this (open) will fail with ENOENT 'No such file or directory' if
-    //  kernel does not have CONFIG_HAVE_EBPF_JIT=y)
-    if (writeProcSysFile("/proc/sys/net/core/bpf_jit_kallsyms", "1\n")) return 1;
+        // Enable JIT kallsyms export for privileged users only
+        // (Note: this (open) will fail with ENOENT 'No such file or directory' if
+        //  kernel does not have CONFIG_HAVE_EBPF_JIT=y)
+        if (writeProcSysFile("/proc/sys/net/core/bpf_jit_kallsyms", "1\n")) return 1;
+    }
 
     // Create all the pin subdirectories
     // (this must be done first to allow selinux_context and pin_subdir functionality,
