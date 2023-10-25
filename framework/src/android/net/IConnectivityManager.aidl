@@ -261,4 +261,6 @@ interface IConnectivityManager
     void setVpnNetworkPreference(String session, in UidRange[] ranges);
 
     void setTestLowTcpPollingTimerForKeepalive(long timeMs);
+
+    IBinder getRoutingCoordinatorService();
 }
