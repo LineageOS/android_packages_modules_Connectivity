@@ -16,11 +16,14 @@
 
 package com.android.networkstack.tethering;
 
+import android.annotation.Nullable;
 import android.app.usage.NetworkStatsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothPan;
 import android.content.Context;
 import android.net.INetd;
+import android.net.RoutingCoordinatorManager;
+import android.net.connectivity.TiramisuConnectivityInternalApiUtil;
 import android.net.ip.IpServer;
 import android.os.Build;
 import android.os.Handler;
@@ -33,6 +36,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
 import com.android.internal.util.StateMachine;
+import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
 import com.android.networkstack.apishim.BluetoothPanShimImpl;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
@@ -122,6 +127,16 @@ public abstract class TetheringDependencies {
     }
 
     /**
+     * Get the routing coordinator, or null if below S.
+     */
+    @Nullable
+    public LateSdk<RoutingCoordinatorManager> getRoutingCoordinator(Context context) {
+        if (!SdkLevel.isAtLeastS()) return new LateSdk<>(null);
+        return new LateSdk<>(
+                TiramisuConnectivityInternalApiUtil.getRoutingCoordinatorManager(context));
+    }
+
+    /**
      * Get a reference to the TetheringNotificationUpdater to be used by tethering.
      */
     public TetheringNotificationUpdater getNotificationUpdater(@NonNull final Context ctx,
@@ -135,7 +150,7 @@ public abstract class TetheringDependencies {
     public abstract Looper getTetheringLooper();
 
     /**
-     *  Get Context of TetheringSerice.
+     *  Get Context of TetheringService.
      */
     public abstract Context getContext();
 

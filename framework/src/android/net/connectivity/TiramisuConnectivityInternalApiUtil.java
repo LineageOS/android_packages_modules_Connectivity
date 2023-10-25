@@ -18,6 +18,7 @@ package android.net.connectivity;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.RoutingCoordinatorManager;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -34,15 +35,28 @@ import androidx.annotation.RequiresApi;
  * linter).
  * @hide
  */
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+// TODO : rename this so that it doesn't reference "Tiramisu" since it can be used in S.
+@RequiresApi(Build.VERSION_CODES.S)
 public class TiramisuConnectivityInternalApiUtil {
 
     /**
      * Get a service binder token for
      * {@link com.android.server.connectivity.wear.CompanionDeviceManagerProxyService}.
      */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public static IBinder getCompanionDeviceManagerProxyService(Context ctx) {
         final ConnectivityManager cm = ctx.getSystemService(ConnectivityManager.class);
         return cm.getCompanionDeviceManagerProxyService();
+    }
+
+    /**
+     * Obtain a routing coordinator manager from a context, possibly cross-module.
+     * @param ctx the context
+     * @return an instance of the coordinator manager
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    public static RoutingCoordinatorManager getRoutingCoordinatorManager(Context ctx) {
+        final ConnectivityManager cm = ctx.getSystemService(ConnectivityManager.class);
+        return cm.getRoutingCoordinatorManager();
     }
 }

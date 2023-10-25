@@ -142,6 +142,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.RouteInfo;
+import android.net.RoutingCoordinatorManager;
 import android.net.TetherStatesParcel;
 import android.net.TetheredClient;
 import android.net.TetheredClient.AddressInfo;
@@ -191,6 +192,7 @@ import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.internal.util.test.FakeSettingsProvider;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.InterfaceParams;
+import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.ip.IpNeighborMonitor;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
@@ -480,6 +482,12 @@ public class TetheringTest {
                 Runnable callback) {
             mEntitleMgr = spy(super.getEntitlementManager(ctx, h, log, callback));
             return mEntitleMgr;
+        }
+
+        @Nullable
+        @Override
+        public LateSdk<RoutingCoordinatorManager> getRoutingCoordinator(final Context context) {
+            return new LateSdk<>(null);
         }
 
         @Override
