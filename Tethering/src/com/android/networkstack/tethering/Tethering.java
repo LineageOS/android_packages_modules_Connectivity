@@ -90,6 +90,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkInfo;
+import android.net.RoutingCoordinatorManager;
 import android.net.TetherStatesParcel;
 import android.net.TetheredClient;
 import android.net.TetheringCallbackStartedParcel;
@@ -136,6 +137,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetdUtils;
+import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceCallbackShim;
@@ -250,6 +252,10 @@ public class Tethering {
     private final Handler mHandler;
     private final INetd mNetd;
     private final NetdCallback mNetdCallback;
+    // Contains null if the connectivity module is unsupported, as the routing coordinator is not
+    // available. Must use LateSdk because MessageUtils enumerates fields in this class, so it
+    // must be able to find all classes at runtime.
+    @NonNull private final LateSdk<RoutingCoordinatorManager> mRoutingCoordinator;
     private final UserRestrictionActionListener mTetheringRestriction;
     private final ActiveDataSubIdListener mActiveDataSubIdListener;
     private final ConnectedClientsTracker mConnectedClientsTracker;
@@ -296,6 +302,7 @@ public class Tethering {
         mDeps = deps;
         mContext = mDeps.getContext();
         mNetd = mDeps.getINetd(mContext);
+        mRoutingCoordinator = mDeps.getRoutingCoordinator(mContext);
         mLooper = mDeps.getTetheringLooper();
         mNotificationUpdater = mDeps.getNotificationUpdater(mContext, mLooper);
         mTetheringMetrics = mDeps.getTetheringMetrics();
@@ -2835,8 +2842,9 @@ public class Tethering {
         mLog.i("adding IpServer for: " + iface);
         final TetherState tetherState = new TetherState(
                 new IpServer(iface, mLooper, interfaceType, mLog, mNetd, mBpfCoordinator,
-                             makeControlCallback(), mConfig, mPrivateAddressCoordinator,
-                             mTetheringMetrics, mDeps.getIpServerDependencies()), isNcm);
+                        mRoutingCoordinator, makeControlCallback(), mConfig,
+                        mPrivateAddressCoordinator, mTetheringMetrics,
+                        mDeps.getIpServerDependencies()), isNcm);
         mTetherStates.put(iface, tetherState);
         tetherState.ipServer.start();
     }
