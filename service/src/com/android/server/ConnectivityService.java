@@ -199,7 +199,6 @@ import android.net.QosFilter;
 import android.net.QosSocketFilter;
 import android.net.QosSocketInfo;
 import android.net.RouteInfo;
-import android.net.RouteInfoParcel;
 import android.net.SocketKeepalive;
 import android.net.TetheringManager;
 import android.net.TransportInfo;
@@ -330,6 +329,7 @@ import com.android.server.connectivity.PermissionMonitor;
 import com.android.server.connectivity.ProfileNetworkPreferenceInfo;
 import com.android.server.connectivity.ProxyTracker;
 import com.android.server.connectivity.QosCallbackTracker;
+import com.android.server.connectivity.RoutingCoordinatorService;
 import com.android.server.connectivity.UidRangeUtils;
 import com.android.server.connectivity.VpnNetworkPreferenceInfo;
 import com.android.server.connectivity.wear.CompanionDeviceManagerProxyService;
@@ -493,6 +493,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @GuardedBy("mTNSLock")
     private TestNetworkService mTNS;
     private final CompanionDeviceManagerProxyService mCdmps;
+    private final RoutingCoordinatorService mRoutingCoordinatorService;
 
     private final Object mTNSLock = new Object();
 
@@ -1825,6 +1826,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } else {
             mCdmps = null;
         }
+
+        mRoutingCoordinatorService = new RoutingCoordinatorService(netd);
 
         mDestroyFrozenSockets = mDeps.isAtLeastU()
                 && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION);
@@ -8515,7 +8518,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             for (final String iface : interfaceDiff.added) {
                 try {
                     if (DBG) log("Adding iface " + iface + " to network " + netId);
-                    mNetd.networkAddInterface(netId, iface);
+                    mRoutingCoordinatorService.addInterfaceToNetwork(netId, iface);
                     wakeupModifyInterface(iface, nai, true);
                     mDeps.reportNetworkInterfaceForTransports(mContext, iface,
                             nai.networkCapabilities.getTransportTypes());
@@ -8528,43 +8531,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
             try {
                 if (DBG) log("Removing iface " + iface + " from network " + netId);
                 wakeupModifyInterface(iface, nai, false);
-                mNetd.networkRemoveInterface(netId, iface);
+                mRoutingCoordinatorService.removeInterfaceFromNetwork(netId, iface);
             } catch (Exception e) {
                 loge("Exception removing interface: " + e);
             }
         }
-    }
-
-    // TODO: move to frameworks/libs/net.
-    private RouteInfoParcel convertRouteInfo(RouteInfo route) {
-        final String nextHop;
-
-        switch (route.getType()) {
-            case RouteInfo.RTN_UNICAST:
-                if (route.hasGateway()) {
-                    nextHop = route.getGateway().getHostAddress();
-                } else {
-                    nextHop = INetd.NEXTHOP_NONE;
-                }
-                break;
-            case RouteInfo.RTN_UNREACHABLE:
-                nextHop = INetd.NEXTHOP_UNREACHABLE;
-                break;
-            case RouteInfo.RTN_THROW:
-                nextHop = INetd.NEXTHOP_THROW;
-                break;
-            default:
-                nextHop = INetd.NEXTHOP_NONE;
-                break;
-        }
-
-        final RouteInfoParcel rip = new RouteInfoParcel();
-        rip.ifName = route.getInterface();
-        rip.destination = route.getDestination().toString();
-        rip.nextHop = nextHop;
-        rip.mtu = route.getMtu();
-
-        return rip;
     }
 
     /**
@@ -8587,10 +8558,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (route.hasGateway()) continue;
             if (VDBG || DDBG) log("Adding Route [" + route + "] to network " + netId);
             try {
-                mNetd.networkAddRouteParcel(netId, convertRouteInfo(route));
+                mRoutingCoordinatorService.addRoute(netId, route);
             } catch (Exception e) {
                 if ((route.getDestination().getAddress() instanceof Inet4Address) || VDBG) {
-                    loge("Exception in networkAddRouteParcel for non-gateway: " + e);
+                    loge("Exception in addRoute for non-gateway: " + e);
                 }
             }
         }
@@ -8598,10 +8569,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (!route.hasGateway()) continue;
             if (VDBG || DDBG) log("Adding Route [" + route + "] to network " + netId);
             try {
-                mNetd.networkAddRouteParcel(netId, convertRouteInfo(route));
+                mRoutingCoordinatorService.addRoute(netId, route);
             } catch (Exception e) {
                 if ((route.getGateway() instanceof Inet4Address) || VDBG) {
-                    loge("Exception in networkAddRouteParcel for gateway: " + e);
+                    loge("Exception in addRoute for gateway: " + e);
                 }
             }
         }
@@ -8609,18 +8580,18 @@ public class ConnectivityService extends IConnectivityManager.Stub
         for (RouteInfo route : routeDiff.removed) {
             if (VDBG || DDBG) log("Removing Route [" + route + "] from network " + netId);
             try {
-                mNetd.networkRemoveRouteParcel(netId, convertRouteInfo(route));
+                mRoutingCoordinatorService.removeRoute(netId, route);
             } catch (Exception e) {
-                loge("Exception in networkRemoveRouteParcel: " + e);
+                loge("Exception in removeRoute: " + e);
             }
         }
 
         for (RouteInfo route : routeDiff.updated) {
             if (VDBG || DDBG) log("Updating Route [" + route + "] from network " + netId);
             try {
-                mNetd.networkUpdateRouteParcel(netId, convertRouteInfo(route));
+                mRoutingCoordinatorService.updateRoute(netId, route);
             } catch (Exception e) {
-                loge("Exception in networkUpdateRouteParcel: " + e);
+                loge("Exception in updateRoute: " + e);
             }
         }
         return !routeDiff.added.isEmpty() || !routeDiff.removed.isEmpty()
@@ -10261,7 +10232,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             // If a rate limit has been configured and is applicable to this network (network
             // provides internet connectivity), apply it. The tc police filter cannot be attached
             // before the clsact qdisc is added which happens as part of updateLinkProperties ->
-            // updateInterfaces -> INetd#networkAddInterface.
+            // updateInterfaces -> RoutingCoordinatorManager#addInterfaceToNetwork
             // Note: in case of a system server crash, the NetworkController constructor in netd
             // (called when netd starts up) deletes the clsact qdisc of all interfaces.
             if (canNetworkBeRateLimited(networkAgent) && mIngressRateLimit >= 0) {
@@ -12753,5 +12724,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     public IBinder getCompanionDeviceManagerProxyService() {
         enforceNetworkStackPermission(mContext);
         return mCdmps;
+    }
+
+    @Override
+    public IBinder getRoutingCoordinatorService() {
+        enforceNetworkStackPermission(mContext);
+        return mRoutingCoordinatorService;
     }
 }
