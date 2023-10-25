@@ -292,17 +292,20 @@ java_genrule {
 // Library providing limited APIs within the connectivity module, so that R+ components like
 // Tethering have a controlled way to depend on newer components like framework-connectivity that
 // are not loaded on R.
+// Note that this target needs to have access to hidden classes, and as such needs to list
+// the full libraries instead of the .impl lib (which only expose API classes).
 java_library {
     name: "connectivity-internal-api-util",
     sdk_version: "module_current",
     libs: [
         "androidx.annotation_annotation",
-        "framework-connectivity.impl",
+        "framework-connectivity-pre-jarjar",
     ],
     jarjar_rules: ":framework-connectivity-jarjar-rules",
     srcs: [
-        // Files listed here MUST all be annotated with @RequiresApi(Build.VERSION_CODES.TIRAMISU),
-        // so that API checks are enforced for R+ users of this library
+        // Files listed here MUST all be annotated with @RequiresApi(Build.VERSION_CODES.S)
+        // or above as appropriate so that API checks are enforced for R+ users of this library
+        "src/android/net/RoutingCoordinatorManager.java",
         "src/android/net/connectivity/TiramisuConnectivityInternalApiUtil.java",
     ],
     visibility: [
