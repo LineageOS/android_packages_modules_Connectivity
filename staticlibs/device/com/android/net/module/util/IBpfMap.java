@@ -18,6 +18,7 @@ package com.android.net.module.util;
 import android.system.ErrnoException;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
@@ -49,14 +50,16 @@ public interface IBpfMap<K extends Struct, V extends Struct> extends AutoCloseab
     /** Remove existing key from eBpf map. Return true if something was deleted. */
     boolean deleteEntry(K key) throws ErrnoException;
 
-    /** Returns {@code true} if this map contains no elements. */
-    boolean isEmpty() throws ErrnoException;
-
     /** Get the key after the passed-in key. */
     K getNextKey(@NonNull K key) throws ErrnoException;
 
     /** Get the first key of the eBpf map. */
     K getFirstKey() throws ErrnoException;
+
+    /** Returns {@code true} if this map contains no elements. */
+    default boolean isEmpty() throws ErrnoException {
+        return getFirstKey() == null;
+    }
 
     /** Check whether a key exists in the map. */
     boolean containsKey(@NonNull K key) throws ErrnoException;
@@ -70,13 +73,38 @@ public interface IBpfMap<K extends Struct, V extends Struct> extends AutoCloseab
 
     /**
      * Iterate through the map and handle each key -> value retrieved base on the given BiConsumer.
+     * The given BiConsumer may to delete the passed-in entry, but is not allowed to perform any
+     * other structural modifications to the map, such as adding entries or deleting other entries.
+     * Otherwise, iteration will result in undefined behaviour.
      */
-    void forEach(ThrowingBiConsumer<K, V> action) throws ErrnoException;
+    default public void forEach(ThrowingBiConsumer<K, V> action) throws ErrnoException {
+        @Nullable K nextKey = getFirstKey();
 
-    /** Clears the map. */
-    void clear() throws ErrnoException;
+        while (nextKey != null) {
+            @NonNull final K curKey = nextKey;
+            @NonNull final V value = getValue(curKey);
+
+            nextKey = getNextKey(curKey);
+            action.accept(curKey, value);
+        }
+    }
+
+    /**
+     * Clears the map. The map may already be empty.
+     *
+     * @throws ErrnoException if the map is already closed, if an error occurred during iteration,
+     *                        or if a non-ENOENT error occurred when deleting a key.
+     */
+    default public void clear() throws ErrnoException {
+        K key = getFirstKey();
+        while (key != null) {
+            deleteEntry(key);  // ignores ENOENT.
+            key = getFirstKey();
+        }
+    }
 
     /** Close for AutoCloseable. */
     @Override
-    void close() throws IOException;
+    default void close() throws IOException {
+    };
 }
