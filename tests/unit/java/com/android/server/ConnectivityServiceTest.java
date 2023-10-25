@@ -2299,7 +2299,7 @@ public class ConnectivityServiceTest {
         }
 
         @Override
-        public int getBpfProgramId(final int attachType, @NonNull final String cgroupPath) {
+        public int getBpfProgramId(final int attachType) {
             return 0;
         }
 
