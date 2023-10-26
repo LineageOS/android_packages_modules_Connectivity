@@ -64,6 +64,8 @@ import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 import static android.text.format.DateUtils.WEEK_IN_MILLIS;
 
+import static com.android.server.net.NetworkStatsEventLogger.POLL_REASON_RAT_CHANGED;
+import static com.android.server.net.NetworkStatsEventLogger.PollEvent.pollReasonNameOf;
 import static com.android.server.net.NetworkStatsService.ACTION_NETWORK_STATS_POLL;
 import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME;
 import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME;
@@ -524,6 +526,11 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             public SkDestroyListener makeSkDestroyListener(
                     IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap, Handler handler) {
                 return mSkDestroyListener;
+            }
+
+            @Override
+            public boolean supportEventLogger(@NonNull Context cts) {
+                return true;
             }
         };
     }
@@ -2673,5 +2680,15 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     public void testDumpIfaceStatsMapUnknownInterface() throws Exception {
         doReturn(null).when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
         doTestDumpIfaceStatsMap("unknown");
+    }
+
+    // Basic test to ensure event logger dump is called.
+    // Note that tests to ensure detailed correctness is done in the dedicated tests.
+    // See NetworkStatsEventLoggerTest.
+    @Test
+    public void testDumpEventLogger() {
+        setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_UMTS);
+        final String dump = getDump();
+        assertDumpContains(dump, pollReasonNameOf(POLL_REASON_RAT_CHANGED));
     }
 }
