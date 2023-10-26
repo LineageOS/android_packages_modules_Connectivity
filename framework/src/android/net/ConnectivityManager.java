@@ -26,9 +26,11 @@ import static android.net.NetworkRequest.Type.TRACK_SYSTEM_DEFAULT;
 import static android.net.QosCallback.QosCallbackRegistrationException;
 
 import android.annotation.CallbackExecutor;
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.annotation.RequiresPermission;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
@@ -114,6 +116,14 @@ import java.util.concurrent.RejectedExecutionException;
 public class ConnectivityManager {
     private static final String TAG = "ConnectivityManager";
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+
+    // TODO : remove this class when udc-mainline-prod is abandoned and android.net.flags.Flags is
+    // available here
+    /** @hide */
+    public static class Flags {
+        static final String SET_DATA_SAVER_VIA_CM =
+                "com.android.net.flags.set_data_saver_via_cm";
+    }
 
     /**
      * A change in network connectivity has occurred. A default connection has either
@@ -5958,6 +5968,28 @@ public class ConnectivityManager {
     }
 
     /**
+     * Sets data saver switch.
+     *
+     * @param enable True if enable.
+     * @throws IllegalStateException if failed.
+     * @hide
+     */
+    @FlaggedApi(Flags.SET_DATA_SAVER_VIA_CM)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public void setDataSaverEnabled(final boolean enable) {
+        try {
+            mService.setDataSaverEnabled(enable);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Adds the specified UID to the list of UIds that are allowed to use data on metered networks
      * even when background data is restricted. The deny list takes precedence over the allow list.
      *
@@ -6170,6 +6202,26 @@ public class ConnectivityManager {
     public IBinder getCompanionDeviceManagerProxyService() {
         try {
             return mService.getCompanionDeviceManagerProxyService();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    private static final Object sRoutingCoordinatorManagerLock = new Object();
+    @GuardedBy("sRoutingCoordinatorManagerLock")
+    private static RoutingCoordinatorManager sRoutingCoordinatorManager = null;
+    /** @hide */
+    @RequiresApi(Build.VERSION_CODES.S)
+    public RoutingCoordinatorManager getRoutingCoordinatorManager() {
+        try {
+            synchronized (sRoutingCoordinatorManagerLock) {
+                if (null == sRoutingCoordinatorManager) {
+                    sRoutingCoordinatorManager = new RoutingCoordinatorManager(mContext,
+                            IRoutingCoordinator.Stub.asInterface(
+                                    mService.getRoutingCoordinatorService()));
+                }
+                return sRoutingCoordinatorManager;
+            }
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

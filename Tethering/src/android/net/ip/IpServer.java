@@ -44,6 +44,7 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.RouteInfo;
+import android.net.RoutingCoordinatorManager;
 import android.net.TetheredClient;
 import android.net.TetheringManager;
 import android.net.TetheringRequestParcel;
@@ -71,6 +72,7 @@ import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetdUtils;
+import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.ip.InterfaceController;
 import com.android.net.module.util.ip.IpNeighborMonitor;
@@ -245,6 +247,11 @@ public class IpServer extends StateMachine {
     private final INetd mNetd;
     @NonNull
     private final BpfCoordinator mBpfCoordinator;
+    // Contains null if the connectivity module is unsupported, as the routing coordinator is not
+    // available. Must use LateSdk because MessageUtils enumerates fields in this class, so it
+    // must be able to find all classes at runtime.
+    @NonNull
+    private final LateSdk<RoutingCoordinatorManager> mRoutingCoordinator;
     private final Callback mCallback;
     private final InterfaceController mInterfaceCtrl;
     private final PrivateAddressCoordinator mPrivateAddressCoordinator;
@@ -307,13 +314,15 @@ public class IpServer extends StateMachine {
     // object. It helps to reduce the arguments of the constructor.
     public IpServer(
             String ifaceName, Looper looper, int interfaceType, SharedLog log,
-            INetd netd, @NonNull BpfCoordinator coordinator, Callback callback,
+            INetd netd, @NonNull BpfCoordinator bpfCoordinator,
+            @Nullable LateSdk<RoutingCoordinatorManager> routingCoordinator, Callback callback,
             TetheringConfiguration config, PrivateAddressCoordinator addressCoordinator,
             TetheringMetrics tetheringMetrics, Dependencies deps) {
         super(ifaceName, looper);
         mLog = log.forSubComponent(ifaceName);
         mNetd = netd;
-        mBpfCoordinator = coordinator;
+        mBpfCoordinator = bpfCoordinator;
+        mRoutingCoordinator = routingCoordinator;
         mCallback = callback;
         mInterfaceCtrl = new InterfaceController(ifaceName, mNetd, mLog);
         mIfaceName = ifaceName;
@@ -807,21 +816,31 @@ public class IpServer extends StateMachine {
         for (RouteInfo route : toBeRemoved) mLinkProperties.removeRoute(route);
     }
 
-    private void addRoutesToLocalNetwork(@NonNull final List<RouteInfo> toBeAdded) {
+    private void addInterfaceToNetwork(final int netId, @NonNull final String ifaceName) {
         try {
-            // It's safe to call networkAddInterface() even if
-            // the interface is already in the local_network.
-            mNetd.networkAddInterface(INetd.LOCAL_NET_ID, mIfaceName);
-            try {
-                // Add routes from local network. Note that adding routes that
-                // already exist does not cause an error (EEXIST is silently ignored).
-                NetdUtils.addRoutesToLocalNetwork(mNetd, mIfaceName, toBeAdded);
-            } catch (IllegalStateException e) {
-                mLog.e("Failed to add IPv4/v6 routes to local table: " + e);
-                return;
+            if (null != mRoutingCoordinator.value) {
+                // TODO : remove this call in favor of using the LocalNetworkConfiguration
+                // correctly, which will let ConnectivityService do it automatically.
+                mRoutingCoordinator.value.addInterfaceToNetwork(netId, ifaceName);
+            } else {
+                mNetd.networkAddInterface(netId, ifaceName);
             }
         } catch (ServiceSpecificException | RemoteException e) {
             mLog.e("Failed to add " + mIfaceName + " to local table: ", e);
+            return;
+        }
+    }
+
+    private void addRoutesToLocalNetwork(@NonNull final List<RouteInfo> toBeAdded) {
+        // It's safe to call addInterfaceToNetwork() even if
+        // the interface is already in the local_network.
+        addInterfaceToNetwork(INetd.LOCAL_NET_ID, mIfaceName);
+        try {
+            // Add routes from local network. Note that adding routes that
+            // already exist does not cause an error (EEXIST is silently ignored).
+            NetdUtils.addRoutesToLocalNetwork(mNetd, mIfaceName, toBeAdded);
+        } catch (IllegalStateException e) {
+            mLog.e("Failed to add IPv4/v6 routes to local table: " + e);
             return;
         }
 

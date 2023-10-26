@@ -240,6 +240,8 @@ interface IConnectivityManager
 
     void setTestAllowBadWifiUntil(long timeMs);
 
+    void setDataSaverEnabled(boolean enable);
+
     void updateMeteredNetworkAllowList(int uid, boolean add);
 
     void updateMeteredNetworkDenyList(int uid, boolean add);
@@ -259,4 +261,6 @@ interface IConnectivityManager
     void setVpnNetworkPreference(String session, in UidRange[] ranges);
 
     void setTestLowTcpPollingTimerForKeepalive(long timeMs);
+
+    IBinder getRoutingCoordinatorService();
 }
