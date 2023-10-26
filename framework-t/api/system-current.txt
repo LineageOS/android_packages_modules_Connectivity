@@ -492,12 +492,12 @@ package android.net.thread {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.thread.PendingOperationalDataset> CREATOR;
   }
 
-  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkController {
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class ThreadNetworkController {
     method public int getThreadVersion();
     field public static final int THREAD_VERSION_1_3 = 4; // 0x4
   }
 
-  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkManager {
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class ThreadNetworkManager {
     method @NonNull public java.util.List<android.net.thread.ThreadNetworkController> getAllThreadNetworkControllers();
   }
 
