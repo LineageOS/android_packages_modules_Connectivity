@@ -38,7 +38,7 @@ import java.util.List;
 @FlaggedApi(ThreadNetworkFlags.FLAG_THREAD_ENABLED)
 @SystemApi
 @SystemService(ThreadNetworkManager.SERVICE_NAME)
-public class ThreadNetworkManager {
+public final class ThreadNetworkManager {
     /**
      * This value tracks {@link Context#THREAD_NETWORK_SERVICE}.
      *
