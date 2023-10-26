@@ -136,6 +136,9 @@ public class TetheringConfiguration {
      */
     public static final int DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS = 5000;
 
+    /** A flag for using synchronous or asynchronous state machine. */
+    public static final boolean USE_SYNC_SM = false;
+
     public final String[] tetherableUsbRegexs;
     public final String[] tetherableWifiRegexs;
     public final String[] tetherableWigigRegexs;
