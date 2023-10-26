@@ -24,28 +24,27 @@
 namespace android {
 namespace net {
 
+#define RETURN_IF_RESULT_NOT_OK(result)                                                            \
+  do {                                                                                             \
+    if (!result.ok()) {                                                                            \
+      LOG(ERROR) << "L" << __LINE__ << " " << __func__ << ": " << strerror(result.error().code()); \
+      return result.error();                                                                       \
+    }                                                                                              \
+  } while (0)
+
 base::Result<void> DnsBpfHelper::init() {
   if (!android::modules::sdklevel::IsAtLeastT()) {
     LOG(ERROR) << __func__ << ": Unsupported before Android T.";
     return base::Error(EOPNOTSUPP);
   }
 
-  auto result = mConfigurationMap.init(CONFIGURATION_MAP_PATH);
-  if (!result.ok()) {
-    LOG(ERROR) << __func__ << ": Failed to init configuration_map: "
-               << strerror(result.error().code());
-    return result;
-  }
-
-  result = mUidOwnerMap.init(UID_OWNER_MAP_PATH);
-  if (!result.ok()) {
-    LOG(ERROR) << __func__ << ": Failed to init uid_owner_map: "
-               << strerror(result.error().code());
-  }
-  return result;
+  RETURN_IF_RESULT_NOT_OK(mConfigurationMap.init(CONFIGURATION_MAP_PATH));
+  RETURN_IF_RESULT_NOT_OK(mUidOwnerMap.init(UID_OWNER_MAP_PATH));
+  RETURN_IF_RESULT_NOT_OK(mDataSaverEnabledMap.init(DATA_SAVER_ENABLED_MAP_PATH));
+  return {};
 }
 
-base::Result<bool> DnsBpfHelper::isUidNetworkingBlocked(uid_t uid, bool) {
+base::Result<bool> DnsBpfHelper::isUidNetworkingBlocked(uid_t uid, bool metered) {
   if (is_system_uid(uid)) return false;
   if (!mConfigurationMap.isValid() || !mUidOwnerMap.isValid()) {
     LOG(ERROR) << __func__
@@ -54,22 +53,25 @@ base::Result<bool> DnsBpfHelper::isUidNetworkingBlocked(uid_t uid, bool) {
   }
 
   auto enabledRules = mConfigurationMap.readValue(UID_RULES_CONFIGURATION_KEY);
-  if (!enabledRules.ok()) {
-    LOG(ERROR) << __func__
-               << ": Failed to read enabled rules from configuration_map: "
-               << strerror(enabledRules.error().code());
-    return enabledRules.error();
-  }
+  RETURN_IF_RESULT_NOT_OK(enabledRules);
 
   auto value = mUidOwnerMap.readValue(uid);
   uint32_t uidRules = value.ok() ? value.value().rule : 0;
 
+  // For doze mode, battery saver, low power standby.
   if (isBlockedByUidRules(enabledRules.value(), uidRules)) return true;
 
-  // TODO: Read data saver settings from bpf maps. For metered network, check penalty box, happy box
-  // and data saver settings.
+  // For data saver.
+  if (!metered) return false;
 
-  return false;
+  // The background data setting (PENALTY_BOX_MATCH) and unrestricted data usage setting
+  // (HAPPY_BOX_MATCH) for individual apps override the system wide Data Saver setting.
+  if (uidRules & PENALTY_BOX_MATCH) return true;
+  if (uidRules & HAPPY_BOX_MATCH) return false;
+
+  auto dataSaverSetting = mDataSaverEnabledMap.readValue(DATA_SAVER_ENABLED_KEY);
+  RETURN_IF_RESULT_NOT_OK(dataSaverSetting);
+  return dataSaverSetting.value();
 }
 
 }  // namespace net
