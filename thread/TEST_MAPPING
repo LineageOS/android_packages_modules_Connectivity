@@ -1,7 +1,5 @@
 {
-  // TODO (b/297729075): graduate this test to presubmit once it meets the SLO requirements.
-  // See go/test-mapping-slo-guide
-  "postsubmit": [
+  "presubmit": [
     {
       "name": "CtsThreadNetworkTestCases"
     }
