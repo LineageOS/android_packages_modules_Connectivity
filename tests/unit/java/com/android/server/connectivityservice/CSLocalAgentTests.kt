@@ -32,11 +32,11 @@ import android.net.RouteInfo
 import android.os.Build
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
+import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,6 +65,8 @@ private fun lp(iface: String) = LinkProperties().apply {
 class CSLocalAgentTests : CSTest() {
     @Test
     fun testBadAgents() {
+        deps.setBuildSdk(VERSION_V)
+
         assertFailsWith<IllegalArgumentException> {
             Agent(nc = NetworkCapabilities.Builder()
                     .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
@@ -75,6 +77,41 @@ class CSLocalAgentTests : CSTest() {
             Agent(nc = NetworkCapabilities.Builder().build(),
                     lnc = LocalNetworkConfig.Builder().build())
         }
+    }
+
+    @Test
+    fun testStructuralConstraintViolation() {
+        deps.setBuildSdk(VERSION_V)
+
+        val cb = TestableNetworkCallback()
+        cm.requestNetwork(NetworkRequest.Builder()
+                .clearCapabilities()
+                .build(),
+                cb)
+        val agent = Agent(nc = NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
+                .build(),
+                lnc = LocalNetworkConfig.Builder().build())
+        agent.connect()
+        cb.expect<Available>(agent.network)
+        cb.expect<CapabilitiesChanged>(agent.network)
+        cb.expect<LinkPropertiesChanged>(agent.network)
+        cb.expect<BlockedStatus>(agent.network)
+        agent.sendNetworkCapabilities(NetworkCapabilities.Builder().build())
+        cb.expect<Lost>(agent.network)
+
+        val agent2 = Agent(nc = NetworkCapabilities.Builder()
+                .build(),
+                lnc = null)
+        agent2.connect()
+        cb.expect<Available>(agent2.network)
+        cb.expect<CapabilitiesChanged>(agent2.network)
+        cb.expect<LinkPropertiesChanged>(agent2.network)
+        cb.expect<BlockedStatus>(agent2.network)
+        agent2.sendNetworkCapabilities(NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
+                .build())
+        cb.expect<Lost>(agent2.network)
     }
 
     @Test
