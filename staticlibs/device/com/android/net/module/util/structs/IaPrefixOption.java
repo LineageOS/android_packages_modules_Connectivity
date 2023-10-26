@@ -129,6 +129,10 @@ public class IaPrefixOption extends Struct {
         return true;
     }
 
+    public IpPrefix getIpPrefix() {
+        return mIpPrefix;
+    }
+
     /**
      * Check whether or not IA Prefix option has 0 preferred and valid lifetimes.
      */
