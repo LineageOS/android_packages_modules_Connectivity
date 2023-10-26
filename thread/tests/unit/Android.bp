@@ -38,7 +38,7 @@ android_test {
         "framework-connectivity-t-pre-jarjar",
         "guava-android-testlib",
         "net-tests-utils",
-        "truth-prebuilt",
+        "truth",
     ],
     libs: [
         "android.test.base",
