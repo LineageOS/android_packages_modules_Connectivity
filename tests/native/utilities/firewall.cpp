@@ -27,6 +27,9 @@ Firewall::Firewall() {
 
     result = mUidOwnerMap.init(UID_OWNER_MAP_PATH);
     EXPECT_RESULT_OK(result) << "init mUidOwnerMap failed";
+
+    result = mDataSaverEnabledMap.init(DATA_SAVER_ENABLED_MAP_PATH);
+    EXPECT_RESULT_OK(result) << "init mDataSaverEnabledMap failed";
 }
 
 Firewall* Firewall::getInstance() {
@@ -114,5 +117,22 @@ Result<void> Firewall::removeUidInterfaceRules(const std::vector<int32_t>& uids)
         auto res = removeRule(uid, IIF_MATCH);
         if (!res.ok()) return res;
     }
+    return {};
+}
+
+Result<bool> Firewall::getDataSaverSetting() {
+    std::lock_guard guard(mMutex);
+    auto dataSaverSetting = mDataSaverEnabledMap.readValue(DATA_SAVER_ENABLED_KEY);
+    if (!dataSaverSetting.ok()) {
+        return Errorf("Cannot read the data saver setting: {}", dataSaverSetting.error().message());
+    }
+    return dataSaverSetting;
+}
+
+Result<void> Firewall::setDataSaver(bool enabled) {
+    std::lock_guard guard(mMutex);
+    auto res = mDataSaverEnabledMap.writeValue(DATA_SAVER_ENABLED_KEY, enabled, BPF_EXIST);
+    if (!res.ok()) return Errorf("Failed to set data saver: {}", res.error().message());
+
     return {};
 }
