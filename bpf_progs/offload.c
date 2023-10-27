@@ -198,7 +198,8 @@ static inline __always_inline int do_forward6(struct __sk_buff* skb,
 
     TetherUpstream6Key ku = {
             .iif = skb->ifindex,
-            .src64 = 0,
+            // Retrieve the first 64 bits of the source IPv6 address in network order
+            .src64 = *(uint64_t*)&(ip6->saddr.s6_addr32[0]),
     };
     if (is_ethernet) __builtin_memcpy(stream.down ? kd.dstMac : ku.dstMac, eth->h_dest, ETH_ALEN);
 
