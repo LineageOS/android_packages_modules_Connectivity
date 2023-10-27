@@ -2880,24 +2880,33 @@ public class TetheringTest {
         final Network wifiNetwork = new Network(200);
         final Network[] allNetworks = { wifiNetwork };
         doReturn(allNetworks).when(mCm).getAllNetworks();
+        InOrder inOrder = inOrder(mUsbManager, mNetd);
         runUsbTethering(null);
+
+        inOrder.verify(mNetd).tetherInterfaceAdd(TEST_RNDIS_IFNAME);
+
         final ArgumentCaptor<InterfaceConfigurationParcel> ifaceConfigCaptor =
                 ArgumentCaptor.forClass(InterfaceConfigurationParcel.class);
         verify(mNetd).interfaceSetCfg(ifaceConfigCaptor.capture());
         final String ipv4Address = ifaceConfigCaptor.getValue().ipv4Addr;
         verify(mDhcpServer, timeout(DHCPSERVER_START_TIMEOUT_MS).times(1)).startWithCallbacks(
                 any(), any());
-        reset(mUsbManager);
 
         // Cause a prefix conflict by assigning a /30 out of the downstream's /24 to the upstream.
         updateV4Upstream(new LinkAddress(InetAddresses.parseNumericAddress(ipv4Address), 30),
                 wifiNetwork, TEST_WIFI_IFNAME, TRANSPORT_WIFI);
         // verify turn off usb tethering
-        verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NONE);
+        inOrder.verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_NONE);
         sendUsbBroadcast(true, true, -1 /* function */);
         mLooper.dispatchAll();
+        inOrder.verify(mNetd).tetherInterfaceRemove(TEST_RNDIS_IFNAME);
+
         // verify restart usb tethering
-        verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
+        inOrder.verify(mUsbManager).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
+
+        sendUsbBroadcast(true, true, TETHER_USB_RNDIS_FUNCTION);
+        mLooper.dispatchAll();
+        inOrder.verify(mNetd).tetherInterfaceAdd(TEST_RNDIS_IFNAME);
     }
 
     @Test
