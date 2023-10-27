@@ -322,6 +322,23 @@ public class IpServerTest {
         when(mTetherConfig.isBpfOffloadEnabled()).thenReturn(DEFAULT_USING_BPF_OFFLOAD);
         when(mTetherConfig.useLegacyDhcpServer()).thenReturn(false /* default value */);
 
+        // Simulate the behavior of RoutingCoordinator
+        if (null != mRoutingCoordinatorManager.value) {
+            doAnswer(it -> {
+                final String fromIface = (String) it.getArguments()[0];
+                final String toIface = (String) it.getArguments()[1];
+                mNetd.tetherAddForward(fromIface, toIface);
+                mNetd.ipfwdAddInterfaceForward(fromIface, toIface);
+                return null;
+            }).when(mRoutingCoordinatorManager.value).addInterfaceForward(any(), any());
+            doAnswer(it -> {
+                final String fromIface = (String) it.getArguments()[0];
+                final String toIface = (String) it.getArguments()[1];
+                mNetd.ipfwdRemoveInterfaceForward(fromIface, toIface);
+                mNetd.tetherRemoveForward(fromIface, toIface);
+                return null;
+            }).when(mRoutingCoordinatorManager.value).removeInterfaceForward(any(), any());
+        }
         mBpfDeps = new BpfCoordinator.Dependencies() {
                     @NonNull
                     public Handler getHandler() {
