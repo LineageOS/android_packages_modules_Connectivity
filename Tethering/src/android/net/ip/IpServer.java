@@ -33,6 +33,7 @@ import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
 import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
+import static com.android.networkstack.tethering.TetheringConfiguration.USE_SYNC_SM;
 import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
 import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
 import static com.android.networkstack.tethering.util.TetheringMessageBase.BASE_IPSERVER;
@@ -56,7 +57,6 @@ import android.net.dhcp.IDhcpEventCallbacks;
 import android.net.dhcp.IDhcpServer;
 import android.net.ip.RouterAdvertisementDaemon.RaParams;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
@@ -68,7 +68,6 @@ import androidx.annotation.Nullable;
 
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
-import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetdUtils;
@@ -85,6 +84,8 @@ import com.android.networkstack.tethering.TetheringConfiguration;
 import com.android.networkstack.tethering.metrics.TetheringMetrics;
 import com.android.networkstack.tethering.util.InterfaceSet;
 import com.android.networkstack.tethering.util.PrefixUtils;
+import com.android.networkstack.tethering.util.StateMachineShim;
+import com.android.networkstack.tethering.util.SyncStateMachine.StateInfo;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -104,7 +105,7 @@ import java.util.Set;
  *
  * @hide
  */
-public class IpServer extends StateMachine {
+public class IpServer extends StateMachineShim {
     public static final int STATE_UNAVAILABLE = 0;
     public static final int STATE_AVAILABLE   = 1;
     public static final int STATE_TETHERED    = 2;
@@ -309,16 +310,18 @@ public class IpServer extends StateMachine {
     private LinkAddress mIpv4Address;
 
     private final TetheringMetrics mTetheringMetrics;
+    private final Handler mHandler;
 
     // TODO: Add a dependency object to pass the data members or variables from the tethering
     // object. It helps to reduce the arguments of the constructor.
     public IpServer(
-            String ifaceName, Looper looper, int interfaceType, SharedLog log,
+            String ifaceName, Handler handler, int interfaceType, SharedLog log,
             INetd netd, @NonNull BpfCoordinator bpfCoordinator,
             @Nullable LateSdk<RoutingCoordinatorManager> routingCoordinator, Callback callback,
             TetheringConfiguration config, PrivateAddressCoordinator addressCoordinator,
             TetheringMetrics tetheringMetrics, Dependencies deps) {
-        super(ifaceName, looper);
+        super(ifaceName, USE_SYNC_SM ? null : handler.getLooper());
+        mHandler = handler;
         mLog = log.forSubComponent(ifaceName);
         mNetd = netd;
         mBpfCoordinator = bpfCoordinator;
@@ -351,13 +354,22 @@ public class IpServer extends StateMachine {
         mTetheredState = new TetheredState();
         mUnavailableState = new UnavailableState();
         mWaitingForRestartState = new WaitingForRestartState();
-        addState(mInitialState);
-        addState(mLocalHotspotState);
-        addState(mTetheredState);
-        addState(mWaitingForRestartState, mTetheredState);
-        addState(mUnavailableState);
+        final ArrayList allStates = new ArrayList<StateInfo>();
+        allStates.add(new StateInfo(mInitialState, null));
+        allStates.add(new StateInfo(mLocalHotspotState, null));
+        allStates.add(new StateInfo(mTetheredState, null));
+        allStates.add(new StateInfo(mWaitingForRestartState, mTetheredState));
+        allStates.add(new StateInfo(mUnavailableState, null));
+        addAllStates(allStates);
+    }
 
-        setInitialState(mInitialState);
+    private Handler getHandler() {
+        return mHandler;
+    }
+
+    /** Start IpServer state machine. */
+    public void start() {
+        start(mInitialState);
     }
 
     /** Interface name which IpServer served.*/

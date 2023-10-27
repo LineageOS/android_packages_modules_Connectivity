@@ -1538,9 +1538,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         /**
          * Get BPF program Id from CGROUP. See {@link BpfUtils#getProgramId}.
          */
-        public int getBpfProgramId(final int attachType, @NonNull final String cgroupPath)
+        public int getBpfProgramId(final int attachType)
                 throws IOException {
-            return BpfUtils.getProgramId(attachType, cgroupPath);
+            return BpfUtils.getProgramId(attachType);
         }
 
         /**
@@ -3274,15 +3274,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.increaseIndent();
         try {
             pw.print("CGROUP_INET_INGRESS: ");
-            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_INGRESS, BpfUtils.CGROUP_PATH));
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_INGRESS));
             pw.print("CGROUP_INET_EGRESS: ");
-            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_EGRESS, BpfUtils.CGROUP_PATH));
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_EGRESS));
             pw.print("CGROUP_INET_SOCK_CREATE: ");
-            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_SOCK_CREATE, BpfUtils.CGROUP_PATH));
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_SOCK_CREATE));
             pw.print("CGROUP_INET4_BIND: ");
-            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET4_BIND, BpfUtils.CGROUP_PATH));
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET4_BIND));
             pw.print("CGROUP_INET6_BIND: ");
-            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET6_BIND, BpfUtils.CGROUP_PATH));
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET6_BIND));
         } catch (IOException e) {
             pw.println("  IOException");
         }
@@ -10816,7 +10816,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         // If type can't be parsed, this throws NumberFormatException, which
                         // is passed back to adb who prints it.
                         final int type = Integer.parseInt(getNextArg());
-                        final int ret = BpfUtils.getProgramId(type, BpfUtils.CGROUP_PATH);
+                        final int ret = BpfUtils.getProgramId(type);
                         pw.println(ret);
                         return 0;
                     }
