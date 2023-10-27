@@ -1687,6 +1687,8 @@ public class Tethering {
         static final int EVENT_IFACE_UPDATE_LINKPROPERTIES      = BASE_MAIN_SM + 7;
         // Events from EntitlementManager to choose upstream again.
         static final int EVENT_UPSTREAM_PERMISSION_CHANGED      = BASE_MAIN_SM + 8;
+        // Internal request from IpServer to enable or disable downstream.
+        static final int EVENT_REQUEST_CHANGE_DOWNSTREAM        = BASE_MAIN_SM + 9;
         private final State mInitialState;
         private final State mTetherModeAliveState;
 
@@ -2184,6 +2186,12 @@ public class Tethering {
                         if (mUpstreamWanted) {
                             handleUpstreamNetworkMonitorCallback(message.arg1, message.obj);
                         }
+                        break;
+                    }
+                    case EVENT_REQUEST_CHANGE_DOWNSTREAM: {
+                        final int tetheringType = message.arg1;
+                        final Boolean enabled = (Boolean) message.obj;
+                        enableTetheringInternal(tetheringType, enabled, null);
                         break;
                     }
                     default:
@@ -2743,7 +2751,8 @@ public class Tethering {
 
             @Override
             public void requestEnableTethering(int tetheringType, boolean enabled) {
-                enableTetheringInternal(tetheringType, enabled, null);
+                mTetherMainSM.sendMessage(TetherMainSM.EVENT_REQUEST_CHANGE_DOWNSTREAM,
+                        tetheringType, 0, enabled ? Boolean.TRUE : Boolean.FALSE);
             }
         };
     }
