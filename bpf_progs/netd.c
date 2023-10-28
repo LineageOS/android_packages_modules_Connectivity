@@ -142,12 +142,6 @@ DEFINE_BPF_RINGBUF_EXT(packet_trace_ringbuf, PacketTrace, PACKET_TRACE_BUF_SIZE,
                         BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, MANDATORY, \
                         "fs_bpf_net_shared", "", LOAD_ON_ENG, LOAD_ON_USER, LOAD_ON_USERDEBUG)
 
-static __always_inline int is_system_uid(uint32_t uid) {
-    // MIN_SYSTEM_UID is AID_ROOT == 0, so uint32_t is *always* >= 0
-    // MAX_SYSTEM_UID is AID_NOBODY == 9999, while AID_APP_START == 10000
-    return (uid < AID_APP_START);
-}
-
 /*
  * Note: this blindly assumes an MTU of 1500, and that packets > MTU are always TCP,
  * and that TCP is using the Linux default settings with TCP timestamp option enabled
