@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cutils/android_filesystem_config.h>
 #include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/in.h>
@@ -248,4 +249,10 @@ STRUCT_SIZE(IngressDiscardValue, 2 * 4);  // 8
 // and negating (via bit-wise xor) the bits/rules that should drop if unset.
 static inline bool isBlockedByUidRules(BpfConfig enabledRules, uint32_t uidRules) {
     return enabledRules & (DROP_IF_SET | DROP_IF_UNSET) & (uidRules ^ DROP_IF_UNSET);
+}
+
+static inline bool is_system_uid(uint32_t uid) {
+    // MIN_SYSTEM_UID is AID_ROOT == 0, so uint32_t is *always* >= 0
+    // MAX_SYSTEM_UID is AID_NOBODY == 9999, while AID_APP_START == 10000
+    return (uid < AID_APP_START);
 }
