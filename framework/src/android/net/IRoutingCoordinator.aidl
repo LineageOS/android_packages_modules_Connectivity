@@ -72,24 +72,4 @@ interface IRoutingCoordinator {
      *         unix errno.
      */
      void removeInterfaceFromNetwork(int netId, in String iface);
-
-   /**
-    * Add forwarding ip rule
-    *
-    * @param fromIface interface name to add forwarding ip rule
-    * @param toIface interface name to add forwarding ip rule
-    * @throws ServiceSpecificException in case of failure, with an error code indicating the
-    *         cause of the failure.
-    */
-    void addInterfaceForward(in String fromIface, in String toIface);
-
-   /**
-    * Remove forwarding ip rule
-    *
-    * @param fromIface interface name to remove forwarding ip rule
-    * @param toIface interface name to remove forwarding ip rule
-    * @throws ServiceSpecificException in case of failure, with an error code indicating the
-    *         cause of the failure.
-    */
-    void removeInterfaceForward(in String fromIface, in String toIface);
 }
