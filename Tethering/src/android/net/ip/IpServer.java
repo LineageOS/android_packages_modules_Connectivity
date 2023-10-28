@@ -841,38 +841,7 @@ public class IpServer extends StateMachineShim {
             }
         } catch (ServiceSpecificException | RemoteException e) {
             mLog.e("Failed to add " + mIfaceName + " to local table: ", e);
-        }
-    }
-
-    private void addInterfaceForward(@NonNull final String fromIface,
-            @NonNull final String toIface) throws ServiceSpecificException, RemoteException {
-        if (null != mRoutingCoordinator.value) {
-            mRoutingCoordinator.value.addInterfaceForward(fromIface, toIface);
-        } else {
-            mNetd.tetherAddForward(fromIface, toIface);
-            mNetd.ipfwdAddInterfaceForward(fromIface, toIface);
-        }
-    }
-
-    private void removeInterfaceForward(@NonNull final String fromIface,
-            @NonNull final String toIface) {
-        if (null != mRoutingCoordinator.value) {
-            try {
-                mRoutingCoordinator.value.removeInterfaceForward(fromIface, toIface);
-            } catch (ServiceSpecificException e) {
-                mLog.e("Exception in removeInterfaceForward", e);
-            }
-        } else {
-            try {
-                mNetd.ipfwdRemoveInterfaceForward(fromIface, toIface);
-            } catch (RemoteException | ServiceSpecificException e) {
-                mLog.e("Exception in ipfwdRemoveInterfaceForward", e);
-            }
-            try {
-                mNetd.tetherRemoveForward(fromIface, toIface);
-            } catch (RemoteException | ServiceSpecificException e) {
-                mLog.e("Exception in disableNat", e);
-            }
+            return;
         }
     }
 
@@ -1385,7 +1354,16 @@ public class IpServer extends StateMachineShim {
             // to remove their rules, which generates errors.
             // Just do the best we can.
             mBpfCoordinator.maybeDetachProgram(mIfaceName, upstreamIface);
-            removeInterfaceForward(mIfaceName, upstreamIface);
+            try {
+                mNetd.ipfwdRemoveInterfaceForward(mIfaceName, upstreamIface);
+            } catch (RemoteException | ServiceSpecificException e) {
+                mLog.e("Exception in ipfwdRemoveInterfaceForward: " + e.toString());
+            }
+            try {
+                mNetd.tetherRemoveForward(mIfaceName, upstreamIface);
+            } catch (RemoteException | ServiceSpecificException e) {
+                mLog.e("Exception in disableNat: " + e.toString());
+            }
         }
 
         @Override
@@ -1441,9 +1419,10 @@ public class IpServer extends StateMachineShim {
 
                         mBpfCoordinator.maybeAttachProgram(mIfaceName, ifname);
                         try {
-                            addInterfaceForward(mIfaceName, ifname);
+                            mNetd.tetherAddForward(mIfaceName, ifname);
+                            mNetd.ipfwdAddInterfaceForward(mIfaceName, ifname);
                         } catch (RemoteException | ServiceSpecificException e) {
-                            mLog.e("Exception enabling iface forward", e);
+                            mLog.e("Exception enabling NAT: " + e.toString());
                             cleanupUpstream();
                             mLastError = TETHER_ERROR_ENABLE_FORWARDING_ERROR;
                             transitionTo(mInitialState);
