@@ -66,6 +66,7 @@ import android.util.SparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.MessageUtils;
 import com.android.internal.util.State;
 import com.android.modules.utils.build.SdkLevel;
@@ -92,6 +93,7 @@ import java.net.Inet6Address;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -298,6 +300,8 @@ public class IpServer extends StateMachineShim {
 
     private int mLastIPv6UpstreamIfindex = 0;
     private boolean mUpstreamSupportsBpf = false;
+    @NonNull
+    private Set<IpPrefix> mLastIPv6UpstreamPrefixes = Collections.emptySet();
 
     private class MyNeighborEventConsumer implements IpNeighborMonitor.NeighborEventConsumer {
         public void accept(NeighborEvent e) {
@@ -782,13 +786,8 @@ public class IpServer extends StateMachineShim {
 
             if (params.hasDefaultRoute) params.hopLimit = getHopLimit(upstreamIface, ttlAdjustment);
 
-            for (LinkAddress linkAddr : v6only.getLinkAddresses()) {
-                if (linkAddr.getPrefixLength() != RFC7421_PREFIX_LENGTH) continue;
-
-                final IpPrefix prefix = new IpPrefix(
-                        linkAddr.getAddress(), linkAddr.getPrefixLength());
-                params.prefixes.add(prefix);
-
+            params.prefixes = getTetherableIpv6Prefixes(v6only);
+            for (IpPrefix prefix : params.prefixes) {
                 final Inet6Address dnsServer = getLocalDnsIpFor(prefix);
                 if (dnsServer != null) {
                     params.dnses.add(dnsServer);
@@ -808,9 +807,12 @@ public class IpServer extends StateMachineShim {
 
         // Not support BPF on virtual upstream interface
         final boolean upstreamSupportsBpf = upstreamIface != null && !isVcnInterface(upstreamIface);
-        updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, upstreamIfIndex, upstreamSupportsBpf);
+        final Set<IpPrefix> upstreamPrefixes = params != null ? params.prefixes : Set.of();
+        updateIpv6ForwardingRules(mLastIPv6UpstreamIfindex, mLastIPv6UpstreamPrefixes,
+                upstreamIfIndex, upstreamPrefixes, upstreamSupportsBpf);
         mLastIPv6LinkProperties = v6only;
         mLastIPv6UpstreamIfindex = upstreamIfIndex;
+        mLastIPv6UpstreamPrefixes = upstreamPrefixes;
         mUpstreamSupportsBpf = upstreamSupportsBpf;
         if (mDadProxy != null) {
             mDadProxy.setUpstreamIface(upstreamIfaceParams);
@@ -839,7 +841,38 @@ public class IpServer extends StateMachineShim {
             }
         } catch (ServiceSpecificException | RemoteException e) {
             mLog.e("Failed to add " + mIfaceName + " to local table: ", e);
-            return;
+        }
+    }
+
+    private void addInterfaceForward(@NonNull final String fromIface,
+            @NonNull final String toIface) throws ServiceSpecificException, RemoteException {
+        if (null != mRoutingCoordinator.value) {
+            mRoutingCoordinator.value.addInterfaceForward(fromIface, toIface);
+        } else {
+            mNetd.tetherAddForward(fromIface, toIface);
+            mNetd.ipfwdAddInterfaceForward(fromIface, toIface);
+        }
+    }
+
+    private void removeInterfaceForward(@NonNull final String fromIface,
+            @NonNull final String toIface) {
+        if (null != mRoutingCoordinator.value) {
+            try {
+                mRoutingCoordinator.value.removeInterfaceForward(fromIface, toIface);
+            } catch (ServiceSpecificException e) {
+                mLog.e("Exception in removeInterfaceForward", e);
+            }
+        } else {
+            try {
+                mNetd.ipfwdRemoveInterfaceForward(fromIface, toIface);
+            } catch (RemoteException | ServiceSpecificException e) {
+                mLog.e("Exception in ipfwdRemoveInterfaceForward", e);
+            }
+            try {
+                mNetd.tetherRemoveForward(fromIface, toIface);
+            } catch (RemoteException | ServiceSpecificException e) {
+                mLog.e("Exception in disableNat", e);
+            }
         }
     }
 
@@ -928,14 +961,17 @@ public class IpServer extends StateMachineShim {
         return supportsBpf ? ifindex : NO_UPSTREAM;
     }
 
-    // Handles updates to IPv6 forwarding rules if the upstream changes.
-    private void updateIpv6ForwardingRules(int prevUpstreamIfindex, int upstreamIfindex,
-            boolean upstreamSupportsBpf) {
+    // Handles updates to IPv6 forwarding rules if the upstream or its prefixes change.
+    private void updateIpv6ForwardingRules(int prevUpstreamIfindex,
+            @NonNull Set<IpPrefix> prevUpstreamPrefixes, int upstreamIfindex,
+            @NonNull Set<IpPrefix> upstreamPrefixes, boolean upstreamSupportsBpf) {
         // If the upstream interface has changed, remove all rules and re-add them with the new
         // upstream interface. If upstream is a virtual network, treated as no upstream.
-        if (prevUpstreamIfindex != upstreamIfindex) {
+        if (prevUpstreamIfindex != upstreamIfindex
+                || !prevUpstreamPrefixes.equals(upstreamPrefixes)) {
             mBpfCoordinator.updateAllIpv6Rules(this, this.mInterfaceParams,
-                    getInterfaceIndexForRule(upstreamIfindex, upstreamSupportsBpf));
+                    getInterfaceIndexForRule(upstreamIfindex, upstreamSupportsBpf),
+                    upstreamPrefixes);
         }
     }
 
@@ -1340,7 +1376,7 @@ public class IpServer extends StateMachineShim {
             for (String ifname : mUpstreamIfaceSet.ifnames) cleanupUpstreamInterface(ifname);
             mUpstreamIfaceSet = null;
             mBpfCoordinator.updateAllIpv6Rules(
-                    IpServer.this, IpServer.this.mInterfaceParams, NO_UPSTREAM);
+                    IpServer.this, IpServer.this.mInterfaceParams, NO_UPSTREAM, Set.of());
         }
 
         private void cleanupUpstreamInterface(String upstreamIface) {
@@ -1349,16 +1385,7 @@ public class IpServer extends StateMachineShim {
             // to remove their rules, which generates errors.
             // Just do the best we can.
             mBpfCoordinator.maybeDetachProgram(mIfaceName, upstreamIface);
-            try {
-                mNetd.ipfwdRemoveInterfaceForward(mIfaceName, upstreamIface);
-            } catch (RemoteException | ServiceSpecificException e) {
-                mLog.e("Exception in ipfwdRemoveInterfaceForward: " + e.toString());
-            }
-            try {
-                mNetd.tetherRemoveForward(mIfaceName, upstreamIface);
-            } catch (RemoteException | ServiceSpecificException e) {
-                mLog.e("Exception in disableNat: " + e.toString());
-            }
+            removeInterfaceForward(mIfaceName, upstreamIface);
         }
 
         @Override
@@ -1414,10 +1441,9 @@ public class IpServer extends StateMachineShim {
 
                         mBpfCoordinator.maybeAttachProgram(mIfaceName, ifname);
                         try {
-                            mNetd.tetherAddForward(mIfaceName, ifname);
-                            mNetd.ipfwdAddInterfaceForward(mIfaceName, ifname);
+                            addInterfaceForward(mIfaceName, ifname);
                         } catch (RemoteException | ServiceSpecificException e) {
-                            mLog.e("Exception enabling NAT: " + e.toString());
+                            mLog.e("Exception enabling iface forward", e);
                             cleanupUpstream();
                             mLastError = TETHER_ERROR_ENABLE_FORWARDING_ERROR;
                             transitionTo(mInitialState);
@@ -1526,5 +1552,22 @@ public class IpServer extends StateMachineShim {
             if (random == value) return dflt;
         }
         return random;
+    }
+
+    /** Get IPv6 prefixes from LinkProperties */
+    @NonNull
+    @VisibleForTesting
+    static HashSet<IpPrefix> getTetherableIpv6Prefixes(@NonNull Collection<LinkAddress> addrs) {
+        final HashSet<IpPrefix> prefixes = new HashSet<>();
+        for (LinkAddress linkAddr : addrs) {
+            if (linkAddr.getPrefixLength() != RFC7421_PREFIX_LENGTH) continue;
+            prefixes.add(new IpPrefix(linkAddr.getAddress(), RFC7421_PREFIX_LENGTH));
+        }
+        return prefixes;
+    }
+
+    @NonNull
+    private HashSet<IpPrefix> getTetherableIpv6Prefixes(@NonNull LinkProperties lp) {
+        return getTetherableIpv6Prefixes(lp.getLinkAddresses());
     }
 }
