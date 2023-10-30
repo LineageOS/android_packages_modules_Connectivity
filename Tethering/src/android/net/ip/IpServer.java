@@ -515,8 +515,12 @@ public class IpServer extends StateMachineShim {
 
         private void handleError() {
             mLastError = TETHER_ERROR_DHCPSERVER_ERROR;
-            sendMessageAtFrontOfQueueToAsyncSM(CMD_SERVICE_FAILED_TO_START,
-                    TETHER_ERROR_DHCPSERVER_ERROR);
+            if (USE_SYNC_SM) {
+                sendMessage(CMD_SERVICE_FAILED_TO_START, TETHER_ERROR_DHCPSERVER_ERROR);
+            } else {
+                sendMessageAtFrontOfQueueToAsyncSM(CMD_SERVICE_FAILED_TO_START,
+                        TETHER_ERROR_DHCPSERVER_ERROR);
+            }
         }
     }
 
@@ -1133,8 +1137,13 @@ public class IpServer extends StateMachineShim {
                 // message (and generally ignores them). It is difficult to know for sure whether
                 // this is correct in all cases, but this is equivalent to what IpServer was doing
                 // in previous versions of the mainline module.
-                // TODO : remove this after migrating to the Sync StateMachine.
-                sendMessageAtFrontOfQueueToAsyncSM(CMD_SERVICE_FAILED_TO_START, mLastError);
+                // TODO : remove sendMessageAtFrontOfQueueToAsyncSM after migrating to the Sync
+                // StateMachine.
+                if (USE_SYNC_SM) {
+                    sendSelfMessageToSyncSM(CMD_SERVICE_FAILED_TO_START, mLastError);
+                } else {
+                    sendMessageAtFrontOfQueueToAsyncSM(CMD_SERVICE_FAILED_TO_START, mLastError);
+                }
             }
 
             if (DBG) Log.d(TAG, getStateString(mDesiredInterfaceState) + " serve " + mIfaceName);
