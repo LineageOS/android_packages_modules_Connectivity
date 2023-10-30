@@ -38,6 +38,7 @@ import android.net.IDnsResolver;
 import android.net.InetAddresses;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.ResolverParamsParcel;
 import android.net.Uri;
 import android.net.shared.PrivateDnsConfig;
@@ -251,7 +252,7 @@ public class DnsManager {
     // TODO: Replace the Map with SparseArrays.
     private final Map<Integer, PrivateDnsValidationStatuses> mPrivateDnsValidationMap;
     private final Map<Integer, LinkProperties> mLinkPropertiesMap;
-    private final Map<Integer, int[]> mTransportsMap;
+    private final Map<Integer, NetworkCapabilities> mNetworkCapabilitiesMap;
 
     private int mSampleValidity;
     private int mSuccessThreshold;
@@ -265,7 +266,7 @@ public class DnsManager {
         mPrivateDnsMap = new ConcurrentHashMap<>();
         mPrivateDnsValidationMap = new HashMap<>();
         mLinkPropertiesMap = new HashMap<>();
-        mTransportsMap = new HashMap<>();
+        mNetworkCapabilitiesMap = new HashMap<>();
 
         // TODO: Create and register ContentObservers to track every setting
         // used herein, posting messages to respond to changes.
@@ -278,7 +279,7 @@ public class DnsManager {
     public void removeNetwork(Network network) {
         mPrivateDnsMap.remove(network.getNetId());
         mPrivateDnsValidationMap.remove(network.getNetId());
-        mTransportsMap.remove(network.getNetId());
+        mNetworkCapabilitiesMap.remove(network.getNetId());
         mLinkPropertiesMap.remove(network.getNetId());
     }
 
@@ -326,12 +327,12 @@ public class DnsManager {
 
     /**
      * When creating a new network or transport types are changed in a specific network,
-     * transport types are always saved to a hashMap before update dns config.
+     * capabilities are always saved to a hashMap before update dns config.
      * When destroying network, the specific network will be removed from the hashMap.
      * The hashMap is always accessed on the same thread.
      */
-    public void updateTransportsForNetwork(int netId, @NonNull int[] transportTypes) {
-        mTransportsMap.put(netId, transportTypes);
+    public void updateCapabilitiesForNetwork(int netId, @NonNull final NetworkCapabilities nc) {
+        mNetworkCapabilitiesMap.put(netId, nc);
         sendDnsConfigurationForNetwork(netId);
     }
 
@@ -351,8 +352,8 @@ public class DnsManager {
      */
     public void sendDnsConfigurationForNetwork(int netId) {
         final LinkProperties lp = mLinkPropertiesMap.get(netId);
-        final int[] transportTypes = mTransportsMap.get(netId);
-        if (lp == null || transportTypes == null) return;
+        final NetworkCapabilities nc = mNetworkCapabilitiesMap.get(netId);
+        if (lp == null || nc == null) return;
         updateParametersSettings();
         final ResolverParamsParcel paramsParcel = new ResolverParamsParcel();
 
@@ -383,7 +384,7 @@ public class DnsManager {
                               .collect(Collectors.toList()))
                 : useTls ? paramsParcel.servers  // Opportunistic
                 : new String[0];            // Off
-        paramsParcel.transportTypes = transportTypes;
+        paramsParcel.transportTypes = nc.getTransportTypes();
         // Prepare to track the validation status of the DNS servers in the
         // resolver config when private DNS is in opportunistic or strict mode.
         if (useTls) {
