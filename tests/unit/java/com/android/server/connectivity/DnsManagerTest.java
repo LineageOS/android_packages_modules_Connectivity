@@ -169,10 +169,12 @@ public class DnsManagerTest {
         lp.addDnsServer(InetAddress.getByName("4.4.4.4"));
 
         // Send a validation event that is tracked on the alternate netId
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setTransportTypes(TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
-        mDnsManager.updateTransportsForNetwork(TEST_NETID_ALTERNATE, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID_ALTERNATE, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID_ALTERNATE, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -205,7 +207,7 @@ public class DnsManagerTest {
                     InetAddress.parseNumericAddress("6.6.6.6"),
                     InetAddress.parseNumericAddress("2001:db8:66:66::1")
                     }));
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         fixedLp = new LinkProperties(lp);
@@ -242,7 +244,9 @@ public class DnsManagerTest {
         // be tracked.
         LinkProperties lp = new LinkProperties();
         lp.addDnsServer(InetAddress.getByName("3.3.3.3"));
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setTransportTypes(TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -256,7 +260,7 @@ public class DnsManagerTest {
         // Validation event has untracked netId
         mDnsManager.updatePrivateDns(new Network(TEST_NETID),
                 mDnsManager.getPrivateDnsConfig());
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -307,7 +311,7 @@ public class DnsManagerTest {
         ConnectivitySettingsManager.setPrivateDnsMode(mCtx, PRIVATE_DNS_MODE_OFF);
         mDnsManager.updatePrivateDns(new Network(TEST_NETID),
                 mDnsManager.getPrivateDnsConfig());
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -352,7 +356,9 @@ public class DnsManagerTest {
         lp.setInterfaceName(TEST_IFACENAME);
         lp.addDnsServer(InetAddress.getByName("3.3.3.3"));
         lp.addDnsServer(InetAddress.getByName("4.4.4.4"));
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setTransportTypes(TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
 
