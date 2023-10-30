@@ -5273,7 +5273,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private boolean isNetworkPotentialSatisfier(
             @NonNull final NetworkAgentInfo candidate, @NonNull final NetworkRequestInfo nri) {
-        // listen requests won't keep up a network satisfying it. If this is not a multilayer
+        // While destroyed network sometimes satisfy requests (including occasionally newly
+        // satisfying requests), *potential* satisfiers are networks that might beat a current
+        // champion if they validate. As such, a destroyed network is never a potential satisfier,
+        // because it's never a good idea to keep a destroyed network in case it validates.
+        // For example, declaring it a potential satisfier would keep an unvalidated destroyed
+        // candidate after it's been replaced by another unvalidated network.
+        if (candidate.isDestroyed()) return false;
+        // Listen requests won't keep up a network satisfying it. If this is not a multilayer
         // request, return immediately. For multilayer requests, check to see if any of the
         // multilayer requests may have a potential satisfier.
         if (!nri.isMultilayerRequest() && (nri.mRequests.get(0).isListen()
@@ -5291,8 +5298,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (req.isListen() || req.isListenForBest()) {
                 continue;
             }
-            // If this Network is already the best Network for a request, or if
-            // there is hope for it to become one if it validated, then it is needed.
+            // If there is hope for this network might validate and subsequently become the best
+            // network for that request, then it is needed. Note that this network can't already
+            // be the best for this request, or it would be the current satisfier, and therefore
+            // there would be no need to call this method to find out if it is a *potential*
+            // satisfier ("unneeded", the only caller, only calls this if this network currently
+            // satisfies no request).
             if (candidate.satisfies(req)) {
                 // As soon as a network is found that satisfies a request, return. Specifically for
                 // multilayer requests, returning as soon as a NetworkAgentInfo satisfies a request
