@@ -29,7 +29,7 @@ import java.util.List;
 /** A wrapper to decide whether use synchronous state machine for tethering. */
 public class StateMachineShim {
     // Exactly one of mAsyncSM or mSyncSM is non-null.
-    private final StateMachine mAsyncSM;
+    private final AsyncStateMachine mAsyncSM;
     private final SyncStateMachine mSyncSM;
 
     /**
@@ -149,6 +149,21 @@ public class StateMachineShim {
     }
 
     /**
+     * Enqueue a message to the front of the queue.
+     * Protected, may only be called by instances of async state machine.
+     *
+     * Message is ignored if state machine has quit.
+     */
+    protected void sendMessageAtFrontOfQueueToAsyncSM(int what, int arg1) {
+        if (mSyncSM != null) {
+            throw new IllegalStateException("sendMessageAtFrontOfQueue can only be used with"
+                    + " async SM");
+        }
+
+        mAsyncSM.sendMessageAtFrontOfQueueToAsyncSM(what, arg1);
+    }
+
+    /**
      * Send self message.
      * This can only be used with sync state machine, so this will throw if using async state
      * machine.
@@ -171,6 +186,11 @@ public class StateMachineShim {
     public static class AsyncStateMachine extends StateMachine {
         public AsyncStateMachine(final String name, final Looper looper) {
             super(name, looper);
+        }
+
+        /** Enqueue a message to the front of the queue for this state machine. */
+        public void sendMessageAtFrontOfQueueToAsyncSM(int what, int arg1) {
+            sendMessageAtFrontOfQueue(what, arg1);
         }
     }
 }
