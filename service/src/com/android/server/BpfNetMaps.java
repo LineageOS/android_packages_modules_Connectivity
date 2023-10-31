@@ -19,6 +19,10 @@ package com.android.server;
 import static android.net.BpfNetMapsConstants.CONFIGURATION_MAP_PATH;
 import static android.net.BpfNetMapsConstants.COOKIE_TAG_MAP_PATH;
 import static android.net.BpfNetMapsConstants.CURRENT_STATS_MAP_CONFIGURATION_KEY;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_DISABLED;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_MAP_PATH;
 import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.IIF_MATCH;
 import static android.net.BpfNetMapsConstants.LOCKDOWN_VPN_MATCH;
@@ -130,6 +134,8 @@ public class BpfNetMaps {
     private static IBpfMap<S32, UidOwnerValue> sUidOwnerMap = null;
     private static IBpfMap<S32, U8> sUidPermissionMap = null;
     private static IBpfMap<CookieTagMapKey, CookieTagMapValue> sCookieTagMap = null;
+    // TODO: Add BOOL class and replace U8?
+    private static IBpfMap<S32, U8> sDataSaverEnabledMap = null;
 
     private static final List<Pair<Integer, String>> PERMISSION_LIST = Arrays.asList(
             Pair.create(PERMISSION_INTERNET, "PERMISSION_INTERNET"),
@@ -177,6 +183,14 @@ public class BpfNetMaps {
         sCookieTagMap = cookieTagMap;
     }
 
+    /**
+     * Set dataSaverEnabledMap for test.
+     */
+    @VisibleForTesting
+    public static void setDataSaverEnabledMapForTest(IBpfMap<S32, U8> dataSaverEnabledMap) {
+        sDataSaverEnabledMap = dataSaverEnabledMap;
+    }
+
     private static IBpfMap<S32, U32> getConfigurationMap() {
         try {
             return new BpfMap<>(
@@ -213,6 +227,15 @@ public class BpfNetMaps {
         }
     }
 
+    private static IBpfMap<S32, U8> getDataSaverEnabledMap() {
+        try {
+            return new BpfMap<>(
+                    DATA_SAVER_ENABLED_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U8.class);
+        } catch (ErrnoException e) {
+            throw new IllegalStateException("Cannot open data saver enabled map", e);
+        }
+    }
+
     private static void initBpfMaps() {
         if (sConfigurationMap == null) {
             sConfigurationMap = getConfigurationMap();
@@ -245,6 +268,15 @@ public class BpfNetMaps {
 
         if (sCookieTagMap == null) {
             sCookieTagMap = getCookieTagMap();
+        }
+
+        if (sDataSaverEnabledMap == null) {
+            sDataSaverEnabledMap = getDataSaverEnabledMap();
+        }
+        try {
+            sDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, new U8(DATA_SAVER_DISABLED));
+        } catch (ErrnoException e) {
+            throw new IllegalStateException("Failed to initialize data saver configuration", e);
         }
     }
 
@@ -926,6 +958,27 @@ public class BpfNetMaps {
         }
     }
 
+    /**
+     * Set Data Saver enabled or disabled
+     *
+     * @param enable     whether Data Saver is enabled or disabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void setDataSaverEnabled(boolean enable) {
+        throwIfPreT("setDataSaverEnabled is not available on pre-T devices");
+
+        try {
+            final short config = enable ? DATA_SAVER_ENABLED : DATA_SAVER_DISABLED;
+            sDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, new U8(config));
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno, "Unable to set data saver: "
+                    + Os.strerror(e.errno));
+        }
+    }
+
     /** Register callback for statsd to pull atom. */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void setPullAtomCallback(final Context context) {
@@ -1008,6 +1061,15 @@ public class BpfNetMaps {
         }
     }
 
+    private void dumpDataSaverConfig(final IndentingPrintWriter pw) {
+        try {
+            final short config = sDataSaverEnabledMap.getValue(DATA_SAVER_ENABLED_KEY).val;
+            // Any non-zero value converted from short to boolean is true by convention.
+            pw.println("sDataSaverEnabledMap: " + (config != DATA_SAVER_DISABLED));
+        } catch (ErrnoException e) {
+            pw.println("Failed to read data saver configuration: " + e);
+        }
+    }
     /**
      * Dump BPF maps
      *
@@ -1058,6 +1120,8 @@ public class BpfNetMaps {
                     });
             BpfDump.dumpMap(sUidPermissionMap, pw, "sUidPermissionMap",
                     (uid, permission) -> uid.val + " " + permissionToString(permission.val));
+
+            dumpDataSaverConfig(pw);
             pw.decreaseIndent();
         }
     }
