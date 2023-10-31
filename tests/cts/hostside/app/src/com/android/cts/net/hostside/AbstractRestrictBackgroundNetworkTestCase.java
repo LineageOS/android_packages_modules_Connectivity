@@ -752,27 +752,24 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         assertDelayedShellCommand("dumpsys deviceidle get deep", enabled ? "IDLE" : "ACTIVE");
     }
 
-    protected void setAppIdle(boolean enabled) throws Exception {
+    protected void setAppIdle(boolean isIdle) throws Exception {
+        setAppIdleNoAssert(isIdle);
+        assertAppIdle(isIdle);
+    }
+
+    protected void setAppIdleNoAssert(boolean isIdle) throws Exception {
         if (!isAppStandbySupported()) {
             return;
         }
-        Log.i(TAG, "Setting app idle to " + enabled);
-        executeSilentShellCommand("am set-inactive " + TEST_APP2_PKG + " " + enabled );
-        assertAppIdle(enabled);
+        Log.i(TAG, "Setting app idle to " + isIdle);
+        final String bucketName = isIdle ? "rare" : "active";
+        executeSilentShellCommand("am set-standby-bucket " + TEST_APP2_PKG + " " + bucketName);
     }
 
-    protected void setAppIdleNoAssert(boolean enabled) throws Exception {
-        if (!isAppStandbySupported()) {
-            return;
-        }
-        Log.i(TAG, "Setting app idle to " + enabled);
-        executeSilentShellCommand("am set-inactive " + TEST_APP2_PKG + " " + enabled );
-    }
-
-    protected void assertAppIdle(boolean enabled) throws Exception {
+    protected void assertAppIdle(boolean isIdle) throws Exception {
         try {
             assertDelayedShellCommand("am get-inactive " + TEST_APP2_PKG,
-                    30 /* maxTries */, 1 /* napTimeSeconds */, "Idle=" + enabled);
+                    30 /* maxTries */, 1 /* napTimeSeconds */, "Idle=" + isIdle);
         } catch (Throwable e) {
             throw e;
         }
