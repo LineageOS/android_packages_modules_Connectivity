@@ -34,7 +34,6 @@ import android.net.NetworkScore
 import android.net.NetworkTestResultParcelable
 import android.net.networkstack.NetworkStackClientBase
 import android.os.HandlerThread
-import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
@@ -168,5 +167,6 @@ class CSAgentWrapper(
         cb.eventuallyExpect<Lost> { it.network == agent.network }
     }
 
+    fun unregisterAfterReplacement(timeoutMs: Int) = agent.unregisterAfterReplacement(timeoutMs)
     fun sendLocalNetworkConfig(lnc: LocalNetworkConfig) = agent.sendLocalNetworkConfig(lnc)
 }
