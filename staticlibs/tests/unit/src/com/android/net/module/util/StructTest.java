@@ -765,6 +765,14 @@ public class StructTest {
                 msg.writeToBytes(ByteOrder.BIG_ENDIAN));
     }
 
+    @Test
+    public void testV4MappedV6Address() {
+        final IpAddressMessage msg = doParsingMessageTest("c0a86401"
+                + "00000000000000000000ffffc0a86401", IpAddressMessage.class, ByteOrder.BIG_ENDIAN);
+        assertEquals(TEST_IPV4_ADDRESS, msg.ipv4Address);
+        assertEquals(InetAddressUtils.v4MappedV6Address(TEST_IPV4_ADDRESS), msg.ipv6Address);
+    }
+
     public static class WrongIpAddressType extends Struct {
         @Field(order = 0, type = Type.Ipv4Address) public byte[] ipv4Address;
         @Field(order = 1, type = Type.Ipv6Address) public byte[] ipv6Address;
