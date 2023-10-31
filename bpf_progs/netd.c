@@ -112,6 +112,9 @@ DEFINE_BPF_RINGBUF_EXT(packet_trace_ringbuf, PacketTrace, PACKET_TRACE_BUF_SIZE,
                        BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, LOAD_ON_ENG,
                        LOAD_ON_USER, LOAD_ON_USERDEBUG);
 
+DEFINE_BPF_MAP_RO_NETD(data_saver_enabled_map, ARRAY, uint32_t, bool,
+                       DATA_SAVER_ENABLED_MAP_SIZE)
+
 // iptables xt_bpf programs need to be usable by both netd and netutils_wrappers
 // selinux contexts, because even non-xt_bpf iptables mutations are implemented as
 // a full table dump, followed by an update in userspace, and then a reload into the kernel,
