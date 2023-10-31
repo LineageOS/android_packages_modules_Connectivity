@@ -13235,7 +13235,7 @@ public class ConnectivityServiceTest {
     }
 
     @Test
-    public void testDumpDoesNotCrash() {
+    public void testDumpDoesNotCrash() throws Exception {
         mServiceContext.setPermission(DUMP, PERMISSION_GRANTED);
         // Filing a couple requests prior to testing the dump.
         final TestNetworkCallback genericNetworkCallback = new TestNetworkCallback();
@@ -13246,6 +13246,44 @@ public class ConnectivityServiceTest {
                 .addTransportType(TRANSPORT_WIFI).build();
         mCm.registerNetworkCallback(genericRequest, genericNetworkCallback);
         mCm.registerNetworkCallback(wifiRequest, wifiNetworkCallback);
+
+        // NetworkProvider
+        final NetworkProvider wifiProvider = new NetworkProvider(mServiceContext,
+                mCsHandlerThread.getLooper(), "Wifi provider");
+        mCm.registerNetworkProvider(wifiProvider);
+
+        // NetworkAgent
+        final LinkProperties wifiLp = new LinkProperties();
+        wifiLp.setInterfaceName(WIFI_IFNAME);
+        mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI, wifiLp);
+        mWiFiAgent.connect(true);
+
+        // NetworkOffer
+        final NetworkScore wifiScore = new NetworkScore.Builder().build();
+        final NetworkCapabilities wifiCaps = new NetworkCapabilities.Builder()
+                .addTransportType(TRANSPORT_WIFI)
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                .build();
+        final TestableNetworkOfferCallback wifiCallback = new TestableNetworkOfferCallback(
+                TIMEOUT_MS /* timeout */, TEST_CALLBACK_TIMEOUT_MS /* noCallbackTimeout */);
+        wifiProvider.registerNetworkOffer(wifiScore, wifiCaps, r -> r.run(), wifiCallback);
+
+        // Profile preferences
+        final UserHandle testHandle = setupEnterpriseNetwork();
+        final TestNetworkAgentWrapper workAgent = makeEnterpriseNetworkAgent();
+        workAgent.connect(true);
+        mCm.setProfileNetworkPreference(testHandle, PROFILE_NETWORK_PREFERENCE_ENTERPRISE,
+                null /* executor */, null /* listener */);
+
+        // OEM preferences
+        @OemNetworkPreferences.OemNetworkPreference final int networkPref =
+                OEM_NETWORK_PREFERENCE_OEM_PAID;
+        setOemNetworkPreferenceAgentConnected(TRANSPORT_CELLULAR, true);
+        setOemNetworkPreference(networkPref, TEST_PACKAGE_NAME);
+
+        // Mobile data preferred UIDs
+        setAndUpdateMobileDataPreferredUids(Set.of(TEST_PACKAGE_UID));
 
         verifyDump(new String[0]);
 
