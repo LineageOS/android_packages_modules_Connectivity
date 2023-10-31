@@ -99,11 +99,6 @@ public class MdnsReplySender {
         return PACKET_SENT;
     }
 
-    /** Get the packetCreationBuffer */
-    public byte[] getPacketCreationBuffer() {
-        return mPacketCreationBuffer;
-    }
-
     /**
      * Cancel all pending sends.
      */
