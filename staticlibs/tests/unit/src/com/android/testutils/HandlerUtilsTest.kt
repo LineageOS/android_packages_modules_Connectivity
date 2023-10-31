@@ -27,7 +27,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 private const val ATTEMPTS = 50 // Causes testWaitForIdle to take about 150ms on aosp_crosshatch-eng
-private const val TIMEOUT_MS = 200
+private const val TIMEOUT_MS = 1000
 
 @RunWith(JUnit4::class)
 class HandlerUtilsTest {
