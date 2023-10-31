@@ -18,6 +18,7 @@ package com.android.net.module.util;
 
 import static junit.framework.Assert.assertEquals;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -30,6 +31,7 @@ import androidx.test.runner.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 
@@ -91,5 +93,18 @@ public class InetAddressUtilsTest {
         assertTrue(updatedLocalAddr.isLinkLocalAddress());
         assertEquals(localAddrStr + "%" + scopeId, updatedLocalAddr.getHostAddress());
         assertEquals(scopeId, updatedLocalAddr.getScopeId());
+    }
+
+    @Test
+    public void testV4MappedV6Address() throws Exception {
+        final Inet4Address v4Addr = (Inet4Address) InetAddress.getByName("192.0.2.1");
+        final Inet6Address v4MappedV6Address = InetAddressUtils.v4MappedV6Address(v4Addr);
+        final byte[] expectedAddrBytes = new byte[]{
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0xff, (byte) 0xff,
+                (byte) 0xc0, (byte) 0x00, (byte) 0x02, (byte) 0x01,
+        };
+        assertArrayEquals(expectedAddrBytes, v4MappedV6Address.getAddress());
     }
 }
