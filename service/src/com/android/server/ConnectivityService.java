@@ -12556,6 +12556,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.TIRAMISU)
     @Override
     public void setDataSaverEnabled(final boolean enable) {
         enforceNetworkStackOrSettingsPermission();
@@ -12567,6 +12568,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (RemoteException e) {
             // Lack of permission or binder errors.
             throw new IllegalStateException(e);
+        }
+
+        try {
+            mBpfNetMaps.setDataSaverEnabled(enable);
+        } catch (ServiceSpecificException | UnsupportedOperationException e) {
+            Log.e(TAG, "Failed to set data saver " + enable + " : " + e);
         }
     }
 
