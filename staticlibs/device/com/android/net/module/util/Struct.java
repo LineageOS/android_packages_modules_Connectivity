@@ -422,7 +422,14 @@ public class Struct {
                 final byte[] address = new byte[isIpv6 ? 16 : 4];
                 buf.get(address);
                 try {
-                    value = InetAddress.getByAddress(address);
+                    if (isIpv6) {
+                        // Using Inet6Address.getByAddress since InetAddress.getByAddress converts
+                        // v4-mapped v6 address to v4 address internally and returns Inet4Address.
+                        value = Inet6Address.getByAddress(
+                                null /* host */, address, -1 /* scope_id */);
+                    } else {
+                        value = InetAddress.getByAddress(address);
+                    }
                 } catch (UnknownHostException e) {
                     throw new IllegalArgumentException("illegal length of IP address", e);
                 }
