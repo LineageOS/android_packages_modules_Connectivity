@@ -68,6 +68,8 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
 
     @NonNull
     private final SharedLog mSharedLog;
+    @NonNull
+    private final byte[] mPacketCreationBuffer;
 
     /**
      * Callbacks called by {@link MdnsInterfaceAdvertiser} to report status updates.
@@ -205,6 +207,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         mCbHandler = new Handler(looper);
         mReplySender = deps.makeReplySender(sharedLog.getTag(), looper, socket,
                 packetCreationBuffer, sharedLog);
+        mPacketCreationBuffer = packetCreationBuffer;
         mAnnouncer = deps.makeMdnsAnnouncer(sharedLog.getTag(), looper, mReplySender,
                 mAnnouncingCallback, sharedLog);
         mProber = deps.makeMdnsProber(sharedLog.getTag(), looper, mReplySender, mProbingCallback,
@@ -390,12 +393,13 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      * @param serviceId The serviceId.
      * @return the raw offload payload
      */
+    @NonNull
     public byte[] getRawOffloadPayload(int serviceId) {
         try {
-            return MdnsUtils.createRawDnsPacket(mReplySender.getPacketCreationBuffer(),
+            return MdnsUtils.createRawDnsPacket(mPacketCreationBuffer,
                     mRecordRepository.getOffloadPacket(serviceId));
         } catch (IOException | IllegalArgumentException e) {
-            mSharedLog.wtf("Cannot create rawOffloadPacket: " + e.getMessage());
+            mSharedLog.wtf("Cannot create rawOffloadPacket: ", e);
             return new byte[0];
         }
     }
