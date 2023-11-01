@@ -35,6 +35,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -211,9 +212,7 @@ public class MdnsUtils {
         }
 
         final int len = writer.getWritePosition();
-        final byte[] outBuffer = new byte[len];
-        System.arraycopy(packetCreationBuffer, 0, outBuffer, 0, len);
-        return outBuffer;
+        return Arrays.copyOfRange(packetCreationBuffer, 0, len);
     }
 
     /**

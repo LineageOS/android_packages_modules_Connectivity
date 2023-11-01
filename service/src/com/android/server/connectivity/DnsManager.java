@@ -326,10 +326,14 @@ public class DnsManager {
     }
 
     /**
-     * When creating a new network or transport types are changed in a specific network,
-     * capabilities are always saved to a hashMap before update dns config.
-     * When destroying network, the specific network will be removed from the hashMap.
-     * The hashMap is always accessed on the same thread.
+     * Update {@link NetworkCapabilities} stored in this instance.
+     *
+     * In order to ensure that the resolver has access to necessary information when other events
+     * occur, capabilities are always saved to a hashMap before updating the DNS configuration
+     * whenever a new network is created, transport types are modified, or metered capabilities are
+     * altered for a network. When a network is destroyed, the corresponding entry is removed from
+     * the hashMap. To prevent concurrency issues, the hashMap should always be accessed from the
+     * same thread.
      */
     public void updateCapabilitiesForNetwork(int netId, @NonNull final NetworkCapabilities nc) {
         mNetworkCapabilitiesMap.put(netId, nc);
@@ -385,6 +389,7 @@ public class DnsManager {
                 : useTls ? paramsParcel.servers  // Opportunistic
                 : new String[0];            // Off
         paramsParcel.transportTypes = nc.getTransportTypes();
+        paramsParcel.meteredNetwork = nc.isMetered();
         // Prepare to track the validation status of the DNS servers in the
         // resolver config when private DNS is in opportunistic or strict mode.
         if (useTls) {
@@ -398,12 +403,13 @@ public class DnsManager {
         }
 
         Log.d(TAG, String.format("sendDnsConfigurationForNetwork(%d, %s, %s, %d, %d, %d, %d, "
-                + "%d, %d, %s, %s)", paramsParcel.netId, Arrays.toString(paramsParcel.servers),
-                Arrays.toString(paramsParcel.domains), paramsParcel.sampleValiditySeconds,
-                paramsParcel.successThreshold, paramsParcel.minSamples,
-                paramsParcel.maxSamples, paramsParcel.baseTimeoutMsec,
+                + "%d, %d, %s, %s, %s, %b)", paramsParcel.netId,
+                Arrays.toString(paramsParcel.servers), Arrays.toString(paramsParcel.domains),
+                paramsParcel.sampleValiditySeconds, paramsParcel.successThreshold,
+                paramsParcel.minSamples, paramsParcel.maxSamples, paramsParcel.baseTimeoutMsec,
                 paramsParcel.retryCount, paramsParcel.tlsName,
-                Arrays.toString(paramsParcel.tlsServers)));
+                Arrays.toString(paramsParcel.tlsServers),
+                Arrays.toString(paramsParcel.transportTypes), paramsParcel.meteredNetwork));
 
         try {
             mDnsResolver.setResolverConfiguration(paramsParcel);
