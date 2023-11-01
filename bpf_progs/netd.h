@@ -236,6 +236,8 @@ STRUCT_SIZE(IngressDiscardValue, 2 * 4);  // 8
 #define UID_RULES_CONFIGURATION_KEY 0
 // Entry in the configuration map that stores which stats map is currently in use.
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 1
+// Entry in the data saver enabled map that stores whether data saver is enabled or not.
+#define DATA_SAVER_ENABLED_KEY 0
 
 #undef STRUCT_SIZE
 
