@@ -4288,7 +4288,9 @@ public class ConnectivityServiceTest {
         testFactory.terminate();
         testFactory.assertNoRequestChanged();
         if (networkCallback != null) mCm.unregisterNetworkCallback(networkCallback);
-        handlerThread.quit();
+
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     @Test
@@ -4349,6 +4351,8 @@ public class ConnectivityServiceTest {
         expectNoRequestChanged(testFactoryAll); // still seeing the request
 
         mWiFiAgent.disconnect();
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     @Test
@@ -4382,7 +4386,8 @@ public class ConnectivityServiceTest {
                 }
             }
         }
-        handlerThread.quit();
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     @Test
@@ -6003,7 +6008,8 @@ public class ConnectivityServiceTest {
             testFactory.assertNoRequestChanged();
         } finally {
             mCm.unregisterNetworkCallback(cellNetworkCallback);
-            handlerThread.quit();
+            handlerThread.quitSafely();
+            handlerThread.join();
         }
     }
 
@@ -6593,7 +6599,8 @@ public class ConnectivityServiceTest {
             }
         } finally {
             testFactory.terminate();
-            handlerThread.quit();
+            handlerThread.quitSafely();
+            handlerThread.join();
         }
     }
 
@@ -15314,6 +15321,8 @@ public class ConnectivityServiceTest {
         expectNoRequestChanged(oemPaidFactory);
         internetFactory.expectRequestAdd();
         mCm.unregisterNetworkCallback(wifiCallback);
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     /**
@@ -15678,6 +15687,8 @@ public class ConnectivityServiceTest {
             assertTrue(testFactory.getMyStartRequested());
         } finally {
             testFactory.terminate();
+            handlerThread.quitSafely();
+            handlerThread.join();
         }
     }
 
