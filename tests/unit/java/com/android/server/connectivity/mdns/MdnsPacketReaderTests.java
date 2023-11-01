@@ -75,7 +75,7 @@ public class MdnsPacketReaderTests {
                     + "the packet length");
         } catch (IOException e) {
             // Expected
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             fail(String.format(
                     Locale.ROOT,
                     "Should not have thrown any other exception except " + "for IOException: %s",

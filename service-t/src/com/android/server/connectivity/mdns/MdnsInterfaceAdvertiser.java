@@ -65,11 +65,12 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     private final MdnsProber mProber;
     @NonNull
     private final MdnsReplySender mReplySender;
-
     @NonNull
     private final SharedLog mSharedLog;
     @NonNull
     private final byte[] mPacketCreationBuffer;
+    @NonNull
+    private final MdnsFeatureFlags mMdnsFeatureFlags;
 
     /**
      * Callbacks called by {@link MdnsInterfaceAdvertiser} to report status updates.
@@ -213,6 +214,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         mProber = deps.makeMdnsProber(sharedLog.getTag(), looper, mReplySender, mProbingCallback,
                 sharedLog);
         mSharedLog = sharedLog;
+        mMdnsFeatureFlags = mdnsFeatureFlags;
     }
 
     /**
@@ -351,7 +353,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     public void handlePacket(byte[] recvbuf, int length, InetSocketAddress src) {
         final MdnsPacket packet;
         try {
-            packet = MdnsPacket.parse(new MdnsPacketReader(recvbuf, length));
+            packet = MdnsPacket.parse(new MdnsPacketReader(recvbuf, length, mMdnsFeatureFlags));
         } catch (MdnsPacket.ParseException e) {
             mSharedLog.e("Error parsing mDNS packet", e);
             if (DBG) {

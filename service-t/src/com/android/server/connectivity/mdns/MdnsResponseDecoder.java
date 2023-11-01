@@ -84,9 +84,9 @@ public class MdnsResponseDecoder {
      * @throws MdnsPacket.ParseException if a response packet could not be parsed.
      */
     @NonNull
-    public static MdnsPacket parseResponse(@NonNull byte[] recvbuf, int length)
-            throws MdnsPacket.ParseException {
-        MdnsPacketReader reader = new MdnsPacketReader(recvbuf, length);
+    public static MdnsPacket parseResponse(@NonNull byte[] recvbuf, int length,
+            @NonNull MdnsFeatureFlags mdnsFeatureFlags) throws MdnsPacket.ParseException {
+        final MdnsPacketReader reader = new MdnsPacketReader(recvbuf, length, mdnsFeatureFlags);
 
         final MdnsPacket mdnsPacket;
         try {
