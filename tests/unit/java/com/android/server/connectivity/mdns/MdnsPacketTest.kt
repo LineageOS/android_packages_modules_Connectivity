@@ -21,12 +21,16 @@ import com.android.net.module.util.HexDump
 import com.android.testutils.DevSdkIgnoreRunner
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(DevSdkIgnoreRunner::class)
 class MdnsPacketTest {
+    private fun makeFlags(isLabelCountLimitEnabled: Boolean = false): MdnsFeatureFlags =
+            MdnsFeatureFlags.newBuilder()
+                    .setIsLabelCountLimitEnabled(isLabelCountLimitEnabled).build()
     @Test
     fun testParseQuery() {
         // Probe packet with 1 question for Android.local, and 4 additionalRecords with 4 addresses
@@ -38,7 +42,7 @@ class MdnsPacketTest {
                 "010db8000000000000000000000789"
 
         val bytes = HexDump.hexStringToByteArray(packetHex)
-        val reader = MdnsPacketReader(bytes, bytes.size)
+        val reader = MdnsPacketReader(bytes, bytes.size, makeFlags())
         val packet = MdnsPacket.parse(reader)
 
         assertEquals(123, packet.transactionId)
@@ -67,5 +71,18 @@ class MdnsPacketTest {
                 (packet.authorityRecords[2] as MdnsInetAddressRecord).inet6Address!!)
         assertEquals(InetAddresses.parseNumericAddress("2001:db8::789"),
                 (packet.authorityRecords[3] as MdnsInetAddressRecord).inet6Address!!)
+    }
+
+    @Test
+    fun testParseQueryWithLabelLoop_ThrowsParseException() {
+        val packetWithErrorHex = "000084000000000100000000054C4142454C0454455354C006000C800100000" +
+                "07800140454455354056C6F63616C00"
+
+        val bytes = HexDump.hexStringToByteArray(packetWithErrorHex)
+        val reader = MdnsPacketReader(
+                bytes, bytes.size, makeFlags(isLabelCountLimitEnabled = true))
+        assertFailsWith<MdnsPacket.ParseException> {
+            MdnsPacket.parse(reader)
+        }
     }
 }
