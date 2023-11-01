@@ -142,6 +142,11 @@ class NetworkStatsObservers {
 
     @VisibleForTesting
     protected Looper getHandlerLooperLocked() {
+        // TODO: Currently, callbacks are dispatched on this thread if the caller register
+        //  callback without supplying a Handler. To ensure that the service handler thread
+        //  is not blocked by client code, the observers must create their own thread. Once
+        //  all callbacks are dispatched outside of the handler thread, the service handler
+        //  thread can be used here.
         HandlerThread handlerThread = new HandlerThread(TAG);
         handlerThread.start();
         return handlerThread.getLooper();
