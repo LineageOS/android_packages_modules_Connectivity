@@ -36,6 +36,7 @@ class DnsBpfHelper {
  private:
   android::bpf::BpfMapRO<uint32_t, uint32_t> mConfigurationMap;
   android::bpf::BpfMapRO<uint32_t, UidOwnerValue> mUidOwnerMap;
+  android::bpf::BpfMapRO<uint32_t, bool> mDataSaverEnabledMap;
 
   // For testing
   friend class DnsBpfHelperTest;
