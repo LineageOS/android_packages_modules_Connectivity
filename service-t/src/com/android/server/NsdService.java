@@ -519,9 +519,9 @@ public class NsdService extends INsdManager.Stub {
         }
     }
 
+    // TODO: Use a Handler instead of a StateMachine since there are no state changes.
     private class NsdStateMachine extends StateMachine {
 
-        private final DefaultState mDefaultState = new DefaultState();
         private final EnabledState mEnabledState = new EnabledState();
 
         @Override
@@ -591,122 +591,10 @@ public class NsdService extends INsdManager.Stub {
 
         NsdStateMachine(String name, Handler handler) {
             super(name, handler);
-            addState(mDefaultState);
-                addState(mEnabledState, mDefaultState);
+            addState(mEnabledState);
             State initialState = mEnabledState;
             setInitialState(initialState);
             setLogRecSize(25);
-        }
-
-        class DefaultState extends State {
-            @Override
-            public boolean processMessage(Message msg) {
-                final ClientInfo cInfo;
-                final int clientRequestId = msg.arg2;
-                switch (msg.what) {
-                    case NsdManager.REGISTER_CLIENT:
-                        final ConnectorArgs arg = (ConnectorArgs) msg.obj;
-                        final INsdManagerCallback cb = arg.callback;
-                        try {
-                            cb.asBinder().linkToDeath(arg.connector, 0);
-                            final String tag = "Client" + arg.uid + "-" + mClientNumberId++;
-                            final NetworkNsdReportedMetrics metrics =
-                                    mDeps.makeNetworkNsdReportedMetrics(
-                                            (int) mClock.elapsedRealtime());
-                            cInfo = new ClientInfo(cb, arg.uid, arg.useJavaBackend,
-                                    mServiceLogs.forSubComponent(tag), metrics);
-                            mClients.put(arg.connector, cInfo);
-                        } catch (RemoteException e) {
-                            Log.w(TAG, "Client request id " + clientRequestId
-                                    + " has already died");
-                        }
-                        break;
-                    case NsdManager.UNREGISTER_CLIENT:
-                        final NsdServiceConnector connector = (NsdServiceConnector) msg.obj;
-                        cInfo = mClients.remove(connector);
-                        if (cInfo != null) {
-                            cInfo.expungeAllRequests();
-                            if (cInfo.isPreSClient()) {
-                                mLegacyClientCount -= 1;
-                            }
-                        }
-                        maybeStopMonitoringSocketsIfNoActiveRequest();
-                        maybeScheduleStop();
-                        break;
-                    case NsdManager.DISCOVER_SERVICES:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onDiscoverServicesFailedImmediately(clientRequestId,
-                                    NsdManager.FAILURE_INTERNAL_ERROR, true /* isLegacy */);
-                        }
-                       break;
-                    case NsdManager.STOP_DISCOVERY:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onStopDiscoveryFailed(
-                                    clientRequestId, NsdManager.FAILURE_INTERNAL_ERROR);
-                        }
-                        break;
-                    case NsdManager.REGISTER_SERVICE:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onRegisterServiceFailedImmediately(clientRequestId,
-                                    NsdManager.FAILURE_INTERNAL_ERROR, true /* isLegacy */);
-                        }
-                        break;
-                    case NsdManager.UNREGISTER_SERVICE:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onUnregisterServiceFailed(
-                                    clientRequestId, NsdManager.FAILURE_INTERNAL_ERROR);
-                        }
-                        break;
-                    case NsdManager.RESOLVE_SERVICE:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onResolveServiceFailedImmediately(clientRequestId,
-                                    NsdManager.FAILURE_INTERNAL_ERROR, true /* isLegacy */);
-                        }
-                        break;
-                    case NsdManager.STOP_RESOLUTION:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onStopResolutionFailed(
-                                    clientRequestId, NsdManager.FAILURE_OPERATION_NOT_RUNNING);
-                        }
-                        break;
-                    case NsdManager.REGISTER_SERVICE_CALLBACK:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cInfo.onServiceInfoCallbackRegistrationFailed(
-                                    clientRequestId, NsdManager.FAILURE_BAD_PARAMETERS);
-                        }
-                        break;
-                    case NsdManager.DAEMON_CLEANUP:
-                        maybeStopDaemon();
-                        break;
-                    // This event should be only sent by the legacy (target SDK < S) clients.
-                    // Mark the sending client as legacy.
-                    case NsdManager.DAEMON_STARTUP:
-                        cInfo = getClientInfoForReply(msg);
-                        if (cInfo != null) {
-                            cancelStop();
-                            cInfo.setPreSClient();
-                            mLegacyClientCount += 1;
-                            maybeStartDaemon();
-                        }
-                        break;
-                    default:
-                        Log.e(TAG, "Unhandled " + msg);
-                        return NOT_HANDLED;
-                }
-                return HANDLED;
-            }
-
-            private ClientInfo getClientInfoForReply(Message msg) {
-                final ListenerArgs args = (ListenerArgs) msg.obj;
-                return mClients.get(args.connector);
-            }
         }
 
         class EnabledState extends State {
@@ -791,6 +679,11 @@ public class NsdService extends INsdManager.Stub {
                     int transactionId, ClientInfo clientInfo) {
                 clientInfo.unregisterMdnsListenerFromRequest(request);
                 removeRequestMap(clientRequestId, transactionId, clientInfo);
+            }
+
+            private ClientInfo getClientInfoForReply(Message msg) {
+                final ListenerArgs args = (ListenerArgs) msg.obj;
+                return mClients.get(args.connector);
             }
 
             @Override
@@ -1214,7 +1107,51 @@ public class NsdService extends INsdManager.Stub {
                     case NsdManager.UNREGISTER_OFFLOAD_ENGINE:
                         mOffloadEngines.unregister((IOffloadEngine) msg.obj);
                         break;
+                    case NsdManager.REGISTER_CLIENT:
+                        final ConnectorArgs arg = (ConnectorArgs) msg.obj;
+                        final INsdManagerCallback cb = arg.callback;
+                        try {
+                            cb.asBinder().linkToDeath(arg.connector, 0);
+                            final String tag = "Client" + arg.uid + "-" + mClientNumberId++;
+                            final NetworkNsdReportedMetrics metrics =
+                                    mDeps.makeNetworkNsdReportedMetrics(
+                                            (int) mClock.elapsedRealtime());
+                            clientInfo = new ClientInfo(cb, arg.uid, arg.useJavaBackend,
+                                    mServiceLogs.forSubComponent(tag), metrics);
+                            mClients.put(arg.connector, clientInfo);
+                        } catch (RemoteException e) {
+                            Log.w(TAG, "Client request id " + clientRequestId
+                                    + " has already died");
+                        }
+                        break;
+                    case NsdManager.UNREGISTER_CLIENT:
+                        final NsdServiceConnector connector = (NsdServiceConnector) msg.obj;
+                        clientInfo = mClients.remove(connector);
+                        if (clientInfo != null) {
+                            clientInfo.expungeAllRequests();
+                            if (clientInfo.isPreSClient()) {
+                                mLegacyClientCount -= 1;
+                            }
+                        }
+                        maybeStopMonitoringSocketsIfNoActiveRequest();
+                        maybeScheduleStop();
+                        break;
+                    case NsdManager.DAEMON_CLEANUP:
+                        maybeStopDaemon();
+                        break;
+                    // This event should be only sent by the legacy (target SDK < S) clients.
+                    // Mark the sending client as legacy.
+                    case NsdManager.DAEMON_STARTUP:
+                        clientInfo = getClientInfoForReply(msg);
+                        if (clientInfo != null) {
+                            cancelStop();
+                            clientInfo.setPreSClient();
+                            mLegacyClientCount += 1;
+                            maybeStartDaemon();
+                        }
+                        break;
                     default:
+                        Log.wtf(TAG, "Unhandled " + msg);
                         return NOT_HANDLED;
                 }
                 return HANDLED;
