@@ -83,6 +83,7 @@ apex {
                 "libandroid_net_connectivity_com_android_net_module_util_jni",
             ],
             native_shared_libs: [
+                "libcom.android.tethering.dns_helper",
                 "libcom.android.tethering.connectivity_native",
                 "libnetd_updatable",
             ],
