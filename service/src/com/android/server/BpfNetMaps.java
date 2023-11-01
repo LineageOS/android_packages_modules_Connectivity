@@ -32,6 +32,7 @@ import static android.net.BpfNetMapsConstants.UID_PERMISSION_MAP_PATH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.BpfNetMapsUtils.PRE_T;
 import static android.net.BpfNetMapsUtils.getMatchByFirewallChain;
+import static android.net.BpfNetMapsUtils.isFirewallAllowList;
 import static android.net.BpfNetMapsUtils.matchToString;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
@@ -350,29 +351,6 @@ public class BpfNetMaps {
         }
         mNetd = netd;
         mDeps = deps;
-    }
-
-    /**
-     * Get if the chain is allow list or not.
-     *
-     * ALLOWLIST means the firewall denies all by default, uids must be explicitly allowed
-     * DENYLIST means the firewall allows all by default, uids must be explicitly denyed
-     */
-    public boolean isFirewallAllowList(final int chain) {
-        switch (chain) {
-            case FIREWALL_CHAIN_DOZABLE:
-            case FIREWALL_CHAIN_POWERSAVE:
-            case FIREWALL_CHAIN_RESTRICTED:
-            case FIREWALL_CHAIN_LOW_POWER_STANDBY:
-                return true;
-            case FIREWALL_CHAIN_STANDBY:
-            case FIREWALL_CHAIN_OEM_DENY_1:
-            case FIREWALL_CHAIN_OEM_DENY_2:
-            case FIREWALL_CHAIN_OEM_DENY_3:
-                return false;
-            default:
-                throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
-        }
     }
 
     private void maybeThrow(final int err, final String msg) {

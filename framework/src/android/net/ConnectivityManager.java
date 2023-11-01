@@ -6198,6 +6198,36 @@ public class ConnectivityManager {
         }
     }
 
+    /**
+     * Return whether the network is blocked for the given uid.
+     *
+     * Similar to {@link NetworkPolicyManager#isUidNetworkingBlocked}, but directly reads the BPF
+     * maps and therefore considerably faster. For use by the NetworkStack process only.
+     *
+     * @param uid The target uid.
+     * @return True if all networking is blocked. Otherwise, false.
+     * @throws IllegalStateException if the map cannot be opened.
+     * @throws ServiceSpecificException if the read fails.
+     * @hide
+     */
+    // This isn't protected by a standard Android permission since it can't
+    // afford to do IPC for performance reasons. Instead, the access control
+    // is provided by linux file group permission AID_NET_BW_ACCT and the
+    // selinux context fs_bpf_net*.
+    // Only the system server process and the network stack have access.
+    // TODO: Expose api when ready.
+    // @SystemApi(client = MODULE_LIBRARIES)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)  // BPF maps were only mainlined in T
+    @RequiresPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)
+    public boolean isUidNetworkingBlocked(int uid) {
+        final BpfNetMapsReader reader = BpfNetMapsReader.getInstance();
+
+        return reader.isUidBlockedByFirewallChains(uid);
+
+        // TODO: If isNetworkMetered is true, check the data saver switch, penalty box
+        //  and happy box rules.
+    }
+
     /** @hide */
     public IBinder getCompanionDeviceManagerProxyService() {
         try {
