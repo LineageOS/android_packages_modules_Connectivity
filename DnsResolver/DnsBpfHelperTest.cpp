@@ -34,6 +34,7 @@ class DnsBpfHelperTest : public ::testing::Test {
   DnsBpfHelper mDnsBpfHelper;
   BpfMap<uint32_t, uint32_t> mFakeConfigurationMap;
   BpfMap<uint32_t, UidOwnerValue> mFakeUidOwnerMap;
+  BpfMap<uint32_t, bool> mFakeDataSaverEnabledMap;
 
   void SetUp() {
     mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_ARRAY, CONFIGURATION_MAP_SIZE);
@@ -42,15 +43,21 @@ class DnsBpfHelperTest : public ::testing::Test {
     mFakeUidOwnerMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
     ASSERT_VALID(mFakeUidOwnerMap);
 
+    mFakeDataSaverEnabledMap.resetMap(BPF_MAP_TYPE_ARRAY, DATA_SAVER_ENABLED_MAP_SIZE);
+    ASSERT_VALID(mFakeDataSaverEnabledMap);
+
     mDnsBpfHelper.mConfigurationMap = mFakeConfigurationMap;
     ASSERT_VALID(mDnsBpfHelper.mConfigurationMap);
     mDnsBpfHelper.mUidOwnerMap = mFakeUidOwnerMap;
     ASSERT_VALID(mDnsBpfHelper.mUidOwnerMap);
+    mDnsBpfHelper.mDataSaverEnabledMap = mFakeDataSaverEnabledMap;
+    ASSERT_VALID(mDnsBpfHelper.mDataSaverEnabledMap);
   }
 
   void ResetAllMaps() {
     mDnsBpfHelper.mConfigurationMap.reset();
     mDnsBpfHelper.mUidOwnerMap.reset();
+    mDnsBpfHelper.mDataSaverEnabledMap.reset();
   }
 };
 
@@ -135,6 +142,58 @@ TEST_F(DnsBpfHelperTest, IsUidNetworkingBlocked_uninitialized) {
   result = mDnsBpfHelper.isUidNetworkingBlocked(AID_SYSTEM, /*metered=*/false);
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value());
+}
+
+// Verify DataSaver on metered network.
+TEST_F(DnsBpfHelperTest, IsUidNetworkingBlocked_metered) {
+  struct TestConfig {
+    const uint32_t enabledRules;     // Settings in configuration map.
+    const bool dataSaverEnabled;     // Settings in data saver enabled map.
+    const uint32_t uidRules;         // Settings in uid owner map.
+    const int blocked;               // Whether the UID is expected to be networking blocked or not.
+    std::string toString() const {
+      return fmt::format(
+          ", enabledRules: {}, dataSaverEnabled: {},  uidRules: {}, expect blocked: {}",
+          enabledRules, dataSaverEnabled, uidRules, blocked);
+    }
+  } testConfigs[]{
+    // clang-format off
+    // enabledRules, dataSaverEnabled, uidRules,                                        blocked
+    {NO_MATCH,       false,            NO_MATCH,                                        false},
+    {NO_MATCH,       false,            PENALTY_BOX_MATCH,                               true},
+    {NO_MATCH,       false,            HAPPY_BOX_MATCH,                                 false},
+    {NO_MATCH,       false,            PENALTY_BOX_MATCH|HAPPY_BOX_MATCH,               true},
+    {NO_MATCH,       true,             NO_MATCH,                                        true},
+    {NO_MATCH,       true,             PENALTY_BOX_MATCH,                               true},
+    {NO_MATCH,       true,             HAPPY_BOX_MATCH,                                 false},
+    {NO_MATCH,       true,             PENALTY_BOX_MATCH|HAPPY_BOX_MATCH,               true},
+    {STANDBY_MATCH,  false,            STANDBY_MATCH,                                   true},
+    {STANDBY_MATCH,  false,            STANDBY_MATCH|PENALTY_BOX_MATCH,                 true},
+    {STANDBY_MATCH,  false,            STANDBY_MATCH|HAPPY_BOX_MATCH,                   true},
+    {STANDBY_MATCH,  false,            STANDBY_MATCH|PENALTY_BOX_MATCH|HAPPY_BOX_MATCH, true},
+    {STANDBY_MATCH,  true,             STANDBY_MATCH,                                   true},
+    {STANDBY_MATCH,  true,             STANDBY_MATCH|PENALTY_BOX_MATCH,                 true},
+    {STANDBY_MATCH,  true,             STANDBY_MATCH|HAPPY_BOX_MATCH,                   true},
+    {STANDBY_MATCH,  true,             STANDBY_MATCH|PENALTY_BOX_MATCH|HAPPY_BOX_MATCH, true},
+    // clang-format on
+  };
+
+  for (const auto& config : testConfigs) {
+    SCOPED_TRACE(config.toString());
+
+    // Setup maps.
+    EXPECT_RESULT_OK(mFakeConfigurationMap.writeValue(UID_RULES_CONFIGURATION_KEY,
+                                                      config.enabledRules, BPF_EXIST));
+    EXPECT_RESULT_OK(mFakeDataSaverEnabledMap.writeValue(DATA_SAVER_ENABLED_KEY,
+                                                      config.dataSaverEnabled, BPF_EXIST));
+    EXPECT_RESULT_OK(mFakeUidOwnerMap.writeValue(AID_APP_START, {.iif = 0, .rule = config.uidRules},
+                                                 BPF_ANY));
+
+    // Verify the function.
+    auto result = mDnsBpfHelper.isUidNetworkingBlocked(AID_APP_START, /*metered=*/true);
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(config.blocked, result.value());
+  }
 }
 
 }  // namespace net
