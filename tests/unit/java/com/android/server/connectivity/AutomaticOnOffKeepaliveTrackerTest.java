@@ -77,6 +77,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.internal.util.IndentingPrintWriter;
 import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker.AutomaticOnOffKeepalive;
 import com.android.server.connectivity.KeepaliveTracker.KeepaliveInfo;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -94,6 +95,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.FileDescriptor;
+import java.io.StringWriter;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -973,5 +975,20 @@ public class AutomaticOnOffKeepaliveTrackerTest {
 
         // The keepalive should be removed in AutomaticOnOffKeepaliveTracker.
         assertNull(getAutoKiForBinder(testInfo.binder));
+    }
+
+    @Test
+    public void testDumpDoesNotCrash() throws Exception {
+        final TestKeepaliveInfo testInfo1 = doStartNattKeepalive();
+        final TestKeepaliveInfo testInfo2 = doStartNattKeepalive();
+        checkAndProcessKeepaliveStart(TEST_SLOT, testInfo1.kpd);
+        checkAndProcessKeepaliveStart(TEST_SLOT + 1, testInfo2.kpd);
+        final AutomaticOnOffKeepalive autoKi1  = getAutoKiForBinder(testInfo1.binder);
+        doPauseKeepalive(autoKi1);
+
+        final StringWriter stringWriter = new StringWriter();
+        final IndentingPrintWriter pw = new IndentingPrintWriter(stringWriter, "   ");
+        visibleOnHandlerThread(mTestHandler, () -> mAOOKeepaliveTracker.dump(pw));
+        assertFalse(stringWriter.toString().isEmpty());
     }
 }
