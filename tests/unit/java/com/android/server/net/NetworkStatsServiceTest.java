@@ -120,6 +120,7 @@ import android.os.DropBoxManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SimpleClock;
 import android.provider.Settings;
@@ -284,6 +285,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private @Mock PersistentInt mImportLegacyFallbacksCounter;
     private @Mock Resources mResources;
     private Boolean mIsDebuggable;
+    private HandlerThread mObserverHandlerThread;
 
     private class MockContext extends BroadcastInterceptingContext {
         private final Context mBaseContext;
@@ -365,10 +367,23 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         PowerManager.WakeLock wakeLock =
                 powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 
-        mHandlerThread = new HandlerThread("HandlerThread");
+        mHandlerThread = new HandlerThread("NetworkStatsServiceTest-HandlerThread");
         final NetworkStatsService.Dependencies deps = makeDependencies();
+        // Create a separate thread for observers to run on. This thread cannot be the same
+        // as the handler thread, because the observer callback is fired on this thread, and
+        // it should not be blocked by client code. Additionally, creating the observers
+        // object requires a looper, which can only be obtained after a thread has been started.
+        mObserverHandlerThread = new HandlerThread("NetworkStatsServiceTest-ObserversThread");
+        mObserverHandlerThread.start();
+        final Looper observerLooper = mObserverHandlerThread.getLooper();
+        final NetworkStatsObservers statsObservers = new NetworkStatsObservers() {
+            @Override
+            protected Looper getHandlerLooperLocked() {
+                return observerLooper;
+            }
+        };
         mService = new NetworkStatsService(mServiceContext, mNetd, mAlarmManager, wakeLock,
-                mClock, mSettings, mStatsFactory, new NetworkStatsObservers(), deps);
+                mClock, mSettings, mStatsFactory, statsObservers, deps);
 
         mElapsedRealtime = 0L;
 
@@ -545,8 +560,14 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mSession.close();
         mService = null;
 
-        mHandlerThread.quitSafely();
-        mHandlerThread.join();
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            mHandlerThread.join();
+        }
+        if (mObserverHandlerThread != null) {
+            mObserverHandlerThread.quitSafely();
+            mObserverHandlerThread.join();
+        }
     }
 
     private void initWifiStats(NetworkStateSnapshot snapshot) throws Exception {
