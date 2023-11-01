@@ -37,6 +37,7 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import android.content.BroadcastReceiver;
@@ -1293,5 +1294,18 @@ public class KeepaliveStatsTrackerTest {
                 expectRegisteredDurations,
                 expectActiveDurations,
                 new KeepaliveCarrierStats[0]);
+
+        assertTrue(mKeepaliveStatsTracker.allMetricsExpected(dailyKeepaliveInfoReported));
+
+        // Write time after 26 hours.
+        final int writeTime2 = 26 * 60 * 60 * 1000;
+        setElapsedRealtime(writeTime2);
+
+        visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.writeAndResetMetrics());
+        verify(mDependencies, times(2)).writeStats(dailyKeepaliveInfoReportedCaptor.capture());
+        final DailykeepaliveInfoReported dailyKeepaliveInfoReported2 =
+                dailyKeepaliveInfoReportedCaptor.getValue();
+
+        assertFalse(mKeepaliveStatsTracker.allMetricsExpected(dailyKeepaliveInfoReported2));
     }
 }

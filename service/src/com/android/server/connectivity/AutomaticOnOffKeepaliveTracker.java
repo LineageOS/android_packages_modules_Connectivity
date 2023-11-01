@@ -692,8 +692,10 @@ public class AutomaticOnOffKeepaliveTracker {
 
     /**
      * Dump AutomaticOnOffKeepaliveTracker state.
+     * This should be only be called in ConnectivityService handler thread.
      */
     public void dump(IndentingPrintWriter pw) {
+        ensureRunningOnHandlerThread();
         mKeepaliveTracker.dump(pw);
         // Reading DeviceConfig will check if the calling uid and calling package name are the same.
         // Clear calling identity to align the calling uid and package so that it won't fail if cts
@@ -712,6 +714,9 @@ public class AutomaticOnOffKeepaliveTracker {
         pw.increaseIndent();
         mEventLog.reverseDump(pw);
         pw.decreaseIndent();
+
+        pw.println();
+        mKeepaliveStatsTracker.dump(pw);
     }
 
     /**
