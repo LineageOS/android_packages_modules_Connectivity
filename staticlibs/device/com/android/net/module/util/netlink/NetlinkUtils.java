@@ -153,7 +153,7 @@ public class NetlinkUtils {
         final FileDescriptor fd = netlinkSocketForProto(nlProto);
 
         try {
-            connectSocketToNetlink(fd);
+            connectToKernel(fd);
             sendMessage(fd, msg, 0, msg.length, IO_TIMEOUT_MS);
             receiveNetlinkAck(fd);
         } catch (InterruptedIOException e) {
@@ -244,7 +244,7 @@ public class NetlinkUtils {
      * @throws ErrnoException if the {@code fd} could not connect to kernel successfully
      * @throws SocketException if there is an error accessing a socket.
      */
-    public static void connectSocketToNetlink(FileDescriptor fd)
+    public static void connectToKernel(@NonNull FileDescriptor fd)
             throws ErrnoException, SocketException {
         Os.connect(fd, makeNetlinkSocketAddress(0, 0));
     }

@@ -68,7 +68,7 @@ public class NetlinkUtilsTest {
         final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
         assertNotNull(fd);
 
-        NetlinkUtils.connectSocketToNetlink(fd);
+        NetlinkUtils.connectToKernel(fd);
 
         final NetlinkSocketAddress localAddr = (NetlinkSocketAddress) Os.getsockname(fd);
         assertNotNull(localAddr);
@@ -153,7 +153,7 @@ public class NetlinkUtilsTest {
         final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
         assertNotNull(fd);
 
-        NetlinkUtils.connectSocketToNetlink(fd);
+        NetlinkUtils.connectToKernel(fd);
 
         final NetlinkSocketAddress localAddr = (NetlinkSocketAddress) Os.getsockname(fd);
         assertNotNull(localAddr);
