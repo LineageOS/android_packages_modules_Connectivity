@@ -90,6 +90,7 @@ import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.ExecutorProvider;
 import com.android.server.connectivity.mdns.MdnsAdvertiser;
+import com.android.server.connectivity.mdns.MdnsAdvertisingOptions;
 import com.android.server.connectivity.mdns.MdnsDiscoveryManager;
 import com.android.server.connectivity.mdns.MdnsFeatureFlags;
 import com.android.server.connectivity.mdns.MdnsInterfaceSocket;
@@ -849,7 +850,9 @@ public class NsdService extends INsdManager.Stub {
                             // service type would generate service instance names like
                             // Name._subtype._sub._type._tcp, which is incorrect
                             // (it should be Name._type._tcp).
-                            mAdvertiser.addService(transactionId, serviceInfo, typeSubtype.second);
+                            mAdvertiser.addOrUpdateService(transactionId, serviceInfo,
+                                    typeSubtype.second,
+                                    MdnsAdvertisingOptions.newBuilder().build());
                             storeAdvertiserRequestMap(clientRequestId, transactionId, clientInfo,
                                     serviceInfo.getNetwork());
                         } else {
