@@ -125,7 +125,7 @@ public class NetworkStatsObserversTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        mObserverHandlerThread = new HandlerThread("HandlerThread");
+        mObserverHandlerThread = new HandlerThread("NetworkStatsObserversTest");
         mObserverHandlerThread.start();
         final Looper observerLooper = mObserverHandlerThread.getLooper();
         mStatsObservers = new NetworkStatsObservers() {

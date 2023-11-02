@@ -16,6 +16,15 @@
 
 package android.net;
 
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
+
 import android.util.Pair;
 
 import com.android.net.module.util.Struct;
@@ -66,7 +75,6 @@ public class BpfNetMapsConstants {
     public static final long OEM_DENY_1_MATCH = (1 << 9);
     public static final long OEM_DENY_2_MATCH = (1 << 10);
     public static final long OEM_DENY_3_MATCH = (1 << 11);
-    // LINT.ThenChange(../../../../bpf_progs/netd.h)
 
     public static final List<Pair<Long, String>> MATCH_LIST = Arrays.asList(
             Pair.create(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"),
@@ -82,4 +90,29 @@ public class BpfNetMapsConstants {
             Pair.create(OEM_DENY_2_MATCH, "OEM_DENY_2_MATCH"),
             Pair.create(OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH")
     );
+
+    /**
+     * List of all firewall allow chains.
+     *
+     * Allow chains mean the firewall denies all uids by default, uids must be explicitly allowed.
+     */
+    public static final List<Integer> ALLOW_CHAINS = List.of(
+            FIREWALL_CHAIN_DOZABLE,
+            FIREWALL_CHAIN_POWERSAVE,
+            FIREWALL_CHAIN_RESTRICTED,
+            FIREWALL_CHAIN_LOW_POWER_STANDBY
+    );
+
+    /**
+     * List of all firewall deny chains.
+     *
+     * Deny chains mean the firewall allows all uids by default, uids must be explicitly denied.
+     */
+    public static final List<Integer> DENY_CHAINS = List.of(
+            FIREWALL_CHAIN_STANDBY,
+            FIREWALL_CHAIN_OEM_DENY_1,
+            FIREWALL_CHAIN_OEM_DENY_2,
+            FIREWALL_CHAIN_OEM_DENY_3
+    );
+    // LINT.ThenChange(../../../../bpf_progs/netd.h)
 }

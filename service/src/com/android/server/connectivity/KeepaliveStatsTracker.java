@@ -34,6 +34,7 @@ import android.os.SystemClock;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
@@ -73,6 +74,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class KeepaliveStatsTracker {
     private static final String TAG = KeepaliveStatsTracker.class.getSimpleName();
     private static final int INVALID_KEEPALIVE_ID = -1;
+    // 1 hour acceptable deviation in metrics collection duration time.
+    private static final long MAX_EXPECTED_DURATION_MS =
+            AutomaticOnOffKeepaliveTracker.METRICS_COLLECTION_DURATION_MS + 1 * 60 * 60 * 1_000L;
 
     @NonNull private final Handler mConnectivityServiceHandler;
     @NonNull private final Dependencies mDependencies;
@@ -709,6 +713,36 @@ public class KeepaliveStatsTracker {
         return mEnabled.get();
     }
 
+    /**
+     * Checks the DailykeepaliveInfoReported for the following:
+     * 1. total active durations/lifetimes <= total registered durations/lifetimes.
+     * 2. Total time in Durations == total time in Carrier lifetime stats
+     * 3. The total elapsed real time spent is within expectations.
+     */
+    @VisibleForTesting
+    public boolean allMetricsExpected(DailykeepaliveInfoReported dailyKeepaliveInfoReported) {
+        int totalRegistered = 0;
+        int totalActiveDurations = 0;
+        int totalTimeSpent = 0;
+        for (DurationForNumOfKeepalive durationForNumOfKeepalive: dailyKeepaliveInfoReported
+                .getDurationPerNumOfKeepalive().getDurationForNumOfKeepaliveList()) {
+            final int n = durationForNumOfKeepalive.getNumOfKeepalive();
+            totalRegistered += durationForNumOfKeepalive.getKeepaliveRegisteredDurationsMsec() * n;
+            totalActiveDurations += durationForNumOfKeepalive.getKeepaliveActiveDurationsMsec() * n;
+            totalTimeSpent += durationForNumOfKeepalive.getKeepaliveRegisteredDurationsMsec();
+        }
+        int totalLifetimes = 0;
+        int totalActiveLifetimes = 0;
+        for (KeepaliveLifetimeForCarrier keepaliveLifetimeForCarrier: dailyKeepaliveInfoReported
+                .getKeepaliveLifetimePerCarrier().getKeepaliveLifetimeForCarrierList()) {
+            totalLifetimes += keepaliveLifetimeForCarrier.getLifetimeMsec();
+            totalActiveLifetimes += keepaliveLifetimeForCarrier.getActiveLifetimeMsec();
+        }
+        return totalActiveDurations <= totalRegistered && totalActiveLifetimes <= totalLifetimes
+                && totalLifetimes == totalRegistered && totalActiveLifetimes == totalActiveDurations
+                && totalTimeSpent <= MAX_EXPECTED_DURATION_MS;
+    }
+
     /** Writes the stored metrics to ConnectivityStatsLog and resets. */
     public void writeAndResetMetrics() {
         ensureRunningOnHandlerThread();
@@ -724,7 +758,19 @@ public class KeepaliveStatsTracker {
         }
 
         final DailykeepaliveInfoReported dailyKeepaliveInfoReported = buildAndResetMetrics();
+        if (!allMetricsExpected(dailyKeepaliveInfoReported)) {
+            Log.wtf(TAG, "Unexpected metrics values: " + dailyKeepaliveInfoReported.toString());
+        }
         mDependencies.writeStats(dailyKeepaliveInfoReported);
+    }
+
+    /** Dump KeepaliveStatsTracker state. */
+    public void dump(IndentingPrintWriter pw) {
+        ensureRunningOnHandlerThread();
+        pw.println("KeepaliveStatsTracker enabled: " + isEnabled());
+        pw.increaseIndent();
+        pw.println(buildKeepaliveMetrics().toString());
+        pw.decreaseIndent();
     }
 
     private void ensureRunningOnHandlerThread() {

@@ -4288,7 +4288,9 @@ public class ConnectivityServiceTest {
         testFactory.terminate();
         testFactory.assertNoRequestChanged();
         if (networkCallback != null) mCm.unregisterNetworkCallback(networkCallback);
-        handlerThread.quit();
+
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     @Test
@@ -4349,6 +4351,8 @@ public class ConnectivityServiceTest {
         expectNoRequestChanged(testFactoryAll); // still seeing the request
 
         mWiFiAgent.disconnect();
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     @Test
@@ -4382,7 +4386,8 @@ public class ConnectivityServiceTest {
                 }
             }
         }
-        handlerThread.quit();
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     @Test
@@ -6003,7 +6008,8 @@ public class ConnectivityServiceTest {
             testFactory.assertNoRequestChanged();
         } finally {
             mCm.unregisterNetworkCallback(cellNetworkCallback);
-            handlerThread.quit();
+            handlerThread.quitSafely();
+            handlerThread.join();
         }
     }
 
@@ -6593,7 +6599,8 @@ public class ConnectivityServiceTest {
             }
         } finally {
             testFactory.terminate();
-            handlerThread.quit();
+            handlerThread.quitSafely();
+            handlerThread.join();
         }
     }
 
@@ -10526,13 +10533,11 @@ public class ConnectivityServiceTest {
         final boolean allowlist = true;
         final boolean denylist = false;
 
-        doReturn(true).when(mBpfNetMaps).isFirewallAllowList(anyInt());
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_DOZABLE, allowlist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_POWERSAVE, allowlist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_RESTRICTED, allowlist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_LOW_POWER_STANDBY, allowlist);
 
-        doReturn(false).when(mBpfNetMaps).isFirewallAllowList(anyInt());
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_STANDBY, denylist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_OEM_DENY_1, denylist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_OEM_DENY_2, denylist);
@@ -15316,6 +15321,8 @@ public class ConnectivityServiceTest {
         expectNoRequestChanged(oemPaidFactory);
         internetFactory.expectRequestAdd();
         mCm.unregisterNetworkCallback(wifiCallback);
+        handlerThread.quitSafely();
+        handlerThread.join();
     }
 
     /**
@@ -15680,6 +15687,8 @@ public class ConnectivityServiceTest {
             assertTrue(testFactory.getMyStartRequested());
         } finally {
             testFactory.terminate();
+            handlerThread.quitSafely();
+            handlerThread.join();
         }
     }
 
