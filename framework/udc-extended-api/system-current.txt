@@ -94,6 +94,7 @@ package android.net {
   }
 
   public final class DscpPolicy implements android.os.Parcelable {
+    method public int describeContents();
     method @Nullable public java.net.InetAddress getDestinationAddress();
     method @Nullable public android.util.Range<java.lang.Integer> getDestinationPortRange();
     method public int getDscpValue();
@@ -101,6 +102,7 @@ package android.net {
     method public int getProtocol();
     method @Nullable public java.net.InetAddress getSourceAddress();
     method public int getSourcePort();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.DscpPolicy> CREATOR;
     field public static final int PROTOCOL_ANY = -1; // 0xffffffff
     field public static final int SOURCE_PORT_ANY = -1; // 0xffffffff
