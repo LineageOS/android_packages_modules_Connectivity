@@ -19,12 +19,20 @@ package com.android.server
 import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
+import android.os.Build
+import androidx.test.filters.SmallTest
+import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
 import org.junit.Test
+import org.junit.runner.RunWith
 
 private const val LONG_TIMEOUT_MS = 5_000
 
+@RunWith(DevSdkIgnoreRunner::class)
+@SmallTest
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 class CSDestroyedNetworkTests : CSTest() {
     @Test
     fun testDestroyNetworkNotKeptWhenUnvalidated() {
