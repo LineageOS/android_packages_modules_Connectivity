@@ -25,9 +25,15 @@
 #include <perfetto/tracing/platform.h>
 #include <perfetto/tracing/tracing.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
+#include "netdbpf/BpfNetworkStats.h"
+
 namespace android {
 namespace bpf {
 namespace internal {
+using ::android::base::StringPrintf;
 
 void NetworkTracePoller::PollAndSchedule(perfetto::base::TaskRunner* runner,
                                          uint32_t poll_ms) {
@@ -116,6 +122,28 @@ bool NetworkTracePoller::Stop() {
   return res.ok();
 }
 
+void NetworkTracePoller::TraceIfaces(const std::vector<PacketTrace>& packets) {
+  if (packets.empty()) return;
+
+  std::unordered_set<uint32_t> uniqueIfindex;
+  for (const PacketTrace& pkt : packets) {
+    uniqueIfindex.insert(pkt.ifindex);
+  }
+
+  for (uint32_t ifindex : uniqueIfindex) {
+    char ifname[IF_NAMESIZE] = {};
+    if (if_indextoname(ifindex, ifname) != ifname) continue;
+
+    StatsValue stats = {};
+    if (bpfGetIfIndexStats(ifindex, &stats) != 0) continue;
+
+    std::string rxTrack = StringPrintf("%s [%d] Rx Bytes", ifname, ifindex);
+    std::string txTrack = StringPrintf("%s [%d] Tx Bytes", ifname, ifindex);
+    ATRACE_INT64(rxTrack.c_str(), stats.rxBytes);
+    ATRACE_INT64(txTrack.c_str(), stats.txBytes);
+  }
+}
+
 bool NetworkTracePoller::ConsumeAll() {
   std::scoped_lock<std::mutex> lock(mMutex);
   return ConsumeAllLocked();
@@ -137,6 +165,7 @@ bool NetworkTracePoller::ConsumeAllLocked() {
 
   ATRACE_INT("NetworkTracePackets", packets.size());
 
+  TraceIfaces(packets);
   mCallback(packets);
 
   return true;
