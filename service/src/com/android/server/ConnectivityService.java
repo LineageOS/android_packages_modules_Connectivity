@@ -4156,7 +4156,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
             switch (msg.what) {
                 case NetworkAgent.EVENT_NETWORK_CAPABILITIES_CHANGED: {
-                    nai.setDeclaredCapabilities((NetworkCapabilities) arg.second);
+                    final NetworkCapabilities proposed = (NetworkCapabilities) arg.second;
+                    if (!nai.respectsNcStructuralConstraints(proposed)) {
+                        Log.wtf(TAG, "Agent " + nai + " violates nc structural constraints : "
+                                + nai.networkCapabilities + " -> " + proposed);
+                        disconnectAndDestroyNetwork(nai);
+                        return;
+                    }
+                    nai.setDeclaredCapabilities(proposed);
                     final NetworkCapabilities sanitized =
                             nai.getDeclaredCapabilitiesSanitized(mCarrierPrivilegeAuthenticator);
                     maybeUpdateWifiRoamTimestamp(nai, sanitized);
