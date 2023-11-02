@@ -176,7 +176,7 @@ open class CSTest {
         override fun getClatCoordinator(netd: INetd?) = this@CSTest.clatCoordinator
         override fun getNetworkStack() = this@CSTest.networkStack
 
-        override fun makeHandlerThread() = csHandlerThread
+        override fun makeHandlerThread(tag: String) = csHandlerThread
         override fun makeProxyTracker(context: Context, connServiceHandler: Handler) = proxyTracker
 
         override fun makeCarrierPrivilegeAuthenticator(
