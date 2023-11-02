@@ -17,6 +17,8 @@
 package android.net;
 
 import static android.net.BpfNetMapsConstants.CONFIGURATION_MAP_PATH;
+import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.UID_OWNER_MAP_PATH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.BpfNetMapsUtils.getMatchByFirewallChain;
@@ -213,13 +215,16 @@ public class BpfNetMapsReader {
      * Return whether the network is blocked by firewall chains for the given uid.
      *
      * @param uid The target uid.
+     * @param isNetworkMetered Whether the target network is metered.
+     * @param isDataSaverEnabled Whether the data saver is enabled.
      *
      * @return True if the network is blocked. Otherwise, false.
      * @throws ServiceSpecificException if the read fails.
      *
      * @hide
      */
-    public boolean isUidBlockedByFirewallChains(final int uid) {
+    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered,
+            boolean isDataSaverEnabled) {
         throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
 
         final long uidRuleConfig;
@@ -235,6 +240,13 @@ public class BpfNetMapsReader {
 
         final boolean blockedByAllowChains = 0 != (uidRuleConfig & ~uidMatch & sMaskDropIfUnset);
         final boolean blockedByDenyChains = 0 != (uidRuleConfig & uidMatch & sMaskDropIfSet);
-        return blockedByAllowChains || blockedByDenyChains;
+        if (blockedByAllowChains || blockedByDenyChains) {
+            return true;
+        }
+
+        if (!isNetworkMetered) return false;
+        if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
+        if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
+        return isDataSaverEnabled;
     }
 }
