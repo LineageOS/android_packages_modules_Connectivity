@@ -22,7 +22,7 @@ import android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
 import android.net.NetworkScore
-import android.net.NetworkScore.KEEP_CONNECTED_DOWNSTREAM_NETWORK
+import android.net.NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK
 import android.net.NetworkScore.KEEP_CONNECTED_FOR_TEST
 import android.os.Build
 import androidx.test.filters.SmallTest
@@ -45,7 +45,7 @@ class CSKeepConnectedTest : CSTest() {
                 .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
                 .build()
         val keepConnectedAgent = Agent(nc = nc, score = FromS(NetworkScore.Builder()
-                .setKeepConnectedReason(KEEP_CONNECTED_DOWNSTREAM_NETWORK)
+                .setKeepConnectedReason(KEEP_CONNECTED_LOCAL_NETWORK)
                 .build()),
                 lnc = LocalNetworkConfig.Builder().build())
         val dontKeepConnectedAgent = Agent(nc = nc, lnc = LocalNetworkConfig.Builder().build())
