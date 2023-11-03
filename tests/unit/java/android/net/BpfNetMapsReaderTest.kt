@@ -17,6 +17,8 @@
 package android.net
 
 import android.net.BpfNetMapsConstants.DOZABLE_MATCH
+import android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH
+import android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH
 import android.net.BpfNetMapsConstants.STANDBY_MATCH
 import android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY
 import android.net.BpfNetMapsUtils.getMatchByFirewallChain
@@ -36,6 +38,7 @@ import org.junit.runner.RunWith
 
 private const val TEST_UID1 = 1234
 private const val TEST_UID2 = TEST_UID1 + 1
+private const val TEST_UID3 = TEST_UID2 + 1
 private const val NO_IIF = 0
 
 // pre-T devices does not support Bpf.
@@ -101,23 +104,26 @@ class BpfNetMapsReaderTest {
         testConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, U32(newConfig))
     }
 
+    fun isUidNetworkingBlocked(uid: Int, metered: Boolean = false, dataSaver: Boolean = false) =
+            bpfNetMapsReader.isUidNetworkingBlocked(uid, metered, dataSaver)
+
     @Test
     fun testIsUidNetworkingBlockedByFirewallChains_allowChain() {
         // With everything disabled by default, verify the return value is false.
         testConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, U32(0))
-        assertFalse(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID1))
+        assertFalse(isUidNetworkingBlocked(TEST_UID1))
 
         // Enable dozable chain but does not provide allowed list. Verify the network is blocked
         // for all uids.
         mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_DOZABLE, true)
-        assertTrue(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID1))
-        assertTrue(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID2))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1))
+        assertTrue(isUidNetworkingBlocked(TEST_UID2))
 
         // Add uid1 to dozable allowed list. Verify the network is not blocked for uid1, while
         // uid2 is blocked.
         testUidOwnerMap.updateEntry(S32(TEST_UID1), UidOwnerValue(NO_IIF, DOZABLE_MATCH))
-        assertFalse(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID1))
-        assertTrue(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID2))
+        assertFalse(isUidNetworkingBlocked(TEST_UID1))
+        assertTrue(isUidNetworkingBlocked(TEST_UID2))
     }
 
     @Test
@@ -126,14 +132,14 @@ class BpfNetMapsReaderTest {
         // for all uids.
         testConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, U32(0))
         mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_STANDBY, true)
-        assertFalse(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID1))
-        assertFalse(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID2))
+        assertFalse(isUidNetworkingBlocked(TEST_UID1))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2))
 
         // Add uid1 to standby allowed list. Verify the network is blocked for uid1, while
         // uid2 is not blocked.
         testUidOwnerMap.updateEntry(S32(TEST_UID1), UidOwnerValue(NO_IIF, STANDBY_MATCH))
-        assertTrue(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID1))
-        assertFalse(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID2))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2))
     }
 
     @Test
@@ -143,6 +149,54 @@ class BpfNetMapsReaderTest {
         testConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, U32(0))
         mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_POWERSAVE, true)
         mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_STANDBY, true)
-        assertTrue(bpfNetMapsReader.isUidBlockedByFirewallChains(TEST_UID1))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1))
+    }
+
+    @IgnoreUpTo(VERSION_CODES.S_V2)
+    @Test
+    fun testIsUidNetworkingBlockedByDataSaver() {
+        // With everything disabled by default, verify the return value is false.
+        testConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, U32(0))
+        assertFalse(isUidNetworkingBlocked(TEST_UID1, metered = true))
+
+        // Add uid1 to penalty box, verify the network is blocked for uid1, while uid2 is not
+        // affected.
+        testUidOwnerMap.updateEntry(S32(TEST_UID1), UidOwnerValue(NO_IIF, PENALTY_BOX_MATCH))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2, metered = true))
+
+        // Enable data saver, verify the network is blocked for uid1, uid2, but uid3 in happy box
+        // is not affected.
+        testUidOwnerMap.updateEntry(S32(TEST_UID3), UidOwnerValue(NO_IIF, HAPPY_BOX_MATCH))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true, dataSaver = true))
+        assertTrue(isUidNetworkingBlocked(TEST_UID2, metered = true, dataSaver = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID3, metered = true, dataSaver = true))
+
+        // Add uid1 to happy box as well, verify nothing is changed because penalty box has higher
+        // priority.
+        testUidOwnerMap.updateEntry(
+            S32(TEST_UID1),
+            UidOwnerValue(NO_IIF, PENALTY_BOX_MATCH or HAPPY_BOX_MATCH)
+        )
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true, dataSaver = true))
+        assertTrue(isUidNetworkingBlocked(TEST_UID2, metered = true, dataSaver = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID3, metered = true, dataSaver = true))
+
+        // Enable doze mode, verify uid3 is blocked even if it is in happy box.
+        mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_DOZABLE, true)
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true, dataSaver = true))
+        assertTrue(isUidNetworkingBlocked(TEST_UID2, metered = true, dataSaver = true))
+        assertTrue(isUidNetworkingBlocked(TEST_UID3, metered = true, dataSaver = true))
+
+        // Disable doze mode and data saver, only uid1 which is in penalty box is blocked.
+        mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_DOZABLE, false)
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2, metered = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID3, metered = true))
+
+        // Make the network non-metered, nothing is blocked.
+        assertFalse(isUidNetworkingBlocked(TEST_UID1))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2))
+        assertFalse(isUidNetworkingBlocked(TEST_UID3))
     }
 }
