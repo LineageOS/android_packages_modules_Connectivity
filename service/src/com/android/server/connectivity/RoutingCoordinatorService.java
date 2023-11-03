@@ -19,12 +19,17 @@ package com.android.server.connectivity;
 import static com.android.net.module.util.NetdUtils.toRouteInfoParcel;
 
 import android.annotation.NonNull;
-import android.content.Context;
 import android.net.INetd;
 import android.net.IRoutingCoordinator;
 import android.net.RouteInfo;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.util.ArraySet;
+import android.util.Log;
+
+import com.android.internal.annotations.GuardedBy;
+
+import java.util.Objects;
 
 /**
  * Class to coordinate routing across multiple clients.
@@ -37,6 +42,7 @@ import android.os.ServiceSpecificException;
  * synchronization.
  */
 public class RoutingCoordinatorService extends IRoutingCoordinator.Stub {
+    private static final String TAG = RoutingCoordinatorService.class.getSimpleName();
     private final INetd mNetd;
 
     public RoutingCoordinatorService(@NonNull INetd netd) {
@@ -114,5 +120,100 @@ public class RoutingCoordinatorService extends IRoutingCoordinator.Stub {
     public void removeInterfaceFromNetwork(final int netId, final String iface)
             throws ServiceSpecificException, RemoteException {
         mNetd.networkRemoveInterface(netId, iface);
+    }
+
+    private final Object mIfacesLock = new Object();
+    private static final class ForwardingPair {
+        @NonNull public final String fromIface;
+        @NonNull public final String toIface;
+        ForwardingPair(@NonNull final String fromIface, @NonNull final String toIface) {
+            this.fromIface = fromIface;
+            this.toIface = toIface;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ForwardingPair)) return false;
+
+            final ForwardingPair that = (ForwardingPair) o;
+
+            return fromIface.equals(that.fromIface) && toIface.equals(that.toIface);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = fromIface.hashCode();
+            result = 2 * result + toIface.hashCode();
+            return result;
+        }
+    }
+
+    @GuardedBy("mIfacesLock")
+    private final ArraySet<ForwardingPair> mForwardedInterfaces = new ArraySet<>();
+
+    /**
+     * Add forwarding ip rule
+     *
+     * @param fromIface interface name to add forwarding ip rule
+     * @param toIface interface name to add forwarding ip rule
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *         cause of the failure.
+     */
+    public void addInterfaceForward(final String fromIface, final String toIface)
+            throws ServiceSpecificException, RemoteException {
+        Objects.requireNonNull(fromIface);
+        Objects.requireNonNull(toIface);
+        Log.i(TAG, "Adding interface forward " + fromIface + " → " + toIface);
+        synchronized (mIfacesLock) {
+            if (mForwardedInterfaces.size() == 0) {
+                mNetd.ipfwdEnableForwarding("RoutingCoordinator");
+            }
+            final ForwardingPair fwp = new ForwardingPair(fromIface, toIface);
+            if (mForwardedInterfaces.contains(fwp)) {
+                throw new IllegalStateException("Forward already exists between ifaces "
+                        + fromIface + " → " + toIface);
+            }
+            mForwardedInterfaces.add(fwp);
+            // Enables NAT for v4 and filters packets from unknown interfaces
+            mNetd.tetherAddForward(fromIface, toIface);
+            mNetd.ipfwdAddInterfaceForward(fromIface, toIface);
+        }
+    }
+
+    /**
+     * Remove forwarding ip rule
+     *
+     * @param fromIface interface name to remove forwarding ip rule
+     * @param toIface interface name to remove forwarding ip rule
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *         cause of the failure.
+     */
+    public void removeInterfaceForward(final String fromIface, final String toIface)
+            throws ServiceSpecificException, RemoteException {
+        Objects.requireNonNull(fromIface);
+        Objects.requireNonNull(toIface);
+        Log.i(TAG, "Removing interface forward " + fromIface + " → " + toIface);
+        synchronized (mIfacesLock) {
+            final ForwardingPair fwp = new ForwardingPair(fromIface, toIface);
+            if (!mForwardedInterfaces.contains(fwp)) {
+                throw new IllegalStateException("No forward set up between interfaces "
+                        + fromIface + " → " + toIface);
+            }
+            mForwardedInterfaces.remove(fwp);
+            try {
+                mNetd.ipfwdRemoveInterfaceForward(fromIface, toIface);
+            } catch (RemoteException | ServiceSpecificException e) {
+                Log.e(TAG, "Exception in ipfwdRemoveInterfaceForward", e);
+            }
+            try {
+                mNetd.tetherRemoveForward(fromIface, toIface);
+            } catch (RemoteException | ServiceSpecificException e) {
+                Log.e(TAG, "Exception in tetherRemoveForward", e);
+            }
+            if (mForwardedInterfaces.size() == 0) {
+                mNetd.ipfwdDisableForwarding("RoutingCoordinator");
+            }
+        }
     }
 }
