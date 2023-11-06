@@ -36,6 +36,11 @@ public class MdnsFeatureFlags {
     public static final String NSD_EXPIRED_SERVICES_REMOVAL =
             "nsd_expired_services_removal";
 
+    /**
+     * A feature flag to control whether the label count limit should be enabled.
+     */
+    public static final String NSD_LIMIT_LABEL_COUNT = "nsd_limit_label_count";
+
     // Flag for offload feature
     public final boolean mIsMdnsOffloadFeatureEnabled;
 
@@ -45,14 +50,20 @@ public class MdnsFeatureFlags {
     // Flag for expired services removal
     public final boolean mIsExpiredServicesRemovalEnabled;
 
+    // Flag for label count limit
+    public final boolean mIsLabelCountLimitEnabled;
+
     /**
      * The constructor for {@link MdnsFeatureFlags}.
      */
     public MdnsFeatureFlags(boolean isOffloadFeatureEnabled,
-            boolean includeInetAddressRecordsInProbing, boolean isExpiredServicesRemovalEnabled) {
+            boolean includeInetAddressRecordsInProbing,
+            boolean isExpiredServicesRemovalEnabled,
+            boolean isLabelCountLimitEnabled) {
         mIsMdnsOffloadFeatureEnabled = isOffloadFeatureEnabled;
         mIncludeInetAddressRecordsInProbing = includeInetAddressRecordsInProbing;
         mIsExpiredServicesRemovalEnabled = isExpiredServicesRemovalEnabled;
+        mIsLabelCountLimitEnabled = isLabelCountLimitEnabled;
     }
 
 
@@ -67,6 +78,7 @@ public class MdnsFeatureFlags {
         private boolean mIsMdnsOffloadFeatureEnabled;
         private boolean mIncludeInetAddressRecordsInProbing;
         private boolean mIsExpiredServicesRemovalEnabled;
+        private boolean mIsLabelCountLimitEnabled;
 
         /**
          * The constructor for {@link Builder}.
@@ -75,6 +87,7 @@ public class MdnsFeatureFlags {
             mIsMdnsOffloadFeatureEnabled = false;
             mIncludeInetAddressRecordsInProbing = false;
             mIsExpiredServicesRemovalEnabled = true; // Default enabled.
+            mIsLabelCountLimitEnabled = true; // Default enabled.
         }
 
         /**
@@ -109,11 +122,23 @@ public class MdnsFeatureFlags {
         }
 
         /**
+         * Set whether the label count limit is enabled.
+         *
+         * @see #NSD_LIMIT_LABEL_COUNT
+         */
+        public Builder setIsLabelCountLimitEnabled(boolean isLabelCountLimitEnabled) {
+            mIsLabelCountLimitEnabled = isLabelCountLimitEnabled;
+            return this;
+        }
+
+        /**
          * Builds a {@link MdnsFeatureFlags} with the arguments supplied to this builder.
          */
         public MdnsFeatureFlags build() {
             return new MdnsFeatureFlags(mIsMdnsOffloadFeatureEnabled,
-                    mIncludeInetAddressRecordsInProbing, mIsExpiredServicesRemovalEnabled);
+                    mIncludeInetAddressRecordsInProbing,
+                    mIsExpiredServicesRemovalEnabled,
+                    mIsLabelCountLimitEnabled);
         }
     }
 }
