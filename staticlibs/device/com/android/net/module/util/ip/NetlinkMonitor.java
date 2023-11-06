@@ -109,7 +109,7 @@ public class NetlinkMonitor extends PacketReader {
                 }
             }
             Os.bind(fd, makeNetlinkSocketAddress(0, mBindGroups));
-            NetlinkUtils.connectSocketToNetlink(fd);
+            NetlinkUtils.connectToKernel(fd);
 
             if (DBG) {
                 final SocketAddress nlAddr = Os.getsockname(fd);
