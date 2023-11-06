@@ -33,7 +33,7 @@ import static com.android.net.module.util.netlink.NetlinkConstants.stringForProt
 import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.NetlinkUtils.IO_TIMEOUT_MS;
 import static com.android.net.module.util.netlink.NetlinkUtils.TCP_ALIVE_STATE_FILTER;
-import static com.android.net.module.util.netlink.NetlinkUtils.connectSocketToNetlink;
+import static com.android.net.module.util.netlink.NetlinkUtils.connectToKernel;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
@@ -266,7 +266,7 @@ public class InetDiagMessage extends NetlinkMessage {
         FileDescriptor fd = null;
         try {
             fd = NetlinkUtils.netlinkSocketForProto(NETLINK_INET_DIAG);
-            NetlinkUtils.connectSocketToNetlink(fd);
+            connectToKernel(fd);
             uid = lookupUid(protocol, local, remote, fd);
         } catch (ErrnoException | SocketException | IllegalArgumentException
                 | InterruptedIOException e) {
@@ -426,8 +426,8 @@ public class InetDiagMessage extends NetlinkMessage {
         try {
             dumpFd = NetlinkUtils.createNetLinkInetDiagSocket();
             destroyFd = NetlinkUtils.createNetLinkInetDiagSocket();
-            connectSocketToNetlink(dumpFd);
-            connectSocketToNetlink(destroyFd);
+            connectToKernel(dumpFd);
+            connectToKernel(destroyFd);
 
             for (int family : List.of(AF_INET, AF_INET6)) {
                 try {
