@@ -28,8 +28,11 @@ Firewall::Firewall() {
     result = mUidOwnerMap.init(UID_OWNER_MAP_PATH);
     EXPECT_RESULT_OK(result) << "init mUidOwnerMap failed";
 
-    result = mDataSaverEnabledMap.init(DATA_SAVER_ENABLED_MAP_PATH);
-    EXPECT_RESULT_OK(result) << "init mDataSaverEnabledMap failed";
+    // Do not check whether DATA_SAVER_ENABLED_MAP_PATH init succeeded or failed since the map is
+    // defined in tethering module, but the user of this class may be in other modules. For example,
+    // DNS resolver tests statically link to this class. But when running MTS, the test infra
+    // installs only DNS resolver module without installing tethering module together.
+    mDataSaverEnabledMap.init(DATA_SAVER_ENABLED_MAP_PATH);
 }
 
 Firewall* Firewall::getInstance() {
@@ -122,6 +125,10 @@ Result<void> Firewall::removeUidInterfaceRules(const std::vector<int32_t>& uids)
 
 Result<bool> Firewall::getDataSaverSetting() {
     std::lock_guard guard(mMutex);
+    if (!mDataSaverEnabledMap.isValid()) {
+        return Errorf("init mDataSaverEnabledMap failed");
+    }
+
     auto dataSaverSetting = mDataSaverEnabledMap.readValue(DATA_SAVER_ENABLED_KEY);
     if (!dataSaverSetting.ok()) {
         return Errorf("Cannot read the data saver setting: {}", dataSaverSetting.error().message());
@@ -131,6 +138,10 @@ Result<bool> Firewall::getDataSaverSetting() {
 
 Result<void> Firewall::setDataSaver(bool enabled) {
     std::lock_guard guard(mMutex);
+    if (!mDataSaverEnabledMap.isValid()) {
+        return Errorf("init mDataSaverEnabledMap failed");
+    }
+
     auto res = mDataSaverEnabledMap.writeValue(DATA_SAVER_ENABLED_KEY, enabled, BPF_EXIST);
     if (!res.ok()) return Errorf("Failed to set data saver: {}", res.error().message());
 
