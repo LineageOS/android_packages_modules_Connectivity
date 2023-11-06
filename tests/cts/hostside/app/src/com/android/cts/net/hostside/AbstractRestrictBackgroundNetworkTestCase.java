@@ -37,6 +37,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.annotation.NonNull;
 import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.NotificationManager;
@@ -435,6 +436,42 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         }
         fail("Invalid state for " + mUid + "; expectAvailable=" + expectAvailable + " after "
                 + maxTries + " attempts.\nLast error: " + error);
+    }
+
+    /**
+     * Asserts whether the network is blocked by accessing bpf maps if command-line tool supports.
+     */
+    void assertNetworkAccessBlockedByBpf(boolean expectBlocked, int uid, boolean metered) {
+        final String result;
+        try {
+            result = executeShellCommand(
+                    "cmd network_stack is-uid-networking-blocked " + uid + " " + metered);
+        } catch (AssertionError e) {
+            // If NetworkStack is too old to support this command, ignore and continue
+            // this test to verify other parts.
+            if (e.getMessage().contains("No shell command implementation.")) {
+                return;
+            }
+            throw e;
+        }
+
+        // Tethering module is too old.
+        if (result.contains("API is unsupported")) {
+            return;
+        }
+
+        assertEquals(expectBlocked, parseBooleanOrThrow(result.trim()));
+    }
+
+    /**
+     * Similar to {@link Boolean#parseBoolean} but throws when the input
+     * is unexpected instead of returning false.
+     */
+    private static boolean parseBooleanOrThrow(@NonNull String s) {
+        // Don't use Boolean.parseBoolean
+        if ("true".equalsIgnoreCase(s)) return true;
+        if ("false".equalsIgnoreCase(s)) return false;
+        throw new IllegalArgumentException("Unexpected: " + s);
     }
 
     /**

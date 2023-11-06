@@ -133,6 +133,8 @@ public class ConnectivityManager {
     public static class Flags {
         static final String SET_DATA_SAVER_VIA_CM =
                 "com.android.net.flags.set_data_saver_via_cm";
+        static final String SUPPORT_IS_UID_NETWORKING_BLOCKED =
+                "com.android.net.flags.support_is_uid_networking_blocked";
     }
 
     /**
@@ -6311,8 +6313,8 @@ public class ConnectivityManager {
     // is provided by linux file group permission AID_NET_BW_ACCT and the
     // selinux context fs_bpf_net*.
     // Only the system server process and the network stack have access.
-    // TODO: Expose api when ready.
-    // @SystemApi(client = MODULE_LIBRARIES)
+    @FlaggedApi(Flags.SUPPORT_IS_UID_NETWORKING_BLOCKED)
+    @SystemApi(client = MODULE_LIBRARIES)
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)  // BPF maps were only mainlined in T
     @RequiresPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)
     public boolean isUidNetworkingBlocked(int uid, boolean isNetworkMetered) {
