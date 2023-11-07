@@ -968,6 +968,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // Flag to optimize closing frozen app sockets by waiting for the cellular modem to wake up.
     private final boolean mDelayDestroyFrozenSockets;
 
+    // Flag to allow SysUI to receive connectivity reports for wifi picker UI.
+    private final boolean mAllowSysUiConnectivityReports;
+
     // Uids that ConnectivityService is pending to close sockets of.
     private final Set<Integer> mPendingFrozenUids = new ArraySet<>();
 
@@ -1468,6 +1471,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         /**
+         * @see DeviceConfigUtils#isTetheringFeatureNotChickenedOut
+         */
+        public boolean isFeatureNotChickenedOut(Context context, String name) {
+            return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context, name);
+        }
+
+        /**
          * Get the BpfNetMaps implementation to use in ConnectivityService.
          * @param netd a netd binder
          * @return BpfNetMaps implementation.
@@ -1834,6 +1844,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION);
         mDelayDestroyFrozenSockets = mDeps.isAtLeastU()
                 && mDeps.isFeatureEnabled(context, DELAY_DESTROY_FROZEN_SOCKETS_VERSION);
+        mAllowSysUiConnectivityReports = mDeps.isFeatureNotChickenedOut(
+                mContext, ALLOW_SYSUI_CONNECTIVITY_REPORTS);
         if (mDestroyFrozenSockets) {
             final UidFrozenStateChangedCallback frozenStateChangedCallback =
                     new UidFrozenStateChangedCallback() {
@@ -3296,6 +3308,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
     static final String DELAY_DESTROY_FROZEN_SOCKETS_VERSION =
             "delay_destroy_frozen_sockets_version";
 
+    @VisibleForTesting
+    public static final String ALLOW_SYSUI_CONNECTIVITY_REPORTS =
+            "allow_sysui_connectivity_reports";
+
     private void enforceInternetPermission() {
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.INTERNET,
@@ -3457,6 +3473,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return checkAnyPermissionOf(mContext, pid, uid,
                 android.Manifest.permission.NETWORK_STACK,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
+    }
+
+    private boolean checkSystemBarServicePermission(int pid, int uid) {
+        return checkAnyPermissionOf(mContext, pid, uid,
+                android.Manifest.permission.STATUS_BAR_SERVICE);
     }
 
     private boolean checkNetworkSignalStrengthWakeupPermission(int pid, int uid) {
@@ -11530,6 +11551,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
     boolean checkConnectivityDiagnosticsPermissions(
             int callbackPid, int callbackUid, NetworkAgentInfo nai, String callbackPackageName) {
         if (checkNetworkStackPermission(callbackPid, callbackUid)) {
+            return true;
+        }
+        if (mAllowSysUiConnectivityReports
+                && checkSystemBarServicePermission(callbackPid, callbackUid)) {
             return true;
         }
 
