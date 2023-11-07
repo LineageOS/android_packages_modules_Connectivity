@@ -272,10 +272,6 @@ public class BpfNetMaps {
         sInitialized = true;
     }
 
-    public boolean isSkDestroyListenerRunning() {
-        return false;
-    }
-
     /**
      * Dependencies of BpfNetMaps, for injection in tests.
      */
