@@ -332,7 +332,7 @@ java_library {
         // Files listed here MUST all be annotated with @RequiresApi(Build.VERSION_CODES.S)
         // or above as appropriate so that API checks are enforced for R+ users of this library
         "src/android/net/RoutingCoordinatorManager.java",
-        "src/android/net/connectivity/TiramisuConnectivityInternalApiUtil.java",
+        "src/android/net/connectivity/ConnectivityInternalApiUtil.java",
     ],
     visibility: [
         "//packages/modules/Connectivity/Tethering:__subpackages__",
