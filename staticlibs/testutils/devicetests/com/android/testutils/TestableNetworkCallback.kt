@@ -18,6 +18,7 @@ package com.android.testutils
 
 import android.net.ConnectivityManager.NetworkCallback
 import android.net.LinkProperties
+import android.net.LocalNetworkInfo
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED
@@ -28,6 +29,7 @@ import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
 import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatusInt
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
+import com.android.testutils.RecorderCallback.CallbackEntry.LocalInfoChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Losing
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.RecorderCallback.CallbackEntry.Resumed
@@ -68,6 +70,10 @@ open class RecorderCallback private constructor(
             override val network: Network,
             val lp: LinkProperties
         ) : CallbackEntry()
+        data class LocalInfoChanged(
+            override val network: Network,
+            val info: LocalNetworkInfo
+        ) : CallbackEntry()
         data class Suspended(override val network: Network) : CallbackEntry()
         data class Resumed(override val network: Network) : CallbackEntry()
         data class Losing(override val network: Network, val maxMsToLive: Int) : CallbackEntry()
@@ -93,6 +99,8 @@ open class RecorderCallback private constructor(
             val NETWORK_CAPS_UPDATED = CapabilitiesChanged::class
             @JvmField
             val LINK_PROPERTIES_CHANGED = LinkPropertiesChanged::class
+            @JvmField
+            val LOCAL_INFO_CHANGED = LocalInfoChanged::class
             @JvmField
             val SUSPENDED = Suspended::class
             @JvmField
@@ -129,6 +137,11 @@ open class RecorderCallback private constructor(
     override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) {
         Log.d(TAG, "onLinkPropertiesChanged $network $lp")
         history.add(LinkPropertiesChanged(network, lp))
+    }
+
+    override fun onLocalNetworkInfoChanged(network: Network, info: LocalNetworkInfo) {
+        Log.d(TAG, "onLocalNetworkInfoChanged $network $info")
+        history.add(LocalInfoChanged(network, info))
     }
 
     override fun onBlockedStatusChanged(network: Network, blocked: Boolean) {
@@ -430,37 +443,63 @@ open class TestableNetworkCallback private constructor(
         suspended: Boolean = false,
         validated: Boolean? = true,
         blocked: Boolean = false,
+        upstream: Network? = null,
         tmt: Long = defaultTimeoutMs
     ) {
-        expectAvailableCallbacksCommon(net, suspended, validated, tmt)
+        expectAvailableCallbacksCommon(net, suspended, validated, upstream, tmt)
         expect<BlockedStatus>(net, tmt) { it.blocked == blocked }
     }
+
+    // For backward compatibility, add a method that allows callers to specify a timeout but
+    // no upstream.
+    fun expectAvailableCallbacks(
+        net: Network,
+        suspended: Boolean = false,
+        validated: Boolean? = true,
+        blocked: Boolean = false,
+        tmt: Long = defaultTimeoutMs
+    ) = expectAvailableCallbacks(net, suspended, validated, blocked, upstream = null, tmt = tmt)
 
     fun expectAvailableCallbacks(
         net: Network,
         suspended: Boolean,
         validated: Boolean,
         blockedReason: Int,
+        upstream: Network? = null,
         tmt: Long
     ) {
-        expectAvailableCallbacksCommon(net, suspended, validated, tmt)
+        expectAvailableCallbacksCommon(net, suspended, validated, upstream, tmt)
         expect<BlockedStatusInt>(net) { it.reason == blockedReason }
     }
+
+    // For backward compatibility, add a method that allows callers to specify a timeout but
+    // no upstream.
+    fun expectAvailableCallbacks(
+            net: Network,
+            suspended: Boolean = false,
+            validated: Boolean = true,
+            blockedReason: Int,
+            tmt: Long = defaultTimeoutMs
+    ) = expectAvailableCallbacks(net, suspended, validated, blockedReason, upstream = null, tmt)
 
     private fun expectAvailableCallbacksCommon(
         net: Network,
         suspended: Boolean,
         validated: Boolean?,
+        upstream: Network?,
         tmt: Long
     ) {
         expect<Available>(net, tmt)
         if (suspended) {
             expect<Suspended>(net, tmt)
         }
-        expect<CapabilitiesChanged>(net, tmt) {
+        val caps = expect<CapabilitiesChanged>(net, tmt) {
             validated == null || validated == it.caps.hasCapability(NET_CAPABILITY_VALIDATED)
-        }
+        }.caps
         expect<LinkPropertiesChanged>(net, tmt)
+        if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)) {
+            expect<LocalInfoChanged>(net, tmt) { it.info.upstreamNetwork == upstream }
+        }
     }
 
     // Backward compatibility for existing Java code. Use named arguments instead and remove all
@@ -507,13 +546,15 @@ open class TestableNetworkCallback private constructor(
         val network: Network
     }
 
+    @JvmOverloads
     fun expectAvailableCallbacks(
         n: HasNetwork,
         suspended: Boolean,
         validated: Boolean,
         blocked: Boolean,
+        upstream: Network? = null,
         timeoutMs: Long
-    ) = expectAvailableCallbacks(n.network, suspended, validated, blocked, timeoutMs)
+    ) = expectAvailableCallbacks(n.network, suspended, validated, blocked, upstream, timeoutMs)
 
     fun expectAvailableAndSuspendedCallbacks(n: HasNetwork, expectValidated: Boolean) {
         expectAvailableAndSuspendedCallbacks(n.network, expectValidated)

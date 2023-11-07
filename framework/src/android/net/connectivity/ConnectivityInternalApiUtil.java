@@ -35,9 +35,8 @@ import androidx.annotation.RequiresApi;
  * linter).
  * @hide
  */
-// TODO : rename this so that it doesn't reference "Tiramisu" since it can be used in S.
 @RequiresApi(Build.VERSION_CODES.S)
-public class TiramisuConnectivityInternalApiUtil {
+public class ConnectivityInternalApiUtil {
 
     /**
      * Get a service binder token for

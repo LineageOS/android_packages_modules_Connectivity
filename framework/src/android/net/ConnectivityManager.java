@@ -3963,16 +3963,21 @@ public class ConnectivityManager {
          * @param network The {@link Network} of the satisfying network.
          * @param networkCapabilities The {@link NetworkCapabilities} of the satisfying network.
          * @param linkProperties The {@link LinkProperties} of the satisfying network.
+         * @param localInfo The {@link LocalNetworkInfo} of the satisfying network, or null
+         *                  if this network is not a local network.
          * @param blocked Whether access to the {@link Network} is blocked due to system policy.
          * @hide
          */
         public final void onAvailable(@NonNull Network network,
                 @NonNull NetworkCapabilities networkCapabilities,
-                @NonNull LinkProperties linkProperties, @BlockedReason int blocked) {
+                @NonNull LinkProperties linkProperties,
+                @Nullable LocalNetworkInfo localInfo,
+                @BlockedReason int blocked) {
             // Internally only this method is called when a new network is available, and
             // it calls the callback in the same way and order that older versions used
             // to call so as not to change the behavior.
             onAvailable(network, networkCapabilities, linkProperties, blocked != 0);
+            if (null != localInfo) onLocalNetworkInfoChanged(network, localInfo);
             onBlockedStatusChanged(network, blocked);
         }
 
@@ -3989,7 +3994,8 @@ public class ConnectivityManager {
          */
         public void onAvailable(@NonNull Network network,
                 @NonNull NetworkCapabilities networkCapabilities,
-                @NonNull LinkProperties linkProperties, boolean blocked) {
+                @NonNull LinkProperties linkProperties,
+                boolean blocked) {
             onAvailable(network);
             if (!networkCapabilities.hasCapability(
                     NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)) {
@@ -4116,6 +4122,19 @@ public class ConnectivityManager {
                 @NonNull LinkProperties linkProperties) {}
 
         /**
+         * Called when there is a change in the {@link LocalNetworkInfo} for this network.
+         *
+         * This is only called for local networks, that is those with the
+         * NET_CAPABILITY_LOCAL_NETWORK network capability.
+         *
+         * @param network the {@link Network} whose local network info has changed.
+         * @param localNetworkInfo the new {@link LocalNetworkInfo} for this network.
+         * @hide
+         */
+        public void onLocalNetworkInfoChanged(@NonNull Network network,
+                @NonNull LocalNetworkInfo localNetworkInfo) {}
+
+        /**
          * Called when the network the framework connected to for this request suspends data
          * transmission temporarily.
          *
@@ -4209,27 +4228,29 @@ public class ConnectivityManager {
     }
 
     /** @hide */
-    public static final int CALLBACK_PRECHECK            = 1;
+    public static final int CALLBACK_PRECHECK                   = 1;
     /** @hide */
-    public static final int CALLBACK_AVAILABLE           = 2;
+    public static final int CALLBACK_AVAILABLE                  = 2;
     /** @hide arg1 = TTL */
-    public static final int CALLBACK_LOSING              = 3;
+    public static final int CALLBACK_LOSING                     = 3;
     /** @hide */
-    public static final int CALLBACK_LOST                = 4;
+    public static final int CALLBACK_LOST                       = 4;
     /** @hide */
-    public static final int CALLBACK_UNAVAIL             = 5;
+    public static final int CALLBACK_UNAVAIL                    = 5;
     /** @hide */
-    public static final int CALLBACK_CAP_CHANGED         = 6;
+    public static final int CALLBACK_CAP_CHANGED                = 6;
     /** @hide */
-    public static final int CALLBACK_IP_CHANGED          = 7;
+    public static final int CALLBACK_IP_CHANGED                 = 7;
     /** @hide obj = NetworkCapabilities, arg1 = seq number */
-    private static final int EXPIRE_LEGACY_REQUEST       = 8;
+    private static final int EXPIRE_LEGACY_REQUEST              = 8;
     /** @hide */
-    public static final int CALLBACK_SUSPENDED           = 9;
+    public static final int CALLBACK_SUSPENDED                  = 9;
     /** @hide */
-    public static final int CALLBACK_RESUMED             = 10;
+    public static final int CALLBACK_RESUMED                    = 10;
     /** @hide */
-    public static final int CALLBACK_BLK_CHANGED         = 11;
+    public static final int CALLBACK_BLK_CHANGED                = 11;
+    /** @hide */
+    public static final int CALLBACK_LOCAL_NETWORK_INFO_CHANGED = 12;
 
     /** @hide */
     public static String getCallbackName(int whichCallback) {
@@ -4245,6 +4266,7 @@ public class ConnectivityManager {
             case CALLBACK_SUSPENDED:    return "CALLBACK_SUSPENDED";
             case CALLBACK_RESUMED:      return "CALLBACK_RESUMED";
             case CALLBACK_BLK_CHANGED:  return "CALLBACK_BLK_CHANGED";
+            case CALLBACK_LOCAL_NETWORK_INFO_CHANGED: return "CALLBACK_LOCAL_NETWORK_INFO_CHANGED";
             default:
                 return Integer.toString(whichCallback);
         }
@@ -4299,7 +4321,8 @@ public class ConnectivityManager {
                 case CALLBACK_AVAILABLE: {
                     NetworkCapabilities cap = getObject(message, NetworkCapabilities.class);
                     LinkProperties lp = getObject(message, LinkProperties.class);
-                    callback.onAvailable(network, cap, lp, message.arg1);
+                    LocalNetworkInfo lni = getObject(message, LocalNetworkInfo.class);
+                    callback.onAvailable(network, cap, lp, lni, message.arg1);
                     break;
                 }
                 case CALLBACK_LOSING: {
@@ -4322,6 +4345,11 @@ public class ConnectivityManager {
                 case CALLBACK_IP_CHANGED: {
                     LinkProperties lp = getObject(message, LinkProperties.class);
                     callback.onLinkPropertiesChanged(network, lp);
+                    break;
+                }
+                case CALLBACK_LOCAL_NETWORK_INFO_CHANGED: {
+                    final LocalNetworkInfo info = getObject(message, LocalNetworkInfo.class);
+                    callback.onLocalNetworkInfoChanged(network, info);
                     break;
                 }
                 case CALLBACK_SUSPENDED: {
