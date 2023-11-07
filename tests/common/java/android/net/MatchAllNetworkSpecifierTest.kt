@@ -52,7 +52,6 @@ class MatchAllNetworkSpecifierTest {
     }
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     @IgnoreAfter(Build.VERSION_CODES.R)
     // Only run this test on Android R.
     // The method - satisfiedBy() has changed to canBeSatisfiedBy() starting from Android R, so the

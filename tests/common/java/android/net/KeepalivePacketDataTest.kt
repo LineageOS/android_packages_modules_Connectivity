@@ -17,27 +17,20 @@ package android.net
 
 import android.net.InvalidPacketException.ERROR_INVALID_IP_ADDRESS
 import android.net.InvalidPacketException.ERROR_INVALID_PORT
-import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
-import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.NonNullTestUtils
 import java.net.InetAddress
 import java.util.Arrays
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class KeepalivePacketDataTest {
-    @Rule @JvmField
-    val ignoreRule: DevSdkIgnoreRule = DevSdkIgnoreRule()
-
     private val INVALID_PORT = 65537
     private val TEST_DST_PORT = 4244
     private val TEST_SRC_PORT = 4243
@@ -60,7 +53,6 @@ class KeepalivePacketDataTest {
             NonNullTestUtils.nullUnsafe(dstAddress), dstPort, data)
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testConstructor() {
         try {
             TestKeepalivePacketData(srcAddress = null)
@@ -99,22 +91,17 @@ class KeepalivePacketDataTest {
     }
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testSrcAddress() = assertEquals(TEST_SRC_ADDRV4, TestKeepalivePacketData().srcAddress)
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testDstAddress() = assertEquals(TEST_DST_ADDRV4, TestKeepalivePacketData().dstAddress)
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testSrcPort() = assertEquals(TEST_SRC_PORT, TestKeepalivePacketData().srcPort)
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testDstPort() = assertEquals(TEST_DST_PORT, TestKeepalivePacketData().dstPort)
 
     @Test
-    @IgnoreUpTo(Build.VERSION_CODES.Q)
     fun testPacket() = assertTrue(Arrays.equals(TESTBYTES, TestKeepalivePacketData().packet))
 }
