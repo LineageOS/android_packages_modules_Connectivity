@@ -37,9 +37,3 @@ android\.nearby\..+
 # This is required since android.net.http contains api classes and hidden classes.
 # TODO: Remove this after hidden classes are moved to different package
 android\.net\.http\..+
-
-# TODO: OffloadServiceInfo is being added as an API, but wasn't an API yet in the first module
-# versions targeting U. Do not jarjar it such versions so that tests do not have to cover both
-# cases. This will be removed in an upcoming change marking it as API.
-android\.net\.nsd\.OffloadServiceInfo(\$.+)?
-android\.net\.nsd\.OffloadEngine(\$.+)?
