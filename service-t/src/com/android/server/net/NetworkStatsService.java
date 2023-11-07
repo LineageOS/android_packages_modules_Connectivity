@@ -640,12 +640,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         // on the experiment flag, BpfNetMaps starts C SkDestroyListener (existing code) or
         // NetworkStatsService starts Java SkDestroyListener (new code).
         final BpfNetMaps bpfNetMaps = mDeps.makeBpfNetMaps(mContext);
-        if (bpfNetMaps.isSkDestroyListenerRunning()) {
-            mSkDestroyListener = null;
-        } else {
-            mSkDestroyListener = mDeps.makeSkDestroyListener(mCookieTagMap, mHandler);
-            mHandler.post(mSkDestroyListener::start);
-        }
+        mSkDestroyListener = mDeps.makeSkDestroyListener(mCookieTagMap, mHandler);
+        mHandler.post(mSkDestroyListener::start);
     }
 
     /**
