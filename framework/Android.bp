@@ -266,6 +266,7 @@ java_genrule {
         ":framework-connectivity-t-pre-jarjar{.jar}",
         ":framework-connectivity.stubs.module_lib{.jar}",
         ":framework-connectivity-t.stubs.module_lib{.jar}",
+        ":framework-connectivity-flagged-apis{.jar}",
         "jarjar-excludes.txt",
     ],
     tools: [
@@ -278,6 +279,7 @@ java_genrule {
         "--prefix android.net.connectivity " +
         "--apistubs $(location :framework-connectivity.stubs.module_lib{.jar}) " +
         "--apistubs $(location :framework-connectivity-t.stubs.module_lib{.jar}) " +
+        "--apistubs $(location :framework-connectivity-flagged-apis{.jar}) " +
         // Make a ":"-separated list. There will be an extra ":" but empty items are ignored.
         "--unsupportedapi $$(printf ':%s' $(locations :connectivity-hiddenapi-files)) " +
         "--excludes $(location jarjar-excludes.txt) " +
@@ -287,6 +289,30 @@ java_genrule {
         "//packages/modules/Connectivity/framework-t:__subpackages__",
         "//packages/modules/Connectivity/service",
     ],
+}
+
+droidstubs {
+    name: "framework-connectivity-flagged-apis-droidstubs",
+    srcs: [
+        ":framework-connectivity-sources",
+        ":framework-connectivity-tiramisu-updatable-sources",
+        ":framework-nearby-java-sources",
+        ":framework-thread-sources",
+    ],
+    flags: [
+        "--show-annotation android.annotation.FlaggedApi",
+    ],
+    aidl: {
+        include_dirs: [
+            "packages/modules/Connectivity/framework/aidl-export",
+            "frameworks/native/aidl/binder", // For PersistableBundle.aidl
+        ],
+    },
+}
+
+java_library {
+    name: "framework-connectivity-flagged-apis",
+    srcs: [":framework-connectivity-flagged-apis-droidstubs"],
 }
 
 // Library providing limited APIs within the connectivity module, so that R+ components like
