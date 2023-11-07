@@ -1258,6 +1258,11 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         return networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
     }
 
+    /** Whether this network is a local network */
+    public boolean isLocalNetwork() {
+        return networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK);
+    }
+
     /**
      * Whether this network should propagate the capabilities from its underlying networks.
      * Currently only true for VPNs.

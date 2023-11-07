@@ -197,8 +197,16 @@ public class RoutingCoordinatorService extends IRoutingCoordinator.Stub {
         synchronized (mIfacesLock) {
             final ForwardingPair fwp = new ForwardingPair(fromIface, toIface);
             if (!mForwardedInterfaces.contains(fwp)) {
-                throw new IllegalStateException("No forward set up between interfaces "
-                        + fromIface + " → " + toIface);
+                // This can happen when an upstream was unregisteredAfterReplacement. The forward
+                // is removed immediately when the upstream is destroyed, but later when the
+                // network actually disconnects CS does not know that and it asks for removal
+                // again.
+                // This can also happen if the network was destroyed before being set as an
+                // upstream, because then CS does not set up the forward rules seeing how the
+                // interface was removed anyway.
+                // Either way, this is benign.
+                Log.i(TAG, "No forward set up between interfaces " + fromIface + " → " + toIface);
+                return;
             }
             mForwardedInterfaces.remove(fwp);
             try {
