@@ -245,7 +245,7 @@ public class DiscoveryProviderManager extends
     @GuardedBy("mMultiplexerLock")
     private void startBleProvider(Set<ScanFilter> scanFilters) {
         if (!mBleDiscoveryProvider.getController().isStarted()) {
-            Log.d(TAG, "DiscoveryProviderManager starts Ble scanning.");
+            Log.d(TAG, "DiscoveryProviderManager starts BLE scanning.");
             mBleDiscoveryProvider.getController().setListener(this);
             mBleDiscoveryProvider.getController().setProviderScanMode(mMerged.getScanMode());
             mBleDiscoveryProvider.getController().setProviderScanFilters(
