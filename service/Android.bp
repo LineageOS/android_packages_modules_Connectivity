@@ -124,7 +124,6 @@ cc_library_shared {
         "libmodules-utils-build",
         "libnetjniutils",
         "libnet_utils_device_common_bpfjni",
-        "libtraffic_controller",
         "netd_aidl_interface-lateststable-ndk",
     ],
     shared_libs: [
