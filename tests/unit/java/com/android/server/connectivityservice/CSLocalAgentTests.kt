@@ -38,10 +38,7 @@ import android.net.RouteInfo
 import android.os.Build
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
-import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
+import com.android.testutils.RecorderCallback.CallbackEntry.LocalInfoChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
 import org.junit.Test
@@ -114,10 +111,7 @@ class CSLocalAgentTests : CSTest() {
                 .build(),
                 lnc = LocalNetworkConfig.Builder().build())
         agent.connect()
-        cb.expect<Available>(agent.network)
-        cb.expect<CapabilitiesChanged>(agent.network)
-        cb.expect<LinkPropertiesChanged>(agent.network)
-        cb.expect<BlockedStatus>(agent.network)
+        cb.expectAvailableCallbacks(agent.network, validated = false)
         agent.sendNetworkCapabilities(NetworkCapabilities.Builder().build())
         cb.expect<Lost>(agent.network)
 
@@ -125,10 +119,7 @@ class CSLocalAgentTests : CSTest() {
                 .build(),
                 lnc = null)
         agent2.connect()
-        cb.expect<Available>(agent2.network)
-        cb.expect<CapabilitiesChanged>(agent2.network)
-        cb.expect<LinkPropertiesChanged>(agent2.network)
-        cb.expect<BlockedStatus>(agent2.network)
+        cb.expectAvailableCallbacks(agent2.network, validated = false)
         agent2.sendNetworkCapabilities(NetworkCapabilities.Builder()
                 .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
                 .build())
@@ -153,10 +144,11 @@ class CSLocalAgentTests : CSTest() {
         )
         localAgent.connect()
 
-        cb.expect<Available>(localAgent.network)
-        cb.expect<CapabilitiesChanged>(localAgent.network)
-        cb.expect<LinkPropertiesChanged>(localAgent.network)
-        cb.expect<BlockedStatus>(localAgent.network)
+        cb.expectAvailableCallbacks(localAgent.network, validated = false)
+
+        val wifiAgent = Agent(score = keepScore(), lp = lp("wifi0"),
+                nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
+        wifiAgent.connect()
 
         val newLnc = LocalNetworkConfig.Builder()
                 .setUpstreamSelector(NetworkRequest.Builder()
@@ -164,6 +156,21 @@ class CSLocalAgentTests : CSTest() {
                         .build())
                 .build()
         localAgent.sendLocalNetworkConfig(newLnc)
+
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgent.network
+        }
+
+        localAgent.sendLocalNetworkConfig(LocalNetworkConfig.Builder().build())
+        cb.expect<LocalInfoChanged>(localAgent.network) { it.info.upstreamNetwork == null }
+
+        localAgent.sendLocalNetworkConfig(newLnc)
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgent.network
+        }
+
+        wifiAgent.disconnect()
+        cb.expect<LocalInfoChanged>(localAgent.network) { it.info.upstreamNetwork == null }
 
         localAgent.disconnect()
     }
@@ -204,6 +211,9 @@ class CSLocalAgentTests : CSTest() {
         wifiAgent.connect()
 
         cb.expectAvailableCallbacks(wifiAgent.network, validated = false)
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgent.network
+        }
 
         clearInvocations(netd)
         val inOrder = inOrder(netd)
@@ -218,6 +228,7 @@ class CSLocalAgentTests : CSTest() {
         wifiAgent2.connect()
 
         cb.expectAvailableCallbacks(wifiAgent2.network, validated = false)
+        cb.expect<LocalInfoChanged> { it.info.upstreamNetwork == wifiAgent2.network }
         cb.expect<Lost> { it.network == wifiAgent.network }
 
         inOrder.verify(netd).ipfwdAddInterfaceForward("local0", wifiIface2)
@@ -252,7 +263,10 @@ class CSLocalAgentTests : CSTest() {
                 nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
         wifiAgent.connect()
 
-        cb.expectAvailableCallbacksUnvalidated(wifiAgent)
+        cb.expectAvailableCallbacks(wifiAgent.network, validated = false)
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgent.network
+        }
 
         clearInvocations(netd)
         wifiAgent.unregisterAfterReplacement(TIMEOUT_MS.toInt())
@@ -260,6 +274,7 @@ class CSLocalAgentTests : CSTest() {
         verify(netd).networkDestroy(wifiAgent.network.netId)
         verify(netd).ipfwdRemoveInterfaceForward("local0", "wifi0")
 
+        cb.expect<LocalInfoChanged>(localAgent.network) { it.info.upstreamNetwork == null }
         cb.expect<Lost> { it.network == wifiAgent.network }
     }
 
@@ -294,7 +309,12 @@ class CSLocalAgentTests : CSTest() {
         val wifiAgent = Agent(lp = lp("wifi0"), nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
         wifiAgent.connect()
 
-        cb.expectAvailableCallbacksUnvalidated(wifiAgent)
+        cb.expectAvailableCallbacks(wifiAgent.network, validated = false)
+        listOf(cb, localCb).forEach {
+            it.expect<LocalInfoChanged>(localAgent.network) {
+                it.info.upstreamNetwork == wifiAgent.network
+            }
+        }
 
         verify(netd).ipfwdAddInterfaceForward("local0", "wifi0")
 
@@ -303,8 +323,10 @@ class CSLocalAgentTests : CSTest() {
         val localAgent2 = Agent(nc = localNc, lp = lp("local0"), lnc = lnc, score = localScore)
         localAgent2.connect()
 
-        localCb.expectAvailableCallbacks(localAgent2.network, validated = false)
-        cb.expectAvailableCallbacks(localAgent2.network, validated = false)
+        localCb.expectAvailableCallbacks(localAgent2.network,
+                validated = false, upstream = wifiAgent.network)
+        cb.expectAvailableCallbacks(localAgent2.network,
+                validated = false, upstream = wifiAgent.network)
         cb.expect<Lost> { it.network == localAgent.network }
     }
 
@@ -316,9 +338,11 @@ class CSLocalAgentTests : CSTest() {
 
         val wifiAgent = Agent(lp = lp("wifi0"), nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
         wifiAgent.connect()
-        cb.expectAvailableCallbacksUnvalidated(wifiAgent)
+        cb.expectAvailableCallbacks(wifiAgent.network, validated = false)
 
-        // Set up a local agent that should forward its traffic to the best wifi upstream.
+        // Unregister wifi pending replacement, then set up a local agent that would have
+        // this network as its upstream.
+        wifiAgent.unregisterAfterReplacement(LONG_TIMEOUT_MS)
         val localAgent = Agent(nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
                 lnc = LocalNetworkConfig.Builder()
@@ -331,14 +355,18 @@ class CSLocalAgentTests : CSTest() {
                         .build())
         )
 
-        // ...but destroy the wifi agent before connecting it
-        wifiAgent.unregisterAfterReplacement(LONG_TIMEOUT_MS)
-
+        // Connect the local agent. The zombie wifi is its upstream, but the stack doesn't
+        // tell netd to add the forward since the wifi0 interface has gone.
         localAgent.connect()
-        cb.expectAvailableCallbacks(localAgent.network, validated = false)
+        cb.expectAvailableCallbacks(localAgent.network,
+                validated = false, upstream = wifiAgent.network)
 
-        verify(netd).ipfwdAddInterfaceForward("local0", "wifi0")
-        verify(netd).ipfwdRemoveInterfaceForward("local0", "wifi0")
+        verify(netd, never()).ipfwdAddInterfaceForward("local0", "wifi0")
+
+        // Disconnect wifi without a replacement. Expect an update with upstream null.
+        wifiAgent.disconnect()
+        verify(netd, never()).ipfwdAddInterfaceForward("local0", "wifi0")
+        cb.expect<LocalInfoChanged> { it.info.upstreamNetwork == null }
     }
 
     @Test
@@ -366,19 +394,34 @@ class CSLocalAgentTests : CSTest() {
         val wifiAgentDun = Agent(score = keepScore(), lp = lp("wifi1"),
                 nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET, NET_CAPABILITY_DUN))
 
+        val cb = TestableNetworkCallback()
+        cm.registerNetworkCallback(NetworkRequest.Builder()
+                .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
+                .build(),
+                cb)
+        cb.expectAvailableCallbacks(localAgent.network, validated = false)
+
         val inOrder = inOrder(netd)
         inOrder.verify(netd, never()).ipfwdAddInterfaceForward(any(), any())
+        cb.assertNoCallback()
 
         wifiAgent.connect()
         inOrder.verify(netd, never()).ipfwdAddInterfaceForward(any(), any())
+        cb.assertNoCallback()
 
         cellAgentDun.connect()
         inOrder.verify(netd).ipfwdEnableForwarding(any())
         inOrder.verify(netd).ipfwdAddInterfaceForward("local0", "cell0")
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == cellAgentDun.network
+        }
 
         wifiAgentDun.connect()
         inOrder.verify(netd).ipfwdRemoveInterfaceForward("local0", "cell0")
         inOrder.verify(netd).ipfwdAddInterfaceForward("local0", "wifi1")
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgentDun.network
+        }
 
         // Make sure sending the same config again doesn't do anything
         repeat(5) {
@@ -387,6 +430,10 @@ class CSLocalAgentTests : CSTest() {
         inOrder.verifyNoMoreInteractions()
 
         wifiAgentDun.disconnect()
+        cb.expect<LocalInfoChanged>(localAgent.network) { it.info.upstreamNetwork == null }
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == cellAgentDun.network
+        }
         inOrder.verify(netd).ipfwdRemoveInterfaceForward("local0", "wifi1")
         // This can take a little bit of time because it needs to wait for the rematch
         inOrder.verify(netd, timeout(MEDIUM_TIMEOUT_MS)).ipfwdAddInterfaceForward("local0", "cell0")
@@ -394,15 +441,35 @@ class CSLocalAgentTests : CSTest() {
         cellAgentDun.disconnect()
         inOrder.verify(netd).ipfwdRemoveInterfaceForward("local0", "cell0")
         inOrder.verify(netd).ipfwdDisableForwarding(any())
+        cb.expect<LocalInfoChanged>(localAgent.network) { it.info.upstreamNetwork == null }
 
         val wifiAgentDun2 = Agent(score = keepScore(), lp = lp("wifi2"),
                 nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET, NET_CAPABILITY_DUN))
         wifiAgentDun2.connect()
         inOrder.verify(netd).ipfwdEnableForwarding(any())
         inOrder.verify(netd).ipfwdAddInterfaceForward("local0", "wifi2")
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgentDun2.network
+        }
 
-        localAgent.disconnect()
+        wifiAgentDun2.disconnect()
         inOrder.verify(netd).ipfwdRemoveInterfaceForward("local0", "wifi2")
         inOrder.verify(netd).ipfwdDisableForwarding(any())
+        cb.expect<LocalInfoChanged>(localAgent.network) { it.info.upstreamNetwork == null }
+
+        val wifiAgentDun3 = Agent(score = keepScore(), lp = lp("wifi3"),
+                nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET, NET_CAPABILITY_DUN))
+        wifiAgentDun3.connect()
+        inOrder.verify(netd).ipfwdEnableForwarding(any())
+        inOrder.verify(netd).ipfwdAddInterfaceForward("local0", "wifi3")
+        cb.expect<LocalInfoChanged>(localAgent.network) {
+            it.info.upstreamNetwork == wifiAgentDun3.network
+        }
+
+        localAgent.disconnect()
+        inOrder.verify(netd).ipfwdRemoveInterfaceForward("local0", "wifi3")
+        inOrder.verify(netd).ipfwdDisableForwarding(any())
+        cb.expect<Lost>(localAgent.network)
+        cb.assertNoCallback()
     }
 }
