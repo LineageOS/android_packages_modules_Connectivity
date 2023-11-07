@@ -31,7 +31,7 @@ import java.lang.annotation.RetentionPolicy;
  * Provides the primary API for controlling all aspects of a Thread network.
  *
  * @hide
-*/
+ */
 @FlaggedApi(ThreadNetworkFlags.FLAG_THREAD_ENABLED)
 @SystemApi
 public final class ThreadNetworkController {
