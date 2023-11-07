@@ -47,7 +47,7 @@ import android.os.SystemProperties;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.test.filters.MediumTest;
+import androidx.test.filters.LargeTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.Ipv6Utils;
@@ -79,7 +79,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @RunWith(AndroidJUnit4.class)
-@MediumTest
+@LargeTest
 public class EthernetTetheringTest extends EthernetTetheringTestBase {
     @Rule
     public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
