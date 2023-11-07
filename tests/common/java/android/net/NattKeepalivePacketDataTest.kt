@@ -82,7 +82,7 @@ class NattKeepalivePacketDataTest {
         dstPort: Int = NATT_PORT
     ) = NattKeepalivePacketData.nattKeepalivePacket(srcAddress, srcPort, dstAddress, dstPort)
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testConstructor() {
         assertFailsWith<InvalidPacketException>(
             "Dst port is not NATT port should cause exception") {
@@ -132,12 +132,12 @@ class NattKeepalivePacketDataTest {
         assertEquals(TEST_ADDRV6, packet2.dstAddress)
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testParcel() {
         assertParcelingIsLossless(nattKeepalivePacket())
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testEquals() {
         assertEqualBothWays(nattKeepalivePacket(), nattKeepalivePacket())
         assertNotEquals(nattKeepalivePacket(dstAddress = TEST_SRC_ADDRV4), nattKeepalivePacket())
@@ -146,7 +146,7 @@ class NattKeepalivePacketDataTest {
         assertNotEquals(nattKeepalivePacket(srcPort = TEST_PORT2), nattKeepalivePacket())
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testHashCode() {
         assertEquals(nattKeepalivePacket().hashCode(), nattKeepalivePacket().hashCode())
     }
