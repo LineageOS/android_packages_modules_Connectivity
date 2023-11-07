@@ -27,6 +27,8 @@ import androidx.test.filters.SmallTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.time.Instant;
+
 /** Unit tests for {@link OperationalDatasetTimestamp}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
@@ -56,6 +58,24 @@ public final class OperationalDatasetTimestampTest {
         OperationalDatasetTimestamp timestamp2 =
                 OperationalDatasetTimestamp.fromTlvValue(timestamp1.toTlvValue());
 
+        assertThat(timestamp2).isEqualTo(timestamp1);
+    }
+
+    @Test
+    public void toTlvValue_timestampFromInstant_conversionIsLossLess() {
+        // This results in ticks = 999938900 / 1000000000 * 32768 = 32765.9978752 ~= 32766.
+        // The ticks 32766 is then converted back to 999938964.84375 ~= 999938965 nanoseconds.
+        // A wrong implementation may save Instant.getNano() and compare against the nanoseconds
+        // and results in precision loss when converted between OperationalDatasetTimestamp and the
+        // TLV values.
+        OperationalDatasetTimestamp timestamp1 =
+                OperationalDatasetTimestamp.fromInstant(Instant.ofEpochSecond(100, 999938900));
+
+        OperationalDatasetTimestamp timestamp2 =
+                OperationalDatasetTimestamp.fromTlvValue(timestamp1.toTlvValue());
+
+        assertThat(timestamp2.getSeconds()).isEqualTo(100);
+        assertThat(timestamp2.getTicks()).isEqualTo(32766);
         assertThat(timestamp2).isEqualTo(timestamp1);
     }
 }
