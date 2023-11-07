@@ -16,7 +16,6 @@
 
 package android.net.util
 
-import android.os.Build
 import android.system.NetlinkSocketAddress
 import android.system.Os
 import android.system.OsConstants.AF_INET
@@ -27,13 +26,10 @@ import android.system.OsConstants.SOCK_DGRAM
 import android.system.PacketSocketAddress
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
-import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -44,9 +40,6 @@ private const val FF_BYTE = 0xff.toByte()
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class SocketUtilsTest {
-    @Rule @JvmField
-    val ignoreRule = DevSdkIgnoreRule()
-
     @Test
     fun testMakeNetlinkSocketAddress() {
         val nlAddress = SocketUtils.makeNetlinkSocketAddress(TEST_PORT, RTMGRP_NEIGH)
@@ -67,7 +60,7 @@ class SocketUtilsTest {
         assertTrue("Not PacketSocketAddress object", pkAddress2 is PacketSocketAddress)
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testMakePacketSocketAddress() {
         val pkAddress = SocketUtils.makePacketSocketAddress(
                 ETH_P_ALL, TEST_INDEX, ByteArray(6) { FF_BYTE })
