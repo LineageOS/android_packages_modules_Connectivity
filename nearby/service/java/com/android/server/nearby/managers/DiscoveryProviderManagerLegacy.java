@@ -143,18 +143,18 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
                 ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
                 if (record == null) {
-                    Log.w(TAG, "DiscoveryProviderManager cannot find the scan record.");
+                    Log.w(TAG, "DiscoveryProviderManagerLegacy cannot find the scan record.");
                     continue;
                 }
                 CallerIdentity callerIdentity = record.getCallerIdentity();
                 if (!DiscoveryPermissions.noteDiscoveryResultDelivery(
                         appOpsManager, callerIdentity)) {
-                    Log.w(TAG, "[DiscoveryProviderManager] scan permission revoked "
+                    Log.w(TAG, "[DiscoveryProviderManagerLegacy] scan permission revoked "
                             + "- not forwarding results");
                     try {
                         record.getScanListener().onError(ScanCallback.ERROR_PERMISSION_DENIED);
                     } catch (RemoteException e) {
-                        Log.w(TAG, "DiscoveryProviderManager failed to report error.", e);
+                        Log.w(TAG, "DiscoveryProviderManagerLegacy failed to report error.", e);
                     }
                     return;
                 }
@@ -181,7 +181,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
                     NearbyMetrics.logScanDeviceDiscovered(
                             record.hashCode(), record.getScanRequest(), nearbyDevice);
                 } catch (RemoteException e) {
-                    Log.w(TAG, "DiscoveryProviderManager failed to report onDiscovered.", e);
+                    Log.w(TAG, "DiscoveryProviderManagerLegacy failed to report onDiscovered.", e);
                 }
             }
         }
@@ -194,18 +194,18 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             for (IBinder listenerBinder : mScanTypeScanListenerRecordMap.keySet()) {
                 ScanListenerRecord record = mScanTypeScanListenerRecordMap.get(listenerBinder);
                 if (record == null) {
-                    Log.w(TAG, "DiscoveryProviderManager cannot find the scan record.");
+                    Log.w(TAG, "DiscoveryProviderManagerLegacy cannot find the scan record.");
                     continue;
                 }
                 CallerIdentity callerIdentity = record.getCallerIdentity();
                 if (!DiscoveryPermissions.noteDiscoveryResultDelivery(
                         appOpsManager, callerIdentity)) {
-                    Log.w(TAG, "[DiscoveryProviderManager] scan permission revoked "
+                    Log.w(TAG, "[DiscoveryProviderManagerLegacy] scan permission revoked "
                             + "- not forwarding results");
                     try {
                         record.getScanListener().onError(ScanCallback.ERROR_PERMISSION_DENIED);
                     } catch (RemoteException e) {
-                        Log.w(TAG, "DiscoveryProviderManager failed to report error.", e);
+                        Log.w(TAG, "DiscoveryProviderManagerLegacy failed to report error.", e);
                     }
                     return;
                 }
@@ -213,7 +213,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
                 try {
                     record.getScanListener().onError(errorCode);
                 } catch (RemoteException e) {
-                    Log.w(TAG, "DiscoveryProviderManager failed to report onError.", e);
+                    Log.w(TAG, "DiscoveryProviderManagerLegacy failed to report onError.", e);
                 }
             }
         }
@@ -296,10 +296,10 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             if (listenerBinder != null && deathRecipient != null) {
                 listenerBinder.unlinkToDeath(removedRecord.getDeathRecipient(), 0);
             }
-            Log.v(TAG, "DiscoveryProviderManager unregistered scan listener.");
+            Log.v(TAG, "DiscoveryProviderManagerLegacy unregistered scan listener.");
             NearbyMetrics.logScanStopped(removedRecord.hashCode(), removedRecord.getScanRequest());
             if (mScanTypeScanListenerRecordMap.isEmpty()) {
-                Log.v(TAG, "DiscoveryProviderManager stops provider because there is no "
+                Log.v(TAG, "DiscoveryProviderManagerLegacy stops provider because there is no "
                         + "scan listener registered.");
                 stopProviders();
                 return;
@@ -309,8 +309,8 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
 
             // Removes current highest scan mode requested and sets the next highest scan mode.
             if (removedRecord.getScanRequest().getScanMode() == mScanMode) {
-                Log.v(TAG, "DiscoveryProviderManager starts to find the new highest scan mode "
-                        + "because the highest scan mode listener was unregistered.");
+                Log.v(TAG, "DiscoveryProviderManagerLegacy starts to find the new highest "
+                        + "scan mode because the highest scan mode listener was unregistered.");
                 @ScanRequest.ScanMode int highestScanModeRequested = ScanRequest.SCAN_MODE_NO_POWER;
                 // find the next highest scan mode;
                 for (ScanListenerRecord record : mScanTypeScanListenerRecordMap.values()) {
@@ -380,7 +380,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
 
     private void startBleProvider(List<ScanFilter> scanFilters) {
         if (!mBleDiscoveryProvider.getController().isStarted()) {
-            Log.d(TAG, "DiscoveryProviderManager starts Ble scanning.");
+            Log.d(TAG, "DiscoveryProviderManagerLegacy starts BLE scanning.");
             mBleDiscoveryProvider.getController().setListener(this);
             mBleDiscoveryProvider.getController().setProviderScanMode(mScanMode);
             mBleDiscoveryProvider.getController().setProviderScanFilters(scanFilters);
@@ -390,7 +390,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
 
     @VisibleForTesting
     void startChreProvider(List<ScanFilter> scanFilters) {
-        Log.d(TAG, "DiscoveryProviderManager starts CHRE scanning.");
+        Log.d(TAG, "DiscoveryProviderManagerLegacy starts CHRE scanning.");
         mChreDiscoveryProvider.getController().setProviderScanFilters(scanFilters);
         mChreDiscoveryProvider.getController().setProviderScanMode(mScanMode);
         mChreDiscoveryProvider.getController().start();
