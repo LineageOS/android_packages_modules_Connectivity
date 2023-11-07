@@ -17,16 +17,11 @@ package android.net;
 
 import static org.junit.Assert.assertEquals;
 
-import android.os.Build;
 import android.os.IBinder;
 
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.testutils.DevSdkIgnoreRule;
-import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
-
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -34,16 +29,13 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(AndroidJUnit4.class)
 public class NetworkStackTest {
-    @Rule
-    public DevSdkIgnoreRule mDevSdkIgnoreRule = new DevSdkIgnoreRule();
-
     @Mock private IBinder mConnectorBinder;
 
     @Before public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testGetService() {
         NetworkStack.setServiceForTest(mConnectorBinder);
         assertEquals(NetworkStack.getService(), mConnectorBinder);

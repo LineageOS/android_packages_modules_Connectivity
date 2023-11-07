@@ -28,25 +28,18 @@ import android.net.NetworkStats.ROAMING_YES
 import android.net.NetworkStats.SET_DEFAULT
 import android.net.NetworkStats.SET_FOREGROUND
 import android.net.NetworkStats.TAG_NONE
-import android.os.Build
 import androidx.test.filters.SmallTest
-import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.assertNetworkStatsEquals
 import com.android.testutils.assertParcelingIsLossless
+import kotlin.test.assertEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import kotlin.test.assertEquals
 
 @RunWith(JUnit4::class)
 @SmallTest
 class NetworkStatsApiTest {
-    @Rule
-    @JvmField
-    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = Build.VERSION_CODES.Q)
-
     private val testStatsEmpty = NetworkStats(0L, 0)
 
     // Note that these variables need to be initialized outside of constructor, initialize
