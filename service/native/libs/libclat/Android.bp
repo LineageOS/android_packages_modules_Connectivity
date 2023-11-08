@@ -43,11 +43,15 @@ cc_test {
     srcs: [
         "clatutils_test.cpp",
     ],
+    header_libs: [
+        "bpf_connectivity_headers",
+    ],
     static_libs: [
         "libbase",
         "libclat",
         "libip_checksum",
         "libnetd_test_tun_interface",
+        "netd_aidl_interface-lateststable-ndk",
     ],
     shared_libs: [
         "liblog",
