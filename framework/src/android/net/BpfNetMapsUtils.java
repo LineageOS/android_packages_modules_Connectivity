@@ -17,6 +17,7 @@
 package android.net;
 
 import static android.net.BpfNetMapsConstants.ALLOW_CHAINS;
+import static android.net.BpfNetMapsConstants.BACKGROUND_MATCH;
 import static android.net.BpfNetMapsConstants.DENY_CHAINS;
 import static android.net.BpfNetMapsConstants.DOZABLE_MATCH;
 import static android.net.BpfNetMapsConstants.LOW_POWER_STANDBY_MATCH;
@@ -28,6 +29,7 @@ import static android.net.BpfNetMapsConstants.OEM_DENY_3_MATCH;
 import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
 import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
 import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
@@ -70,6 +72,8 @@ public class BpfNetMapsUtils {
                 return POWERSAVE_MATCH;
             case FIREWALL_CHAIN_RESTRICTED:
                 return RESTRICTED_MATCH;
+            case FIREWALL_CHAIN_BACKGROUND:
+                return BACKGROUND_MATCH;
             case FIREWALL_CHAIN_LOW_POWER_STANDBY:
                 return LOW_POWER_STANDBY_MATCH;
             case FIREWALL_CHAIN_OEM_DENY_1:
