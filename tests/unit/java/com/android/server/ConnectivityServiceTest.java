@@ -59,6 +59,7 @@ import static android.net.ConnectivityManager.EXTRA_IS_ACTIVE;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_INFO;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_TYPE;
 import static android.net.ConnectivityManager.EXTRA_REALTIME_NS;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
@@ -10475,6 +10476,7 @@ public class ConnectivityServiceTest {
         doTestSetUidFirewallRule(FIREWALL_CHAIN_POWERSAVE, FIREWALL_RULE_DENY);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_RESTRICTED, FIREWALL_RULE_DENY);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_LOW_POWER_STANDBY, FIREWALL_RULE_DENY);
+        doTestSetUidFirewallRule(FIREWALL_CHAIN_BACKGROUND, FIREWALL_RULE_DENY);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_1, FIREWALL_RULE_ALLOW);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_2, FIREWALL_RULE_ALLOW);
         doTestSetUidFirewallRule(FIREWALL_CHAIN_OEM_DENY_3, FIREWALL_RULE_ALLOW);
@@ -10488,6 +10490,7 @@ public class ConnectivityServiceTest {
                 FIREWALL_CHAIN_POWERSAVE,
                 FIREWALL_CHAIN_RESTRICTED,
                 FIREWALL_CHAIN_LOW_POWER_STANDBY,
+                FIREWALL_CHAIN_BACKGROUND,
                 FIREWALL_CHAIN_OEM_DENY_1,
                 FIREWALL_CHAIN_OEM_DENY_2,
                 FIREWALL_CHAIN_OEM_DENY_3);
@@ -10537,6 +10540,7 @@ public class ConnectivityServiceTest {
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_POWERSAVE, allowlist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_RESTRICTED, allowlist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_LOW_POWER_STANDBY, allowlist);
+        doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_BACKGROUND, allowlist);
 
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_STANDBY, denylist);
         doTestSetFirewallChainEnabledCloseSocket(FIREWALL_CHAIN_OEM_DENY_1, denylist);
@@ -10558,6 +10562,7 @@ public class ConnectivityServiceTest {
         doTestReplaceFirewallChain(FIREWALL_CHAIN_POWERSAVE);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_RESTRICTED);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_LOW_POWER_STANDBY);
+        doTestReplaceFirewallChain(FIREWALL_CHAIN_BACKGROUND);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_1);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_2);
         doTestReplaceFirewallChain(FIREWALL_CHAIN_OEM_DENY_3);
