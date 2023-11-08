@@ -22,25 +22,3 @@
 using aidl::android::net::INetd;
 
 static_assert(INetd::CLAT_MARK == CLAT_MARK, "must be 0xDEADC1A7");
-
-enum FirewallRule { ALLOW = INetd::FIREWALL_RULE_ALLOW, DENY = INetd::FIREWALL_RULE_DENY };
-
-// ALLOWLIST means the firewall denies all by default, uids must be explicitly ALLOWed
-// DENYLIST means the firewall allows all by default, uids must be explicitly DENYed
-
-enum FirewallType { ALLOWLIST = INetd::FIREWALL_ALLOWLIST, DENYLIST = INetd::FIREWALL_DENYLIST };
-
-// LINT.IfChange(firewall_chain)
-enum ChildChain {
-    NONE = 0,
-    DOZABLE = 1,
-    STANDBY = 2,
-    POWERSAVE = 3,
-    RESTRICTED = 4,
-    LOW_POWER_STANDBY = 5,
-    OEM_DENY_1 = 7,
-    OEM_DENY_2 = 8,
-    OEM_DENY_3 = 9,
-    INVALID_CHAIN
-};
-// LINT.ThenChange(packages/modules/Connectivity/framework/src/android/net/ConnectivityManager.java)
