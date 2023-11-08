@@ -33,11 +33,35 @@ java_library {
     min_sdk_version: "30",
     srcs: [":service-thread-sources"],
     libs: [
+        "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
         "service-connectivity-pre-jarjar",
     ],
     static_libs: [
         "net-utils-device-common",
+        "net-utils-device-common-netlink",
+        "ot-daemon-aidl-java",
+    ],
+    apex_available: ["com.android.tethering"],
+}
+
+cc_library_shared {
+    name: "libservice-thread-jni",
+    min_sdk_version: "30",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wthread-safety",
+    ],
+    srcs: [
+        "jni/**/*.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libcutils",
+        "liblog",
+        "libnativehelper",
     ],
     apex_available: ["com.android.tethering"],
 }

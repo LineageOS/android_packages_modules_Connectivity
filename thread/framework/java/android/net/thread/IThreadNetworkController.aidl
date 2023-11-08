@@ -16,10 +16,28 @@
 
 package android.net.thread;
 
+import android.net.Network;
+import android.net.thread.ActiveOperationalDataset;
+import android.net.thread.IActiveOperationalDatasetReceiver;
+import android.net.thread.IOperationalDatasetCallback;
+import android.net.thread.IOperationReceiver;
+import android.net.thread.IScheduleMigrationReceiver;
+import android.net.thread.IStateCallback;
+import android.net.thread.PendingOperationalDataset;
+
 /**
 * Interface for communicating with ThreadNetworkControllerService.
 * @hide
 */
 interface IThreadNetworkController {
+    void registerStateCallback(in IStateCallback callback);
+    void unregisterStateCallback(in IStateCallback callback);
+    void registerOperationalDatasetCallback(in IOperationalDatasetCallback callback);
+    void unregisterOperationalDatasetCallback(in IOperationalDatasetCallback callback);
+
+    void join(in ActiveOperationalDataset activeOpDataset, in IOperationReceiver receiver);
+    void scheduleMigration(in PendingOperationalDataset pendingOpDataset, in IOperationReceiver receiver);
+    void leave(in IOperationReceiver receiver);
+
     int getThreadVersion();
 }
