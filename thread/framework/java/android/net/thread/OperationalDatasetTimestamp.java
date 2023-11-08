@@ -43,9 +43,10 @@ public final class OperationalDatasetTimestamp {
     /** @hide */
     public static final int LENGTH_TIMESTAMP = Long.BYTES;
 
-    private static final long TICKS_UPPER_BOUND = 0x8000;
+    private static final int TICKS_UPPER_BOUND = 0x8000;
 
-    private final Instant mInstant;
+    private final long mSeconds;
+    private final int mTicks;
     private final boolean mIsAuthoritativeSource;
 
     /**
@@ -55,18 +56,34 @@ public final class OperationalDatasetTimestamp {
      * {@link instant#getNano()} based on frequency of 32768 Hz, and {@code isAuthoritativeSource}
      * is set to {@code true}.
      *
+     * <p>Note that this conversion can lose precision and a value returned by {@link #toInstant}
+     * may not equal exactly the {@code instant}.
+     *
      * @throws IllegalArgumentException if {@code instant.getEpochSecond()} is larger than {@code
      *     0xffffffffffffL}
+     * @see toInstant
      */
     @NonNull
     public static OperationalDatasetTimestamp fromInstant(@NonNull Instant instant) {
-        return new OperationalDatasetTimestamp(instant, /* isAuthoritativeSource= */ true);
+        int ticks = getRoundedTicks(instant.getNano());
+        long seconds = instant.getEpochSecond() + ticks / TICKS_UPPER_BOUND;
+        // the rounded ticks can be 0x8000 if instant.getNano() >= 999984742
+        ticks = ticks % TICKS_UPPER_BOUND;
+        return new OperationalDatasetTimestamp(seconds, ticks, true /* isAuthoritativeSource */);
     }
 
-    /** Converts this {@link OperationalDatasetTimestamp} object to an {@link Instant}. */
+    /**
+     * Converts this {@link OperationalDatasetTimestamp} object to an {@link Instant}.
+     *
+     * <p>Note that the return value may not equal exactly the {@code instant} if this object is
+     * created with {@link #fromInstant}.
+     *
+     * @see fromInstant
+     */
     @NonNull
     public Instant toInstant() {
-        return mInstant;
+        long nanos = Math.round((double) mTicks * 1000000000L / TICKS_UPPER_BOUND);
+        return Instant.ofEpochSecond(mSeconds, nanos);
     }
 
     /**
@@ -100,10 +117,7 @@ public final class OperationalDatasetTimestamp {
     public byte[] toTlvValue() {
         byte[] tlv = new byte[LENGTH_TIMESTAMP];
         ByteBuffer buffer = ByteBuffer.wrap(tlv);
-        long encodedValue =
-                (mInstant.getEpochSecond() << 16)
-                        | ((mInstant.getNano() * TICKS_UPPER_BOUND / 1000000000L) << 1)
-                        | (mIsAuthoritativeSource ? 1 : 0);
+        long encodedValue = (mSeconds << 16) | (mTicks << 1) | (mIsAuthoritativeSource ? 1 : 0);
         buffer.putLong(encodedValue);
         return tlv;
     }
@@ -125,10 +139,6 @@ public final class OperationalDatasetTimestamp {
             @IntRange(from = 0x0, to = 0xffffffffffffL) long seconds,
             @IntRange(from = 0x0, to = 0x7fff) int ticks,
             boolean isAuthoritativeSource) {
-        this(makeInstant(seconds, ticks), isAuthoritativeSource);
-    }
-
-    private static Instant makeInstant(long seconds, int ticks) {
         checkArgument(
                 seconds >= 0 && seconds <= 0xffffffffffffL,
                 "seconds exceeds allowed range (seconds = %d,"
@@ -138,25 +148,8 @@ public final class OperationalDatasetTimestamp {
                 ticks >= 0 && ticks <= 0x7fff,
                 "ticks exceeds allowed ranged (ticks = %d, allowedRange" + " = [0x0, 0x7fff])",
                 ticks);
-        long nanos = Math.round((double) ticks * 1000000000L / TICKS_UPPER_BOUND);
-        return Instant.ofEpochSecond(seconds, nanos);
-    }
-
-    /**
-     * Creates new {@link OperationalDatasetTimestamp} object.
-     *
-     * @throws IllegalArgumentException if {@code instant.getEpochSecond()} is larger than {@code
-     *     0xffffffffffffL}
-     */
-    private OperationalDatasetTimestamp(@NonNull Instant instant, boolean isAuthoritativeSource) {
-        requireNonNull(instant, "instant cannot be null");
-        long seconds = instant.getEpochSecond();
-        checkArgument(
-                seconds >= 0 && seconds <= 0xffffffffffffL,
-                "instant seconds exceeds allowed range (seconds = %d, allowedRange = [0x0,"
-                        + " 0xffffffffffffL])",
-                seconds);
-        mInstant = instant;
+        mSeconds = seconds;
+        mTicks = ticks;
         mIsAuthoritativeSource = isAuthoritativeSource;
     }
 
@@ -171,13 +164,12 @@ public final class OperationalDatasetTimestamp {
 
     /** Returns the seconds portion of the timestamp. */
     public @IntRange(from = 0x0, to = 0xffffffffffffL) long getSeconds() {
-        return mInstant.getEpochSecond() + getRoundedTicks(mInstant.getNano()) / TICKS_UPPER_BOUND;
+        return mSeconds;
     }
 
     /** Returns the ticks portion of the timestamp. */
     public @IntRange(from = 0x0, to = 0x7fff) int getTicks() {
-        // the rounded ticks can be 0x8000 if mInstant.getNano() >= 999984742
-        return (int) (getRoundedTicks(mInstant.getNano()) % TICKS_UPPER_BOUND);
+        return mTicks;
     }
 
     /** Returns {@code true} if the timestamp comes from an authoritative source. */
@@ -208,13 +200,14 @@ public final class OperationalDatasetTimestamp {
             return false;
         } else {
             OperationalDatasetTimestamp otherTimestamp = (OperationalDatasetTimestamp) other;
-            return mInstant.equals(otherTimestamp.mInstant)
+            return mSeconds == otherTimestamp.mSeconds
+                    && mTicks == otherTimestamp.mTicks
                     && mIsAuthoritativeSource == otherTimestamp.mIsAuthoritativeSource;
         }
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mInstant, mIsAuthoritativeSource);
+        return Objects.hash(mSeconds, mTicks, mIsAuthoritativeSource);
     }
 }
