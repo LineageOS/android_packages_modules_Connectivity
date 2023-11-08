@@ -110,7 +110,6 @@ cc_library_shared {
     ],
     srcs: [
         ":services.connectivity-netstats-jni-sources",
-        "jni/com_android_server_BpfNetMaps.cpp",
         "jni/com_android_server_connectivity_ClatCoordinator.cpp",
         "jni/com_android_server_TestNetworkService.cpp",
         "jni/onload.cpp",
