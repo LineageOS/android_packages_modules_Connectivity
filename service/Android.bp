@@ -107,10 +107,6 @@ cc_library_shared {
         "-Werror",
         "-Wno-unused-parameter",
         "-Wthread-safety",
-
-        // AServiceManager_waitForService is available on only 31+, but it's still safe for Thread
-        // service because it's enabled on only 34+
-        "-Wno-unguarded-availability",
     ],
     srcs: [
         ":services.connectivity-netstats-jni-sources",
