@@ -146,8 +146,6 @@ public abstract class EthernetTetheringTestBase {
     private final TetheringManager mTm = mContext.getSystemService(TetheringManager.class);
     private final PackageManager mPackageManager = mContext.getPackageManager();
     private final CtsNetUtils mCtsNetUtils = new CtsNetUtils(mContext);
-    private final UiAutomation mUiAutomation =
-            InstrumentationRegistry.getInstrumentation().getUiAutomation();
 
     // Late initialization in setUp()
     private boolean mRunTests;
@@ -276,7 +274,6 @@ public abstract class EthernetTetheringTestBase {
         } finally {
             mHandlerThread.quitSafely();
             mHandlerThread.join();
-            mUiAutomation.dropShellPermissionIdentity();
         }
     }
 
