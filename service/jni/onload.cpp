@@ -26,6 +26,7 @@ int register_com_android_server_BpfNetMaps(JNIEnv* env);
 int register_com_android_server_connectivity_ClatCoordinator(JNIEnv* env);
 int register_android_server_net_NetworkStatsFactory(JNIEnv* env);
 int register_android_server_net_NetworkStatsService(JNIEnv* env);
+int register_com_android_server_ServiceManagerWrapper(JNIEnv* env);
 
 extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv *env;
@@ -35,6 +36,10 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
     }
 
     if (register_com_android_server_TestNetworkService(env) < 0) {
+        return JNI_ERR;
+    }
+
+    if (register_com_android_server_ServiceManagerWrapper(env) < 0) {
         return JNI_ERR;
     }
 
