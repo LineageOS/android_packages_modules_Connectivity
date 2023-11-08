@@ -107,11 +107,16 @@ cc_library_shared {
         "-Werror",
         "-Wno-unused-parameter",
         "-Wthread-safety",
+
+        // AServiceManager_waitForService is available on only 31+, but it's still safe for Thread
+        // service because it's enabled on only 34+
+        "-Wno-unguarded-availability",
     ],
     srcs: [
         ":services.connectivity-netstats-jni-sources",
         "jni/com_android_server_BpfNetMaps.cpp",
         "jni/com_android_server_connectivity_ClatCoordinator.cpp",
+        "jni/com_android_server_ServiceManagerWrapper.cpp",
         "jni/com_android_server_TestNetworkService.cpp",
         "jni/onload.cpp",
     ],
@@ -128,6 +133,7 @@ cc_library_shared {
     ],
     shared_libs: [
         "libbase",
+        "libbinder_ndk",
         "libcutils",
         "libnetdutils",
         "liblog",
@@ -203,6 +209,8 @@ java_library {
     visibility: [
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/Connectivity/thread/service:__subpackages__",
+        "//packages/modules/Connectivity/thread/tests:__subpackages__",
     ],
 }
 
