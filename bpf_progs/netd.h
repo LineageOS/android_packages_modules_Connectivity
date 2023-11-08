@@ -192,6 +192,7 @@ enum UidOwnerMatchType {
     OEM_DENY_1_MATCH = (1 << 9),
     OEM_DENY_2_MATCH = (1 << 10),
     OEM_DENY_3_MATCH = (1 << 11),
+    BACKGROUND_MATCH = (1 << 12)
 };
 // LINT.ThenChange(../framework/src/android/net/BpfNetMapsConstants.java)
 
@@ -244,7 +245,8 @@ STRUCT_SIZE(IngressDiscardValue, 2 * 4);  // 8
 // DROP_IF_SET is set of rules that DROP if rule is globally enabled, and per-uid bit is set
 #define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
 // DROP_IF_UNSET is set of rules that should DROP if globally enabled, and per-uid bit is NOT set
-#define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH | LOW_POWER_STANDBY_MATCH)
+#define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH \
+                        | LOW_POWER_STANDBY_MATCH | BACKGROUND_MATCH)
 
 // Warning: funky bit-wise arithmetic: in parallel, for all DROP_IF_SET/UNSET rules
 // check whether the rules are globally enabled, and if so whether the rules are
