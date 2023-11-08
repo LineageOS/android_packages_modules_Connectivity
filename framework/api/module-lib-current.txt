@@ -45,6 +45,7 @@ package android.net {
     field public static final int BLOCKED_METERED_REASON_DATA_SAVER = 65536; // 0x10000
     field public static final int BLOCKED_METERED_REASON_MASK = -65536; // 0xffff0000
     field public static final int BLOCKED_METERED_REASON_USER_RESTRICTED = 131072; // 0x20000
+    field @FlaggedApi("com.android.net.flags.basic_background_restrictions_enabled") public static final int BLOCKED_REASON_APP_BACKGROUND = 64; // 0x40
     field public static final int BLOCKED_REASON_APP_STANDBY = 4; // 0x4
     field public static final int BLOCKED_REASON_BATTERY_SAVER = 1; // 0x1
     field public static final int BLOCKED_REASON_DOZE = 2; // 0x2
@@ -52,6 +53,7 @@ package android.net {
     field public static final int BLOCKED_REASON_LOW_POWER_STANDBY = 32; // 0x20
     field public static final int BLOCKED_REASON_NONE = 0; // 0x0
     field public static final int BLOCKED_REASON_RESTRICTED_MODE = 8; // 0x8
+    field @FlaggedApi("com.android.net.flags.basic_background_restrictions_enabled") public static final int FIREWALL_CHAIN_BACKGROUND = 6; // 0x6
     field public static final int FIREWALL_CHAIN_DOZABLE = 1; // 0x1
     field public static final int FIREWALL_CHAIN_LOW_POWER_STANDBY = 5; // 0x5
     field public static final int FIREWALL_CHAIN_OEM_DENY_1 = 7; // 0x7

@@ -16,6 +16,7 @@
 
 package android.net;
 
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
@@ -77,6 +78,7 @@ public class BpfNetMapsConstants {
     public static final long OEM_DENY_1_MATCH = (1 << 9);
     public static final long OEM_DENY_2_MATCH = (1 << 10);
     public static final long OEM_DENY_3_MATCH = (1 << 11);
+    public static final long BACKGROUND_MATCH = (1 << 12);
 
     public static final List<Pair<Long, String>> MATCH_LIST = Arrays.asList(
             Pair.create(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"),
@@ -90,7 +92,8 @@ public class BpfNetMapsConstants {
             Pair.create(LOCKDOWN_VPN_MATCH, "LOCKDOWN_VPN_MATCH"),
             Pair.create(OEM_DENY_1_MATCH, "OEM_DENY_1_MATCH"),
             Pair.create(OEM_DENY_2_MATCH, "OEM_DENY_2_MATCH"),
-            Pair.create(OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH")
+            Pair.create(OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH"),
+            Pair.create(BACKGROUND_MATCH, "BACKGROUND_MATCH")
     );
 
     /**
@@ -102,7 +105,8 @@ public class BpfNetMapsConstants {
             FIREWALL_CHAIN_DOZABLE,
             FIREWALL_CHAIN_POWERSAVE,
             FIREWALL_CHAIN_RESTRICTED,
-            FIREWALL_CHAIN_LOW_POWER_STANDBY
+            FIREWALL_CHAIN_LOW_POWER_STANDBY,
+            FIREWALL_CHAIN_BACKGROUND
     );
 
     /**
