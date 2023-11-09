@@ -70,13 +70,16 @@ public final class ActiveOperationalDatasetTest {
     // PAN ID: 0xD9A0
     // PSKc: A245479C836D551B9CA557F7B9D351B4
     // Security Policy: 672 onrcb
-    private static final byte[] VALID_DATASET =
+    private static final byte[] VALID_DATASET_TLVS =
             base16().decode(
                             "0E080000000000010000000300001335060004001FFFE002"
                                     + "08ACC214689BC40BDF0708FD64DB1225F47E0B0510F26B31"
                                     + "53760F519A63BAFDDFFC80D2AF030F4F70656E5468726561"
                                     + "642D643961300102D9A00410A245479C836D551B9CA557F7"
                                     + "B9D351B40C0402A0FFF8");
+
+    private static final ActiveOperationalDataset DEFAULT_DATASET =
+            ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET_TLVS);
 
     private static byte[] removeTlv(byte[] dataset, int type) {
         ByteArrayOutputStream os = new ByteArrayOutputStream(dataset.length);
@@ -105,7 +108,8 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void parcelable_parcelingIsLossLess() {
-        ActiveOperationalDataset dataset = ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET);
+        ActiveOperationalDataset dataset =
+                ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET_TLVS);
 
         assertParcelingIsLossless(dataset);
     }
@@ -126,7 +130,8 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalidNetworkKeyTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_NETWORK_KEY, "05080000000000000000");
+        byte[] invalidTlv =
+                replaceTlv(VALID_DATASET_TLVS, TYPE_NETWORK_KEY, "05080000000000000000");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -135,7 +140,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noNetworkKeyTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_NETWORK_KEY);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_NETWORK_KEY);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -144,7 +149,8 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalidActiveTimestampTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_ACTIVE_TIMESTAMP, "0E0700000000010000");
+        byte[] invalidTlv =
+                replaceTlv(VALID_DATASET_TLVS, TYPE_ACTIVE_TIMESTAMP, "0E0700000000010000");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -153,7 +159,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noActiveTimestampTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_ACTIVE_TIMESTAMP);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_ACTIVE_TIMESTAMP);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -162,7 +168,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalidNetworkNameTlv_emptyName_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_NETWORK_NAME, "0300");
+        byte[] invalidTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_NETWORK_NAME, "0300");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -173,7 +179,9 @@ public final class ActiveOperationalDatasetTest {
     public void fromThreadTlvs_invalidNetworkNameTlv_tooLongName_throwsIllegalArgument() {
         byte[] invalidTlv =
                 replaceTlv(
-                        VALID_DATASET, TYPE_NETWORK_NAME, "03114142434445464748494A4B4C4D4E4F5051");
+                        VALID_DATASET_TLVS,
+                        TYPE_NETWORK_NAME,
+                        "03114142434445464748494A4B4C4D4E4F5051");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -182,7 +190,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noNetworkNameTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_NETWORK_NAME);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_NETWORK_NAME);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -191,7 +199,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalidChannelTlv_channelMissing_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_CHANNEL, "000100");
+        byte[] invalidTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL, "000100");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -200,7 +208,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_undefinedChannelPage_success() {
-        byte[] datasetTlv = replaceTlv(VALID_DATASET, TYPE_CHANNEL, "0003010020");
+        byte[] datasetTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL, "0003010020");
 
         ActiveOperationalDataset dataset = ActiveOperationalDataset.fromThreadTlvs(datasetTlv);
 
@@ -210,8 +218,8 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalid2P4GhzChannel_throwsIllegalArgument() {
-        byte[] invalidTlv1 = replaceTlv(VALID_DATASET, TYPE_CHANNEL, "000300000A");
-        byte[] invalidTlv2 = replaceTlv(VALID_DATASET, TYPE_CHANNEL, "000300001B");
+        byte[] invalidTlv1 = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL, "000300000A");
+        byte[] invalidTlv2 = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL, "000300001B");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -223,7 +231,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_valid2P4GhzChannelTlv_success() {
-        byte[] validTlv = replaceTlv(VALID_DATASET, TYPE_CHANNEL, "0003000010");
+        byte[] validTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL, "0003000010");
 
         ActiveOperationalDataset dataset = ActiveOperationalDataset.fromThreadTlvs(validTlv);
 
@@ -232,7 +240,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noChannelTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_CHANNEL);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_CHANNEL);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -241,7 +249,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_prematureEndOfChannelMaskEntry_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_CHANNEL_MASK, "350100");
+        byte[] invalidTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL_MASK, "350100");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -250,7 +258,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_inconsistentChannelMaskLength_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_CHANNEL_MASK, "3506000500010000");
+        byte[] invalidTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL_MASK, "3506000500010000");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -261,7 +269,7 @@ public final class ActiveOperationalDatasetTest {
     public void fromThreadTlvs_unsupportedChannelMaskLength_success() {
         ActiveOperationalDataset dataset =
                 ActiveOperationalDataset.fromThreadTlvs(
-                        replaceTlv(VALID_DATASET, TYPE_CHANNEL_MASK, "350700050001000000"));
+                        replaceTlv(VALID_DATASET_TLVS, TYPE_CHANNEL_MASK, "350700050001000000"));
 
         SparseArray<byte[]> channelMask = dataset.getChannelMask();
         assertThat(channelMask.size()).isEqualTo(1);
@@ -271,7 +279,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noChannelMaskTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_CHANNEL_MASK);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_CHANNEL_MASK);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -280,7 +288,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalidPanIdTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_PAN_ID, "010101");
+        byte[] invalidTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_PAN_ID, "010101");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -289,7 +297,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noPanIdTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_PAN_ID);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_PAN_ID);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -298,7 +306,8 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_invalidExtendedPanIdTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_EXTENDED_PAN_ID, "020700010203040506");
+        byte[] invalidTlv =
+                replaceTlv(VALID_DATASET_TLVS, TYPE_EXTENDED_PAN_ID, "020700010203040506");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -307,7 +316,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noExtendedPanIdTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_EXTENDED_PAN_ID);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_EXTENDED_PAN_ID);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -317,7 +326,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void fromThreadTlvs_invalidPskcTlv_throwsIllegalArgument() {
         byte[] invalidTlv =
-                replaceTlv(VALID_DATASET, TYPE_PSKC, "0411000102030405060708090A0B0C0D0E0F10");
+                replaceTlv(VALID_DATASET_TLVS, TYPE_PSKC, "0411000102030405060708090A0B0C0D0E0F10");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -326,7 +335,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noPskcTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_PSKC);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_PSKC);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -336,7 +345,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void fromThreadTlvs_invalidMeshLocalPrefixTlv_throwsIllegalArgument() {
         byte[] invalidTlv =
-                replaceTlv(VALID_DATASET, TYPE_MESH_LOCAL_PREFIX, "0709FD0001020304050607");
+                replaceTlv(VALID_DATASET_TLVS, TYPE_MESH_LOCAL_PREFIX, "0709FD0001020304050607");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -345,7 +354,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noMeshLocalPrefixTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_MESH_LOCAL_PREFIX);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_MESH_LOCAL_PREFIX);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -354,7 +363,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_tooShortSecurityPolicyTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = replaceTlv(VALID_DATASET, TYPE_SECURITY_POLICY, "0C0101");
+        byte[] invalidTlv = replaceTlv(VALID_DATASET_TLVS, TYPE_SECURITY_POLICY, "0C0101");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -363,7 +372,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_noSecurityPolicyTlv_throwsIllegalArgument() {
-        byte[] invalidTlv = removeTlv(VALID_DATASET, TYPE_SECURITY_POLICY);
+        byte[] invalidTlv = removeTlv(VALID_DATASET_TLVS, TYPE_SECURITY_POLICY);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -429,7 +438,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_containsUnknownTlvs_unknownTlvsRetained() {
-        final byte[] datasetWithUnknownTlvs = addTlv(VALID_DATASET, "AA01FFBB020102");
+        final byte[] datasetWithUnknownTlvs = addTlv(VALID_DATASET_TLVS, "AA01FFBB020102");
 
         ActiveOperationalDataset dataset =
                 ActiveOperationalDataset.fromThreadTlvs(datasetWithUnknownTlvs);
@@ -443,7 +452,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void toThreadTlvs_conversionIsLossLess() {
-        ActiveOperationalDataset dataset1 = ActiveOperationalDataset.createRandomDataset();
+        ActiveOperationalDataset dataset1 = DEFAULT_DATASET;
 
         ActiveOperationalDataset dataset2 =
                 ActiveOperationalDataset.fromThreadTlvs(dataset1.toThreadTlvs());
@@ -465,9 +474,7 @@ public final class ActiveOperationalDatasetTest {
                 };
 
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setNetworkKey(networkKey)
-                        .build();
+                new Builder(DEFAULT_DATASET).setNetworkKey(networkKey).build();
 
         assertThat(dataset.getNetworkKey()).isEqualTo(networkKey);
     }
@@ -475,7 +482,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setInvalidNetworkKey_throwsIllegalArgument() {
         byte[] invalidNetworkKey = new byte[] {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(
                 IllegalArgumentException.class, () -> builder.setNetworkKey(invalidNetworkKey));
@@ -486,9 +493,7 @@ public final class ActiveOperationalDatasetTest {
         byte[] extendedPanId = new byte[] {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setExtendedPanId(extendedPanId)
-                        .build();
+                new Builder(DEFAULT_DATASET).setExtendedPanId(extendedPanId).build();
 
         assertThat(dataset.getExtendedPanId()).isEqualTo(extendedPanId);
     }
@@ -496,31 +501,28 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setInvalidExtendedPanId_throwsIllegalArgument() {
         byte[] extendedPanId = new byte[] {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(IllegalArgumentException.class, () -> builder.setExtendedPanId(extendedPanId));
     }
 
     @Test
     public void builder_setValidPanId_success() {
-        ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setPanId(0xfffe)
-                        .build();
+        ActiveOperationalDataset dataset = new Builder(DEFAULT_DATASET).setPanId(0xfffe).build();
 
         assertThat(dataset.getPanId()).isEqualTo(0xfffe);
     }
 
     @Test
     public void builder_setInvalidPanId_throwsIllegalArgument() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(IllegalArgumentException.class, () -> builder.setPanId(0xffff));
     }
 
     @Test
     public void builder_setInvalidChannel_throwsIllegalArgument() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(IllegalArgumentException.class, () -> builder.setChannel(0, 0));
         assertThrows(IllegalArgumentException.class, () -> builder.setChannel(0, 27));
@@ -529,9 +531,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValid2P4GhzChannel_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setChannel(CHANNEL_PAGE_24_GHZ, 16)
-                        .build();
+                new Builder(DEFAULT_DATASET).setChannel(CHANNEL_PAGE_24_GHZ, 16).build();
 
         assertThat(dataset.getChannel()).isEqualTo(16);
         assertThat(dataset.getChannelPage()).isEqualTo(CHANNEL_PAGE_24_GHZ);
@@ -540,23 +540,21 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValidNetworkName_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setNetworkName("ot-network")
-                        .build();
+                new Builder(DEFAULT_DATASET).setNetworkName("ot-network").build();
 
         assertThat(dataset.getNetworkName()).isEqualTo("ot-network");
     }
 
     @Test
     public void builder_setEmptyNetworkName_throwsIllegalArgument() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(IllegalArgumentException.class, () -> builder.setNetworkName(""));
     }
 
     @Test
     public void builder_setTooLongNetworkName_throwsIllegalArgument() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(
                 IllegalArgumentException.class, () -> builder.setNetworkName("openthread-network"));
@@ -564,7 +562,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void builder_setTooLongUtf8NetworkName_throwsIllegalArgument() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         // UTF-8 encoded length of "我的线程网络" is 18 bytes which exceeds the max length
         assertThrows(IllegalArgumentException.class, () -> builder.setNetworkName("我的线程网络"));
@@ -573,9 +571,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValidUtf8NetworkName_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setNetworkName("我的网络")
-                        .build();
+                new Builder(DEFAULT_DATASET).setNetworkName("我的网络").build();
 
         assertThat(dataset.getNetworkName()).isEqualTo("我的网络");
     }
@@ -584,8 +580,7 @@ public final class ActiveOperationalDatasetTest {
     public void builder_setValidPskc_success() {
         byte[] pskc = base16().decode("A245479C836D551B9CA557F7B9D351B4");
 
-        ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset()).setPskc(pskc).build();
+        ActiveOperationalDataset dataset = new Builder(DEFAULT_DATASET).setPskc(pskc).build();
 
         assertThat(dataset.getPskc()).isEqualTo(pskc);
     }
@@ -593,18 +588,18 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setTooLongPskc_throwsIllegalArgument() {
         byte[] tooLongPskc = base16().decode("A245479C836D551B9CA557F7B9D351B400");
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(IllegalArgumentException.class, () -> builder.setPskc(tooLongPskc));
     }
 
     @Test
     public void builder_setValidChannelMask_success() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
         SparseArray<byte[]> channelMask = new SparseArray<byte[]>(1);
         channelMask.put(0, new byte[] {0x00, 0x00, 0x01, 0x00});
 
-        ActiveOperationalDataset dataset = builder.setChannelMask(channelMask).build();
+        ActiveOperationalDataset dataset =
+                new Builder(DEFAULT_DATASET).setChannelMask(channelMask).build();
 
         SparseArray<byte[]> resultChannelMask = dataset.getChannelMask();
         assertThat(resultChannelMask.size()).isEqualTo(1);
@@ -613,7 +608,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void builder_setEmptyChannelMask_throwsIllegalArgument() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -623,7 +618,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValidActiveTimestamp_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
+                new Builder(DEFAULT_DATASET)
                         .setActiveTimestamp(
                                 new OperationalDatasetTimestamp(
                                         /* seconds= */ 1,
@@ -638,7 +633,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void builder_wrongMeshLocalPrefixLength_throwsIllegalArguments() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         // The Mesh-Local Prefix length must be 64 bits
         assertThrows(
@@ -656,7 +651,7 @@ public final class ActiveOperationalDatasetTest {
 
     @Test
     public void builder_meshLocalPrefixNotStartWith0xfd_throwsIllegalArguments() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder();
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -666,9 +661,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValidMeshLocalPrefix_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
-                        .setMeshLocalPrefix(new IpPrefix("fd00::/64"))
-                        .build();
+                new Builder(DEFAULT_DATASET).setMeshLocalPrefix(new IpPrefix("fd00::/64")).build();
 
         assertThat(dataset.getMeshLocalPrefix()).isEqualTo(new IpPrefix("fd00::/64"));
     }
@@ -676,7 +669,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValid1P2SecurityPolicy_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
+                new Builder(DEFAULT_DATASET)
                         .setSecurityPolicy(
                                 new SecurityPolicy(672, new byte[] {(byte) 0xff, (byte) 0xf8}))
                         .build();
@@ -689,7 +682,7 @@ public final class ActiveOperationalDatasetTest {
     @Test
     public void builder_setValid1P1SecurityPolicy_success() {
         ActiveOperationalDataset dataset =
-                new Builder(ActiveOperationalDataset.createRandomDataset())
+                new Builder(DEFAULT_DATASET)
                         .setSecurityPolicy(new SecurityPolicy(672, new byte[] {(byte) 0xff}))
                         .build();
 
