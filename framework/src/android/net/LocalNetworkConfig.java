@@ -82,6 +82,15 @@ public final class LocalNetworkConfig implements Parcelable {
         dest.writeParcelable(mDownstreamMulticastRoutingConfig, flags);
     }
 
+    @Override
+    public String toString() {
+        return "LocalNetworkConfig{"
+                + "UpstreamSelector=" + mUpstreamSelector
+                + ", UpstreamMulticastConfig=" + mUpstreamMulticastRoutingConfig
+                + ", DownstreamMulticastConfig=" + mDownstreamMulticastRoutingConfig
+                + '}';
+    }
+
     public static final @NonNull Creator<LocalNetworkConfig> CREATOR = new Creator<>() {
         public LocalNetworkConfig createFromParcel(Parcel in) {
             final NetworkRequest upstreamSelector = in.readParcelable(null);
