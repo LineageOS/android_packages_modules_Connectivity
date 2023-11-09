@@ -1597,10 +1597,8 @@ public class BpfCoordinator {
 
         @Override
         public int hashCode() {
-            // TODO: if this is ever used in production code, don't pass ifindices
-            // to Objects.hash() to avoid autoboxing overhead.
-            return Objects.hash(upstreamIfindex, downstreamIfindex, sourcePrefix, inDstMac,
-                    outSrcMac, outDstMac);
+            return 13 * upstreamIfindex + 41 * downstreamIfindex
+                    + Objects.hash(sourcePrefix, inDstMac, outSrcMac, outDstMac);
         }
 
         @Override
@@ -1725,9 +1723,8 @@ public class BpfCoordinator {
 
         @Override
         public int hashCode() {
-            // TODO: if this is ever used in production code, don't pass ifindices
-            // to Objects.hash() to avoid autoboxing overhead.
-            return Objects.hash(upstreamIfindex, downstreamIfindex, address, srcMac, dstMac);
+            return 13 * upstreamIfindex + 41 * downstreamIfindex
+                    + Objects.hash(address, srcMac, dstMac);
         }
 
         @Override
