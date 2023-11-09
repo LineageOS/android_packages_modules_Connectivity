@@ -7,6 +7,18 @@ GenericException: android.net.IpSecManager.IpSecTunnelInterface#finalize():
     Methods must not throw generic exceptions (`java.lang.Throwable`)
 
 
+MissingPermission: android.net.IpSecManager#startTunnelModeTransformMigration(android.net.IpSecTransform, java.net.InetAddress, java.net.InetAddress):
+    Feature field FEATURE_IPSEC_TUNNEL_MIGRATION required by method android.net.IpSecManager.startTunnelModeTransformMigration(android.net.IpSecTransform, java.net.InetAddress, java.net.InetAddress) is hidden or removed
+
+
+RequiresPermission: android.net.EthernetManager#disableInterface(String, java.util.concurrent.Executor, android.os.OutcomeReceiver<java.lang.String,android.net.EthernetNetworkManagementException>):
+    Method 'disableInterface' documentation mentions permissions already declared by @RequiresPermission
+RequiresPermission: android.net.EthernetManager#enableInterface(String, java.util.concurrent.Executor, android.os.OutcomeReceiver<java.lang.String,android.net.EthernetNetworkManagementException>):
+    Method 'enableInterface' documentation mentions permissions already declared by @RequiresPermission
+RequiresPermission: android.net.EthernetManager#updateConfiguration(String, android.net.EthernetNetworkUpdateRequest, java.util.concurrent.Executor, android.os.OutcomeReceiver<java.lang.String,android.net.EthernetNetworkManagementException>):
+    Method 'updateConfiguration' documentation mentions permissions already declared by @RequiresPermission
+
+
 UnflaggedApi: android.nearby.CredentialElement#equals(Object):
     New API must be flagged with @FlaggedApi: method android.nearby.CredentialElement.equals(Object)
 UnflaggedApi: android.nearby.CredentialElement#hashCode():
