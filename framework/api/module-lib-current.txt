@@ -235,6 +235,7 @@ package android.net {
 
   public final class VpnTransportInfo implements android.os.Parcelable android.net.TransportInfo {
     ctor @Deprecated public VpnTransportInfo(int, @Nullable String);
+    method public long getApplicableRedactions();
     method @Nullable public String getSessionId();
     method @NonNull public android.net.VpnTransportInfo makeCopy(long);
   }
