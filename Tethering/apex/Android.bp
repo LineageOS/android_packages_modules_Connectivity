@@ -80,6 +80,7 @@ apex {
         first: {
             jni_libs: [
                 "libservice-connectivity",
+                "libservice-thread-jni",
                 "libandroid_net_connectivity_com_android_net_module_util_jni",
             ],
             native_shared_libs: [

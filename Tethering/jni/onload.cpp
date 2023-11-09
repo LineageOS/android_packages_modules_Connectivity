@@ -25,7 +25,6 @@ namespace android {
 int register_com_android_net_module_util_BpfMap(JNIEnv* env, char const* class_name);
 int register_com_android_net_module_util_TcUtils(JNIEnv* env, char const* class_name);
 int register_com_android_networkstack_tethering_BpfCoordinator(JNIEnv* env);
-int register_com_android_networkstack_tethering_BpfUtils(JNIEnv* env);
 int register_com_android_networkstack_tethering_util_TetheringUtils(JNIEnv* env);
 
 extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
