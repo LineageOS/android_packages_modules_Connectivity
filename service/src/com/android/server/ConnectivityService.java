@@ -5263,7 +5263,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private boolean hasCarrierPrivilegeForNetworkCaps(final int callingUid,
             @NonNull final NetworkCapabilities caps) {
         if (mCarrierPrivilegeAuthenticator != null) {
-            return mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+            return mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                     callingUid, caps);
         }
         return false;

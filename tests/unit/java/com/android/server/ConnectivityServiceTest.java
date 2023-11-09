@@ -79,7 +79,6 @@ import static android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPR
 import static android.net.ConnectivityManager.TYPE_ETHERNET;
 import static android.net.ConnectivityManager.TYPE_MOBILE;
 import static android.net.ConnectivityManager.TYPE_MOBILE_SUPL;
-import static android.net.ConnectivityManager.TYPE_NONE;
 import static android.net.ConnectivityManager.TYPE_VPN;
 import static android.net.ConnectivityManager.TYPE_WIFI;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF;
@@ -17531,7 +17530,7 @@ public class ConnectivityServiceTest {
 
         // In this test TEST_PACKAGE_UID will be the UID of the carrier service UID.
         doReturn(true).when(mCarrierPrivilegeAuthenticator)
-                .hasCarrierPrivilegeForNetworkCapabilities(eq(TEST_PACKAGE_UID), any());
+                .isCarrierServiceUidForNetworkCapabilities(eq(TEST_PACKAGE_UID), any());
 
         // Simulate a restricted telephony network. The telephony factory is entitled to set
         // the access UID to the service package on any of its restricted networks.

@@ -1598,7 +1598,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
                 && (nc.hasSingleTransportBesidesTest(TRANSPORT_CELLULAR)
                         || nc.hasSingleTransportBesidesTest(TRANSPORT_WIFI))
                 && (1 == nc.getAllowedUidsNoCopy().size())
-                && (carrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+                && (carrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                         nc.getAllowedUidsNoCopy().valueAt(0), nc))) {
             return true;
         }

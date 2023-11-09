@@ -164,9 +164,9 @@ public class CarrierPrivilegeAuthenticatorTest {
                 .addTransportType(TRANSPORT_CELLULAR)
                 .setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
 
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertTrue(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, ncBuilder.build()));
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid + 1, ncBuilder.build()));
     }
 
@@ -203,9 +203,9 @@ public class CarrierPrivilegeAuthenticatorTest {
                 .addTransportType(TRANSPORT_CELLULAR)
                 .setNetworkSpecifier(specifier)
                 .build();
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertTrue(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, nc));
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid + 1, nc));
     }
 
@@ -225,9 +225,9 @@ public class CarrierPrivilegeAuthenticatorTest {
         listener.onCarrierPrivilegesChanged(Collections.emptyList(), new int[] {});
         listener.onCarrierServiceChanged(null, applicationInfo.uid);
 
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, nc));
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertTrue(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid + 1, nc));
     }
 
@@ -238,11 +238,11 @@ public class CarrierPrivilegeAuthenticatorTest {
 
         final NetworkCapabilities.Builder ncBuilder = new NetworkCapabilities.Builder();
         ncBuilder.addTransportType(TRANSPORT_CELLULAR);
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, ncBuilder.build()));
 
         ncBuilder.setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
-        assertTrue(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertTrue(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, ncBuilder.build()));
 
         // The builder for NetworkCapabilities doesn't allow removing the transport as long as a
@@ -251,7 +251,7 @@ public class CarrierPrivilegeAuthenticatorTest {
         ncBuilder.removeTransportType(TRANSPORT_CELLULAR);
         ncBuilder.addTransportType(TRANSPORT_WIFI);
         ncBuilder.setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
-        assertFalse(mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+        assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, ncBuilder.build()));
     }
 }

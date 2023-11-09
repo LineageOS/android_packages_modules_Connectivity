@@ -213,7 +213,7 @@ public class CarrierPrivilegeAuthenticator {
      * @param networkCapabilities the network capabilities for which carrier privilege is checked.
      * @return true if uid provides the relevant carrier config else false.
      */
-    public boolean hasCarrierPrivilegeForNetworkCapabilities(int callingUid,
+    public boolean isCarrierServiceUidForNetworkCapabilities(int callingUid,
             @NonNull NetworkCapabilities networkCapabilities) {
         if (callingUid == Process.INVALID_UID) return false;
         final int subId;
