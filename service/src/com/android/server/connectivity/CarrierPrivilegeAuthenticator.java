@@ -224,6 +224,17 @@ public class CarrierPrivilegeAuthenticator {
         } else {
             subId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
         }
+        if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID
+                && !networkCapabilities.getSubscriptionIds().contains(subId)) {
+            // Ideally, the code above should just use networkCapabilities.getSubscriptionIds()
+            // for simplicity and future-proofing. However, this is not the historical behavior,
+            // and there is no enforcement that they do not differ, so log a terrible failure if
+            // they do not match to gain confidence this never happens.
+            // TODO : when there is confidence that this never happens, rewrite the code above
+            // with NetworkCapabilities#getSubscriptionIds.
+            Log.wtf(TAG, "NetworkCapabilities subIds are inconsistent between "
+                    + "specifier/transportInfo and mSubIds : " + networkCapabilities);
+        }
         if (SubscriptionManager.INVALID_SUBSCRIPTION_ID == subId) return false;
         return callingUid == getCarrierServiceUidForSubId(subId);
     }
