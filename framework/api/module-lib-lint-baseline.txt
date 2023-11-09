@@ -9,6 +9,8 @@ RequiresPermission: android.net.ConnectivityManager#requestNetwork(android.net.N
     Method 'requestNetwork' documentation mentions permissions without declaring @RequiresPermission
 RequiresPermission: android.net.ConnectivityManager#requestNetwork(android.net.NetworkRequest, android.net.ConnectivityManager.NetworkCallback):
     Method 'requestNetwork' documentation mentions permissions without declaring @RequiresPermission
+RequiresPermission: android.net.ConnectivityManager#requestRouteToHostAddress(int, java.net.InetAddress):
+    Method 'requestRouteToHostAddress' documentation mentions permissions without declaring @RequiresPermission
 RequiresPermission: android.net.LinkProperties#getCaptivePortalApiUrl():
     Method 'getCaptivePortalApiUrl' documentation mentions permissions without declaring @RequiresPermission
 RequiresPermission: android.net.LinkProperties#getCaptivePortalData():
@@ -17,6 +19,8 @@ RequiresPermission: android.net.NetworkCapabilities#getOwnerUid():
     Method 'getOwnerUid' documentation mentions permissions without declaring @RequiresPermission
 RequiresPermission: android.net.NetworkCapabilities#getUnderlyingNetworks():
     Method 'getUnderlyingNetworks' documentation mentions permissions without declaring @RequiresPermission
+RequiresPermission: android.net.NetworkCapabilities.Builder#setAllowedUids(java.util.Set<java.lang.Integer>):
+    Method 'setAllowedUids' documentation mentions permissions already declared by @RequiresPermission
 RequiresPermission: android.net.NetworkCapabilities.Builder#setSignalStrength(int):
     Method 'setSignalStrength' documentation mentions permissions already declared by @RequiresPermission
 RequiresPermission: android.net.NetworkCapabilities.Builder#setUnderlyingNetworks(java.util.List<android.net.Network>):
