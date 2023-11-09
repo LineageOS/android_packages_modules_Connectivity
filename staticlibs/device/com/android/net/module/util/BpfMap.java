@@ -239,6 +239,11 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
         return Struct.parse(mValueClass, buffer);
     }
 
+    /** Synchronize Kernel RCU */
+    public static void synchronizeKernelRCU() throws ErrnoException {
+        nativeSynchronizeKernelRCU();
+    }
+
     private static native int nativeBpfFdGet(String path, int mode, int keySize, int valueSize)
             throws ErrnoException, NullPointerException;
 
@@ -260,4 +265,6 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
 
     private native boolean nativeFindMapEntry(int fd, byte[] key, byte[] value)
             throws ErrnoException;
+
+    private static native void nativeSynchronizeKernelRCU() throws ErrnoException;
 }
