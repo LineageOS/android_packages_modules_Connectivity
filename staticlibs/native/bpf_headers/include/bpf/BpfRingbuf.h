@@ -39,6 +39,8 @@ class BpfRingbufBase {
     mProducerPos = nullptr;
   }
 
+  bool isEmpty(void);
+
  protected:
   // Non-initializing constructor, used by Create.
   BpfRingbufBase(size_t value_size) : mValueSize(value_size) {}
@@ -195,6 +197,13 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
 
   mDataPos = pointerAddBytes<void*>(mProducerPos, getpagesize());
   return {};
+}
+
+inline bool BpfRingbufBase::isEmpty(void) {
+  uint32_t prod_pos = mProducerPos->load(std::memory_order_acquire);
+  // Only userspace writes to mConsumerPos, so no need to use std::memory_order_acquire
+  uint64_t cons_pos = mConsumerPos->load(std::memory_order_relaxed);
+  return (cons_pos & 0xFFFFFFFF) == prod_pos;
 }
 
 inline base::Result<int> BpfRingbufBase::ConsumeAll(
