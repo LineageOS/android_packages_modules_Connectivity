@@ -113,6 +113,33 @@ public final class ThreadNetworkController {
         }
     }
 
+    /**
+     * Creates a new Active Operational Dataset with randomized parameters.
+     *
+     * <p>This method is the recommended way to create a randomized dataset which can be used with
+     * {@link #join} to securely join this device to the specified network . It's highly discouraged
+     * to change the randomly generated Extended PAN ID, Network Key or PSKc, as it will compromise
+     * the security of a Thread network.
+     *
+     * @throws IllegalArgumentException if length of the UTF-8 representation of {@code networkName}
+     *     isn't in range of [{@link #LENGTH_MIN_NETWORK_NAME_BYTES}, {@link
+     *     #LENGTH_MAX_NETWORK_NAME_BYTES}]
+     */
+    public void createRandomizedDataset(
+            @NonNull String networkName,
+            @NonNull @CallbackExecutor Executor executor,
+            @NonNull OutcomeReceiver<ActiveOperationalDataset, ThreadNetworkException> receiver) {
+        ActiveOperationalDataset.checkNetworkName(networkName);
+        requireNonNull(executor, "executor cannot be null");
+        requireNonNull(receiver, "receiver cannot be null");
+        try {
+            mControllerService.createRandomizedDataset(
+                    networkName, new ActiveDatasetReceiverProxy(executor, receiver));
+        } catch (RemoteException e) {
+            e.rethrowFromSystemServer();
+        }
+    }
+
     /** Returns {@code true} if {@code deviceRole} indicates an attached state. */
     public static boolean isAttached(@DeviceRole int deviceRole) {
         return deviceRole == DEVICE_ROLE_CHILD
@@ -447,6 +474,29 @@ public final class ThreadNetworkController {
             int errorCode,
             String errorMsg) {
         executor.execute(() -> receiver.onError(new ThreadNetworkException(errorCode, errorMsg)));
+    }
+
+    private static final class ActiveDatasetReceiverProxy
+            extends IActiveOperationalDatasetReceiver.Stub {
+        final Executor mExecutor;
+        final OutcomeReceiver<ActiveOperationalDataset, ThreadNetworkException> mResultReceiver;
+
+        ActiveDatasetReceiverProxy(
+                @CallbackExecutor Executor executor,
+                OutcomeReceiver<ActiveOperationalDataset, ThreadNetworkException> resultReceiver) {
+            this.mExecutor = executor;
+            this.mResultReceiver = resultReceiver;
+        }
+
+        @Override
+        public void onSuccess(ActiveOperationalDataset dataset) {
+            mExecutor.execute(() -> mResultReceiver.onResult(dataset));
+        }
+
+        @Override
+        public void onError(int errorCode, String errorMessage) {
+            propagateError(mExecutor, mResultReceiver, errorCode, errorMessage);
+        }
     }
 
     private static final class OperationReceiverProxy extends IOperationReceiver.Stub {
