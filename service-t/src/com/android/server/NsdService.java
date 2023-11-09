@@ -1647,10 +1647,12 @@ public class NsdService extends INsdManager.Stub {
                         mContext, MdnsFeatureFlags.INCLUDE_INET_ADDRESS_RECORDS_IN_PROBING))
                 .setIsExpiredServicesRemovalEnabled(mDeps.isTrunkStableFeatureEnabled(
                         MdnsFeatureFlags.NSD_EXPIRED_SERVICES_REMOVAL))
+                .setIsLabelCountLimitEnabled(mDeps.isTetheringFeatureNotChickenedOut(
+                        mContext, MdnsFeatureFlags.NSD_LIMIT_LABEL_COUNT))
                 .build();
         mMdnsSocketClient =
                 new MdnsMultinetworkSocketClient(handler.getLooper(), mMdnsSocketProvider,
-                        LOGGER.forSubComponent("MdnsMultinetworkSocketClient"));
+                        LOGGER.forSubComponent("MdnsMultinetworkSocketClient"), flags);
         mMdnsDiscoveryManager = deps.makeMdnsDiscoveryManager(new ExecutorProvider(),
                 mMdnsSocketClient, LOGGER.forSubComponent("MdnsDiscoveryManager"), flags);
         handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));

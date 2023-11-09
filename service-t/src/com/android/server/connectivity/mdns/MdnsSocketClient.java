@@ -105,9 +105,10 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     private AtomicInteger packetsCount;
     @Nullable private Timer checkMulticastResponseTimer;
     private final SharedLog sharedLog;
+    @NonNull private final MdnsFeatureFlags mdnsFeatureFlags;
 
     public MdnsSocketClient(@NonNull Context context, @NonNull MulticastLock multicastLock,
-            SharedLog sharedLog) {
+            SharedLog sharedLog, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
         this.sharedLog = sharedLog;
         this.context = context;
         this.multicastLock = multicastLock;
@@ -116,6 +117,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         } else {
             unicastReceiverBuffer = null;
         }
+        this.mdnsFeatureFlags = mdnsFeatureFlags;
     }
 
     @Override
@@ -454,7 +456,8 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
         final MdnsPacket response;
         try {
-            response = MdnsResponseDecoder.parseResponse(packet.getData(), packet.getLength());
+            response = MdnsResponseDecoder.parseResponse(
+                    packet.getData(), packet.getLength(), mdnsFeatureFlags);
         } catch (MdnsPacket.ParseException e) {
             sharedLog.w(String.format("Error while decoding %s packet (%d): %d",
                     responseType, packetNumber, e.code));

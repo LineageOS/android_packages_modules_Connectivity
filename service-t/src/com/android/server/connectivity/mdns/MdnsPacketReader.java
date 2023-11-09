@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.util.SparseArray;
 
@@ -33,21 +34,23 @@ public class MdnsPacketReader {
     private final byte[] buf;
     private final int count;
     private final SparseArray<LabelEntry> labelDictionary;
+    private final MdnsFeatureFlags mMdnsFeatureFlags;
     private int pos;
     private int limit;
 
     /** Constructs a reader for the given packet. */
     public MdnsPacketReader(DatagramPacket packet) {
-        this(packet.getData(), packet.getLength());
+        this(packet.getData(), packet.getLength(), MdnsFeatureFlags.newBuilder().build());
     }
 
     /** Constructs a reader for the given packet. */
-    public MdnsPacketReader(byte[] buffer, int length) {
+    public MdnsPacketReader(byte[] buffer, int length, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
         buf = buffer;
         count = length;
         pos = 0;
         limit = -1;
         labelDictionary = new SparseArray<>(16);
+        mMdnsFeatureFlags = mdnsFeatureFlags;
     }
 
     /**

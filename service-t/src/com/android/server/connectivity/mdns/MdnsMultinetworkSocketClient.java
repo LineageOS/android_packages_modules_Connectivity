@@ -50,6 +50,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     @NonNull private final Handler mHandler;
     @NonNull private final MdnsSocketProvider mSocketProvider;
     @NonNull private final SharedLog mSharedLog;
+    @NonNull private final MdnsFeatureFlags mMdnsFeatureFlags;
 
     private final ArrayMap<MdnsServiceBrowserListener, InterfaceSocketCallback> mSocketRequests =
             new ArrayMap<>();
@@ -58,11 +59,12 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
     private int mReceivedPacketNumber = 0;
 
     public MdnsMultinetworkSocketClient(@NonNull Looper looper,
-            @NonNull MdnsSocketProvider provider,
-            @NonNull SharedLog sharedLog) {
+            @NonNull MdnsSocketProvider provider, @NonNull SharedLog sharedLog,
+            @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
         mHandler = new Handler(looper);
         mSocketProvider = provider;
         mSharedLog = sharedLog;
+        mMdnsFeatureFlags = mdnsFeatureFlags;
     }
 
     private class InterfaceSocketCallback implements MdnsSocketProvider.SocketCallback {
@@ -239,7 +241,7 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
 
         final MdnsPacket response;
         try {
-            response = MdnsResponseDecoder.parseResponse(recvbuf, length);
+            response = MdnsResponseDecoder.parseResponse(recvbuf, length, mMdnsFeatureFlags);
         } catch (MdnsPacket.ParseException e) {
             if (e.code != MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE) {
                 mSharedLog.e(e.getMessage(), e);

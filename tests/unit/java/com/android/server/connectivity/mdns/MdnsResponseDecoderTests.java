@@ -17,8 +17,10 @@
 package com.android.server.connectivity.mdns;
 
 import static android.net.InetAddresses.parseNumericAddress;
+
 import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -337,7 +339,8 @@ public class MdnsResponseDecoderTests {
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
-        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(data6, data6.length);
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
+                data6, data6.length, MdnsFeatureFlags.newBuilder().build());
         assertNotNull(parsedPacket);
 
         final Network network = mock(Network.class);
@@ -636,7 +639,8 @@ public class MdnsResponseDecoderTests {
 
     private ArraySet<MdnsResponse> decode(MdnsResponseDecoder decoder, byte[] data,
             Collection<MdnsResponse> existingResponses) throws MdnsPacket.ParseException {
-        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(data, data.length);
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
+                data, data.length, MdnsFeatureFlags.newBuilder().build());
         assertNotNull(parsedPacket);
 
         return new ArraySet<>(decoder.augmentResponses(parsedPacket,

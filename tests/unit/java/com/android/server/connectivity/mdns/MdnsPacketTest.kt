@@ -27,6 +27,9 @@ import org.junit.runner.RunWith
 
 @RunWith(DevSdkIgnoreRunner::class)
 class MdnsPacketTest {
+    private fun makeFlags(isLabelCountLimitEnabled: Boolean = false): MdnsFeatureFlags =
+            MdnsFeatureFlags.newBuilder()
+                    .setIsLabelCountLimitEnabled(isLabelCountLimitEnabled).build()
     @Test
     fun testParseQuery() {
         // Probe packet with 1 question for Android.local, and 4 additionalRecords with 4 addresses
@@ -38,7 +41,7 @@ class MdnsPacketTest {
                 "010db8000000000000000000000789"
 
         val bytes = HexDump.hexStringToByteArray(packetHex)
-        val reader = MdnsPacketReader(bytes, bytes.size)
+        val reader = MdnsPacketReader(bytes, bytes.size, makeFlags())
         val packet = MdnsPacket.parse(reader)
 
         assertEquals(123, packet.transactionId)
