@@ -15,6 +15,8 @@
  */
 
 #include <errno.h>
+#include <linux/pfkeyv2.h>
+#include <sys/socket.h>
 #include <jni.h>
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedLocalRef.h>
@@ -117,6 +119,22 @@ static jboolean com_android_net_module_util_BpfMap_nativeFindMapEntry(JNIEnv *en
     return throwIfNotEnoent(env, "nativeFindMapEntry", ret, errno);
 }
 
+static void com_android_net_module_util_BpfMap_nativeSynchronizeKernelRCU(JNIEnv *env,
+                                                                          jclass clazz) {
+    const int pfSocket = socket(AF_KEY, SOCK_RAW | SOCK_CLOEXEC, PF_KEY_V2);
+
+    if (pfSocket < 0) {
+        jniThrowErrnoException(env, "nativeSynchronizeKernelRCU:socket", errno);
+        return;
+    }
+
+    if (close(pfSocket)) {
+        jniThrowErrnoException(env, "nativeSynchronizeKernelRCU:close", errno);
+        return;
+    }
+    return;
+}
+
 /*
  * JNI registration.
  */
@@ -132,6 +150,8 @@ static const JNINativeMethod gMethods[] = {
         (void*) com_android_net_module_util_BpfMap_nativeGetNextMapKey },
     { "nativeFindMapEntry", "(I[B[B)Z",
         (void*) com_android_net_module_util_BpfMap_nativeFindMapEntry },
+    { "nativeSynchronizeKernelRCU", "()V",
+        (void*) com_android_net_module_util_BpfMap_nativeSynchronizeKernelRCU },
 
 };
 
