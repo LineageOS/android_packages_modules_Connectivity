@@ -96,12 +96,17 @@ java_library {
     srcs: [
     "framework/**/DnsPacket.java",
     "framework/**/DnsPacketUtils.java",
+    "framework/**/DnsSvcbPacket.java",
+    "framework/**/DnsSvcbRecord.java",
+    "framework/**/HexDump.java",
+    "framework/**/NetworkStackConstants.java",
     ],
     sdk_version: "module_current",
     visibility: [
         "//packages/services/Iwlan:__subpackages__",
     ],
     libs: [
+        "androidx.annotation_annotation",
         "framework-annotations-lib",
         "framework-connectivity.stubs.module_lib",
     ],

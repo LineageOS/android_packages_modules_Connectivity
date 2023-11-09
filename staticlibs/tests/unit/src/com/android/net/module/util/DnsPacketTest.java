@@ -203,6 +203,30 @@ public class DnsPacketTest {
                 "test.com", CLASS_IN, 0 /* ttl */, "example.com"));
     }
 
+    /** Verifies that the type of implementation returned from DnsRecord#parse is correct */
+    @Test
+    public void testDnsRecordParse() throws IOException {
+        final byte[] svcbQuestionRecord = new byte[] {
+                0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 0x03, 'c', 'o', 'm', 0x00, /* Name */
+                0x00, 0x40, /* Type */
+                0x00, 0x01, /* Class */
+        };
+        assertTrue(DnsPacket.DnsRecord.parse(DnsPacket.QDSECTION,
+                ByteBuffer.wrap(svcbQuestionRecord)) instanceof DnsSvcbRecord);
+
+        final byte[] svcbAnswerRecord = new byte[] {
+                0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 0x03, 'c', 'o', 'm', 0x00, /* Name */
+                0x00, 0x40, /* Type */
+                0x00, 0x01, /* Class */
+                0x00, 0x00, 0x01, 0x2b, /* TTL */
+                0x00, 0x0b, /* Data length */
+                0x00, 0x01, /* SvcPriority */
+                0x03, 'd', 'o', 't', 0x03, 'c', 'o', 'm', 0x00, /* TargetName */
+        };
+        assertTrue(DnsPacket.DnsRecord.parse(DnsPacket.ANSECTION,
+                ByteBuffer.wrap(svcbAnswerRecord)) instanceof DnsSvcbRecord);
+    }
+
     /**
      * Verifies ttl/rData error handling when parsing
      * {@link DnsPacket.DnsRecord} from bytes.
