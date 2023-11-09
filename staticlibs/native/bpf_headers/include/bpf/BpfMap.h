@@ -78,7 +78,7 @@ class BpfMapRO {
     Result<Key> getFirstKey() const {
         Key firstKey;
         if (getFirstMapKey(mMapFd, &firstKey)) {
-            return ErrnoErrorf("Get firstKey map {} failed", mMapFd.get());
+            return ErrnoErrorf("BpfMap::getFirstKey() failed");
         }
         return firstKey;
     }
@@ -86,7 +86,7 @@ class BpfMapRO {
     Result<Key> getNextKey(const Key& key) const {
         Key nextKey;
         if (getNextMapKey(mMapFd, &key, &nextKey)) {
-            return ErrnoErrorf("Get next key of map {} failed", mMapFd.get());
+            return ErrnoErrorf("BpfMap::getNextKey() failed");
         }
         return nextKey;
     }
@@ -94,7 +94,7 @@ class BpfMapRO {
     Result<Value> readValue(const Key key) const {
         Value value;
         if (findMapEntry(mMapFd, &key, &value)) {
-            return ErrnoErrorf("Read value of map {} failed", mMapFd.get());
+            return ErrnoErrorf("BpfMap::readValue() failed");
         }
         return value;
     }
@@ -243,14 +243,14 @@ class BpfMap : public BpfMapRO<Key, Value> {
 
     Result<void> writeValue(const Key& key, const Value& value, uint64_t flags) {
         if (writeToMapEntry(mMapFd, &key, &value, flags)) {
-            return ErrnoErrorf("Write to map {} failed", mMapFd.get());
+            return ErrnoErrorf("BpfMap::writeValue() failed");
         }
         return {};
     }
 
     Result<void> deleteValue(const Key& key) {
         if (deleteMapEntry(mMapFd, &key)) {
-            return ErrnoErrorf("Delete entry from map {} failed", mMapFd.get());
+            return ErrnoErrorf("BpfMap::deleteValue() failed");
         }
         return {};
     }
@@ -280,7 +280,7 @@ class BpfMap : public BpfMapRO<Key, Value> {
         if (map_flags & BPF_F_RDONLY) abort();
         mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries,
                                map_flags));
-        if (!mMapFd.ok()) return ErrnoErrorf("Unable to create map.");
+        if (!mMapFd.ok()) return ErrnoErrorf("BpfMap::resetMap() failed");
         abortOnMismatch(/* writable */ true);
         return {};
     }
