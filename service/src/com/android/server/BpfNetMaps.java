@@ -45,6 +45,8 @@ import static android.system.OsConstants.EINVAL;
 import static android.system.OsConstants.ENODEV;
 import static android.system.OsConstants.ENOENT;
 import static android.system.OsConstants.EOPNOTSUPP;
+import static android.system.OsConstants.SOCK_RAW;
+import static android.system.OsConstants.SOCK_CLOEXEC;
 
 import static com.android.server.ConnectivityStatsLog.NETWORK_BPF_MAP_INFO;
 
@@ -324,10 +326,26 @@ public class BpfNetMaps {
         }
 
         /**
-         * Call synchronize_rcu()
+         * Synchronously call in to kernel to synchronize_rcu()
          */
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public int synchronizeKernelRCU() {
-            return native_synchronizeKernelRCU();
+            // See p/m/C's staticlibs/native/bpf_headers/include/bpf/BpfUtils.h
+            // for equivalent C implementation of this function.
+            try {
+                // When closing socket, kernel calls synchronize_rcu()
+                // from pf_key's sock_release().
+                // Constants from //bionic/libc/include/sys/socket.h: AF_KEY=15
+                // and kernel's include/uapi/linux/pfkeyv2.h: PF_KEY_V2=2
+                Os.close(Os.socket(15 /*PF_KEY*/, SOCK_RAW | SOCK_CLOEXEC, 2));
+            } catch (ErrnoException e) {
+                // socket() can only fail due to lack of privs (selinux) or OOM,
+                // close() always succeeds, but may return a pending error,
+                // however on a freshly opened socket that cannot happen.
+                // As such this failing is basically a build configuration error.
+                return -e.errno;
+            }
+            return 0;
         }
 
         /**
@@ -1061,7 +1079,4 @@ public class BpfNetMaps {
             pw.decreaseIndent();
         }
     }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private static native int native_synchronizeKernelRCU();
 }
