@@ -108,9 +108,6 @@ public class BpfNetMaps {
     // Use legacy netd for releases before T.
     private static boolean sInitialized = false;
 
-    private static final String BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP =
-            "bpf_net_maps_force_disable_java_bpf_map";
-
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
     // This entry is not accessed by others.
     // BpfNetMaps acquires this lock while sequence of read, modify, and write.
