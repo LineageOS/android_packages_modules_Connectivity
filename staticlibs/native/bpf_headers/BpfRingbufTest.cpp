@@ -72,12 +72,15 @@ class BpfRingbufTest : public ::testing::Test {
 
     auto result = BpfRingbuf<uint64_t>::Create(mRingbufPath.c_str());
     ASSERT_RESULT_OK(result);
+    EXPECT_TRUE(result.value()->isEmpty());
 
     for (int i = 0; i < n; i++) {
       RunProgram();
     }
 
+    EXPECT_FALSE(result.value()->isEmpty());
     EXPECT_THAT(result.value()->ConsumeAll(callback), HasValue(n));
+    EXPECT_TRUE(result.value()->isEmpty());
     EXPECT_EQ(output, TEST_RINGBUF_MAGIC_NUM);
     EXPECT_EQ(run_count, n);
   }
