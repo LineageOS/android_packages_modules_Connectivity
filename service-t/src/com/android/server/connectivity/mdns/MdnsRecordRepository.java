@@ -133,11 +133,6 @@ public class MdnsRecordRepository {
         public final boolean isSharedName;
 
         /**
-         * Whether probing is still in progress for the record.
-         */
-        public boolean isProbing;
-
-        /**
          * Last time (as per SystemClock.elapsedRealtime) when advertised via multicast, 0 if never
          */
         public long lastAdvertisedTimeMs;
@@ -148,12 +143,10 @@ public class MdnsRecordRepository {
          */
         public long lastSentTimeMs;
 
-        RecordInfo(NsdServiceInfo serviceInfo, T record, boolean sharedName,
-                 boolean probing) {
+        RecordInfo(NsdServiceInfo serviceInfo, T record, boolean sharedName) {
             this.serviceInfo = serviceInfo;
             this.record = record;
             this.isSharedName = sharedName;
-            this.isProbing = probing;
         }
     }
 
@@ -187,6 +180,11 @@ public class MdnsRecordRepository {
         public int sentPacketCount = NO_PACKET;
 
         /**
+         * Whether probing is still in progress.
+         */
+        private boolean isProbing;
+
+        /**
          * Create a ServiceRegistration for dns-sd service registration (RFC6763).
          *
          * @param deviceHostname Hostname of the device (for the interface used)
@@ -209,7 +207,7 @@ public class MdnsRecordRepository {
                             false /* cacheFlush */,
                             NON_NAME_RECORDS_TTL_MILLIS,
                             serviceName),
-                    true /* sharedName */, true /* probing */);
+                    true /* sharedName */);
 
             if (subtype == null) {
                 this.ptrRecords = Collections.singletonList(ptrRecord);
@@ -226,7 +224,7 @@ public class MdnsRecordRepository {
                                 false /* cacheFlush */,
                                 NON_NAME_RECORDS_TTL_MILLIS,
                                 serviceName),
-                        true /* sharedName */, true /* probing */);
+                        true /* sharedName */);
 
                 this.ptrRecords = List.of(ptrRecord, subtypeRecord);
             }
@@ -239,7 +237,7 @@ public class MdnsRecordRepository {
                             NAME_RECORDS_TTL_MILLIS, 0 /* servicePriority */, 0 /* serviceWeight */,
                             serviceInfo.getPort(),
                             deviceHostname),
-                    false /* sharedName */, true /* probing */);
+                    false /* sharedName */);
 
             txtRecord = new RecordInfo<>(
                     serviceInfo,
@@ -248,7 +246,7 @@ public class MdnsRecordRepository {
                             true /* cacheFlush */, // Service name is verified unique after probing
                             NON_NAME_RECORDS_TTL_MILLIS,
                             attrsToTextEntries(serviceInfo.getAttributes())),
-                    false /* sharedName */, true /* probing */);
+                    false /* sharedName */);
 
             final ArrayList<RecordInfo<?>> allRecords = new ArrayList<>(5);
             allRecords.addAll(ptrRecords);
@@ -263,18 +261,18 @@ public class MdnsRecordRepository {
                             false /* cacheFlush */,
                             NON_NAME_RECORDS_TTL_MILLIS,
                             serviceType),
-                    true /* sharedName */, true /* probing */));
+                    true /* sharedName */));
 
             this.allRecords = Collections.unmodifiableList(allRecords);
             this.repliedServiceCount = repliedServiceCount;
             this.sentPacketCount = sentPacketCount;
+            this.isProbing = true;
         }
 
         void setProbing(boolean probing) {
-            for (RecordInfo<?> info : allRecords) {
-                info.isProbing = probing;
-            }
+            this.isProbing = probing;
         }
+
     }
 
     /**
@@ -292,7 +290,7 @@ public class MdnsRecordRepository {
                             true /* cacheFlush */,
                             NAME_RECORDS_TTL_MILLIS,
                             mDeviceHostname),
-                    false /* sharedName */, false /* probing */));
+                    false /* sharedName */));
 
             mGeneralRecords.add(new RecordInfo<>(
                     null /* serviceInfo */,
@@ -302,7 +300,7 @@ public class MdnsRecordRepository {
                             true /* cacheFlush */,
                             NAME_RECORDS_TTL_MILLIS,
                             addr.getAddress()),
-                    false /* sharedName */, false /* probing */));
+                    false /* sharedName */));
         }
     }
 
@@ -485,7 +483,7 @@ public class MdnsRecordRepository {
             // Add answers from each service
             for (int i = 0; i < mServices.size(); i++) {
                 final ServiceRegistration registration = mServices.valueAt(i);
-                if (registration.exiting) continue;
+                if (registration.exiting || registration.isProbing) continue;
                 if (addReplyFromService(question, registration.allRecords, registration.ptrRecords,
                         registration.srvRecord, registration.txtRecord, replyUnicast, now,
                         answerInfo, additionalAnswerRecords)) {
@@ -558,7 +556,6 @@ public class MdnsRecordRepository {
 
         final int answersStartIndex = answerInfo.size();
         for (RecordInfo<?> info : serviceRecords) {
-            if (info.isProbing) continue;
 
              /* RFC6762 6.: the record name must match the question name, the record rrtype
              must match the question qtype unless the qtype is "ANY" (255) or the rrtype is
@@ -870,7 +867,7 @@ public class MdnsRecordRepository {
         final ServiceRegistration registration = mServices.get(serviceId);
         if (registration == null) return false;
 
-        return registration.srvRecord.isProbing;
+        return registration.isProbing;
     }
 
     /**
