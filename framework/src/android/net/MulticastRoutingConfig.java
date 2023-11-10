@@ -159,6 +159,24 @@ public class MulticastRoutingConfig implements Parcelable {
         }
     };
 
+    @Override
+    public String toString() {
+        return "MulticastRoutingConfig{"
+                + "ForwardingMode=" + forwardingModeToString(mForwardingMode)
+                + ", MinScope=" + mMinScope
+                + ", ListeningAddresses=" + mListeningAddresses
+                + '}';
+    }
+
+    private static String forwardingModeToString(final int forwardingMode) {
+        switch (forwardingMode) {
+            case FORWARD_NONE: return "NONE";
+            case FORWARD_SELECTED: return "SELECTED";
+            case FORWARD_WITH_MIN_SCOPE: return "WITH_MIN_SCOPE";
+            default: return "UNKNOWN";
+        }
+    }
+
     public static class Builder {
         @MulticastForwardingMode
         private final int mForwardingMode;

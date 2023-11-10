@@ -56,6 +56,7 @@ public abstract class DnsPacket {
      */
     // TODO: Define the constant as a public constant in DnsResolver since it can never change.
     private static final int TYPE_CNAME = 5;
+    public static final int TYPE_SVCB = 64;
 
     /**
      * Thrown when parsing packet failed.
@@ -282,7 +283,7 @@ public abstract class DnsPacket {
          * @param buf ByteBuffer input of record, must be in network byte order
          *         (which is the default).
          */
-        private DnsRecord(@RecordType int rType, @NonNull ByteBuffer buf)
+        protected DnsRecord(@RecordType int rType, @NonNull ByteBuffer buf)
                 throws BufferUnderflowException, ParseException {
             Objects.requireNonNull(buf);
             this.rType = rType;
@@ -326,6 +327,8 @@ public abstract class DnsPacket {
             // Return a DnsRecord instance by default for backward compatibility, this is useful
             // when a partner supports new type of DnsRecord but does not inherit DnsRecord.
             switch (nsType) {
+                case TYPE_SVCB:
+                    return new DnsSvcbRecord(rType, buf);
                 default:
                     return new DnsRecord(rType, buf);
             }

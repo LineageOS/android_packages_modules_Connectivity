@@ -106,9 +106,6 @@ public class BpfNetMaps {
     // Use legacy netd for releases before T.
     private static boolean sInitialized = false;
 
-    private static final String BPF_NET_MAPS_FORCE_DISABLE_JAVA_BPF_MAP =
-            "bpf_net_maps_force_disable_java_bpf_map";
-
     // Lock for sConfigurationMap entry for UID_RULES_CONFIGURATION_KEY.
     // This entry is not accessed by others.
     // BpfNetMaps acquires this lock while sequence of read, modify, and write.
@@ -324,10 +321,16 @@ public class BpfNetMaps {
         }
 
         /**
-         * Call synchronize_rcu()
+         * Synchronously call in to kernel to synchronize_rcu()
          */
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public int synchronizeKernelRCU() {
-            return native_synchronizeKernelRCU();
+            try {
+                BpfMap.synchronizeKernelRCU();
+            } catch (ErrnoException e) {
+                return -e.errno;
+            }
+            return 0;
         }
 
         /**
@@ -1061,7 +1064,4 @@ public class BpfNetMaps {
             pw.decreaseIndent();
         }
     }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private static native int native_synchronizeKernelRCU();
 }

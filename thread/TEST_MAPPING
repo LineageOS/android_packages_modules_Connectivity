@@ -3,5 +3,10 @@
     {
       "name": "CtsThreadNetworkTestCases"
     }
+  ],
+  "postsubmit": [
+    {
+      "name": "ThreadNetworkUnitTests"
+    }
   ]
 }

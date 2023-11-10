@@ -20,14 +20,7 @@ import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
-import android.net.IpPrefix;
 import android.net.thread.ActiveOperationalDataset.Builder;
 import android.net.thread.ActiveOperationalDataset.SecurityPolicy;
 import android.util.SparseArray;
@@ -61,7 +54,7 @@ public class ActiveOperationalDatasetTest {
     // PAN ID: 0xD9A0
     // PSKc: A245479C836D551B9CA557F7B9D351B4
     // Security Policy: 672 onrcb
-    private static final byte[] VALID_DATASET =
+    private static final byte[] VALID_DATASET_TLVS =
             base16().decode(
                             "0E080000000000010000000300001335060004001FFFE002"
                                     + "08ACC214689BC40BDF0708FD64DB1225F47E0B0510F26B31"
@@ -83,7 +76,7 @@ public class ActiveOperationalDatasetTest {
 
     @Test
     public void fromThreadTlvs_containsUnknownTlvs_unknownTlvsRetained() {
-        byte[] datasetWithUnknownTlvs = addTlv(VALID_DATASET, "AA01FFBB020102");
+        byte[] datasetWithUnknownTlvs = addTlv(VALID_DATASET_TLVS, "AA01FFBB020102");
 
         ActiveOperationalDataset dataset1 =
                 ActiveOperationalDataset.fromThreadTlvs(datasetWithUnknownTlvs);
@@ -98,66 +91,8 @@ public class ActiveOperationalDatasetTest {
     }
 
     @Test
-    public void createRandomDataset_fieldsAreRandomized() {
-        // Always return the max bounded value
-        doAnswer(invocation -> (int) invocation.getArgument(0) - 1)
-                .when(mockRandom)
-                .nextInt(anyInt());
-        doAnswer(
-                        invocation -> {
-                            byte[] output = invocation.getArgument(0);
-                            for (int i = 0; i < output.length; ++i) {
-                                output[i] = (byte) (i + 10);
-                            }
-                            return null;
-                        })
-                .when(mockRandom)
-                .nextBytes(any(byte[].class));
-        doAnswer(
-                        invocation -> {
-                            byte[] output = invocation.getArgument(0);
-                            for (int i = 0; i < output.length; ++i) {
-                                output[i] = (byte) (i + 30);
-                            }
-                            return null;
-                        })
-                .when(mockSecureRandom)
-                .nextBytes(any(byte[].class));
-
-        ActiveOperationalDataset dataset =
-                ActiveOperationalDataset.createRandomDataset(mockRandom, mockSecureRandom);
-
-        assertThat(dataset.getActiveTimestamp())
-                .isEqualTo(new OperationalDatasetTimestamp(1, 0, false));
-        assertThat(dataset.getExtendedPanId())
-                .isEqualTo(new byte[] {10, 11, 12, 13, 14, 15, 16, 17});
-        assertThat(dataset.getMeshLocalPrefix())
-                .isEqualTo(new IpPrefix("fd0b:0c0d:0e0f:1011::/64"));
-        verify(mockRandom, times(2)).nextBytes(any(byte[].class));
-        assertThat(dataset.getPanId()).isEqualTo(0xfffe); // PAN ID <= 0xfffe
-        verify(mockRandom, times(1)).nextInt(eq(0xffff));
-        assertThat(dataset.getChannel()).isEqualTo(26);
-        verify(mockRandom, times(1)).nextInt(eq(16));
-        assertThat(dataset.getChannelPage()).isEqualTo(0);
-        assertThat(dataset.getChannelMask().size()).isEqualTo(1);
-        assertThat(dataset.getPskc())
-                .isEqualTo(
-                        new byte[] {
-                            30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45
-                        });
-        assertThat(dataset.getNetworkKey())
-                .isEqualTo(
-                        new byte[] {
-                            30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45
-                        });
-        verify(mockSecureRandom, times(2)).nextBytes(any(byte[].class));
-        assertThat(dataset.getSecurityPolicy())
-                .isEqualTo(new SecurityPolicy(672, new byte[] {(byte) 0xff, (byte) 0xf8}));
-    }
-
-    @Test
     public void builder_buildWithTooLongTlvs_throwsIllegalState() {
-        Builder builder = new Builder(ActiveOperationalDataset.createRandomDataset());
+        Builder builder = new Builder(ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET_TLVS));
         for (int i = 0; i < 10; i++) {
             builder.addUnknownTlv(i, new byte[20]);
         }
@@ -167,7 +102,8 @@ public class ActiveOperationalDatasetTest {
 
     @Test
     public void builder_setUnknownTlvs_success() {
-        ActiveOperationalDataset dataset1 = ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET);
+        ActiveOperationalDataset dataset1 =
+                ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET_TLVS);
         SparseArray<byte[]> unknownTlvs = new SparseArray<>(2);
         unknownTlvs.put(0x33, new byte[] {1, 2, 3});
         unknownTlvs.put(0x44, new byte[] {1, 2, 3, 4});

@@ -69,7 +69,15 @@ public final class PendingOperationalDataset implements Parcelable {
     @NonNull private final OperationalDatasetTimestamp mPendingTimestamp;
     @NonNull private final Duration mDelayTimer;
 
-    /** Creates a new {@link PendingOperationalDataset} object. */
+    /**
+     * Creates a new {@link PendingOperationalDataset} object.
+     *
+     * @param activeOpDataset the included Active Operational Dataset
+     * @param pendingTimestamp the Pending Timestamp which represents the version of this Pending
+     *     Dataset
+     * @param delayTimer the delay after when {@code activeOpDataset} will be committed on this
+     *     device
+     */
     public PendingOperationalDataset(
             @NonNull ActiveOperationalDataset activeOpDataset,
             @NonNull OperationalDatasetTimestamp pendingTimestamp,
