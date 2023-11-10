@@ -59,9 +59,11 @@ Result<void> Firewall::toggleStandbyMatch(bool enable) {
 Result<void> Firewall::addRule(uint32_t uid, UidOwnerMatchType match, uint32_t iif) {
     // iif should be non-zero if and only if match == MATCH_IIF
     if (match == IIF_MATCH && iif == 0) {
-        return Errorf("Interface match {} must have nonzero interface index", match);
+        return Errorf("Interface match {} must have nonzero interface index",
+                      static_cast<int>(match));
     } else if (match != IIF_MATCH && iif != 0) {
-        return Errorf("Non-interface match {} must have zero interface index", match);
+        return Errorf("Non-interface match {} must have zero interface index",
+                      static_cast<int>(match));
     }
 
     std::lock_guard guard(mMutex);
