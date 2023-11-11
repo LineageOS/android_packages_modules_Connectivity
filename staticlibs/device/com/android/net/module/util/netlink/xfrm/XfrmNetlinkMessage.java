@@ -41,6 +41,9 @@ public abstract class XfrmNetlinkMessage extends NetlinkMessage {
     public static final short XFRM_MSG_NEWSA = 16;
     public static final short XFRM_MSG_GETSA = 18;
 
+    public static final int XFRM_MODE_TRANSPORT = 0;
+    public static final int XFRM_MODE_TUNNEL = 1;
+
     public static final BigInteger XFRM_INF = new BigInteger("FFFFFFFFFFFFFFFF", 16);
 
     public XfrmNetlinkMessage(@NonNull final StructNlMsgHdr header) {
