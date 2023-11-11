@@ -21,6 +21,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
 
@@ -30,7 +31,9 @@ import java.net.Inet6Address;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
+import java.util.StringJoiner;
 
 /**
  * A class representing a configuration for multicast routing.
@@ -38,8 +41,8 @@ import java.util.Set;
  * Internal usage to Connectivity
  * @hide
  */
-// TODO : @SystemApi
-public class MulticastRoutingConfig implements Parcelable {
+// @SystemApi(client = MODULE_LIBRARIES)
+public final class MulticastRoutingConfig implements Parcelable {
     private static final String TAG = MulticastRoutingConfig.class.getSimpleName();
 
     /** Do not forward any multicast packets. */
@@ -55,6 +58,7 @@ public class MulticastRoutingConfig implements Parcelable {
      */
     public static final int FORWARD_WITH_MIN_SCOPE = 2;
 
+    /** @hide */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(prefix = { "FORWARD_" }, value = {
             FORWARD_NONE,
@@ -68,6 +72,7 @@ public class MulticastRoutingConfig implements Parcelable {
      */
     public static final int MULTICAST_SCOPE_NONE = -1;
 
+    /** @hide */
     public static final MulticastRoutingConfig CONFIG_FORWARD_NONE =
             new MulticastRoutingConfig(FORWARD_NONE, MULTICAST_SCOPE_NONE, null);
 
@@ -102,7 +107,7 @@ public class MulticastRoutingConfig implements Parcelable {
      * Returns the minimal group address scope that is allowed for forwarding.
      * If the forwarding mode is not FORWARD_WITH_MIN_SCOPE, will be MULTICAST_SCOPE_NONE.
      */
-    public int getMinScope() {
+    public int getMinimumScope() {
         return mMinScope;
     }
 
@@ -111,7 +116,7 @@ public class MulticastRoutingConfig implements Parcelable {
      * The list will be empty if the forwarding mode is not FORWARD_SELECTED.
      */
     @NonNull
-    public Set<Inet6Address> getMulticastListeningAddresses() {
+    public Set<Inet6Address> getListeningAddresses() {
         return mListeningAddresses;
     }
 
@@ -133,7 +138,7 @@ public class MulticastRoutingConfig implements Parcelable {
     }
 
     @Override
-    public void writeToParcel(Parcel dest, int flags) {
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mForwardingMode);
         dest.writeInt(mMinScope);
         dest.writeInt(mListeningAddresses.size());
@@ -147,9 +152,10 @@ public class MulticastRoutingConfig implements Parcelable {
         return 0;
     }
 
+    @NonNull
     public static final Creator<MulticastRoutingConfig> CREATOR = new Creator<>() {
         @Override
-        public MulticastRoutingConfig createFromParcel(Parcel in) {
+        public MulticastRoutingConfig createFromParcel(@NonNull Parcel in) {
             return new MulticastRoutingConfig(in);
         }
 
@@ -158,15 +164,6 @@ public class MulticastRoutingConfig implements Parcelable {
             return new MulticastRoutingConfig[size];
         }
     };
-
-    @Override
-    public String toString() {
-        return "MulticastRoutingConfig{"
-                + "ForwardingMode=" + forwardingModeToString(mForwardingMode)
-                + ", MinScope=" + mMinScope
-                + ", ListeningAddresses=" + mListeningAddresses
-                + '}';
-    }
 
     private static String forwardingModeToString(final int forwardingMode) {
         switch (forwardingMode) {
@@ -177,43 +174,58 @@ public class MulticastRoutingConfig implements Parcelable {
         }
     }
 
-    public static class Builder {
+    public static final class Builder {
         @MulticastForwardingMode
         private final int mForwardingMode;
         private int mMinScope;
         private final ArraySet<Inet6Address> mListeningAddresses;
 
-        private Builder(@MulticastForwardingMode final int mode, int scope) {
+        // The two constructors with runtime checks for the mode and scope are arguably
+        // less convenient than three static factory methods, but API guidelines mandates
+        // that Builders are built with a constructor and not factory methods.
+        /**
+         * Create a new builder for forwarding mode FORWARD_NONE or FORWARD_SELECTED.
+         *
+         * <p>On a Builder for FORWARD_NONE, no properties can be set.
+         * <p>On a Builder for FORWARD_SELECTED, listening addresses can be added and removed
+         * but the minimum scope can't be set.
+         *
+         * @param mode {@link #FORWARD_NONE} or {@link #FORWARD_SELECTED}. Any other
+         *             value will result in IllegalArgumentException.
+         * @see #Builder(int, int)
+         */
+        public Builder(@MulticastForwardingMode final int mode) {
+            if (FORWARD_NONE != mode && FORWARD_SELECTED != mode) {
+                if (FORWARD_WITH_MIN_SCOPE == mode) {
+                    throw new IllegalArgumentException("FORWARD_WITH_MIN_SCOPE requires "
+                            + "passing the scope as a second argument");
+                } else {
+                    throw new IllegalArgumentException("Unknown forwarding mode : " + mode);
+                }
+            }
             mForwardingMode = mode;
-            mMinScope = scope;
+            mMinScope = MULTICAST_SCOPE_NONE;
             mListeningAddresses = new ArraySet<>();
         }
 
         /**
-         * Create a builder that forwards nothing.
-         * No properties can be set on such a builder.
-         */
-        public static Builder newBuilderForwardingNone() {
-            return new Builder(FORWARD_NONE, MULTICAST_SCOPE_NONE);
-        }
-
-        /**
-         * Create a builder that forwards packets above a certain scope
+         * Create a new builder for forwarding mode FORWARD_WITH_MIN_SCOPE.
          *
-         * The scope can be changed on this builder, but not the listening addresses.
-         * @param scope the initial scope
-         */
-        public static Builder newBuilderWithMinScope(final int scope) {
-            return new Builder(FORWARD_WITH_MIN_SCOPE, scope);
-        }
-
-        /**
-         * Create a builder that forwards a specified list of listening addresses.
+         * <p>On this Builder the scope can be set with {@link #setMinimumScope}, but
+         * listening addresses can't be added or removed.
          *
-         * Addresses can be added and removed from this builder, but the scope can't be set.
+         * @param mode Must be {@link #FORWARD_WITH_MIN_SCOPE}.
+         * @param scope the minimum scope for this multicast routing config.
+         * @see Builder#Builder(int)
          */
-        public static Builder newBuilderWithListeningAddresses() {
-            return new Builder(FORWARD_SELECTED, MULTICAST_SCOPE_NONE);
+        public Builder(@MulticastForwardingMode final int mode, int scope) {
+            if (FORWARD_WITH_MIN_SCOPE != mode) {
+                throw new IllegalArgumentException("Forwarding with a min scope must "
+                        + "use forward mode FORWARD_WITH_MIN_SCOPE");
+            }
+            mForwardingMode = mode;
+            mMinScope = scope;
+            mListeningAddresses = new ArraySet<>();
         }
 
         /**
@@ -221,6 +233,7 @@ public class MulticastRoutingConfig implements Parcelable {
          * This is only meaningful (indeed, allowed) for configs in FORWARD_WITH_MIN_SCOPE mode.
          * @return this builder
          */
+        @NonNull
         public Builder setMinimumScope(final int scope) {
             if (FORWARD_WITH_MIN_SCOPE != mForwardingMode) {
                 throw new IllegalArgumentException("Can't set the scope on a builder in mode "
@@ -237,6 +250,7 @@ public class MulticastRoutingConfig implements Parcelable {
          * If this address was already added, this is a no-op.
          * @return this builder
          */
+        @NonNull
         public Builder addListeningAddress(@NonNull final Inet6Address address) {
             if (FORWARD_SELECTED != mForwardingMode) {
                 throw new IllegalArgumentException("Can't add an address on a builder in mode "
@@ -254,7 +268,8 @@ public class MulticastRoutingConfig implements Parcelable {
          * If this address was not added, or was already removed, this is a no-op.
          * @return this builder
          */
-        public Builder removeListeningAddress(@NonNull final Inet6Address address) {
+        @NonNull
+        public Builder clearListeningAddress(@NonNull final Inet6Address address) {
             if (FORWARD_SELECTED != mForwardingMode) {
                 throw new IllegalArgumentException("Can't remove an address on a builder in mode "
                         + modeToString(mForwardingMode));
@@ -266,6 +281,7 @@ public class MulticastRoutingConfig implements Parcelable {
         /**
          * Build the config.
          */
+        @NonNull
         public MulticastRoutingConfig build() {
             return new MulticastRoutingConfig(mForwardingMode, mMinScope, mListeningAddresses);
         }
@@ -278,5 +294,42 @@ public class MulticastRoutingConfig implements Parcelable {
             case FORWARD_WITH_MIN_SCOPE: return "FORWARD_WITH_MIN_SCOPE";
             default: return "unknown multicast routing mode " + mode;
         }
+    }
+
+    public boolean equals(Object other) {
+        if (other == this) {
+            return true;
+        } else if (!(other instanceof MulticastRoutingConfig)) {
+            return false;
+        } else {
+            final MulticastRoutingConfig otherConfig = (MulticastRoutingConfig) other;
+            return mForwardingMode == otherConfig.mForwardingMode
+                && mMinScope == otherConfig.mMinScope
+                && mListeningAddresses.equals(otherConfig.mListeningAddresses);
+        }
+    }
+
+    public int hashCode() {
+        return Objects.hash(mForwardingMode, mMinScope, mListeningAddresses);
+    }
+
+    public String toString() {
+        final StringJoiner resultJoiner = new StringJoiner(" ", "{", "}");
+
+        resultJoiner.add("ForwardingMode:");
+        resultJoiner.add(modeToString(mForwardingMode));
+
+        if (mForwardingMode == FORWARD_WITH_MIN_SCOPE) {
+            resultJoiner.add("MinScope:");
+            resultJoiner.add(Integer.toString(mMinScope));
+        }
+
+        if (mForwardingMode == FORWARD_SELECTED && !mListeningAddresses.isEmpty()) {
+            resultJoiner.add("ListeningAddresses: [");
+            resultJoiner.add(TextUtils.join(",", mListeningAddresses));
+            resultJoiner.add("]");
+        }
+
+        return resultJoiner.toString();
     }
 }
