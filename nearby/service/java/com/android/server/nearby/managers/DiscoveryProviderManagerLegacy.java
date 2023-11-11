@@ -221,8 +221,6 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
 
     /** Called after boot completed. */
     public void init() {
-        // Register BLE only scan when Bluetooth is turned off
-        setBleScanEnabled();
         if (mInjector.getContextHubManager() != null) {
             mChreDiscoveryProvider.init();
         }
@@ -346,6 +344,9 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             Log.w(TAG, "failed to start any provider because client disabled BLE");
             return false;
         }
+        if (!enableBle()) {
+            return false;
+        }
         List<ScanFilter> scanFilters = getPresenceScanFilters();
         boolean chreOnly = isChreOnly(scanFilters);
         Boolean chreAvailable = mChreDiscoveryProvider.available();
@@ -413,7 +414,9 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
         }
     }
 
-    private void stopProviders() {
+    @VisibleForTesting
+    protected void stopProviders() {
+        disableBle();
         stopBleProvider();
         stopChreProvider();
     }
@@ -512,7 +515,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
      * @return {@code true} when Nearby currently can scan through Bluetooth or Ble or successfully
      * registers Nearby service to Ble scan when Blutooth is off.
      */
-    public boolean setBleScanEnabled() {
+    public boolean enableBle() {
         BluetoothAdapter adapter = mInjector.getBluetoothAdapter();
         if (adapter == null) {
             Log.e(TAG, "BluetoothAdapter is null.");
@@ -530,5 +533,19 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             return false;
         }
         return true;
+    }
+
+    /**
+     * Unregisters Nearby service to Ble.
+     * Ble can be disabled when there is no app register the Ble service, so we can only to know we
+     * successfully unregister Ble by getting result from {@link BluetoothAdapter#disableBle()}.
+     */
+    public boolean disableBle() {
+        BluetoothAdapter adapter = mInjector.getBluetoothAdapter();
+        if (adapter == null) {
+            Log.e(TAG, "BluetoothAdapter is null.");
+            return false;
+        }
+        return adapter.disableBLE();
     }
 }
