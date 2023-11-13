@@ -62,6 +62,8 @@ import android.service.notification.NotificationListenerService;
 import android.util.Log;
 import android.util.Pair;
 
+import androidx.annotation.Nullable;
+
 import com.android.compatibility.common.util.AmUtils;
 import com.android.compatibility.common.util.BatteryUtils;
 import com.android.compatibility.common.util.DeviceConfigStateHelper;
@@ -283,8 +285,30 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     }
 
     protected void assertBackgroundNetworkAccess(boolean expectAllowed) throws Exception {
+        assertBackgroundNetworkAccess(expectAllowed, null);
+    }
+
+    /**
+     * Asserts whether the active network is available or not for the background app. If the network
+     * is unavailable, also checks whether it is blocked by the expected error.
+     *
+     * @param expectAllowed expect background network access to be allowed or not.
+     * @param expectedUnavailableError the expected error when {@code expectAllowed} is false. It's
+     *                                 meaningful only when the {@code expectAllowed} is 'false'.
+     *                                 Throws an IllegalArgumentException when {@code expectAllowed}
+     *                                 is true and this parameter is not null. When the
+     *                                 {@code expectAllowed} is 'false' and this parameter is null,
+     *                                 this function does not compare error type of the networking
+     *                                 access failure.
+     */
+    protected void assertBackgroundNetworkAccess(boolean expectAllowed,
+            @Nullable final String expectedUnavailableError) throws Exception {
         assertBackgroundState();
-        assertNetworkAccess(expectAllowed /* expectAvailable */, false /* needScreenOn */);
+        if (expectAllowed && expectedUnavailableError != null) {
+            throw new IllegalArgumentException("expectedUnavailableError is not null");
+        }
+        assertNetworkAccess(expectAllowed /* expectAvailable */, false /* needScreenOn */,
+                expectedUnavailableError);
     }
 
     protected void assertForegroundNetworkAccess() throws Exception {
@@ -407,12 +431,17 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
      */
     private void assertNetworkAccess(boolean expectAvailable, boolean needScreenOn)
             throws Exception {
+        assertNetworkAccess(expectAvailable, needScreenOn, null);
+    }
+
+    private void assertNetworkAccess(boolean expectAvailable, boolean needScreenOn,
+            @Nullable final String expectedUnavailableError) throws Exception {
         final int maxTries = 5;
         String error = null;
         int timeoutMs = 500;
 
         for (int i = 1; i <= maxTries; i++) {
-            error = checkNetworkAccess(expectAvailable);
+            error = checkNetworkAccess(expectAvailable, expectedUnavailableError);
 
             if (error == null) return;
 
@@ -479,12 +508,15 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
      *
      * @return error message with the mismatch (or empty if assertion passed).
      */
-    private String checkNetworkAccess(boolean expectAvailable) throws Exception {
+    private String checkNetworkAccess(boolean expectAvailable,
+            @Nullable final String expectedUnavailableError) throws Exception {
         final String resultData = mServiceClient.checkNetworkStatus();
-        return checkForAvailabilityInResultData(resultData, expectAvailable);
+        return checkForAvailabilityInResultData(resultData, expectAvailable,
+                expectedUnavailableError);
     }
 
-    private String checkForAvailabilityInResultData(String resultData, boolean expectAvailable) {
+    private String checkForAvailabilityInResultData(String resultData, boolean expectAvailable,
+            @Nullable final String expectedUnavailableError) {
         if (resultData == null) {
             assertNotNull("Network status from app2 is null", resultData);
         }
@@ -516,6 +548,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         if (expectedState != state || expectedDetailedState != detailedState) {
             errors.append(String.format("Connection state mismatch: expected %s/%s, got %s/%s\n",
                     expectedState, expectedDetailedState, state, detailedState));
+        } else if (!expectAvailable && (expectedUnavailableError != null)
+                 && !connectionCheckDetails.contains(expectedUnavailableError)) {
+            errors.append("Connection unavailable reason mismatch: expected "
+                     + expectedUnavailableError + "\n");
         }
 
         if (errors.length() > 0) {
@@ -914,7 +950,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                 final String resultData = result.get(0).second;
                 if (resultCode == INetworkStateObserver.RESULT_SUCCESS_NETWORK_STATE_CHECKED) {
                     final String error = checkForAvailabilityInResultData(
-                            resultData, expectAvailable);
+                            resultData, expectAvailable, null /* expectedUnavailableError */);
                     if (error != null) {
                         fail("Network is not available for activity in app2 (" + mUid + "): "
                                 + error);
@@ -949,7 +985,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                 final String resultData = result.get(0).second;
                 if (resultCode == INetworkStateObserver.RESULT_SUCCESS_NETWORK_STATE_CHECKED) {
                     final String error = checkForAvailabilityInResultData(
-                            resultData, expectAvailable);
+                            resultData, expectAvailable, null /* expectedUnavailableError */);
                     if (error != null) {
                         Log.d(TAG, "Network state is unexpected, checking again. " + error);
                         // Right now we could end up in an unexpected state if expedited job
