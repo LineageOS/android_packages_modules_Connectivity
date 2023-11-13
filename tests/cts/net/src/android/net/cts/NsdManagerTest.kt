@@ -80,6 +80,7 @@ import com.android.net.module.util.HexDump
 import com.android.net.module.util.PacketBuilder
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
+import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
@@ -843,6 +844,8 @@ class NsdManagerTest {
         checkConnectSocketToMdnsd(shouldFail = false)
     }
 
+    // Native mdns powered by Netd is removed after U.
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test @CtsNetTestCasesMaxTargetSdk30("Socket is started with the service up to target SDK 30")
     fun testManagerCreatesLegacySocket() {
         nsdManager // Ensure the lazy-init member is initialized, so NsdManager is created
