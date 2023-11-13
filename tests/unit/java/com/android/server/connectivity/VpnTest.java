@@ -56,11 +56,9 @@ import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_AUTO;
 import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_IPV4_UDP;
 import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_IPV6_ESP;
 import static com.android.server.connectivity.Vpn.PREFERRED_IKE_PROTOCOL_IPV6_UDP;
-import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.HandlerUtils.waitForIdleSerialExecutor;
 import static com.android.testutils.MiscAsserts.assertThrows;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -149,7 +147,6 @@ import android.net.vcn.VcnTransportInfo;
 import android.net.wifi.WifiInfo;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.os.ConditionVariable;
 import android.os.INetworkManagementService;
 import android.os.ParcelFileDescriptor;
 import android.os.PersistableBundle;
@@ -1983,22 +1980,6 @@ public class VpnTest extends VpnTestBase {
         // a subsequent CL.
     }
 
-    @Test
-    public void testStartLegacyVpnIpv6() throws Exception {
-        setMockedUsers(PRIMARY_USER);
-        final Vpn vpn = createVpn(PRIMARY_USER.id);
-        final LinkProperties lp = new LinkProperties();
-        lp.setInterfaceName(EGRESS_IFACE);
-        lp.addLinkAddress(new LinkAddress("2001:db8::1/64"));
-        final RouteInfo defaultRoute = new RouteInfo(
-                new IpPrefix(Inet6Address.ANY, 0), null, EGRESS_IFACE);
-        lp.addRoute(defaultRoute);
-
-        // IllegalStateException thrown since legacy VPN only supports IPv4.
-        assertThrows(IllegalStateException.class,
-                () -> vpn.startLegacyVpn(mVpnProfile, EGRESS_NETWORK, lp));
-    }
-
     private Vpn startLegacyVpn(final Vpn vpn, final VpnProfile vpnProfile) throws Exception {
         setMockedUsers(PRIMARY_USER);
 
@@ -3112,23 +3093,15 @@ public class VpnTest extends VpnTestBase {
     }
 
     @Test
-    public void testStartRacoonNumericAddress() throws Exception {
-        startRacoon("1.2.3.4", "1.2.3.4");
-    }
+    public void testStartLegacyVpnType() throws Exception {
+        setMockedUsers(PRIMARY_USER);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final VpnProfile profile = new VpnProfile("testProfile" /* key */);
 
-    @Test
-    public void testStartRacoonHostname() throws Exception {
-        startRacoon("hostname", "5.6.7.8"); // address returned by deps.resolve
-    }
-
-    @Test
-    public void testStartPptp() throws Exception {
-        startPptp(true /* useMppe */);
-    }
-
-    @Test
-    public void testStartPptp_NoMppe() throws Exception {
-        startPptp(false /* useMppe */);
+        profile.type = VpnProfile.TYPE_PPTP;
+        assertThrows(UnsupportedOperationException.class, () -> startLegacyVpn(vpn, profile));
+        profile.type = VpnProfile.TYPE_L2TP_IPSEC_PSK;
+        assertThrows(UnsupportedOperationException.class, () -> startLegacyVpn(vpn, profile));
     }
 
     private void assertTransportInfoMatches(NetworkCapabilities nc, int type) {
@@ -3136,125 +3109,6 @@ public class VpnTest extends VpnTestBase {
         VpnTransportInfo ti = (VpnTransportInfo) nc.getTransportInfo();
         assertNotNull(ti);
         assertEquals(type, ti.getType());
-    }
-
-    private void startPptp(boolean useMppe) throws Exception {
-        final VpnProfile profile = new VpnProfile("testProfile" /* key */);
-        profile.type = VpnProfile.TYPE_PPTP;
-        profile.name = "testProfileName";
-        profile.username = "userName";
-        profile.password = "thePassword";
-        profile.server = "192.0.2.123";
-        profile.mppe = useMppe;
-
-        doReturn(new Network[] { new Network(101) }).when(mConnectivityManager).getAllNetworks();
-        doReturn(new Network(102)).when(mConnectivityManager).registerNetworkAgent(
-                any(), // INetworkAgent
-                any(), // NetworkInfo
-                any(), // LinkProperties
-                any(), // NetworkCapabilities
-                any(), // LocalNetworkConfig
-                any(), // NetworkScore
-                any(), // NetworkAgentConfig
-                anyInt()); // provider ID
-
-        final Vpn vpn = startLegacyVpn(createVpn(PRIMARY_USER.id), profile);
-        final TestDeps deps = (TestDeps) vpn.mDeps;
-
-        testAndCleanup(() -> {
-            final String[] mtpdArgs = deps.mtpdArgs.get(10, TimeUnit.SECONDS);
-            final String[] argsPrefix = new String[]{
-                    EGRESS_IFACE, "pptp", profile.server, "1723", "name", profile.username,
-                    "password", profile.password, "linkname", "vpn", "refuse-eap", "nodefaultroute",
-                    "usepeerdns", "idle", "1800", "mtu", "1270", "mru", "1270"
-            };
-            assertArrayEquals(argsPrefix, Arrays.copyOf(mtpdArgs, argsPrefix.length));
-            if (useMppe) {
-                assertEquals(argsPrefix.length + 2, mtpdArgs.length);
-                assertEquals("+mppe", mtpdArgs[argsPrefix.length]);
-                assertEquals("-pap", mtpdArgs[argsPrefix.length + 1]);
-            } else {
-                assertEquals(argsPrefix.length + 1, mtpdArgs.length);
-                assertEquals("nomppe", mtpdArgs[argsPrefix.length]);
-            }
-
-            verify(mConnectivityManager, timeout(10_000)).registerNetworkAgent(
-                    any(), // INetworkAgent
-                    any(), // NetworkInfo
-                    any(), // LinkProperties
-                    any(), // NetworkCapabilities
-                    any(), // LocalNetworkConfig
-                    any(), // NetworkScore
-                    any(), // NetworkAgentConfig
-                    anyInt()); // provider ID
-        }, () -> { // Cleanup
-                vpn.mVpnRunner.exitVpnRunner();
-                deps.getStateFile().delete(); // set to delete on exit, but this deletes it earlier
-                vpn.mVpnRunner.join(10_000); // wait for up to 10s for the runner to die and cleanup
-            });
-    }
-
-    public void startRacoon(final String serverAddr, final String expectedAddr)
-            throws Exception {
-        final ConditionVariable legacyRunnerReady = new ConditionVariable();
-        final VpnProfile profile = new VpnProfile("testProfile" /* key */);
-        profile.type = VpnProfile.TYPE_L2TP_IPSEC_PSK;
-        profile.name = "testProfileName";
-        profile.username = "userName";
-        profile.password = "thePassword";
-        profile.server = serverAddr;
-        profile.ipsecIdentifier = "id";
-        profile.ipsecSecret = "secret";
-        profile.l2tpSecret = "l2tpsecret";
-
-        when(mConnectivityManager.getAllNetworks())
-            .thenReturn(new Network[] { new Network(101) });
-
-        when(mConnectivityManager.registerNetworkAgent(any(), any(), any(), any(),
-                any(), any(), any(), anyInt())).thenAnswer(invocation -> {
-                    // The runner has registered an agent and is now ready.
-                    legacyRunnerReady.open();
-                    return new Network(102);
-                });
-        final Vpn vpn = startLegacyVpn(createVpn(PRIMARY_USER.id), profile);
-        final TestDeps deps = (TestDeps) vpn.mDeps;
-        try {
-            // udppsk and 1701 are the values for TYPE_L2TP_IPSEC_PSK
-            assertArrayEquals(
-                    new String[] { EGRESS_IFACE, expectedAddr, "udppsk",
-                            profile.ipsecIdentifier, profile.ipsecSecret, "1701" },
-                    deps.racoonArgs.get(10, TimeUnit.SECONDS));
-            // literal values are hardcoded in Vpn.java for mtpd args
-            assertArrayEquals(
-                    new String[] { EGRESS_IFACE, "l2tp", expectedAddr, "1701", profile.l2tpSecret,
-                            "name", profile.username, "password", profile.password,
-                            "linkname", "vpn", "refuse-eap", "nodefaultroute", "usepeerdns",
-                            "idle", "1800", "mtu", "1270", "mru", "1270" },
-                    deps.mtpdArgs.get(10, TimeUnit.SECONDS));
-
-            // Now wait for the runner to be ready before testing for the route.
-            ArgumentCaptor<LinkProperties> lpCaptor = ArgumentCaptor.forClass(LinkProperties.class);
-            ArgumentCaptor<NetworkCapabilities> ncCaptor =
-                    ArgumentCaptor.forClass(NetworkCapabilities.class);
-            verify(mConnectivityManager, timeout(10_000)).registerNetworkAgent(any(), any(),
-                    lpCaptor.capture(), ncCaptor.capture(), any(), any(), any(), anyInt());
-
-            // In this test the expected address is always v4 so /32.
-            // Note that the interface needs to be specified because RouteInfo objects stored in
-            // LinkProperties objects always acquire the LinkProperties' interface.
-            final RouteInfo expectedRoute = new RouteInfo(new IpPrefix(expectedAddr + "/32"),
-                    null, EGRESS_IFACE, RouteInfo.RTN_THROW);
-            final List<RouteInfo> actualRoutes = lpCaptor.getValue().getRoutes();
-            assertTrue("Expected throw route (" + expectedRoute + ") not found in " + actualRoutes,
-                    actualRoutes.contains(expectedRoute));
-
-            assertTransportInfoMatches(ncCaptor.getValue(), VpnManager.TYPE_VPN_LEGACY);
-        } finally {
-            // Now interrupt the thread, unblock the runner and clean up.
-            vpn.mVpnRunner.exitVpnRunner();
-            deps.getStateFile().delete(); // set to delete on exit, but this deletes it earlier
-            vpn.mVpnRunner.join(10_000); // wait for up to 10s for the runner to die and cleanup
-        }
     }
 
     // Make it public and un-final so as to spy it
