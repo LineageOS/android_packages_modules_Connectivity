@@ -94,7 +94,7 @@ class CSLocalAgentTests : CSTest() {
         }
         assertFailsWith<IllegalArgumentException> {
             Agent(nc = NetworkCapabilities.Builder().build(),
-                    lnc = LocalNetworkConfig.Builder().build())
+                    lnc = FromS(LocalNetworkConfig.Builder().build()))
         }
     }
 
@@ -110,7 +110,7 @@ class CSLocalAgentTests : CSTest() {
         val agent = Agent(nc = NetworkCapabilities.Builder()
                 .addCapability(NET_CAPABILITY_LOCAL_NETWORK)
                 .build(),
-                lnc = LocalNetworkConfig.Builder().build())
+                lnc = FromS(LocalNetworkConfig.Builder().build()))
         agent.connect()
         cb.expectAvailableCallbacks(agent.network, validated = false)
         agent.sendNetworkCapabilities(NetworkCapabilities.Builder().build())
@@ -141,7 +141,7 @@ class CSLocalAgentTests : CSTest() {
         val localAgent = Agent(
                 nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
-                lnc = LocalNetworkConfig.Builder().build(),
+                lnc = FromS(LocalNetworkConfig.Builder().build()),
         )
         localAgent.connect()
 
@@ -194,11 +194,11 @@ class CSLocalAgentTests : CSTest() {
         // Set up a local agent that should forward its traffic to the best wifi upstream.
         val localAgent = Agent(nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
-                lnc = LocalNetworkConfig.Builder()
+                lnc = FromS(LocalNetworkConfig.Builder()
                 .setUpstreamSelector(NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
                         .build())
-                .build(),
+                .build()),
                 score = FromS(NetworkScore.Builder()
                         .setKeepConnectedReason(KEEP_CONNECTED_LOCAL_NETWORK)
                         .build())
@@ -247,11 +247,11 @@ class CSLocalAgentTests : CSTest() {
         // Set up a local agent that should forward its traffic to the best wifi upstream.
         val localAgent = Agent(nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
-                lnc = LocalNetworkConfig.Builder()
+                lnc = FromS(LocalNetworkConfig.Builder()
                         .setUpstreamSelector(NetworkRequest.Builder()
                                 .addTransportType(TRANSPORT_WIFI)
                                 .build())
-                        .build(),
+                        .build()),
                 score = FromS(NetworkScore.Builder()
                         .setKeepConnectedReason(KEEP_CONNECTED_LOCAL_NETWORK)
                         .build())
@@ -293,11 +293,11 @@ class CSLocalAgentTests : CSTest() {
         cm.registerNetworkCallback(NetworkRequest.Builder().clearCapabilities().build(), cb)
 
         val localNc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK)
-        val lnc = LocalNetworkConfig.Builder()
+        val lnc = FromS(LocalNetworkConfig.Builder()
                 .setUpstreamSelector(NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
                         .build())
-                .build()
+                .build())
         val localScore = FromS(NetworkScore.Builder().build())
 
         // Set up a local agent that should forward its traffic to the best wifi upstream.
@@ -346,11 +346,11 @@ class CSLocalAgentTests : CSTest() {
         wifiAgent.unregisterAfterReplacement(LONG_TIMEOUT_MS)
         val localAgent = Agent(nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
-                lnc = LocalNetworkConfig.Builder()
+                lnc = FromS(LocalNetworkConfig.Builder()
                         .setUpstreamSelector(NetworkRequest.Builder()
                                 .addTransportType(TRANSPORT_WIFI)
                                 .build())
-                        .build(),
+                        .build()),
                 score = FromS(NetworkScore.Builder()
                         .setKeepConnectedReason(KEEP_CONNECTED_LOCAL_NETWORK)
                         .build())
@@ -374,11 +374,11 @@ class CSLocalAgentTests : CSTest() {
     fun testForwardingRules() {
         deps.setBuildSdk(VERSION_V)
         // Set up a local agent that should forward its traffic to the best DUN upstream.
-        val lnc = LocalNetworkConfig.Builder()
+        val lnc = FromS(LocalNetworkConfig.Builder()
                 .setUpstreamSelector(NetworkRequest.Builder()
                         .addCapability(NET_CAPABILITY_DUN)
                         .build())
-                .build()
+                .build())
         val localAgent = Agent(nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
                 lnc = lnc,
@@ -426,7 +426,7 @@ class CSLocalAgentTests : CSTest() {
 
         // Make sure sending the same config again doesn't do anything
         repeat(5) {
-            localAgent.sendLocalNetworkConfig(lnc)
+            localAgent.sendLocalNetworkConfig(lnc.value)
         }
         inOrder.verifyNoMoreInteractions()
 
@@ -501,13 +501,13 @@ class CSLocalAgentTests : CSTest() {
         }
 
         // Set up a local agent.
-        val lnc = LocalNetworkConfig.Builder().apply {
+        val lnc = FromS(LocalNetworkConfig.Builder().apply {
             if (haveUpstream) {
                 setUpstreamSelector(NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
                         .build())
             }
-        }.build()
+        }.build())
         val localAgent = Agent(nc = nc(TRANSPORT_THREAD, NET_CAPABILITY_LOCAL_NETWORK),
                 lp = lp("local0"),
                 lnc = lnc,
