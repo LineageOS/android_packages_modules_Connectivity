@@ -226,15 +226,17 @@ public final class ThreadNetworkController {
      * @param callback the callback which has been registered with {@link #registerStateCallback}
      * @throws IllegalArgumentException if {@code callback} hasn't been registered
      */
+    @RequiresPermission(permission.ACCESS_NETWORK_STATE)
     public void unregisterStateCallback(@NonNull StateCallback callback) {
         requireNonNull(callback, "callback cannot be null");
         synchronized (mStateCallbackMapLock) {
-            StateCallbackProxy callbackProxy = mStateCallbackMap.remove(callback);
+            StateCallbackProxy callbackProxy = mStateCallbackMap.get(callback);
             if (callbackProxy == null) {
                 throw new IllegalArgumentException("callback hasn't been registered");
             }
             try {
                 mControllerService.unregisterStateCallback(callbackProxy);
+                mStateCallbackMap.remove(callback);
             } catch (RemoteException e) {
                 e.rethrowFromSystemServer();
             }
@@ -334,15 +336,21 @@ public final class ThreadNetworkController {
      *     #registerOperationalDatasetCallback}
      * @throws IllegalArgumentException if {@code callback} hasn't been registered
      */
+    @RequiresPermission(
+            allOf = {
+                permission.ACCESS_NETWORK_STATE,
+                "android.permission.THREAD_NETWORK_PRIVILEGED"
+            })
     public void unregisterOperationalDatasetCallback(@NonNull OperationalDatasetCallback callback) {
         requireNonNull(callback, "callback cannot be null");
         synchronized (mOpDatasetCallbackMapLock) {
-            OperationalDatasetCallbackProxy callbackProxy = mOpDatasetCallbackMap.remove(callback);
+            OperationalDatasetCallbackProxy callbackProxy = mOpDatasetCallbackMap.get(callback);
             if (callbackProxy == null) {
                 throw new IllegalArgumentException("callback hasn't been registered");
             }
             try {
                 mControllerService.unregisterOperationalDatasetCallback(callbackProxy);
+                mOpDatasetCallbackMap.remove(callback);
             } catch (RemoteException e) {
                 e.rethrowFromSystemServer();
             }
