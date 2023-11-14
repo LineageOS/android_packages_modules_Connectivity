@@ -230,7 +230,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
     /**
      * The base class for all SvcParam.
      */
-    private abstract static class SvcParam {
+    private abstract static class SvcParam<T> {
         private final int mKey;
 
         SvcParam(int key) {
@@ -240,9 +240,11 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         int getKey() {
             return mKey;
         }
+
+        abstract T getValue();
     }
 
-    private static class SvcParamMandatory extends SvcParam {
+    private static class SvcParamMandatory extends SvcParam<short[]> {
         private final short[] mValue;
 
         private SvcParamMandatory(@NonNull ByteBuffer buf) throws BufferUnderflowException,
@@ -258,6 +260,12 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         }
 
         @Override
+        short[] getValue() {
+            /* Not yet implemented */
+            return null;
+        }
+
+        @Override
         public String toString() {
             final StringJoiner valueJoiner = new StringJoiner(",");
             for (short key : mValue) {
@@ -267,7 +275,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         }
     }
 
-    private static class SvcParamAlpn extends SvcParam {
+    private static class SvcParamAlpn extends SvcParam<List<String>> {
         private final List<String> mValue;
 
         SvcParamAlpn(@NonNull ByteBuffer buf) throws BufferUnderflowException, ParseException {
@@ -281,6 +289,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
             }
         }
 
+        @Override
         List<String> getValue() {
             return Collections.unmodifiableList(mValue);
         }
@@ -291,7 +300,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         }
     }
 
-    private static class SvcParamNoDefaultAlpn extends SvcParam {
+    private static class SvcParamNoDefaultAlpn extends SvcParam<Void> {
         SvcParamNoDefaultAlpn(@NonNull ByteBuffer buf) throws BufferUnderflowException,
                 ParseException {
             super(KEY_NO_DEFAULT_ALPN);
@@ -303,12 +312,17 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         }
 
         @Override
+        Void getValue() {
+            return null;
+        }
+
+        @Override
         public String toString() {
             return toKeyName(getKey());
         }
     }
 
-    private static class SvcParamPort extends SvcParam {
+    private static class SvcParamPort extends SvcParam<Integer> {
         private final int mValue;
 
         SvcParamPort(@NonNull ByteBuffer buf) throws BufferUnderflowException, ParseException {
@@ -321,7 +335,8 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
             mValue = Short.toUnsignedInt(buf.getShort());
         }
 
-        int getValue() {
+        @Override
+        Integer getValue() {
             return mValue;
         }
 
@@ -331,7 +346,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         }
     }
 
-    private static class SvcParamIpHint extends SvcParam {
+    private static class SvcParamIpHint extends SvcParam<List<InetAddress>> {
         private final List<InetAddress> mValue;
 
         private SvcParamIpHint(int key, @NonNull ByteBuffer buf, int addrLen) throws
@@ -346,6 +361,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
             }
         }
 
+        @Override
         List<InetAddress> getValue() {
             return Collections.unmodifiableList(mValue);
         }
@@ -378,7 +394,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
         }
     }
 
-    private static class SvcParamDohPath extends SvcParam {
+    private static class SvcParamDohPath extends SvcParam<String> {
         private final String mValue;
 
         SvcParamDohPath(@NonNull ByteBuffer buf) throws BufferUnderflowException, ParseException {
@@ -390,6 +406,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
             mValue = new String(value, StandardCharsets.UTF_8);
         }
 
+        @Override
         String getValue() {
             return mValue;
         }
@@ -401,7 +418,7 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
     }
 
     // For other unrecognized and unimplemented SvcParams, they are stored as SvcParamGeneric.
-    private static class SvcParamGeneric extends SvcParam {
+    private static class SvcParamGeneric extends SvcParam<byte[]> {
         private final byte[] mValue;
 
         SvcParamGeneric(int key, @NonNull ByteBuffer buf) throws BufferUnderflowException,
@@ -411,6 +428,12 @@ public final class DnsSvcbRecord extends DnsPacket.DnsRecord {
             final int len = Short.toUnsignedInt(buf.getShort());
             mValue = new byte[len];
             buf.get(mValue);
+        }
+
+        @Override
+        byte[] getValue() {
+            /* Not yet implemented */
+            return null;
         }
 
         @Override
