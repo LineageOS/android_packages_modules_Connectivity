@@ -223,6 +223,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         return mOtDaemon;
     }
 
+    // TODO(b/309792480): restarts the OT daemon service
     private void onOtDaemonDied() {
         Log.w(TAG, "OT daemon became dead, clean up...");
         OperationReceiverWrapper.onOtDaemonDied();
@@ -566,9 +567,15 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private void handleDeviceRoleChanged(@DeviceRole int deviceRole) {
         if (ThreadNetworkController.isAttached(deviceRole)) {
             Log.d(TAG, "Attached to the Thread network");
+
+            // This is an idempotent method which can be called for multiple times when the device
+            // is already attached (e.g. going from Child to Router)
             registerThreadNetwork();
         } else {
             Log.d(TAG, "Detached from the Thread network");
+
+            // This is an idempotent method which can be called for multiple times when the device
+            // is already detached or stopped
             unregisterThreadNetwork();
         }
     }
@@ -625,7 +632,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         public void registerStateCallback(IStateCallback callback) {
             checkOnHandlerThread();
             if (mStateCallbacks.containsKey(callback)) {
-                return;
+                throw new IllegalStateException("Registering the same IStateCallback twice");
             }
 
             IBinder.DeathRecipient deathRecipient =
@@ -657,7 +664,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         public void registerDatasetCallback(IOperationalDatasetCallback callback) {
             checkOnHandlerThread();
             if (mOpDatasetCallbacks.containsKey(callback)) {
-                return;
+                throw new IllegalStateException(
+                        "Registering the same IOperationalDatasetCallback twice");
             }
 
             IBinder.DeathRecipient deathRecipient =
@@ -732,7 +740,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 mActiveDataset = newActiveDataset;
             } catch (IllegalArgumentException e) {
                 // Is unlikely that OT will generate invalid Operational Dataset
-                Log.w(TAG, "Ignoring invalid Active Operational Dataset changes", e);
+                Log.wtf(TAG, "Invalid Active Operational Dataset from OpenThread", e);
             }
 
             PendingOperationalDataset newPendingDataset;
@@ -746,7 +754,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 onPendingOperationalDatasetChanged(newPendingDataset, listenerId);
                 mPendingDataset = newPendingDataset;
             } catch (IllegalArgumentException e) {
-                Log.w(TAG, "Ignoring invalid Pending Operational Dataset changes", e);
+                // Is unlikely that OT will generate invalid Operational Dataset
+                Log.wtf(TAG, "Invalid Pending Operational Dataset from OpenThread", e);
             }
         }
 

@@ -16,6 +16,7 @@
 
 package com.android.server.thread;
 
+import android.annotation.Nullable;
 import android.net.LinkAddress;
 import android.net.util.SocketUtils;
 import android.os.ParcelFileDescriptor;
@@ -34,6 +35,7 @@ import java.io.IOException;
 /** Controller for virtual/tunnel network interfaces. */
 public class TunInterfaceController {
     private static final String TAG = "TunIfController";
+    private static final long INFINITE_LIFETIME = 0xffffffffL;
     static final int MTU = 1280;
 
     static {
@@ -76,6 +78,7 @@ public class TunInterfaceController {
     }
 
     /** Returns the FD of the tunnel interface. */
+    @Nullable
     public ParcelFileDescriptor getTunFd() {
         return mParcelTunFd;
     }
@@ -98,7 +101,7 @@ public class TunInterfaceController {
 
         if (address.getDeprecationTime() == LinkAddress.LIFETIME_PERMANENT
                 || address.getDeprecationTime() == LinkAddress.LIFETIME_UNKNOWN) {
-            validLifetimeSeconds = 0xffffffffL;
+            validLifetimeSeconds = INFINITE_LIFETIME;
         } else {
             validLifetimeSeconds =
                     Math.max(
@@ -108,7 +111,7 @@ public class TunInterfaceController {
 
         if (address.getExpirationTime() == LinkAddress.LIFETIME_PERMANENT
                 || address.getExpirationTime() == LinkAddress.LIFETIME_UNKNOWN) {
-            preferredLifetimeSeconds = 0xffffffffL;
+            preferredLifetimeSeconds = INFINITE_LIFETIME;
         } else {
             preferredLifetimeSeconds =
                     Math.max(
