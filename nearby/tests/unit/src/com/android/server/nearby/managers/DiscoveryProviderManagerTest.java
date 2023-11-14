@@ -166,8 +166,23 @@ public class DiscoveryProviderManagerTest {
     @Test
     public void test_enableBleWhenBleOff() throws Exception {
         when(mBluetoothAdapter.isEnabled()).thenReturn(false);
-        mDiscoveryProviderManager.init();
+        ScanRequest scanRequest = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .addScanFilter(getChreOnlyPresenceScanFilter()).build();
+        mDiscoveryProviderManager.registerScanListener(scanRequest, mScanListener, mCallerIdentity);
         verify(mBluetoothAdapter, times(1)).enableBLE();
+    }
+
+    @Test
+    public void test_disBleBleWhenNoClient() throws Exception {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(false);
+        ScanRequest scanRequest = new ScanRequest.Builder()
+                .setScanType(SCAN_TYPE_NEARBY_PRESENCE)
+                .addScanFilter(getChreOnlyPresenceScanFilter()).build();
+        mDiscoveryProviderManager.registerScanListener(scanRequest, mScanListener, mCallerIdentity);
+        verify(mBluetoothAdapter, times(1)).enableBLE();
+        mDiscoveryProviderManager.unregisterScanListener(mScanListener);
+        verify(mBluetoothAdapter, times(1)).disableBLE();
     }
 
     @Test
@@ -358,7 +373,7 @@ public class DiscoveryProviderManagerTest {
         when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
         when(mBluetoothAdapter.enableBLE()).thenReturn(true);
 
-        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+        assertThat(mDiscoveryProviderManager.enableBle()).isTrue();
     }
 
     @Test
@@ -368,7 +383,7 @@ public class DiscoveryProviderManagerTest {
         when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
         when(mBluetoothAdapter.enableBLE()).thenReturn(true);
 
-        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+        assertThat(mDiscoveryProviderManager.enableBle()).isTrue();
     }
 
     @Test
@@ -378,7 +393,7 @@ public class DiscoveryProviderManagerTest {
         when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
         when(mBluetoothAdapter.enableBLE()).thenReturn(true);
 
-        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+        assertThat(mDiscoveryProviderManager.enableBle()).isTrue();
     }
 
     @Test
@@ -388,7 +403,7 @@ public class DiscoveryProviderManagerTest {
         when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
         when(mBluetoothAdapter.enableBLE()).thenReturn(false);
 
-        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isFalse();
+        assertThat(mDiscoveryProviderManager.enableBle()).isFalse();
     }
 
     @Test
@@ -397,7 +412,7 @@ public class DiscoveryProviderManagerTest {
         when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
         when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(false);
 
-        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+        assertThat(mDiscoveryProviderManager.enableBle()).isTrue();
     }
 
     @Test
@@ -406,6 +421,6 @@ public class DiscoveryProviderManagerTest {
         when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
         when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(false);
 
-        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isFalse();
+        assertThat(mDiscoveryProviderManager.enableBle()).isFalse();
     }
 }
