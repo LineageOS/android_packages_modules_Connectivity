@@ -21,7 +21,6 @@ import static android.net.DnsResolver.TYPE_AAAA;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.text.TextUtils;
 import android.util.Log;
 
 import java.net.InetAddress;
@@ -29,7 +28,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.StringJoiner;
 
 /**
  * A class for a DNS SVCB response packet.
@@ -157,16 +155,6 @@ public class DnsSvcbPacket extends DnsPacket {
             }
         }
         return out;
-    }
-
-    @Override
-    public String toString() {
-        final StringJoiner out = new StringJoiner(" ");
-        out.add("QUERY: [" + TextUtils.join(", ", mRecords[QDSECTION]) + "]");
-        out.add("ANSWER: [" + TextUtils.join(", ", mRecords[ANSECTION]) + "]");
-        out.add("AUTHORITY: [" + TextUtils.join(", ", mRecords[NSSECTION]) + "]");
-        out.add("ADDITIONAL: [" + TextUtils.join(", ", mRecords[ARSECTION]) + "]");
-        return out.toString();
     }
 
     /**
