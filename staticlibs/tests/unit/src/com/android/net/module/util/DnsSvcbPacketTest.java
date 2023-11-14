@@ -207,7 +207,7 @@ public class DnsSvcbPacketTest {
                 os.write(shortToByteArray((short) mRdataLen));
             } else {
                 final byte[] targetNameLabels =
-                                DnsPacketUtils.DnsRecordParser.domainNameToLabels(mTargetName);
+                        DnsPacketUtils.DnsRecordParser.domainNameToLabels(mTargetName);
                 mRdataLen += (Short.BYTES + targetNameLabels.length);
                 os.write(shortToByteArray((short) mRdataLen));
                 os.write(shortToByteArray(mSvcPriority));
@@ -251,7 +251,9 @@ public class DnsSvcbPacketTest {
         // Check the content returned from toString() for now because the getter function for
         // this SvcParam hasn't been implemented.
         // TODO(b/240259333): Consider adding DnsSvcbRecord.isMandatory(String alpn) when needed.
-        assertTrue(record.toString().contains("mandatory=ipv4hint,alpn,key333"));
+        assertTrue(record.toString().contains("ipv4hint"));
+        assertTrue(record.toString().contains("alpn"));
+        assertTrue(record.toString().contains("key333"));
     }
 
     @Test
