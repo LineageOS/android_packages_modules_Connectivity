@@ -419,12 +419,12 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     @Override
     public void registerStateCallback(IStateCallback stateCallback) throws RemoteException {
         enforceAllCallingPermissionsGranted(permission.ACCESS_NETWORK_STATE);
-
         mHandler.post(() -> mOtDaemonCallbackProxy.registerStateCallback(stateCallback));
     }
 
     @Override
     public void unregisterStateCallback(IStateCallback stateCallback) throws RemoteException {
+        enforceAllCallingPermissionsGranted(permission.ACCESS_NETWORK_STATE);
         mHandler.post(() -> mOtDaemonCallbackProxy.unregisterStateCallback(stateCallback));
     }
 
@@ -439,6 +439,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     @Override
     public void unregisterOperationalDatasetCallback(IOperationalDatasetCallback callback)
             throws RemoteException {
+        enforceAllCallingPermissionsGranted(
+                permission.ACCESS_NETWORK_STATE, PERMISSION_THREAD_NETWORK_PRIVILEGED);
         mHandler.post(() -> mOtDaemonCallbackProxy.unregisterDatasetCallback(callback));
     }
 

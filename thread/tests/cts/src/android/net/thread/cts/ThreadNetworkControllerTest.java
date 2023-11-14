@@ -101,7 +101,7 @@ public class ThreadNetworkControllerTest {
     public void tearDown() throws Exception {
         if (mManager != null) {
             leaveAndWait();
-            dropPermissions();
+            dropAllPermissions();
         }
     }
 
@@ -128,7 +128,7 @@ public class ThreadNetworkControllerTest {
         getInstrumentation().getUiAutomation().adoptShellPermissionIdentity(allPermissions);
     }
 
-    private static void dropPermissions() {
+    private static void dropAllPermissions() {
         getInstrumentation().getUiAutomation().dropShellPermissionIdentity();
     }
 
@@ -217,16 +217,21 @@ public class ThreadNetworkControllerTest {
 
         for (ThreadNetworkController controller : getAllControllers()) {
             SettableFuture<Integer> deviceRole = SettableFuture.create();
+            StateCallback callback = deviceRole::set;
 
-            controller.registerStateCallback(mExecutor, role -> deviceRole.set(role));
+            try {
+                controller.registerStateCallback(mExecutor, callback);
 
-            assertThat(deviceRole.get()).isEqualTo(DEVICE_ROLE_STOPPED);
+                assertThat(deviceRole.get()).isEqualTo(DEVICE_ROLE_STOPPED);
+            } finally {
+                controller.unregisterStateCallback(callback);
+            }
         }
     }
 
     @Test
     public void registerStateCallback_noPermissions_throwsSecurityException() throws Exception {
-        dropPermissions();
+        dropAllPermissions();
 
         for (ThreadNetworkController controller : getAllControllers()) {
             assertThrows(
@@ -248,6 +253,26 @@ public class ThreadNetworkControllerTest {
             assertThrows(
                     IllegalArgumentException.class,
                     () -> controller.registerStateCallback(mExecutor, callback));
+        }
+    }
+
+    @Test
+    public void unregisterStateCallback_noPermissions_throwsSecurityException() throws Exception {
+        for (ThreadNetworkController controller : getAllControllers()) {
+            SettableFuture<Integer> deviceRole = SettableFuture.create();
+            StateCallback callback = role -> deviceRole.set(role);
+            grantPermissions(permission.ACCESS_NETWORK_STATE);
+            controller.registerStateCallback(mExecutor, callback);
+
+            try {
+                dropAllPermissions();
+                assertThrows(
+                        SecurityException.class,
+                        () -> controller.unregisterStateCallback(callback));
+            } finally {
+                grantPermissions(permission.ACCESS_NETWORK_STATE);
+                controller.unregisterStateCallback(callback);
+            }
         }
     }
 
@@ -282,7 +307,7 @@ public class ThreadNetworkControllerTest {
         grantPermissions(permission.ACCESS_NETWORK_STATE);
         for (ThreadNetworkController controller : getAllControllers()) {
             SettableFuture<Integer> deviceRole = SettableFuture.create();
-            StateCallback callback = role -> deviceRole.set(role);
+            StateCallback callback = deviceRole::set;
             controller.registerStateCallback(mExecutor, callback);
             controller.unregisterStateCallback(callback);
 
@@ -300,12 +325,70 @@ public class ThreadNetworkControllerTest {
         for (ThreadNetworkController controller : getAllControllers()) {
             SettableFuture<ActiveOperationalDataset> activeFuture = SettableFuture.create();
             SettableFuture<PendingOperationalDataset> pendingFuture = SettableFuture.create();
+            var callback = newDatasetCallback(activeFuture, pendingFuture);
 
-            controller.registerOperationalDatasetCallback(
-                    mExecutor, newDatasetCallback(activeFuture, pendingFuture));
+            try {
+                controller.registerOperationalDatasetCallback(mExecutor, callback);
 
-            assertThat(activeFuture.get()).isNull();
-            assertThat(pendingFuture.get()).isNull();
+                assertThat(activeFuture.get()).isNull();
+                assertThat(pendingFuture.get()).isNull();
+            } finally {
+                controller.unregisterOperationalDatasetCallback(callback);
+            }
+        }
+    }
+
+    @Test
+    public void registerOperationalDatasetCallback_noPermissions_throwsSecurityException()
+            throws Exception {
+        dropAllPermissions();
+
+        for (ThreadNetworkController controller : getAllControllers()) {
+            SettableFuture<ActiveOperationalDataset> activeFuture = SettableFuture.create();
+            SettableFuture<PendingOperationalDataset> pendingFuture = SettableFuture.create();
+            var callback = newDatasetCallback(activeFuture, pendingFuture);
+
+            assertThrows(
+                    SecurityException.class,
+                    () -> controller.registerOperationalDatasetCallback(mExecutor, callback));
+        }
+    }
+
+    @Test
+    public void unregisterOperationalDatasetCallback_callbackRegistered_success() throws Exception {
+        grantPermissions(permission.ACCESS_NETWORK_STATE, PERMISSION_THREAD_NETWORK_PRIVILEGED);
+        for (ThreadNetworkController controller : getAllControllers()) {
+            SettableFuture<ActiveOperationalDataset> activeFuture = SettableFuture.create();
+            SettableFuture<PendingOperationalDataset> pendingFuture = SettableFuture.create();
+            var callback = newDatasetCallback(activeFuture, pendingFuture);
+            controller.registerOperationalDatasetCallback(mExecutor, callback);
+
+            controller.unregisterOperationalDatasetCallback(callback);
+        }
+    }
+
+    @Test
+    public void unregisterOperationalDatasetCallback_noPermissions_throwsSecurityException()
+            throws Exception {
+        dropAllPermissions();
+
+        for (ThreadNetworkController controller : getAllControllers()) {
+            SettableFuture<ActiveOperationalDataset> activeFuture = SettableFuture.create();
+            SettableFuture<PendingOperationalDataset> pendingFuture = SettableFuture.create();
+            var callback = newDatasetCallback(activeFuture, pendingFuture);
+            grantPermissions(permission.ACCESS_NETWORK_STATE, PERMISSION_THREAD_NETWORK_PRIVILEGED);
+            controller.registerOperationalDatasetCallback(mExecutor, callback);
+
+            try {
+                dropAllPermissions();
+                assertThrows(
+                        SecurityException.class,
+                        () -> controller.unregisterOperationalDatasetCallback(callback));
+            } finally {
+                grantPermissions(
+                        permission.ACCESS_NETWORK_STATE, PERMISSION_THREAD_NETWORK_PRIVILEGED);
+                controller.unregisterOperationalDatasetCallback(callback);
+            }
         }
     }
 
@@ -343,7 +426,7 @@ public class ThreadNetworkControllerTest {
 
     @Test
     public void join_withoutPrivilegedPermission_throwsSecurityException() throws Exception {
-        dropPermissions();
+        dropAllPermissions();
 
         for (ThreadNetworkController controller : getAllControllers()) {
             ActiveOperationalDataset activeDataset = newRandomizedDataset("TestNet", controller);
@@ -408,7 +491,7 @@ public class ThreadNetworkControllerTest {
 
     @Test
     public void leave_withoutPrivilegedPermission_throwsSecurityException() {
-        dropPermissions();
+        dropAllPermissions();
 
         for (ThreadNetworkController controller : getAllControllers()) {
             assertThrows(SecurityException.class, () -> controller.leave(mExecutor, v -> {}));
