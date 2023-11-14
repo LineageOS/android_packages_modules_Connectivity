@@ -53,25 +53,25 @@ static jint com_android_server_thread_TunInterfaceController_createTunInterface(
     strlcpy(ifr.ifr_name, ifName.c_str(), sizeof(ifr.ifr_name));
 
     if (ioctl(fd, TUNSETIFF, &ifr, sizeof(ifr)) != 0) {
-        close(fd);
         jniThrowExceptionFmt(env, "java/io/IOException", "ioctl(TUNSETIFF) failed (%s)",
                              strerror(errno));
+        close(fd);
         return -1;
     }
 
     int inet6 = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, IPPROTO_IP);
     if (inet6 == -1) {
-        close(fd);
         jniThrowExceptionFmt(env, "java/io/IOException", "create inet6 socket failed (%s)",
                              strerror(errno));
+        close(fd);
         return -1;
     }
     ifr.ifr_mtu = mtu;
     if (ioctl(inet6, SIOCSIFMTU, &ifr) != 0) {
-        close(fd);
-        close(inet6);
         jniThrowExceptionFmt(env, "java/io/IOException", "ioctl(SIOCSIFMTU) failed (%s)",
                              strerror(errno));
+        close(fd);
+        close(inet6);
         return -1;
     }
 
@@ -94,7 +94,6 @@ static void com_android_server_thread_TunInterfaceController_setInterfaceUp(
     }
 
     if (ioctl(inet6, SIOCSIFFLAGS, &ifr) != 0) {
-        close(inet6);
         jniThrowExceptionFmt(env, "java/io/IOException", "ioctl(SIOCSIFFLAGS) failed (%s)",
                              strerror(errno));
     }
