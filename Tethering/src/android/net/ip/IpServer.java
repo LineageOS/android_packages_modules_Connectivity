@@ -838,7 +838,7 @@ public class IpServer extends StateMachineShim {
 
     private void addInterfaceToNetwork(final int netId, @NonNull final String ifaceName) {
         try {
-            if (null != mRoutingCoordinator.value) {
+            if (SdkLevel.isAtLeastS() && null != mRoutingCoordinator.value) {
                 // TODO : remove this call in favor of using the LocalNetworkConfiguration
                 // correctly, which will let ConnectivityService do it automatically.
                 mRoutingCoordinator.value.addInterfaceToNetwork(netId, ifaceName);
@@ -852,7 +852,7 @@ public class IpServer extends StateMachineShim {
 
     private void addInterfaceForward(@NonNull final String fromIface,
             @NonNull final String toIface) throws ServiceSpecificException, RemoteException {
-        if (null != mRoutingCoordinator.value) {
+        if (SdkLevel.isAtLeastS() && null != mRoutingCoordinator.value) {
             mRoutingCoordinator.value.addInterfaceForward(fromIface, toIface);
         } else {
             mNetd.tetherAddForward(fromIface, toIface);
@@ -862,7 +862,7 @@ public class IpServer extends StateMachineShim {
 
     private void removeInterfaceForward(@NonNull final String fromIface,
             @NonNull final String toIface) {
-        if (null != mRoutingCoordinator.value) {
+        if (SdkLevel.isAtLeastS() && null != mRoutingCoordinator.value) {
             try {
                 mRoutingCoordinator.value.removeInterfaceForward(fromIface, toIface);
             } catch (ServiceSpecificException e) {
