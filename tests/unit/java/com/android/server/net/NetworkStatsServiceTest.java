@@ -193,6 +193,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * TODO: This test used to be really brittle because it used Easymock - it uses Mockito now, but
  * still uses the Easymock structure, which could be simplified.
  */
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 // NetworkStatsService is not updatable before T, so tests do not need to be backwards compatible
