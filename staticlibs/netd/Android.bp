@@ -162,8 +162,13 @@ aidl_interface {
             version: "13",
             imports: [],
         },
+        {
+            version: "14",
+            imports: [],
+        },
 
     ],
+    frozen: true,
 
 }
 
