@@ -86,7 +86,7 @@ public class MdnsFeatureFlags {
         public Builder() {
             mIsMdnsOffloadFeatureEnabled = false;
             mIncludeInetAddressRecordsInProbing = false;
-            mIsExpiredServicesRemovalEnabled = true; // Default enabled.
+            mIsExpiredServicesRemovalEnabled = false;
             mIsLabelCountLimitEnabled = true; // Default enabled.
         }
 
