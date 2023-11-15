@@ -47,6 +47,7 @@ interface INetd {
      * @param isAllowlist Whether this is an allowlist or denylist chain.
      * @param uids The list of UIDs to allow/deny.
      * @return true if the chain was successfully replaced, false otherwise.
+     * @deprecated unimplemented on T+.
      */
     boolean firewallReplaceUidChain(in @utf8InCpp String chainName,
                                     boolean isAllowlist,
@@ -683,6 +684,7 @@ interface INetd {
     * @param uid uid of target app
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void bandwidthAddNaughtyApp(int uid);
 
@@ -692,6 +694,7 @@ interface INetd {
     * @param uid uid of target app
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void bandwidthRemoveNaughtyApp(int uid);
 
@@ -701,6 +704,7 @@ interface INetd {
     * @param uid uid of target app
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void bandwidthAddNiceApp(int uid);
 
@@ -710,6 +714,7 @@ interface INetd {
     * @param uid uid of target app
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void bandwidthRemoveNiceApp(int uid);
 
@@ -983,6 +988,7 @@ interface INetd {
     *                   PERMISSION_UPDATE_DEVICE_STATS. If the permission is NO_PERMISSIONS, then
     *                   revoke all permissions for the uids.
     * @param uids uid of users to grant permission
+    * @deprecated unimplemented on T+.
     */
     void trafficSetNetPermForUids(int permission, in int[] uids);
 
@@ -1071,6 +1077,7 @@ interface INetd {
     * @param firewallRule either FIREWALL_RULE_ALLOW or FIREWALL_RULE_DENY
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void firewallSetUidRule(int childChain, int uid, int firewallRule);
 
@@ -1081,6 +1088,7 @@ interface INetd {
     * @param enable whether to enable or disable child chain.
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void firewallEnableChildChain(int childChain, boolean enable);
 
@@ -1212,6 +1220,7 @@ interface INetd {
      * @param uids an array of UIDs which the filtering rules will be set
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *         cause of the failure.
+     * @deprecated unimplemented on T+.
      */
     void firewallAddUidInterfaceRules(in @utf8InCpp String ifName, in int[] uids);
 
@@ -1224,6 +1233,7 @@ interface INetd {
      * @param uids an array of UIDs from which the filtering rules will be removed
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
      *         cause of the failure.
+     * @deprecated unimplemented on T+.
      */
     void firewallRemoveUidInterfaceRules(in int[] uids);
 
@@ -1231,6 +1241,7 @@ interface INetd {
     * Request netd to change the current active network stats map.
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
+    * @deprecated unimplemented on T+.
     */
     void trafficSwapActiveStatsMap();
 
