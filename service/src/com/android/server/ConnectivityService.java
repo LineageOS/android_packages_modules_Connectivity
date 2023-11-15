@@ -1770,7 +1770,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mUserAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
                 null /* broadcastPermission */, mHandler);
 
-        mNetworkActivityTracker = new LegacyNetworkActivityTracker(mContext, mNetd, mHandler);
+        // TrackMultiNetworkActivities feature should be enabled by trunk stable flag.
+        // But reading the trunk stable flags from mainline modules is not supported yet.
+        // So enabling this feature on V+ release.
+        mTrackMultiNetworkActivities = mDeps.isAtLeastV();
+        mNetworkActivityTracker = new LegacyNetworkActivityTracker(mContext, mNetd, mHandler,
+                mTrackMultiNetworkActivities);
 
         final NetdCallback netdCallback = new NetdCallback();
         try {
@@ -3246,9 +3251,20 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void handleReportNetworkActivity(final NetworkActivityParams params) {
         mNetworkActivityTracker.handleReportNetworkActivity(params);
 
+        final boolean isCellNetworkActivity;
+        if (mTrackMultiNetworkActivities) {
+            final NetworkAgentInfo nai = getNetworkAgentInfoForNetId(params.label);
+            // nai could be null if netd receives a netlink message and calls the network
+            // activity change callback after the network is unregistered from ConnectivityService.
+            isCellNetworkActivity = nai != null
+                    && nai.networkCapabilities.hasTransport(TRANSPORT_CELLULAR);
+        } else {
+            isCellNetworkActivity = params.label == TRANSPORT_CELLULAR;
+        }
+
         if (mDelayDestroyFrozenSockets
                 && params.isActive
-                && params.label == TRANSPORT_CELLULAR
+                && isCellNetworkActivity
                 && !mPendingFrozenUids.isEmpty()) {
             closePendingFrozenSockets();
         }
@@ -4965,6 +4981,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (wasDefault) {
             mDefaultInetConditionPublished = 0;
         }
+        if (mTrackMultiNetworkActivities) {
+            // If trackMultiNetworkActivities is disabled, ActivityTracker removes idleTimer when
+            // the network becomes no longer the default network.
+            mNetworkActivityTracker.removeDataActivityTracking(nai);
+        }
         notifyIfacesChangedForNetworkStats();
         // If this was a local network forwarded to some upstream, or if some local network was
         // forwarded to this nai, then disable forwarding rules now.
@@ -5018,12 +5039,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 }
 
                 if (mDefaultRequest == nri) {
-                    // TODO : make battery stats aware that since 2013 multiple interfaces may be
-                    //  active at the same time. For now keep calling this with the default
-                    //  network, because while incorrect this is the closest to the old (also
-                    //  incorrect) behavior.
-                    mNetworkActivityTracker.updateDataActivityTracking(
-                            null /* newNetwork */, nai);
+                    mNetworkActivityTracker.updateDefaultNetwork(null /* newNetwork */, nai);
                     maybeClosePendingFrozenSockets(null /* newNetwork */, nai);
                     ensureNetworkTransitionWakelock(nai.toShortString());
                 }
@@ -9644,7 +9660,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (oldDefaultNetwork != null) {
             mLingerMonitor.noteLingerDefaultNetwork(oldDefaultNetwork, newDefaultNetwork);
         }
-        mNetworkActivityTracker.updateDataActivityTracking(newDefaultNetwork, oldDefaultNetwork);
+        mNetworkActivityTracker.updateDefaultNetwork(newDefaultNetwork, oldDefaultNetwork);
         maybeClosePendingFrozenSockets(newDefaultNetwork, oldDefaultNetwork);
         mProxyTracker.setDefaultProxy(null != newDefaultNetwork
                 ? newDefaultNetwork.linkProperties.getHttpProxy() : null);
@@ -10543,6 +10559,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
             networkAgent.lingerRequest(NetworkRequest.REQUEST_ID_NONE,
                     SystemClock.elapsedRealtime(), mNascentDelayMs);
             networkAgent.setInactive();
+
+            if (mTrackMultiNetworkActivities) {
+                // Start tracking activity of this network.
+                // This must be called before rematchAllNetworksAndRequests since the network
+                // should be tracked when the network becomes the default network.
+                // This method does not trigger any callbacks or broadcasts. Callbacks or broadcasts
+                // can be triggered later if this network becomes the default network.
+                mNetworkActivityTracker.setupDataActivityTracking(networkAgent);
+            }
 
             // Consider network even though it is not yet validated.
             rematchAllNetworksAndRequests();
@@ -11735,8 +11760,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
      */
     private static final class NetworkActivityParams {
         public final boolean isActive;
-        // Label used for idle timer. Transport type is used as label.
-        // label is int since NMS was using the identifier as int, and it has not been changed
+        // If TrackMultiNetworkActivities is enabled, idleTimer label is netid.
+        // If TrackMultiNetworkActivities is disabled, idleTimer label is transport type.
         public final int label;
         public final long timestampNs;
         // Uid represents the uid that was responsible for waking the radio.
@@ -11778,13 +11803,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    private final boolean mTrackMultiNetworkActivities;
     private final LegacyNetworkActivityTracker mNetworkActivityTracker;
 
     /**
      * Class used for updating network activity tracking with netd and notify network activity
      * changes.
      */
-    private static final class LegacyNetworkActivityTracker {
+    @VisibleForTesting
+    public static final class LegacyNetworkActivityTracker {
         private static final int NO_UID = -1;
         private final Context mContext;
         private final INetd mNetd;
@@ -11796,8 +11823,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // If there is no default network, default network is considered active to keep the existing
         // behavior. Initial value is used until first connect to the default network.
         private volatile boolean mIsDefaultNetworkActive = true;
+        private Network mDefaultNetwork;
         // Key is netId. Value is configured idle timer information.
         private final SparseArray<IdleTimerParams> mActiveIdleTimers = new SparseArray<>();
+        private final boolean mTrackMultiNetworkActivities;
+        // Store netIds of Wi-Fi networks whose idletimers report that they are active
+        private final Set<Integer> mActiveWifiNetworks = new ArraySet<>();
+        // Store netIds of cellular networks whose idletimers report that they are active
+        private final Set<Integer> mActiveCellularNetworks = new ArraySet<>();
 
         private static class IdleTimerParams {
             public final int timeout;
@@ -11810,10 +11843,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         LegacyNetworkActivityTracker(@NonNull Context context, @NonNull INetd netd,
-                @NonNull Handler handler) {
+                @NonNull Handler handler, boolean trackMultiNetworkActivities) {
             mContext = context;
             mNetd = netd;
             mHandler = handler;
+            mTrackMultiNetworkActivities = trackMultiNetworkActivities;
         }
 
         private void ensureRunningOnConnectivityServiceThread() {
@@ -11823,19 +11857,97 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
-        public void handleReportNetworkActivity(NetworkActivityParams activityParams) {
-            ensureRunningOnConnectivityServiceThread();
+        /**
+         * Update network activity and call BatteryStats to update radio power state if the
+         * mobile or Wi-Fi activity is changed.
+         * LegacyNetworkActivityTracker considers the mobile network is active if at least one
+         * mobile network is active since BatteryStatsService only maintains a single power state
+         * for the mobile network.
+         * The Wi-Fi network is also the same.
+         *
+         * {@link #setupDataActivityTracking} and {@link #removeDataActivityTracking} use
+         * TRANSPORT_CELLULAR as the transportType argument if the network has both cell and Wi-Fi
+         * transports.
+         */
+        private void maybeUpdateRadioPowerState(final int netId, final int transportType,
+                final boolean isActive, final int uid) {
+            if (transportType != TRANSPORT_WIFI && transportType != TRANSPORT_CELLULAR) {
+                Log.e(TAG, "Unexpected transportType in maybeUpdateRadioPowerState: "
+                        + transportType);
+                return;
+            }
+            final Set<Integer> activeNetworks = transportType == TRANSPORT_WIFI
+                    ? mActiveWifiNetworks : mActiveCellularNetworks;
+
+            final boolean wasEmpty = activeNetworks.isEmpty();
+            if (isActive) {
+                activeNetworks.add(netId);
+            } else {
+                activeNetworks.remove(netId);
+            }
+
+            if (wasEmpty != activeNetworks.isEmpty()) {
+                updateRadioPowerState(isActive, transportType, uid);
+            }
+        }
+
+        private void handleDefaultNetworkActivity(final int transportType,
+                final boolean isActive, final long timestampNs) {
+            mIsDefaultNetworkActive = isActive;
+            sendDataActivityBroadcast(transportTypeToLegacyType(transportType),
+                    isActive, timestampNs);
+            if (isActive) {
+                reportNetworkActive();
+            }
+        }
+
+        private void handleReportNetworkActivityWithNetIdLabel(
+                NetworkActivityParams activityParams) {
+            final int netId = activityParams.label;
+            final IdleTimerParams idleTimerParams = mActiveIdleTimers.get(netId);
+            if (idleTimerParams == null) {
+                // This network activity change is not tracked anymore
+                // This can happen if netd callback post activity change event message but idle
+                // timer is removed before processing this message.
+                return;
+            }
+            // TODO: if a network changes transports, storing the transport type in the
+            // IdleTimerParams is not correct. Consider getting it from the network's
+            // NetworkCapabilities instead.
+            final int transportType = idleTimerParams.transportType;
+            maybeUpdateRadioPowerState(netId, transportType,
+                    activityParams.isActive, activityParams.uid);
+
+            if (mDefaultNetwork == null || mDefaultNetwork.netId != netId) {
+                // This activity change is not for the default network.
+                return;
+            }
+
+            handleDefaultNetworkActivity(transportType, activityParams.isActive,
+                    activityParams.timestampNs);
+        }
+
+        private void handleReportNetworkActivityWithTransportTypeLabel(
+                NetworkActivityParams activityParams) {
             if (mActiveIdleTimers.size() == 0) {
                 // This activity change is not for the current default network.
                 // This can happen if netd callback post activity change event message but
                 // the default network is lost before processing this message.
                 return;
             }
-            sendDataActivityBroadcast(transportTypeToLegacyType(activityParams.label),
-                    activityParams.isActive, activityParams.timestampNs);
-            mIsDefaultNetworkActive = activityParams.isActive;
-            if (mIsDefaultNetworkActive) {
-                reportNetworkActive();
+            handleDefaultNetworkActivity(activityParams.label, activityParams.isActive,
+                    activityParams.timestampNs);
+        }
+
+        /**
+         * Handle network activity change
+         */
+        public void handleReportNetworkActivity(NetworkActivityParams activityParams) {
+            ensureRunningOnConnectivityServiceThread();
+            if (mTrackMultiNetworkActivities) {
+                handleReportNetworkActivityWithNetIdLabel(activityParams);
+            } else {
+                handleReportNetworkActivityWithTransportTypeLabel(activityParams);
             }
         }
 
@@ -11892,6 +12004,30 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         /**
+         * Get idle timer label
+         */
+        @VisibleForTesting
+        public static int getIdleTimerLabel(final boolean trackMultiNetworkActivities,
+                final int netId, final int transportType) {
+            return trackMultiNetworkActivities ? netId : transportType;
+        }
+
+        private boolean maybeCreateIdleTimer(
+                String iface, int netId, int timeout, int transportType) {
+            if (timeout <= 0 || iface == null) return false;
+            try {
+                final String label = Integer.toString(getIdleTimerLabel(
+                        mTrackMultiNetworkActivities, netId, transportType));
+                mNetd.idletimerAddInterface(iface, timeout, label);
+                mActiveIdleTimers.put(netId, new IdleTimerParams(timeout, transportType));
+                return true;
+            } catch (Exception e) {
+                loge("Exception in createIdleTimer", e);
+                return false;
+            }
+        }
+
+        /**
          * Setup data activity tracking for the given network.
          *
          * Every {@code setupDataActivityTracking} should be paired with a
@@ -11900,13 +12036,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * @return true if the idleTimer is added to the network, false otherwise
          */
         private boolean setupDataActivityTracking(NetworkAgentInfo networkAgent) {
+            ensureRunningOnConnectivityServiceThread();
             final String iface = networkAgent.linkProperties.getInterfaceName();
             final int netId = networkAgent.network().netId;
 
             final int timeout;
             final int type;
 
-            if (networkAgent.networkCapabilities.hasTransport(
+            if (!networkAgent.networkCapabilities.hasCapability(NET_CAPABILITY_NOT_VPN)) {
+                // Do not track VPN network.
+                return false;
+            } else if (networkAgent.networkCapabilities.hasTransport(
                     NetworkCapabilities.TRANSPORT_CELLULAR)) {
                 timeout = Settings.Global.getInt(mContext.getContentResolver(),
                         ConnectivitySettingsManager.DATA_ACTIVITY_TIMEOUT_MOBILE,
@@ -11922,25 +12062,21 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 return false; // do not track any other networks
             }
 
-            updateRadioPowerState(true /* isActive */, type);
-
-            if (timeout > 0 && iface != null) {
-                try {
-                    mActiveIdleTimers.put(netId, new IdleTimerParams(timeout, type));
-                    mNetd.idletimerAddInterface(iface, timeout, Integer.toString(type));
-                    return true;
-                } catch (Exception e) {
-                    // You shall not crash!
-                    loge("Exception in setupDataActivityTracking " + e);
-                }
+            final boolean hasIdleTimer = maybeCreateIdleTimer(iface, netId, timeout, type);
+            if (hasIdleTimer || !mTrackMultiNetworkActivities) {
+                // If trackMultiNetwork is disabled, NetworkActivityTracker updates radio power
+                // state in all cases. If trackMultiNetwork is enabled, it updates radio power
+                // state only about a network that has an idletimer.
+                maybeUpdateRadioPowerState(netId, type, true /* isActive */, NO_UID);
             }
-            return false;
+            return hasIdleTimer;
         }
 
         /**
          * Remove data activity tracking when network disconnects.
          */
-        private void removeDataActivityTracking(NetworkAgentInfo networkAgent) {
+        public void removeDataActivityTracking(NetworkAgentInfo networkAgent) {
+            ensureRunningOnConnectivityServiceThread();
             final String iface = networkAgent.linkProperties.getInterfaceName();
             final int netId = networkAgent.network().netId;
             final NetworkCapabilities caps = networkAgent.networkCapabilities;
@@ -11948,7 +12084,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (iface == null) return;
 
             final int type;
-            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            if (!networkAgent.networkCapabilities.hasCapability(NET_CAPABILITY_NOT_VPN)) {
+                // Do not track VPN network.
+                return;
+            } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
                 type = NetworkCapabilities.TRANSPORT_CELLULAR;
             } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
                 type = NetworkCapabilities.TRANSPORT_WIFI;
@@ -11957,16 +12096,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
 
             try {
-                updateRadioPowerState(false /* isActive */, type);
+                maybeUpdateRadioPowerState(netId, type, false /* isActive */, NO_UID);
                 final IdleTimerParams params = mActiveIdleTimers.get(netId);
                 if (params == null) {
                     // IdleTimer is not added if the configured timeout is 0 or negative value
                     return;
                 }
                 mActiveIdleTimers.remove(netId);
-                // The call fails silently if no idle timer setup for this interface
-                mNetd.idletimerRemoveInterface(iface, params.timeout,
-                        Integer.toString(params.transportType));
+                final String label = Integer.toString(getIdleTimerLabel(
+                        mTrackMultiNetworkActivities, netId, params.transportType));
+                        // The call fails silently if no idle timer setup for this interface
+                mNetd.idletimerRemoveInterface(iface, params.timeout, label);
             } catch (Exception e) {
                 // You shall not crash!
                 loge("Exception in removeDataActivityTracking " + e);
@@ -11976,12 +12116,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
         private void updateDefaultNetworkActivity(NetworkAgentInfo defaultNetwork,
                 boolean hasIdleTimer) {
             if (defaultNetwork != null) {
+                mDefaultNetwork = defaultNetwork.network();
                 mIsDefaultNetworkActive = true;
-                // Callbacks are called only when the network has the idle timer.
-                if (hasIdleTimer) {
+                // If only the default network is tracked, callbacks are called only when the
+                // network has the idle timer.
+                if (mTrackMultiNetworkActivities || hasIdleTimer) {
                     reportNetworkActive();
                 }
             } else {
+                mDefaultNetwork = null;
                 // If there is no default network, default network is considered active to keep the
                 // existing behavior.
                 mIsDefaultNetworkActive = true;
@@ -11989,29 +12132,34 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         /**
-         * Update data activity tracking when network state is updated.
+         * Update the default network this class tracks the activity of.
          */
-        public void updateDataActivityTracking(NetworkAgentInfo newNetwork,
+        public void updateDefaultNetwork(NetworkAgentInfo newNetwork,
                 NetworkAgentInfo oldNetwork) {
             ensureRunningOnConnectivityServiceThread();
+            // If TrackMultiNetworkActivities is enabled, devices add idleTimer when the network is
+            // first connected and remove when the network is disconnected.
+            // If TrackMultiNetworkActivities is disabled, devices add idleTimer when the network
+            // becomes the default network and remove when the network becomes no longer the default
+            // network.
             boolean hasIdleTimer = false;
-            if (newNetwork != null) {
+            if (!mTrackMultiNetworkActivities && newNetwork != null) {
                 hasIdleTimer = setupDataActivityTracking(newNetwork);
             }
             updateDefaultNetworkActivity(newNetwork, hasIdleTimer);
-            if (oldNetwork != null) {
+            if (!mTrackMultiNetworkActivities && oldNetwork != null) {
                 removeDataActivityTracking(oldNetwork);
             }
         }
 
-        private void updateRadioPowerState(boolean isActive, int transportType) {
+        private void updateRadioPowerState(boolean isActive, int transportType, int uid) {
             final BatteryStatsManager bs = mContext.getSystemService(BatteryStatsManager.class);
             switch (transportType) {
                 case NetworkCapabilities.TRANSPORT_CELLULAR:
-                    bs.reportMobileRadioPowerState(isActive, NO_UID);
+                    bs.reportMobileRadioPowerState(isActive, uid);
                     break;
                 case NetworkCapabilities.TRANSPORT_WIFI:
-                    bs.reportWifiRadioPowerState(isActive, NO_UID);
+                    bs.reportWifiRadioPowerState(isActive, uid);
                     break;
                 default:
                     logw("Untracked transport type:" + transportType);
@@ -12031,7 +12179,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         public void dump(IndentingPrintWriter pw) {
+            pw.print("mTrackMultiNetworkActivities="); pw.println(mTrackMultiNetworkActivities);
             pw.print("mIsDefaultNetworkActive="); pw.println(mIsDefaultNetworkActive);
+            pw.print("mDefaultNetwork="); pw.println(mDefaultNetwork);
             pw.println("Idle timers:");
             try {
                 for (int i = 0; i < mActiveIdleTimers.size(); i++) {
@@ -12040,11 +12190,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     pw.print("    timeout="); pw.print(params.timeout);
                     pw.print(" type="); pw.println(params.transportType);
                 }
+                pw.println("WiFi active networks: " + mActiveWifiNetworks);
+                pw.println("Cellular active networks: " + mActiveCellularNetworks);
             } catch (Exception e) {
-                // mActiveIdleTimers should only be accessed from handler thread, except dump().
-                // As dump() is never called in normal usage, it would be needlessly expensive
-                // to lock the collection only for its benefit.
-                // Also, mActiveIdleTimers is not expected to be updated frequently.
+                // mActiveIdleTimers, mActiveWifiNetworks, and mActiveCellularNetworks should only
+                // be accessed from handler thread, except dump(). As dump() is never called in
+                // normal usage, it would be needlessly expensive to lock the collection only for
+                // its benefit. Also, they are not expected to be updated frequently.
                 // So catching the exception and logging.
                 pw.println("Failed to dump NetworkActivityTracker: " + e);
             }
