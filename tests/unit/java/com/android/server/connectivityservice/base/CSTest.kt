@@ -43,6 +43,7 @@ import android.net.NetworkScore
 import android.net.PacProxyManager
 import android.net.networkstack.NetworkStackClientBase
 import android.os.BatteryStatsManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.UserHandle
@@ -54,6 +55,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.android.internal.app.IBatteryStats
 import com.android.internal.util.test.BroadcastInterceptingContext
 import com.android.modules.utils.build.SdkLevel
+import com.android.net.module.util.ArrayTrackRecord
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException
 import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
@@ -64,14 +66,16 @@ import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies
 import com.android.server.connectivity.ProxyTracker
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
+import java.util.concurrent.Executors
+import kotlin.test.assertNull
+import kotlin.test.fail
 import org.mockito.AdditionalAnswers.delegatesTo
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
-import java.util.concurrent.Executors
-import kotlin.test.fail
 
 internal const val HANDLER_TIMEOUT_MS = 2_000
+internal const val BROADCAST_TIMEOUT_MS = 3_000L
 internal const val TEST_PACKAGE_NAME = "com.android.test.package"
 internal const val WIFI_WOL_IFNAME = "test_wlan_wol"
 internal val LOCAL_IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1")
@@ -155,7 +159,8 @@ open class CSTest {
     val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
     val alarmManager = makeMockAlarmManager()
     val systemConfigManager = makeMockSystemConfigManager()
-    val batteryManager = BatteryStatsManager(mock<IBatteryStats>())
+    val batteryStats = mock<IBatteryStats>()
+    val batteryManager = BatteryStatsManager(batteryStats)
     val telephonyManager = mock<TelephonyManager>().also {
         doReturn(true).`when`(it).isDataCapable()
     }
@@ -284,6 +289,26 @@ open class CSTest {
             Context.BATTERY_STATS_SERVICE -> batteryManager
             Context.STATS_MANAGER -> null // Stats manager is final and can't be mocked
             else -> super.getSystemService(serviceName)
+        }
+
+        internal val orderedBroadcastAsUserHistory = ArrayTrackRecord<Intent>().newReadHead()
+
+        fun expectNoDataActivityBroadcast(timeoutMs: Int) {
+            assertNull(orderedBroadcastAsUserHistory.poll(
+                    timeoutMs.toLong()) { intent -> true })
+        }
+
+        override fun sendOrderedBroadcastAsUser(
+                intent: Intent,
+                user: UserHandle,
+                receiverPermission: String?,
+                resultReceiver: BroadcastReceiver?,
+                scheduler: Handler?,
+                initialCode: Int,
+                initialData: String?,
+                initialExtras: Bundle?
+        ) {
+            orderedBroadcastAsUserHistory.add(intent)
         }
     }
 
