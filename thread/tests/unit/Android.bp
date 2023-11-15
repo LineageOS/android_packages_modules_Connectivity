@@ -36,6 +36,7 @@ android_test {
         "ctstestrunner-axt",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
+        "guava",
         "guava-android-testlib",
         "net-tests-utils",
         "truth",
