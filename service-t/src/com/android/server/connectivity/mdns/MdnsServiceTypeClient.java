@@ -312,8 +312,7 @@ public class MdnsServiceTypeClient {
         this.searchOptions = searchOptions;
         boolean hadReply = false;
         if (listeners.put(listener, searchOptions) == null) {
-            for (MdnsResponse existingResponse :
-                    serviceCache.getCachedServices(cacheKey)) {
+            for (MdnsResponse existingResponse : serviceCache.getCachedServices(cacheKey)) {
                 if (!responseMatchesOptions(existingResponse, searchOptions)) continue;
                 final MdnsServiceInfo info =
                         buildMdnsServiceInfoFromResponse(existingResponse, serviceTypeLabels);
