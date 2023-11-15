@@ -74,10 +74,7 @@ public class OffloadHalHidlImpl implements IOffloadHal {
      */
     public boolean initOffload(@NonNull NativeHandle handle1, @NonNull NativeHandle handle2,
             @NonNull OffloadHalCallback callback) {
-        final String logmsg = String.format("initOffload(%d, %d, %s)",
-                handle1.getFileDescriptor().getInt$(), handle2.getFileDescriptor().getInt$(),
-                (callback == null) ? "null"
-                : "0x" + Integer.toHexString(System.identityHashCode(callback)));
+        final String logmsg = "initOffload()";
 
         mOffloadHalCallback = callback;
         mTetheringOffloadCallback = new TetheringOffloadCallback(
