@@ -39,6 +39,7 @@ import java.util.Objects;
  * a given delay. This is typically used to deploy new network parameters (e.g. Network Key or
  * Channel) to all devices in the network.
  *
+ * @see ThreadNetworkController#scheduleMigration
  * @hide
  */
 @FlaggedApi(ThreadNetworkFlags.FLAG_THREAD_ENABLED)
@@ -76,7 +77,8 @@ public final class PendingOperationalDataset implements Parcelable {
      * @param pendingTimestamp the Pending Timestamp which represents the version of this Pending
      *     Dataset
      * @param delayTimer the delay after when {@code activeOpDataset} will be committed on this
-     *     device
+     *     device; use {@link Duration#ZERO} to tell the system to choose a reasonable value
+     *     automatically
      */
     public PendingOperationalDataset(
             @NonNull ActiveOperationalDataset activeOpDataset,
