@@ -36,6 +36,7 @@ android_test {
         "androidx.test.ext.junit",
         "compatibility-device-util-axt",
         "ctstestrunner-axt",
+        "guava",
         "guava-android-testlib",
         "net-tests-utils",
         "truth",
