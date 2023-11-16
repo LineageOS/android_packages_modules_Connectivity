@@ -47,8 +47,9 @@ class CSKeepConnectedTest : CSTest() {
         val keepConnectedAgent = Agent(nc = nc, score = FromS(NetworkScore.Builder()
                 .setKeepConnectedReason(KEEP_CONNECTED_LOCAL_NETWORK)
                 .build()),
-                lnc = LocalNetworkConfig.Builder().build())
-        val dontKeepConnectedAgent = Agent(nc = nc, lnc = LocalNetworkConfig.Builder().build())
+                lnc = FromS(LocalNetworkConfig.Builder().build()))
+        val dontKeepConnectedAgent = Agent(nc = nc,
+                lnc = FromS(LocalNetworkConfig.Builder().build()))
         doTestKeepConnected(keepConnectedAgent, dontKeepConnectedAgent)
     }
 
