@@ -26,6 +26,7 @@ import static com.android.testutils.ParcelUtils.assertParcelSane;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -310,5 +311,13 @@ public class VpnProfileTest {
         decoded.username = profile.username;
         decoded.password = profile.password;
         assertEquals(profile, decoded);
+    }
+
+    @Test
+    public void testClone() {
+        final VpnProfile profile = getSampleIkev2Profile(DUMMY_PROFILE_KEY);
+        final VpnProfile clone = profile.clone();
+        assertEquals(profile, clone);
+        assertNotSame(profile, clone);
     }
 }
