@@ -6262,8 +6262,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     if (!networkFound) return;
 
                     if (underpinnedNetworkFound) {
+                        final NetworkCapabilities underpinnedNc =
+                                getNetworkCapabilitiesInternal(underpinnedNetwork);
                         mKeepaliveTracker.handleMonitorAutomaticKeepalive(ki,
-                                underpinnedNetwork.netId);
+                                underpinnedNetwork.netId, underpinnedNc.getUids());
                     } else {
                         // If no underpinned network, then make sure the keepalive is running.
                         mKeepaliveTracker.handleMaybeResumeKeepalive(ki);
