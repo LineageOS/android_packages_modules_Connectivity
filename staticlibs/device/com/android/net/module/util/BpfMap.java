@@ -18,12 +18,14 @@ package com.android.net.module.util;
 import static android.system.OsConstants.EEXIST;
 import static android.system.OsConstants.ENOENT;
 
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
 import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @param <K> the key of the map.
  * @param <V> the value of the map.
  */
+@RequiresApi(Build.VERSION_CODES.S)
 public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V> {
     static {
         System.loadLibrary(JniUtil.getJniLibraryName(BpfMap.class.getPackage()));
