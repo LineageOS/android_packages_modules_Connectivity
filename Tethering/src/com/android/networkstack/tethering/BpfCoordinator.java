@@ -90,7 +90,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1258,12 +1257,18 @@ public class BpfCoordinator {
         pw.decreaseIndent();
     }
 
-    private IpPrefix longToPrefix(long ip64) {
-        final ByteBuffer prefixBuffer = ByteBuffer.allocate(IPV6_ADDR_LEN);
-        prefixBuffer.putLong(ip64);
+    /**
+     * Returns a /64 IpPrefix corresponding to the passed in byte array
+     *
+     * @param ip64 byte array to convert format
+     * @return the converted IpPrefix
+     */
+    @VisibleForTesting
+    public static IpPrefix bytesToPrefix(final byte[] ip64) {
         IpPrefix sourcePrefix;
+        byte[] prefixBytes = Arrays.copyOf(ip64, IPV6_ADDR_LEN);
         try {
-            sourcePrefix = new IpPrefix(InetAddress.getByAddress(prefixBuffer.array()), 64);
+            sourcePrefix = new IpPrefix(InetAddress.getByAddress(prefixBytes), 64);
         } catch (UnknownHostException e) {
             // Cannot happen. InetAddress.getByAddress can only throw an exception if the byte array
             // is the wrong length, but we allocate it with fixed length IPV6_ADDR_LEN.
@@ -1274,7 +1279,7 @@ public class BpfCoordinator {
 
     private String ipv6UpstreamRuleToString(TetherUpstream6Key key, Tether6Value value) {
         return String.format("%d(%s) [%s] [%s] -> %d(%s) %04x [%s] [%s]",
-                key.iif, getIfName(key.iif), key.dstMac, longToPrefix(key.src64), value.oif,
+                key.iif, getIfName(key.iif), key.dstMac, bytesToPrefix(key.src64), value.oif,
                 getIfName(value.oif), value.ethProto, value.ethSrcMac, value.ethDstMac);
     }
 
@@ -1570,7 +1575,7 @@ public class BpfCoordinator {
          */
         @NonNull
         public TetherUpstream6Key makeTetherUpstream6Key() {
-            long prefix64 = ByteBuffer.wrap(sourcePrefix.getRawAddress()).getLong();
+            final byte[] prefix64 = Arrays.copyOf(sourcePrefix.getRawAddress(), 8);
             return new TetherUpstream6Key(downstreamIfindex, inDstMac, prefix64);
         }
 
