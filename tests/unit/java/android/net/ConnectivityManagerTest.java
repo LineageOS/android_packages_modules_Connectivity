@@ -90,6 +90,7 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -102,6 +103,8 @@ import java.lang.ref.WeakReference;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(VERSION_CODES.R)
 public class ConnectivityManagerTest {
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
     private static final int TIMEOUT_MS = 30_000;
     private static final int SHORT_TIMEOUT_MS = 150;
 
@@ -524,6 +527,7 @@ public class ConnectivityManagerTest {
                     + " attempts", ref.get());
     }
 
+    @DevSdkIgnoreRule.IgnoreAfter(VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     public void testDataSaverStatusTracker() {
         mockService(NetworkPolicyManager.class, Context.NETWORK_POLICY_SERVICE, mNpm);
