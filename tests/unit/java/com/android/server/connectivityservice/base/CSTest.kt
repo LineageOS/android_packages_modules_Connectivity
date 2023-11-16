@@ -321,7 +321,7 @@ open class CSTest {
             nc: NetworkCapabilities = defaultNc(),
             nac: NetworkAgentConfig = emptyAgentConfig(nc.getLegacyType()),
             lp: LinkProperties = defaultLp(),
-            lnc: LocalNetworkConfig? = null,
+            lnc: FromS<LocalNetworkConfig>? = null,
             score: FromS<NetworkScore> = defaultScore(),
             provider: NetworkProvider? = null
     ) = CSAgentWrapper(context, deps, csHandlerThread, networkStack,

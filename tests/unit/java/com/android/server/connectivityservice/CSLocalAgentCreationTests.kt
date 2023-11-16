@@ -49,7 +49,7 @@ private const val NO_CALLBACK_TIMEOUT_MS = 200L
 private fun keepConnectedScore() =
         FromS(NetworkScore.Builder().setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST).build())
 
-private fun defaultLnc() = LocalNetworkConfig.Builder().build()
+private fun defaultLnc() = FromS(LocalNetworkConfig.Builder().build())
 
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
@@ -124,8 +124,7 @@ class CSLocalAgentCreationTests(
                     lnc = null)
         }
         assertFailsWith<IllegalArgumentException> {
-            Agent(nc = NetworkCapabilities.Builder().build(),
-                    lnc = LocalNetworkConfig.Builder().build())
+            Agent(nc = NetworkCapabilities.Builder().build(), lnc = defaultLnc())
         }
     }
 }
