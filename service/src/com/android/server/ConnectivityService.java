@@ -10085,6 +10085,45 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Process default network changes if applicable.
         processDefaultNetworkChanges(changes);
 
+        // Update forwarding rules for the upstreams of local networks. Do this before sending
+        // onAvailable so that by the time onAvailable is sent the forwarding rules are set up.
+        // Don't send CALLBACK_LOCAL_NETWORK_INFO_CHANGED yet though : they should be sent after
+        // onAvailable so clients know what network the change is about. Store such changes in
+        // an array that's only allocated if necessary (because it's almost never necessary).
+        ArrayList<NetworkAgentInfo> localInfoChangedAgents = null;
+        for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
+            if (!nai.isLocalNetwork()) continue;
+            final NetworkRequest nr = nai.localNetworkConfig.getUpstreamSelector();
+            if (null == nr) continue; // No upstream for this local network
+            final NetworkRequestInfo nri = mNetworkRequests.get(nr);
+            final NetworkReassignment.RequestReassignment change = changes.getReassignment(nri);
+            if (null == change) continue; // No change in upstreams for this network
+            final String fromIface = nai.linkProperties.getInterfaceName();
+            if (!hasSameInterfaceName(change.mOldNetwork, change.mNewNetwork)
+                    || change.mOldNetwork.isDestroyed()) {
+                // There can be a change with the same interface name if the new network is the
+                // replacement for the old network that was unregisteredAfterReplacement.
+                try {
+                    if (null != change.mOldNetwork) {
+                        mRoutingCoordinatorService.removeInterfaceForward(fromIface,
+                                change.mOldNetwork.linkProperties.getInterfaceName());
+                    }
+                    // If the new upstream is already destroyed, there is no point in setting up
+                    // a forward (in fact, it might forward to the interface for some new network !)
+                    // Later when the upstream disconnects CS will try to remove the forward, which
+                    // is ignored with a benign log by RoutingCoordinatorService.
+                    if (null != change.mNewNetwork && !change.mNewNetwork.isDestroyed()) {
+                        mRoutingCoordinatorService.addInterfaceForward(fromIface,
+                                change.mNewNetwork.linkProperties.getInterfaceName());
+                    }
+                } catch (final RemoteException e) {
+                    loge("Can't update forwarding rules", e);
+                }
+            }
+            if (null == localInfoChangedAgents) localInfoChangedAgents = new ArrayList<>();
+            localInfoChangedAgents.add(nai);
+        }
+
         // Notify requested networks are available after the default net is switched, but
         // before LegacyTypeTracker sends legacy broadcasts
         for (final NetworkReassignment.RequestReassignment event :
@@ -10133,38 +10172,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             notifyNetworkLosing(nai, now);
         }
 
-        // Update forwarding rules for the upstreams of local networks. Do this after sending
-        // onAvailable so that clients understand what network this is about.
-        for (final NetworkAgentInfo nai : mNetworkAgentInfos) {
-            if (!nai.isLocalNetwork()) continue;
-            final NetworkRequest nr = nai.localNetworkConfig.getUpstreamSelector();
-            if (null == nr) continue; // No upstream for this local network
-            final NetworkRequestInfo nri = mNetworkRequests.get(nr);
-            final NetworkReassignment.RequestReassignment change = changes.getReassignment(nri);
-            if (null == change) continue; // No change in upstreams for this network
-            final String fromIface = nai.linkProperties.getInterfaceName();
-            if (!hasSameInterfaceName(change.mOldNetwork, change.mNewNetwork)
-                    || change.mOldNetwork.isDestroyed()) {
-                // There can be a change with the same interface name if the new network is the
-                // replacement for the old network that was unregisteredAfterReplacement.
-                try {
-                    if (null != change.mOldNetwork) {
-                        mRoutingCoordinatorService.removeInterfaceForward(fromIface,
-                                change.mOldNetwork.linkProperties.getInterfaceName());
-                    }
-                    // If the new upstream is already destroyed, there is no point in setting up
-                    // a forward (in fact, it might forward to the interface for some new network !)
-                    // Later when the upstream disconnects CS will try to remove the forward, which
-                    // is ignored with a benign log by RoutingCoordinatorService.
-                    if (null != change.mNewNetwork && !change.mNewNetwork.isDestroyed()) {
-                        mRoutingCoordinatorService.addInterfaceForward(fromIface,
-                                change.mNewNetwork.linkProperties.getInterfaceName());
-                    }
-                } catch (final RemoteException e) {
-                    loge("Can't update forwarding rules", e);
-                }
+        // Send LOCAL_NETWORK_INFO_CHANGED callbacks now that onAvailable and onLost have been sent.
+        if (null != localInfoChangedAgents) {
+            for (final NetworkAgentInfo nai : localInfoChangedAgents) {
+                notifyNetworkCallbacks(nai,
+                        ConnectivityManager.CALLBACK_LOCAL_NETWORK_INFO_CHANGED);
             }
-            notifyNetworkCallbacks(nai, ConnectivityManager.CALLBACK_LOCAL_NETWORK_INFO_CHANGED);
         }
 
         updateLegacyTypeTrackerAndVpnLockdownForRematch(changes, nais);
