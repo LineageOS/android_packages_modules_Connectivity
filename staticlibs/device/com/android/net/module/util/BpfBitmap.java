@@ -16,9 +16,11 @@
 
 package com.android.net.module.util;
 
+import android.os.Build;
 import android.system.ErrnoException;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
  /**
  *
@@ -26,6 +28,7 @@ import androidx.annotation.NonNull;
  * array type with key->int and value->uint64_t defined in the bpf program.
  *
  */
+@RequiresApi(Build.VERSION_CODES.S)
 public class BpfBitmap {
     private BpfMap<Struct.S32, Struct.S64> mBpfMap;
 
