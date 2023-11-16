@@ -2039,16 +2039,7 @@ public class VpnTest extends VpnTestBase {
 
     private Vpn startLegacyVpn(final Vpn vpn, final VpnProfile vpnProfile) throws Exception {
         setMockedUsers(PRIMARY_USER);
-
-        // Dummy egress interface
-        final LinkProperties lp = new LinkProperties();
-        lp.setInterfaceName(EGRESS_IFACE);
-
-        final RouteInfo defaultRoute = new RouteInfo(new IpPrefix(Inet4Address.ANY, 0),
-                        InetAddresses.parseNumericAddress("192.0.2.0"), EGRESS_IFACE);
-        lp.addRoute(defaultRoute);
-
-        vpn.startLegacyVpn(vpnProfile, EGRESS_NETWORK, lp);
+        vpn.startLegacyVpn(vpnProfile);
         return vpn;
     }
 
