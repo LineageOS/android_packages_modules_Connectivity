@@ -25,7 +25,13 @@ namespace android {
 static jobject com_android_server_ServiceManagerWrapper_waitForService(
         JNIEnv* env, jobject clazz, jstring serviceName) {
     ScopedUtfChars name(env, serviceName);
+
+// AServiceManager_waitForService is available on only 31+, but it's still safe for Thread
+// service because it's enabled on only 34+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
     return AIBinder_toJavaBinder(env, AServiceManager_waitForService(name.c_str()));
+#pragma clang diagnostic pop
 }
 
 /*
