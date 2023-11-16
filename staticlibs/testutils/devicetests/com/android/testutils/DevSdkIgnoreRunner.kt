@@ -19,6 +19,7 @@ package com.android.testutils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
+import java.lang.IllegalStateException
 import java.lang.reflect.Modifier
 import org.junit.runner.Description
 import org.junit.runner.Runner
@@ -27,6 +28,7 @@ import org.junit.runner.manipulation.Filterable
 import org.junit.runner.manipulation.NoTestsRemainException
 import org.junit.runner.manipulation.Sortable
 import org.junit.runner.manipulation.Sorter
+import org.junit.runner.notification.Failure
 import org.junit.runner.notification.RunNotifier
 import org.junit.runners.Parameterized
 
@@ -52,6 +54,9 @@ import org.junit.runners.Parameterized
  *     class MyTestClass { ... }
  */
 class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, Sortable {
+    private val leakMonitorDesc = Description.createTestDescription(klass, "ThreadLeakMonitor")
+    private val shouldThreadLeakFailTest = klass.isAnnotationPresent(MonitorThreadLeak::class.java)
+
     // Inference correctly infers Runner & Filterable & Sortable for |baseRunner|, but the
     // Java bytecode doesn't have a way to express this. Give this type a name by wrapping it.
     private class RunnerWrapper<T>(private val wrapped: T) :
@@ -60,6 +65,10 @@ class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, So
         override fun getDescription(): Description = wrapped.description
         override fun run(notifier: RunNotifier?) = wrapped.run(notifier)
     }
+
+    // Annotation for test classes to indicate the test runner should monitor thread leak.
+    // TODO(b/307693729): Remove this annotation and monitor thread leak by default.
+    annotation class MonitorThreadLeak
 
     private val baseRunner: RunnerWrapper<*>? = klass.let {
         val ignoreAfter = it.getAnnotation(IgnoreAfter::class.java)
@@ -81,20 +90,52 @@ class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, So
                 it.isAnnotationPresent(Parameterized.Parameters::class.java) }
 
     override fun run(notifier: RunNotifier) {
-        if (baseRunner != null) {
+        if (baseRunner == null) {
+            // Report a single, skipped placeholder test for this class, as the class is expected to
+            // report results when run. In practice runners that apply the Filterable implementation
+            // would see a NoTestsRemainException and not call the run method.
+            notifier.fireTestIgnored(
+                    Description.createTestDescription(klass, "skippedClassForDevSdkMismatch"))
+            return
+        }
+        if (!shouldThreadLeakFailTest) {
             baseRunner.run(notifier)
             return
         }
 
-        // Report a single, skipped placeholder test for this class, as the class is expected to
-        // report results when run. In practice runners that apply the Filterable implementation
-        // would see a NoTestsRemainException and not call the run method.
-        notifier.fireTestIgnored(
-                Description.createTestDescription(klass, "skippedClassForDevSdkMismatch"))
+        // Dump threads as a baseline to monitor thread leaks.
+        val threadCountsBeforeTest = getAllThreadNameCounts()
+
+        baseRunner.run(notifier)
+
+        notifier.fireTestStarted(leakMonitorDesc)
+        val threadCountsAfterTest = getAllThreadNameCounts()
+        if (threadCountsBeforeTest != threadCountsAfterTest) {
+            notifier.fireTestFailure(Failure(leakMonitorDesc,
+                    IllegalStateException("Expected threads: $threadCountsBeforeTest " +
+                            "but got: $threadCountsAfterTest")))
+        }
+        notifier.fireTestFinished(leakMonitorDesc)
+    }
+
+    private fun getAllThreadNameCounts(): Map<String, Int> {
+        // Get the counts of threads in the group per name.
+        // Filter system thread groups.
+        return Thread.getAllStackTraces().keys
+                .filter { it.threadGroup?.name != "system" }
+                .groupingBy { it.name }.eachCount()
     }
 
     override fun getDescription(): Description {
-        return baseRunner?.description ?: Description.createSuiteDescription(klass)
+        if (baseRunner == null) {
+            return Description.createSuiteDescription(klass)
+        }
+
+        return baseRunner.description.also {
+            if (shouldThreadLeakFailTest) {
+                it.addChild(leakMonitorDesc)
+            }
+        }
     }
 
     /**
@@ -102,7 +143,9 @@ class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, So
      */
     override fun testCount(): Int {
         // When ignoring the tests, a skipped placeholder test is reported, so test count is 1.
-        return baseRunner?.testCount() ?: 1
+        if (baseRunner == null) return 1
+
+        return baseRunner.testCount() + if (shouldThreadLeakFailTest) 1 else 0
     }
 
     @Throws(NoTestsRemainException::class)
