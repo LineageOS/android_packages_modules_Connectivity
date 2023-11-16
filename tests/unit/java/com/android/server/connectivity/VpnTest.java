@@ -3164,6 +3164,20 @@ public class VpnTest extends VpnTestBase {
         assertThrows(UnsupportedOperationException.class, () -> startLegacyVpn(vpn, profile));
     }
 
+    @Test
+    public void testStartLegacyVpnModifyProfile_TypePSK() throws Exception {
+        setMockedUsers(PRIMARY_USER);
+        final Vpn vpn = createVpn(PRIMARY_USER.id);
+        final Ikev2VpnProfile ikev2VpnProfile =
+                new Ikev2VpnProfile.Builder(TEST_VPN_SERVER, TEST_VPN_IDENTITY)
+                        .setAuthPsk(TEST_VPN_PSK)
+                        .build();
+        final VpnProfile profile = ikev2VpnProfile.toVpnProfile();
+
+        startLegacyVpn(vpn, profile);
+        assertEquals(profile, ikev2VpnProfile.toVpnProfile());
+    }
+
     private void assertTransportInfoMatches(NetworkCapabilities nc, int type) {
         assertNotNull(nc);
         VpnTransportInfo ti = (VpnTransportInfo) nc.getTransportInfo();
