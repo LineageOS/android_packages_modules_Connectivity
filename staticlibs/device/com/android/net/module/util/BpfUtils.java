@@ -15,7 +15,10 @@
  */
 package com.android.net.module.util;
 
+import android.os.Build;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import java.io.IOException;
 
@@ -24,6 +27,7 @@ import java.io.IOException;
  *
  * {@hide}
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class BpfUtils {
     static {
         System.loadLibrary(JniUtil.getJniLibraryName(BpfUtils.class.getPackage()));
