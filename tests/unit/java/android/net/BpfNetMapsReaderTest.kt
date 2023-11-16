@@ -16,6 +16,9 @@
 
 package android.net
 
+import android.net.BpfNetMapsConstants.DATA_SAVER_DISABLED
+import android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED
+import android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY
 import android.net.BpfNetMapsConstants.DOZABLE_MATCH
 import android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH
 import android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH
@@ -26,6 +29,8 @@ import android.os.Build.VERSION_CODES
 import com.android.net.module.util.IBpfMap
 import com.android.net.module.util.Struct.S32
 import com.android.net.module.util.Struct.U32
+import com.android.net.module.util.Struct.U8
+import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.TestBpfMap
@@ -33,6 +38,7 @@ import java.lang.reflect.Modifier
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -45,17 +51,24 @@ private const val NO_IIF = 0
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(VERSION_CODES.S_V2)
 class BpfNetMapsReaderTest {
+    @Rule
+    @JvmField
+    val ignoreRule = DevSdkIgnoreRule()
+
     private val testConfigurationMap: IBpfMap<S32, U32> = TestBpfMap()
     private val testUidOwnerMap: IBpfMap<S32, UidOwnerValue> = TestBpfMap()
+    private val testDataSaverEnabledMap: IBpfMap<S32, U8> = TestBpfMap()
     private val bpfNetMapsReader = BpfNetMapsReader(
-        TestDependencies(testConfigurationMap, testUidOwnerMap))
+        TestDependencies(testConfigurationMap, testUidOwnerMap, testDataSaverEnabledMap))
 
     class TestDependencies(
         private val configMap: IBpfMap<S32, U32>,
-        private val uidOwnerMap: IBpfMap<S32, UidOwnerValue>
+        private val uidOwnerMap: IBpfMap<S32, UidOwnerValue>,
+        private val dataSaverEnabledMap: IBpfMap<S32, U8>
     ) : BpfNetMapsReader.Dependencies() {
         override fun getConfigurationMap() = configMap
         override fun getUidOwnerMap() = uidOwnerMap
+        override fun getDataSaverEnabledMap() = dataSaverEnabledMap
     }
 
     private fun doTestIsChainEnabled(chain: Int) {
@@ -198,5 +211,14 @@ class BpfNetMapsReaderTest {
         assertFalse(isUidNetworkingBlocked(TEST_UID1))
         assertFalse(isUidNetworkingBlocked(TEST_UID2))
         assertFalse(isUidNetworkingBlocked(TEST_UID3))
+    }
+
+    @IgnoreUpTo(VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    fun testGetDataSaverEnabled() {
+        testDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, U8(DATA_SAVER_DISABLED))
+        assertFalse(bpfNetMapsReader.dataSaverEnabled)
+        testDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, U8(DATA_SAVER_ENABLED))
+        assertTrue(bpfNetMapsReader.dataSaverEnabled)
     }
 }
