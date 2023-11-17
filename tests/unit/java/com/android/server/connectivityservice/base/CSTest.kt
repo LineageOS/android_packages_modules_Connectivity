@@ -116,8 +116,7 @@ open class CSTest {
     init {
         if (!SdkLevel.isAtLeastS()) {
             throw UnsupportedApiLevelException("CSTest subclasses must be annotated to only " +
-                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R) and " +
-                    "@RunWith(DevSdkIgnoreRunner::class)")
+                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)")
         }
     }
 
