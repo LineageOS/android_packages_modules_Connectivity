@@ -1659,8 +1659,7 @@ public class ConnectivityServiceTest {
             waitForIdle();
         }
 
-        public void startLegacyVpnPrivileged(VpnProfile profile,
-                @Nullable Network underlying, @NonNull LinkProperties egress) {
+        public void startLegacyVpnPrivileged(VpnProfile profile) {
             switch (profile.type) {
                 case VpnProfile.TYPE_IKEV2_IPSEC_RSA:
                 case VpnProfile.TYPE_IKEV2_IPSEC_USER_PASS:
@@ -10252,7 +10251,7 @@ public class ConnectivityServiceTest {
         b.expectBroadcast();
         // Simulate LockdownVpnTracker attempting to start the VPN since it received the
         // systemDefault callback.
-        mMockVpn.startLegacyVpnPrivileged(profile, mCellAgent.getNetwork(), cellLp);
+        mMockVpn.startLegacyVpnPrivileged(profile);
         if (expectSetVpnDefaultForUids) {
             // setVpnDefaultForUids() releases the original network request and creates a VPN
             // request so LOST callback is received.
@@ -10323,7 +10322,7 @@ public class ConnectivityServiceTest {
         // callback with different network.
         final ExpectedBroadcast b6 = expectConnectivityAction(TYPE_VPN, DetailedState.DISCONNECTED);
         mMockVpn.stopVpnRunnerPrivileged();
-        mMockVpn.startLegacyVpnPrivileged(profile, mWiFiAgent.getNetwork(), wifiLp);
+        mMockVpn.startLegacyVpnPrivileged(profile);
         // VPN network is disconnected (to restart)
         callback.expect(LOST, mMockVpn);
         defaultCallback.expect(LOST, mMockVpn);
