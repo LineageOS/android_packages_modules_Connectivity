@@ -83,6 +83,7 @@ import android.util.SparseIntArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 
 import libcore.net.event.NetworkEventDispatcher;
 
@@ -6371,10 +6372,13 @@ public class ConnectivityManager {
         final BpfNetMapsReader reader = BpfNetMapsReader.getInstance();
 
         final boolean isDataSaverEnabled;
-        // TODO: For U-QPR3+ devices, get data saver status from bpf configuration map directly.
-        final DataSaverStatusTracker dataSaverStatusTracker =
-                DataSaverStatusTracker.getInstance(mContext);
-        isDataSaverEnabled = dataSaverStatusTracker.getDataSaverEnabled();
+        if (SdkLevel.isAtLeastV()) {
+            isDataSaverEnabled = reader.getDataSaverEnabled();
+        } else {
+            final DataSaverStatusTracker dataSaverStatusTracker =
+                    DataSaverStatusTracker.getInstance(mContext);
+            isDataSaverEnabled = dataSaverStatusTracker.getDataSaverEnabled();
+        }
 
         return reader.isUidNetworkingBlocked(uid, isNetworkMetered, isDataSaverEnabled);
     }

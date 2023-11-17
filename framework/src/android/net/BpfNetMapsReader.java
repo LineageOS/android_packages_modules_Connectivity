@@ -17,6 +17,9 @@
 package android.net;
 
 import static android.net.BpfNetMapsConstants.CONFIGURATION_MAP_PATH;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_MAP_PATH;
 import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.UID_OWNER_MAP_PATH;
@@ -33,14 +36,15 @@ import android.os.Build;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
-import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.U8;
 
 /**
  * A helper class to *read* java BpfMaps.
@@ -48,6 +52,8 @@ import com.android.net.module.util.Struct.U32;
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)  // BPF maps were only mainlined in T
 public class BpfNetMapsReader {
+    private static final String TAG = BpfNetMapsReader.class.getSimpleName();
+
     // Locally store the handle of bpf maps. The FileDescriptors are statically cached inside the
     // BpfMap implementation.
 
@@ -57,6 +63,7 @@ public class BpfNetMapsReader {
     // Bpf map to store per uid traffic control configurations.
     // See {@link UidOwnerValue} for more detail.
     private final IBpfMap<S32, UidOwnerValue> mUidOwnerMap;
+    private final IBpfMap<S32, U8> mDataSaverEnabledMap;
     private final Dependencies mDeps;
 
     // Bitmaps for calculating whether a given uid is blocked by firewall chains.
@@ -104,6 +111,7 @@ public class BpfNetMapsReader {
         mDeps = deps;
         mConfigurationMap = mDeps.getConfigurationMap();
         mUidOwnerMap = mDeps.getUidOwnerMap();
+        mDataSaverEnabledMap = mDeps.getDataSaverEnabledMap();
     }
 
     /**
@@ -128,6 +136,16 @@ public class BpfNetMapsReader {
                         S32.class, UidOwnerValue.class);
             } catch (ErrnoException e) {
                 throw new IllegalStateException("Cannot open uid owner map", e);
+            }
+        }
+
+        /** Get the data saver enabled map. */
+        public  IBpfMap<S32, U8> getDataSaverEnabledMap() {
+            try {
+                return new BpfMap<>(DATA_SAVER_ENABLED_MAP_PATH, BpfMap.BPF_F_RDONLY, S32.class,
+                        U8.class);
+            } catch (ErrnoException e) {
+                throw new IllegalStateException("Cannot open data saver enabled map", e);
             }
         }
     }
@@ -171,12 +189,12 @@ public class BpfNetMapsReader {
      *                                  cause of the failure.
      */
     public static boolean isChainEnabled(
-            final IBpfMap<Struct.S32, Struct.U32> configurationMap, final int chain) {
+            final IBpfMap<S32, U32> configurationMap, final int chain) {
         throwIfPreT("isChainEnabled is not available on pre-T devices");
 
         final long match = getMatchByFirewallChain(chain);
         try {
-            final Struct.U32 config = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
+            final U32 config = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
             return (config.val & match) != 0;
         } catch (ErrnoException e) {
             throw new ServiceSpecificException(e.errno,
@@ -195,14 +213,14 @@ public class BpfNetMapsReader {
      * @throws ServiceSpecificException      in case of failure, with an error code indicating the
      *                                       cause of the failure.
      */
-    public static int getUidRule(final IBpfMap<Struct.S32, UidOwnerValue> uidOwnerMap,
+    public static int getUidRule(final IBpfMap<S32, UidOwnerValue> uidOwnerMap,
             final int chain, final int uid) {
         throwIfPreT("getUidRule is not available on pre-T devices");
 
         final long match = getMatchByFirewallChain(chain);
         final boolean isAllowList = isFirewallAllowList(chain);
         try {
-            final UidOwnerValue uidMatch = uidOwnerMap.getValue(new Struct.S32(uid));
+            final UidOwnerValue uidMatch = uidOwnerMap.getValue(new S32(uid));
             final boolean isMatchEnabled = uidMatch != null && (uidMatch.rule & match) != 0;
             return isMatchEnabled == isAllowList ? FIREWALL_RULE_ALLOW : FIREWALL_RULE_DENY;
         } catch (ErrnoException e) {
@@ -248,5 +266,30 @@ public class BpfNetMapsReader {
         if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
         if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
         return isDataSaverEnabled;
+    }
+
+    /**
+     * Get Data Saver enabled or disabled
+     *
+     * @return whether Data Saver is enabled or disabled.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     */
+    public boolean getDataSaverEnabled() {
+        throwIfPreT("getDataSaverEnabled is not available on pre-T devices");
+
+        // Note that this is not expected to be called until V given that it relies on the
+        // counterpart platform solution to set data saver status to bpf.
+        // See {@code NetworkManagementService#setDataSaverModeEnabled}.
+        if (!SdkLevel.isAtLeastV()) {
+            Log.wtf(TAG, "getDataSaverEnabled is not expected to be called on pre-V devices");
+        }
+
+        try {
+            return mDataSaverEnabledMap.getValue(DATA_SAVER_ENABLED_KEY).val == DATA_SAVER_ENABLED;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno, "Unable to get data saver: "
+                    + Os.strerror(e.errno));
+        }
     }
 }
