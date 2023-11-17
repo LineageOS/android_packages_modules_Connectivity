@@ -301,6 +301,10 @@ droidstubs {
     ],
     flags: [
         "--show-annotation android.annotation.FlaggedApi",
+        "--show-for-stub-purposes-annotation android.annotation.SystemApi" +
+        "\\(client=android.annotation.SystemApi.Client.PRIVILEGED_APPS\\)",
+        "--show-for-stub-purposes-annotation android.annotation.SystemApi" +
+        "\\(client=android.annotation.SystemApi.Client.MODULE_LIBRARIES\\)",
     ],
     aidl: {
         include_dirs: [
