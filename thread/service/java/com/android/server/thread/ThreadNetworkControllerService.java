@@ -55,16 +55,20 @@ import android.Manifest.permission;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalNetworkConfig;
 import android.net.MulticastRoutingConfig;
+import android.net.LocalNetworkInfo;
+import android.net.Network;
 import android.net.NetworkAgent;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
 import android.net.NetworkRequest;
 import android.net.NetworkScore;
+import android.net.RouteInfo;
 import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.ActiveOperationalDataset.SecurityPolicy;
 import android.net.thread.IActiveOperationalDatasetReceiver;
@@ -92,6 +96,7 @@ import com.android.server.thread.openthread.IOtDaemonCallback;
 import com.android.server.thread.openthread.IOtStatusReceiver;
 import com.android.server.thread.openthread.Ipv6AddressInfo;
 import com.android.server.thread.openthread.OtDaemonState;
+import com.android.server.thread.openthread.BorderRouterConfigurationParcel;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -139,9 +144,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     private IOtDaemon mOtDaemon;
     private NetworkAgent mNetworkAgent;
-    private final NetworkRequest mUpstreamNetworkRequest;
     private MulticastRoutingConfig mUpstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
     private MulticastRoutingConfig mDownstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
+    private Network mUpstreamNetwork;
+    private final NetworkRequest mUpstreamNetworkRequest;
+    private final HashMap<Network, String> mNetworkToInterface;
+    private final LocalNetworkConfig mLocalNetworkConfig;
+
+    private BorderRouterConfigurationParcel mBorderRouterConfig;
 
     @VisibleForTesting
     ThreadNetworkControllerService(
@@ -158,7 +168,18 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mOtDaemonSupplier = otDaemonSupplier;
         mConnectivityManager = connectivityManager;
         mTunIfController = tunIfController;
-        mUpstreamNetworkRequest = null; // to be updated aosp/2823311
+        mUpstreamNetworkRequest =
+                new NetworkRequest.Builder()
+                        .clearCapabilities()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        .build();
+        mLocalNetworkConfig =
+                new LocalNetworkConfig.Builder()
+                        .setUpstreamSelector(mUpstreamNetworkRequest)
+                        .build();
+        mNetworkToInterface = new HashMap<Network, String>();
+        mBorderRouterConfig = new BorderRouterConfigurationParcel();
     }
 
     public static ThreadNetworkControllerService newInstance(Context context) {
@@ -179,6 +200,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private static NetworkCapabilities newNetworkCapabilities() {
         return new NetworkCapabilities.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_THREAD)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
                 .build();
     }
@@ -260,9 +282,75 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                     mLinkProperties.setInterfaceName(TUN_IF_NAME);
                     mLinkProperties.setMtu(TunInterfaceController.MTU);
                     mConnectivityManager.registerNetworkProvider(mNetworkProvider);
+                    requestUpstreamNetwork();
 
                     initializeOtDaemon();
                 });
+    }
+
+    private void requestUpstreamNetwork() {
+        mConnectivityManager.registerNetworkCallback(
+                mUpstreamNetworkRequest,
+                new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(@NonNull Network network) {
+                        Log.i(TAG, "onAvailable: " + network);
+                    }
+
+                    @Override
+                    public void onLost(@NonNull Network network) {
+                        Log.i(TAG, "onLost: " + network);
+                    }
+
+                    @Override
+                    public void onLinkPropertiesChanged(
+                            @NonNull Network network, @NonNull LinkProperties linkProperties) {
+                        Log.i(
+                                TAG,
+                                String.format(
+                                        "onLinkPropertiesChanged: {network: %s, interface: %s}",
+                                        network, linkProperties.getInterfaceName()));
+                        mNetworkToInterface.put(network, linkProperties.getInterfaceName());
+                        if (network.equals(mUpstreamNetwork)) {
+                            enableBorderRouting(mNetworkToInterface.get(mUpstreamNetwork));
+                        }
+                    }
+                },
+                mHandler);
+    }
+
+    private final class ThreadNetworkCallback extends ConnectivityManager.NetworkCallback {
+        @Override
+        public void onAvailable(@NonNull Network network) {
+            Log.i(TAG, "onAvailable: Thread network Available");
+        }
+
+        @Override
+        public void onLocalNetworkInfoChanged(
+                @NonNull Network network, @NonNull LocalNetworkInfo localNetworkInfo) {
+            Log.i(TAG, "onLocalNetworkInfoChanged: " + localNetworkInfo);
+            if (localNetworkInfo.getUpstreamNetwork() == null) {
+                mUpstreamNetwork = null;
+                return;
+            }
+            if (!localNetworkInfo.getUpstreamNetwork().equals(mUpstreamNetwork)) {
+                mUpstreamNetwork = localNetworkInfo.getUpstreamNetwork();
+                if (mNetworkToInterface.containsKey(mUpstreamNetwork)) {
+                    enableBorderRouting(mNetworkToInterface.get(mUpstreamNetwork));
+                }
+            }
+        }
+    }
+
+    private void requestThreadNetwork() {
+        mConnectivityManager.registerNetworkCallback(
+                new NetworkRequest.Builder()
+                        .clearCapabilities()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_THREAD)
+                        .removeForbiddenCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)
+                        .build(),
+                new ThreadNetworkCallback(),
+                mHandler);
     }
 
     private void registerThreadNetwork() {
@@ -274,6 +362,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 new NetworkScore.Builder()
                         .setKeepConnectedReason(NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK)
                         .build();
+        requestThreadNetwork();
         mNetworkAgent =
                 new NetworkAgent(
                         mContext,
@@ -281,6 +370,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                         TAG,
                         netCaps,
                         mLinkProperties,
+                        mLocalNetworkConfig,
                         score,
                         new NetworkAgentConfig.Builder().build(),
                         mNetworkProvider) {};
@@ -320,10 +410,19 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     private void updateNetworkLinkProperties(LinkAddress linkAddress, boolean isAdded) {
+        RouteInfo routeInfo =
+                new RouteInfo(
+                        new IpPrefix(linkAddress.getAddress(), 64),
+                        null,
+                        TUN_IF_NAME,
+                        RouteInfo.RTN_UNICAST,
+                        TunInterfaceController.MTU);
         if (isAdded) {
             mLinkProperties.addLinkAddress(linkAddress);
+            mLinkProperties.addRoute(routeInfo);
         } else {
             mLinkProperties.removeLinkAddress(linkAddress);
+            mLinkProperties.removeRoute(routeInfo);
         }
 
         // The Thread daemon can send link property updates before the networkAgent is
@@ -570,6 +669,39 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         } catch (RemoteException e) {
             // Oneway AIDL API should never throw?
             receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        }
+    }
+
+    private void enableBorderRouting(String infraIfName) {
+        if (mBorderRouterConfig.isBorderRoutingEnabled
+                && infraIfName.equals(mBorderRouterConfig.infraInterfaceName)) {
+            return;
+        }
+        Log.i(TAG, "enableBorderRouting on AIL: " + infraIfName);
+        try {
+            mBorderRouterConfig.infraInterfaceName = infraIfName;
+            mBorderRouterConfig.infraInterfaceIcmp6Socket =
+                    InfraInterfaceController.createIcmp6Socket(infraIfName);
+            mBorderRouterConfig.isBorderRoutingEnabled = true;
+
+            mOtDaemon.configureBorderRouter(
+                    mBorderRouterConfig,
+                    new IOtStatusReceiver.Stub() {
+                        @Override
+                        public void onSuccess() {
+                            Log.i(TAG, "configure border router successfully");
+                        }
+
+                        @Override
+                        public void onError(int i, String s) {
+                            Log.w(
+                                    TAG,
+                                    String.format(
+                                            "failed to configure border router: %d %s", i, s));
+                        }
+                    });
+        } catch (Exception e) {
+            Log.w(TAG, "enableBorderRouting failed: " + e);
         }
     }
 
