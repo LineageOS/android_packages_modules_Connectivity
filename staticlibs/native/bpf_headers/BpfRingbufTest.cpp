@@ -74,11 +74,27 @@ class BpfRingbufTest : public ::testing::Test {
     ASSERT_RESULT_OK(result);
     EXPECT_TRUE(result.value()->isEmpty());
 
+    struct timespec t1, t2;
+    EXPECT_EQ(0, clock_gettime(CLOCK_MONOTONIC, &t1));
+    EXPECT_FALSE(result.value()->wait(1000 /*ms*/));  // false because wait should timeout
+    EXPECT_EQ(0, clock_gettime(CLOCK_MONOTONIC, &t2));
+    long long time1 = t1.tv_sec * 1000000000LL + t1.tv_nsec;
+    long long time2 = t2.tv_sec * 1000000000LL + t2.tv_nsec;
+    EXPECT_GE(time2 - time1, 1000000000 /*ns*/);  // 1000 ms as ns
+
     for (int i = 0; i < n; i++) {
       RunProgram();
     }
 
     EXPECT_FALSE(result.value()->isEmpty());
+
+    EXPECT_EQ(0, clock_gettime(CLOCK_MONOTONIC, &t1));
+    EXPECT_TRUE(result.value()->wait());
+    EXPECT_EQ(0, clock_gettime(CLOCK_MONOTONIC, &t2));
+    time1 = t1.tv_sec * 1000000000LL + t1.tv_nsec;
+    time2 = t2.tv_sec * 1000000000LL + t2.tv_nsec;
+    EXPECT_LE(time2 - time1, 1000000 /*ns*/);  // in x86 CF testing < 5000 ns
+
     EXPECT_THAT(result.value()->ConsumeAll(callback), HasValue(n));
     EXPECT_TRUE(result.value()->isEmpty());
     EXPECT_EQ(output, TEST_RINGBUF_MAGIC_NUM);
