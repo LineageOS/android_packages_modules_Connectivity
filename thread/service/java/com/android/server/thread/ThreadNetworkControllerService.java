@@ -54,6 +54,8 @@ import static com.android.server.thread.openthread.IOtDaemon.TUN_IF_NAME;
 import android.Manifest.permission;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresPermission;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.IpPrefix;
@@ -82,6 +84,7 @@ import android.net.thread.OperationalDatasetTimestamp;
 import android.net.thread.PendingOperationalDataset;
 import android.net.thread.ThreadNetworkController;
 import android.net.thread.ThreadNetworkController.DeviceRole;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -121,6 +124,7 @@ import java.util.function.Supplier;
  * `mHandlerThread` 2. In the @Override methods, the actual work MUST be dispatched to the
  * HandlerThread except for arguments or permissions checking
  */
+@TargetApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 final class ThreadNetworkControllerService extends IThreadNetworkController.Stub {
     private static final String TAG = "ThreadNetworkService";
 
@@ -738,6 +742,32 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             getOtDaemon().leave(newOtStatusReceiver(receiver));
         } catch (RemoteException e) {
             // Oneway AIDL API should never throw?
+            receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        }
+    }
+
+    /**
+     * Sets the country code.
+     *
+     * @param countryCode 2 characters string country code (as defined in ISO 3166) to set.
+     * @param receiver the receiver to receive result of this operation
+     */
+    @RequiresPermission(PERMISSION_THREAD_NETWORK_PRIVILEGED)
+    public void setCountryCode(@NonNull String countryCode, @NonNull IOperationReceiver receiver) {
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+
+        OperationReceiverWrapper receiverWrapper = new OperationReceiverWrapper(receiver);
+        mHandler.post(() -> setCountryCodeInternal(countryCode, receiverWrapper));
+    }
+
+    private void setCountryCodeInternal(
+            String countryCode, @NonNull OperationReceiverWrapper receiver) {
+        checkOnHandlerThread();
+
+        try {
+            getOtDaemon().setCountryCode(countryCode, newOtStatusReceiver(receiver));
+        } catch (RemoteException e) {
+            Log.e(TAG, "otDaemon.setCountryCode failed", e);
             receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
         }
     }
