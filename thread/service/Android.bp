@@ -43,6 +43,9 @@ java_library {
         "ot-daemon-aidl-java",
     ],
     apex_available: ["com.android.tethering"],
+    optimize: {
+        proguard_flags_files: ["proguard.flags"],
+    },
 }
 
 cc_library_shared {
