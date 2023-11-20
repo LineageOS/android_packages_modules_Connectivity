@@ -43,11 +43,11 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.HandlerExecutor;
+import com.android.net.module.util.DeviceConfigUtils;
 import com.android.networkstack.apishim.TelephonyManagerShimImpl;
 import com.android.networkstack.apishim.common.TelephonyManagerShim;
 import com.android.networkstack.apishim.common.TelephonyManagerShim.CarrierPrivilegesListenerShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
-import com.android.server.ConnectivityService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,13 +78,13 @@ public class CarrierPrivilegeAuthenticator {
     private final boolean mUseCallbacksForServiceChanged;
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
-            @NonNull final ConnectivityService.Dependencies deps,
+            @NonNull final Dependencies deps,
             @NonNull final TelephonyManager t,
             @NonNull final TelephonyManagerShim telephonyManagerShim) {
         mContext = c;
         mTelephonyManager = t;
         mTelephonyManagerShim = telephonyManagerShim;
-        final HandlerThread thread = new HandlerThread(TAG);
+        final HandlerThread thread = deps.makeHandlerThread();
         thread.start();
         mHandler = new Handler(thread.getLooper());
         mUseCallbacksForServiceChanged = deps.isFeatureEnabled(
@@ -110,9 +110,24 @@ public class CarrierPrivilegeAuthenticator {
     }
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
-            @NonNull final ConnectivityService.Dependencies deps,
             @NonNull final TelephonyManager t) {
-        this(c, deps, t, TelephonyManagerShimImpl.newInstance(t));
+        this(c, new Dependencies(), t, TelephonyManagerShimImpl.newInstance(t));
+    }
+
+    public static class Dependencies {
+        /**
+         * Create a HandlerThread to use in CarrierPrivilegeAuthenticator.
+         */
+        public HandlerThread makeHandlerThread() {
+            return new HandlerThread(TAG);
+        }
+
+        /**
+         * @see DeviceConfigUtils#isTetheringFeatureEnabled
+         */
+        public boolean isFeatureEnabled(Context context, String name) {
+            return DeviceConfigUtils.isTetheringFeatureEnabled(context, name);
+        }
     }
 
     private void simConfigChanged() {
