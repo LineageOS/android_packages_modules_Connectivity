@@ -64,6 +64,7 @@ import static com.android.networkstack.tethering.BpfUtils.UPSTREAM;
 import static com.android.networkstack.tethering.TetheringConfiguration.DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS;
 import static com.android.testutils.MiscAsserts.assertSameElements;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -166,7 +167,6 @@ import java.io.StringWriter;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -794,7 +794,7 @@ public class BpfCoordinatorTest {
         if (!mDeps.isAtLeastS()) return;
         ArrayMap<TetherUpstream6Key, Tether6Value> expected = new ArrayMap<>();
         for (IpPrefix upstreamPrefix : upstreamPrefixes) {
-            long prefix64 = prefixToLong(upstreamPrefix);
+            final byte[] prefix64 = prefixToIp64(upstreamPrefix);
             final TetherUpstream6Key key = new TetherUpstream6Key(DOWNSTREAM_IFACE_PARAMS.index,
                     DOWNSTREAM_IFACE_PARAMS.macAddr, prefix64);
             final Tether6Value value = new Tether6Value(upstreamIfindex,
@@ -822,7 +822,7 @@ public class BpfCoordinatorTest {
         if (!mDeps.isAtLeastS()) return;
         Set<TetherUpstream6Key> expected = new ArraySet<>();
         for (IpPrefix upstreamPrefix : upstreamPrefixes) {
-            long prefix64 = prefixToLong(upstreamPrefix);
+            final byte[] prefix64 = prefixToIp64(upstreamPrefix);
             final TetherUpstream6Key key = new TetherUpstream6Key(DOWNSTREAM_IFACE_PARAMS.index,
                     DOWNSTREAM_IFACE_PARAMS.macAddr, prefix64);
             expected.add(key);
@@ -1275,7 +1275,7 @@ public class BpfCoordinatorTest {
     }
 
     @Test
-    public void testRuleMakeTetherDownstream6Key() throws Exception {
+    public void testIpv6DownstreamRuleMakeTetherDownstream6Key() throws Exception {
         final int mobileIfIndex = 100;
         final Ipv6DownstreamRule rule = buildTestDownstreamRule(mobileIfIndex, NEIGH_A, MAC_A);
 
@@ -1288,7 +1288,7 @@ public class BpfCoordinatorTest {
     }
 
     @Test
-    public void testRuleMakeTether6Value() throws Exception {
+    public void testIpv6DownstreamRuleMakeTether6Value() throws Exception {
         final int mobileIfIndex = 100;
         final Ipv6DownstreamRule rule = buildTestDownstreamRule(mobileIfIndex, NEIGH_A, MAC_A);
 
@@ -1300,6 +1300,46 @@ public class BpfCoordinatorTest {
         assertEquals(value.pmtu, NetworkStackConstants.ETHER_MTU);
         // oif (4) + ethDstMac (6) + ethSrcMac (6) + ethProto (2) + pmtu (2) = 20.
         assertEquals(20, value.writeToBytes().length);
+    }
+
+    @Test
+    public void testIpv6UpstreamRuleMakeTetherUpstream6Key() {
+        final byte[] bytes = new byte[]{(byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0xab, (byte) 0xcd, (byte) 0xfe, (byte) 0x00};
+        final IpPrefix prefix = new IpPrefix("2001:db8:abcd:fe00::/64");
+        final Ipv6UpstreamRule rule = buildTestUpstreamRule(UPSTREAM_IFINDEX,
+                DOWNSTREAM_IFINDEX, prefix, DOWNSTREAM_MAC);
+
+        final TetherUpstream6Key key = rule.makeTetherUpstream6Key();
+        assertEquals(DOWNSTREAM_IFINDEX, key.iif);
+        assertEquals(DOWNSTREAM_MAC, key.dstMac);
+        assertArrayEquals(bytes, key.src64);
+        // iif (4) + dstMac (6) + padding (6) + src64 (8) = 24
+        assertEquals(24, key.writeToBytes().length);
+    }
+
+    @Test
+    public void testIpv6UpstreamRuleMakeTether6Value() {
+        final IpPrefix prefix = new IpPrefix("2001:db8:abcd:fe00::/64");
+        final Ipv6UpstreamRule rule = buildTestUpstreamRule(UPSTREAM_IFINDEX,
+                DOWNSTREAM_IFINDEX, prefix, DOWNSTREAM_MAC);
+
+        final Tether6Value value = rule.makeTether6Value();
+        assertEquals(UPSTREAM_IFINDEX, value.oif);
+        assertEquals(MAC_NULL, value.ethDstMac);
+        assertEquals(MAC_NULL, value.ethSrcMac);
+        assertEquals(ETH_P_IPV6, value.ethProto);
+        assertEquals(NetworkStackConstants.ETHER_MTU, value.pmtu);
+        // oif (4) + ethDstMac (6) + ethSrcMac (6) + ethProto (2) + pmtu (2) = 20
+        assertEquals(20, value.writeToBytes().length);
+    }
+
+    @Test
+    public void testBytesToPrefix() {
+        final byte[] bytes = new byte[]{(byte) 0x20, (byte) 0x01, (byte) 0x0d, (byte) 0xb8,
+                (byte) 0x00, (byte) 0x00, (byte) 0x12, (byte) 0x34};
+        final IpPrefix prefix = new IpPrefix("2001:db8:0:1234::/64");
+        assertEquals(prefix, BpfCoordinator.bytesToPrefix(bytes));
     }
 
     @Test
@@ -2269,8 +2309,8 @@ public class BpfCoordinatorTest {
                 100 /* nonzero, CT_NEW */);
     }
 
-    private static long prefixToLong(IpPrefix prefix) {
-        return ByteBuffer.wrap(prefix.getRawAddress()).getLong();
+    private static byte[] prefixToIp64(IpPrefix prefix) {
+        return Arrays.copyOf(prefix.getRawAddress(), 8);
     }
 
     void checkRule4ExistInUpstreamDownstreamMap() throws Exception {
@@ -2515,7 +2555,7 @@ public class BpfCoordinatorTest {
         final Ipv6DownstreamRule rule = buildTestDownstreamRule(UPSTREAM_IFINDEX, NEIGH_A, MAC_A);
         mBpfDownstream6Map.insertEntry(rule.makeTetherDownstream6Key(), rule.makeTether6Value());
 
-        final long prefix64 = prefixToLong(UPSTREAM_PREFIX);
+        final byte[] prefix64 = prefixToIp64(UPSTREAM_PREFIX);
         final TetherUpstream6Key upstream6Key = new TetherUpstream6Key(DOWNSTREAM_IFINDEX,
                 DOWNSTREAM_MAC, prefix64);
         final Tether6Value upstream6Value = new Tether6Value(UPSTREAM_IFINDEX,
