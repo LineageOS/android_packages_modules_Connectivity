@@ -61,8 +61,8 @@ class ConnectivityCheckTest {
                     commonError)
         }
         assertTrue(tm.isDataConnectivityPossible,
-            "The device is not setup with a SIM card that supports data connectivity. " +
-                    commonError)
+            "The device has a SIM card, but it does not supports data connectivity. " +
+            "Check the data plan, and verify that mobile data is working. " + commonError)
         connectUtil.ensureCellularValidated()
     }
 }
