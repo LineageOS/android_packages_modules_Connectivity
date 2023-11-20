@@ -1362,8 +1362,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         /**
          * Create a HandlerThread to use in ConnectivityService.
          */
-        public HandlerThread makeHandlerThread() {
-            return new HandlerThread("ConnectivityServiceThread");
+        public HandlerThread makeHandlerThread(@NonNull final String tag) {
+            return new HandlerThread(tag);
         }
 
         /**
@@ -1458,7 +1458,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context, @NonNull final TelephonyManager tm) {
             if (isAtLeastT()) {
-                return new CarrierPrivilegeAuthenticator(context, this, tm);
+                return new CarrierPrivilegeAuthenticator(context, tm);
             } else {
                 return null;
             }
@@ -1706,7 +1706,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mNetd = netd;
         mBpfNetMaps = mDeps.getBpfNetMaps(mContext, netd);
-        mHandlerThread = mDeps.makeHandlerThread();
+        mHandlerThread = mDeps.makeHandlerThread("ConnectivityServiceThread");
         mPermissionMonitor =
                 new PermissionMonitor(mContext, mNetd, mBpfNetMaps, mHandlerThread);
         mHandlerThread.start();
