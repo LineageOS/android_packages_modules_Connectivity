@@ -17,6 +17,7 @@
 package com.android.server.connectivity;
 
 import static android.net.ConnectivityDiagnosticsManager.ConnectivityReport;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
@@ -1549,7 +1550,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * @param hasAutomotiveFeature true if this device has the automotive feature, false otherwise
      * @param authenticator the carrier privilege authenticator to check for telephony constraints
      */
-    public static void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
+    public void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
             final int creatorUid, final boolean hasAutomotiveFeature,
             @NonNull final ConnectivityService.Dependencies deps,
             @Nullable final CarrierPrivilegeAuthenticator authenticator) {
@@ -1562,7 +1563,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         }
     }
 
-    private static boolean areAllowedUidsAcceptableFromNetworkAgent(
+    private boolean areAllowedUidsAcceptableFromNetworkAgent(
             @NonNull final NetworkCapabilities nc, final boolean hasAutomotiveFeature,
             @NonNull final ConnectivityService.Dependencies deps,
             @Nullable final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator) {
@@ -1575,19 +1576,25 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         // On a non-restricted network, access UIDs make no sense
         if (nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)) return false;
 
-        // If this network has TRANSPORT_TEST, then the caller can do whatever they want to
-        // access UIDs
-        if (nc.hasTransport(TRANSPORT_TEST)) return true;
+        // If this network has TRANSPORT_TEST and nothing else, then the caller can do whatever
+        // they want to access UIDs
+        if (nc.hasSingleTransport(TRANSPORT_TEST)) return true;
 
-        // Factories that make ethernet networks can allow UIDs for automotive devices.
-        if (nc.hasSingleTransport(TRANSPORT_ETHERNET) && hasAutomotiveFeature) {
-            return true;
+        if (nc.hasTransport(TRANSPORT_ETHERNET)) {
+            // Factories that make ethernet networks can allow UIDs for automotive devices.
+            if (hasAutomotiveFeature) return true;
+            // It's also admissible if the ethernet network has TRANSPORT_TEST, as long as it
+            // doesn't have NET_CAPABILITY_INTERNET so it can't become the default network.
+            if (nc.hasTransport(TRANSPORT_TEST) && !nc.hasCapability(NET_CAPABILITY_INTERNET)) {
+                return true;
+            }
+            return false;
         }
 
         // Factories that make cell networks can allow the UID for the carrier service package.
         // This can only work in T where there is support for CarrierPrivilegeAuthenticator
         if (null != carrierPrivilegeAuthenticator
-                && nc.hasSingleTransport(TRANSPORT_CELLULAR)
+                && nc.hasSingleTransportBesidesTest(TRANSPORT_CELLULAR)
                 && (1 == nc.getAllowedUidsNoCopy().size())
                 && (carrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
                         nc.getAllowedUidsNoCopy().valueAt(0), nc))) {
