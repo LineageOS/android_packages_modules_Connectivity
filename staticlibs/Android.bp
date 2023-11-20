@@ -191,7 +191,7 @@ java_library {
 java_library {
     name: "net-utils-device-common-netlink",
     srcs: [
-        "device/com/android/net/module/util/netlink/*.java",
+        "device/com/android/net/module/util/netlink/**/*.java",
     ],
     sdk_version: "module_current",
     min_sdk_version: "30",
