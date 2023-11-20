@@ -41,6 +41,7 @@ import android.util.SparseIntArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.util.IndentingPrintWriter;
 import com.android.modules.utils.HandlerExecutor;
 import com.android.networkstack.apishim.TelephonyManagerShimImpl;
 import com.android.networkstack.apishim.common.TelephonyManagerShim;
@@ -125,11 +126,13 @@ public class CarrierPrivilegeAuthenticator {
 
     private class PrivilegeListener implements CarrierPrivilegesListenerShim {
         public final int mLogicalSlot;
+
         PrivilegeListener(final int logicalSlot) {
             mLogicalSlot = logicalSlot;
         }
 
-        @Override public void onCarrierPrivilegesChanged(
+        @Override
+        public void onCarrierPrivilegesChanged(
                 @NonNull List<String> privilegedPackageNames,
                 @NonNull int[] privilegedUids) {
             if (mUseCallbacksForServiceChanged) return;
@@ -209,7 +212,9 @@ public class CarrierPrivilegeAuthenticator {
     public boolean hasCarrierPrivilegeForNetworkCapabilities(int callingUid,
             @NonNull NetworkCapabilities networkCapabilities) {
         if (callingUid == Process.INVALID_UID) return false;
-        if (!networkCapabilities.hasSingleTransport(TRANSPORT_CELLULAR)) return false;
+        if (!networkCapabilities.hasSingleTransportBesidesTest(TRANSPORT_CELLULAR)) {
+            return false;
+        }
         final int subId = getSubIdFromNetworkSpecifier(networkCapabilities.getNetworkSpecifier());
         if (SubscriptionManager.INVALID_SUBSCRIPTION_ID == subId) return false;
         return callingUid == getCarrierServiceUidForSubId(subId);
@@ -290,6 +295,18 @@ public class CarrierPrivilegeAuthenticator {
         } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
             // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
             Log.e(TAG, "removeCarrierPrivilegesListener API is not available");
+        }
+    }
+
+    public void dump(IndentingPrintWriter pw) {
+        pw.println("CarrierPrivilegeAuthenticator:");
+        synchronized (mLock) {
+            final int size = mCarrierServiceUid.size();
+            for (int i = 0; i < size; ++i) {
+                final int logicalSlot = mCarrierServiceUid.keyAt(i);
+                final int serviceUid = mCarrierServiceUid.valueAt(i);
+                pw.println("Logical slot = " + logicalSlot + " : uid = " + serviceUid);
+            }
         }
     }
 }

@@ -1457,6 +1457,18 @@ public final class NetworkCapabilities implements Parcelable {
         return mTransportTypes == (1 << transportType);
     }
 
+    /**
+     * Returns true iff this NC has the specified transport and no other, ignoring TRANSPORT_TEST.
+     *
+     * If this NC has the passed transport and no other, this method returns true.
+     * If this NC has the passed transport, TRANSPORT_TEST and no other, this method returns true.
+     * Otherwise, this method returns false.
+     * @hide
+     */
+    public boolean hasSingleTransportBesidesTest(@Transport int transportType) {
+        return (mTransportTypes & ~(1 << TRANSPORT_TEST)) == (1 << transportType);
+    }
+
     private boolean satisfiedByTransportTypes(NetworkCapabilities nc) {
         return ((this.mTransportTypes == 0)
                 || ((this.mTransportTypes & nc.mTransportTypes) != 0));
