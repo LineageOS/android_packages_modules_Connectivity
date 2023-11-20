@@ -45,6 +45,7 @@ import android.content.pm.PackageManager;
 import android.net.NetworkCapabilities;
 import android.net.TelephonyNetworkSpecifier;
 import android.os.Build;
+import android.os.HandlerThread;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 
@@ -52,10 +53,11 @@ import com.android.net.module.util.CollectionUtils;
 import com.android.networkstack.apishim.TelephonyManagerShimImpl;
 import com.android.networkstack.apishim.common.TelephonyManagerShim.CarrierPrivilegesListenerShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
-import com.android.server.ConnectivityService;
+import com.android.server.connectivity.CarrierPrivilegeAuthenticator.Dependencies;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -86,10 +88,11 @@ public class CarrierPrivilegeAuthenticatorTest {
     private final int mCarrierConfigPkgUid = 12345;
     private final String mTestPkg = "com.android.server.connectivity.test";
     private final BroadcastReceiver mMultiSimBroadcastReceiver;
+    @NonNull private final HandlerThread mHandlerThread;
 
     public class TestCarrierPrivilegeAuthenticator extends CarrierPrivilegeAuthenticator {
         TestCarrierPrivilegeAuthenticator(@NonNull final Context c,
-                @NonNull final ConnectivityService.Dependencies deps,
+                @NonNull final Dependencies deps,
                 @NonNull final TelephonyManager t) {
             super(c, deps, t, mTelephonyManagerShim);
         }
@@ -98,6 +101,11 @@ public class CarrierPrivilegeAuthenticatorTest {
             if (SubscriptionManager.DEFAULT_SUBSCRIPTION_ID == subId) return TEST_SUBSCRIPTION_ID;
             return subId;
         }
+    }
+
+    @After
+    public void tearDown() {
+        mHandlerThread.quit();
     }
 
     /** Parameters to test both using callbacks or the old broadcast */
@@ -111,9 +119,11 @@ public class CarrierPrivilegeAuthenticatorTest {
         mTelephonyManager = mock(TelephonyManager.class);
         mTelephonyManagerShim = mock(TelephonyManagerShimImpl.class);
         mPackageManager = mock(PackageManager.class);
-        final ConnectivityService.Dependencies deps = mock(ConnectivityService.Dependencies.class);
+        mHandlerThread = new HandlerThread(CarrierPrivilegeAuthenticatorTest.class.getSimpleName());
+        final Dependencies deps = mock(Dependencies.class);
         doReturn(useCallbacks).when(deps).isFeatureEnabled(any() /* context */,
                 eq(CARRIER_SERVICE_CHANGED_USE_CALLBACK));
+        doReturn(mHandlerThread).when(deps).makeHandlerThread();
         doReturn(SUBSCRIPTION_COUNT).when(mTelephonyManager).getActiveModemCount();
         doReturn(mTestPkg).when(mTelephonyManagerShim)
                 .getCarrierServicePackageNameForLogicalSlot(anyInt());
