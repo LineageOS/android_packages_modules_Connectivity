@@ -62,10 +62,13 @@ java_defaults {
     // uncomment when b/13249961 is fixed
     // sdk_version: "current",
     platform_apis: true,
-    data: [":ConnectivityTestPreparer"],
     per_testcase_directory: true,
     host_required: ["net-tests-utils-host-common"],
     test_config_template: "AndroidTestTemplate.xml",
+    data: [
+        ":ConnectivityTestPreparer",
+        ":CtsCarrierServicePackage",
+    ]
 }
 
 // Networking CTS tests for development and release. These tests always target the platform SDK
@@ -153,4 +156,18 @@ android_test {
     target_sdk_version: "30",
     package_name: "android.net.cts.maxtargetsdk30", // CTS package names must be unique.
     instrumentation_target_package: "android.net.cts.maxtargetsdk30",
+}
+
+android_test_helper_app {
+    name: "CtsCarrierServicePackage",
+    defaults: ["cts_defaults"],
+    package_name: "android.net.cts.carrierservicepackage",
+    manifest: "carrierservicepackage/AndroidManifest.xml",
+    srcs: ["carrierservicepackage/src/**/*.java"],
+    min_sdk_version: "30",
+    // Tag this module as a cts test artifact
+    test_suites: [
+        "cts",
+        "general-tests",
+    ],
 }
