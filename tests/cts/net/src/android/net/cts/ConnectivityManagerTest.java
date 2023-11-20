@@ -796,14 +796,15 @@ public class ConnectivityManagerTest {
             // Make sure that the NC is null if the package doesn't hold ACCESS_NETWORK_STATE.
             assertNull(redactNc(nc, groundedUid, groundedPkg));
 
-            // Uids, ssid, underlying networks & subscriptionIds will be redacted if the given uid
+            // Uids, ssid & underlying networks will be redacted if the given uid
             // doesn't hold the associated permissions. The wifi transport info is also suitably
             // redacted.
             final NetworkCapabilities redactedNormal = redactNc(nc, normalUid, normalPkg);
             assertNull(redactedNormal.getUids());
             assertNull(redactedNormal.getSsid());
             assertNull(redactedNormal.getUnderlyingNetworks());
-            assertEquals(0, redactedNormal.getSubscriptionIds().size());
+            // Owner UID is allowed to see the subscription IDs.
+            assertEquals(2, redactedNormal.getSubscriptionIds().size());
             assertEquals(WifiInfo.DEFAULT_MAC_ADDRESS,
                     ((WifiInfo) redactedNormal.getTransportInfo()).getBSSID());
             assertEquals(rssi, ((WifiInfo) redactedNormal.getTransportInfo()).getRssi());
