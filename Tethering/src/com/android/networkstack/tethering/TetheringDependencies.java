@@ -35,7 +35,6 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
-import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
@@ -84,9 +83,9 @@ public abstract class TetheringDependencies {
     /**
      * Get a reference to the UpstreamNetworkMonitor to be used by tethering.
      */
-    public UpstreamNetworkMonitor getUpstreamNetworkMonitor(Context ctx, StateMachine target,
-            SharedLog log, int what) {
-        return new UpstreamNetworkMonitor(ctx, target, log, what);
+    public UpstreamNetworkMonitor getUpstreamNetworkMonitor(Context ctx, Handler h,
+            SharedLog log, UpstreamNetworkMonitor.EventListener listener) {
+        return new UpstreamNetworkMonitor(ctx, h, log, listener);
     }
 
     /**
