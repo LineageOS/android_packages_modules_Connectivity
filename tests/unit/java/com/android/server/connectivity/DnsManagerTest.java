@@ -140,7 +140,8 @@ public class DnsManagerTest {
         assertResolverOptionsEquals(actual.resolverOptions, expected.resolverOptions);
         assertContainsExactly(actual.transportTypes, expected.transportTypes);
         assertEquals(actual.meteredNetwork, expected.meteredNetwork);
-        assertFieldCountEquals(17, ResolverParamsParcel.class);
+        assertEquals(actual.dohParams, expected.dohParams);
+        assertFieldCountEquals(18, ResolverParamsParcel.class);
     }
 
     @Before
@@ -381,6 +382,7 @@ public class DnsManagerTest {
         expectedParams.transportTypes = TEST_TRANSPORT_TYPES;
         expectedParams.resolverOptions = null;
         expectedParams.meteredNetwork = true;
+        expectedParams.dohParams = null;
         assertResolverParamsEquals(actualParams, expectedParams);
     }
 
