@@ -1362,8 +1362,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         /**
          * Create a HandlerThread to use in ConnectivityService.
          */
-        public HandlerThread makeHandlerThread() {
-            return new HandlerThread("ConnectivityServiceThread");
+        public HandlerThread makeHandlerThread(@NonNull final String tag) {
+            return new HandlerThread(tag);
         }
 
         /**
@@ -1458,7 +1458,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context, @NonNull final TelephonyManager tm) {
             if (isAtLeastT()) {
-                return new CarrierPrivilegeAuthenticator(context, this, tm);
+                return new CarrierPrivilegeAuthenticator(context, tm);
             } else {
                 return null;
             }
@@ -1706,7 +1706,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mNetd = netd;
         mBpfNetMaps = mDeps.getBpfNetMaps(mContext, netd);
-        mHandlerThread = mDeps.makeHandlerThread();
+        mHandlerThread = mDeps.makeHandlerThread("ConnectivityServiceThread");
         mPermissionMonitor =
                 new PermissionMonitor(mContext, mNetd, mBpfNetMaps, mHandlerThread);
         mHandlerThread.start();
@@ -2649,6 +2649,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    private boolean canSeeAllowedUids(final int pid, final int uid, final int netOwnerUid) {
+        return Process.SYSTEM_UID == uid
+                || netOwnerUid == uid
+                || checkAnyPermissionOf(mContext, pid, uid,
+                        android.Manifest.permission.NETWORK_FACTORY);
+    }
+
     @VisibleForTesting
     NetworkCapabilities networkCapabilitiesRestrictedForCallerPermissions(
             NetworkCapabilities nc, int callerPid, int callerUid) {
@@ -2670,8 +2677,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)) {
             newNc.setAdministratorUids(new int[0]);
         }
-        if (!checkAnyPermissionOf(mContext,
-                callerPid, callerUid, android.Manifest.permission.NETWORK_FACTORY)) {
+        if (!canSeeAllowedUids(callerPid, callerUid, newNc.getOwnerUid())) {
             newNc.setAllowedUids(new ArraySet<>());
             newNc.setSubscriptionIds(Collections.emptySet());
         }
@@ -3943,6 +3949,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         pw.println();
         dumpBpfProgramStatus(pw);
+
+        if (null != mCarrierPrivilegeAuthenticator) {
+            pw.println();
+            mCarrierPrivilegeAuthenticator.dump(pw);
+        }
 
         pw.println();
 
@@ -5252,7 +5263,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private boolean hasCarrierPrivilegeForNetworkCaps(final int callingUid,
             @NonNull final NetworkCapabilities caps) {
         if (mCarrierPrivilegeAuthenticator != null) {
-            return mCarrierPrivilegeAuthenticator.hasCarrierPrivilegeForNetworkCapabilities(
+            return mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                     callingUid, caps);
         }
         return false;
