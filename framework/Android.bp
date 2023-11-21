@@ -94,7 +94,9 @@ java_defaults {
         "framework-wifi.stubs.module_lib",
     ],
     static_libs: [
-        "mdns_aidl_interface-lateststable-java",
+        // Not using the latest stable version because all functions in the latest version of
+        // mdns_aidl_interface are deprecated.
+        "mdns_aidl_interface-V1-java",
         "modules-utils-backgroundthread",
         "modules-utils-build",
         "modules-utils-preconditions",
