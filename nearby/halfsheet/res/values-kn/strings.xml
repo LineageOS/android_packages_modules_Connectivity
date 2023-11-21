@@ -33,7 +33,7 @@
     <string name="common_connecting" msgid="160531481424245303">"ಕನೆಕ್ಟ್ ಆಗುತ್ತಿದೆ…"</string>
     <string name="common_battery_level" msgid="8748495823047456645">"ಬ್ಯಾಟರಿ: %d%%"</string>
     <string name="paring_action_done" msgid="6888875159174470731">"ಮುಗಿದಿದೆ"</string>
-    <string name="paring_action_save" msgid="6259357442067880136">"ಉಳಿಸಿ"</string>
+    <string name="paring_action_save" msgid="6259357442067880136">"ಸೇವ್ ಮಾಡಿ"</string>
     <string name="paring_action_connect" msgid="4801102939608129181">"ಕನೆಕ್ಟ್ ಮಾಡಿ"</string>
     <string name="paring_action_launch" msgid="8940808384126591230">"ಸೆಟಪ್ ಮಾಡಿ"</string>
     <string name="paring_action_settings" msgid="424875657242864302">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
