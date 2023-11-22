@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.android.net.module.util.netlink;
+package com.android.net.module.util.netlink.xfrm;
 
-import static com.android.net.module.util.netlink.IpSecXfrmNetlinkMessage.IPPROTO_ESP;
+import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.IPPROTO_ESP;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -38,7 +38,7 @@ import java.nio.ByteOrder;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-public class IpSecStructXfrmUsersaIdTest {
+public class StructXfrmUsersaIdTest {
     private static final String EXPECTED_HEX_STRING =
             "C0000201000000000000000000000000" + "7768440002003200";
     private static final byte[] EXPECTED_HEX = HexDump.hexStringToByteArray(EXPECTED_HEX_STRING);
@@ -50,8 +50,7 @@ public class IpSecStructXfrmUsersaIdTest {
 
     @Test
     public void testEncode() throws Exception {
-        final IpSecStructXfrmUsersaId struct =
-                new IpSecStructXfrmUsersaId(DEST_ADDRESS, SPI, FAMILY, PROTO);
+        final StructXfrmUsersaId struct = new StructXfrmUsersaId(DEST_ADDRESS, SPI, FAMILY, PROTO);
 
         ByteBuffer buffer = ByteBuffer.allocate(EXPECTED_HEX.length);
         buffer.order(ByteOrder.nativeOrder());
@@ -65,8 +64,8 @@ public class IpSecStructXfrmUsersaIdTest {
         final ByteBuffer buffer = ByteBuffer.wrap(EXPECTED_HEX);
         buffer.order(ByteOrder.nativeOrder());
 
-        final IpSecStructXfrmUsersaId struct =
-                IpSecStructXfrmUsersaId.parse(IpSecStructXfrmUsersaId.class, buffer);
+        final StructXfrmUsersaId struct =
+                StructXfrmUsersaId.parse(StructXfrmUsersaId.class, buffer);
 
         assertEquals(DEST_ADDRESS, struct.getDestAddress());
         assertEquals(SPI, struct.spi);
