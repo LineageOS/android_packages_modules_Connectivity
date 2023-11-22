@@ -49,6 +49,7 @@ private const val NO_CALLBACK_TIMEOUT_MS = 200L
 private const val TEST_ELAPSED_REALTIME_MS = 123L
 private const val DEFAULT_TTL_TIME_MS = 120000L
 
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class MdnsServiceCacheTest {
@@ -104,6 +105,7 @@ class MdnsServiceCacheTest {
     @After
     fun tearDown() {
         thread.quitSafely()
+        thread.join()
     }
 
     private fun makeFlags(isExpiredServicesRemovalEnabled: Boolean = false) =
