@@ -45,7 +45,7 @@ android_test {
     libs: [
         "android.test.base",
         "android.test.runner",
-        "framework-connectivity-flagged-apis"
+        "framework-connectivity-module-api-stubs-including-flagged"
     ],
     // Test coverage system runs on different devices. Need to
     // compile for all architectures.
