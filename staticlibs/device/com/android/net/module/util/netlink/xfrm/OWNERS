@@ -1,0 +1,3 @@
+# Bug component: 1364804
+
+per-file **Xfrm* = file:platform/frameworks/base:main:/services/core/java/com/android/server/vcn/OWNERS
