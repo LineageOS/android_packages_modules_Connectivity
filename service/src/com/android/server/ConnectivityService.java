@@ -4784,7 +4784,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // If the Private DNS mode is opportunistic, reprogram the DNS servers
         // in order to restart a validation pass from within netd.
         final PrivateDnsConfig cfg = mDnsManager.getPrivateDnsConfig();
-        if (cfg.useTls && TextUtils.isEmpty(cfg.hostname)) {
+        if (cfg.inOpportunisticMode()) {
             updateDnses(nai.linkProperties, null, nai.network.getNetId());
         }
     }
