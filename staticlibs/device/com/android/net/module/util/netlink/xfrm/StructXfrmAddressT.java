@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.net.module.util.netlink;
+package com.android.net.module.util.netlink.xfrm;
+
+import static com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_LEN;
 
 import android.system.OsConstants;
 
@@ -41,21 +43,19 @@ import java.net.UnknownHostException;
  *
  * @hide
  */
-public class IpSecStructXfrmAddressT extends Struct {
-    private static final int IPV4_ADDRESS_LEN = 4;
-
+public class StructXfrmAddressT extends Struct {
     public static final int STRUCT_SIZE = 16;
 
     @Field(order = 0, type = Type.ByteArray, arraysize = STRUCT_SIZE)
     public final byte[] address;
 
     // Constructor that allows Strutc.parse(Class<T>, ByteBuffer) to work
-    public IpSecStructXfrmAddressT(@NonNull byte[] address) {
+    public StructXfrmAddressT(@NonNull final byte[] address) {
         this.address = address.clone();
     }
 
     // Constructor to build a new message
-    public IpSecStructXfrmAddressT(@NonNull InetAddress inetAddress) {
+    public StructXfrmAddressT(@NonNull final InetAddress inetAddress) {
         this.address = new byte[STRUCT_SIZE];
         final byte[] addressBytes = inetAddress.getAddress();
         System.arraycopy(addressBytes, 0, address, 0, addressBytes.length);
@@ -67,7 +67,7 @@ public class IpSecStructXfrmAddressT extends Struct {
         if (family == OsConstants.AF_INET6) {
             addressBytes = this.address;
         } else if (family == OsConstants.AF_INET) {
-            addressBytes = new byte[IPV4_ADDRESS_LEN];
+            addressBytes = new byte[IPV4_ADDR_LEN];
             System.arraycopy(this.address, 0, addressBytes, 0, addressBytes.length);
         } else {
             throw new IllegalArgumentException("Invalid IP family " + family);

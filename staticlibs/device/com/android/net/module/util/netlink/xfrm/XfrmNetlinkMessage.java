@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.android.net.module.util.netlink;
+package com.android.net.module.util.netlink.xfrm;
 
 import androidx.annotation.NonNull;
+
+import com.android.net.module.util.netlink.NetlinkMessage;
+import com.android.net.module.util.netlink.StructNlMsgHdr;
 
 /** Base calss for XFRM netlink messages */
 // Developer notes: The Linux kernel includes a number of XFRM structs that are not standard netlink
@@ -24,11 +27,11 @@ import androidx.annotation.NonNull;
 // netlink message implementation assumes their sizes will remain stable. If any non-attribute
 // struct size changes, it should be caught by CTS and then developers should add
 // kernel-version-based behvaiours.
-public abstract class IpSecXfrmNetlinkMessage extends NetlinkMessage {
+public abstract class XfrmNetlinkMessage extends NetlinkMessage {
     // TODO: STOPSHIP: b/308011229 Remove it when OsConstants.IPPROTO_ESP is exposed
     public static final int IPPROTO_ESP = 50;
 
-    public IpSecXfrmNetlinkMessage(@NonNull StructNlMsgHdr header) {
+    public XfrmNetlinkMessage(@NonNull final StructNlMsgHdr header) {
         super(header);
     }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.net.module.util.netlink;
+package com.android.net.module.util.netlink.xfrm;
 
 import androidx.annotation.NonNull;
 
@@ -40,7 +40,7 @@ import java.net.InetAddress;
  *
  * @hide
  */
-public class IpSecStructXfrmUsersaId extends Struct {
+public class StructXfrmUsersaId extends Struct {
     public static final int STRUCT_SIZE = 24;
 
     @Field(order = 0, type = Type.ByteArray, arraysize = 16)
@@ -55,23 +55,23 @@ public class IpSecStructXfrmUsersaId extends Struct {
     @Field(order = 3, type = Type.U8, padding = 1)
     public final short proto;
 
-    @Computed private final IpSecStructXfrmAddressT mDestXfrmAddressT;
+    @Computed private final StructXfrmAddressT mDestXfrmAddressT;
 
     // Constructor that allows Strutc.parse(Class<T>, ByteBuffer) to work
-    public IpSecStructXfrmUsersaId(
-            @NonNull byte[] nestedStructDAddr, long spi, int family, short proto) {
+    public StructXfrmUsersaId(
+            @NonNull final byte[] nestedStructDAddr, long spi, int family, short proto) {
         this.nestedStructDAddr = nestedStructDAddr.clone();
         this.spi = spi;
         this.family = family;
         this.proto = proto;
 
-        mDestXfrmAddressT = new IpSecStructXfrmAddressT(this.nestedStructDAddr);
+        mDestXfrmAddressT = new StructXfrmAddressT(this.nestedStructDAddr);
     }
 
     // Constructor to build a new message
-    public IpSecStructXfrmUsersaId(
-            @NonNull InetAddress destAddress, long spi, int family, short proto) {
-        this(new IpSecStructXfrmAddressT(destAddress).writeToBytes(), spi, family, proto);
+    public StructXfrmUsersaId(
+            @NonNull final InetAddress destAddress, long spi, int family, short proto) {
+        this(new StructXfrmAddressT(destAddress).writeToBytes(), spi, family, proto);
     }
 
     /** Return the destination address */
