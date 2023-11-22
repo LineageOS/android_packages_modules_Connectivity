@@ -34,10 +34,10 @@ import android.app.compat.CompatChanges;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
+import android.net.ConnectivityThread;
 import android.net.Network;
 import android.net.NetworkRequest;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
@@ -632,10 +632,9 @@ public final class NsdManager {
      */
     public NsdManager(Context context, INsdManager service) {
         mContext = context;
-
-        HandlerThread t = new HandlerThread("NsdManager");
-        t.start();
-        mHandler = new ServiceHandler(t.getLooper());
+        // Use a common singleton thread ConnectivityThread to be shared among all nsd tasks.
+        // Instead of launching separate threads to handle tasks from the various instances.
+        mHandler = new ServiceHandler(ConnectivityThread.getInstanceLooper());
 
         try {
             mService = service.connect(new NsdCallbackImpl(mHandler), CompatChanges.isChangeEnabled(
