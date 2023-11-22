@@ -27,6 +27,7 @@
 
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.net.thread.unittests" />
+        <option name="hidden-api-checks" value="false"/>
         <!-- Ignores tests introduced by guava-android-testlib -->
         <option name="exclude-annotation" value="org.junit.Ignore"/>
     </test>
