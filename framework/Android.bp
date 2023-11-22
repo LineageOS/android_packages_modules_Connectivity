@@ -266,7 +266,7 @@ java_genrule {
         ":framework-connectivity-t-pre-jarjar{.jar}",
         ":framework-connectivity.stubs.module_lib{.jar}",
         ":framework-connectivity-t.stubs.module_lib{.jar}",
-        ":framework-connectivity-flagged-apis{.jar}",
+        ":framework-connectivity-module-api-stubs-including-flagged{.jar}",
         "jarjar-excludes.txt",
     ],
     tools: [
@@ -279,7 +279,7 @@ java_genrule {
         "--prefix android.net.connectivity " +
         "--apistubs $(location :framework-connectivity.stubs.module_lib{.jar}) " +
         "--apistubs $(location :framework-connectivity-t.stubs.module_lib{.jar}) " +
-        "--apistubs $(location :framework-connectivity-flagged-apis{.jar}) " +
+        "--apistubs $(location :framework-connectivity-module-api-stubs-including-flagged{.jar}) " +
         // Make a ":"-separated list. There will be an extra ":" but empty items are ignored.
         "--unsupportedapi $$(printf ':%s' $(locations :connectivity-hiddenapi-files)) " +
         "--excludes $(location jarjar-excludes.txt) " +
@@ -292,7 +292,7 @@ java_genrule {
 }
 
 droidstubs {
-    name: "framework-connectivity-flagged-apis-droidstubs",
+    name: "framework-connectivity-module-api-stubs-including-flagged-droidstubs",
     srcs: [
         ":framework-connectivity-sources",
         ":framework-connectivity-tiramisu-updatable-sources",
@@ -300,7 +300,6 @@ droidstubs {
         ":framework-thread-sources",
     ],
     flags: [
-        "--show-annotation android.annotation.FlaggedApi",
         "--show-for-stub-purposes-annotation android.annotation.SystemApi" +
         "\\(client=android.annotation.SystemApi.Client.PRIVILEGED_APPS\\)",
         "--show-for-stub-purposes-annotation android.annotation.SystemApi" +
@@ -315,8 +314,8 @@ droidstubs {
 }
 
 java_library {
-    name: "framework-connectivity-flagged-apis",
-    srcs: [":framework-connectivity-flagged-apis-droidstubs"],
+    name: "framework-connectivity-module-api-stubs-including-flagged",
+    srcs: [":framework-connectivity-module-api-stubs-including-flagged-droidstubs"],
 }
 
 // Library providing limited APIs within the connectivity module, so that R+ components like
