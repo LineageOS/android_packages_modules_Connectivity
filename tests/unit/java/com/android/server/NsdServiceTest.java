@@ -145,6 +145,7 @@ import java.util.Queue;
 // TODOs:
 //  - test client can send requests and receive replies
 //  - test NSD_ON ENABLE/DISABLED listening
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
