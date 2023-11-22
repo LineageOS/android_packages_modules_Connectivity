@@ -278,10 +278,8 @@ public class ConnectivityManagerTest {
     private static final int MIN_KEEPALIVE_INTERVAL = 10;
 
     private static final int NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
-    // Timeout for waiting network to be validated. Set the timeout to 30s, which is more than
-    // DNS timeout.
-    // TODO(b/252972908): reset the original timer when aosp/2188755 is ramped up.
-    private static final int LISTEN_ACTIVITY_TIMEOUT_MS = 30_000;
+    // Timeout for waiting network to be validated.
+    private static final int LISTEN_ACTIVITY_TIMEOUT_MS = 5_000;
     private static final int NO_CALLBACK_TIMEOUT_MS = 100;
     private static final int NETWORK_REQUEST_TIMEOUT_MS = 3000;
     private static final int SOCKET_TIMEOUT_MS = 100;
