@@ -1280,9 +1280,9 @@ public class BpfCoordinatorTest {
         final Ipv6DownstreamRule rule = buildTestDownstreamRule(mobileIfIndex, NEIGH_A, MAC_A);
 
         final TetherDownstream6Key key = rule.makeTetherDownstream6Key();
-        assertEquals(key.iif, mobileIfIndex);
-        assertEquals(key.dstMac, MacAddress.ALL_ZEROS_ADDRESS);  // rawip upstream
-        assertTrue(Arrays.equals(key.neigh6, NEIGH_A.getAddress()));
+        assertEquals(mobileIfIndex, key.iif);
+        assertEquals(MacAddress.ALL_ZEROS_ADDRESS, key.dstMac);  // rawip upstream
+        assertArrayEquals(NEIGH_A.getAddress(), key.neigh6);
         // iif (4) + dstMac(6) + padding(2) + neigh6 (16) = 28.
         assertEquals(28, key.writeToBytes().length);
     }
@@ -1293,12 +1293,12 @@ public class BpfCoordinatorTest {
         final Ipv6DownstreamRule rule = buildTestDownstreamRule(mobileIfIndex, NEIGH_A, MAC_A);
 
         final Tether6Value value = rule.makeTether6Value();
-        assertEquals(value.oif, DOWNSTREAM_IFINDEX);
-        assertEquals(value.ethDstMac, MAC_A);
-        assertEquals(value.ethSrcMac, DOWNSTREAM_MAC);
-        assertEquals(value.ethProto, ETH_P_IPV6);
-        assertEquals(value.pmtu, NetworkStackConstants.ETHER_MTU);
-        // oif (4) + ethDstMac (6) + ethSrcMac (6) + ethProto (2) + pmtu (2) = 20.
+        assertEquals(DOWNSTREAM_IFINDEX, value.oif);
+        assertEquals(MAC_A, value.ethDstMac);
+        assertEquals(DOWNSTREAM_MAC, value.ethSrcMac);
+        assertEquals(ETH_P_IPV6, value.ethProto);
+        assertEquals(NetworkStackConstants.ETHER_MTU, value.pmtu);
+        // oif (4) + ethDstMac (6) + ethSrcMac (6) + ethProto (2) + pmtu (2) = 20
         assertEquals(20, value.writeToBytes().length);
     }
 
