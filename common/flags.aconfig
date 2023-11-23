@@ -15,13 +15,6 @@ flag {
 }
 
 flag {
-  name: "nsd_expired_services_removal"
-  namespace: "android_core_networking"
-  description: "Remove expired services from MdnsServiceCache"
-  bug: "304649384"
-}
-
-flag {
   name: "set_data_saver_via_cm"
   namespace: "android_core_networking"
   description: "Set data saver through ConnectivityManager API"
