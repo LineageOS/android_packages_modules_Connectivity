@@ -17,8 +17,6 @@
 package com.android.server.connectivity;
 
 import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
-import static android.net.NetworkCapabilities.NET_CAPABILITY_PRIORITIZE_LATENCY;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
@@ -223,19 +221,6 @@ public class NetworkRanker {
     }
 
     /**
-     * Returns whether the scorable has any of the PRIORITIZE_* capabilities.
-     *
-     * These capabilities code for customer slices, and a network that has one is a customer slice.
-     */
-    private boolean hasPrioritizedCapability(@NonNull final Scoreable nai) {
-        final NetworkCapabilities caps = nai.getCapsNoCopy();
-        final long anyPrioritizeCapability =
-                (1L << NET_CAPABILITY_PRIORITIZE_LATENCY)
-                | (1L << NET_CAPABILITY_PRIORITIZE_BANDWIDTH);
-        return 0 != (caps.getCapabilitiesInternal() & anyPrioritizeCapability);
-    }
-
-    /**
      * Get the best network among a list of candidates according to policy.
      * @param candidates the candidates
      * @param currentSatisfier the current satisfier, or null if none
@@ -338,12 +323,6 @@ public class NetworkRanker {
         // If there were no primary network, then candidates.size() > 0 because it didn't
         // change from the previous result. If there were, it's guaranteed candidates.size() > 0
         // because accepted.size() > 0 above.
-
-        // If any network is not a slice with prioritized bandwidth or latency, don't choose one
-        // that is.
-        partitionInto(candidates, nai -> !hasPrioritizedCapability(nai), accepted, rejected);
-        if (accepted.size() == 1) return accepted.get(0);
-        if (accepted.size() > 0 && rejected.size() > 0) candidates = new ArrayList<>(accepted);
 
         // If some of the networks have a better transport than others, keep only the ones with
         // the best transports.
