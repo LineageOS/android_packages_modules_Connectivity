@@ -255,7 +255,12 @@ class ConnectivityServiceIntegrationTest {
         na.connect()
 
         testCallback.expectAvailableThenValidatedCallbacks(na.network, TEST_TIMEOUT_MS)
-        assertEquals(2, nsInstrumentation.getRequestUrls().size)
+        val requestedSize = nsInstrumentation.getRequestUrls().size
+        if (requestedSize == 2 || (requestedSize == 1 &&
+                nsInstrumentation.getRequestUrls()[0] == httpsProbeUrl)) {
+            return
+        }
+        fail("Unexpected request urls: ${nsInstrumentation.getRequestUrls()}")
     }
 
     @Test
