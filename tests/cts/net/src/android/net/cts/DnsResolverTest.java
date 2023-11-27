@@ -860,4 +860,9 @@ public class DnsResolverTest {
             assertEquals(DnsResolver.ERROR_SYSTEM, e.code);
         }
     }
+
+    @Test
+    public void testNoRawBinderAccess() {
+        assertNull(mContext.getSystemService("dnsresolver"));
+    }
 }
