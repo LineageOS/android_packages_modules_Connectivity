@@ -128,6 +128,14 @@ public class StructNlMsgHdr {
         nlmsg_pid = 0;
     }
 
+    public StructNlMsgHdr(int payloadLen, short type, short flags, int seq) {
+        nlmsg_len = StructNlMsgHdr.STRUCT_SIZE + payloadLen;
+        nlmsg_type = type;
+        nlmsg_flags = flags;
+        nlmsg_seq = seq;
+        nlmsg_pid = 0;
+    }
+
     /**
      * Write netlink message header to ByteBuffer.
      */
