@@ -54,6 +54,7 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
+import android.net.TelephonyNetworkSpecifier;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -107,12 +108,16 @@ public class NetworkNotificationManagerTest {
     private static final long TEST_TIMEOUT_MS = 10_000L;
     private static final long UI_AUTOMATOR_WAIT_TIME_MILLIS = TEST_TIMEOUT_MS;
 
-    static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
-    static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
-    static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
+    private static final int TEST_SUB_ID = 43;
+    private static final String TEST_OPERATOR_NAME = "Test Operator";
+    private static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
+    private static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
+    private static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
     static {
         CELL_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
         CELL_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        CELL_CAPABILITIES.setNetworkSpecifier(new TelephonyNetworkSpecifier.Builder()
+                .setSubscriptionId(TEST_SUB_ID).build());
 
         WIFI_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
         WIFI_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
@@ -149,6 +154,7 @@ public class NetworkNotificationManagerTest {
     @Mock DisplayMetrics mDisplayMetrics;
     @Mock PackageManager mPm;
     @Mock TelephonyManager mTelephonyManager;
+    @Mock TelephonyManager mTestSubIdTelephonyManager;
     @Mock NotificationManager mNotificationManager;
     @Mock NetworkAgentInfo mWifiNai;
     @Mock NetworkAgentInfo mCellNai;
@@ -170,18 +176,21 @@ public class NetworkNotificationManagerTest {
         mVpnNai.networkInfo = mNetworkInfo;
         mDisplayMetrics.density = 2.275f;
         doReturn(true).when(mVpnNai).isVPN();
-        when(mCtx.getResources()).thenReturn(mResources);
-        when(mCtx.getPackageManager()).thenReturn(mPm);
-        when(mCtx.getApplicationInfo()).thenReturn(new ApplicationInfo());
+        doReturn(mResources).when(mCtx).getResources();
+        doReturn(mPm).when(mCtx).getPackageManager();
+        doReturn(new ApplicationInfo()).when(mCtx).getApplicationInfo();
         final Context asUserCtx = mock(Context.class, AdditionalAnswers.delegatesTo(mCtx));
         doReturn(UserHandle.ALL).when(asUserCtx).getUser();
-        when(mCtx.createContextAsUser(eq(UserHandle.ALL), anyInt())).thenReturn(asUserCtx);
-        when(mCtx.getSystemService(eq(Context.NOTIFICATION_SERVICE)))
-                .thenReturn(mNotificationManager);
-        when(mNetworkInfo.getExtraInfo()).thenReturn(TEST_EXTRA_INFO);
+        doReturn(asUserCtx).when(mCtx).createContextAsUser(eq(UserHandle.ALL), anyInt());
+        doReturn(mNotificationManager).when(mCtx)
+                .getSystemService(eq(Context.NOTIFICATION_SERVICE));
+        doReturn(TEST_EXTRA_INFO).when(mNetworkInfo).getExtraInfo();
         ConnectivityResources.setResourcesContextForTest(mCtx);
-        when(mResources.getColor(anyInt(), any())).thenReturn(0xFF607D8B);
-        when(mResources.getDisplayMetrics()).thenReturn(mDisplayMetrics);
+        doReturn(0xFF607D8B).when(mResources).getColor(anyInt(), any());
+        doReturn(mDisplayMetrics).when(mResources).getDisplayMetrics();
+        doReturn(mTestSubIdTelephonyManager).when(mTelephonyManager)
+                .createForSubscriptionId(TEST_SUB_ID);
+        doReturn(TEST_OPERATOR_NAME).when(mTestSubIdTelephonyManager).getNetworkOperatorName();
 
         // Come up with some credible-looking transport names. The actual values do not matter.
         String[] transportNames = new String[NetworkCapabilities.MAX_TRANSPORT + 1];
@@ -531,5 +540,45 @@ public class NetworkNotificationManagerTest {
         doNotificationTextTest(PARTIAL_CONNECTIVITY,
                 R.string.wifi_no_internet, TEST_EXTRA_INFO,
                 R.string.wifi_no_internet_detailed);
+    }
+
+    private void runTelephonySignInNotificationTest(String testTitle, String testContents) {
+        final int id = 101;
+        final String tag = NetworkNotificationManager.tagFor(id);
+        mManager.showNotification(id, SIGN_IN, mCellNai, null, null, false);
+
+        final ArgumentCaptor<Notification> noteCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(mNotificationManager).notify(eq(tag), eq(SIGN_IN.eventId), noteCaptor.capture());
+        final Bundle noteExtras = noteCaptor.getValue().extras;
+        assertEquals(testTitle, noteExtras.getString(Notification.EXTRA_TITLE));
+        assertEquals(testContents, noteExtras.getString(Notification.EXTRA_TEXT));
+    }
+
+    @Test
+    public void testTelephonySignInNotification() {
+        final String testTitle = "Telephony no internet title";
+        final String testContents = "Add data for " + TEST_OPERATOR_NAME;
+        // The test does not use real resources as they are in the ConnectivityResources package,
+        // which is tricky to use (requires resolving the package, QUERY_ALL_PACKAGES permission).
+        doReturn(testTitle).when(mResources).getString(
+                R.string.mobile_network_available_no_internet);
+        doReturn(testContents).when(mResources).getString(
+                R.string.mobile_network_available_no_internet_detailed, TEST_OPERATOR_NAME);
+
+        runTelephonySignInNotificationTest(testTitle, testContents);
+    }
+
+    @Test
+    public void testTelephonySignInNotification_NoOperator() {
+        doReturn("").when(mTestSubIdTelephonyManager).getNetworkOperatorName();
+
+        final String testTitle = "Telephony no internet title";
+        final String testContents = "Add data";
+        doReturn(testTitle).when(mResources).getString(
+                R.string.mobile_network_available_no_internet);
+        doReturn(testContents).when(mResources).getString(
+                R.string.mobile_network_available_no_internet_detailed_unknown_carrier);
+
+        runTelephonySignInNotificationTest(testTitle, testContents);
     }
 }
