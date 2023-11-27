@@ -27,7 +27,9 @@ import android.net.thread.IOperationReceiver;
 import android.os.Build;
 import android.util.Log;
 
+import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.connectivity.ConnectivityResources;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -73,6 +75,7 @@ public class ThreadNetworkCountryCode {
     private static final CountryCodeInfo DEFAULT_COUNTRY_CODE_INFO =
             new CountryCodeInfo(DEFAULT_COUNTRY_CODE, COUNTRY_CODE_SOURCE_DEFAULT);
 
+    private final ConnectivityResources mResources;
     private final LocationManager mLocationManager;
     @Nullable private final Geocoder mGeocoder;
     private final ThreadNetworkControllerService mThreadNetworkControllerService;
@@ -123,17 +126,20 @@ public class ThreadNetworkCountryCode {
     }
 
     private boolean isLocationUseForCountryCodeEnabled() {
-        // TODO: b/311324956 read the configuration from the overlay configuration.
-        return true;
+        return mResources
+                .get()
+                .getBoolean(R.bool.config_thread_location_use_for_country_code_enabled);
     }
 
     public ThreadNetworkCountryCode(
             LocationManager locationManager,
             ThreadNetworkControllerService threadNetworkControllerService,
-            @Nullable Geocoder geocoder) {
+            @Nullable Geocoder geocoder,
+            ConnectivityResources resources) {
         mLocationManager = locationManager;
         mThreadNetworkControllerService = threadNetworkControllerService;
         mGeocoder = geocoder;
+        mResources = resources;
     }
 
     /** Sets up this country code module to listen to location country code changes. */

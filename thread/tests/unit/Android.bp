@@ -39,12 +39,14 @@ android_test {
         "guava-android-testlib",
         "mockito-target-extended-minus-junit4",
         "net-tests-utils",
+        "service-connectivity-pre-jarjar",
         "service-thread-pre-jarjar",
         "truth",
     ],
     libs: [
         "android.test.base",
         "android.test.runner",
+        "ServiceConnectivityResources",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     jni_libs: [
