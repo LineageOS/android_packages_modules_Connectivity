@@ -243,7 +243,7 @@ public class NetworkNotificationManager {
                     details = r.getString(R.string.network_available_sign_in_detailed, name);
                     break;
                 case TRANSPORT_CELLULAR:
-                    title = r.getString(R.string.network_available_sign_in, 0);
+                    title = r.getString(R.string.mobile_network_available_no_internet);
                     // TODO: Change this to pull from NetworkInfo once a printable
                     // name has been added to it
                     NetworkSpecifier specifier = nai.networkCapabilities.getNetworkSpecifier();
@@ -252,8 +252,16 @@ public class NetworkNotificationManager {
                         subId = ((TelephonyNetworkSpecifier) specifier).getSubscriptionId();
                     }
 
-                    details = mTelephonyManager.createForSubscriptionId(subId)
+                    final String operatorName = mTelephonyManager.createForSubscriptionId(subId)
                             .getNetworkOperatorName();
+                    if (TextUtils.isEmpty(operatorName)) {
+                        details = r.getString(R.string
+                                .mobile_network_available_no_internet_detailed_unknown_carrier);
+                    } else {
+                        details = r.getString(
+                                R.string.mobile_network_available_no_internet_detailed,
+                                operatorName);
+                    }
                     break;
                 default:
                     title = r.getString(R.string.network_available_sign_in, 0);
