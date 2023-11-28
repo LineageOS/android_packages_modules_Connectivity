@@ -39,6 +39,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.nearby.NearbyConfiguration;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.metrics.NearbyMetrics;
 import com.android.server.nearby.presence.PresenceDiscoveryResult;
@@ -70,6 +71,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
     private final Context mContext;
     private final BleDiscoveryProvider mBleDiscoveryProvider;
     private final Injector mInjector;
+    private final NearbyConfiguration mNearbyConfiguration;
     @ScanRequest.ScanMode
     private int mScanMode;
     @GuardedBy("mLock")
@@ -84,6 +86,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
                         mContext, new ChreCommunication(injector, mContext, executor), executor);
         mScanTypeScanListenerRecordMap = new HashMap<>();
         mInjector = injector;
+        mNearbyConfiguration = new NearbyConfiguration();
         Log.v(TAG, "DiscoveryProviderManagerLegacy: ");
     }
 
@@ -97,6 +100,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
         mBleDiscoveryProvider = bleDiscoveryProvider;
         mChreDiscoveryProvider = chreDiscoveryProvider;
         mScanTypeScanListenerRecordMap = scanTypeScanListenerRecordMap;
+        mNearbyConfiguration = new NearbyConfiguration();
     }
 
     private static boolean isChreOnly(List<ScanFilter> scanFilters) {
@@ -222,7 +226,9 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
     /** Called after boot completed. */
     public void init() {
         // Register BLE only scan when Bluetooth is turned off
-        setBleScanEnabled();
+        if (mNearbyConfiguration.enableBleInInit()) {
+            setBleScanEnabled();
+        }
         if (mInjector.getContextHubManager() != null) {
             mChreDiscoveryProvider.init();
         }
