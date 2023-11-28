@@ -36,6 +36,7 @@
     <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
         <option name="force-skip-system-props" value="true" />
         <option name="set-global-setting" key="verifier_verify_adb_installs" value="0" />
+        <option name="set-global-setting" key="low_power_standby_enabled" value="0" />
     </target_preparer>
 
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
