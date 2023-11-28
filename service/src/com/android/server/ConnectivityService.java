@@ -7649,7 +7649,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void enforceRequestCapabilitiesDeclaration(@NonNull final String callerPackageName,
-            @NonNull final NetworkCapabilities networkCapabilities) {
+            @NonNull final NetworkCapabilities networkCapabilities, int callingUid) {
         // This check is added to fix the linter error for "current min is 30", which is not going
         // to happen because Connectivity service always run in S+.
         if (!mDeps.isAtLeastS()) {
@@ -7663,7 +7663,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 applicationNetworkCapabilities = mSelfCertifiedCapabilityCache.get(
                         callerPackageName);
                 if (applicationNetworkCapabilities == null) {
-                    final PackageManager packageManager = mContext.getPackageManager();
+                    final PackageManager packageManager =
+                            mContext.createContextAsUser(UserHandle.getUserHandleForUid(
+                                    callingUid), 0 /* flags */).getPackageManager();
                     final PackageManager.Property networkSliceProperty = packageManager.getProperty(
                             ConstantsShim.PROPERTY_SELF_CERTIFIED_NETWORK_CAPABILITIES,
                             callerPackageName
@@ -7695,7 +7697,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
             String callingPackageName, String callingAttributionTag, final int callingUid) {
         if (shouldCheckCapabilitiesDeclaration(networkCapabilities, callingUid,
                 callingPackageName)) {
-            enforceRequestCapabilitiesDeclaration(callingPackageName, networkCapabilities);
+            enforceRequestCapabilitiesDeclaration(callingPackageName, networkCapabilities,
+                    callingUid);
         }
         if (networkCapabilities.hasCapability(NET_CAPABILITY_NOT_RESTRICTED) == false) {
             // For T+ devices, callers with carrier privilege could request with CBS capabilities.
