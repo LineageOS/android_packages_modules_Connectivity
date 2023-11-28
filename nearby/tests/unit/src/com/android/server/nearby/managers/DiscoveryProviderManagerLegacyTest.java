@@ -16,6 +16,7 @@
 
 package com.android.server.nearby.managers;
 
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
 
@@ -37,6 +38,8 @@ import android.nearby.PresenceScanFilter;
 import android.nearby.PublicCredential;
 import android.nearby.ScanRequest;
 import android.os.IBinder;
+
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.provider.BleDiscoveryProvider;
@@ -139,6 +142,8 @@ public class DiscoveryProviderManagerLegacyTest {
 
     @Before
     public void setup() {
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().adoptShellPermissionIdentity(
+                READ_DEVICE_CONFIG);
         MockitoAnnotations.initMocks(this);
         when(mInjector.getAppOpsManager()).thenReturn(mAppOpsManager);
         when(mInjector.getBluetoothAdapter()).thenReturn(mBluetoothAdapter);
