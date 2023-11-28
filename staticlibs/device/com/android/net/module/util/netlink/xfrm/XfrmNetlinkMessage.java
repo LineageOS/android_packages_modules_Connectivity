@@ -17,9 +17,12 @@
 package com.android.net.module.util.netlink.xfrm;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
+
+import java.nio.ByteBuffer;
 
 /** Base calss for XFRM netlink messages */
 // Developer notes: The Linux kernel includes a number of XFRM structs that are not standard netlink
@@ -28,12 +31,45 @@ import com.android.net.module.util.netlink.StructNlMsgHdr;
 // struct size changes, it should be caught by CTS and then developers should add
 // kernel-version-based behvaiours.
 public abstract class XfrmNetlinkMessage extends NetlinkMessage {
-    // TODO: STOPSHIP: b/308011229 Remove it when OsConstants.IPPROTO_ESP is exposed
+    // TODO: b/312498032 Remove it when OsConstants.IPPROTO_ESP is stable
     public static final int IPPROTO_ESP = 50;
+    // TODO: b/312498032 Remove it when OsConstants.NETLINK_XFRM is stable
+    public static final int NETLINK_XFRM = 6;
+
+    /* see include/uapi/linux/xfrm.h */
+    public static final short XFRM_MSG_NEWSA = 16;
+    public static final short XFRM_MSG_GETSA = 18;
 
     public XfrmNetlinkMessage(@NonNull final StructNlMsgHdr header) {
         super(header);
     }
 
-    // TODO: Add the support for parsing messages
+    /**
+     * Parse XFRM message from ByteBuffer.
+     *
+     * <p>This method should be called from NetlinkMessage#parse(ByteBuffer, int) for generic
+     * message validation and processing
+     *
+     * @param nlmsghdr netlink message header.
+     * @param byteBuffer the ByteBuffer instance that wraps the raw netlink message bytes. MUST be
+     *                   host order
+     */
+    @Nullable
+    public static XfrmNetlinkMessage parseXfrmInternal(
+            @NonNull final StructNlMsgHdr nlmsghdr, @NonNull final ByteBuffer byteBuffer) {
+        switch (nlmsghdr.nlmsg_type) {
+            case XFRM_MSG_GETSA:
+                return XfrmNetlinkGetSaMessage.parseInternal(nlmsghdr, byteBuffer);
+            default:
+                return null;
+        }
+    }
+
+    protected abstract void packPayload(@NonNull final ByteBuffer byteBuffer);
+
+    /** Write a XFRM message to {@link ByteBuffer}. */
+    public void pack(@NonNull final ByteBuffer byteBuffer) {
+        getHeader().pack(byteBuffer);
+        packPayload(byteBuffer);
+    }
 }
