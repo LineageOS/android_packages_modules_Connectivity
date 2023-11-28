@@ -76,23 +76,43 @@ static Status checkProgramAccessible(const char* programPath) {
 }
 
 static Status initPrograms(const char* cg2_path) {
+    if (!cg2_path) {
+        ALOGE("cg2_path is NULL");
+        return statusFromErrno(EINVAL, "cg2_path is NULL");
+    }
+
     // This code was mainlined in T, so this should be trivially satisfied.
-    if (!modules::sdklevel::IsAtLeastT()) abort();
+    if (!modules::sdklevel::IsAtLeastT()) {
+        ALOGE("S- platform is unsupported");
+        abort();
+    }
 
     // S requires eBPF support which was only added in 4.9, so this should be satisfied.
-    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) abort();
+    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) {
+        ALOGE("kernel version < 4.9.0 is unsupported");
+        abort();
+    }
 
     // U bumps the kernel requirement up to 4.14
-    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) abort();
+    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) {
+        ALOGE("U+ platform with kernel version < 4.14.0 is unsupported");
+        abort();
+    }
 
     if (modules::sdklevel::IsAtLeastV()) {
         // V bumps the kernel requirement up to 4.19
         // see also: //system/netd/tests/kernel_test.cpp TestKernel419
-        if (!bpf::isAtLeastKernelVersion(4, 19, 0)) abort();
+        if (!bpf::isAtLeastKernelVersion(4, 19, 0)) {
+            ALOGE("V+ platform with kernel version < 4.19.0 is unsupported");
+            abort();
+        }
 
         // Technically already required by U, but only enforce on V+
         // see also: //system/netd/tests/kernel_test.cpp TestKernel64Bit
-        if (bpf::isKernel32Bit() && bpf::isAtLeastKernelVersion(5, 16, 0)) abort();
+        if (bpf::isKernel32Bit() && bpf::isAtLeastKernelVersion(5, 16, 0)) {
+            ALOGE("V+ platform with 32 bit kernel, version >= 5.16.0 is unsupported");
+            abort();
+        }
     }
 
     // Linux 6.1 is highest version supported by U, starting with V new kernels,
@@ -102,10 +122,16 @@ static Status initPrograms(const char* cg2_path) {
     // it does not affect unprivileged apps, the 32-on-64 compatibility
     // problems are AFAIK limited to various CAP_NET_ADMIN protected interfaces.
     // see also: //system/bpf/bpfloader/BpfLoader.cpp main()
-    if (bpf::isUserspace32bit() && bpf::isAtLeastKernelVersion(6, 2, 0)) abort();
+    if (bpf::isUserspace32bit() && bpf::isAtLeastKernelVersion(6, 2, 0)) {
+        ALOGE("32 bit userspace with Kernel version >= 6.2.0 is unsupported");
+        abort();
+    }
 
     // U mandates this mount point (though it should also be the case on T)
-    if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) abort();
+    if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) {
+        ALOGE("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
+        abort();
+    }
 
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
     if (!cg_fd.ok()) {
