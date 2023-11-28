@@ -22,6 +22,7 @@ import androidx.annotation.Nullable;
 import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
 /** Base calss for XFRM netlink messages */
@@ -39,6 +40,8 @@ public abstract class XfrmNetlinkMessage extends NetlinkMessage {
     /* see include/uapi/linux/xfrm.h */
     public static final short XFRM_MSG_NEWSA = 16;
     public static final short XFRM_MSG_GETSA = 18;
+
+    public static final BigInteger XFRM_INF = new BigInteger("FFFFFFFFFFFFFFFF", 16);
 
     public XfrmNetlinkMessage(@NonNull final StructNlMsgHdr header) {
         super(header);
