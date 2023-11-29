@@ -16,12 +16,17 @@
 
 package com.android.net.module.util.netlink;
 
+import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.NETLINK_XFRM;
+
 import android.system.OsConstants;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage;
+
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * NetlinkMessage base class for other, more specific netlink message types.
@@ -75,6 +80,8 @@ public class NetlinkMessage {
             parsed = parseInetDiagMessage(nlmsghdr, byteBuffer);
         } else if (nlFamily == OsConstants.NETLINK_NETFILTER) {
             parsed = parseNfMessage(nlmsghdr, byteBuffer);
+        } else if (nlFamily == NETLINK_XFRM) {
+            parsed = parseXfrmMessage(nlmsghdr, byteBuffer);
         } else {
             parsed = null;
         }
@@ -167,5 +174,20 @@ public class NetlinkMessage {
                 return (NetlinkMessage) ConntrackMessage.parse(nlmsghdr, byteBuffer);
             default: return null;
         }
+    }
+
+    @Nullable
+    private static NetlinkMessage parseXfrmMessage(
+            @NonNull final StructNlMsgHdr nlmsghdr, @NonNull final ByteBuffer byteBuffer) {
+        return (NetlinkMessage) XfrmNetlinkMessage.parseXfrmInternal(nlmsghdr, byteBuffer);
+    }
+
+    /** A convenient method to create a ByteBuffer for encoding a new message */
+    protected static ByteBuffer newNlMsgByteBuffer(int payloadLen) {
+        final int length = StructNlMsgHdr.STRUCT_SIZE + payloadLen;
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(length);
+        byteBuffer.order(ByteOrder.nativeOrder());
+
+        return byteBuffer;
     }
 }

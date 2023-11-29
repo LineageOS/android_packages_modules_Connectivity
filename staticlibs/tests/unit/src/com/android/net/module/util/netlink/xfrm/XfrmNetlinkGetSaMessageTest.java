@@ -17,6 +17,7 @@
 package com.android.net.module.util.netlink.xfrm;
 
 import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.IPPROTO_ESP;
+import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.NETLINK_XFRM;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -28,6 +29,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.net.module.util.HexDump;
+import com.android.net.module.util.netlink.NetlinkMessage;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,11 +40,12 @@ import java.nio.ByteOrder;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
-public class StructXfrmUsersaIdTest {
+public class XfrmNetlinkGetSaMessageTest {
     private static final String EXPECTED_HEX_STRING =
-            "C0000201000000000000000000000000" + "7768440002003200";
+            "28000000120001000000000000000000"
+                    + "C0000201000000000000000000000000"
+                    + "7768440002003200";
     private static final byte[] EXPECTED_HEX = HexDump.hexStringToByteArray(EXPECTED_HEX_STRING);
-
     private static final InetAddress DEST_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1");
     private static final long SPI = 0x77684400;
     private static final int FAMILY = OsConstants.AF_INET;
@@ -50,26 +53,23 @@ public class StructXfrmUsersaIdTest {
 
     @Test
     public void testEncode() throws Exception {
-        final StructXfrmUsersaId struct = new StructXfrmUsersaId(DEST_ADDRESS, SPI, FAMILY, PROTO);
-
-        final ByteBuffer buffer = ByteBuffer.allocate(EXPECTED_HEX.length);
-        buffer.order(ByteOrder.nativeOrder());
-        struct.writeToByteBuffer(buffer);
-
-        assertArrayEquals(EXPECTED_HEX, buffer.array());
+        final byte[] result =
+                XfrmNetlinkGetSaMessage.newXfrmNetlinkGetSaMessage(DEST_ADDRESS, SPI, PROTO);
+        assertArrayEquals(EXPECTED_HEX, result);
     }
 
     @Test
     public void testDecode() throws Exception {
         final ByteBuffer buffer = ByteBuffer.wrap(EXPECTED_HEX);
         buffer.order(ByteOrder.nativeOrder());
-
-        final StructXfrmUsersaId struct =
-                StructXfrmUsersaId.parse(StructXfrmUsersaId.class, buffer);
+        final XfrmNetlinkGetSaMessage message =
+                (XfrmNetlinkGetSaMessage) NetlinkMessage.parse(buffer, NETLINK_XFRM);
+        final StructXfrmUsersaId struct = message.getStructXfrmUsersaId();
 
         assertEquals(DEST_ADDRESS, struct.getDestAddress());
         assertEquals(SPI, struct.spi);
         assertEquals(FAMILY, struct.family);
         assertEquals(PROTO, struct.proto);
+        assertEquals(0, buffer.remaining());
     }
 }
