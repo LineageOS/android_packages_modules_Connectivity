@@ -16,6 +16,24 @@
       "message": "I don\u0027t run Lineage anymore and haven\u0027t hacked on Android in a long time, but it appears this shouldn\u0027t be an issue in the modern version of Android, due to them finally setting this to false by default (before the setting was null which caused tethering to break on some carriers)\n\nhttps://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/telephony/java/android/telephony/CarrierConfigManager.java;l\u003d10373?q\u003dframeworks%2Fbase%2Ftelephony%2Fjava%2Fandroid%2Ftelephony%2FCarrierConfigManager.java\u0026ss\u003dandroid%2Fplatform%2Fsuperproject%2Fmain",
       "revId": "6c7f9e0f95c460a76585691e49b868ba42b7cf7f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2c1e49c4_415bc6d8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2023-11-29T12:54:19Z",
+      "side": 1,
+      "message": "It\u0027d still help where carriers would set this to true, wouldn\u0027t it? If that worked, that is.",
+      "parentUuid": "c28b0c57_64570558",
+      "revId": "6c7f9e0f95c460a76585691e49b868ba42b7cf7f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
