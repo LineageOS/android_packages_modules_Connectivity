@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"सञ्जालमा साइन इन गर्नुहोस्"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"इन्टरनेट छैन"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"<xliff:g id="NETWORK_CARRIER">%1$s</xliff:g> को मोबाइल डेटा सकियो होला। विकल्पहरू हेर्न ट्याप गर्नुहोस्।"</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"मोबाइल डेटा सकियो होला। विकल्पहरू हेर्न ट्याप गर्नुहोस्।"</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> को इन्टरनेटमाथि पहुँच छैन"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"विकल्पहरूका लागि ट्याप गर्नुहोस्"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"मोबाइल नेटवर्कको इन्टरनेटमाथि पहुँच छैन"</string>

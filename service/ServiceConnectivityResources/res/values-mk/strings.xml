@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"Најавете се на мрежа"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"Нема интернет"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"Можеби се потрошил мобилниот интернет од <xliff:g id="NETWORK_CARRIER">%1$s</xliff:g>. Допрете за опции."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Можеби се потрошил мобилниот интернет. Допрете за опции."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> нема интернет-пристап"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Допрете за опции"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Мобилната мрежа нема интернет-пристап"</string>
