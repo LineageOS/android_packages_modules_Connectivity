@@ -302,7 +302,7 @@ public class DnsManager {
         final PrivateDnsConfig privateDnsCfg = mPrivateDnsMap.getOrDefault(netId,
                 PRIVATE_DNS_OFF);
 
-        final boolean useTls = privateDnsCfg.useTls;
+        final boolean useTls = privateDnsCfg.mode != PRIVATE_DNS_MODE_OFF;
         final PrivateDnsValidationStatuses statuses =
                 useTls ? mPrivateDnsValidationMap.get(netId) : null;
         final boolean validated = (null != statuses) && statuses.hasValidatedServer();
@@ -370,7 +370,7 @@ public class DnsManager {
         // networks like IMS.
         final PrivateDnsConfig privateDnsCfg = mPrivateDnsMap.getOrDefault(netId,
                 PRIVATE_DNS_OFF);
-        final boolean useTls = privateDnsCfg.useTls;
+        final boolean useTls = privateDnsCfg.mode != PRIVATE_DNS_MODE_OFF;
         final boolean strictMode = privateDnsCfg.inStrictMode();
 
         paramsParcel.netId = netId;
