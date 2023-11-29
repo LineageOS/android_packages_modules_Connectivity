@@ -36,6 +36,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.nearby.NearbyConfiguration;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.managers.registration.DiscoveryRegistration;
 import com.android.server.nearby.provider.AbstractDiscoveryProvider;
@@ -67,6 +68,7 @@ public class DiscoveryProviderManager extends
     private final BleDiscoveryProvider mBleDiscoveryProvider;
     private final Injector mInjector;
     private final Executor mExecutor;
+    private final NearbyConfiguration mNearbyConfiguration;
 
     public DiscoveryProviderManager(Context context, Injector injector) {
         Log.v(TAG, "DiscoveryProviderManager: ");
@@ -76,6 +78,7 @@ public class DiscoveryProviderManager extends
         mChreDiscoveryProvider = new ChreDiscoveryProvider(mContext,
                 new ChreCommunication(injector, mContext, mExecutor), mExecutor);
         mInjector = injector;
+        mNearbyConfiguration = new NearbyConfiguration();
     }
 
     @VisibleForTesting
@@ -87,6 +90,7 @@ public class DiscoveryProviderManager extends
         mInjector = injector;
         mBleDiscoveryProvider = bleDiscoveryProvider;
         mChreDiscoveryProvider = chreDiscoveryProvider;
+        mNearbyConfiguration = new NearbyConfiguration();
     }
 
     private static boolean isChreOnly(Set<ScanFilter> scanFilters) {
@@ -143,7 +147,9 @@ public class DiscoveryProviderManager extends
     /** Called after boot completed. */
     public void init() {
         // Register BLE only scan when Bluetooth is turned off
-        setBleScanEnabled();
+        if (mNearbyConfiguration.enableBleInInit()) {
+            setBleScanEnabled();
+        }
         if (mInjector.getContextHubManager() != null) {
             mChreDiscoveryProvider.init();
         }
