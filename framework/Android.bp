@@ -22,10 +22,6 @@ package {
 // In the branch which does not support FlaggedAPI, use this default to ignore the annotated APIs.
 java_defaults {
     name: "FlaggedApiDefaults",
-    api_dir: "udc-extended-api",
-    droiddoc_options: [
-      "--hide-annotation android.annotation.FlaggedApi",
-    ],
 }
 
 // The above variables may have different values
