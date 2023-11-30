@@ -16,6 +16,7 @@
 
 package com.android.server;
 
+import static android.Manifest.permission.DEVICE_POWER;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.net.ConnectivityManager.NETID_UNSET;
@@ -2104,11 +2105,17 @@ public class NsdService extends INsdManager.Stub {
             if (!SdkLevel.isAtLeastT()) {
                 throw new SecurityException("API is not available in before API level 33");
             }
-            // REGISTER_NSD_OFFLOAD_ENGINE was only added to the SDK in V, but may
-            // be back ported to older builds: accept it as long as it's signature-protected
-            if (PermissionUtils.checkAnyPermissionOf(context, REGISTER_NSD_OFFLOAD_ENGINE)
-                    && (SdkLevel.isAtLeastV() || PermissionUtils.isSystemSignaturePermission(
-                    context, REGISTER_NSD_OFFLOAD_ENGINE))) {
+
+            // REGISTER_NSD_OFFLOAD_ENGINE was only added to the SDK in V.
+            if (SdkLevel.isAtLeastV() && PermissionUtils.checkAnyPermissionOf(context,
+                    REGISTER_NSD_OFFLOAD_ENGINE)) {
+                return;
+            }
+
+            // REGISTER_NSD_OFFLOAD_ENGINE cannot be backport to U. In U, check the DEVICE_POWER
+            // permission instead.
+            if (!SdkLevel.isAtLeastV() && SdkLevel.isAtLeastU()
+                    && PermissionUtils.checkAnyPermissionOf(context, DEVICE_POWER)) {
                 return;
             }
             if (PermissionUtils.checkAnyPermissionOf(context, NETWORK_STACK,
