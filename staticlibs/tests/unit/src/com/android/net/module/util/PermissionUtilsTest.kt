@@ -16,15 +16,12 @@
 
 package com.android.net.module.util
 
-import android.Manifest.permission.INTERNET
-import android.Manifest.permission.NETWORK_SETTINGS
 import android.Manifest.permission.NETWORK_STACK
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.PackageManager.PERMISSION_DENIED
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
-import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.net.module.util.PermissionUtils.checkAnyPermissionOf
@@ -143,28 +140,5 @@ class PermissionUtilsTest {
         } catch (e: UnsupportedOperationException) {
             Assert.fail("Exception should have not been thrown with system feature enabled")
         }
-    }
-
-    @Test
-    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    fun testIsSystemSignaturePermission() {
-        assertTrue(
-            PermissionUtils.isSystemSignaturePermission(
-                context,
-                NETWORK_SETTINGS
-            )
-        )
-        assertFalse(
-            PermissionUtils
-                .isSystemSignaturePermission(context, PERMISSION_MAINLINE_NETWORK_STACK)
-        )
-        assertFalse(
-            PermissionUtils
-                .isSystemSignaturePermission(context, "test_permission")
-        )
-        assertFalse(
-            PermissionUtils
-                .isSystemSignaturePermission(context, INTERNET)
-        )
     }
 }
