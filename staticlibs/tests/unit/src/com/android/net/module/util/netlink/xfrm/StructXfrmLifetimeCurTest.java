@@ -31,6 +31,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Calendar;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
@@ -42,7 +43,7 @@ public class StructXfrmLifetimeCurTest {
     private static final BigInteger ADD_TIME;
 
     static {
-        final Calendar cal = Calendar.getInstance();
+        final Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         cal.set(2023, Calendar.NOVEMBER, 2, 1, 42, 36);
         final long timestampSeconds = TimeUnit.MILLISECONDS.toSeconds(cal.getTimeInMillis());
         ADD_TIME = BigInteger.valueOf(timestampSeconds);
