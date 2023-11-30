@@ -16,6 +16,7 @@
 
 package com.android.server;
 
+import static android.Manifest.permission.DEVICE_POWER;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED;
@@ -24,7 +25,6 @@ import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_GONE;
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE;
 import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
-import static android.content.pm.PermissionInfo.PROTECTION_SIGNATURE;
 import static android.net.InetAddresses.parseNumericAddress;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
@@ -75,7 +75,6 @@ import android.compat.testing.PlatformCompatChangeRule;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.pm.PermissionInfo;
 import android.net.INetd;
 import android.net.Network;
 import android.net.mdns.aidl.DiscoveryInfo;
@@ -170,6 +169,8 @@ public class NsdServiceTest {
 
     @Rule
     public TestRule compatChangeRule = new PlatformCompatChangeRule();
+    @Rule
+    public TestRule ignoreRule = new DevSdkIgnoreRule();
     @Mock Context mContext;
     @Mock PackageManager mPackageManager;
     @Mock ContentResolver mResolver;
@@ -1697,8 +1698,8 @@ public class NsdServiceTest {
 
     @Test
     @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
-    public void testRegisterOffloadEngine_checkPermission()
-            throws PackageManager.NameNotFoundException {
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public void testRegisterOffloadEngine_checkPermission_V() {
         final NsdManager client = connectClient(mService);
         final OffloadEngine offloadEngine = mock(OffloadEngine.class);
         doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(NETWORK_STACK);
@@ -1708,17 +1709,41 @@ public class NsdServiceTest {
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(
                 REGISTER_NSD_OFFLOAD_ENGINE);
 
-        PermissionInfo permissionInfo = new PermissionInfo("");
-        permissionInfo.packageName = "android";
-        permissionInfo.protectionLevel = PROTECTION_SIGNATURE;
-        doReturn(permissionInfo).when(mPackageManager).getPermissionInfo(
-                REGISTER_NSD_OFFLOAD_ENGINE, 0);
-        client.registerOffloadEngine("iface1", OffloadEngine.OFFLOAD_TYPE_REPLY,
-                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK,
-                Runnable::run, offloadEngine);
-        client.unregisterOffloadEngine(offloadEngine);
+        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(
+                REGISTER_NSD_OFFLOAD_ENGINE);
+        doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(DEVICE_POWER);
+        assertThrows(SecurityException.class,
+                () -> client.registerOffloadEngine("iface1", OffloadEngine.OFFLOAD_TYPE_REPLY,
+                        OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+                        offloadEngine));
+        doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(
+                REGISTER_NSD_OFFLOAD_ENGINE);
+        final OffloadEngine offloadEngine2 = mock(OffloadEngine.class);
+        client.registerOffloadEngine("iface2", OffloadEngine.OFFLOAD_TYPE_REPLY,
+                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+                offloadEngine2);
+        client.unregisterOffloadEngine(offloadEngine2);
+    }
 
-        // TODO: add checks to test the packageName other than android
+    @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testRegisterOffloadEngine_checkPermission_U() {
+        final NsdManager client = connectClient(mService);
+        final OffloadEngine offloadEngine = mock(OffloadEngine.class);
+        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(NETWORK_STACK);
+        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(
+                PERMISSION_MAINLINE_NETWORK_STACK);
+        doReturn(PERMISSION_DENIED).when(mContext).checkCallingOrSelfPermission(NETWORK_SETTINGS);
+        doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(
+                REGISTER_NSD_OFFLOAD_ENGINE);
+
+        doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(DEVICE_POWER);
+        client.registerOffloadEngine("iface2", OffloadEngine.OFFLOAD_TYPE_REPLY,
+                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+                offloadEngine);
+        client.unregisterOffloadEngine(offloadEngine);
     }
 
 
