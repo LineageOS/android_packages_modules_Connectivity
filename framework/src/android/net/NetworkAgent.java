@@ -756,20 +756,11 @@ public abstract class NetworkAgent {
             }
             final ConnectivityManager cm = (ConnectivityManager) mInitialConfiguration.context
                     .getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (mInitialConfiguration.localNetworkConfig == null) {
-                // Call registerNetworkAgent without localNetworkConfig argument to pass
-                // android.net.cts.NetworkAgentTest#testAgentStartsInConnecting in old cts
-                mNetwork = cm.registerNetworkAgent(new NetworkAgentBinder(mHandler),
-                        new NetworkInfo(mInitialConfiguration.info),
-                        mInitialConfiguration.properties, mInitialConfiguration.capabilities,
-                        mInitialConfiguration.score, mInitialConfiguration.config, providerId);
-            } else {
-                mNetwork = cm.registerNetworkAgent(new NetworkAgentBinder(mHandler),
-                        new NetworkInfo(mInitialConfiguration.info),
-                        mInitialConfiguration.properties, mInitialConfiguration.capabilities,
-                        mInitialConfiguration.localNetworkConfig, mInitialConfiguration.score,
-                        mInitialConfiguration.config, providerId);
-            }
+            mNetwork = cm.registerNetworkAgent(new NetworkAgentBinder(mHandler),
+                    new NetworkInfo(mInitialConfiguration.info),
+                    mInitialConfiguration.properties, mInitialConfiguration.capabilities,
+                    mInitialConfiguration.localNetworkConfig, mInitialConfiguration.score,
+                    mInitialConfiguration.config, providerId);
             mInitialConfiguration = null; // All this memory can now be GC'd
         }
         return mNetwork;
