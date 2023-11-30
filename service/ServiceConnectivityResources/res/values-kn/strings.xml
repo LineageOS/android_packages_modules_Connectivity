@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"ನೆಟ್‌ವರ್ಕ್‌ಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"ಇಂಟರ್ನೆಟ್ ಇಲ್ಲ"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"<xliff:g id="NETWORK_CARRIER">%1$s</xliff:g> ನ ನಿಮ್ಮ ಡೇಟಾ ಮುಗಿದಿರಬಹುದು. ಆಯ್ಕೆಗಳಿಗಾಗಿ ಟ್ಯಾಪ್ ಮಾಡಿ."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"ನಿಮ್ಮ ಡೇಟಾ ಮುಗಿದಿರಬಹುದು. ಆಯ್ಕೆಗಳಿಗಾಗಿ ಟ್ಯಾಪ್ ಮಾಡಿ."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> ಯಾವುದೇ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವನ್ನು ಹೊಂದಿಲ್ಲ"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"ಆಯ್ಕೆಗಳಿಗೆ ಟ್ಯಾಪ್ ಮಾಡಿ"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"ಮೊಬೈಲ್ ನೆಟ್‌ವರ್ಕ್‌ ಯಾವುದೇ ಇಂಟರ್ನೆಟ್ ಪ್ರವೇಶವನ್ನು ಹೊಂದಿಲ್ಲ"</string>
