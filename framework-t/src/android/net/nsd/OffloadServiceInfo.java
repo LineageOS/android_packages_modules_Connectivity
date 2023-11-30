@@ -16,6 +16,7 @@
 
 package android.net.nsd;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -39,6 +40,7 @@ import java.util.Objects;
  *
  * @hide
  */
+@FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api")
 @SystemApi
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public final class OffloadServiceInfo implements Parcelable {
