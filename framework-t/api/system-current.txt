@@ -378,11 +378,11 @@ package android.net.netstats.provider {
 package android.net.nsd {
 
   public final class NsdManager {
-    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void registerOffloadEngine(@NonNull String, long, long, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.OffloadEngine);
-    method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void unregisterOffloadEngine(@NonNull android.net.nsd.OffloadEngine);
+    method @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void registerOffloadEngine(@NonNull String, long, long, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.OffloadEngine);
+    method @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void unregisterOffloadEngine(@NonNull android.net.nsd.OffloadEngine);
   }
 
-  public interface OffloadEngine {
+  @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") public interface OffloadEngine {
     method public void onOffloadServiceRemoved(@NonNull android.net.nsd.OffloadServiceInfo);
     method public void onOffloadServiceUpdated(@NonNull android.net.nsd.OffloadServiceInfo);
     field public static final int OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK = 1; // 0x1
@@ -391,7 +391,7 @@ package android.net.nsd {
     field public static final int OFFLOAD_TYPE_REPLY = 1; // 0x1
   }
 
-  public final class OffloadServiceInfo implements android.os.Parcelable {
+  @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") public final class OffloadServiceInfo implements android.os.Parcelable {
     ctor public OffloadServiceInfo(@NonNull android.net.nsd.OffloadServiceInfo.Key, @NonNull java.util.List<java.lang.String>, @NonNull String, @Nullable byte[], @IntRange(from=0, to=java.lang.Integer.MAX_VALUE) int, long);
     method public int describeContents();
     method @NonNull public String getHostname();
