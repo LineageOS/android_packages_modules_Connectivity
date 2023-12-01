@@ -131,17 +131,6 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.assertThrows
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.argThat
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.timeout
-import org.mockito.Mockito.verify
 import java.io.Closeable
 import java.io.IOException
 import java.net.DatagramSocket
@@ -160,6 +149,17 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.argThat
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.timeout
+import org.mockito.Mockito.verify
 
 private const val TAG = "NetworkAgentTest"
 // This test doesn't really have a constraint on how fast the methods should return. If it's
@@ -951,7 +951,6 @@ class NetworkAgentTest {
                 argThat<NetworkInfo> { it.detailedState == NetworkInfo.DetailedState.CONNECTING },
                 any(LinkProperties::class.java),
                 any(NetworkCapabilities::class.java),
-                any(), // LocalNetworkConfig TODO : specify when it's public
                 any(NetworkScore::class.java),
                 any(NetworkAgentConfig::class.java),
                 eq(NetworkProvider.ID_NONE))
