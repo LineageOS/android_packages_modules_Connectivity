@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"Mag-sign in sa network"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"Walang internet"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"Posibleng ubos na ang data mo sa <xliff:g id="NETWORK_CARRIER">%1$s</xliff:g>. I-tap para sa mga opsyon."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Posibleng naubusan ka ng data. I-tap para sa mga opsyon."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"Walang access sa internet ang <xliff:g id="NETWORK_SSID">%1$s</xliff:g>"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"I-tap para sa mga opsyon"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Walang access sa internet ang mobile network"</string>
