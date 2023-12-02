@@ -48,6 +48,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
@@ -59,6 +60,7 @@ private val TEST_BUFFER = ByteArray(1300)
 private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 
 private const val TEST_SERVICE_ID_1 = 42
+private const val TEST_SERVICE_ID_DUPLICATE = 43
 private val TEST_SERVICE_1 = NsdServiceInfo().apply {
     serviceType = "_testservice._tcp"
     serviceName = "MyTestService"
@@ -270,6 +272,28 @@ class MdnsInterfaceAdvertiserTest {
         advertiser.renameServiceForConflict(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
         verify(prober).restartForConflict(mockProbingInfo)
+    }
+
+    @Test
+    fun testReplaceExitingService() {
+        doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
+                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+        val subType = "_sub"
+        advertiser.addService(TEST_SERVICE_ID_DUPLICATE, TEST_SERVICE_1, subType)
+        verify(repository).addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+        verify(announcer).stop(TEST_SERVICE_ID_DUPLICATE)
+        verify(prober).startProbing(any())
+    }
+
+    @Test
+    fun testUpdateExistingService() {
+        doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
+                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+        val subType = "_sub"
+        advertiser.updateService(TEST_SERVICE_ID_DUPLICATE, subType)
+        verify(repository).updateService(eq(TEST_SERVICE_ID_DUPLICATE), any())
+        verify(announcer, never()).stop(TEST_SERVICE_ID_DUPLICATE)
+        verify(prober, never()).startProbing(any())
     }
 
     private fun addServiceAndFinishProbing(serviceId: Int, serviceInfo: NsdServiceInfo):

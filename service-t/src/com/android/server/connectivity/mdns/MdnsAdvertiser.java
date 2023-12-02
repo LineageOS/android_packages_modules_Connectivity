@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -342,20 +343,31 @@ public class MdnsAdvertiser {
         }
 
         /**
-         * Add a service.
+         * Add a service to advertise.
          *
          * Conflicts must be checked via {@link #getConflictingService} before attempting to add.
          */
-        void addService(int id, Registration registration) {
+        void addService(int id, @NonNull Registration registration) {
             mPendingRegistrations.put(id, registration);
             for (int i = 0; i < mAdvertisers.size(); i++) {
                 try {
-                    mAdvertisers.valueAt(i).addService(
-                            id, registration.getServiceInfo(), registration.getSubtype());
+                    mAdvertisers.valueAt(i).addService(id, registration.getServiceInfo(),
+                            registration.getSubtype());
                 } catch (NameConflictException e) {
                     mSharedLog.wtf("Name conflict adding services that should have unique names",
                             e);
                 }
+            }
+        }
+
+        /**
+         * Update an already registered service.
+         * The caller is expected to check that the service being updated doesn't change its name
+         */
+        void updateService(int id, @NonNull Registration registration) {
+            mPendingRegistrations.put(id, registration);
+            for (int i = 0; i < mAdvertisers.size(); i++) {
+                mAdvertisers.valueAt(i).updateService(id, registration.getSubtype());
             }
         }
 
@@ -474,13 +486,30 @@ public class MdnsAdvertiser {
         @NonNull
         private NsdServiceInfo mServiceInfo;
         @Nullable
-        private final String mSubtype;
+        private String mSubtype;
+
         int mConflictDuringProbingCount;
         int mConflictAfterProbingCount;
 
         private Registration(@NonNull NsdServiceInfo serviceInfo, @Nullable String subtype) {
             this.mOriginalName = serviceInfo.getServiceName();
             this.mServiceInfo = serviceInfo;
+            this.mSubtype = subtype;
+        }
+
+        /**
+         * Matches between the NsdServiceInfo in the Registration and the provided argument.
+         */
+        public boolean matches(@Nullable NsdServiceInfo newInfo) {
+            return Objects.equals(newInfo.getServiceName(), mOriginalName) && Objects.equals(
+                    newInfo.getServiceType(), mServiceInfo.getServiceType()) && Objects.equals(
+                    newInfo.getNetwork(), mServiceInfo.getNetwork());
+        }
+
+        /**
+         * Update subType for the registration.
+         */
+        public void updateSubtype(@Nullable String subtype) {
             this.mSubtype = subtype;
         }
 
@@ -632,42 +661,68 @@ public class MdnsAdvertiser {
     }
 
     /**
-     * Add a service to advertise.
+     * Add or update a service to advertise.
+     *
      * @param id A unique ID for the service.
      * @param service The service info to advertise.
      * @param subtype An optional subtype to advertise the service with.
+     * @param advertisingOptions The advertising options.
      */
-    public void addService(int id, NsdServiceInfo service, @Nullable String subtype) {
+    public void addOrUpdateService(int id, NsdServiceInfo service, @Nullable String subtype,
+            MdnsAdvertisingOptions advertisingOptions) {
         checkThread();
-        if (mRegistrations.get(id) != null) {
-            mSharedLog.e("Adding duplicate registration for " + service);
-            // TODO (b/264986328): add a more specific error code
-            mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
-            return;
-        }
-
-        mSharedLog.i("Adding service " + service + " with ID " + id + " and subtype " + subtype);
-
+        final Registration existingRegistration = mRegistrations.get(id);
         final Network network = service.getNetwork();
-        final Registration registration = new Registration(service, subtype);
-        final BiPredicate<Network, InterfaceAdvertiserRequest> checkConflictFilter;
-        if (network == null) {
-            // If registering on all networks, no advertiser must have conflicts
-            checkConflictFilter = (net, adv) -> true;
-        } else {
-            // If registering on one network, the matching network advertiser and the one for all
-            // networks must not have conflicts
-            checkConflictFilter = (net, adv) -> net == null || network.equals(net);
-        }
+        Registration registration;
+        if (advertisingOptions.isOnlyUpdate()) {
+            if (existingRegistration == null) {
+                mSharedLog.e("Update non existing registration for " + service);
+                mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
+                return;
+            }
+            if (!(existingRegistration.matches(service))) {
+                mSharedLog.e("Update request can only update subType, serviceInfo: " + service
+                        + ", existing serviceInfo: " + existingRegistration.getServiceInfo());
+                mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
+                return;
 
-        updateRegistrationUntilNoConflict(checkConflictFilter, registration);
+            }
+            mSharedLog.i("Update service " + service + " with ID " + id + " and subtype " + subtype
+                    + " advertisingOptions " + advertisingOptions);
+            registration = existingRegistration;
+            registration.updateSubtype(subtype);
+        } else {
+            if (existingRegistration != null) {
+                mSharedLog.e("Adding duplicate registration for " + service);
+                // TODO (b/264986328): add a more specific error code
+                mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
+                return;
+            }
+            mSharedLog.i("Adding service " + service + " with ID " + id + " and subtype " + subtype
+                    + " advertisingOptions " + advertisingOptions);
+            registration = new Registration(service, subtype);
+            final BiPredicate<Network, InterfaceAdvertiserRequest> checkConflictFilter;
+            if (network == null) {
+                // If registering on all networks, no advertiser must have conflicts
+                checkConflictFilter = (net, adv) -> true;
+            } else {
+                // If registering on one network, the matching network advertiser and the one
+                // for all networks must not have conflicts
+                checkConflictFilter = (net, adv) -> net == null || network.equals(net);
+            }
+            updateRegistrationUntilNoConflict(checkConflictFilter, registration);
+        }
 
         InterfaceAdvertiserRequest advertiser = mAdvertiserRequests.get(network);
         if (advertiser == null) {
             advertiser = new InterfaceAdvertiserRequest(network);
             mAdvertiserRequests.put(network, advertiser);
         }
-        advertiser.addService(id, registration);
+        if (advertisingOptions.isOnlyUpdate()) {
+            advertiser.updateService(id, registration);
+        } else {
+            advertiser.addService(id, registration);
+        }
         mRegistrations.put(id, registration);
     }
 
