@@ -229,6 +229,18 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
     }
 
     /**
+     * Update an already registered service without sending exit/re-announcement packet.
+     *
+     * @param id An exiting service id
+     * @param subtype A new subtype
+     */
+    public void updateService(int id, @Nullable String subtype) {
+        // The current implementation is intended to be used in cases where subtypes don't get
+        // announced.
+        mRecordRepository.updateService(id, subtype);
+    }
+
+    /**
      * Start advertising a service.
      *
      * @throws NameConflictException There is already a service being advertised with that name.
