@@ -129,13 +129,52 @@ class MdnsRecordRepositoryTest {
     @Test
     fun testAddAndConflicts() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, flags)
-        repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* subtype */)
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
         assertFailsWith(NameConflictException::class) {
             repository.addService(TEST_SERVICE_ID_2, TEST_SERVICE_1, null /* subtype */)
         }
         assertFailsWith(NameConflictException::class) {
             repository.addService(TEST_SERVICE_ID_3, TEST_SERVICE_3, null /* subtype */)
         }
+    }
+
+    @Test
+    fun testAddAndUpdates() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, flags)
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+
+        assertFailsWith(IllegalArgumentException::class) {
+            repository.updateService(TEST_SERVICE_ID_2, null /* subtype */)
+        }
+
+        repository.updateService(TEST_SERVICE_ID_1, TEST_SUBTYPE)
+
+        val queriedName = arrayOf(TEST_SUBTYPE, "_sub", "_testservice", "_tcp", "local")
+        val questions = listOf(MdnsPointerRecord(queriedName,
+                0L /* receiptTimeMillis */,
+                false /* cacheFlush */,
+                // TTL and data is empty for a question
+                0L /* ttlMillis */,
+                null /* pointer */))
+        val query = MdnsPacket(0 /* flags */, questions, listOf() /* answers */,
+                listOf() /* authorityRecords */, listOf() /* additionalRecords */)
+        val src = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
+        val reply = repository.getReply(query, src)
+
+        assertNotNull(reply)
+
+        // TTLs as per RFC6762 10.
+        val longTtl = 4_500_000L
+        val serviceName = arrayOf("MyTestService", "_testservice", "_tcp", "local")
+
+        assertEquals(listOf(
+                MdnsPointerRecord(
+                        queriedName,
+                        0L /* receiptTimeMillis */,
+                        false /* cacheFlush */,
+                        longTtl,
+                        serviceName),
+        ), reply.answers)
     }
 
     @Test
@@ -758,7 +797,7 @@ class MdnsRecordRepositoryTest {
 private fun MdnsRecordRepository.initWithService(
     serviceId: Int,
     serviceInfo: NsdServiceInfo,
-    subtype: String? = null
+    subtype: String? = null,
 ): AnnouncementInfo {
     updateAddresses(TEST_ADDRESSES)
     addService(serviceId, serviceInfo, subtype)
