@@ -1115,9 +1115,9 @@ public class NsdServiceTest {
         final RegistrationListener regListener = mock(RegistrationListener.class);
         client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
         waitForIdle();
-        verify(mAdvertiser).addService(anyInt(), argThat(s ->
+        verify(mAdvertiser).addOrUpdateService(anyInt(), argThat(s ->
                 "Instance".equals(s.getServiceName())
-                        && SERVICE_TYPE.equals(s.getServiceType())), eq("_subtype"));
+                        && SERVICE_TYPE.equals(s.getServiceType())), eq("_subtype"), any());
 
         final DiscoveryListener discListener = mock(DiscoveryListener.class);
         client.discoverServices(typeWithSubtype, PROTOCOL, network, Runnable::run, discListener);
@@ -1222,8 +1222,8 @@ public class NsdServiceTest {
         waitForIdle();
 
         final ArgumentCaptor<Integer> serviceIdCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(mAdvertiser).addService(serviceIdCaptor.capture(),
-                argThat(info -> matches(info, regInfo)), eq(null) /* subtype */);
+        verify(mAdvertiser).addOrUpdateService(serviceIdCaptor.capture(),
+                argThat(info -> matches(info, regInfo)), eq(null) /* subtype */, any());
 
         client.unregisterService(regListenerWithoutFeature);
         waitForIdle();
@@ -1282,10 +1282,10 @@ public class NsdServiceTest {
         waitForIdle();
 
         // The advertiser is enabled for _type2 but not _type1
-        verify(mAdvertiser, never()).addService(
-                anyInt(), argThat(info -> matches(info, service1)), eq(null) /* subtype */);
-        verify(mAdvertiser).addService(
-                anyInt(), argThat(info -> matches(info, service2)), eq(null) /* subtype */);
+        verify(mAdvertiser, never()).addOrUpdateService(anyInt(),
+                argThat(info -> matches(info, service1)), eq(null) /* subtype */, any());
+        verify(mAdvertiser).addOrUpdateService(anyInt(), argThat(info -> matches(info, service2)),
+                eq(null) /* subtype */, any());
     }
 
     @Test
@@ -1309,8 +1309,8 @@ public class NsdServiceTest {
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
         final ArgumentCaptor<Integer> idCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(mAdvertiser).addService(idCaptor.capture(), argThat(info ->
-                matches(info, regInfo)), eq(null) /* subtype */);
+        verify(mAdvertiser).addOrUpdateService(idCaptor.capture(), argThat(info ->
+                matches(info, regInfo)), eq(null) /* subtype */, any());
 
         // Verify onServiceRegistered callback
         final MdnsAdvertiser.AdvertiserCallback cb = cbCaptor.getValue();
@@ -1358,7 +1358,7 @@ public class NsdServiceTest {
 
         client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
         waitForIdle();
-        verify(mAdvertiser, never()).addService(anyInt(), any(), any());
+        verify(mAdvertiser, never()).addOrUpdateService(anyInt(), any(), any(), any());
 
         verify(regListener, timeout(TIMEOUT_MS)).onRegistrationFailed(
                 argThat(info -> matches(info, regInfo)), eq(FAILURE_INTERNAL_ERROR));
@@ -1387,9 +1387,9 @@ public class NsdServiceTest {
         waitForIdle();
         final ArgumentCaptor<Integer> idCaptor = ArgumentCaptor.forClass(Integer.class);
         // Service name is truncated to 63 characters
-        verify(mAdvertiser).addService(idCaptor.capture(),
+        verify(mAdvertiser).addOrUpdateService(idCaptor.capture(),
                 argThat(info -> info.getServiceName().equals("a".repeat(63))),
-                eq(null) /* subtype */);
+                eq(null) /* subtype */, any());
 
         // Verify onServiceRegistered callback
         final MdnsAdvertiser.AdvertiserCallback cb = cbCaptor.getValue();
@@ -1479,7 +1479,7 @@ public class NsdServiceTest {
         client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
-        verify(mAdvertiser).addService(anyInt(), any(), any());
+        verify(mAdvertiser).addOrUpdateService(anyInt(), any(), any(), any());
 
         // Verify the discovery uses MdnsDiscoveryManager
         final DiscoveryListener discListener = mock(DiscoveryListener.class);
@@ -1512,7 +1512,7 @@ public class NsdServiceTest {
         client.registerService(regInfo, NsdManager.PROTOCOL_DNS_SD, Runnable::run, regListener);
         waitForIdle();
         verify(mSocketProvider).startMonitoringSockets();
-        verify(mAdvertiser).addService(anyInt(), any(), any());
+        verify(mAdvertiser).addOrUpdateService(anyInt(), any(), any(), any());
 
         final Network wifiNetwork1 = new Network(123);
         final Network wifiNetwork2 = new Network(124);
