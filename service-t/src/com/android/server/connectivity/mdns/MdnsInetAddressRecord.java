@@ -60,6 +60,12 @@ public class MdnsInetAddressRecord extends MdnsRecord {
         super(name, type, reader, isQuestion);
     }
 
+    public MdnsInetAddressRecord(String[] name, int type, boolean isUnicast) {
+        super(name, type,
+                MdnsConstants.QCLASS_INTERNET | (isUnicast ? MdnsConstants.QCLASS_UNICAST : 0),
+                0L /* receiptTimeMillis */, false /* cacheFlush */, 0L /* ttlMillis */);
+    }
+
     public MdnsInetAddressRecord(String[] name, long receiptTimeMillis, boolean cacheFlush,
                     long ttlMillis, InetAddress address) {
         super(name, address instanceof Inet4Address ? TYPE_A : TYPE_AAAA,
