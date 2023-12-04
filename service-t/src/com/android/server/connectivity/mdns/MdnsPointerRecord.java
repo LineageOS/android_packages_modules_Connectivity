@@ -39,6 +39,12 @@ public class MdnsPointerRecord extends MdnsRecord {
         super(name, TYPE_PTR, reader, isQuestion);
     }
 
+    public MdnsPointerRecord(String[] name, boolean isUnicast) {
+        super(name, TYPE_PTR,
+                MdnsConstants.QCLASS_INTERNET | (isUnicast ? MdnsConstants.QCLASS_UNICAST : 0),
+                0L /* receiptTimeMillis */, false /* cacheFlush */, 0L /* ttlMillis */);
+    }
+
     public MdnsPointerRecord(String[] name, long receiptTimeMillis, boolean cacheFlush,
                     long ttlMillis, String[] pointer) {
         super(name, TYPE_PTR, MdnsConstants.QCLASS_INTERNET, receiptTimeMillis, cacheFlush,
