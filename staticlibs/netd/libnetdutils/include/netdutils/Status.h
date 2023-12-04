@@ -41,6 +41,9 @@ class [[nodiscard]] Status {
     // Constructs an error Status, |code| must be non-zero.
     Status(int code, std::string msg) : mCode(code), mMsg(std::move(msg)) { assert(!ok()); }
 
+    // Constructs an error Status with message. Error |code| is unspecified.
+    explicit Status(std::string msg) : Status(std::numeric_limits<int>::max(), std::move(msg)) {}
+
     Status(android::base::Result<void> result)
         : mCode(result.ok() ? 0 : static_cast<int>(result.error().code())),
           mMsg(result.ok() ? "" : result.error().message()) {}
