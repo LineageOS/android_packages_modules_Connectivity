@@ -31,6 +31,7 @@ import android.os.OutcomeReceiver;
 import android.os.RemoteException;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.internal.annotations.VisibleForTesting;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -494,6 +495,31 @@ public final class ThreadNetworkController {
         requireNonNull(receiver, "receiver cannot be null");
         try {
             mControllerService.leave(new OperationReceiverProxy(executor, receiver));
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Sets to use a specified test network as the upstream.
+     *
+     * @param testNetworkInterfaceName The name of the test network interface. When it's null,
+     *     forbids using test network as an upstream.
+     * @param executor the executor to execute {@code receiver}
+     * @param receiver the receiver to receive result of this operation
+     * @hide
+     */
+    @VisibleForTesting
+    @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED")
+    public void setTestNetworkAsUpstream(
+            @Nullable String testNetworkInterfaceName,
+            @NonNull @CallbackExecutor Executor executor,
+            @NonNull OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        requireNonNull(executor, "executor cannot be null");
+        requireNonNull(receiver, "receiver cannot be null");
+        try {
+            mControllerService.setTestNetworkAsUpstream(
+                    testNetworkInterfaceName, new OperationReceiverProxy(executor, receiver));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
