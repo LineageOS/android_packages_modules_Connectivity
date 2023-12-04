@@ -118,7 +118,6 @@ import android.net.IpSecTransform;
 import android.net.IpSecTunnelInterfaceResponse;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
-import android.net.LocalSocket;
 import android.net.Network;
 import android.net.NetworkAgent;
 import android.net.NetworkAgentConfig;
@@ -195,10 +194,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.Inet4Address;
@@ -209,13 +205,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -3178,20 +3172,7 @@ public class VpnTest extends VpnTestBase {
 
     // Make it public and un-final so as to spy it
     public class TestDeps extends Vpn.Dependencies {
-        public final CompletableFuture<String[]> racoonArgs = new CompletableFuture();
-        public final CompletableFuture<String[]> mtpdArgs = new CompletableFuture();
-        public final File mStateFile;
-
-        private final HashMap<String, Boolean> mRunningServices = new HashMap<>();
-
-        TestDeps() {
-            try {
-                mStateFile = File.createTempFile("vpnTest", ".tmp");
-                mStateFile.deleteOnExit();
-            } catch (final IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        TestDeps() {}
 
         @Override
         public boolean isCallerSystem() {
@@ -3199,86 +3180,8 @@ public class VpnTest extends VpnTestBase {
         }
 
         @Override
-        public void startService(final String serviceName) {
-            mRunningServices.put(serviceName, true);
-        }
-
-        @Override
-        public void stopService(final String serviceName) {
-            mRunningServices.put(serviceName, false);
-        }
-
-        @Override
-        public boolean isServiceRunning(final String serviceName) {
-            return mRunningServices.getOrDefault(serviceName, false);
-        }
-
-        @Override
-        public boolean isServiceStopped(final String serviceName) {
-            return !isServiceRunning(serviceName);
-        }
-
-        @Override
-        public File getStateFile() {
-            return mStateFile;
-        }
-
-        @Override
         public PendingIntent getIntentForStatusPanel(Context context) {
             return null;
-        }
-
-        @Override
-        public void sendArgumentsToDaemon(
-                final String daemon, final LocalSocket socket, final String[] arguments,
-                final Vpn.RetryScheduler interruptChecker) throws IOException {
-            if ("racoon".equals(daemon)) {
-                racoonArgs.complete(arguments);
-            } else if ("mtpd".equals(daemon)) {
-                writeStateFile(arguments);
-                mtpdArgs.complete(arguments);
-            } else {
-                throw new UnsupportedOperationException("Unsupported daemon : " + daemon);
-            }
-        }
-
-        private void writeStateFile(final String[] arguments) throws IOException {
-            mStateFile.delete();
-            mStateFile.createNewFile();
-            mStateFile.deleteOnExit();
-            final BufferedWriter writer = new BufferedWriter(
-                    new FileWriter(mStateFile, false /* append */));
-            writer.write(EGRESS_IFACE);
-            writer.write("\n");
-            // addresses
-            writer.write("10.0.0.1/24\n");
-            // routes
-            writer.write("192.168.6.0/24\n");
-            // dns servers
-            writer.write("192.168.6.1\n");
-            // search domains
-            writer.write("vpn.searchdomains.com\n");
-            // endpoint - intentionally empty
-            writer.write("\n");
-            writer.flush();
-            writer.close();
-        }
-
-        @Override
-        @NonNull
-        public InetAddress resolve(final String endpoint) {
-            try {
-                // If a numeric IP address, return it.
-                return InetAddress.parseNumericAddress(endpoint);
-            } catch (IllegalArgumentException e) {
-                // Otherwise, return some token IP to test for.
-                return InetAddress.parseNumericAddress("5.6.7.8");
-            }
-        }
-
-        @Override
-        public boolean isInterfacePresent(final Vpn vpn, final String iface) {
-            return true;
         }
 
         @Override
