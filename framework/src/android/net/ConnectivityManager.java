@@ -16,8 +16,6 @@
 package android.net;
 
 import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
-import static android.content.pm.ApplicationInfo.FLAG_PERSISTENT;
-import static android.content.pm.ApplicationInfo.FLAG_SYSTEM;
 import static android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1;
 import static android.net.NetworkRequest.Type.BACKGROUND_REQUEST;
 import static android.net.NetworkRequest.Type.LISTEN;
@@ -26,8 +24,6 @@ import static android.net.NetworkRequest.Type.REQUEST;
 import static android.net.NetworkRequest.Type.TRACK_DEFAULT;
 import static android.net.NetworkRequest.Type.TRACK_SYSTEM_DEFAULT;
 import static android.net.QosCallback.QosCallbackRegistrationException;
-
-import static com.android.internal.annotations.VisibleForTesting.Visibility.PRIVATE;
 
 import android.annotation.CallbackExecutor;
 import android.annotation.FlaggedApi;
@@ -41,16 +37,12 @@ import android.annotation.SdkConstant.SdkConstantType;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
-import android.annotation.TargetApi;
-import android.app.Application;
 import android.app.PendingIntent;
 import android.app.admin.DevicePolicyManager;
 import android.compat.annotation.UnsupportedAppUsage;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.ConnectivityDiagnosticsManager.DataStallReport.DetectionMethod;
 import android.net.IpSecManager.UdpEncapsulationSocket;
 import android.net.SocketKeepalive.Callback;
@@ -82,8 +74,6 @@ import android.util.Range;
 import android.util.SparseIntArray;
 
 import com.android.internal.annotations.GuardedBy;
-import com.android.internal.annotations.VisibleForTesting;
-import com.android.modules.utils.build.SdkLevel;
 
 import libcore.net.event.NetworkEventDispatcher;
 
@@ -105,7 +95,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Class that answers queries about the state of network connectivity. It also
@@ -6262,90 +6251,6 @@ public class ConnectivityManager {
     }
 
     /**
-     * Helper class to track data saver status.
-     *
-     * The class will fetch current data saver status from {@link NetworkPolicyManager} when
-     * initialized, and listening for status changed intent to cache the latest status.
-     *
-     * @hide
-     */
-    @TargetApi(Build.VERSION_CODES.TIRAMISU) // RECEIVER_NOT_EXPORTED requires T.
-    @VisibleForTesting(visibility = PRIVATE)
-    public static class DataSaverStatusTracker extends BroadcastReceiver {
-        private static final Object sDataSaverStatusTrackerLock = new Object();
-
-        private static volatile DataSaverStatusTracker sInstance;
-
-        /**
-         * Gets a static instance of the class.
-         *
-         * @param context A {@link Context} for initialization. Note that since the data saver
-         *                status is global on a device, passing any context is equivalent.
-         * @return The static instance of a {@link DataSaverStatusTracker}.
-         */
-        public static DataSaverStatusTracker getInstance(@NonNull Context context) {
-            if (sInstance == null) {
-                synchronized (sDataSaverStatusTrackerLock) {
-                    if (sInstance == null) {
-                        sInstance = new DataSaverStatusTracker(context);
-                    }
-                }
-            }
-            return sInstance;
-        }
-
-        private final NetworkPolicyManager mNpm;
-        // The value updates on the caller's binder thread or UI thread.
-        private final AtomicBoolean mIsDataSaverEnabled;
-
-        @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-        public DataSaverStatusTracker(final Context context) {
-            // To avoid leaks, take the application context.
-            final Context appContext;
-            if (context instanceof Application) {
-                appContext = context;
-            } else {
-                appContext = context.getApplicationContext();
-            }
-
-            if ((appContext.getApplicationInfo().flags & FLAG_PERSISTENT) == 0
-                    && (appContext.getApplicationInfo().flags & FLAG_SYSTEM) == 0) {
-                throw new IllegalStateException("Unexpected caller: "
-                        + appContext.getApplicationInfo().packageName);
-            }
-
-            mNpm = appContext.getSystemService(NetworkPolicyManager.class);
-            final IntentFilter filter = new IntentFilter(
-                    ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED);
-            // The receiver should not receive broadcasts from other Apps.
-            appContext.registerReceiver(this, filter, Context.RECEIVER_NOT_EXPORTED);
-            mIsDataSaverEnabled = new AtomicBoolean();
-            updateDataSaverEnabled();
-        }
-
-        // Runs on caller's UI thread.
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED)) {
-                updateDataSaverEnabled();
-            } else {
-                throw new IllegalStateException("Unexpected intent " + intent);
-            }
-        }
-
-        public boolean getDataSaverEnabled() {
-            return mIsDataSaverEnabled.get();
-        }
-
-        private void updateDataSaverEnabled() {
-            // Uid doesn't really matter, but use a fixed UID to make things clearer.
-            final int dataSaverForCallerUid = mNpm.getRestrictBackgroundStatus(Process.SYSTEM_UID);
-            mIsDataSaverEnabled.set(dataSaverForCallerUid
-                    != ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED);
-        }
-    }
-
-    /**
      * Return whether the network is blocked for the given uid and metered condition.
      *
      * Similar to {@link NetworkPolicyManager#isUidNetworkingBlocked}, but directly reads the BPF
@@ -6370,17 +6275,12 @@ public class ConnectivityManager {
     @RequiresPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)
     public boolean isUidNetworkingBlocked(int uid, boolean isNetworkMetered) {
         final BpfNetMapsReader reader = BpfNetMapsReader.getInstance();
-
-        final boolean isDataSaverEnabled;
-        if (SdkLevel.isAtLeastV()) {
-            isDataSaverEnabled = reader.getDataSaverEnabled();
-        } else {
-            final DataSaverStatusTracker dataSaverStatusTracker =
-                    DataSaverStatusTracker.getInstance(mContext);
-            isDataSaverEnabled = dataSaverStatusTracker.getDataSaverEnabled();
-        }
-
-        return reader.isUidNetworkingBlocked(uid, isNetworkMetered, isDataSaverEnabled);
+        // Note that before V, the data saver status in bpf is written by ConnectivityService
+        // when receiving {@link #ACTION_RESTRICT_BACKGROUND_CHANGED}. Thus,
+        // the status is not synchronized.
+        // On V+, the data saver status is set by platform code when enabling/disabling
+        // data saver, which is synchronized.
+        return reader.isUidNetworkingBlocked(uid, isNetworkMetered, reader.getDataSaverEnabled());
     }
 
     /** @hide */

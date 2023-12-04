@@ -32,6 +32,7 @@ import static android.net.ConnectivityDiagnosticsManager.DataStallReport.DETECTI
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_DNS_CONSECUTIVE_TIMEOUTS;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_TCP_METRICS_COLLECTION_PERIOD_MILLIS;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_TCP_PACKET_FAIL_RATE;
+import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_MASK;
 import static android.net.ConnectivityManager.BLOCKED_REASON_LOCKDOWN_VPN;
 import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
@@ -1769,6 +1770,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         packageIntentFilter.addDataScheme("package");
         mUserAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
                 null /* broadcastPermission */, mHandler);
+
+        // This is needed for pre-V devices to propagate the data saver status
+        // to the BPF map. This isn't supported before Android T because BPF maps are
+        // unsupported, and it's also unnecessary on Android V and later versions,
+        // as the platform code handles data saver bit updates. Additionally, checking
+        // the initial data saver status here is superfluous because the intent won't
+        // be sent until the system is ready.
+        if (mDeps.isAtLeastT() && !mDeps.isAtLeastV()) {
+            final IntentFilter dataSaverIntentFilter =
+                    new IntentFilter(ACTION_RESTRICT_BACKGROUND_CHANGED);
+            mUserAllContext.registerReceiver(mDataSaverReceiver, dataSaverIntentFilter,
+                    null /* broadcastPermission */, mHandler);
+        }
 
         // TrackMultiNetworkActivities feature should be enabled by trunk stable flag.
         // But reading the trunk stable flags from mainline modules is not supported yet.
@@ -7044,6 +7058,32 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 case Intent.ACTION_PACKAGE_REMOVED:
                 case Intent.ACTION_PACKAGE_REPLACED:
                     onPackageChanged(intent.getData().getSchemeSpecificPart());
+                    break;
+                default:
+                    Log.wtf(TAG, "received unexpected intent: " + intent.getAction());
+            }
+        }
+    };
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private final BroadcastReceiver mDataSaverReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (mDeps.isAtLeastV()) {
+                throw new IllegalStateException(
+                        "data saver status should be updated from platform");
+            }
+            ensureRunningOnConnectivityServiceThread();
+            switch (intent.getAction()) {
+                case ACTION_RESTRICT_BACKGROUND_CHANGED:
+                    // If the uid is present in the deny list, the API will consistently
+                    // return ENABLED. To retrieve the global switch status, the system
+                    // uid is chosen because it will never be included in the deny list.
+                    final int dataSaverForSystemUid =
+                            mPolicyManager.getRestrictBackgroundStatus(Process.SYSTEM_UID);
+                    final boolean isDataSaverEnabled = (dataSaverForSystemUid
+                            != ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED);
+                    mBpfNetMaps.setDataSaverEnabled(isDataSaverEnabled);
                     break;
                 default:
                     Log.wtf(TAG, "received unexpected intent: " + intent.getAction());
@@ -12985,7 +13025,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @Override
     public void setDataSaverEnabled(final boolean enable) {
         enforceNetworkStackOrSettingsPermission();
