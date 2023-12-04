@@ -42,6 +42,12 @@ public class MdnsTextRecord extends MdnsRecord {
         super(name, TYPE_TXT, reader, isQuestion);
     }
 
+    public MdnsTextRecord(String[] name, boolean isUnicast) {
+        super(name, TYPE_TXT,
+                MdnsConstants.QCLASS_INTERNET | (isUnicast ? MdnsConstants.QCLASS_UNICAST : 0),
+                0L /* receiptTimeMillis */, false /* cacheFlush */, 0L /* ttlMillis */);
+    }
+
     public MdnsTextRecord(String[] name, long receiptTimeMillis, boolean cacheFlush, long ttlMillis,
             List<TextEntry> entries) {
         super(name, TYPE_TXT, MdnsConstants.QCLASS_INTERNET, receiptTimeMillis, cacheFlush,
