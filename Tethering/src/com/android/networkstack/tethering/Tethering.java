@@ -303,9 +303,9 @@ public class Tethering {
         mContext = mDeps.getContext();
         mNetd = mDeps.getINetd(mContext);
         mRoutingCoordinator = mDeps.getRoutingCoordinator(mContext);
-        mLooper = mDeps.getTetheringLooper();
-        mNotificationUpdater = mDeps.getNotificationUpdater(mContext, mLooper);
-        mTetheringMetrics = mDeps.getTetheringMetrics();
+        mLooper = mDeps.makeTetheringLooper();
+        mNotificationUpdater = mDeps.makeNotificationUpdater(mContext, mLooper);
+        mTetheringMetrics = mDeps.makeTetheringMetrics();
 
         // This is intended to ensrure that if something calls startTethering(bluetooth) just after
         // bluetooth is enabled. Before onServiceConnected is called, store the calls into this
@@ -319,7 +319,7 @@ public class Tethering {
         mTetherMainSM.start();
 
         mHandler = mTetherMainSM.getHandler();
-        mOffloadController = mDeps.getOffloadController(mHandler, mLog,
+        mOffloadController = mDeps.makeOffloadController(mHandler, mLog,
                 new OffloadController.Dependencies() {
 
                     @Override
@@ -327,7 +327,7 @@ public class Tethering {
                         return mConfig;
                     }
                 });
-        mUpstreamNetworkMonitor = mDeps.getUpstreamNetworkMonitor(mContext, mHandler, mLog,
+        mUpstreamNetworkMonitor = mDeps.makeUpstreamNetworkMonitor(mContext, mHandler, mLog,
                 (what, obj) -> {
                     mTetherMainSM.sendMessage(TetherMainSM.EVENT_UPSTREAM_CALLBACK, what, 0, obj);
                 });
@@ -337,7 +337,7 @@ public class Tethering {
         filter.addAction(ACTION_CARRIER_CONFIG_CHANGED);
         // EntitlementManager will send EVENT_UPSTREAM_PERMISSION_CHANGED when cellular upstream
         // permission is changed according to entitlement check result.
-        mEntitlementMgr = mDeps.getEntitlementManager(mContext, mHandler, mLog,
+        mEntitlementMgr = mDeps.makeEntitlementManager(mContext, mHandler, mLog,
                 () -> mTetherMainSM.sendMessage(
                 TetherMainSM.EVENT_UPSTREAM_PERMISSION_CHANGED));
         mEntitlementMgr.setOnTetherProvisioningFailedListener((downstream, reason) -> {
@@ -373,11 +373,11 @@ public class Tethering {
         // It is OK for the configuration to be passed to the PrivateAddressCoordinator at
         // construction time because the only part of the configuration it uses is
         // shouldEnableWifiP2pDedicatedIp(), and currently do not support changing that.
-        mPrivateAddressCoordinator = mDeps.getPrivateAddressCoordinator(mContext, mConfig);
+        mPrivateAddressCoordinator = mDeps.makePrivateAddressCoordinator(mContext, mConfig);
 
         // Must be initialized after tethering configuration is loaded because BpfCoordinator
         // constructor needs to use the configuration.
-        mBpfCoordinator = mDeps.getBpfCoordinator(
+        mBpfCoordinator = mDeps.makeBpfCoordinator(
                 new BpfCoordinator.Dependencies() {
                     @NonNull
                     public Handler getHandler() {
@@ -406,7 +406,7 @@ public class Tethering {
                 });
 
         if (SdkLevel.isAtLeastT() && mConfig.isWearTetheringEnabled()) {
-            mWearableConnectionManager = mDeps.getWearableConnectionManager(mContext);
+            mWearableConnectionManager = mDeps.makeWearableConnectionManager(mContext);
         } else {
             mWearableConnectionManager = null;
         }
@@ -875,7 +875,7 @@ public class Tethering {
 
     private void changeBluetoothTetheringSettings(@NonNull final BluetoothPan bluetoothPan,
             final boolean enable) {
-        final BluetoothPanShim panShim = mDeps.getBluetoothPanShim(bluetoothPan);
+        final BluetoothPanShim panShim = mDeps.makeBluetoothPanShim(bluetoothPan);
         if (enable) {
             if (mBluetoothIfaceRequest != null) {
                 Log.d(TAG, "Bluetooth tethering settings already enabled");
@@ -1739,7 +1739,7 @@ public class Tethering {
             addState(mSetDnsForwardersErrorState);
 
             mNotifyList = new ArrayList<>();
-            mIPv6TetheringCoordinator = deps.getIPv6TetheringCoordinator(mNotifyList, mLog);
+            mIPv6TetheringCoordinator = deps.makeIPv6TetheringCoordinator(mNotifyList, mLog);
             mOffload = new OffloadWrapper();
 
             setInitialState(mInitialState);
@@ -2844,7 +2844,7 @@ public class Tethering {
                 new IpServer(iface, mHandler, interfaceType, mLog, mNetd, mBpfCoordinator,
                         mRoutingCoordinator, new ControlCallback(), mConfig,
                         mPrivateAddressCoordinator, mTetheringMetrics,
-                        mDeps.getIpServerDependencies()), isNcm);
+                        mDeps.makeIpServerDependencies()), isNcm);
         mTetherStates.put(iface, tetherState);
         tetherState.ipServer.start();
     }
