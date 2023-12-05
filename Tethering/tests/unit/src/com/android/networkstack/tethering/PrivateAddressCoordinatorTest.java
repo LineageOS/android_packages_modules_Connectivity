@@ -30,6 +30,7 @@ import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
@@ -104,6 +105,7 @@ public final class PrivateAddressCoordinatorTest {
         when(mContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(mConnectivityMgr);
         when(mConnectivityMgr.getAllNetworks()).thenReturn(mAllNetworks);
         when(mConfig.shouldEnableWifiP2pDedicatedIp()).thenReturn(false);
+        when(mConfig.isRandomPrefixBaseEnabled()).thenReturn(false);
         setUpIpServers();
         mPrivateAddressCoordinator = spy(new PrivateAddressCoordinator(mContext, mConfig));
     }
@@ -571,5 +573,42 @@ public final class PrivateAddressCoordinatorTest {
                 CONNECTIVITY_SCOPE_LOCAL, true /* useLastAddress */);
         assertEquals("Wrong local hotspot prefix: ", new LinkAddress("192.168.134.5/24"),
                 localHotspotAddress);
+    }
+
+    @Test
+    public void testStartedPrefixRange() throws Exception {
+        when(mConfig.isRandomPrefixBaseEnabled()).thenReturn(true);
+
+        startedPrefixBaseTest("192.168.0.0/16", 0);
+
+        startedPrefixBaseTest("192.168.0.0/16", 1);
+
+        startedPrefixBaseTest("192.168.0.0/16", 0xffff);
+
+        startedPrefixBaseTest("172.16.0.0/12", 0x10000);
+
+        startedPrefixBaseTest("172.16.0.0/12", 0x11111);
+
+        startedPrefixBaseTest("172.16.0.0/12", 0xfffff);
+
+        startedPrefixBaseTest("10.0.0.0/8", 0x100000);
+
+        startedPrefixBaseTest("10.0.0.0/8", 0x1fffff);
+
+        startedPrefixBaseTest("10.0.0.0/8", 0xffffff);
+
+        startedPrefixBaseTest("192.168.0.0/16", 0x1000000);
+    }
+
+    private void startedPrefixBaseTest(final String expected, final int randomIntForPrefixBase)
+            throws Exception {
+        mPrivateAddressCoordinator = spy(new PrivateAddressCoordinator(mContext, mConfig));
+        when(mPrivateAddressCoordinator.getRandomInt()).thenReturn(randomIntForPrefixBase);
+        final LinkAddress address = requestDownstreamAddress(mHotspotIpServer,
+                CONNECTIVITY_SCOPE_GLOBAL, false /* useLastAddress */);
+        final IpPrefix prefixBase = new IpPrefix(expected);
+        assertTrue(address + " is not part of " + prefixBase,
+                prefixBase.containsPrefix(asIpPrefix(address)));
+
     }
 }
