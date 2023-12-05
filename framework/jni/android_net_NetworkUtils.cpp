@@ -26,6 +26,7 @@
 #include <bpf/BpfClassic.h>
 #include <DnsProxydProtocol.h> // NETID_USE_LOCAL_NAMESERVERS
 #include <nativehelper/JNIPlatformHelp.h>
+#include <nativehelper/ScopedPrimitiveArray.h>
 #include <utils/Log.h>
 
 #include "jni.h"
@@ -240,6 +241,15 @@ static jobject android_net_utils_getTcpRepairWindow(JNIEnv *env, jclass clazz, j
             trw.rcv_wnd, trw.rcv_wup, tcpinfo.tcpi_rcv_wscale);
 }
 
+static void android_net_utils_setsockoptBytes(JNIEnv *env, jclass clazz, jobject javaFd,
+        jint level, jint option, jbyteArray javaBytes) {
+    int sock = AFileDescriptor_getFd(env, javaFd);
+    ScopedByteArrayRO value(env, javaBytes);
+    if (setsockopt(sock, level, option, value.get(), value.size()) != 0) {
+        jniThrowErrnoException(env, "setsockoptBytes", errno);
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 /*
@@ -260,6 +270,8 @@ static const JNINativeMethod gNetworkUtilMethods[] = {
     { "resNetworkResult", "(Ljava/io/FileDescriptor;)Landroid/net/DnsResolver$DnsResponse;", (void*) android_net_utils_resNetworkResult },
     { "resNetworkCancel", "(Ljava/io/FileDescriptor;)V", (void*) android_net_utils_resNetworkCancel },
     { "getDnsNetwork", "()Landroid/net/Network;", (void*) android_net_utils_getDnsNetwork },
+    { "setsockoptBytes", "(Ljava/io/FileDescriptor;II[B)V",
+    (void*) android_net_utils_setsockoptBytes},
 };
 // clang-format on
 
