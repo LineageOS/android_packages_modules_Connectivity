@@ -2230,7 +2230,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         final DropBoxManager dropBox = mock(DropBoxManager.class);
         return new NetworkStatsRecorder(new FileRotator(
                 directory, prefix, config.rotateAgeMillis, config.deleteAgeMillis),
-                observer, dropBox, prefix, config.bucketDuration, includeTags, wipeOnError);
+                observer, dropBox, prefix, config.bucketDuration, includeTags, wipeOnError,
+                false /* useFastDataInput */);
     }
 
     private NetworkStatsCollection getLegacyCollection(String prefix, boolean includeTags) {

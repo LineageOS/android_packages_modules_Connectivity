@@ -79,6 +79,7 @@ public class NetworkStatsRecorder {
     private final long mBucketDuration;
     private final boolean mOnlyTags;
     private final boolean mWipeOnError;
+    private final boolean mUseFastDataInput;
 
     private long mPersistThresholdBytes = 2 * MB_IN_BYTES;
     private NetworkStats mLastSnapshot;
@@ -104,6 +105,7 @@ public class NetworkStatsRecorder {
         mBucketDuration = YEAR_IN_MILLIS;
         mOnlyTags = false;
         mWipeOnError = true;
+        mUseFastDataInput = false;
 
         mPending = null;
         mSinceBoot = new NetworkStatsCollection(mBucketDuration);
@@ -116,7 +118,7 @@ public class NetworkStatsRecorder {
      */
     public NetworkStatsRecorder(FileRotator rotator, NonMonotonicObserver<String> observer,
             DropBoxManager dropBox, String cookie, long bucketDuration, boolean onlyTags,
-            boolean wipeOnError) {
+            boolean wipeOnError, boolean useFastDataInput) {
         mRotator = Objects.requireNonNull(rotator, "missing FileRotator");
         mObserver = Objects.requireNonNull(observer, "missing NonMonotonicObserver");
         mDropBox = Objects.requireNonNull(dropBox, "missing DropBoxManager");
@@ -125,6 +127,7 @@ public class NetworkStatsRecorder {
         mBucketDuration = bucketDuration;
         mOnlyTags = onlyTags;
         mWipeOnError = wipeOnError;
+        mUseFastDataInput = useFastDataInput;
 
         mPending = new NetworkStatsCollection(bucketDuration);
         mSinceBoot = new NetworkStatsCollection(bucketDuration);
@@ -195,8 +198,12 @@ public class NetworkStatsRecorder {
     }
 
     private NetworkStatsCollection loadLocked(long start, long end) {
-        if (LOGD) Log.d(TAG, "loadLocked() reading from disk for " + mCookie);
-        final NetworkStatsCollection res = new NetworkStatsCollection(mBucketDuration);
+        if (LOGD) {
+            Log.d(TAG, "loadLocked() reading from disk for " + mCookie
+                    + " useFastDataInput: " + mUseFastDataInput);
+        }
+        final NetworkStatsCollection res =
+                new NetworkStatsCollection(mBucketDuration, mUseFastDataInput);
         try {
             mRotator.readMatching(res, start, end);
             res.recordCollection(mPending);
