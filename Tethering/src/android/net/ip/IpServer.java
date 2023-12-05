@@ -33,7 +33,6 @@ import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
 import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
-import static com.android.networkstack.tethering.TetheringConfiguration.USE_SYNC_SM;
 import static com.android.networkstack.tethering.UpstreamNetworkState.isVcnInterface;
 import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
 import static com.android.networkstack.tethering.util.TetheringMessageBase.BASE_IPSERVER;
@@ -316,6 +315,7 @@ public class IpServer extends StateMachineShim {
 
     private final TetheringMetrics mTetheringMetrics;
     private final Handler mHandler;
+    private final boolean mIsSyncSM;
 
     // TODO: Add a dependency object to pass the data members or variables from the tethering
     // object. It helps to reduce the arguments of the constructor.
@@ -325,7 +325,7 @@ public class IpServer extends StateMachineShim {
             @Nullable LateSdk<RoutingCoordinatorManager> routingCoordinator, Callback callback,
             TetheringConfiguration config, PrivateAddressCoordinator addressCoordinator,
             TetheringMetrics tetheringMetrics, Dependencies deps) {
-        super(ifaceName, USE_SYNC_SM ? null : handler.getLooper());
+        super(ifaceName, config.isSyncSM() ? null : handler.getLooper());
         mHandler = handler;
         mLog = log.forSubComponent(ifaceName);
         mNetd = netd;
@@ -338,6 +338,7 @@ public class IpServer extends StateMachineShim {
         mLinkProperties = new LinkProperties();
         mUsingLegacyDhcp = config.useLegacyDhcpServer();
         mP2pLeasesSubnetPrefixLength = config.getP2pLeasesSubnetPrefixLength();
+        mIsSyncSM = config.isSyncSM();
         mPrivateAddressCoordinator = addressCoordinator;
         mDeps = deps;
         mTetheringMetrics = tetheringMetrics;
@@ -515,7 +516,7 @@ public class IpServer extends StateMachineShim {
 
         private void handleError() {
             mLastError = TETHER_ERROR_DHCPSERVER_ERROR;
-            if (USE_SYNC_SM) {
+            if (mIsSyncSM) {
                 sendMessage(CMD_SERVICE_FAILED_TO_START, TETHER_ERROR_DHCPSERVER_ERROR);
             } else {
                 sendMessageAtFrontOfQueueToAsyncSM(CMD_SERVICE_FAILED_TO_START,
@@ -1170,7 +1171,7 @@ public class IpServer extends StateMachineShim {
                 // in previous versions of the mainline module.
                 // TODO : remove sendMessageAtFrontOfQueueToAsyncSM after migrating to the Sync
                 // StateMachine.
-                if (USE_SYNC_SM) {
+                if (mIsSyncSM) {
                     sendSelfMessageToSyncSM(CMD_SERVICE_FAILED_TO_START, mLastError);
                 } else {
                     sendMessageAtFrontOfQueueToAsyncSM(CMD_SERVICE_FAILED_TO_START, mLastError);
