@@ -41,3 +41,10 @@ flag {
   description: "The flag controls the access for registerOffloadEngine API in NsdManager"
   bug: "294777050"
 }
+
+flag {
+  name: "ipsec_transform_state"
+  namespace: "android_core_networking_ipsec"
+  description: "The flag controls the access for getIpSecTransformState and IpSecTransformState"
+  bug: "308011229"
+}
