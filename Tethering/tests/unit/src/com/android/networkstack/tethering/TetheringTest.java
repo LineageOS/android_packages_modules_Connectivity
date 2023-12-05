@@ -436,51 +436,51 @@ public class TetheringTest {
         ArrayList<IpServer> mAllDownstreams;
 
         @Override
-        public BpfCoordinator getBpfCoordinator(
+        public BpfCoordinator makeBpfCoordinator(
                 BpfCoordinator.Dependencies deps) {
             return mBpfCoordinator;
         }
 
         @Override
-        public OffloadHardwareInterface getOffloadHardwareInterface(Handler h, SharedLog log) {
+        public OffloadHardwareInterface makeOffloadHardwareInterface(Handler h, SharedLog log) {
             return mOffloadHardwareInterface;
         }
 
         @Override
-        public OffloadController getOffloadController(Handler h, SharedLog log,
+        public OffloadController makeOffloadController(Handler h, SharedLog log,
                 OffloadController.Dependencies deps) {
-            mOffloadCtrl = spy(super.getOffloadController(h, log, deps));
+            mOffloadCtrl = spy(super.makeOffloadController(h, log, deps));
             // Return real object here instead of mock because
             // testReportFailCallbackIfOffloadNotSupported depend on real OffloadController object.
             return mOffloadCtrl;
         }
 
         @Override
-        public UpstreamNetworkMonitor getUpstreamNetworkMonitor(Context ctx, Handler h,
+        public UpstreamNetworkMonitor makeUpstreamNetworkMonitor(Context ctx, Handler h,
                 SharedLog log, UpstreamNetworkMonitor.EventListener listener) {
             // Use a real object instead of a mock so that some tests can use a real UNM and some
             // can use a mock.
             mEventListener = listener;
-            mUpstreamNetworkMonitor = spy(super.getUpstreamNetworkMonitor(ctx, h, log, listener));
+            mUpstreamNetworkMonitor = spy(super.makeUpstreamNetworkMonitor(ctx, h, log, listener));
             return mUpstreamNetworkMonitor;
         }
 
         @Override
-        public IPv6TetheringCoordinator getIPv6TetheringCoordinator(
+        public IPv6TetheringCoordinator makeIPv6TetheringCoordinator(
                 ArrayList<IpServer> notifyList, SharedLog log) {
             mAllDownstreams = notifyList;
             return mIPv6TetheringCoordinator;
         }
 
         @Override
-        public IpServer.Dependencies getIpServerDependencies() {
+        public IpServer.Dependencies makeIpServerDependencies() {
             return mIpServerDependencies;
         }
 
         @Override
-        public EntitlementManager getEntitlementManager(Context ctx, Handler h, SharedLog log,
+        public EntitlementManager makeEntitlementManager(Context ctx, Handler h, SharedLog log,
                 Runnable callback) {
-            mEntitleMgr = spy(super.getEntitlementManager(ctx, h, log, callback));
+            mEntitleMgr = spy(super.makeEntitlementManager(ctx, h, log, callback));
             return mEntitleMgr;
         }
 
@@ -503,7 +503,7 @@ public class TetheringTest {
         }
 
         @Override
-        public Looper getTetheringLooper() {
+        public Looper makeTetheringLooper() {
             return mLooper.getLooper();
         }
 
@@ -518,7 +518,7 @@ public class TetheringTest {
         }
 
         @Override
-        public TetheringNotificationUpdater getNotificationUpdater(Context ctx, Looper looper) {
+        public TetheringNotificationUpdater makeNotificationUpdater(Context ctx, Looper looper) {
             return mNotificationUpdater;
         }
 
@@ -528,19 +528,19 @@ public class TetheringTest {
         }
 
         @Override
-        public TetheringMetrics getTetheringMetrics() {
+        public TetheringMetrics makeTetheringMetrics() {
             return mTetheringMetrics;
         }
 
         @Override
-        public PrivateAddressCoordinator getPrivateAddressCoordinator(Context ctx,
+        public PrivateAddressCoordinator makePrivateAddressCoordinator(Context ctx,
                 TetheringConfiguration cfg) {
-            mPrivateAddressCoordinator = super.getPrivateAddressCoordinator(ctx, cfg);
+            mPrivateAddressCoordinator = super.makePrivateAddressCoordinator(ctx, cfg);
             return mPrivateAddressCoordinator;
         }
 
         @Override
-        public BluetoothPanShim getBluetoothPanShim(BluetoothPan pan) {
+        public BluetoothPanShim makeBluetoothPanShim(BluetoothPan pan) {
             try {
                 when(mBluetoothPanShim.requestTetheredInterface(
                         any(), any())).thenReturn(mTetheredInterfaceRequestShim);
