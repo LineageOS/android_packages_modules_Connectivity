@@ -124,7 +124,6 @@ java_sdk_library {
     defaults: [
         "framework-connectivity-t-defaults",
         "enable-framework-connectivity-t-targets",
-        "FlaggedApiDefaults",
     ],
     // Do not add static_libs to this library: put them in framework-connectivity instead.
     // The jarjar rules are only so that references to jarjared utils in
