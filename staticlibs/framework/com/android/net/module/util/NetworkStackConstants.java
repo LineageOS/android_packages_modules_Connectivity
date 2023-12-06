@@ -189,6 +189,7 @@ public final class NetworkStackConstants {
 
     public static final byte PIO_FLAG_ON_LINK = (byte) (1 << 7);
     public static final byte PIO_FLAG_AUTONOMOUS = (byte) (1 << 6);
+    public static final byte PIO_FLAG_DHCPV6_PD_PREFERRED = (byte) (1 << 4);
 
     /**
      * TCP constants.
