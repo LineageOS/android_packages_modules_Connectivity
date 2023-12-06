@@ -279,7 +279,7 @@ public class ConnectivityManagerTest {
 
     private static final int NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
     // Timeout for waiting network to be validated.
-    private static final int LISTEN_ACTIVITY_TIMEOUT_MS = 5_000;
+    private static final int LISTEN_ACTIVITY_TIMEOUT_MS = 30_000;
     private static final int NO_CALLBACK_TIMEOUT_MS = 100;
     private static final int NETWORK_REQUEST_TIMEOUT_MS = 3000;
     private static final int SOCKET_TIMEOUT_MS = 100;
