@@ -142,6 +142,7 @@ public class NetlinkMessage {
                 return (NetlinkMessage) RtNetlinkAddressMessage.parse(nlmsghdr, byteBuffer);
             case NetlinkConstants.RTM_NEWROUTE:
             case NetlinkConstants.RTM_DELROUTE:
+            case NetlinkConstants.RTM_GETROUTE:
                 return (NetlinkMessage) RtNetlinkRouteMessage.parse(nlmsghdr, byteBuffer);
             case NetlinkConstants.RTM_NEWNEIGH:
             case NetlinkConstants.RTM_DELNEIGH:
