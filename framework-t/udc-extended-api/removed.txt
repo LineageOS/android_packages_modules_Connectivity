@@ -1,9 +1,0 @@
-// Signature format: 2.0
-package android.net {
-
-  public class TrafficStats {
-    method @Deprecated public static void setThreadStatsUidSelf();
-  }
-
-}
-
