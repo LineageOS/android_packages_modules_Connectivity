@@ -291,6 +291,7 @@ import com.android.net.module.util.BitUtils;
 import com.android.net.module.util.BpfUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
+import com.android.net.module.util.HandlerUtils;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.LinkPropertiesUtils.CompareOrUpdateResult;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
@@ -315,7 +316,6 @@ import com.android.server.connectivity.DnsManager;
 import com.android.server.connectivity.DnsManager.PrivateDnsValidationUpdate;
 import com.android.server.connectivity.DscpPolicyTracker;
 import com.android.server.connectivity.FullScore;
-import com.android.server.connectivity.HandlerUtils;
 import com.android.server.connectivity.InvalidTagException;
 import com.android.server.connectivity.KeepaliveResourceUtil;
 import com.android.server.connectivity.KeepaliveTracker;
@@ -1280,7 +1280,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         LocalPriorityDump() {}
 
         private void dumpHigh(FileDescriptor fd, PrintWriter pw) {
-            if (!HandlerUtils.runWithScissors(mHandler, () -> {
+            if (!HandlerUtils.runWithScissorsForDump(mHandler, () -> {
                 doDump(fd, pw, new String[]{DIAG_ARG});
                 doDump(fd, pw, new String[]{SHORT_ARG});
             }, DUMPSYS_DEFAULT_TIMEOUT_MS)) {
@@ -1289,7 +1289,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
 
         private void dumpNormal(FileDescriptor fd, PrintWriter pw, String[] args) {
-            if (!HandlerUtils.runWithScissors(mHandler, () -> doDump(fd, pw, args),
+            if (!HandlerUtils.runWithScissorsForDump(mHandler, () -> doDump(fd, pw, args),
                     DUMPSYS_DEFAULT_TIMEOUT_MS)) {
                 pw.println("dumpNormal timeout");
             }
