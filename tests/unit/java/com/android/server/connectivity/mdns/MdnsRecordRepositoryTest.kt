@@ -150,12 +150,7 @@ class MdnsRecordRepositoryTest {
         repository.updateService(TEST_SERVICE_ID_1, TEST_SUBTYPE)
 
         val queriedName = arrayOf(TEST_SUBTYPE, "_sub", "_testservice", "_tcp", "local")
-        val questions = listOf(MdnsPointerRecord(queriedName,
-                0L /* receiptTimeMillis */,
-                false /* cacheFlush */,
-                // TTL and data is empty for a question
-                0L /* ttlMillis */,
-                null /* pointer */))
+        val questions = listOf(MdnsPointerRecord(queriedName, false /* isUnicast */))
         val query = MdnsPacket(0 /* flags */, questions, listOf() /* answers */,
                 listOf() /* authorityRecords */, listOf() /* additionalRecords */)
         val src = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
@@ -475,13 +470,8 @@ class MdnsRecordRepositoryTest {
     fun testGetReplyCaseInsensitive() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, flags)
         repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1)
-        val questionsCaseInSensitive =
-            listOf(MdnsPointerRecord(arrayOf("_TESTSERVICE", "_TCP", "local"),
-                0L /* receiptTimeMillis */,
-                false /* cacheFlush */,
-                // TTL and data is empty for a question
-                0L /* ttlMillis */,
-                null /* pointer */))
+        val questionsCaseInSensitive = listOf(
+                MdnsPointerRecord(arrayOf("_TESTSERVICE", "_TCP", "local"), false /* isUnicast */))
         val queryCaseInsensitive = MdnsPacket(0 /* flags */, questionsCaseInSensitive,
             listOf() /* answers */, listOf() /* authorityRecords */,
             listOf() /* additionalRecords */)
@@ -508,12 +498,7 @@ class MdnsRecordRepositoryTest {
         val queriedName = if (subtype == null) arrayOf("_testservice", "_tcp", "local")
         else arrayOf(subtype, "_sub", "_testservice", "_tcp", "local")
 
-        val questions = listOf(MdnsPointerRecord(queriedName,
-                0L /* receiptTimeMillis */,
-                false /* cacheFlush */,
-                // TTL and data is empty for a question
-                0L /* ttlMillis */,
-                null /* pointer */))
+        val questions = listOf(MdnsPointerRecord(queriedName, false /* isUnicast */))
         val query = MdnsPacket(0 /* flags */, questions, listOf() /* answers */,
                 listOf() /* authorityRecords */, listOf() /* additionalRecords */)
         val src = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
@@ -711,12 +696,8 @@ class MdnsRecordRepositoryTest {
         assertEquals(MdnsConstants.NO_PACKET,
                 repository.getServiceRepliedRequestsCount(TEST_SERVICE_ID_1))
 
-        val questions = listOf(MdnsPointerRecord(arrayOf("_testservice", "_tcp", "local"),
-                0L /* receiptTimeMillis */,
-                false /* cacheFlush */,
-                // TTL and data is empty for a question
-                0L /* ttlMillis */,
-                null /* pointer */))
+        val questions = listOf(
+                MdnsPointerRecord(arrayOf("_testservice", "_tcp", "local"), false /* isUnicast */))
         val query = MdnsPacket(0 /* flags */, questions, listOf() /* answers */,
                 listOf() /* authorityRecords */, listOf() /* additionalRecords */)
         val src = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
