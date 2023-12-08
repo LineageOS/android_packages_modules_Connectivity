@@ -108,9 +108,6 @@ public class UpstreamNetworkMonitorTest {
 
     @Before public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        reset(mContext);
-        reset(mCS);
-        reset(mLog);
         when(mLog.forSubComponent(anyString())).thenReturn(mLog);
         when(mEntitleMgr.isCellularUpstreamPermitted()).thenReturn(true);
 
