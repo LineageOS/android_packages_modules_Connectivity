@@ -726,6 +726,7 @@ public class ConnectivityManagerTest {
         return mCm.getRedactedNetworkCapabilitiesForPackage(nc, uid, packageName);
     }
 
+    @ConnectivityModuleTest
     @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
     @AppModeFull(reason = "Cannot get installed packages in instant app mode")
     @Test
