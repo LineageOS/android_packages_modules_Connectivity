@@ -25,7 +25,6 @@ import java.lang.annotation.RetentionPolicy;
  * A connection with the peer device.
  *
  * <p>Connections are used to exchange data with the peer device.
- *
  */
 public interface Connection {
     /** Unknown error. */

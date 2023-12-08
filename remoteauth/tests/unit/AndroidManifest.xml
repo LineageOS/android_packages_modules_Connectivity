@@ -31,5 +31,6 @@
     <instrumentation
         android:name="androidx.test.runner.AndroidJUnitRunner"
         android:targetPackage="android.remoteauth.test"
-        android:label="RemoteAuth Mainline Module Tests" />
+        android:label="RemoteAuth Mainline Module Tests"
+        android:directBootAware="true"/>
 </manifest>

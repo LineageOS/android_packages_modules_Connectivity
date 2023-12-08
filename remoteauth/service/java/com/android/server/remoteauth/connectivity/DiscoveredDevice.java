@@ -25,8 +25,7 @@ public final class DiscoveredDevice {
     private @NonNull ConnectionInfo mConnectionInfo;
     private @Nullable String mDisplayName;
 
-    public DiscoveredDevice(
-            @NonNull ConnectionInfo connectionInfo, @Nullable String displayName) {
+    public DiscoveredDevice(@NonNull ConnectionInfo connectionInfo, @Nullable String displayName) {
         this.mConnectionInfo = connectionInfo;
         this.mDisplayName = displayName;
     }
