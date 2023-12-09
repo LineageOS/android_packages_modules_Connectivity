@@ -33,6 +33,7 @@ java_library {
     libs: [
         "androidx.annotation_annotation",
         "framework-bluetooth",
+        "framework-connectivity",
         "error_prone_annotations",
         "framework-configinfrastructure",
         "framework-connectivity-pre-jarjar",
