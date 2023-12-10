@@ -53,11 +53,11 @@ public final class NsdServiceInfo implements Parcelable {
 
     private String mServiceType;
 
-    private final Set<String> mSubtypes = new ArraySet<>();
+    private final Set<String> mSubtypes;
 
-    private final ArrayMap<String, byte[]> mTxtRecord = new ArrayMap<>();
+    private final ArrayMap<String, byte[]> mTxtRecord;
 
-    private final List<InetAddress> mHostAddresses = new ArrayList<>();
+    private final List<InetAddress> mHostAddresses;
 
     private int mPort;
 
@@ -67,12 +67,32 @@ public final class NsdServiceInfo implements Parcelable {
     private int mInterfaceIndex;
 
     public NsdServiceInfo() {
+        mSubtypes = new ArraySet<>();
+        mTxtRecord = new ArrayMap<>();
+        mHostAddresses = new ArrayList<>();
     }
 
     /** @hide */
     public NsdServiceInfo(String sn, String rt) {
+        this();
         mServiceName = sn;
         mServiceType = rt;
+    }
+
+    /**
+     * Creates a copy of {@code other}.
+     *
+     * @hide
+     */
+    public NsdServiceInfo(@NonNull NsdServiceInfo other) {
+        mServiceName = other.getServiceName();
+        mServiceType = other.getServiceType();
+        mSubtypes = new ArraySet<>(other.getSubtypes());
+        mTxtRecord = new ArrayMap<>(other.mTxtRecord);
+        mHostAddresses = new ArrayList<>(other.getHostAddresses());
+        mPort = other.getPort();
+        mNetwork = other.getNetwork();
+        mInterfaceIndex = other.getInterfaceIndex();
     }
 
     /** Get the service name */
