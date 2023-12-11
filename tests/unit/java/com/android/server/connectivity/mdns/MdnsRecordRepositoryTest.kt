@@ -756,6 +756,34 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
+    fun testGetReply_queryWithIpv4Address_replyWithIpv4Address() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, flags)
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1, setOf(TEST_SUBTYPE))
+        val query = makeQuery(TYPE_PTR to arrayOf("_testservice", "_tcp", "local"))
+
+        val srcIpv4 = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
+        val replyIpv4 = repository.getReply(query, srcIpv4)
+
+        assertNotNull(replyIpv4)
+        assertEquals(MdnsConstants.getMdnsIPv4Address(), replyIpv4.destination.address)
+        assertEquals(MdnsConstants.MDNS_PORT, replyIpv4.destination.port)
+    }
+
+    @Test
+    fun testGetReply_queryWithIpv6Address_replyWithIpv6Address() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, flags)
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1, setOf(TEST_SUBTYPE))
+        val query = makeQuery(TYPE_PTR to arrayOf("_testservice", "_tcp", "local"))
+
+        val srcIpv6 = InetSocketAddress(parseNumericAddress("2001:db8::123"), 5353)
+        val replyIpv6 = repository.getReply(query, srcIpv6)
+
+        assertNotNull(replyIpv6)
+        assertEquals(MdnsConstants.getMdnsIPv6Address(), replyIpv6.destination.address)
+        assertEquals(MdnsConstants.MDNS_PORT, replyIpv6.destination.port)
+    }
+
+    @Test
     fun testGetConflictingServices() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, flags)
         repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1)

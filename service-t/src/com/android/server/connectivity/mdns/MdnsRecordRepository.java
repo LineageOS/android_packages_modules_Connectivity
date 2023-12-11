@@ -141,6 +141,9 @@ public class MdnsRecordRepository {
          * Last time (as per SystemClock.elapsedRealtime) when sent via unicast or multicast,
          * 0 if never
          */
+        // FIXME: the `lastSentTimeMs` and `lastAdvertisedTimeMs` should be maintained separately
+        // for IPv4 and IPv6, because neither IPv4 nor and IPv6 clients can receive replies in
+        // different address space.
         public long lastSentTimeMs;
 
         RecordInfo(NsdServiceInfo serviceInfo, T record, boolean sharedName) {
