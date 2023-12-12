@@ -33,7 +33,10 @@ android_library {
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/NetworkStack/tests/integration",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        test: true
+    },
 }
 
 android_test {
