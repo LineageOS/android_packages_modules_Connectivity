@@ -18,8 +18,6 @@ package com.android.server.nearby.util;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import androidx.test.filters.SdkSuppress;
-
 import org.junit.Test;
 
 public final class ArrayUtilsTest {
@@ -30,51 +28,58 @@ public final class ArrayUtilsTest {
     private static final byte[] BYTES_ALL = new byte[] {7, 9, 8};
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConcatByteArraysNoInput() {
         assertThat(ArrayUtils.concatByteArrays().length).isEqualTo(0);
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConcatByteArraysOneEmptyArray() {
         assertThat(ArrayUtils.concatByteArrays(BYTES_EMPTY).length).isEqualTo(0);
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConcatByteArraysOneNonEmptyArray() {
         assertThat(ArrayUtils.concatByteArrays(BYTES_ONE)).isEqualTo(BYTES_ONE);
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConcatByteArraysMultipleNonEmptyArrays() {
         assertThat(ArrayUtils.concatByteArrays(BYTES_ONE, BYTES_TWO)).isEqualTo(BYTES_ALL);
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testConcatByteArraysMultipleArrays() {
         assertThat(ArrayUtils.concatByteArrays(BYTES_ONE, BYTES_EMPTY, BYTES_TWO))
                 .isEqualTo(BYTES_ALL);
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testIsEmptyNull_returnsTrue() {
         assertThat(ArrayUtils.isEmpty(null)).isTrue();
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testIsEmpty_returnsTrue() {
         assertThat(ArrayUtils.isEmpty(new byte[]{})).isTrue();
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
     public void testIsEmpty_returnsFalse() {
         assertThat(ArrayUtils.isEmpty(BYTES_ALL)).isFalse();
+    }
+
+    @Test
+    public void testAppendByte() {
+        assertThat(ArrayUtils.append((byte) 2, BYTES_ONE)).isEqualTo(new byte[]{2, 7, 9});
+    }
+
+    @Test
+    public void testAppendByteNull() {
+        assertThat(ArrayUtils.append((byte) 2, null)).isEqualTo(new byte[]{2});
+    }
+
+    @Test
+    public void testAppendByteToArray() {
+        assertThat(ArrayUtils.append(BYTES_ONE, (byte) 2)).isEqualTo(new byte[]{7, 9, 2});
     }
 }

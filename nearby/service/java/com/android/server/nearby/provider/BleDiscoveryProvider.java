@@ -45,7 +45,6 @@ import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.presence.ExtendedAdvertisement;
 import com.android.server.nearby.util.ArrayUtils;
 import com.android.server.nearby.util.ForegroundThread;
-import com.android.server.nearby.util.encryption.CryptorImpIdentityV1;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -133,10 +132,6 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                         .addMedium(NearbyDevice.Medium.BLE)
                         .setName(deviceName)
                         .setRssi(rssi);
-        for (int i : advertisement.getActions()) {
-            builder.addExtendedProperty(new DataElement(DataElement.DataType.ACTION,
-                    new byte[]{(byte) i}));
-        }
         for (DataElement dataElement : advertisement.getDataElements()) {
             builder.addExtendedProperty(dataElement);
         }
@@ -284,17 +279,13 @@ public class BleDiscoveryProvider extends AbstractDiscoveryProvider {
                         if (advertisement == null) {
                             continue;
                         }
-                        if (CryptorImpIdentityV1.getInstance().verify(
-                                advertisement.getIdentity(),
-                                credential.getEncryptedMetadataKeyTag())) {
-                            builder.setPresenceDevice(getPresenceDevice(advertisement, deviceName,
-                                    rssi));
-                            builder.setEncryptionKeyTag(credential.getEncryptedMetadataKeyTag());
-                            if (!ArrayUtils.isEmpty(credential.getSecretId())) {
-                                builder.setDeviceId(Arrays.hashCode(credential.getSecretId()));
-                            }
-                            return;
+                        builder.setPresenceDevice(getPresenceDevice(advertisement, deviceName,
+                                rssi));
+                        builder.setEncryptionKeyTag(credential.getEncryptedMetadataKeyTag());
+                        if (!ArrayUtils.isEmpty(credential.getSecretId())) {
+                            builder.setDeviceId(Arrays.hashCode(credential.getSecretId()));
                         }
+                        return;
                     }
                 }
             }
