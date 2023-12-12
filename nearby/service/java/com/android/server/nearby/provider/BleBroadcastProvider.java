@@ -103,7 +103,8 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                                     + " is wrong.");
                             advertiseStarted = false;
                     }
-                } catch (NullPointerException | IllegalStateException | SecurityException e) {
+                } catch (NullPointerException | IllegalStateException | SecurityException
+                    | IllegalArgumentException e) {
                     Log.w(TAG, "Failed to start advertising.", e);
                     advertiseStarted = false;
                 }
