@@ -46,6 +46,7 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.GuardedBy;
@@ -57,6 +58,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * The Network Service Discovery Manager class provides the API to discover services
@@ -152,7 +155,36 @@ public final class NsdManager {
                 "com.android.net.flags.register_nsd_offload_engine_api";
         static final String NSD_SUBTYPES_SUPPORT_ENABLED =
                 "com.android.net.flags.nsd_subtypes_support_enabled";
+        static final String ADVERTISE_REQUEST_API =
+                "com.android.net.flags.advertise_request_api";
     }
+
+    /**
+     * A regex for the acceptable format of a type or subtype label.
+     * @hide
+     */
+    public static final String TYPE_SUBTYPE_LABEL_REGEX = "_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]";
+
+    /**
+     * A regex for the acceptable format of a service type specification.
+     *
+     * When it matches, matcher group 1 is an optional leading subtype when using legacy dot syntax
+     * (_subtype._type._tcp). Matcher group 2 is the actual type, and matcher group 3 contains
+     * optional comma-separated subtypes.
+     * @hide
+     */
+    public static final String TYPE_REGEX =
+            // Optional leading subtype (_subtype._type._tcp)
+            // (?: xxx) is a non-capturing parenthesis, don't capture the dot
+            "^(?:(" + TYPE_SUBTYPE_LABEL_REGEX + ")\\.)?"
+                    // Actual type (_type._tcp.local)
+                    + "(" + TYPE_SUBTYPE_LABEL_REGEX + "\\._(?:tcp|udp))"
+                    // Drop '.' at the end of service type that is compatible with old backend.
+                    // e.g. allow "_type._tcp.local."
+                    + "\\.?"
+                    // Optional subtype after comma, for "_type._tcp,_subtype1,_subtype2" format
+                    + "((?:," + TYPE_SUBTYPE_LABEL_REGEX + ")*)"
+                    + "$";
 
     /**
      * Broadcast intent action to indicate whether network service discovery is
@@ -1098,6 +1130,16 @@ public final class NsdManager {
         return key;
     }
 
+    private int updateRegisteredListener(Object listener, Executor e, NsdServiceInfo s) {
+        final int key;
+        synchronized (mMapLock) {
+            key = getListenerKey(listener);
+            mServiceMap.put(key, s);
+            mExecutorMap.put(key, e);
+        }
+        return key;
+    }
+
     private void removeListener(int key) {
         synchronized (mMapLock) {
             mListenerMap.remove(key);
@@ -1162,14 +1204,111 @@ public final class NsdManager {
      */
     public void registerService(@NonNull NsdServiceInfo serviceInfo, int protocolType,
             @NonNull Executor executor, @NonNull RegistrationListener listener) {
+        checkServiceInfo(serviceInfo);
+        checkProtocol(protocolType);
+        final AdvertisingRequest.Builder builder = new AdvertisingRequest.Builder(serviceInfo,
+                protocolType);
+        // Optionally assume that the request is an update request if it uses subtypes and the same
+        // listener. This is not documented behavior as support for advertising subtypes via
+        // "_servicename,_sub1,_sub2" has never been documented in the first place, and using
+        // multiple subtypes was broken in T until a later module update. Subtype registration is
+        // documented in the NsdServiceInfo.setSubtypes API instead, but this provides a limited
+        // option for users of the older undocumented behavior, only for subtype changes.
+        if (isSubtypeUpdateRequest(serviceInfo, listener)) {
+            builder.setAdvertisingConfig(AdvertisingRequest.NSD_ADVERTISING_UPDATE_ONLY);
+        }
+        registerService(builder.build(), executor, listener);
+    }
+
+    private boolean isSubtypeUpdateRequest(@NonNull NsdServiceInfo serviceInfo, @NonNull
+            RegistrationListener listener) {
+        // If the listener is the same object, serviceInfo is for the same service name and
+        // type (outside of subtypes), and either of them use subtypes, treat the request as a
+        // subtype update request.
+        synchronized (mMapLock) {
+            int valueIndex = mListenerMap.indexOfValue(listener);
+            if (valueIndex == -1) {
+                return false;
+            }
+            final int key = mListenerMap.keyAt(valueIndex);
+            NsdServiceInfo existingService = mServiceMap.get(key);
+            if (existingService == null) {
+                return false;
+            }
+            final Pair<String, String> existingTypeSubtype = getTypeAndSubtypes(
+                    existingService.getServiceType());
+            final Pair<String, String> newTypeSubtype = getTypeAndSubtypes(
+                    serviceInfo.getServiceType());
+            if (existingTypeSubtype == null || newTypeSubtype == null) {
+                return false;
+            }
+            final boolean existingHasNoSubtype = TextUtils.isEmpty(existingTypeSubtype.second);
+            final boolean updatedHasNoSubtype = TextUtils.isEmpty(newTypeSubtype.second);
+            if (existingHasNoSubtype && updatedHasNoSubtype) {
+                // Only allow subtype changes when subtypes are used. This ensures that this
+                // behavior does not affect most requests.
+                return false;
+            }
+
+            return Objects.equals(existingService.getServiceName(), serviceInfo.getServiceName())
+                    && Objects.equals(existingTypeSubtype.first, newTypeSubtype.first);
+        }
+    }
+
+    /**
+     * Get the base type from a type specification with "_type._tcp,sub1,sub2" syntax.
+     *
+     * <p>This rejects specifications using dot syntax to specify subtypes ("_sub1._type._tcp").
+     *
+     * @return Type and comma-separated list of subtypes, or null if invalid format.
+     */
+    @Nullable
+    private static Pair<String, String> getTypeAndSubtypes(@NonNull String typeWithSubtype) {
+        final Matcher matcher = Pattern.compile(TYPE_REGEX).matcher(typeWithSubtype);
+        if (!matcher.matches()) return null;
+        // Reject specifications using leading subtypes with a dot
+        if (!TextUtils.isEmpty(matcher.group(1))) return null;
+        return new Pair<>(matcher.group(2), matcher.group(3));
+    }
+
+    /**
+     * Register a service to be discovered by other services.
+     *
+     * <p> The function call immediately returns after sending a request to register service
+     * to the framework. The application is notified of a successful registration
+     * through the callback {@link RegistrationListener#onServiceRegistered} or a failure
+     * through {@link RegistrationListener#onRegistrationFailed}.
+     *
+     * <p> The application should call {@link #unregisterService} when the service
+     * registration is no longer required, and/or whenever the application is stopped.
+     * @param  advertisingRequest service being registered
+     * @param executor Executor to run listener callbacks with
+     * @param listener The listener notifies of a successful registration and is used to
+     * unregister this service through a call on {@link #unregisterService}. Cannot be null.
+     *
+     * @hide
+     */
+//    @FlaggedApi(Flags.ADVERTISE_REQUEST_API)
+    public void registerService(@NonNull AdvertisingRequest advertisingRequest,
+            @NonNull Executor executor,
+            @NonNull RegistrationListener listener) {
+        final NsdServiceInfo serviceInfo = advertisingRequest.getServiceInfo();
+        final int protocolType = advertisingRequest.getProtocolType();
         if (serviceInfo.getPort() <= 0) {
             throw new IllegalArgumentException("Invalid port number");
         }
         checkServiceInfo(serviceInfo);
         checkProtocol(protocolType);
-        int key = putListener(listener, executor, serviceInfo);
+        final int key;
+        // For update only request, the old listener has to be reused
+        if ((advertisingRequest.getAdvertisingConfig()
+                & AdvertisingRequest.NSD_ADVERTISING_UPDATE_ONLY) > 0) {
+            key = updateRegisteredListener(listener, executor, serviceInfo);
+        } else {
+            key = putListener(listener, executor, serviceInfo);
+        }
         try {
-            mService.registerService(key, serviceInfo);
+            mService.registerService(key, advertisingRequest);
         } catch (RemoteException e) {
             e.rethrowFromSystemServer();
         }
