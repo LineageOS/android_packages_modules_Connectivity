@@ -131,12 +131,12 @@ public class StructXfrmReplayStateEsn {
 
     /** Return the TX sequence number in unisgned long */
     public long getTxSequenceNumber() {
-        return getSequenceNumber(mWithoutBitmap.seqHi, mWithoutBitmap.seq);
+        return getSequenceNumber(mWithoutBitmap.oSeqHi, mWithoutBitmap.oSeq);
     }
 
     /** Return the RX sequence number in unisgned long */
     public long getRxSequenceNumber() {
-        return getSequenceNumber(mWithoutBitmap.oSeqHi, mWithoutBitmap.oSeq);
+        return getSequenceNumber(mWithoutBitmap.seqHi, mWithoutBitmap.seq);
     }
 
     @VisibleForTesting
