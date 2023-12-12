@@ -22,7 +22,6 @@ import android.net.IpSecConfig;
 import android.net.IpSecUdpEncapResponse;
 import android.net.IpSecSpiResponse;
 import android.net.IpSecTransformResponse;
-import android.net.IpSecTransformState;
 import android.net.IpSecTunnelInterfaceResponse;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -74,8 +73,6 @@ interface IIpSecService
             in String callingPackage);
 
     void deleteTransform(int transformId);
-
-    IpSecTransformState getTransformState(int transformId);
 
     void applyTransportModeTransform(
             in ParcelFileDescriptor socket, int direction, int transformId);
