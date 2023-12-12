@@ -24,6 +24,7 @@ import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,6 +124,16 @@ public class BroadcastProviderManagerTest {
         mBroadcastProviderManager.startBroadcast(mBroadcastRequest, mBroadcastListener);
         mBroadcastProviderManager.stopBroadcast(mBroadcastListener);
         verify(mBinder).unlinkToDeath(any(), eq(0));
+    }
+
+    @Test
+    public void testRegisterAdvertising_twoTimes_fail() throws Exception {
+        IBroadcastListener newListener = mock(IBroadcastListener.class);
+        IBinder newBinder = mock(IBinder.class);
+        when(newListener.asBinder()).thenReturn(newBinder);
+        mBroadcastProviderManager.startBroadcast(mBroadcastRequest, mBroadcastListener);
+        mBroadcastProviderManager.startBroadcast(mBroadcastRequest, newListener);
+        verify(newListener).onStatusChanged(eq(BroadcastCallback.STATUS_FAILURE));
     }
 
     @Test
