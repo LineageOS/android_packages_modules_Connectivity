@@ -22,6 +22,7 @@ import static com.android.server.nearby.NearbyService.TAG;
 
 import android.annotation.Nullable;
 import android.app.AppOpsManager;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.nearby.DataElement;
 import android.nearby.IScanListener;
@@ -220,6 +221,8 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
 
     /** Called after boot completed. */
     public void init() {
+        // Register BLE only scan when Bluetooth is turned off
+        setBleScanEnabled();
         if (mInjector.getContextHubManager() != null) {
             mChreDiscoveryProvider.init();
         }
@@ -502,5 +505,30 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             Log.d(TAG, "Binder is dead - unregistering scan listener");
             unregisterScanListener(listener);
         }
+    }
+
+    /**
+     * Registers Nearby service to Ble scan if Bluetooth is off. (Even when Bluetooth is off)
+     * @return {@code true} when Nearby currently can scan through Bluetooth or Ble or successfully
+     * registers Nearby service to Ble scan when Blutooth is off.
+     */
+    public boolean setBleScanEnabled() {
+        BluetoothAdapter adapter = mInjector.getBluetoothAdapter();
+        if (adapter == null) {
+            Log.e(TAG, "BluetoothAdapter is null.");
+            return false;
+        }
+        if (adapter.isEnabled() || adapter.isLeEnabled()) {
+            return true;
+        }
+        if (!adapter.isBleScanAlwaysAvailable()) {
+            Log.v(TAG, "Ble always on scan is disabled.");
+            return false;
+        }
+        if (!adapter.enableBLE()) {
+            Log.e(TAG, "Failed to register Ble scan.");
+            return false;
+        }
+        return true;
     }
 }
