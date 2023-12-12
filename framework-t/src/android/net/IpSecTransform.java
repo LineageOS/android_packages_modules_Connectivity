@@ -15,11 +15,8 @@
  */
 package android.net;
 
-import static android.net.IpSecManager.Flags.IPSEC_TRANSFORM_STATE;
 import static android.net.IpSecManager.INVALID_RESOURCE_ID;
 
-import android.annotation.CallbackExecutor;
-import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -29,8 +26,6 @@ import android.annotation.SystemApi;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Binder;
-import android.os.OutcomeReceiver;
-import android.os.RemoteException;
 import android.os.ServiceSpecificException;
 import android.util.Log;
 
@@ -43,7 +38,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.InetAddress;
 import java.util.Objects;
-import java.util.concurrent.Executor;
 
 /**
  * This class represents a transform, which roughly corresponds to an IPsec Security Association.
@@ -204,44 +198,6 @@ public final class IpSecTransform implements AutoCloseable {
     @VisibleForTesting
     public int getResourceId() {
         return mResourceId;
-    }
-
-    /**
-     * Retrieve the current state of this IpSecTransform.
-     *
-     * @param executor The {@link Executor} on which to call the supplied callback.
-     * @param callback Callback that's called after the transform state is ready or when an error
-     *     occurs.
-     * @see IpSecTransformState
-     * @hide
-     */
-    @FlaggedApi(IPSEC_TRANSFORM_STATE)
-    public void getIpSecTransformState(
-            @CallbackExecutor @NonNull Executor executor,
-            @NonNull OutcomeReceiver<IpSecTransformState, RuntimeException> callback) {
-        Objects.requireNonNull(executor);
-        Objects.requireNonNull(callback);
-
-        // TODO: Consider adding check to prevent DDoS attack.
-
-        try {
-            final IpSecTransformState ipSecTransformState =
-                    getIpSecManager(mContext).getTransformState(mResourceId);
-            executor.execute(
-                    () -> {
-                        callback.onResult(ipSecTransformState);
-                    });
-        } catch (IllegalStateException e) {
-            executor.execute(
-                    () -> {
-                        callback.onError(e);
-                    });
-        } catch (RemoteException e) {
-            executor.execute(
-                    () -> {
-                        callback.onError(e.rethrowFromSystemServer());
-                    });
-        }
     }
 
     /**
