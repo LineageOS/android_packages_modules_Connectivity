@@ -754,4 +754,26 @@ public class TetheringConfigurationTest {
                 new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID, mDeps);
         assertEquals(p2pLeasesSubnetPrefixLength, p2pCfg.getP2pLeasesSubnetPrefixLength());
     }
+
+    private void setTetherEnableSyncSMFlagEnabled(Boolean enabled) {
+        mDeps.setFeatureEnabled(TetheringConfiguration.TETHER_ENABLE_SYNC_SM, enabled);
+    }
+
+    private void assertEnableSyncSMIs(boolean value) {
+        assertEquals(value, new TetheringConfiguration(
+                mMockContext, mLog, INVALID_SUBSCRIPTION_ID, mDeps).isSyncSM());
+    }
+
+    @Test
+    public void testEnableSyncSMFlag() throws Exception {
+        // Test default disabled
+        setTetherEnableSyncSMFlagEnabled(null);
+        assertEnableSyncSMIs(false);
+
+        setTetherEnableSyncSMFlagEnabled(true);
+        assertEnableSyncSMIs(true);
+
+        setTetherEnableSyncSMFlagEnabled(false);
+        assertEnableSyncSMIs(false);
+    }
 }
