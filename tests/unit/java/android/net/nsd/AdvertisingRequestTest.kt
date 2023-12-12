@@ -16,19 +16,14 @@
 
 package android.net.nsd
 
-import android.net.Network
-import android.net.nsd.AdvertisingRequest
 import android.net.nsd.AdvertisingRequest.NSD_ADVERTISING_UPDATE_ONLY
-import android.net.nsd.NsdManager
 import android.net.nsd.NsdManager.PROTOCOL_DNS_SD
-import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.parcelingRoundTrip
-import com.android.testutils.assertThrows
 import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -55,8 +50,8 @@ class AdvertisingRequestTest {
 
         val afterParcel = parcelingRoundTrip(beforeParcel)
 
-        assertEquals(beforeParcel.serviceInfo.serviceType, afterParcel.serviceInfo.serviceType);
-        assertEquals(beforeParcel.advertisingConfig, afterParcel.advertisingConfig);
+        assertEquals(beforeParcel.serviceInfo.serviceType, afterParcel.serviceInfo.serviceType)
+        assertEquals(beforeParcel.advertisingConfig, afterParcel.advertisingConfig)
     }
 
 @Test

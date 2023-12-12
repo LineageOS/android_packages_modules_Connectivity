@@ -15,8 +15,6 @@
  */
 package android.net.nsd;
 
-import static java.util.Objects.requireNonNull;
-
 import android.annotation.LongDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;

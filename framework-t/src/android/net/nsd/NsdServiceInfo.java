@@ -16,18 +16,13 @@
 
 package android.net.nsd;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import android.annotation.FlaggedApi;
-import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.net.Network;
-import android.net.nsd.NsdManager.RegistrationListener;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.os.Process;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;

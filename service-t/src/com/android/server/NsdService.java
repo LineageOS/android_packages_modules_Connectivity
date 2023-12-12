@@ -28,6 +28,7 @@ import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 import static android.net.nsd.NsdManager.RESOLVE_SERVICE_SUCCEEDED;
 import static android.net.nsd.NsdManager.SUBTYPE_LABEL_REGEX;
 import static android.net.nsd.NsdManager.TYPE_REGEX;
+import static android.os.Process.SYSTEM_UID;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
@@ -115,6 +116,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -738,6 +740,33 @@ public class NsdService extends INsdManager.Stub {
                 return new ArraySet<>(subtypeMap.values());
             }
 
+            private boolean checkTtl(
+                        @Nullable Duration ttl, @NonNull ClientInfo clientInfo) {
+                if (ttl == null) {
+                    return true;
+                }
+
+                final long ttlSeconds = ttl.toSeconds();
+                final int uid = clientInfo.getUid();
+
+                // Allows Thread module in the system_server to register TTL that is smaller than
+                // 30 seconds
+                final long minTtlSeconds = uid == SYSTEM_UID ? 0 : NsdManager.TTL_SECONDS_MIN;
+
+                // Allows Thread module in the system_server to register TTL that is larger than
+                // 10 hours
+                final long maxTtlSeconds =
+                        uid == SYSTEM_UID ? 0xffffffffL : NsdManager.TTL_SECONDS_MAX;
+
+                if (ttlSeconds < minTtlSeconds || ttlSeconds > maxTtlSeconds) {
+                    mServiceLogs.e("ttlSeconds exceeds allowed range (value = "
+                            + ttlSeconds + ", allowedRange = [" + minTtlSeconds
+                            + ", " + maxTtlSeconds + " ])");
+                    return false;
+                }
+                return true;
+            }
+
             @Override
             public boolean processMessage(Message msg) {
                 final ClientInfo clientInfo;
@@ -964,11 +993,19 @@ public class NsdService extends INsdManager.Stub {
                                 break;
                             }
 
+                            if (!checkTtl(advertisingRequest.getTtl(), clientInfo)) {
+                                clientInfo.onRegisterServiceFailedImmediately(clientRequestId,
+                                        NsdManager.FAILURE_BAD_PARAMETERS, false /* isLegacy */);
+                                break;
+                            }
+
                             serviceInfo.setSubtypes(subtypes);
                             maybeStartMonitoringSockets();
                             final MdnsAdvertisingOptions mdnsAdvertisingOptions =
-                                    MdnsAdvertisingOptions.newBuilder().setIsOnlyUpdate(
-                                            isUpdateOnly).build();
+                                    MdnsAdvertisingOptions.newBuilder()
+                                            .setIsOnlyUpdate(isUpdateOnly)
+                                            .setTtl(advertisingRequest.getTtl())
+                                            .build();
                             mAdvertiser.addOrUpdateService(transactionId, serviceInfo,
                                     mdnsAdvertisingOptions, clientInfo.mUid);
                             storeAdvertiserRequestMap(clientRequestId, transactionId, clientInfo,
@@ -1511,6 +1548,7 @@ public class NsdService extends INsdManager.Stub {
                         network == null ? INetd.LOCAL_NET_ID : network.netId,
                         serviceInfo.getInterfaceIndex());
                 servInfo.setSubtypes(dedupSubtypeLabels(serviceInfo.getSubtypes()));
+                servInfo.setExpirationTime(serviceInfo.getExpirationTime());
                 return servInfo;
             }
 
@@ -2669,6 +2707,10 @@ public class NsdService extends INsdManager.Stub {
                         .append("\n");
             }
             return sb.toString();
+        }
+
+        public int getUid() {
+            return mUid;
         }
 
         private boolean isPreSClient() {

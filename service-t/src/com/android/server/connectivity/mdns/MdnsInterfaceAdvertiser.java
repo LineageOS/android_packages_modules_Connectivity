@@ -258,8 +258,10 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      *
      * @throws NameConflictException There is already a service being advertised with that name.
      */
-    public void addService(int id, NsdServiceInfo service) throws NameConflictException {
-        final int replacedExitingService = mRecordRepository.addService(id, service);
+    public void addService(int id, NsdServiceInfo service,
+            @NonNull MdnsAdvertisingOptions advertisingOptions) throws NameConflictException {
+        final int replacedExitingService =
+                mRecordRepository.addService(id, service, advertisingOptions.getTtl());
         // Cancel announcements for the existing service. This only happens for exiting services
         // (so cancelling exiting announcements), as per RecordRepository.addService.
         if (replacedExitingService >= 0) {

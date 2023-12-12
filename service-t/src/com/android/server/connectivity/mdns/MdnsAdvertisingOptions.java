@@ -16,6 +16,11 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.Nullable;
+
+import java.time.Duration;
+import java.util.Objects;
+
 /**
  * API configuration parameters for advertising the mDNS service.
  *
@@ -27,13 +32,15 @@ public class MdnsAdvertisingOptions {
 
     private static MdnsAdvertisingOptions sDefaultOptions;
     private final boolean mIsOnlyUpdate;
+    @Nullable
+    private final Duration mTtl;
 
     /**
      * Parcelable constructs for a {@link MdnsAdvertisingOptions}.
      */
-    MdnsAdvertisingOptions(
-            boolean isOnlyUpdate) {
+    MdnsAdvertisingOptions(boolean isOnlyUpdate, @Nullable Duration ttl) {
         this.mIsOnlyUpdate = isOnlyUpdate;
+        this.mTtl = ttl;
     }
 
     /**
@@ -60,9 +67,36 @@ public class MdnsAdvertisingOptions {
         return mIsOnlyUpdate;
     }
 
+    /**
+     * Returns the TTL for all records in a service.
+     */
+    @Nullable
+    public Duration getTtl() {
+        return mTtl;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        } else if (!(other instanceof MdnsAdvertisingOptions)) {
+            return false;
+        } else {
+            final MdnsAdvertisingOptions otherOptions = (MdnsAdvertisingOptions) other;
+            return mIsOnlyUpdate == otherOptions.mIsOnlyUpdate
+                    && Objects.equals(mTtl, otherOptions.mTtl);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(mIsOnlyUpdate, mTtl);
+    }
+
     @Override
     public String toString() {
-        return "MdnsAdvertisingOptions{" + "mIsOnlyUpdate=" + mIsOnlyUpdate + '}';
+        return "MdnsAdvertisingOptions{" + "mIsOnlyUpdate=" + mIsOnlyUpdate + ", mTtl=" + mTtl
+                + '}';
     }
 
     /**
@@ -70,6 +104,8 @@ public class MdnsAdvertisingOptions {
      */
     public static final class Builder {
         private boolean mIsOnlyUpdate = false;
+        @Nullable
+        private Duration mTtl;
 
         private Builder() {
         }
@@ -83,10 +119,18 @@ public class MdnsAdvertisingOptions {
         }
 
         /**
+         * Sets the TTL duration for all records of the service.
+         */
+        public Builder setTtl(@Nullable Duration ttl) {
+            this.mTtl = ttl;
+            return this;
+        }
+
+        /**
          * Builds a {@link MdnsAdvertisingOptions} with the arguments supplied to this builder.
          */
         public MdnsAdvertisingOptions build() {
-            return new MdnsAdvertisingOptions(mIsOnlyUpdate);
+            return new MdnsAdvertisingOptions(mIsOnlyUpdate, mTtl);
         }
     }
 }
