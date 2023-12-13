@@ -35,7 +35,6 @@ import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_I
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
-import android.net.ParseException;
 import android.net.util.SocketUtils;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -315,49 +314,20 @@ public class NetlinkUtils {
 
     private NetlinkUtils() {}
 
-    /**
-     * Sends a netlink dump request and processes the returned dump messages
-     *
-     * @param <T> extends NetlinkMessage
-     * @param dumpRequestMessage netlink dump request message to be sent
-     * @param nlFamily netlink family
-     * @param msgClass expected class of the netlink message
-     * @param func function defined by caller to handle the dump messages
-     * @throws SocketException when fails to create socket
-     * @throws InterruptedIOException when fails to read the dumpFd
-     * @throws ErrnoException when fails to send dump request
-     * @throws ParseException when message can't be parsed
-     */
-    public static <T extends NetlinkMessage> void getAndProcessNetlinkDumpMessages(
-            byte[] dumpRequestMessage, int nlFamily, Class<T> msgClass,
+    private static <T extends NetlinkMessage> void getAndProcessNetlinkDumpMessagesWithFd(
+            FileDescriptor fd, byte[] dumpRequestMessage, int nlFamily, Class<T> msgClass,
             Consumer<T> func)
-            throws SocketException, InterruptedIOException, ErrnoException, ParseException {
-        // Create socket and send dump request
-        final FileDescriptor fd;
-        try {
-            fd = netlinkSocketForProto(nlFamily);
-        } catch (ErrnoException  e) {
-            Log.e(TAG, "Failed to create netlink socket " + e);
-            throw e.rethrowAsSocketException();
-        }
+            throws SocketException, InterruptedIOException, ErrnoException {
+        // connecToKernel throws ErrnoException and SocketException, should be handled by caller
+        connectToKernel(fd);
 
-        try {
-            connectToKernel(fd);
-        } catch (ErrnoException | SocketException e) {
-            Log.e(TAG, "Failed to connect netlink socket to kernel " + e);
-            closeSocketQuietly(fd);
-            return;
-        }
-
-        try {
-            sendMessage(fd, dumpRequestMessage, 0, dumpRequestMessage.length, IO_TIMEOUT_MS);
-        } catch (InterruptedIOException | ErrnoException e) {
-            Log.e(TAG, "Failed to send dump request " + e);
-            closeSocketQuietly(fd);
-            throw e;
-        }
+        // sendMessage throws InterruptedIOException and ErrnoException,
+        // should be handled by caller
+        sendMessage(fd, dumpRequestMessage, 0, dumpRequestMessage.length, IO_TIMEOUT_MS);
 
         while (true) {
+            // recvMessage throws ErrnoException, InterruptedIOException
+            // should be handled by caller
             final ByteBuffer buf = recvMessage(
                     fd, NetlinkUtils.DEFAULT_RECV_BUFSIZE, IO_TIMEOUT_MS);
 
@@ -368,23 +338,47 @@ public class NetlinkUtils {
                     // Move to the position where parse started for error log.
                     buf.position(position);
                     Log.e(TAG, "Failed to parse netlink message: " + hexify(buf));
-                    closeSocketQuietly(fd);
-                    throw new ParseException("Failed to parse netlink message");
+                    break;
                 }
 
                 if (nlMsg.getHeader().nlmsg_type == NLMSG_DONE) {
-                    closeSocketQuietly(fd);
                     return;
                 }
 
                 if (!msgClass.isInstance(nlMsg)) {
-                    Log.e(TAG, "Received unexpected netlink message: " + nlMsg);
+                    Log.wtf(TAG, "Received unexpected netlink message: " + nlMsg);
                     continue;
                 }
 
                 final T msg = (T) nlMsg;
                 func.accept(msg);
             }
+        }
+    }
+    /**
+     * Sends a netlink dump request and processes the returned dump messages
+     *
+     * @param <T> extends NetlinkMessage
+     * @param dumpRequestMessage netlink dump request message to be sent
+     * @param nlFamily netlink family
+     * @param msgClass expected class of the netlink message
+     * @param func function defined by caller to handle the dump messages
+     * @throws SocketException when fails to connect socket to kernel
+     * @throws InterruptedIOException when fails to read the dumpFd
+     * @throws ErrnoException when fails to create dump fd, send dump request
+     *                        or receive messages
+     */
+    public static <T extends NetlinkMessage> void getAndProcessNetlinkDumpMessages(
+            byte[] dumpRequestMessage, int nlFamily, Class<T> msgClass,
+            Consumer<T> func)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        // Create socket
+        final FileDescriptor fd = netlinkSocketForProto(nlFamily);
+        try {
+            getAndProcessNetlinkDumpMessagesWithFd(fd, dumpRequestMessage, nlFamily,
+                    msgClass, func);
+        } finally {
+            closeSocketQuietly(fd);
         }
     }
 
@@ -439,7 +433,7 @@ public class NetlinkUtils {
             NetlinkUtils.<RtNetlinkRouteMessage>getAndProcessNetlinkDumpMessages(
                     dumpMsg, NETLINK_ROUTE, RtNetlinkRouteMessage.class,
                     handleNlDumpMsg);
-        } catch (SocketException | InterruptedIOException | ErrnoException | ParseException e) {
+        } catch (SocketException | InterruptedIOException | ErrnoException e) {
             Log.e(TAG, "Failed to dump multicast routes");
             return routes;
         }
