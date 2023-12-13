@@ -115,6 +115,9 @@ message BleFilterResult {
   repeated DataElement data_element = 7;
   optional bytes ble_service_data = 8;
   optional ResultType result_type = 9;
+  // Timestamp when the device is discovered, in nanoseconds,
+  // relative to Android SystemClock.elapsedRealtimeNanos().
+  optional uint64 timestamp_ns = 10;
 }
 
 message BleFilterResults {

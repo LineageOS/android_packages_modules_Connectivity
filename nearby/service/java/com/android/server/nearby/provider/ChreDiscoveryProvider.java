@@ -20,6 +20,9 @@ import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
 
 import static com.android.server.nearby.NearbyService.TAG;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 import android.annotation.Nullable;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -155,7 +158,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
             builder.setFastPairSupported(version != ChreCommunication.INVALID_NANO_APP_VERSION);
             try {
                 callback.onQueryComplete(builder.build());
-            } catch (RemoteException e) {
+            } catch (RemoteException | NullPointerException e) {
                 e.printStackTrace();
             }
         });
@@ -350,7 +353,11 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
                                             DataElement.DataType.ACTION,
                                             new byte[]{(byte) filterResult.getIntent()}));
                         }
-
+                        if (filterResult.hasTimestampNs()) {
+                            presenceDeviceBuilder
+                                    .setDiscoveryTimestampMillis(MILLISECONDS.convert(
+                                            filterResult.getTimestampNs(), NANOSECONDS));
+                        }
                         PublicCredential publicCredential =
                                 new PublicCredential.Builder(
                                         secretId,
