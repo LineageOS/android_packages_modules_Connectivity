@@ -262,6 +262,7 @@ public class ChreDiscoveryProviderTest {
                                 .setValue(ByteString.copyFrom(testData))
                                 .setValueLength(testData.length)
                         )
+                        .setDiscoveryTimestamp(1697765417070L)
                         .build();
         Blefilter.BleFilterResults results =
                 Blefilter.BleFilterResults.newBuilder().addResult(result).build();
