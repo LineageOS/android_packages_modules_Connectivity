@@ -16,6 +16,7 @@
 
 package com.android.net.module.util.netlink;
 
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static org.junit.Assert.fail;
 
 import android.system.OsConstants;
@@ -48,10 +49,14 @@ public class StructNlMsgHdrTest {
     public static final String TEST_NLMSG_PID_STR = "nlmsg_pid{5678}";
 
     private StructNlMsgHdr makeStructNlMsgHdr(short type) {
+        return makeStructNlMsgHdr(type, TEST_NLMSG_FLAGS);
+    }
+
+    private StructNlMsgHdr makeStructNlMsgHdr(short type, short flags) {
         final StructNlMsgHdr struct = new StructNlMsgHdr();
         struct.nlmsg_len = TEST_NLMSG_LEN;
         struct.nlmsg_type = type;
-        struct.nlmsg_flags = TEST_NLMSG_FLAGS;
+        struct.nlmsg_flags = flags;
         struct.nlmsg_seq = TEST_NLMSG_SEQ;
         struct.nlmsg_pid = TEST_NLMSG_PID;
         return struct;
@@ -60,6 +65,11 @@ public class StructNlMsgHdrTest {
     private static void assertContains(String actualValue, String expectedSubstring) {
         if (actualValue.contains(expectedSubstring)) return;
         fail("\"" + actualValue + "\" does not contain \"" + expectedSubstring + "\"");
+    }
+
+    private static void assertNotContains(String actualValue, String unexpectedSubstring) {
+        if (!actualValue.contains(unexpectedSubstring)) return;
+        fail("\"" + actualValue + "\" contains \"" + unexpectedSubstring + "\"");
     }
 
     @Test
@@ -98,5 +108,32 @@ public class StructNlMsgHdrTest {
         assertContains(s, TEST_NLMSG_SEQ_STR);
         assertContains(s, TEST_NLMSG_PID_STR);
         assertContains(s, "nlmsg_type{20(SOCK_DIAG_BY_FAMILY)}");
+    }
+
+    @Test
+    public void testToString_flags_dumpRequest() {
+        final short flags = StructNlMsgHdr.NLM_F_REQUEST | StructNlMsgHdr.NLM_F_DUMP;
+        StructNlMsgHdr struct = makeStructNlMsgHdr(NetlinkConstants.RTM_GETROUTE, flags);
+
+        String s = struct.toString(OsConstants.NETLINK_ROUTE);
+
+        assertContains(s, "RTM_GETROUTE");
+        assertContains(s, "NLM_F_REQUEST");
+        assertContains(s, "NLM_F_DUMP");
+        // NLM_F_DUMP = NLM_F_ROOT | NLM_F_MATCH;
+        assertNotContains(s, "NLM_F_MATCH");
+        assertNotContains(s, "NLM_F_ROOT");
+    }
+
+    @Test
+    public void testToString_flags_root() {
+        final short flags = StructNlMsgHdr.NLM_F_ROOT;
+        StructNlMsgHdr struct = makeStructNlMsgHdr(NetlinkConstants.RTM_GETROUTE, flags);
+
+        String s = struct.toString(OsConstants.NETLINK_ROUTE);
+
+        assertContains(s, "NLM_F_ROOT");
+        // NLM_F_DUMP = NLM_F_ROOT | NLM_F_MATCH;
+        assertNotContains(s, "NLM_F_DUMP");
     }
 }
