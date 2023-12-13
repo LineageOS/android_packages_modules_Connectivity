@@ -284,6 +284,8 @@ public class NearbyManager {
      */
     public void queryOffloadCapability(@NonNull @CallbackExecutor Executor executor,
             @NonNull Consumer<OffloadCapability> callback) {
+        Objects.requireNonNull(executor);
+        Objects.requireNonNull(callback);
         try {
             mService.queryOffloadCapability(new OffloadTransport(executor, callback));
         } catch (RemoteException e) {
