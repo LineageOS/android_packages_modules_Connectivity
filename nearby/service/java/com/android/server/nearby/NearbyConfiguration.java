@@ -54,6 +54,11 @@ public class NearbyConfiguration {
     public static final String NEARBY_REFACTOR_DISCOVERY_MANAGER =
             "nearby_refactor_discovery_manager";
 
+    /**
+     * Flag to guard enable BLE during Nearby Service init time.
+     */
+    public static final String NEARBY_ENABLE_BLE_IN_INIT = "nearby_enable_ble_in_init";
+
     private static final boolean IS_USER_BUILD = "user".equals(Build.TYPE);
 
     private final DeviceConfigListener mDeviceConfigListener = new DeviceConfigListener();
@@ -67,6 +72,8 @@ public class NearbyConfiguration {
     private boolean mSupportTestApp;
     @GuardedBy("mDeviceConfigLock")
     private boolean mRefactorDiscoveryManager;
+    @GuardedBy("mDeviceConfigLock")
+    private boolean mEnableBleInInit;
 
     public NearbyConfiguration() {
         mDeviceConfigListener.start();
@@ -131,6 +138,15 @@ public class NearbyConfiguration {
         }
     }
 
+    /**
+     * @return {@code true} if enableBLE() is called during NearbyService init time.
+     */
+    public boolean enableBleInInit() {
+        synchronized (mDeviceConfigLock) {
+            return mEnableBleInInit;
+        }
+    }
+
     private class DeviceConfigListener implements DeviceConfig.OnPropertiesChangedListener {
         public void start() {
             DeviceConfig.addOnPropertiesChangedListener(getNamespace(),
@@ -149,6 +165,8 @@ public class NearbyConfiguration {
                         NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
                 mRefactorDiscoveryManager = getDeviceConfigBoolean(
                         NEARBY_REFACTOR_DISCOVERY_MANAGER, false /* defaultValue */);
+                mEnableBleInInit = getDeviceConfigBoolean(
+                        NEARBY_ENABLE_BLE_IN_INIT, true /* defaultValue */);
             }
         }
     }
