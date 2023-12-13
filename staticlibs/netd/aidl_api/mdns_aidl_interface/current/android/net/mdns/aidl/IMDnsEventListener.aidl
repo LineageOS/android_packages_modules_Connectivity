@@ -34,9 +34,21 @@
 package android.net.mdns.aidl;
 /* @hide */
 interface IMDnsEventListener {
+  /**
+   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
+   */
   oneway void onServiceRegistrationStatus(in android.net.mdns.aidl.RegistrationInfo status);
+  /**
+   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
+   */
   oneway void onServiceDiscoveryStatus(in android.net.mdns.aidl.DiscoveryInfo status);
+  /**
+   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
+   */
   oneway void onServiceResolutionStatus(in android.net.mdns.aidl.ResolutionInfo status);
+  /**
+   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
+   */
   oneway void onGettingServiceAddressStatus(in android.net.mdns.aidl.GetAddressInfo status);
   const int SERVICE_DISCOVERY_FAILED = 602;
   const int SERVICE_FOUND = 603;

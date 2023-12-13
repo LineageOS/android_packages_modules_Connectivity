@@ -34,13 +34,40 @@
 package android.net.mdns.aidl;
 /* @hide */
 interface IMDns {
+  /**
+   * @deprecated unimplemented on V+.
+   */
   void startDaemon();
+  /**
+   * @deprecated unimplemented on V+.
+   */
   void stopDaemon();
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void registerService(in android.net.mdns.aidl.RegistrationInfo info);
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void discover(in android.net.mdns.aidl.DiscoveryInfo info);
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void resolve(in android.net.mdns.aidl.ResolutionInfo info);
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void getServiceAddress(in android.net.mdns.aidl.GetAddressInfo info);
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void stopOperation(int id);
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void registerEventListener(in android.net.mdns.aidl.IMDnsEventListener listener);
+  /**
+   * @deprecated unimplemented on U+.
+   */
   void unregisterEventListener(in android.net.mdns.aidl.IMDnsEventListener listener);
 }
