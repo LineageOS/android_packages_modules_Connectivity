@@ -57,6 +57,11 @@ public class MdnsFeatureFlags {
      */
     public static final String NSD_UNICAST_REPLY_ENABLED = "nsd_unicast_reply_enabled";
 
+    /**
+     * A feature flag to control whether the aggressive query mode should be enabled.
+     */
+    public static final String NSD_AGGRESSIVE_QUERY_MODE = "nsd_aggressive_query_mode";
+
     // Flag for offload feature
     public final boolean mIsMdnsOffloadFeatureEnabled;
 
@@ -74,6 +79,9 @@ public class MdnsFeatureFlags {
 
     // Flag to enable replying unicast to queries requesting unicast replies
     public final boolean mIsUnicastReplyEnabled;
+
+    // Flag for aggressive query mode
+    public final boolean mIsAggressiveQueryModeEnabled;
 
     @Nullable
     private final FlagOverrideProvider mOverrideProvider;
@@ -103,6 +111,13 @@ public class MdnsFeatureFlags {
     }
 
     /**
+     * Indicates whether {@link #NSD_AGGRESSIVE_QUERY_MODE} is enabled, including for testing.
+     */
+    public boolean isAggressiveQueryModeEnabled() {
+        return mIsAggressiveQueryModeEnabled || isForceEnabledForTest(NSD_AGGRESSIVE_QUERY_MODE);
+    }
+
+    /**
      * The constructor for {@link MdnsFeatureFlags}.
      */
     public MdnsFeatureFlags(boolean isOffloadFeatureEnabled,
@@ -111,6 +126,7 @@ public class MdnsFeatureFlags {
             boolean isLabelCountLimitEnabled,
             boolean isKnownAnswerSuppressionEnabled,
             boolean isUnicastReplyEnabled,
+            boolean isAggressiveQueryModeEnabled,
             @Nullable FlagOverrideProvider overrideProvider) {
         mIsMdnsOffloadFeatureEnabled = isOffloadFeatureEnabled;
         mIncludeInetAddressRecordsInProbing = includeInetAddressRecordsInProbing;
@@ -118,6 +134,7 @@ public class MdnsFeatureFlags {
         mIsLabelCountLimitEnabled = isLabelCountLimitEnabled;
         mIsKnownAnswerSuppressionEnabled = isKnownAnswerSuppressionEnabled;
         mIsUnicastReplyEnabled = isUnicastReplyEnabled;
+        mIsAggressiveQueryModeEnabled = isAggressiveQueryModeEnabled;
         mOverrideProvider = overrideProvider;
     }
 
@@ -136,6 +153,7 @@ public class MdnsFeatureFlags {
         private boolean mIsLabelCountLimitEnabled;
         private boolean mIsKnownAnswerSuppressionEnabled;
         private boolean mIsUnicastReplyEnabled;
+        private boolean mIsAggressiveQueryModeEnabled;
         private FlagOverrideProvider mOverrideProvider;
 
         /**
@@ -148,6 +166,7 @@ public class MdnsFeatureFlags {
             mIsLabelCountLimitEnabled = true; // Default enabled.
             mIsKnownAnswerSuppressionEnabled = false;
             mIsUnicastReplyEnabled = true;
+            mIsAggressiveQueryModeEnabled = false;
             mOverrideProvider = null;
         }
 
@@ -224,6 +243,16 @@ public class MdnsFeatureFlags {
         }
 
         /**
+         * Set whether the aggressive query mode is enabled.
+         *
+         * @see #NSD_AGGRESSIVE_QUERY_MODE
+         */
+        public Builder setIsAggressiveQueryModeEnabled(boolean isAggressiveQueryModeEnabled) {
+            mIsAggressiveQueryModeEnabled = isAggressiveQueryModeEnabled;
+            return this;
+        }
+
+        /**
          * Builds a {@link MdnsFeatureFlags} with the arguments supplied to this builder.
          */
         public MdnsFeatureFlags build() {
@@ -233,6 +262,7 @@ public class MdnsFeatureFlags {
                     mIsLabelCountLimitEnabled,
                     mIsKnownAnswerSuppressionEnabled,
                     mIsUnicastReplyEnabled,
+                    mIsAggressiveQueryModeEnabled,
                     mOverrideProvider);
         }
     }

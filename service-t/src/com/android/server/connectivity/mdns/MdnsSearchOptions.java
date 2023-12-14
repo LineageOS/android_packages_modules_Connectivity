@@ -44,6 +44,10 @@ public class MdnsSearchOptions implements Parcelable {
     public static final int PASSIVE_QUERY_MODE = 0;
     // Active query mode scans frequently.
     public static final int ACTIVE_QUERY_MODE = 1;
+    // Aggressive query mode scans more frequently than the active mode at first, and sends both
+    // unicast and multicast queries simultaneously, but in long sessions it eventually sends as
+    // many queries as the PASSIVE mode.
+    public static final int AGGRESSIVE_QUERY_MODE = 2;
 
     /** @hide */
     public static final Parcelable.Creator<MdnsSearchOptions> CREATOR =
