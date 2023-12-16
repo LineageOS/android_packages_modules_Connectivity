@@ -53,14 +53,10 @@ static Status attachProgramToCgroup(const char* programPath, const unique_fd& cg
                                     bpf_attach_type type) {
     unique_fd cgroupProg(retrieveProgram(programPath));
     if (!cgroupProg.ok()) {
-        const int err = errno;
-        ALOGE("Failed to get program from %s: %s", programPath, strerror(err));
-        return statusFromErrno(err, "cgroup program get failed");
+        return statusFromErrno(errno, fmt::format("Failed to get program from {}", programPath));
     }
     if (android::bpf::attachProgram(type, cgroupProg, cgroupFd)) {
-        const int err = errno;
-        ALOGE("Program from %s attach failed: %s", programPath, strerror(err));
-        return statusFromErrno(err, "program attach failed");
+        return statusFromErrno(errno, fmt::format("Program {} attach failed", programPath));
     }
     return netdutils::status::ok;
 }
@@ -68,31 +64,39 @@ static Status attachProgramToCgroup(const char* programPath, const unique_fd& cg
 static Status checkProgramAccessible(const char* programPath) {
     unique_fd prog(retrieveProgram(programPath));
     if (!prog.ok()) {
-        const int err = errno;
-        ALOGE("Failed to get program from %s: %s", programPath, strerror(err));
-        return statusFromErrno(err, "program retrieve failed");
+        return statusFromErrno(errno, fmt::format("Failed to get program from {}", programPath));
     }
     return netdutils::status::ok;
 }
 
 static Status initPrograms(const char* cg2_path) {
+    if (!cg2_path) return Status("cg2_path is NULL");
+
     // This code was mainlined in T, so this should be trivially satisfied.
-    if (!modules::sdklevel::IsAtLeastT()) abort();
+    if (!modules::sdklevel::IsAtLeastT()) return Status("S- platform is unsupported");
 
     // S requires eBPF support which was only added in 4.9, so this should be satisfied.
-    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) abort();
+    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) {
+        return Status("kernel version < 4.9.0 is unsupported");
+    }
 
     // U bumps the kernel requirement up to 4.14
-    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) abort();
+    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) {
+        return Status("U+ platform with kernel version < 4.14.0 is unsupported");
+    }
 
     if (modules::sdklevel::IsAtLeastV()) {
         // V bumps the kernel requirement up to 4.19
         // see also: //system/netd/tests/kernel_test.cpp TestKernel419
-        if (!bpf::isAtLeastKernelVersion(4, 19, 0)) abort();
+        if (!bpf::isAtLeastKernelVersion(4, 19, 0)) {
+            return Status("V+ platform with kernel version < 4.19.0 is unsupported");
+        }
 
         // Technically already required by U, but only enforce on V+
         // see also: //system/netd/tests/kernel_test.cpp TestKernel64Bit
-        if (bpf::isKernel32Bit() && bpf::isAtLeastKernelVersion(5, 16, 0)) abort();
+        if (bpf::isKernel32Bit() && bpf::isAtLeastKernelVersion(5, 16, 0)) {
+            return Status("V+ platform with 32 bit kernel, version >= 5.16.0 is unsupported");
+        }
     }
 
     // Linux 6.1 is highest version supported by U, starting with V new kernels,
@@ -102,10 +106,14 @@ static Status initPrograms(const char* cg2_path) {
     // it does not affect unprivileged apps, the 32-on-64 compatibility
     // problems are AFAIK limited to various CAP_NET_ADMIN protected interfaces.
     // see also: //system/bpf/bpfloader/BpfLoader.cpp main()
-    if (bpf::isUserspace32bit() && bpf::isAtLeastKernelVersion(6, 2, 0)) abort();
+    if (bpf::isUserspace32bit() && bpf::isAtLeastKernelVersion(6, 2, 0)) {
+        return Status("32 bit userspace with Kernel version >= 6.2.0 is unsupported");
+    }
 
     // U mandates this mount point (though it should also be the case on T)
-    if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) abort();
+    if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) {
+        return Status("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
+    }
 
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
     if (!cg_fd.ok()) {

@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"ନେଟ୍‌ୱର୍କରେ ସାଇନ୍‍ ଇନ୍‍ କରନ୍ତୁ"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"ଇଣ୍ଟରନେଟ ନାହିଁ"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"ଆପଣଙ୍କ <xliff:g id="NETWORK_CARRIER">%1$s</xliff:g> ଡାଟା ଶେଷ ହୋଇଥାଇପାରେ। ବିକଳ୍ପଗୁଡ଼ିକ ପାଇଁ ଟାପ କରନ୍ତୁ।"</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"ଆପଣଙ୍କ ଡାଟା ଶେଷ ହୋଇଥାଇପାରେ। ବିକଳ୍ପଗୁଡ଼ିକ ପାଇଁ ଟାପ କରନ୍ତୁ।"</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g>ର ଇଣ୍ଟର୍ନେଟ୍ ଆକ୍ସେସ୍ ନାହିଁ"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"ବିକଳ୍ପ ପାଇଁ ଟାପ୍‍ କରନ୍ତୁ"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"ମୋବାଇଲ୍ ନେଟ୍‌ୱାର୍କରେ ଇଣ୍ଟର୍ନେଟ୍ ଆକ୍ସେସ୍ ନାହିଁ"</string>

@@ -30,10 +30,12 @@ import static com.android.networkstack.tethering.UpstreamNetworkMonitor.TYPE_NON
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -51,27 +53,23 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.internal.util.State;
-import com.android.internal.util.StateMachine;
 import com.android.net.module.util.SharedLog;
 import com.android.networkstack.tethering.TestConnectivityManager.NetworkRequestInfo;
 import com.android.networkstack.tethering.TestConnectivityManager.TestNetworkAgent;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -84,8 +82,6 @@ import java.util.Set;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class UpstreamNetworkMonitorTest {
-    private static final int EVENT_UNM_UPDATE = 1;
-
     private static final boolean INCLUDES = true;
     private static final boolean EXCLUDES = false;
 
@@ -102,32 +98,24 @@ public class UpstreamNetworkMonitorTest {
     @Mock private EntitlementManager mEntitleMgr;
     @Mock private IConnectivityManager mCS;
     @Mock private SharedLog mLog;
+    @Mock private UpstreamNetworkMonitor.EventListener mListener;
 
-    private TestStateMachine mSM;
     private TestConnectivityManager mCM;
     private UpstreamNetworkMonitor mUNM;
 
     private final TestLooper mLooper = new TestLooper();
+    private InOrder mCallbackOrder;
 
     @Before public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        reset(mContext);
-        reset(mCS);
-        reset(mLog);
         when(mLog.forSubComponent(anyString())).thenReturn(mLog);
         when(mEntitleMgr.isCellularUpstreamPermitted()).thenReturn(true);
 
+        mCallbackOrder = inOrder(mListener);
         mCM = spy(new TestConnectivityManager(mContext, mCS));
         when(mContext.getSystemService(eq(Context.CONNECTIVITY_SERVICE))).thenReturn(mCM);
-        mSM = new TestStateMachine(mLooper.getLooper());
-        mUNM = new UpstreamNetworkMonitor(mContext, mSM, mLog, EVENT_UNM_UPDATE);
-    }
-
-    @After public void tearDown() throws Exception {
-        if (mSM != null) {
-            mSM.quit();
-            mSM = null;
-        }
+        mUNM = new UpstreamNetworkMonitor(mContext, new Handler(mLooper.getLooper()), mLog,
+                mListener);
     }
 
     @Test
@@ -603,14 +591,17 @@ public class UpstreamNetworkMonitorTest {
         mCM.makeDefaultNetwork(cellAgent);
         mLooper.dispatchAll();
         verifyCurrentLinkProperties(cellAgent);
-        int messageIndex = mSM.messages.size() - 1;
+        verifyNotifyNetworkCapabilitiesChange(cellAgent.networkCapabilities);
+        verifyNotifyLinkPropertiesChange(cellLp);
+        verifyNotifyDefaultSwitch(cellAgent);
+        verifyNoMoreInteractions(mListener);
 
         addLinkAddresses(cellLp, ipv6Addr1);
         mCM.sendLinkProperties(cellAgent, false /* updateDefaultFirst */);
         mLooper.dispatchAll();
         verifyCurrentLinkProperties(cellAgent);
-        verifyNotifyLinkPropertiesChange(messageIndex);
-        messageIndex = mSM.messages.size() - 1;
+        verifyNotifyLinkPropertiesChange(cellLp);
+        verifyNoMoreInteractions(mListener);
 
         removeLinkAddresses(cellLp, ipv6Addr1);
         addLinkAddresses(cellLp, ipv6Addr2);
@@ -618,7 +609,8 @@ public class UpstreamNetworkMonitorTest {
         mLooper.dispatchAll();
         assertEquals(cellAgent.linkProperties, mUNM.getCurrentPreferredUpstream().linkProperties);
         verifyCurrentLinkProperties(cellAgent);
-        verifyNotifyLinkPropertiesChange(messageIndex);
+        verifyNotifyLinkPropertiesChange(cellLp);
+        verifyNoMoreInteractions(mListener);
     }
 
     private void verifyCurrentLinkProperties(TestNetworkAgent agent) {
@@ -626,12 +618,33 @@ public class UpstreamNetworkMonitorTest {
         assertEquals(agent.linkProperties, mUNM.getCurrentPreferredUpstream().linkProperties);
     }
 
-    private void verifyNotifyLinkPropertiesChange(int lastMessageIndex) {
-        assertEquals(UpstreamNetworkMonitor.EVENT_ON_LINKPROPERTIES,
-                mSM.messages.get(++lastMessageIndex).arg1);
-        assertEquals(UpstreamNetworkMonitor.NOTIFY_LOCAL_PREFIXES,
-                mSM.messages.get(++lastMessageIndex).arg1);
-        assertEquals(lastMessageIndex + 1, mSM.messages.size());
+    private void verifyNotifyNetworkCapabilitiesChange(final NetworkCapabilities cap) {
+        mCallbackOrder.verify(mListener).onUpstreamEvent(
+                eq(UpstreamNetworkMonitor.EVENT_ON_CAPABILITIES),
+                argThat(uns -> uns instanceof UpstreamNetworkState
+                    && cap.equals(((UpstreamNetworkState) uns).networkCapabilities)));
+
+    }
+
+    private void verifyNotifyLinkPropertiesChange(final LinkProperties lp) {
+        mCallbackOrder.verify(mListener).onUpstreamEvent(
+                eq(UpstreamNetworkMonitor.EVENT_ON_LINKPROPERTIES),
+                argThat(uns -> uns instanceof UpstreamNetworkState
+                    && lp.equals(((UpstreamNetworkState) uns).linkProperties)));
+
+        mCallbackOrder.verify(mListener).onUpstreamEvent(
+                eq(UpstreamNetworkMonitor.NOTIFY_LOCAL_PREFIXES), any());
+    }
+
+    private void verifyNotifyDefaultSwitch(TestNetworkAgent agent) {
+        mCallbackOrder.verify(mListener).onUpstreamEvent(
+                eq(UpstreamNetworkMonitor.EVENT_DEFAULT_SWITCHED),
+                argThat(uns ->
+                    uns instanceof UpstreamNetworkState
+                    && agent.networkId.equals(((UpstreamNetworkState) uns).network)
+                    && agent.linkProperties.equals(((UpstreamNetworkState) uns).linkProperties)
+                    && agent.networkCapabilities.equals(
+                        ((UpstreamNetworkState) uns).networkCapabilities)));
     }
 
     private void addLinkAddresses(LinkProperties lp, String... addrs) {
@@ -671,33 +684,6 @@ public class UpstreamNetworkMonitorTest {
             }
         }
         return false;
-    }
-
-    public static class TestStateMachine extends StateMachine {
-        public final ArrayList<Message> messages = new ArrayList<>();
-        private final State mLoggingState = new LoggingState();
-
-        class LoggingState extends State {
-            @Override public void enter() {
-                messages.clear();
-            }
-
-            @Override public void exit() {
-                messages.clear();
-            }
-
-            @Override public boolean processMessage(Message msg) {
-                messages.add(msg);
-                return true;
-            }
-        }
-
-        public TestStateMachine(Looper looper) {
-            super("UpstreamNetworkMonitor.TestStateMachine", looper);
-            addState(mLoggingState);
-            setInitialState(mLoggingState);
-            super.start();
-        }
     }
 
     static void assertPrefixSet(Set<IpPrefix> prefixes, boolean expectation, String... expected) {

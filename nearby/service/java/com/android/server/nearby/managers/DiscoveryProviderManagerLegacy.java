@@ -39,6 +39,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.nearby.NearbyConfiguration;
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.metrics.NearbyMetrics;
 import com.android.server.nearby.presence.PresenceDiscoveryResult;
@@ -70,6 +71,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
     private final Context mContext;
     private final BleDiscoveryProvider mBleDiscoveryProvider;
     private final Injector mInjector;
+    private final NearbyConfiguration mNearbyConfiguration;
     @ScanRequest.ScanMode
     private int mScanMode;
     @GuardedBy("mLock")
@@ -84,6 +86,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
                         mContext, new ChreCommunication(injector, mContext, executor), executor);
         mScanTypeScanListenerRecordMap = new HashMap<>();
         mInjector = injector;
+        mNearbyConfiguration = new NearbyConfiguration();
         Log.v(TAG, "DiscoveryProviderManagerLegacy: ");
     }
 
@@ -97,6 +100,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
         mBleDiscoveryProvider = bleDiscoveryProvider;
         mChreDiscoveryProvider = chreDiscoveryProvider;
         mScanTypeScanListenerRecordMap = scanTypeScanListenerRecordMap;
+        mNearbyConfiguration = new NearbyConfiguration();
     }
 
     private static boolean isChreOnly(List<ScanFilter> scanFilters) {
@@ -221,6 +225,10 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
 
     /** Called after boot completed. */
     public void init() {
+        // Register BLE only scan when Bluetooth is turned off
+        if (mNearbyConfiguration.enableBleInInit()) {
+            setBleScanEnabled();
+        }
         if (mInjector.getContextHubManager() != null) {
             mChreDiscoveryProvider.init();
         }
@@ -344,9 +352,6 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             Log.w(TAG, "failed to start any provider because client disabled BLE");
             return false;
         }
-        if (!enableBle()) {
-            return false;
-        }
         List<ScanFilter> scanFilters = getPresenceScanFilters();
         boolean chreOnly = isChreOnly(scanFilters);
         Boolean chreAvailable = mChreDiscoveryProvider.available();
@@ -414,9 +419,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
         }
     }
 
-    @VisibleForTesting
-    protected void stopProviders() {
-        disableBle();
+    private void stopProviders() {
         stopBleProvider();
         stopChreProvider();
     }
@@ -515,7 +518,7 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
      * @return {@code true} when Nearby currently can scan through Bluetooth or Ble or successfully
      * registers Nearby service to Ble scan when Blutooth is off.
      */
-    public boolean enableBle() {
+    public boolean setBleScanEnabled() {
         BluetoothAdapter adapter = mInjector.getBluetoothAdapter();
         if (adapter == null) {
             Log.e(TAG, "BluetoothAdapter is null.");
@@ -533,19 +536,5 @@ public class DiscoveryProviderManagerLegacy implements AbstractDiscoveryProvider
             return false;
         }
         return true;
-    }
-
-    /**
-     * Unregisters Nearby service to Ble.
-     * Ble can be disabled when there is no app register the Ble service, so we can only to know we
-     * successfully unregister Ble by getting result from {@link BluetoothAdapter#disableBle()}.
-     */
-    public boolean disableBle() {
-        BluetoothAdapter adapter = mInjector.getBluetoothAdapter();
-        if (adapter == null) {
-            Log.e(TAG, "BluetoothAdapter is null.");
-            return false;
-        }
-        return adapter.disableBLE();
     }
 }

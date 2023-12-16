@@ -16,6 +16,7 @@
 
 package com.android.server;
 
+import static android.Manifest.permission.DEVICE_POWER;
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.net.ConnectivityManager.NETID_UNSET;
@@ -90,6 +91,7 @@ import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.ExecutorProvider;
 import com.android.server.connectivity.mdns.MdnsAdvertiser;
+import com.android.server.connectivity.mdns.MdnsAdvertisingOptions;
 import com.android.server.connectivity.mdns.MdnsDiscoveryManager;
 import com.android.server.connectivity.mdns.MdnsFeatureFlags;
 import com.android.server.connectivity.mdns.MdnsInterfaceSocket;
@@ -849,7 +851,9 @@ public class NsdService extends INsdManager.Stub {
                             // service type would generate service instance names like
                             // Name._subtype._sub._type._tcp, which is incorrect
                             // (it should be Name._type._tcp).
-                            mAdvertiser.addService(transactionId, serviceInfo, typeSubtype.second);
+                            mAdvertiser.addOrUpdateService(transactionId, serviceInfo,
+                                    typeSubtype.second,
+                                    MdnsAdvertisingOptions.newBuilder().build());
                             storeAdvertiserRequestMap(clientRequestId, transactionId, clientInfo,
                                     serviceInfo.getNetwork());
                         } else {
@@ -2104,11 +2108,17 @@ public class NsdService extends INsdManager.Stub {
             if (!SdkLevel.isAtLeastT()) {
                 throw new SecurityException("API is not available in before API level 33");
             }
-            // REGISTER_NSD_OFFLOAD_ENGINE was only added to the SDK in V, but may
-            // be back ported to older builds: accept it as long as it's signature-protected
-            if (PermissionUtils.checkAnyPermissionOf(context, REGISTER_NSD_OFFLOAD_ENGINE)
-                    && (SdkLevel.isAtLeastV() || PermissionUtils.isSystemSignaturePermission(
-                    context, REGISTER_NSD_OFFLOAD_ENGINE))) {
+
+            // REGISTER_NSD_OFFLOAD_ENGINE was only added to the SDK in V.
+            if (SdkLevel.isAtLeastV() && PermissionUtils.checkAnyPermissionOf(context,
+                    REGISTER_NSD_OFFLOAD_ENGINE)) {
+                return;
+            }
+
+            // REGISTER_NSD_OFFLOAD_ENGINE cannot be backport to U. In U, check the DEVICE_POWER
+            // permission instead.
+            if (!SdkLevel.isAtLeastV() && SdkLevel.isAtLeastU()
+                    && PermissionUtils.checkAnyPermissionOf(context, DEVICE_POWER)) {
                 return;
             }
             if (PermissionUtils.checkAnyPermissionOf(context, NETWORK_STACK,

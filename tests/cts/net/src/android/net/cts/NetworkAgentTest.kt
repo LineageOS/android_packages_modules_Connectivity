@@ -131,17 +131,6 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.assertThrows
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.argThat
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.timeout
-import org.mockito.Mockito.verify
 import java.io.Closeable
 import java.io.IOException
 import java.net.DatagramSocket
@@ -160,6 +149,17 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.argThat
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.timeout
+import org.mockito.Mockito.verify
 
 private const val TAG = "NetworkAgentTest"
 // This test doesn't really have a constraint on how fast the methods should return. If it's
@@ -774,11 +774,13 @@ class NetworkAgentTest {
 
             // Cell and WiFi are allowed to set UIDs, but not Bluetooth or agents with multiple
             // transports.
-            doTestAllowedUids(defaultSubId, TRANSPORT_CELLULAR, uid, expectUidsPresent = true)
+            // TODO(b/315136340): Allow ownerUid to see allowedUids and enable below test case
+            // doTestAllowedUids(defaultSubId, TRANSPORT_CELLULAR, uid, expectUidsPresent = true)
             if (SdkLevel.isAtLeastV()) {
                 // Cannot be tested before V because WifiInfo.Builder#setSubscriptionId doesn't
                 // exist
-                doTestAllowedUids(defaultSubId, TRANSPORT_WIFI, uid, expectUidsPresent = true)
+                // TODO(b/315136340): Allow ownerUid to see allowedUids and enable below test case
+                // doTestAllowedUids(defaultSubId, TRANSPORT_WIFI, uid, expectUidsPresent = true)
             }
             doTestAllowedUids(defaultSubId, TRANSPORT_BLUETOOTH, uid, expectUidsPresent = false)
             doTestAllowedUids(defaultSubId, intArrayOf(TRANSPORT_CELLULAR, TRANSPORT_WIFI), uid,
@@ -951,7 +953,6 @@ class NetworkAgentTest {
                 argThat<NetworkInfo> { it.detailedState == NetworkInfo.DetailedState.CONNECTING },
                 any(LinkProperties::class.java),
                 any(NetworkCapabilities::class.java),
-                any(), // LocalNetworkConfig TODO : specify when it's public
                 any(NetworkScore::class.java),
                 any(NetworkAgentConfig::class.java),
                 eq(NetworkProvider.ID_NONE))

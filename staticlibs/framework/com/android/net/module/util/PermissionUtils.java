@@ -21,15 +21,12 @@ import static android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS;
 import static android.Manifest.permission.NETWORK_STACK;
 import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
-import static android.content.pm.PermissionInfo.PROTECTION_SIGNATURE;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.PermissionInfo;
 import android.os.Binder;
 
 import java.io.PrintWriter;
@@ -52,25 +49,6 @@ public final class PermissionUtils {
             if (context.checkCallingOrSelfPermission(permission) == PERMISSION_GRANTED) {
                 return true;
             }
-        }
-        return false;
-    }
-
-    /**
-     * Return true if the permission has system signature.
-     */
-    public static boolean isSystemSignaturePermission(@NonNull Context context,
-            @NonNull String permission) {
-        try {
-            PermissionInfo permissionInfo = context.getPackageManager().getPermissionInfo(
-                    permission, 0 /* flags */);
-            if (permissionInfo == null) {
-                return false;
-            }
-            return "android".equals(permissionInfo.packageName)
-                    && permissionInfo.getProtection() == PROTECTION_SIGNATURE;
-        } catch (PackageManager.NameNotFoundException ignored) {
-            // Ignored the NameNotFoundException and return false
         }
         return false;
     }

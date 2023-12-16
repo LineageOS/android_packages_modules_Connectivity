@@ -303,9 +303,9 @@ public class Tethering {
         mContext = mDeps.getContext();
         mNetd = mDeps.getINetd(mContext);
         mRoutingCoordinator = mDeps.getRoutingCoordinator(mContext);
-        mLooper = mDeps.getTetheringLooper();
-        mNotificationUpdater = mDeps.getNotificationUpdater(mContext, mLooper);
-        mTetheringMetrics = mDeps.getTetheringMetrics();
+        mLooper = mDeps.makeTetheringLooper();
+        mNotificationUpdater = mDeps.makeNotificationUpdater(mContext, mLooper);
+        mTetheringMetrics = mDeps.makeTetheringMetrics();
 
         // This is intended to ensrure that if something calls startTethering(bluetooth) just after
         // bluetooth is enabled. Before onServiceConnected is called, store the calls into this
@@ -319,7 +319,7 @@ public class Tethering {
         mTetherMainSM.start();
 
         mHandler = mTetherMainSM.getHandler();
-        mOffloadController = mDeps.getOffloadController(mHandler, mLog,
+        mOffloadController = mDeps.makeOffloadController(mHandler, mLog,
                 new OffloadController.Dependencies() {
 
                     @Override
@@ -327,15 +327,17 @@ public class Tethering {
                         return mConfig;
                     }
                 });
-        mUpstreamNetworkMonitor = mDeps.getUpstreamNetworkMonitor(mContext, mTetherMainSM, mLog,
-                TetherMainSM.EVENT_UPSTREAM_CALLBACK);
+        mUpstreamNetworkMonitor = mDeps.makeUpstreamNetworkMonitor(mContext, mHandler, mLog,
+                (what, obj) -> {
+                    mTetherMainSM.sendMessage(TetherMainSM.EVENT_UPSTREAM_CALLBACK, what, 0, obj);
+                });
         mForwardedDownstreams = new HashSet<>();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_CARRIER_CONFIG_CHANGED);
         // EntitlementManager will send EVENT_UPSTREAM_PERMISSION_CHANGED when cellular upstream
         // permission is changed according to entitlement check result.
-        mEntitlementMgr = mDeps.getEntitlementManager(mContext, mHandler, mLog,
+        mEntitlementMgr = mDeps.makeEntitlementManager(mContext, mHandler, mLog,
                 () -> mTetherMainSM.sendMessage(
                 TetherMainSM.EVENT_UPSTREAM_PERMISSION_CHANGED));
         mEntitlementMgr.setOnTetherProvisioningFailedListener((downstream, reason) -> {
@@ -371,11 +373,11 @@ public class Tethering {
         // It is OK for the configuration to be passed to the PrivateAddressCoordinator at
         // construction time because the only part of the configuration it uses is
         // shouldEnableWifiP2pDedicatedIp(), and currently do not support changing that.
-        mPrivateAddressCoordinator = mDeps.getPrivateAddressCoordinator(mContext, mConfig);
+        mPrivateAddressCoordinator = mDeps.makePrivateAddressCoordinator(mContext, mConfig);
 
         // Must be initialized after tethering configuration is loaded because BpfCoordinator
         // constructor needs to use the configuration.
-        mBpfCoordinator = mDeps.getBpfCoordinator(
+        mBpfCoordinator = mDeps.makeBpfCoordinator(
                 new BpfCoordinator.Dependencies() {
                     @NonNull
                     public Handler getHandler() {
@@ -404,7 +406,7 @@ public class Tethering {
                 });
 
         if (SdkLevel.isAtLeastT() && mConfig.isWearTetheringEnabled()) {
-            mWearableConnectionManager = mDeps.getWearableConnectionManager(mContext);
+            mWearableConnectionManager = mDeps.makeWearableConnectionManager(mContext);
         } else {
             mWearableConnectionManager = null;
         }
@@ -873,7 +875,7 @@ public class Tethering {
 
     private void changeBluetoothTetheringSettings(@NonNull final BluetoothPan bluetoothPan,
             final boolean enable) {
-        final BluetoothPanShim panShim = mDeps.getBluetoothPanShim(bluetoothPan);
+        final BluetoothPanShim panShim = mDeps.makeBluetoothPanShim(bluetoothPan);
         if (enable) {
             if (mBluetoothIfaceRequest != null) {
                 Log.d(TAG, "Bluetooth tethering settings already enabled");
@@ -1737,7 +1739,7 @@ public class Tethering {
             addState(mSetDnsForwardersErrorState);
 
             mNotifyList = new ArrayList<>();
-            mIPv6TetheringCoordinator = deps.getIPv6TetheringCoordinator(mNotifyList, mLog);
+            mIPv6TetheringCoordinator = deps.makeIPv6TetheringCoordinator(mNotifyList, mLog);
             mOffload = new OffloadWrapper();
 
             setInitialState(mInitialState);
@@ -2732,84 +2734,73 @@ public class Tethering {
         }
     }
 
-    private IpServer.Callback makeControlCallback() {
-        return new IpServer.Callback() {
-            @Override
-            public void updateInterfaceState(IpServer who, int state, int lastError) {
-                notifyInterfaceStateChange(who, state, lastError);
+    private class ControlCallback extends IpServer.Callback {
+        @Override
+        public void updateInterfaceState(IpServer who, int state, int lastError) {
+            final String iface = who.interfaceName();
+            final TetherState tetherState = mTetherStates.get(iface);
+            if (tetherState != null && tetherState.ipServer.equals(who)) {
+                tetherState.lastState = state;
+                tetherState.lastError = lastError;
+            } else {
+                if (DBG) Log.d(TAG, "got notification from stale iface " + iface);
             }
 
-            @Override
-            public void updateLinkProperties(IpServer who, LinkProperties newLp) {
-                notifyLinkPropertiesChanged(who, newLp);
-            }
+            mLog.log(String.format("OBSERVED iface=%s state=%s error=%s", iface, state, lastError));
 
-            @Override
-            public void dhcpLeasesChanged() {
-                maybeDhcpLeasesChanged();
+            // If TetherMainSM is in ErrorState, TetherMainSM stays there.
+            // Thus we give a chance for TetherMainSM to recover to InitialState
+            // by sending CMD_CLEAR_ERROR
+            if (lastError == TETHER_ERROR_INTERNAL_ERROR) {
+                mTetherMainSM.sendMessage(TetherMainSM.CMD_CLEAR_ERROR, who);
             }
-
-            @Override
-            public void requestEnableTethering(int tetheringType, boolean enabled) {
-                mTetherMainSM.sendMessage(TetherMainSM.EVENT_REQUEST_CHANGE_DOWNSTREAM,
-                        tetheringType, 0, enabled ? Boolean.TRUE : Boolean.FALSE);
+            int which;
+            switch (state) {
+                case IpServer.STATE_UNAVAILABLE:
+                case IpServer.STATE_AVAILABLE:
+                    which = TetherMainSM.EVENT_IFACE_SERVING_STATE_INACTIVE;
+                    break;
+                case IpServer.STATE_TETHERED:
+                case IpServer.STATE_LOCAL_ONLY:
+                    which = TetherMainSM.EVENT_IFACE_SERVING_STATE_ACTIVE;
+                    break;
+                default:
+                    Log.wtf(TAG, "Unknown interface state: " + state);
+                    return;
             }
-        };
-    }
-
-    // TODO: Move into TetherMainSM.
-    private void notifyInterfaceStateChange(IpServer who, int state, int error) {
-        final String iface = who.interfaceName();
-        final TetherState tetherState = mTetherStates.get(iface);
-        if (tetherState != null && tetherState.ipServer.equals(who)) {
-            tetherState.lastState = state;
-            tetherState.lastError = error;
-        } else {
-            if (DBG) Log.d(TAG, "got notification from stale iface " + iface);
+            mTetherMainSM.sendMessage(which, state, 0, who);
+            sendTetherStateChangedBroadcast();
         }
 
-        mLog.log(String.format("OBSERVED iface=%s state=%s error=%s", iface, state, error));
-
-        // If TetherMainSM is in ErrorState, TetherMainSM stays there.
-        // Thus we give a chance for TetherMainSM to recover to InitialState
-        // by sending CMD_CLEAR_ERROR
-        if (error == TETHER_ERROR_INTERNAL_ERROR) {
-            mTetherMainSM.sendMessage(TetherMainSM.CMD_CLEAR_ERROR, who);
-        }
-        int which;
-        switch (state) {
-            case IpServer.STATE_UNAVAILABLE:
-            case IpServer.STATE_AVAILABLE:
-                which = TetherMainSM.EVENT_IFACE_SERVING_STATE_INACTIVE;
-                break;
-            case IpServer.STATE_TETHERED:
-            case IpServer.STATE_LOCAL_ONLY:
-                which = TetherMainSM.EVENT_IFACE_SERVING_STATE_ACTIVE;
-                break;
-            default:
-                Log.wtf(TAG, "Unknown interface state: " + state);
+        @Override
+        public void updateLinkProperties(IpServer who, LinkProperties newLp) {
+            final String iface = who.interfaceName();
+            final int state;
+            final TetherState tetherState = mTetherStates.get(iface);
+            if (tetherState != null && tetherState.ipServer.equals(who)) {
+                state = tetherState.lastState;
+            } else {
+                mLog.log("got notification from stale iface " + iface);
                 return;
-        }
-        mTetherMainSM.sendMessage(which, state, 0, who);
-        sendTetherStateChangedBroadcast();
-    }
+            }
 
-    private void notifyLinkPropertiesChanged(IpServer who, LinkProperties newLp) {
-        final String iface = who.interfaceName();
-        final int state;
-        final TetherState tetherState = mTetherStates.get(iface);
-        if (tetherState != null && tetherState.ipServer.equals(who)) {
-            state = tetherState.lastState;
-        } else {
-            mLog.log("got notification from stale iface " + iface);
-            return;
+            mLog.log(String.format(
+                    "OBSERVED LinkProperties update iface=%s state=%s lp=%s",
+                    iface, IpServer.getStateString(state), newLp));
+            final int which = TetherMainSM.EVENT_IFACE_UPDATE_LINKPROPERTIES;
+            mTetherMainSM.sendMessage(which, state, 0, newLp);
         }
 
-        mLog.log(String.format(
-                "OBSERVED LinkProperties update iface=%s state=%s lp=%s",
-                iface, IpServer.getStateString(state), newLp));
-        final int which = TetherMainSM.EVENT_IFACE_UPDATE_LINKPROPERTIES;
-        mTetherMainSM.sendMessage(which, state, 0, newLp);
+        @Override
+        public void dhcpLeasesChanged() {
+            maybeDhcpLeasesChanged();
+        }
+
+        @Override
+        public void requestEnableTethering(int tetheringType, boolean enabled) {
+            mTetherMainSM.sendMessage(TetherMainSM.EVENT_REQUEST_CHANGE_DOWNSTREAM,
+                    tetheringType, 0, enabled ? Boolean.TRUE : Boolean.FALSE);
+        }
     }
 
     private boolean hasSystemFeature(final String feature) {
@@ -2851,9 +2842,9 @@ public class Tethering {
         mLog.i("adding IpServer for: " + iface);
         final TetherState tetherState = new TetherState(
                 new IpServer(iface, mHandler, interfaceType, mLog, mNetd, mBpfCoordinator,
-                        mRoutingCoordinator, makeControlCallback(), mConfig,
+                        mRoutingCoordinator, new ControlCallback(), mConfig,
                         mPrivateAddressCoordinator, mTetheringMetrics,
-                        mDeps.getIpServerDependencies()), isNcm);
+                        mDeps.makeIpServerDependencies()), isNcm);
         mTetherStates.put(iface, tetherState);
         tetherState.ipServer.start();
     }
@@ -2878,5 +2869,10 @@ public class Tethering {
                 listener.onResult(TETHER_ERROR_NO_ERROR);
             } catch (RemoteException e) { }
         });
+    }
+
+    @VisibleForTesting
+    public TetherMainSM getTetherMainSMForTesting() {
+        return mTetherMainSM;
     }
 }

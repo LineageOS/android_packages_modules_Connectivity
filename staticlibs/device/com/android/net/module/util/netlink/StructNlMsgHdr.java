@@ -71,13 +71,17 @@ public class StructNlMsgHdr {
             }
             sb.append("NLM_F_ECHO");
         }
-        if ((flags & NLM_F_ROOT) != 0) {
+        if ((flags & NLM_F_DUMP) == NLM_F_DUMP) {
+            if (sb.length() > 0) {
+                sb.append("|");
+            }
+            sb.append("NLM_F_DUMP");
+        } else if ((flags & NLM_F_ROOT) != 0) { // NLM_F_DUMP = NLM_F_ROOT | NLM_F_MATCH
             if (sb.length() > 0) {
                 sb.append("|");
             }
             sb.append("NLM_F_ROOT");
-        }
-        if ((flags & NLM_F_MATCH) != 0) {
+        } else if ((flags & NLM_F_MATCH) != 0) {
             if (sb.length() > 0) {
                 sb.append("|");
             }
@@ -125,6 +129,14 @@ public class StructNlMsgHdr {
         nlmsg_type = 0;
         nlmsg_flags = 0;
         nlmsg_seq = 0;
+        nlmsg_pid = 0;
+    }
+
+    public StructNlMsgHdr(int payloadLen, short type, short flags, int seq) {
+        nlmsg_len = StructNlMsgHdr.STRUCT_SIZE + payloadLen;
+        nlmsg_type = type;
+        nlmsg_flags = flags;
+        nlmsg_seq = seq;
         nlmsg_pid = 0;
     }
 

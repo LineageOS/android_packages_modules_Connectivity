@@ -32,6 +32,7 @@ import static android.net.ConnectivityDiagnosticsManager.DataStallReport.DETECTI
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_DNS_CONSECUTIVE_TIMEOUTS;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_TCP_METRICS_COLLECTION_PERIOD_MILLIS;
 import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_TCP_PACKET_FAIL_RATE;
+import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_MASK;
 import static android.net.ConnectivityManager.BLOCKED_REASON_LOCKDOWN_VPN;
 import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
@@ -1770,6 +1771,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mUserAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
                 null /* broadcastPermission */, mHandler);
 
+        // This is needed for pre-V devices to propagate the data saver status
+        // to the BPF map. This isn't supported before Android T because BPF maps are
+        // unsupported, and it's also unnecessary on Android V and later versions,
+        // as the platform code handles data saver bit updates. Additionally, checking
+        // the initial data saver status here is superfluous because the intent won't
+        // be sent until the system is ready.
+        if (mDeps.isAtLeastT() && !mDeps.isAtLeastV()) {
+            final IntentFilter dataSaverIntentFilter =
+                    new IntentFilter(ACTION_RESTRICT_BACKGROUND_CHANGED);
+            mUserAllContext.registerReceiver(mDataSaverReceiver, dataSaverIntentFilter,
+                    null /* broadcastPermission */, mHandler);
+        }
+
         // TrackMultiNetworkActivities feature should be enabled by trunk stable flag.
         // But reading the trunk stable flags from mainline modules is not supported yet.
         // So enabling this feature on V+ release.
@@ -1875,6 +1889,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     mContext.getSystemService(ActivityManager.class);
             activityManager.registerUidFrozenStateChangedCallback(
                     (Runnable r) -> r.run(), frozenStateChangedCallback);
+        }
+
+        if (mDeps.isFeatureNotChickenedOut(mContext, LOG_BPF_RC)) {
+            mHandler.post(BpfLoaderRcUtils::checkBpfLoaderRc);
         }
     }
 
@@ -2651,7 +2669,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private boolean canSeeAllowedUids(final int pid, final int uid, final int netOwnerUid) {
         return Process.SYSTEM_UID == uid
-                || netOwnerUid == uid
                 || checkAnyPermissionOf(mContext, pid, uid,
                         android.Manifest.permission.NETWORK_FACTORY);
     }
@@ -3334,6 +3351,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @VisibleForTesting
     public static final String ALLOW_SYSUI_CONNECTIVITY_REPORTS =
             "allow_sysui_connectivity_reports";
+
+    public static final String LOG_BPF_RC = "log_bpf_rc_force_disable";
 
     private void enforceInternetPermission() {
         mContext.enforceCallingOrSelfPermission(
@@ -4784,7 +4803,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // If the Private DNS mode is opportunistic, reprogram the DNS servers
         // in order to restart a validation pass from within netd.
         final PrivateDnsConfig cfg = mDnsManager.getPrivateDnsConfig();
-        if (cfg.useTls && TextUtils.isEmpty(cfg.hostname)) {
+        if (cfg.inOpportunisticMode()) {
             updateDnses(nai.linkProperties, null, nai.network.getNetId());
         }
     }
@@ -7046,6 +7065,32 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     };
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private final BroadcastReceiver mDataSaverReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (mDeps.isAtLeastV()) {
+                throw new IllegalStateException(
+                        "data saver status should be updated from platform");
+            }
+            ensureRunningOnConnectivityServiceThread();
+            switch (intent.getAction()) {
+                case ACTION_RESTRICT_BACKGROUND_CHANGED:
+                    // If the uid is present in the deny list, the API will consistently
+                    // return ENABLED. To retrieve the global switch status, the system
+                    // uid is chosen because it will never be included in the deny list.
+                    final int dataSaverForSystemUid =
+                            mPolicyManager.getRestrictBackgroundStatus(Process.SYSTEM_UID);
+                    final boolean isDataSaverEnabled = (dataSaverForSystemUid
+                            != ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED);
+                    mBpfNetMaps.setDataSaverEnabled(isDataSaverEnabled);
+                    break;
+                default:
+                    Log.wtf(TAG, "received unexpected intent: " + intent.getAction());
+            }
+        }
+    };
+
     private final HashMap<Messenger, NetworkProviderInfo> mNetworkProviderInfos = new HashMap<>();
     private final HashMap<NetworkRequest, NetworkRequestInfo> mNetworkRequests = new HashMap<>();
 
@@ -7649,7 +7694,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void enforceRequestCapabilitiesDeclaration(@NonNull final String callerPackageName,
-            @NonNull final NetworkCapabilities networkCapabilities) {
+            @NonNull final NetworkCapabilities networkCapabilities, int callingUid) {
         // This check is added to fix the linter error for "current min is 30", which is not going
         // to happen because Connectivity service always run in S+.
         if (!mDeps.isAtLeastS()) {
@@ -7663,7 +7708,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 applicationNetworkCapabilities = mSelfCertifiedCapabilityCache.get(
                         callerPackageName);
                 if (applicationNetworkCapabilities == null) {
-                    final PackageManager packageManager = mContext.getPackageManager();
+                    final PackageManager packageManager =
+                            mContext.createContextAsUser(UserHandle.getUserHandleForUid(
+                                    callingUid), 0 /* flags */).getPackageManager();
                     final PackageManager.Property networkSliceProperty = packageManager.getProperty(
                             ConstantsShim.PROPERTY_SELF_CERTIFIED_NETWORK_CAPABILITIES,
                             callerPackageName
@@ -7695,7 +7742,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
             String callingPackageName, String callingAttributionTag, final int callingUid) {
         if (shouldCheckCapabilitiesDeclaration(networkCapabilities, callingUid,
                 callingPackageName)) {
-            enforceRequestCapabilitiesDeclaration(callingPackageName, networkCapabilities);
+            enforceRequestCapabilitiesDeclaration(callingPackageName, networkCapabilities,
+                    callingUid);
         }
         if (networkCapabilities.hasCapability(NET_CAPABILITY_NOT_RESTRICTED) == false) {
             // For T+ devices, callers with carrier privilege could request with CBS capabilities.
@@ -12980,7 +13028,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @Override
     public void setDataSaverEnabled(final boolean enable) {
         enforceNetworkStackOrSettingsPermission();

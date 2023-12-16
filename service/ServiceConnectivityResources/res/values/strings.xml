@@ -29,6 +29,15 @@
     <!-- A notification is shown when a captive portal network is detected.  This is the notification's message. -->
     <string name="network_available_sign_in_detailed"><xliff:g id="network_ssid">%1$s</xliff:g></string>
 
+    <!-- A notification is shown when the system detected no internet access on a mobile network, possibly because the user is out of data, and a webpage is available to get Internet access (possibly by topping up or getting a subscription).  This is the notification's title. -->
+    <string name="mobile_network_available_no_internet">No internet</string>
+
+    <!-- A notification is shown when the system detected no internet access on a mobile network, possibly because the user is out of data, and a webpage is available to get Internet access (possibly by topping up or getting a subscription).  This is the notification's message. -->
+    <string name="mobile_network_available_no_internet_detailed">You may be out of data from <xliff:g id="network_carrier" example="Android Mobile">%1$s</xliff:g>. Tap for options.</string>
+
+    <!-- A notification is shown when the system detected no internet access on a mobile network, possibly because the user is out of data, and a webpage is available to get Internet access (possibly by topping up or getting a subscription).  This is the notification's message when the carrier is unknown. -->
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier">You may be out of data. Tap for options.</string>
+
     <!-- A notification is shown when the user connects to a Wi-Fi network and the system detects that that network has no Internet access. This is the notification's title. -->
     <string name="wifi_no_internet"><xliff:g id="network_ssid" example="GoogleGuest">%1$s</xliff:g> has no internet access</string>
 

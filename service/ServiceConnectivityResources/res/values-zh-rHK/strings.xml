@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"登入網絡"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"沒有互聯網連線"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"你的「<xliff:g id="NETWORK_CARRIER">%1$s</xliff:g>」數據可能已用完。輕按即可查看選項。"</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"你的數據可能已用完。輕按即可查看選項。"</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g>未有連接至互聯網"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"輕按即可查看選項"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"流動網絡並未連接互聯網"</string>
