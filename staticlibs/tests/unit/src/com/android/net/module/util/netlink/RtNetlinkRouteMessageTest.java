@@ -16,7 +16,9 @@
 
 package com.android.net.module.util.netlink;
 
+import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.NETLINK_ROUTE;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -341,5 +343,25 @@ public class RtNetlinkRouteMessageTest {
                 + "sinceLastUseMillis{60060}"
                 + "}";
         assertEquals(expected, routeMsg.toString());
+    }
+
+    @Test
+    public void testGetRtmFamily_RTNL_FAMILY_IP6MR() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_MULTICAST_IPV6_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+
+        assertEquals(RTNL_FAMILY_IP6MR, routeMsg.getRtmFamily());
+    }
+
+    @Test
+    public void testGetRtmFamily_AF_INET6() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+
+        assertEquals(AF_INET6, routeMsg.getRtmFamily());
     }
 }
