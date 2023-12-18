@@ -19,12 +19,6 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-build = ["TrunkStable.bp"]
-
-// This is a placeholder comment to avoid merge conflicts
-// as the above target may not exist
-// depending on the branch
-
 // The library requires the final artifact to contain net-utils-device-common-struct.
 java_library {
     name: "connectivity-net-module-utils-bpf",
