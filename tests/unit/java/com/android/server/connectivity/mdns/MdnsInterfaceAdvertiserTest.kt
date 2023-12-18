@@ -67,6 +67,13 @@ private val TEST_SERVICE_1 = NsdServiceInfo().apply {
     port = 12345
 }
 
+private val TEST_SERVICE_1_SUBTYPE = NsdServiceInfo().apply {
+    subtypes = setOf("_sub")
+    serviceType = "_testservice._tcp"
+    serviceName = "MyTestService"
+    port = 12345
+}
+
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class MdnsInterfaceAdvertiserTest {
@@ -119,7 +126,7 @@ class MdnsInterfaceAdvertiserTest {
             knownServices.add(inv.getArgument(0))
 
             -1
-        }.`when`(repository).addService(anyInt(), any(), any())
+        }.`when`(repository).addService(anyInt(), any())
         doAnswer { inv ->
             knownServices.remove(inv.getArgument(0))
             null
@@ -277,10 +284,9 @@ class MdnsInterfaceAdvertiserTest {
     @Test
     fun testReplaceExitingService() {
         doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
-                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
-        val subType = "_sub"
-        advertiser.addService(TEST_SERVICE_ID_DUPLICATE, TEST_SERVICE_1, subType)
-        verify(repository).addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any())
+        advertiser.addService(TEST_SERVICE_ID_DUPLICATE, TEST_SERVICE_1_SUBTYPE)
+        verify(repository).addService(eq(TEST_SERVICE_ID_DUPLICATE), any())
         verify(announcer).stop(TEST_SERVICE_ID_DUPLICATE)
         verify(prober).startProbing(any())
     }
@@ -288,9 +294,9 @@ class MdnsInterfaceAdvertiserTest {
     @Test
     fun testUpdateExistingService() {
         doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
-                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
-        val subType = "_sub"
-        advertiser.updateService(TEST_SERVICE_ID_DUPLICATE, subType)
+                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any())
+        val subTypes = setOf("_sub")
+        advertiser.updateService(TEST_SERVICE_ID_DUPLICATE, subTypes)
         verify(repository).updateService(eq(TEST_SERVICE_ID_DUPLICATE), any())
         verify(announcer, never()).stop(TEST_SERVICE_ID_DUPLICATE)
         verify(prober, never()).startProbing(any())
@@ -302,8 +308,8 @@ class MdnsInterfaceAdvertiserTest {
         doReturn(serviceId).`when`(testProbingInfo).serviceId
         doReturn(testProbingInfo).`when`(repository).setServiceProbing(serviceId)
 
-        advertiser.addService(serviceId, serviceInfo, null /* subtype */)
-        verify(repository).addService(serviceId, serviceInfo, null /* subtype */)
+        advertiser.addService(serviceId, serviceInfo)
+        verify(repository).addService(serviceId, serviceInfo)
         verify(prober).startProbing(testProbingInfo)
 
         // Simulate probing success: continues to announcing
