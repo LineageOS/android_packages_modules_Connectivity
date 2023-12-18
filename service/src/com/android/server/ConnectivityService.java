@@ -3475,7 +3475,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
     }
 
-    private boolean checkSystemBarServicePermission(int pid, int uid) {
+    private boolean checkStatusBarServicePermission(int pid, int uid) {
         return checkAnyPermissionOf(mContext, pid, uid,
                 android.Manifest.permission.STATUS_BAR_SERVICE);
     }
@@ -11554,7 +11554,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return true;
         }
         if (mAllowSysUiConnectivityReports
-                && checkSystemBarServicePermission(callbackPid, callbackUid)) {
+                && checkStatusBarServicePermission(callbackPid, callbackUid)) {
             return true;
         }
 
