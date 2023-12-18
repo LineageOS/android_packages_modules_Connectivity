@@ -150,6 +150,8 @@ public final class NsdManager {
     public static class Flags {
         static final String REGISTER_NSD_OFFLOAD_ENGINE_API =
                 "com.android.net.flags.register_nsd_offload_engine_api";
+        static final String NSD_SUBTYPES_SUPPORT_ENABLED =
+                "com.android.net.flags.nsd_subtypes_support_enabled";
     }
 
     /**
