@@ -99,6 +99,13 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     }
 
     /**
+     * Returns the rtnetlink family.
+     */
+    public short getRtmFamily() {
+        return mRtmsg.family;
+    }
+
+    /**
      * Returns if the route is resolved. This is always true for unicast,
      * and may be false only for multicast routes.
      */
