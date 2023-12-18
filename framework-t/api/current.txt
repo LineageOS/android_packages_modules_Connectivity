@@ -275,6 +275,7 @@ package android.net.nsd {
     method public int getPort();
     method public String getServiceName();
     method public String getServiceType();
+    method @FlaggedApi("com.android.net.flags.nsd_subtypes_support_enabled") @NonNull public java.util.Set<java.lang.String> getSubtypes();
     method public void removeAttribute(String);
     method public void setAttribute(String, String);
     method @Deprecated public void setHost(java.net.InetAddress);
@@ -283,6 +284,7 @@ package android.net.nsd {
     method public void setPort(int);
     method public void setServiceName(String);
     method public void setServiceType(String);
+    method @FlaggedApi("com.android.net.flags.nsd_subtypes_support_enabled") public void setSubtypes(@NonNull java.util.Set<java.lang.String>);
     method public void writeToParcel(android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.nsd.NsdServiceInfo> CREATOR;
   }
