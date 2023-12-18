@@ -213,7 +213,6 @@ class BpfNetMapsReaderTest {
         assertFalse(isUidNetworkingBlocked(TEST_UID3))
     }
 
-    @IgnoreUpTo(VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testGetDataSaverEnabled() {
         testDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, U8(DATA_SAVER_DISABLED))
