@@ -37,6 +37,7 @@ import com.android.server.connectivity.mdns.util.MdnsUtils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A class that handles advertising services on a {@link MdnsInterfaceSocket} tied to an interface.
@@ -232,12 +233,12 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      * Update an already registered service without sending exit/re-announcement packet.
      *
      * @param id An exiting service id
-     * @param subtype A new subtype
+     * @param subtypes New subtypes
      */
-    public void updateService(int id, @Nullable String subtype) {
+    public void updateService(int id, @NonNull Set<String> subtypes) {
         // The current implementation is intended to be used in cases where subtypes don't get
         // announced.
-        mRecordRepository.updateService(id, subtype);
+        mRecordRepository.updateService(id, subtypes);
     }
 
     /**
@@ -245,9 +246,8 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
      *
      * @throws NameConflictException There is already a service being advertised with that name.
      */
-    public void addService(int id, NsdServiceInfo service, @Nullable String subtype)
-            throws NameConflictException {
-        final int replacedExitingService = mRecordRepository.addService(id, service, subtype);
+    public void addService(int id, NsdServiceInfo service) throws NameConflictException {
+        final int replacedExitingService = mRecordRepository.addService(id, service);
         // Cancel announcements for the existing service. This only happens for exiting services
         // (so cancelling exiting announcements), as per RecordRepository.addService.
         if (replacedExitingService >= 0) {
