@@ -969,7 +969,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         return new NetworkStatsRecorder(new FileRotator(
                 baseDir, prefix, config.rotateAgeMillis, config.deleteAgeMillis),
                 mNonMonotonicObserver, dropBox, prefix, config.bucketDuration, includeTags,
-                wipeOnError, false /* useFastDataInput */);
+                wipeOnError, false /* useFastDataInput */, baseDir);
     }
 
     @GuardedBy("mStatsLock")
