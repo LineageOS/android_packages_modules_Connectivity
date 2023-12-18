@@ -151,6 +151,9 @@ public class NetlinkConstants {
     public static final int RTNLGRP_ND_USEROPT = 20;
     public static final int RTMGRP_ND_USEROPT = 1 << (RTNLGRP_ND_USEROPT - 1);
 
+    // Netlink family
+    public static final short RTNL_FAMILY_IP6MR = 129;
+
     // Device flags.
     public static final int IFF_UP       = 1 << 0;
     public static final int IFF_LOWER_UP = 1 << 16;
