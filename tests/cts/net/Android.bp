@@ -131,6 +131,7 @@ java_defaults {
         "cts",
         "general-tests",
         "mts-tethering",
+        "mcts-tethering",
     ],
 }
 
