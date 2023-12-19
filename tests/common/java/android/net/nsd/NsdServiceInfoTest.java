@@ -18,6 +18,7 @@ package android.net.nsd;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -40,6 +41,7 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
@@ -114,6 +116,7 @@ public class NsdServiceInfoTest {
         NsdServiceInfo fullInfo = new NsdServiceInfo();
         fullInfo.setServiceName("kitten");
         fullInfo.setServiceType("_kitten._tcp");
+        fullInfo.setSubtypes(Set.of("_thread", "_matter"));
         fullInfo.setPort(4242);
         fullInfo.setHostAddresses(List.of(IPV4_ADDRESS));
         fullInfo.setNetwork(new Network(123));
@@ -149,7 +152,7 @@ public class NsdServiceInfoTest {
         assertFalse(attributedInfo.getAttributes().keySet().contains("sticky"));
     }
 
-    public void checkParcelable(NsdServiceInfo original) {
+    private static void checkParcelable(NsdServiceInfo original) {
         // Write to parcel.
         Parcel p = Parcel.obtain();
         Bundle writer = new Bundle();
@@ -179,11 +182,20 @@ public class NsdServiceInfoTest {
         }
     }
 
-    public void assertEmptyServiceInfo(NsdServiceInfo shouldBeEmpty) {
+    private static void assertEmptyServiceInfo(NsdServiceInfo shouldBeEmpty) {
         byte[] txtRecord = shouldBeEmpty.getTxtRecord();
         if (txtRecord == null || txtRecord.length == 0) {
             return;
         }
         fail("NsdServiceInfo.getTxtRecord did not return null but " + Arrays.toString(txtRecord));
+    }
+
+    @Test
+    public void testSubtypesValidSubtypesSuccess() {
+        NsdServiceInfo info = new NsdServiceInfo();
+
+        info.setSubtypes(Set.of("_thread", "_matter"));
+
+        assertEquals(Set.of("_thread", "_matter"), info.getSubtypes());
     }
 }

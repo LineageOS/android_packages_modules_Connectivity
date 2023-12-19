@@ -233,6 +233,20 @@ public class MdnsUtils {
                 && mdnsRecord.getRemainingTTL(now) <= mdnsRecord.getTtl() / 2;
     }
 
+    /**
+     * Creates a new full subtype name with given service type and subtype labels.
+     *
+     * For example, given ["_http", "_tcp"] and "_printer", this method returns a new String array
+     * of ["_printer", "_sub", "_http", "_tcp"].
+     */
+    public static String[] constructFullSubtype(String[] serviceType, String subtype) {
+        String[] fullSubtype = new String[serviceType.length + 2];
+        fullSubtype[0] = subtype;
+        fullSubtype[1] = MdnsConstants.SUBTYPE_LABEL;
+        System.arraycopy(serviceType, 0, fullSubtype, 2, serviceType.length);
+        return fullSubtype;
+    }
+
     /** A wrapper class of {@link SystemClock} to be mocked in unit tests. */
     public static class Clock {
         /**
