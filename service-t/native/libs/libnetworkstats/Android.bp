@@ -73,6 +73,7 @@ cc_test {
         "-Wthread-safety",
     ],
     static_libs: [
+        "libbase",
         "libgmock",
         "libnetworkstats",
         "libperfetto_client_experimental",
@@ -80,7 +81,6 @@ cc_test {
         "perfetto_trace_protos",
     ],
     shared_libs: [
-        "libbase",
         "liblog",
         "libcutils",
         "libandroid_net",
