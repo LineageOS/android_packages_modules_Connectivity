@@ -626,6 +626,7 @@ class NetworkAgentTest {
             }
         }
         agent.unregister()
+        callback.eventuallyExpect<Lost> { it.network == agent.network }
         // callback will be unregistered in tearDown()
     }
 
