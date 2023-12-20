@@ -69,10 +69,10 @@ cc_test {
         "BpfBaseTest.cpp"
     ],
     static_libs: [
+        "libbase",
         "libnetd_updatable",
     ],
     shared_libs: [
-        "libbase",
         "libcutils",
         "liblog",
         "libnetdutils",
