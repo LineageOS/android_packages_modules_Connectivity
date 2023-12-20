@@ -47,10 +47,8 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.system.StructTimeval;
 import android.util.Log;
-import android.util.Pair;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.net.module.util.FdEventsReader;
@@ -114,9 +112,8 @@ public class RouterAdvertisementDaemon {
     private static final int DAY_IN_SECONDS = 86_400;
 
     // Commands for IpServer to control RouterAdvertisementDaemon
-    private static final int CMD_START        = 1;
-    private static final int CMD_STOP         = 2;
-    private static final int CMD_BUILD_NEW_RA = 3;
+    private static final int CMD_START = 1;
+    private static final int CMD_STOP  = 2;
 
     private final InterfaceParams mInterface;
     private final InetSocketAddress mAllNodes;
@@ -281,26 +278,6 @@ public class RouterAdvertisementDaemon {
                         mRsPacketListener = null;
                     }
                     break;
-                case CMD_BUILD_NEW_RA:
-                    synchronized (mLock) {
-                        // raInfo.first is deprecatedParams and raInfo.second is newParams.
-                        final Pair<RaParams, RaParams> raInfo = (Pair<RaParams, RaParams>) msg.obj;
-                        if (raInfo.first != null) {
-                            mDeprecatedInfoTracker.putPrefixes(raInfo.first.prefixes);
-                            mDeprecatedInfoTracker.putDnses(raInfo.first.dnses);
-                        }
-
-                        if (raInfo.second != null) {
-                            // Process information that is no longer deprecated.
-                            mDeprecatedInfoTracker.removePrefixes(raInfo.second.prefixes);
-                            mDeprecatedInfoTracker.removeDnses(raInfo.second.dnses);
-                        }
-                        mRaParams = raInfo.second;
-                        assembleRaLocked();
-                    }
-
-                    maybeNotifyMulticastTransmitter();
-                    break;
                 default:
                     Log.e(TAG, "Unknown message, cmd = " + String.valueOf(msg.what));
                     break;
@@ -359,8 +336,23 @@ public class RouterAdvertisementDaemon {
 
     /** Build new RA.*/
     public void buildNewRa(RaParams deprecatedParams, RaParams newParams) {
-        final Pair<RaParams, RaParams> raInfo = new Pair<>(deprecatedParams, newParams);
-        sendMessage(CMD_BUILD_NEW_RA, raInfo);
+        synchronized (mLock) {
+            if (deprecatedParams != null) {
+                mDeprecatedInfoTracker.putPrefixes(deprecatedParams.prefixes);
+                mDeprecatedInfoTracker.putDnses(deprecatedParams.dnses);
+            }
+
+            if (newParams != null) {
+                // Process information that is no longer deprecated.
+                mDeprecatedInfoTracker.removePrefixes(newParams.prefixes);
+                mDeprecatedInfoTracker.removeDnses(newParams.dnses);
+            }
+
+            mRaParams = newParams;
+            assembleRaLocked();
+        }
+
+        maybeNotifyMulticastTransmitter();
     }
 
     /** Start router advertisement daemon. */
@@ -668,16 +660,11 @@ public class RouterAdvertisementDaemon {
     }
 
     private boolean sendMessage(int cmd) {
-        return sendMessage(cmd, null);
-    }
-
-    private boolean sendMessage(int cmd, @Nullable Object obj) {
         if (mRaMessageHandler == null) {
             return false;
         }
 
-        return mRaMessageHandler.sendMessage(
-                Message.obtain(mRaMessageHandler, cmd, obj));
+        return mRaMessageHandler.sendMessage(Message.obtain(mRaMessageHandler, cmd));
     }
 
     // TODO: Consider moving this to run on a provided Looper as a Handler,
