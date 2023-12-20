@@ -1454,14 +1454,22 @@ public class NsdServiceTest {
         final String serviceType5 = "_TEST._999._tcp.";
         final String serviceType6 = "_998._tcp.,_TEST";
         final String serviceType7 = "_997._tcp,_TEST";
+        final String serviceType8 = "_997._tcp,_test1,_test2,_test3";
+        final String serviceType9 = "_test4._997._tcp,_test1,_test2,_test3";
 
         assertNull(parseTypeAndSubtype(serviceType1));
         assertNull(parseTypeAndSubtype(serviceType2));
         assertNull(parseTypeAndSubtype(serviceType3));
-        assertEquals(new Pair<>("_123._udp", null), parseTypeAndSubtype(serviceType4));
-        assertEquals(new Pair<>("_999._tcp", "_TEST"), parseTypeAndSubtype(serviceType5));
-        assertEquals(new Pair<>("_998._tcp", "_TEST"), parseTypeAndSubtype(serviceType6));
-        assertEquals(new Pair<>("_997._tcp", "_TEST"), parseTypeAndSubtype(serviceType7));
+        assertEquals(new Pair<>("_123._udp", Collections.emptyList()),
+                parseTypeAndSubtype(serviceType4));
+        assertEquals(new Pair<>("_999._tcp", List.of("_TEST")), parseTypeAndSubtype(serviceType5));
+        assertEquals(new Pair<>("_998._tcp", List.of("_TEST")), parseTypeAndSubtype(serviceType6));
+        assertEquals(new Pair<>("_997._tcp", List.of("_TEST")), parseTypeAndSubtype(serviceType7));
+
+        assertEquals(new Pair<>("_997._tcp", List.of("_test1", "_test2", "_test3")),
+                parseTypeAndSubtype(serviceType8));
+        assertEquals(new Pair<>("_997._tcp", List.of("_test4")),
+                parseTypeAndSubtype(serviceType9));
     }
 
     @Test
