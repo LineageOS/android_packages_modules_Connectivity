@@ -36,7 +36,6 @@ import android.os.Build;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
@@ -277,13 +276,6 @@ public class BpfNetMapsReader {
      */
     public boolean getDataSaverEnabled() {
         throwIfPreT("getDataSaverEnabled is not available on pre-T devices");
-
-        // Note that this is not expected to be called until V given that it relies on the
-        // counterpart platform solution to set data saver status to bpf.
-        // See {@code NetworkManagementService#setDataSaverModeEnabled}.
-        if (!SdkLevel.isAtLeastV()) {
-            Log.wtf(TAG, "getDataSaverEnabled is not expected to be called on pre-V devices");
-        }
 
         try {
             return mDataSaverEnabledMap.getValue(DATA_SAVER_ENABLED_KEY).val == DATA_SAVER_ENABLED;
