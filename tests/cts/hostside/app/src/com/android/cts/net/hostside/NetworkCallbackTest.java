@@ -203,6 +203,7 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
         // Initial state
         setBatterySaverMode(false);
         setRestrictBackground(false);
+        setAppIdle(false);
 
         // Get transports of the active network, this has to be done before changing meteredness,
         // since wifi will be disconnected when changing from non-metered to metered.
