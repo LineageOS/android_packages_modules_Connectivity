@@ -105,7 +105,9 @@ java_defaults {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }
 
 java_library {
@@ -134,7 +136,10 @@ java_library {
         "framework-tethering.impl",
         "framework-wifi.stubs.module_lib",
     ],
-    visibility: ["//packages/modules/Connectivity:__subpackages__"]
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_defaults {
@@ -189,6 +194,9 @@ java_sdk_library {
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 platform_compat_config {
@@ -248,6 +256,9 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 java_genrule {
@@ -293,9 +304,9 @@ droidstubs {
     ],
     flags: [
         "--show-for-stub-purposes-annotation android.annotation.SystemApi" +
-        "\\(client=android.annotation.SystemApi.Client.PRIVILEGED_APPS\\)",
+            "\\(client=android.annotation.SystemApi.Client.PRIVILEGED_APPS\\)",
         "--show-for-stub-purposes-annotation android.annotation.SystemApi" +
-        "\\(client=android.annotation.SystemApi.Client.MODULE_LIBRARIES\\)",
+            "\\(client=android.annotation.SystemApi.Client.MODULE_LIBRARIES\\)",
     ],
     aidl: {
         include_dirs: [
@@ -308,6 +319,9 @@ droidstubs {
 java_library {
     name: "framework-connectivity-module-api-stubs-including-flagged",
     srcs: [":framework-connectivity-module-api-stubs-including-flagged-droidstubs"],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Library providing limited APIs within the connectivity module, so that R+ components like
@@ -332,4 +346,7 @@ java_library {
     visibility: [
         "//packages/modules/Connectivity/Tethering:__subpackages__",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
