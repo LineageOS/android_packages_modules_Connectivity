@@ -169,7 +169,6 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
@@ -424,131 +423,132 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     @NonNull
-    private NetworkStatsService.Dependencies makeDependencies() {
-        return new NetworkStatsService.Dependencies() {
-            @Override
-            public File getLegacyStatsDir() {
-                return mLegacyStatsDir;
-            }
+    private TestDependencies makeDependencies() {
+        return new TestDependencies();
+    }
 
-            @Override
-            public File getOrCreateStatsDir() {
-                return mStatsDir;
-            }
+    class TestDependencies extends NetworkStatsService.Dependencies {
+        @Override
+        public File getLegacyStatsDir() {
+            return mLegacyStatsDir;
+        }
 
-            @Override
-            public boolean getStoreFilesInApexData() {
-                return mStoreFilesInApexData;
-            }
+        @Override
+        public File getOrCreateStatsDir() {
+            return mStatsDir;
+        }
 
-            @Override
-            public int getImportLegacyTargetAttempts() {
-                return mImportLegacyTargetAttempts;
-            }
+        @Override
+        public boolean getStoreFilesInApexData() {
+            return mStoreFilesInApexData;
+        }
 
-            @Override
-            public PersistentInt createPersistentCounter(@androidx.annotation.NonNull Path dir,
-                    @androidx.annotation.NonNull String name) throws IOException {
-                switch (name) {
-                    case NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME:
-                        return mImportLegacyAttemptsCounter;
-                    case NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME:
-                        return mImportLegacySuccessesCounter;
-                    case NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME:
-                        return mImportLegacyFallbacksCounter;
-                    default:
-                        throw new IllegalArgumentException("Unknown counter name: " + name);
-                }
-            }
+        @Override
+        public int getImportLegacyTargetAttempts() {
+            return mImportLegacyTargetAttempts;
+        }
 
-            @Override
-            public NetworkStatsCollection readPlatformCollection(
-                    @NonNull String prefix, long bucketDuration) {
-                return mPlatformNetworkStatsCollection.get(prefix);
+        @Override
+        public PersistentInt createPersistentCounter(@NonNull Path dir, @NonNull String name) {
+            switch (name) {
+                case NETSTATS_IMPORT_ATTEMPTS_COUNTER_NAME:
+                    return mImportLegacyAttemptsCounter;
+                case NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME:
+                    return mImportLegacySuccessesCounter;
+                case NETSTATS_IMPORT_FALLBACKS_COUNTER_NAME:
+                    return mImportLegacyFallbacksCounter;
+                default:
+                    throw new IllegalArgumentException("Unknown counter name: " + name);
             }
+        }
 
-            @Override
-            public HandlerThread makeHandlerThread() {
-                return mHandlerThread;
-            }
+        @Override
+        public NetworkStatsCollection readPlatformCollection(
+                @NonNull String prefix, long bucketDuration) {
+            return mPlatformNetworkStatsCollection.get(prefix);
+        }
 
-            @Override
-            public NetworkStatsSubscriptionsMonitor makeSubscriptionsMonitor(
-                    @NonNull Context context, @NonNull Executor executor,
-                    @NonNull NetworkStatsService service) {
+        @Override
+        public HandlerThread makeHandlerThread() {
+            return mHandlerThread;
+        }
 
-                return mNetworkStatsSubscriptionsMonitor;
-            }
+        @Override
+        public NetworkStatsSubscriptionsMonitor makeSubscriptionsMonitor(
+                @NonNull Context context, @NonNull Executor executor,
+                @NonNull NetworkStatsService service) {
 
-            @Override
-            public ContentObserver makeContentObserver(Handler handler,
-                    NetworkStatsSettings settings, NetworkStatsSubscriptionsMonitor monitor) {
-                mHandler = handler;
-                return mContentObserver = super.makeContentObserver(handler, settings, monitor);
-            }
+            return mNetworkStatsSubscriptionsMonitor;
+        }
 
-            @Override
-            public LocationPermissionChecker makeLocationPermissionChecker(final Context context) {
-                return mLocationPermissionChecker;
-            }
+        @Override
+        public ContentObserver makeContentObserver(Handler handler,
+                NetworkStatsSettings settings, NetworkStatsSubscriptionsMonitor monitor) {
+            mHandler = handler;
+            return mContentObserver = super.makeContentObserver(handler, settings, monitor);
+        }
 
-            @Override
-            public BpfInterfaceMapUpdater makeBpfInterfaceMapUpdater(
-                    @NonNull Context ctx, @NonNull Handler handler) {
-                return mBpfInterfaceMapUpdater;
-            }
+        @Override
+        public LocationPermissionChecker makeLocationPermissionChecker(final Context context) {
+            return mLocationPermissionChecker;
+        }
 
-            @Override
-            public IBpfMap<S32, U8> getUidCounterSetMap() {
-                return mUidCounterSetMap;
-            }
+        @Override
+        public BpfInterfaceMapUpdater makeBpfInterfaceMapUpdater(
+                @NonNull Context ctx, @NonNull Handler handler) {
+            return mBpfInterfaceMapUpdater;
+        }
 
-            @Override
-            public IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
-                return mCookieTagMap;
-            }
+        @Override
+        public IBpfMap<S32, U8> getUidCounterSetMap() {
+            return mUidCounterSetMap;
+        }
 
-            @Override
-            public IBpfMap<StatsMapKey, StatsMapValue> getStatsMapA() {
-                return mStatsMapA;
-            }
+        @Override
+        public IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
+            return mCookieTagMap;
+        }
 
-            @Override
-            public IBpfMap<StatsMapKey, StatsMapValue> getStatsMapB() {
-                return mStatsMapB;
-            }
+        @Override
+        public IBpfMap<StatsMapKey, StatsMapValue> getStatsMapA() {
+            return mStatsMapA;
+        }
 
-            @Override
-            public IBpfMap<UidStatsMapKey, StatsMapValue> getAppUidStatsMap() {
-                return mAppUidStatsMap;
-            }
+        @Override
+        public IBpfMap<StatsMapKey, StatsMapValue> getStatsMapB() {
+            return mStatsMapB;
+        }
 
-            @Override
-            public IBpfMap<S32, StatsMapValue> getIfaceStatsMap() {
-                return mIfaceStatsMap;
-            }
+        @Override
+        public IBpfMap<UidStatsMapKey, StatsMapValue> getAppUidStatsMap() {
+            return mAppUidStatsMap;
+        }
 
-            @Override
-            public boolean isDebuggable() {
-                return mIsDebuggable == Boolean.TRUE;
-            }
+        @Override
+        public IBpfMap<S32, StatsMapValue> getIfaceStatsMap() {
+            return mIfaceStatsMap;
+        }
 
-            @Override
-            public BpfNetMaps makeBpfNetMaps(Context ctx) {
-                return mBpfNetMaps;
-            }
+        @Override
+        public boolean isDebuggable() {
+            return mIsDebuggable == Boolean.TRUE;
+        }
 
-            @Override
-            public SkDestroyListener makeSkDestroyListener(
-                    IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap, Handler handler) {
-                return mSkDestroyListener;
-            }
+        @Override
+        public BpfNetMaps makeBpfNetMaps(Context ctx) {
+            return mBpfNetMaps;
+        }
 
-            @Override
-            public boolean supportEventLogger(@NonNull Context cts) {
-                return true;
-            }
-        };
+        @Override
+        public SkDestroyListener makeSkDestroyListener(
+                IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap, Handler handler) {
+            return mSkDestroyListener;
+        }
+
+        @Override
+        public boolean supportEventLogger(@NonNull Context cts) {
+            return true;
+        }
     }
 
     @After
