@@ -30,7 +30,7 @@ java_library {
     srcs: [":nearby-service-srcs"],
 
     defaults: [
-        "framework-system-server-module-defaults"
+        "framework-system-server-module-defaults",
     ],
     libs: [
         "androidx.annotation_annotation",
@@ -66,13 +66,16 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 genrule {
     name: "statslog-nearby-java-gen",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module nearby " +
-         " --javaPackage com.android.server.nearby.proto --javaClass NearbyStatsLog" +
-         " --minApiLevel 33",
+        " --javaPackage com.android.server.nearby.proto --javaClass NearbyStatsLog" +
+        " --minApiLevel 33",
     out: ["com/android/server/nearby/proto/NearbyStatsLog.java"],
 }
