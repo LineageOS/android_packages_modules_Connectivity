@@ -10,3 +10,6 @@
 # VS Code project
 **/.vscode
 **/*.code-workspace
+
+# Vim temporary files
+**/*.swp
