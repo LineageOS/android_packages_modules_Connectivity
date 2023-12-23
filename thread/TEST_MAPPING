@@ -4,7 +4,7 @@
       "name": "CtsThreadNetworkTestCases"
     }
   ],
-  "postsubmit": [
+  "presubmit": [
     {
       "name": "ThreadNetworkUnitTests"
     }
