@@ -48,6 +48,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.SharedLog;
@@ -237,7 +238,18 @@ public class EthernetTracker {
         mDeps = deps;
 
         // Interface match regex.
-        mIfaceMatch = mDeps.getInterfaceRegexFromResource(mContext);
+        String ifaceMatchRegex = mDeps.getInterfaceRegexFromResource(mContext);
+        // "*" is a magic string to indicate "pick the default".
+        if (ifaceMatchRegex.equals("*")) {
+            if (SdkLevel.isAtLeastV()) {
+                // On V+, include both usb%d and eth%d interfaces.
+                ifaceMatchRegex = "(usb|eth)\\d+";
+            } else {
+                // On T and U, include only eth%d interfaces.
+                ifaceMatchRegex = "eth\\d+";
+            }
+        }
+        mIfaceMatch = ifaceMatchRegex;
 
         // Read default Ethernet interface configuration from resources
         final String[] interfaceConfigs = mDeps.getInterfaceConfigFromResource(context);
