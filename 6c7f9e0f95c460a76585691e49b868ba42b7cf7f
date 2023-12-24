@@ -34,6 +34,24 @@
       "parentUuid": "c28b0c57_64570558",
       "revId": "6c7f9e0f95c460a76585691e49b868ba42b7cf7f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "aeebcfbe_b7f7c386",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2023-12-24T11:40:28Z",
+      "side": 1,
+      "message": "Yeah this commit is kept for that reason, device specific CarrierConfig could be setting this to true for some carriers. It\u0027s a small commit and doesn\u0027t really hurt to keep.",
+      "parentUuid": "2c1e49c4_415bc6d8",
+      "revId": "6c7f9e0f95c460a76585691e49b868ba42b7cf7f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
