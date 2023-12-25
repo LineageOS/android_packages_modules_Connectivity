@@ -53,14 +53,15 @@ import static com.android.server.thread.openthread.IOtDaemon.TUN_IF_NAME;
 
 import android.Manifest.permission;
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalNetworkConfig;
-import android.net.MulticastRoutingConfig;
 import android.net.LocalNetworkInfo;
+import android.net.MulticastRoutingConfig;
 import android.net.Network;
 import android.net.NetworkAgent;
 import android.net.NetworkAgentConfig;
@@ -69,6 +70,7 @@ import android.net.NetworkProvider;
 import android.net.NetworkRequest;
 import android.net.NetworkScore;
 import android.net.RouteInfo;
+import android.net.TestNetworkSpecifier;
 import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.ActiveOperationalDataset.SecurityPolicy;
 import android.net.thread.IActiveOperationalDatasetReceiver;
@@ -91,12 +93,12 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.ServiceManagerWrapper;
+import com.android.server.thread.openthread.BorderRouterConfigurationParcel;
 import com.android.server.thread.openthread.IOtDaemon;
 import com.android.server.thread.openthread.IOtDaemonCallback;
 import com.android.server.thread.openthread.IOtStatusReceiver;
 import com.android.server.thread.openthread.Ipv6AddressInfo;
 import com.android.server.thread.openthread.OtDaemonState;
-import com.android.server.thread.openthread.BorderRouterConfigurationParcel;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -147,9 +149,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private MulticastRoutingConfig mUpstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
     private MulticastRoutingConfig mDownstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
     private Network mUpstreamNetwork;
-    private final NetworkRequest mUpstreamNetworkRequest;
+    private NetworkRequest mUpstreamNetworkRequest;
+    private UpstreamNetworkCallback mUpstreamNetworkCallback;
+    private TestNetworkSpecifier mUpstreamTestNetworkSpecifier;
     private final HashMap<Network, String> mNetworkToInterface;
-    private final LocalNetworkConfig mLocalNetworkConfig;
 
     private BorderRouterConfigurationParcel mBorderRouterConfig;
 
@@ -168,16 +171,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mOtDaemonSupplier = otDaemonSupplier;
         mConnectivityManager = connectivityManager;
         mTunIfController = tunIfController;
-        mUpstreamNetworkRequest =
-                new NetworkRequest.Builder()
-                        .clearCapabilities()
-                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                        .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                        .build();
-        mLocalNetworkConfig =
-                new LocalNetworkConfig.Builder()
-                        .setUpstreamSelector(mUpstreamNetworkRequest)
-                        .build();
+        mUpstreamNetworkRequest = newUpstreamNetworkRequest();
         mNetworkToInterface = new HashMap<Network, String>();
         mBorderRouterConfig = new BorderRouterConfigurationParcel();
     }
@@ -237,6 +231,60 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 LinkAddress.LIFETIME_PERMANENT /* expirationTime */);
     }
 
+    private NetworkRequest newUpstreamNetworkRequest() {
+        NetworkRequest.Builder builder = new NetworkRequest.Builder().clearCapabilities();
+
+        if (mUpstreamTestNetworkSpecifier != null) {
+            return builder.addTransportType(NetworkCapabilities.TRANSPORT_TEST)
+                    .setNetworkSpecifier(mUpstreamTestNetworkSpecifier)
+                    .build();
+        }
+        return builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+    }
+
+    private LocalNetworkConfig newLocalNetworkConfig() {
+        return new LocalNetworkConfig.Builder()
+                .setUpstreamMulticastRoutingConfig(mUpstreamMulticastRoutingConfig)
+                .setDownstreamMulticastRoutingConfig(mDownstreamMulticastRoutingConfig)
+                .setUpstreamSelector(mUpstreamNetworkRequest)
+                .build();
+    }
+
+    @Override
+    public void setTestNetworkAsUpstream(
+            @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
+        enforceAllCallingPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+
+        Log.i(TAG, "setTestNetworkAsUpstream: " + testNetworkInterfaceName);
+        mHandler.post(() -> setTestNetworkAsUpstreamInternal(testNetworkInterfaceName, receiver));
+    }
+
+    private void setTestNetworkAsUpstreamInternal(
+            @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
+        checkOnHandlerThread();
+
+        TestNetworkSpecifier testNetworkSpecifier = null;
+        if (testNetworkInterfaceName != null) {
+            testNetworkSpecifier = new TestNetworkSpecifier(testNetworkInterfaceName);
+        }
+
+        if (!Objects.equals(mUpstreamTestNetworkSpecifier, testNetworkSpecifier)) {
+            cancelRequestUpstreamNetwork();
+            mUpstreamTestNetworkSpecifier = testNetworkSpecifier;
+            mUpstreamNetworkRequest = newUpstreamNetworkRequest();
+            requestUpstreamNetwork();
+            sendLocalNetworkConfig();
+        }
+        try {
+            receiver.onSuccess();
+        } catch (RemoteException ignored) {
+            // do nothing if the client is dead
+        }
+    }
+
     private void initializeOtDaemon() {
         try {
             getOtDaemon();
@@ -289,45 +337,63 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     private void requestUpstreamNetwork() {
+        if (mUpstreamNetworkCallback != null) {
+            throw new AssertionError("The upstream network request is already there.");
+        }
+        mUpstreamNetworkCallback = new UpstreamNetworkCallback();
         mConnectivityManager.registerNetworkCallback(
-                mUpstreamNetworkRequest,
-                new ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onAvailable(@NonNull Network network) {
-                        Log.i(TAG, "onAvailable: " + network);
-                    }
+                mUpstreamNetworkRequest, mUpstreamNetworkCallback, mHandler);
+    }
 
-                    @Override
-                    public void onLost(@NonNull Network network) {
-                        Log.i(TAG, "onLost: " + network);
-                    }
+    private void cancelRequestUpstreamNetwork() {
+        if (mUpstreamNetworkCallback == null) {
+            throw new AssertionError("The upstream network request null.");
+        }
+        mNetworkToInterface.clear();
+        mConnectivityManager.unregisterNetworkCallback(mUpstreamNetworkCallback);
+        mUpstreamNetworkCallback = null;
+    }
 
-                    @Override
-                    public void onLinkPropertiesChanged(
-                            @NonNull Network network, @NonNull LinkProperties linkProperties) {
-                        Log.i(
-                                TAG,
-                                String.format(
-                                        "onLinkPropertiesChanged: {network: %s, interface: %s}",
-                                        network, linkProperties.getInterfaceName()));
-                        mNetworkToInterface.put(network, linkProperties.getInterfaceName());
-                        if (network.equals(mUpstreamNetwork)) {
-                            enableBorderRouting(mNetworkToInterface.get(mUpstreamNetwork));
-                        }
-                    }
-                },
-                mHandler);
+    private final class UpstreamNetworkCallback extends ConnectivityManager.NetworkCallback {
+        @Override
+        public void onAvailable(@NonNull Network network) {
+            checkOnHandlerThread();
+            Log.i(TAG, "onAvailable: " + network);
+        }
+
+        @Override
+        public void onLost(@NonNull Network network) {
+            checkOnHandlerThread();
+            Log.i(TAG, "onLost: " + network);
+        }
+
+        @Override
+        public void onLinkPropertiesChanged(
+                @NonNull Network network, @NonNull LinkProperties linkProperties) {
+            checkOnHandlerThread();
+            Log.i(
+                    TAG,
+                    String.format(
+                            "onLinkPropertiesChanged: {network: %s, interface: %s}",
+                            network, linkProperties.getInterfaceName()));
+            mNetworkToInterface.put(network, linkProperties.getInterfaceName());
+            if (network.equals(mUpstreamNetwork)) {
+                enableBorderRouting(mNetworkToInterface.get(mUpstreamNetwork));
+            }
+        }
     }
 
     private final class ThreadNetworkCallback extends ConnectivityManager.NetworkCallback {
         @Override
         public void onAvailable(@NonNull Network network) {
+            checkOnHandlerThread();
             Log.i(TAG, "onAvailable: Thread network Available");
         }
 
         @Override
         public void onLocalNetworkInfoChanged(
                 @NonNull Network network, @NonNull LocalNetworkInfo localNetworkInfo) {
+            checkOnHandlerThread();
             Log.i(TAG, "onLocalNetworkInfoChanged: " + localNetworkInfo);
             if (localNetworkInfo.getUpstreamNetwork() == null) {
                 mUpstreamNetwork = null;
@@ -370,7 +436,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                         TAG,
                         netCaps,
                         mLinkProperties,
-                        mLocalNetworkConfig,
+                        newLocalNetworkConfig(),
                         score,
                         new NetworkAgentConfig.Builder().build(),
                         mNetworkProvider) {};
@@ -754,20 +820,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         if (mNetworkAgent == null) {
             return;
         }
-        final LocalNetworkConfig.Builder configBuilder = new LocalNetworkConfig.Builder();
-        LocalNetworkConfig localNetworkConfig =
-                configBuilder
-                        .setUpstreamMulticastRoutingConfig(mUpstreamMulticastRoutingConfig)
-                        .setDownstreamMulticastRoutingConfig(mDownstreamMulticastRoutingConfig)
-                        .setUpstreamSelector(mUpstreamNetworkRequest)
-                        .build();
+        final LocalNetworkConfig localNetworkConfig = newLocalNetworkConfig();
         mNetworkAgent.sendLocalNetworkConfig(localNetworkConfig);
-        Log.d(
-                TAG,
-                "Sent localNetworkConfig with upstreamConfig "
-                        + mUpstreamMulticastRoutingConfig
-                        + " downstreamConfig"
-                        + mDownstreamMulticastRoutingConfig);
+        Log.d(TAG, "Sent localNetworkConfig: " + localNetworkConfig);
     }
 
     private void handleMulticastForwardingStateChanged(boolean isEnabled) {
@@ -800,8 +855,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         MulticastRoutingConfig newDownstreamConfig;
         MulticastRoutingConfig.Builder builder;
 
-        if (mDownstreamMulticastRoutingConfig.getForwardingMode() !=
-                MulticastRoutingConfig.FORWARD_SELECTED) {
+        if (mDownstreamMulticastRoutingConfig.getForwardingMode()
+                != MulticastRoutingConfig.FORWARD_SELECTED) {
             Log.e(
                     TAG,
                     "Ignore multicast listening address updates when downstream multicast "
@@ -809,8 +864,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             // Don't update the address set if downstream multicast forwarding is disabled.
             return;
         }
-        if (isAdded ==
-                mDownstreamMulticastRoutingConfig.getListeningAddresses().contains(address)) {
+        if (isAdded
+                == mDownstreamMulticastRoutingConfig.getListeningAddresses().contains(address)) {
             return;
         }
 
