@@ -64,6 +64,7 @@ import libcore.io.Streams;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -90,7 +91,8 @@ import java.util.Set;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
 public class NetworkStatsCollectionTest {
-
+    @Rule
+    public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
     private static final String TEST_FILE = "test.bin";
     private static final String TEST_IMSI = "310260000000000";
     private static final int TEST_SUBID = 1;
@@ -197,6 +199,33 @@ public class NetworkStatsCollectionTest {
         collection.read(new ByteArrayInputStream(bos.toByteArray()));
         assertSummaryTotalIncludingTags(collection, buildTemplateMobileAll(TEST_IMSI),
                 77017831L, 100995L, 35436758L, 92344L);
+    }
+
+    private InputStream getUidInputStreamFromRes(int uidRes) throws Exception {
+        final File testFile =
+                new File(InstrumentationRegistry.getContext().getFilesDir(), TEST_FILE);
+        stageFile(uidRes, testFile);
+
+        final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        collection.readLegacyUid(testFile, true);
+
+        // now export into a unified format
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        collection.write(bos);
+        return new ByteArrayInputStream(bos.toByteArray());
+    }
+
+    @Test
+    public void testFastDataInputRead() throws Exception {
+        final NetworkStatsCollection legacyCollection =
+                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS, false /* useFastDataInput */);
+        final NetworkStatsCollection fastReadCollection =
+                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS, true /* useFastDataInput */);
+        final InputStream bis = getUidInputStreamFromRes(R.raw.netstats_uid_v4);
+        legacyCollection.read(bis);
+        bis.reset();
+        fastReadCollection.read(bis);
+        assertCollectionEntries(legacyCollection.getEntries(), fastReadCollection);
     }
 
     @Test
