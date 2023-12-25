@@ -64,7 +64,8 @@ public final class NetworkStatsRecorderTest {
 
     private NetworkStatsRecorder buildRecorder(FileRotator rotator, boolean wipeOnError) {
         return new NetworkStatsRecorder(rotator, mObserver, mDropBox, TEST_PREFIX,
-                    HOUR_IN_MILLIS, false /* includeTags */, wipeOnError);
+                HOUR_IN_MILLIS, false /* includeTags */, wipeOnError,
+                false /* useFastDataInput */);
     }
 
     @Test
