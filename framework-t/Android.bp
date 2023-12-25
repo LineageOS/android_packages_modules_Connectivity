@@ -57,6 +57,10 @@ java_defaults {
         "app-compat-annotations",
         "androidx.annotation_annotation",
     ],
+    static_libs: [
+        // Cannot go to framework-connectivity because mid_sdk checks require 31.
+        "modules-utils-binary-xml",
+    ],
     impl_only_libs: [
         // The build system will use framework-bluetooth module_current stubs, because
         // of sdk_version: "module_current" above.
