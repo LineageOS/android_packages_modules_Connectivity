@@ -25,6 +25,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
@@ -57,15 +58,46 @@ public class MdnsReplySender {
     @NonNull
     private final SharedLog mSharedLog;
     private final boolean mEnableDebugLog;
+    @NonNull
+    private final Dependencies mDependencies;
+
+    /**
+     * Dependencies of MdnsReplySender, for injection in tests.
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        /**
+         * @see Handler#sendMessageDelayed(Message, long)
+         */
+        public void sendMessageDelayed(@NonNull Handler handler, @NonNull Message message,
+                long delayMillis) {
+            handler.sendMessageDelayed(message, delayMillis);
+        }
+
+        /**
+         * @see Handler#removeMessages(int)
+         */
+        public void removeMessages(@NonNull Handler handler, int what) {
+            handler.removeMessages(what);
+        }
+    }
 
     public MdnsReplySender(@NonNull Looper looper, @NonNull MdnsInterfaceSocket socket,
             @NonNull byte[] packetCreationBuffer, @NonNull SharedLog sharedLog,
             boolean enableDebugLog) {
+        this(looper, socket, packetCreationBuffer, sharedLog, enableDebugLog, new Dependencies());
+    }
+
+    @VisibleForTesting
+    public MdnsReplySender(@NonNull Looper looper, @NonNull MdnsInterfaceSocket socket,
+            @NonNull byte[] packetCreationBuffer, @NonNull SharedLog sharedLog,
+            boolean enableDebugLog, @NonNull Dependencies dependencies) {
         mHandler = new SendHandler(looper);
         mSocket = socket;
         mPacketCreationBuffer = packetCreationBuffer;
         mSharedLog = sharedLog;
         mEnableDebugLog = enableDebugLog;
+        mDependencies = dependencies;
     }
 
     /**
@@ -74,7 +106,8 @@ public class MdnsReplySender {
     public void queueReply(@NonNull MdnsReplyInfo reply) {
         ensureRunningOnHandlerThread(mHandler);
         // TODO: implement response aggregation (RFC 6762 6.4)
-        mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_SEND, reply), reply.sendDelayMs);
+        mDependencies.sendMessageDelayed(
+                mHandler, mHandler.obtainMessage(MSG_SEND, reply), reply.sendDelayMs);
 
         if (mEnableDebugLog) {
             mSharedLog.v("Scheduling " + reply);
@@ -104,7 +137,7 @@ public class MdnsReplySender {
      */
     public void cancelAll() {
         ensureRunningOnHandlerThread(mHandler);
-        mHandler.removeMessages(MSG_SEND);
+        mDependencies.removeMessages(mHandler, MSG_SEND);
     }
 
     private class SendHandler extends Handler {
