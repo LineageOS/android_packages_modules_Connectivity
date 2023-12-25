@@ -27,6 +27,7 @@ import static android.system.OsConstants.NETLINK_INET_DIAG;
 import static com.android.net.module.util.netlink.NetlinkConstants.NLMSG_DONE;
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DESTROY;
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DIAG_BY_FAMILY;
+import static com.android.net.module.util.netlink.NetlinkConstants.SOCKDIAG_MSG_HEADER_SIZE;
 import static com.android.net.module.util.netlink.NetlinkConstants.hexify;
 import static com.android.net.module.util.netlink.NetlinkConstants.stringForAddressFamily;
 import static com.android.net.module.util.netlink.NetlinkConstants.stringForProtocol;
@@ -59,6 +60,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -154,7 +156,8 @@ public class InetDiagMessage extends NetlinkMessage {
     }
 
     public StructInetDiagMsg inetDiagMsg;
-
+    // The netlink attributes.
+    public List<StructNlAttr> nlAttrs = new ArrayList<>();
     @VisibleForTesting
     public InetDiagMessage(@NonNull StructNlMsgHdr header) {
         super(header);
@@ -172,6 +175,16 @@ public class InetDiagMessage extends NetlinkMessage {
         if (msg.inetDiagMsg == null) {
             return null;
         }
+        final int payloadLength = header.nlmsg_len - SOCKDIAG_MSG_HEADER_SIZE;
+        final ByteBuffer payload = byteBuffer.slice();
+        while (payload.position() < payloadLength) {
+            final StructNlAttr attr = StructNlAttr.parse(payload);
+            // Stop parsing for truncated or malformed attribute
+            if (attr == null)  return null;
+
+            msg.nlAttrs.add(attr);
+        }
+
         return msg;
     }
 
