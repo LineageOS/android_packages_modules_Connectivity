@@ -22,6 +22,7 @@ import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
 
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__FAST_DATA_INPUT_STATE__FDIS_DISABLED;
+import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__FAST_DATA_INPUT_STATE__FDIS_ENABLED;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__OPERATION_TYPE__ROT_READ;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_UID;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_UIDTAG;
@@ -61,7 +62,8 @@ public class NetworkStatsMetricsLogger {
         public void writeRecorderFileReadingStats(int recorderType, int readIndex,
                                                   int readLatencyMillis,
                                                   int fileCount, int totalFileSize,
-                                                  int keys, int uids, int totalHistorySize) {
+                                                  int keys, int uids, int totalHistorySize,
+                                                  boolean useFastDataInput) {
             ConnectivityStatsLog.write(NETWORK_STATS_RECORDER_FILE_OPERATED,
                     NETWORK_STATS_RECORDER_FILE_OPERATED__OPERATION_TYPE__ROT_READ,
                     recorderType,
@@ -72,7 +74,9 @@ public class NetworkStatsMetricsLogger {
                     keys,
                     uids,
                     totalHistorySize,
-                    NETWORK_STATS_RECORDER_FILE_OPERATED__FAST_DATA_INPUT_STATE__FDIS_DISABLED);
+                    useFastDataInput
+                            ? NETWORK_STATS_RECORDER_FILE_OPERATED__FAST_DATA_INPUT_STATE__FDIS_ENABLED
+                            : NETWORK_STATS_RECORDER_FILE_OPERATED__FAST_DATA_INPUT_STATE__FDIS_DISABLED);
         }
     }
 
@@ -138,7 +142,8 @@ public class NetworkStatsMetricsLogger {
      * Log statistics from the NetworkStatsRecorder file reading process into statsd.
      */
     public void logRecorderFileReading(@NonNull String prefix, int readLatencyMillis,
-            @Nullable File statsDir, @NonNull NetworkStatsCollection collection) {
+            @Nullable File statsDir, @NonNull NetworkStatsCollection collection,
+            boolean useFastDataInput) {
         final Set<Integer> uids = new HashSet<>();
         final Map<NetworkStatsCollection.Key, NetworkStatsHistory> entries =
                 collection.getEntries();
@@ -160,6 +165,7 @@ public class NetworkStatsMetricsLogger {
                 fileAttributes.second /* totalFileSize */,
                 entries.size(),
                 uids.size(),
-                totalHistorySize);
+                totalHistorySize,
+                useFastDataInput);
     }
 }
