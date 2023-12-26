@@ -21,7 +21,7 @@ import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.AF_UNSPEC;
 import static android.system.OsConstants.EACCES;
 import static android.system.OsConstants.NETLINK_ROUTE;
-
+import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
@@ -190,5 +190,18 @@ public class NetlinkUtilsTest {
         addrMsg.pack(byteBuffer);
 
         return bytes;
+    }
+
+    @Test
+    public void testGetIpv6MulticastRoutes_doesNotThrow() {
+        var multicastRoutes = NetlinkUtils.getIpv6MulticastRoutes();
+
+        for (var route : multicastRoutes) {
+            assertNotNull(route);
+            assertEquals("Route is not IP6MR: " + route,
+                    RTNL_FAMILY_IP6MR, route.getRtmFamily());
+            assertNotNull("Route doesn't contain source: " + route, route.getSource());
+            assertNotNull("Route doesn't contain destination: " + route, route.getDestination());
+        }
     }
 }
