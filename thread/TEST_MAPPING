@@ -8,5 +8,10 @@
     {
       "name": "ThreadNetworkUnitTests"
     }
+  ],
+  "postsubmit": [
+    {
+      "name": "ThreadNetworkIntegrationTests"
+    }
   ]
 }
