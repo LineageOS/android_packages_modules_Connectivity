@@ -199,7 +199,7 @@ public class NetworkStatsRecorder {
             // have wipeOnError flag unset, skip reporting metrics.
             if (mWipeOnError) {
                 mMetricsLogger.logRecorderFileReading(mCookie, (int) (readEnd - readStart),
-                        mStatsDir, res);
+                        mStatsDir, res, mUseFastDataInput);
             }
         }
         return res;
