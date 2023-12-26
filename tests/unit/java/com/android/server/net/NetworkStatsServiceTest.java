@@ -2231,7 +2231,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         return new NetworkStatsRecorder(new FileRotator(
                 directory, prefix, config.rotateAgeMillis, config.deleteAgeMillis),
                 observer, dropBox, prefix, config.bucketDuration, includeTags, wipeOnError,
-                false /* useFastDataInput */);
+                false /* useFastDataInput */, directory);
     }
 
     private NetworkStatsCollection getLegacyCollection(String prefix, boolean includeTags) {
