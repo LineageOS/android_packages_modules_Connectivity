@@ -22,6 +22,7 @@ import static android.net.TrafficStats.MB_IN_BYTES;
 import static android.text.format.DateUtils.YEAR_IN_MILLIS;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.NetworkIdentitySet;
 import android.net.NetworkStats;
 import android.net.NetworkStats.NonMonotonicObserver;
@@ -45,6 +46,7 @@ import com.android.net.module.util.NetworkStatsUtils;
 import libcore.io.IoUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -93,6 +95,8 @@ public class NetworkStatsRecorder {
 
     private WeakReference<NetworkStatsCollection> mComplete;
     private final NetworkStatsMetricsLogger mMetricsLogger = new NetworkStatsMetricsLogger();
+    @Nullable
+    private final File mStatsDir;
 
     /**
      * Non-persisted recorder, with only one bucket. Used by {@link NetworkStatsObservers}.
@@ -114,6 +118,7 @@ public class NetworkStatsRecorder {
         mSinceBoot = new NetworkStatsCollection(mBucketDuration);
 
         mPendingRewriter = null;
+        mStatsDir = null;
     }
 
     /**
@@ -121,7 +126,7 @@ public class NetworkStatsRecorder {
      */
     public NetworkStatsRecorder(FileRotator rotator, NonMonotonicObserver<String> observer,
             DropBoxManager dropBox, String cookie, long bucketDuration, boolean onlyTags,
-            boolean wipeOnError, boolean useFastDataInput) {
+            boolean wipeOnError, boolean useFastDataInput, @Nullable File statsDir) {
         mRotator = Objects.requireNonNull(rotator, "missing FileRotator");
         mObserver = Objects.requireNonNull(observer, "missing NonMonotonicObserver");
         mDropBox = Objects.requireNonNull(dropBox, "missing DropBoxManager");
@@ -136,6 +141,7 @@ public class NetworkStatsRecorder {
         mSinceBoot = new NetworkStatsCollection(bucketDuration);
 
         mPendingRewriter = new CombiningRewriter(mPending);
+        mStatsDir = statsDir;
     }
 
     public void setPersistThreshold(long thresholdBytes) {
@@ -192,7 +198,8 @@ public class NetworkStatsRecorder {
             // For legacy recorders which are used for data integrity check, which
             // have wipeOnError flag unset, skip reporting metrics.
             if (mWipeOnError) {
-                mMetricsLogger.logRecorderFileReading(mCookie, (int) (readEnd - readStart), res);
+                mMetricsLogger.logRecorderFileReading(mCookie, (int) (readEnd - readStart),
+                        mStatsDir, res);
             }
         }
         return res;
