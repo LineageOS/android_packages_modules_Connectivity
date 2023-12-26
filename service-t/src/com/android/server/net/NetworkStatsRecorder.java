@@ -32,12 +32,14 @@ import android.net.NetworkTemplate;
 import android.net.TrafficStats;
 import android.os.Binder;
 import android.os.DropBoxManager;
+import android.os.SystemClock;
 import android.service.NetworkStatsRecorderProto;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.proto.ProtoOutputStream;
 
 import com.android.internal.util.FileRotator;
+import com.android.metrics.NetworkStatsMetricsLogger;
 import com.android.net.module.util.NetworkStatsUtils;
 
 import libcore.io.IoUtils;
@@ -90,6 +92,7 @@ public class NetworkStatsRecorder {
     private final CombiningRewriter mPendingRewriter;
 
     private WeakReference<NetworkStatsCollection> mComplete;
+    private final NetworkStatsMetricsLogger mMetricsLogger = new NetworkStatsMetricsLogger();
 
     /**
      * Non-persisted recorder, with only one bucket. Used by {@link NetworkStatsObservers}.
@@ -182,8 +185,15 @@ public class NetworkStatsRecorder {
         Objects.requireNonNull(mRotator, "missing FileRotator");
         NetworkStatsCollection res = mComplete != null ? mComplete.get() : null;
         if (res == null) {
+            final long readStart = SystemClock.elapsedRealtime();
             res = loadLocked(Long.MIN_VALUE, Long.MAX_VALUE);
             mComplete = new WeakReference<NetworkStatsCollection>(res);
+            final long readEnd = SystemClock.elapsedRealtime();
+            // For legacy recorders which are used for data integrity check, which
+            // have wipeOnError flag unset, skip reporting metrics.
+            if (mWipeOnError) {
+                mMetricsLogger.logRecorderFileReading(mCookie, (int) (readEnd - readStart), res);
+            }
         }
         return res;
     }
