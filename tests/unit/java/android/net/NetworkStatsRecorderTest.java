@@ -114,7 +114,8 @@ public final class NetworkStatsRecorderTest {
         final NetworkStatsMetricsLogger.Dependencies deps =
                 mock(NetworkStatsMetricsLogger.Dependencies.class);
         final NetworkStatsMetricsLogger logger = new NetworkStatsMetricsLogger(deps);
-        logger.logRecorderFileReading(PREFIX_XT, 888, null /* statsDir */, collection);
+        logger.logRecorderFileReading(PREFIX_XT, 888, null /* statsDir */, collection,
+                false /* useFastDataInput */);
         verify(deps).writeRecorderFileReadingStats(
                 NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_XT,
                 1 /* readIndex */,
@@ -123,11 +124,13 @@ public final class NetworkStatsRecorderTest {
                 0 /* totalFileSize */,
                 0 /* keys */,
                 0 /* uids */,
-                0 /* totalHistorySize */
+                0 /* totalHistorySize */,
+                false /* useFastDataInput */
         );
 
         // Write second time, verify the index increases.
-        logger.logRecorderFileReading(PREFIX_XT, 567, null /* statsDir */, collection);
+        logger.logRecorderFileReading(PREFIX_XT, 567, null /* statsDir */, collection,
+                true /* useFastDataInput */);
         verify(deps).writeRecorderFileReadingStats(
                 NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_XT,
                 2 /* readIndex */,
@@ -136,7 +139,8 @@ public final class NetworkStatsRecorderTest {
                 0 /* totalFileSize */,
                 0 /* keys */,
                 0 /* uids */,
-                0 /* totalHistorySize */
+                0 /* totalHistorySize */,
+                true /* useFastDataInput */
         );
     }
 
@@ -156,7 +160,8 @@ public final class NetworkStatsRecorderTest {
         final NetworkStatsMetricsLogger.Dependencies deps =
                 mock(NetworkStatsMetricsLogger.Dependencies.class);
         final NetworkStatsMetricsLogger logger = new NetworkStatsMetricsLogger(deps);
-        logger.logRecorderFileReading(PREFIX_UID, 123, null /* statsDir */, collection);
+        logger.logRecorderFileReading(PREFIX_UID, 123, null /* statsDir */, collection,
+                false /* useFastDataInput */);
         verify(deps).writeRecorderFileReadingStats(
                 NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_UID,
                 1 /* readIndex */,
@@ -165,7 +170,8 @@ public final class NetworkStatsRecorderTest {
                 0 /* totalFileSize */,
                 3 /* keys */,
                 2 /* uids */,
-                5 /* totalHistorySize */
+                5 /* totalHistorySize */,
+                false /* useFastDataInput */
         );
     }
 
@@ -185,7 +191,8 @@ public final class NetworkStatsRecorderTest {
         final NetworkStatsMetricsLogger.Dependencies deps =
                 mock(NetworkStatsMetricsLogger.Dependencies.class);
         final NetworkStatsMetricsLogger logger = new NetworkStatsMetricsLogger(deps);
-        logger.logRecorderFileReading(PREFIX_UID_TAG, 678, statsDir, collection);
+        logger.logRecorderFileReading(PREFIX_UID_TAG, 678, statsDir, collection,
+                false /* useFastDataInput */);
         verify(deps).writeRecorderFileReadingStats(
                 NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_UIDTAG,
                 1 /* readIndex */,
@@ -194,7 +201,8 @@ public final class NetworkStatsRecorderTest {
                 26 /* totalFileSize */,
                 0 /* keys */,
                 0 /* uids */,
-                0 /* totalHistorySize */
+                0 /* totalHistorySize */,
+                false /* useFastDataInput */
         );
     }
 
