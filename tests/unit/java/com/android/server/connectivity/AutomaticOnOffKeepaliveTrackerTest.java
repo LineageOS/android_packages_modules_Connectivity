@@ -162,7 +162,7 @@ public class AutomaticOnOffKeepaliveTrackerTest {
             + "00000000"            // idiag_expires
             + "00000000"            // idiag_rqueue
             + "00000000"            // idiag_wqueue
-            + "00000000"            // idiag_uid
+            + "39300000"            // idiag_uid = 12345
             + "00000000"            // idiag_inode
             // rtattr
             + "0500"            // len = 5
@@ -424,6 +424,16 @@ public class AutomaticOnOffKeepaliveTrackerTest {
         setupResponseWithSocketExisting();
         assertTrue(visibleOnHandlerThread(mTestHandler,
                 () -> mAOOKeepaliveTracker.isAnyTcpSocketConnected(TEST_NETID, TEST_UID_RANGES)));
+    }
+
+    @Test
+    public void testIsAnyTcpSocketConnected_noTargetUidSocket() throws Exception {
+        setupResponseWithSocketExisting();
+        // Configured uid(12345) is not in the VPN range.
+        assertFalse(visibleOnHandlerThread(mTestHandler,
+                () -> mAOOKeepaliveTracker.isAnyTcpSocketConnected(
+                        TEST_NETID,
+                        new ArraySet<>(Arrays.asList(new Range<>(99999, 99999))))));
     }
 
     @Test
