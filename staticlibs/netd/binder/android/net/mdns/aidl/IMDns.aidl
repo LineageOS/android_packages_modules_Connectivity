@@ -28,6 +28,8 @@ interface IMDns {
      * Start the MDNSResponder daemon.
      *
      * @throws ServiceSpecificException with unix errno EALREADY if daemon is already running.
+     * @throws UnsupportedOperationException on Android V and after.
+     * @deprecated unimplemented on V+.
      */
     void startDaemon();
 
@@ -35,6 +37,8 @@ interface IMDns {
      * Stop the MDNSResponder daemon.
      *
      * @throws ServiceSpecificException with unix errno EBUSY if daemon is still in use.
+     * @throws UnsupportedOperationException on Android V and after.
+     * @deprecated unimplemented on V+.
      */
     void stopDaemon();
 
@@ -49,6 +53,8 @@ interface IMDns {
      * @throws ServiceSpecificException with one of the following error values:
      *         - Unix errno EBUSY if request id is already in use.
      *         - kDNSServiceErr_* list in dns_sd.h if registration fail.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void registerService(in RegistrationInfo info);
 
@@ -63,6 +69,8 @@ interface IMDns {
      * @throws ServiceSpecificException with one of the following error values:
      *         - Unix errno EBUSY if request id is already in use.
      *         - kDNSServiceErr_* list in dns_sd.h if discovery fail.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void discover(in DiscoveryInfo info);
 
@@ -77,6 +85,8 @@ interface IMDns {
      * @throws ServiceSpecificException with one of the following error values:
      *         - Unix errno EBUSY if request id is already in use.
      *         - kDNSServiceErr_* list in dns_sd.h if resolution fail.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void resolve(in ResolutionInfo info);
 
@@ -92,6 +102,8 @@ interface IMDns {
      * @throws ServiceSpecificException with one of the following error values:
      *         - Unix errno EBUSY if request id is already in use.
      *         - kDNSServiceErr_* list in dns_sd.h if getting address fail.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void getServiceAddress(in GetAddressInfo info);
 
@@ -101,6 +113,8 @@ interface IMDns {
      * @param id the operation id to be stopped.
      *
      * @throws ServiceSpecificException with unix errno ESRCH if request id is not in use.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void stopOperation(int id);
 
@@ -112,6 +126,8 @@ interface IMDns {
      * @throws ServiceSpecificException with one of the following error values:
      *         - Unix errno EINVAL if listener is null.
      *         - Unix errno EEXIST if register duplicated listener.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void registerEventListener(in IMDnsEventListener listener);
 
@@ -121,6 +137,8 @@ interface IMDns {
      * @param listener The listener to be unregistered.
      *
      * @throws ServiceSpecificException with unix errno EINVAL if listener is null.
+     * @throws UnsupportedOperationException on Android U and after.
+     * @deprecated unimplemented on U+.
      */
     void unregisterEventListener(in IMDnsEventListener listener);
 }

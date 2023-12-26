@@ -1,11 +1,11 @@
-/**
- * Copyright (c) 2022, The Android Open Source Project
+/*
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,30 +33,13 @@
 
 package android.net.mdns.aidl;
 /* @hide */
-interface IMDnsEventListener {
-  /**
-   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
-   */
-  oneway void onServiceRegistrationStatus(in android.net.mdns.aidl.RegistrationInfo status);
-  /**
-   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
-   */
-  oneway void onServiceDiscoveryStatus(in android.net.mdns.aidl.DiscoveryInfo status);
-  /**
-   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
-   */
-  oneway void onServiceResolutionStatus(in android.net.mdns.aidl.ResolutionInfo status);
-  /**
-   * @deprecated this is implemented for backward compatibility. Don't use it in new code.
-   */
-  oneway void onGettingServiceAddressStatus(in android.net.mdns.aidl.GetAddressInfo status);
-  const int SERVICE_DISCOVERY_FAILED = 602;
-  const int SERVICE_FOUND = 603;
-  const int SERVICE_LOST = 604;
-  const int SERVICE_REGISTRATION_FAILED = 605;
-  const int SERVICE_REGISTERED = 606;
-  const int SERVICE_RESOLUTION_FAILED = 607;
-  const int SERVICE_RESOLVED = 608;
-  const int SERVICE_GET_ADDR_FAILED = 611;
-  const int SERVICE_GET_ADDR_SUCCESS = 612;
+@JavaDerive(equals=true, toString=true) @JavaOnlyImmutable
+parcelable DiscoveryInfo {
+  int id;
+  int result;
+  @utf8InCpp String serviceName;
+  @utf8InCpp String registrationType;
+  @utf8InCpp String domainName;
+  int interfaceIdx;
+  int netId;
 }
