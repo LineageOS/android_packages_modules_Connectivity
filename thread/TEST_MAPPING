@@ -2,9 +2,7 @@
   "presubmit": [
     {
       "name": "CtsThreadNetworkTestCases"
-    }
-  ],
-  "presubmit": [
+    },
     {
       "name": "ThreadNetworkUnitTests"
     }
