@@ -199,7 +199,8 @@ public class NsdService extends INsdManager.Stub {
 
     private final Context mContext;
     private final NsdStateMachine mNsdStateMachine;
-    private final MDnsManager mMDnsManager;
+    // It can be null on V+ device since mdns native service provided by netd is removed.
+    private final @Nullable MDnsManager mMDnsManager;
     private final MDnsEventCallback mMDnsEventCallback;
     @NonNull
     private final Dependencies mDeps;
@@ -541,6 +542,11 @@ public class NsdService extends INsdManager.Stub {
         }
 
         private void maybeStartDaemon() {
+            if (mMDnsManager == null) {
+                Log.wtf(TAG, "maybeStartDaemon: mMDnsManager is null");
+                return;
+            }
+
             if (mIsDaemonStarted) {
                 if (DBG) Log.d(TAG, "Daemon is already started.");
                 return;
@@ -553,6 +559,11 @@ public class NsdService extends INsdManager.Stub {
         }
 
         private void maybeStopDaemon() {
+            if (mMDnsManager == null) {
+                Log.wtf(TAG, "maybeStopDaemon: mMDnsManager is null");
+                return;
+            }
+
             if (!mIsDaemonStarted) {
                 if (DBG) Log.d(TAG, "Daemon has not been started.");
                 return;
@@ -1698,7 +1709,8 @@ public class NsdService extends INsdManager.Stub {
         mContext = ctx;
         mNsdStateMachine = new NsdStateMachine(TAG, handler);
         mNsdStateMachine.start();
-        mMDnsManager = ctx.getSystemService(MDnsManager.class);
+        // It can fail on V+ device since mdns native service provided by netd is removed.
+        mMDnsManager = SdkLevel.isAtLeastV() ? null : ctx.getSystemService(MDnsManager.class);
         mMDnsEventCallback = new MDnsEventCallback(mNsdStateMachine);
         mDeps = deps;
 
@@ -2235,6 +2247,11 @@ public class NsdService extends INsdManager.Stub {
     }
 
     private boolean registerService(int transactionId, NsdServiceInfo service) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "registerService: mMDnsManager is null");
+            return false;
+        }
+
         if (DBG) {
             Log.d(TAG, "registerService: " + transactionId + " " + service);
         }
@@ -2252,10 +2269,19 @@ public class NsdService extends INsdManager.Stub {
     }
 
     private boolean unregisterService(int transactionId) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "unregisterService: mMDnsManager is null");
+            return false;
+        }
         return mMDnsManager.stopOperation(transactionId);
     }
 
     private boolean discoverServices(int transactionId, NsdServiceInfo serviceInfo) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "discoverServices: mMDnsManager is null");
+            return false;
+        }
+
         final String type = serviceInfo.getServiceType();
         final int discoverInterface = getNetworkInterfaceIndex(serviceInfo);
         if (serviceInfo.getNetwork() != null && discoverInterface == IFACE_IDX_ANY) {
@@ -2266,10 +2292,18 @@ public class NsdService extends INsdManager.Stub {
     }
 
     private boolean stopServiceDiscovery(int transactionId) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "stopServiceDiscovery: mMDnsManager is null");
+            return false;
+        }
         return mMDnsManager.stopOperation(transactionId);
     }
 
     private boolean resolveService(int transactionId, NsdServiceInfo service) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "resolveService: mMDnsManager is null");
+            return false;
+        }
         final String name = service.getServiceName();
         final String type = service.getServiceType();
         final int resolveInterface = getNetworkInterfaceIndex(service);
@@ -2343,14 +2377,26 @@ public class NsdService extends INsdManager.Stub {
     }
 
     private boolean stopResolveService(int transactionId) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "stopResolveService: mMDnsManager is null");
+            return false;
+        }
         return mMDnsManager.stopOperation(transactionId);
     }
 
     private boolean getAddrInfo(int transactionId, String hostname, int interfaceIdx) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "getAddrInfo: mMDnsManager is null");
+            return false;
+        }
         return mMDnsManager.getServiceAddress(transactionId, hostname, interfaceIdx);
     }
 
     private boolean stopGetAddrInfo(int transactionId) {
+        if (mMDnsManager == null) {
+            Log.wtf(TAG, "stopGetAddrInfo: mMDnsManager is null");
+            return false;
+        }
         return mMDnsManager.stopOperation(transactionId);
     }
 
