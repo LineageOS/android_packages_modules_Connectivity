@@ -196,6 +196,22 @@ public class NsdManagerTest {
         verify(listener2, timeout(mTimeoutMs).times(1)).onServiceResolved(reply);
     }
 
+    @Test
+    public void testRegisterServiceWithAdvertisingRequest() throws Exception {
+        final NsdManager manager = mManager;
+        final NsdServiceInfo request = new NsdServiceInfo("another_name2", "another_type2");
+        request.setPort(2203);
+        final AdvertisingRequest advertisingRequest = new AdvertisingRequest.Builder(request,
+                PROTOCOL).build();
+        final NsdManager.RegistrationListener listener = mock(
+                NsdManager.RegistrationListener.class);
+
+        manager.registerService(advertisingRequest, Runnable::run, listener);
+        int key4 = getRequestKey(req -> verify(mServiceConn).registerService(req.capture(), any()));
+        mCallback.onRegisterServiceSucceeded(key4, request);
+        verify(listener, timeout(mTimeoutMs).times(1)).onServiceRegistered(request);
+    }
+
     private void doTestRegisterService() throws Exception {
         NsdManager manager = mManager;
 
@@ -346,8 +362,19 @@ public class NsdManagerTest {
         NsdManager.ResolveListener listener3 = mock(NsdManager.ResolveListener.class);
 
         NsdServiceInfo invalidService = new NsdServiceInfo(null, null);
-        NsdServiceInfo validService = new NsdServiceInfo("a_name", "a_type");
+        NsdServiceInfo validService = new NsdServiceInfo("a_name", "_a_type._tcp");
+        NsdServiceInfo otherServiceWithSubtype = new NsdServiceInfo("b_name", "_a_type._tcp,_sub1");
+        NsdServiceInfo validServiceDuplicate = new NsdServiceInfo("a_name", "_a_type._tcp");
+        NsdServiceInfo validServiceSubtypeUpdate = new NsdServiceInfo("a_name",
+                "_a_type._tcp,_sub1,_s2");
+        NsdServiceInfo otherSubtypeUpdate = new NsdServiceInfo("a_name", "_a_type._tcp,_sub1,_s3");
+        NsdServiceInfo dotSyntaxSubtypeUpdate = new NsdServiceInfo("a_name", "_sub1._a_type._tcp");
         validService.setPort(2222);
+        otherServiceWithSubtype.setPort(2222);
+        validServiceDuplicate.setPort(2222);
+        validServiceSubtypeUpdate.setPort(2222);
+        otherSubtypeUpdate.setPort(2222);
+        dotSyntaxSubtypeUpdate.setPort(2222);
 
         // Service registration
         //  - invalid arguments
@@ -358,7 +385,21 @@ public class NsdManagerTest {
         mustFail(() -> { manager.registerService(validService, -1, listener1); });
         mustFail(() -> { manager.registerService(validService, PROTOCOL, null); });
         manager.registerService(validService, PROTOCOL, listener1);
-        //  - listener already registered
+        //  - update without subtype is not allowed
+        mustFail(() -> { manager.registerService(validServiceDuplicate, PROTOCOL, listener1); });
+        //  - update with subtype is allowed
+        manager.registerService(validServiceSubtypeUpdate, PROTOCOL, listener1);
+        //  - re-updating to the same subtype is allowed
+        manager.registerService(validServiceSubtypeUpdate, PROTOCOL, listener1);
+        //  - updating to other subtypes is allowed
+        manager.registerService(otherSubtypeUpdate, PROTOCOL, listener1);
+        //  - update back to the service without subtype is allowed
+        manager.registerService(validService, PROTOCOL, listener1);
+        //  - updating to a subtype with _sub._type syntax is not allowed
+        mustFail(() -> { manager.registerService(dotSyntaxSubtypeUpdate, PROTOCOL, listener1); });
+        //  - updating to a different service name is not allowed
+        mustFail(() -> { manager.registerService(otherServiceWithSubtype, PROTOCOL, listener1); });
+        //  - listener already registered, and not using subtypes
         mustFail(() -> { manager.registerService(validService, PROTOCOL, listener1); });
         manager.unregisterService(listener1);
         // TODO: make listener immediately reusable
