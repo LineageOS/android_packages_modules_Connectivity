@@ -38,6 +38,7 @@ import android.os.Build;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.FunctionalUtils.ThrowingConsumer;
@@ -86,71 +87,79 @@ public class NsdManagerTest {
     @Test
     @EnableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testResolveServiceS() throws Exception {
-        verify(mServiceConn, never()).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ false);
         doTestResolveService();
     }
 
     @Test
     @DisableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testResolveServicePreS() throws Exception {
-        verify(mServiceConn).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ true);
         doTestResolveService();
     }
 
     @Test
     @EnableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testDiscoverServiceS() throws Exception {
-        verify(mServiceConn, never()).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ false);
         doTestDiscoverService();
     }
 
     @Test
     @DisableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testDiscoverServicePreS() throws Exception {
-        verify(mServiceConn).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ true);
         doTestDiscoverService();
     }
 
     @Test
     @EnableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testParallelResolveServiceS() throws Exception {
-        verify(mServiceConn, never()).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ false);
         doTestParallelResolveService();
     }
 
     @Test
     @DisableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testParallelResolveServicePreS() throws Exception {
-        verify(mServiceConn).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ true);
         doTestParallelResolveService();
     }
 
     @Test
     @EnableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testInvalidCallsS() throws Exception {
-        verify(mServiceConn, never()).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ false);
         doTestInvalidCalls();
     }
 
     @Test
     @DisableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testInvalidCallsPreS() throws Exception {
-        verify(mServiceConn).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ true);
         doTestInvalidCalls();
     }
 
     @Test
     @EnableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testRegisterServiceS() throws Exception {
-        verify(mServiceConn, never()).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ false);
         doTestRegisterService();
     }
 
     @Test
     @DisableCompatChanges(ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
     public void testRegisterServicePreS() throws Exception {
-        verify(mServiceConn).startDaemon();
+        verifyDaemonStarted(/* targetSdkPreS= */ true);
         doTestRegisterService();
+    }
+
+    private void verifyDaemonStarted(boolean targetSdkPreS) throws Exception {
+        if (targetSdkPreS && !SdkLevel.isAtLeastV()) {
+            verify(mServiceConn).startDaemon();
+        } else {
+            verify(mServiceConn, never()).startDaemon();
+        }
     }
 
     private void doTestResolveService() throws Exception {
