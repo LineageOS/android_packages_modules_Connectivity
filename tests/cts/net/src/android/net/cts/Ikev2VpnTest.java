@@ -648,7 +648,7 @@ public class Ikev2VpnTest {
                         testIpv6Only, requiresValidation, testSessionKey , testIkeTunConnParams)));
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testStartStopVpnProfileV4() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
@@ -660,7 +660,7 @@ public class Ikev2VpnTest {
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
-    @Test
+    @Test @IgnoreUpTo(SC_V2)
     public void testStartStopVpnProfileV6() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
