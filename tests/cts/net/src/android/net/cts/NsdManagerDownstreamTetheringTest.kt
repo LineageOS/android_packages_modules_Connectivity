@@ -62,7 +62,7 @@ class NsdManagerDownstreamTetheringTest : EthernetTetheringTestBase() {
 
     @Test
     fun testMdnsDiscoveryCanSendPacketOnLocalOnlyDownstreamTetheringInterface() {
-        assumeFalse(isInterfaceForTetheringAvailable)
+        assumeFalse(isInterfaceForTetheringAvailable())
 
         var downstreamIface: TestNetworkInterface? = null
         var tetheringEventCallback: MyTetheringEventCallback? = null
@@ -104,7 +104,7 @@ class NsdManagerDownstreamTetheringTest : EthernetTetheringTestBase() {
 
     @Test
     fun testMdnsDiscoveryWorkOnTetheringInterface() {
-        assumeFalse(isInterfaceForTetheringAvailable)
+        assumeFalse(isInterfaceForTetheringAvailable())
         setIncludeTestInterfaces(true)
 
         var downstreamIface: TestNetworkInterface? = null
