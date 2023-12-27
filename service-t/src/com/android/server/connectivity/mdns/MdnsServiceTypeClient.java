@@ -541,6 +541,9 @@ public class MdnsServiceTypeClient {
             }
 
             if (response.isComplete()) {
+                // There is a bug here: the newServiceFound is global right now. The state needs
+                // to be per listener because of the  responseMatchesOptions() filter.
+                // Otherwise, it won't handle the subType update properly.
                 if (newServiceFound || serviceBecomesComplete) {
                     sharedLog.log("onServiceFound: " + serviceInfo);
                     listener.onServiceFound(serviceInfo, false /* isServiceFromCache */);
