@@ -2200,25 +2200,24 @@ public class NsdService extends INsdManager.Stub {
                 throw new SecurityException("API is not available in before API level 33");
             }
 
-            // REGISTER_NSD_OFFLOAD_ENGINE was only added to the SDK in V.
-            if (SdkLevel.isAtLeastV() && PermissionUtils.checkAnyPermissionOf(context,
-                    REGISTER_NSD_OFFLOAD_ENGINE)) {
-                return;
+            final ArrayList<String> permissionsList = new ArrayList<>(Arrays.asList(NETWORK_STACK,
+                    PERMISSION_MAINLINE_NETWORK_STACK, NETWORK_SETTINGS));
+
+            if (SdkLevel.isAtLeastV()) {
+                // REGISTER_NSD_OFFLOAD_ENGINE was only added to the SDK in V.
+                permissionsList.add(REGISTER_NSD_OFFLOAD_ENGINE);
+            } else if (SdkLevel.isAtLeastU()) {
+                // REGISTER_NSD_OFFLOAD_ENGINE cannot be backport to U. In U, check the DEVICE_POWER
+                // permission instead.
+                permissionsList.add(DEVICE_POWER);
             }
 
-            // REGISTER_NSD_OFFLOAD_ENGINE cannot be backport to U. In U, check the DEVICE_POWER
-            // permission instead.
-            if (!SdkLevel.isAtLeastV() && SdkLevel.isAtLeastU()
-                    && PermissionUtils.checkAnyPermissionOf(context, DEVICE_POWER)) {
-                return;
-            }
-            if (PermissionUtils.checkAnyPermissionOf(context, NETWORK_STACK,
-                    PERMISSION_MAINLINE_NETWORK_STACK, NETWORK_SETTINGS)) {
+            if (PermissionUtils.checkAnyPermissionOf(context,
+                    permissionsList.toArray(new String[0]))) {
                 return;
             }
             throw new SecurityException("Requires one of the following permissions: "
-                    + String.join(", ", List.of(REGISTER_NSD_OFFLOAD_ENGINE, NETWORK_STACK,
-                    PERMISSION_MAINLINE_NETWORK_STACK, NETWORK_SETTINGS)) + ".");
+                    + String.join(", ", permissionsList) + ".");
         }
     }
 
