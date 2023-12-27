@@ -156,7 +156,8 @@ class NetworkStatsTest {
                 UID_COLLECTION_BUCKET_DURATION_MS,
                 false /* includeTags */,
                 false /* wipeOnError */,
-                useFastDataInput /* useFastDataInput */
+                useFastDataInput /* useFastDataInput */,
+                it
             )
             recorder.orLoadCompleteLocked
         }

@@ -985,8 +985,8 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
      * @hide
      */
     @Nullable
-    public static String compareStats(
-            NetworkStatsCollection migrated, NetworkStatsCollection legacy) {
+    public static String compareStats(NetworkStatsCollection migrated,
+                                      NetworkStatsCollection legacy, boolean allowKeyChange) {
         final Map<NetworkStatsCollection.Key, NetworkStatsHistory> migEntries =
                 migrated.getEntries();
         final Map<NetworkStatsCollection.Key, NetworkStatsHistory> legEntries = legacy.getEntries();
@@ -998,7 +998,7 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
             final NetworkStatsHistory legHistory = legEntries.get(legKey);
             final NetworkStatsHistory migHistory = migEntries.get(legKey);
 
-            if (migHistory == null && couldKeyChangeOnImport(legKey)) {
+            if (migHistory == null && allowKeyChange && couldKeyChangeOnImport(legKey)) {
                 unmatchedLegKeys.remove(legKey);
                 continue;
             }
