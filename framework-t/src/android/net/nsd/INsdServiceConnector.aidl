@@ -16,6 +16,7 @@
 
 package android.net.nsd;
 
+import android.net.nsd.AdvertisingRequest;
 import android.net.nsd.INsdManagerCallback;
 import android.net.nsd.IOffloadEngine;
 import android.net.nsd.NsdServiceInfo;
@@ -27,7 +28,7 @@ import android.os.Messenger;
  * {@hide}
  */
 interface INsdServiceConnector {
-    void registerService(int listenerKey, in NsdServiceInfo serviceInfo);
+    void registerService(int listenerKey, in AdvertisingRequest advertisingRequest);
     void unregisterService(int listenerKey);
     void discoverServices(int listenerKey, in NsdServiceInfo serviceInfo);
     void stopDiscovery(int listenerKey);
