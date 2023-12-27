@@ -196,7 +196,7 @@ public abstract class EthernetTetheringTestBase {
         mRunTests = isEthernetTetheringSupported();
         assumeTrue(mRunTests);
 
-        mTetheredInterfaceRequester = new TetheredInterfaceRequester(mHandler);
+        mTetheredInterfaceRequester = new TetheredInterfaceRequester();
     }
 
     private boolean isEthernetTetheringSupported() throws Exception {
@@ -278,7 +278,7 @@ public abstract class EthernetTetheringTestBase {
         }
     }
 
-    protected boolean isInterfaceForTetheringAvailable() throws Exception {
+    protected static boolean isInterfaceForTetheringAvailable() throws Exception {
         // Before T, all ethernet interfaces could be used for server mode. Instead of
         // waiting timeout, just checking whether the system currently has any
         // ethernet interface is more reliable.
@@ -289,7 +289,7 @@ public abstract class EthernetTetheringTestBase {
         // If previous test case doesn't release tethering interface successfully, the other tests
         // after that test may be skipped as unexcepted.
         // TODO: figure out a better way to check default tethering interface existenion.
-        final TetheredInterfaceRequester requester = new TetheredInterfaceRequester(mHandler);
+        final TetheredInterfaceRequester requester = new TetheredInterfaceRequester();
         try {
             // Use short timeout (200ms) for requesting an existing interface, if any, because
             // it should reurn faster than requesting a new tethering interface. Using default
@@ -524,7 +524,7 @@ public abstract class EthernetTetheringTestBase {
         }
     }
 
-    protected MyTetheringEventCallback enableEthernetTethering(String iface,
+    protected static MyTetheringEventCallback enableEthernetTethering(String iface,
             TetheringRequest request, Network expectedUpstream) throws Exception {
         // Enable ethernet tethering with null expectedUpstream means the test accept any upstream
         // after etherent tethering started.
@@ -535,7 +535,7 @@ public abstract class EthernetTetheringTestBase {
             callback = new MyTetheringEventCallback(iface);
         }
         runAsShell(NETWORK_SETTINGS, () -> {
-            sTm.registerTetheringEventCallback(mHandler::post, callback);
+            sTm.registerTetheringEventCallback(c -> c.run() /* executor */, callback);
             // Need to hold the shell permission until callback is registered. This helps to avoid
             // the test become flaky.
             callback.awaitCallbackRegistered();
@@ -555,7 +555,7 @@ public abstract class EthernetTetheringTestBase {
         };
         Log.d(TAG, "Starting Ethernet tethering");
         runAsShell(TETHER_PRIVILEGED, () -> {
-            sTm.startTethering(request, mHandler::post /* executor */, startTetheringCallback);
+            sTm.startTethering(request, c -> c.run() /* executor */, startTetheringCallback);
             // Binder call is an async call. Need to hold the shell permission until tethering
             // started. This helps to avoid the test become flaky.
             if (!tetheringStartedLatch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
@@ -578,7 +578,7 @@ public abstract class EthernetTetheringTestBase {
         return callback;
     }
 
-    protected MyTetheringEventCallback enableEthernetTethering(String iface,
+    protected static MyTetheringEventCallback enableEthernetTethering(String iface,
             Network expectedUpstream) throws Exception {
         return enableEthernetTethering(iface,
                 new TetheringRequest.Builder(TETHERING_ETHERNET)
@@ -604,14 +604,8 @@ public abstract class EthernetTetheringTestBase {
     }
 
     protected static final class TetheredInterfaceRequester implements TetheredInterfaceCallback {
-        private final Handler mHandler;
-
         private TetheredInterfaceRequest mRequest;
         private final CompletableFuture<String> mFuture = new CompletableFuture<>();
-
-        TetheredInterfaceRequester(Handler handler) {
-            mHandler = handler;
-        }
 
         @Override
         public void onAvailable(String iface) {
@@ -628,7 +622,7 @@ public abstract class EthernetTetheringTestBase {
             assertNull("BUG: more than one tethered interface request", mRequest);
             Log.d(TAG, "Requesting tethered interface");
             mRequest = runAsShell(NETWORK_SETTINGS, () ->
-                    sEm.requestTetheredInterface(mHandler::post, this));
+                    sEm.requestTetheredInterface(c -> c.run() /* executor */, this));
             return mFuture;
         }
 
