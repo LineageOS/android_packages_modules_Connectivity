@@ -55,6 +55,7 @@ $ $ANDROID_BUILD_TOP/out/host/linux-x86/bin/deapexer decompress --input $ANDROID
 $ adb install /tmp/tethering.apex
 $ adb reboot
 
+NOTE: Developers should use AOSP by default, udc-mainline-prod should not be used unless for Google internal features.
 For udc-mainline-prod on Google internal host
 Build unbundled module using banchan
 $ source build/envsetup.sh
