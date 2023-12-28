@@ -138,6 +138,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private final Supplier<IOtDaemon> mOtDaemonSupplier;
     private final ConnectivityManager mConnectivityManager;
     private final TunInterfaceController mTunIfController;
+    private final InfraInterfaceController mInfraIfController;
     private final LinkProperties mLinkProperties = new LinkProperties();
     private final OtDaemonCallbackProxy mOtDaemonCallbackProxy = new OtDaemonCallbackProxy();
 
@@ -163,7 +164,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             NetworkProvider networkProvider,
             Supplier<IOtDaemon> otDaemonSupplier,
             ConnectivityManager connectivityManager,
-            TunInterfaceController tunIfController) {
+            TunInterfaceController tunIfController,
+            InfraInterfaceController infraIfController) {
         mContext = context;
         mHandlerThread = handlerThread;
         mHandler = new Handler(handlerThread.getLooper());
@@ -171,6 +173,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mOtDaemonSupplier = otDaemonSupplier;
         mConnectivityManager = connectivityManager;
         mTunIfController = tunIfController;
+        mInfraIfController = infraIfController;
         mUpstreamNetworkRequest = newUpstreamNetworkRequest();
         mNetworkToInterface = new HashMap<Network, String>();
         mBorderRouterConfig = new BorderRouterConfigurationParcel();
@@ -188,7 +191,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 networkProvider,
                 () -> IOtDaemon.Stub.asInterface(ServiceManagerWrapper.waitForService("ot_daemon")),
                 context.getSystemService(ConnectivityManager.class),
-                new TunInterfaceController(TUN_IF_NAME));
+                new TunInterfaceController(TUN_IF_NAME),
+                new InfraInterfaceController());
     }
 
     private static NetworkCapabilities newNetworkCapabilities() {
@@ -256,7 +260,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     @Override
     public void setTestNetworkAsUpstream(
             @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
-        enforceAllCallingPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
 
         Log.i(TAG, "setTestNetworkAsUpstream: " + testNetworkInterfaceName);
         mHandler.post(() -> setTestNetworkAsUpstreamInternal(testNetworkInterfaceName, receiver));
@@ -590,29 +594,29 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         return -1;
     }
 
-    private void enforceAllCallingPermissionsGranted(String... permissions) {
+    private void enforceAllPermissionsGranted(String... permissions) {
         for (String permission : permissions) {
-            mContext.enforceCallingPermission(
+            mContext.enforceCallingOrSelfPermission(
                     permission, "Permission " + permission + " is missing");
         }
     }
 
     @Override
     public void registerStateCallback(IStateCallback stateCallback) throws RemoteException {
-        enforceAllCallingPermissionsGranted(permission.ACCESS_NETWORK_STATE);
+        enforceAllPermissionsGranted(permission.ACCESS_NETWORK_STATE);
         mHandler.post(() -> mOtDaemonCallbackProxy.registerStateCallback(stateCallback));
     }
 
     @Override
     public void unregisterStateCallback(IStateCallback stateCallback) throws RemoteException {
-        enforceAllCallingPermissionsGranted(permission.ACCESS_NETWORK_STATE);
+        enforceAllPermissionsGranted(permission.ACCESS_NETWORK_STATE);
         mHandler.post(() -> mOtDaemonCallbackProxy.unregisterStateCallback(stateCallback));
     }
 
     @Override
     public void registerOperationalDatasetCallback(IOperationalDatasetCallback callback)
             throws RemoteException {
-        enforceAllCallingPermissionsGranted(
+        enforceAllPermissionsGranted(
                 permission.ACCESS_NETWORK_STATE, PERMISSION_THREAD_NETWORK_PRIVILEGED);
         mHandler.post(() -> mOtDaemonCallbackProxy.registerDatasetCallback(callback));
     }
@@ -620,7 +624,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     @Override
     public void unregisterOperationalDatasetCallback(IOperationalDatasetCallback callback)
             throws RemoteException {
-        enforceAllCallingPermissionsGranted(
+        enforceAllPermissionsGranted(
                 permission.ACCESS_NETWORK_STATE, PERMISSION_THREAD_NETWORK_PRIVILEGED);
         mHandler.post(() -> mOtDaemonCallbackProxy.unregisterDatasetCallback(callback));
     }
@@ -675,7 +679,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     @Override
     public void join(
             @NonNull ActiveOperationalDataset activeDataset, @NonNull IOperationReceiver receiver) {
-        enforceAllCallingPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
 
         OperationReceiverWrapper receiverWrapper = new OperationReceiverWrapper(receiver);
         mHandler.post(() -> joinInternal(activeDataset, receiverWrapper));
@@ -699,7 +703,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     public void scheduleMigration(
             @NonNull PendingOperationalDataset pendingDataset,
             @NonNull IOperationReceiver receiver) {
-        enforceAllCallingPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
 
         OperationReceiverWrapper receiverWrapper = new OperationReceiverWrapper(receiver);
         mHandler.post(() -> scheduleMigrationInternal(pendingDataset, receiverWrapper));
@@ -722,7 +726,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     @Override
     public void leave(@NonNull IOperationReceiver receiver) throws RemoteException {
-        enforceAllCallingPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
 
         mHandler.post(() -> leaveInternal(new OperationReceiverWrapper(receiver)));
     }
@@ -747,7 +751,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         try {
             mBorderRouterConfig.infraInterfaceName = infraIfName;
             mBorderRouterConfig.infraInterfaceIcmp6Socket =
-                    InfraInterfaceController.createIcmp6Socket(infraIfName);
+                    mInfraIfController.createIcmp6Socket(infraIfName);
             mBorderRouterConfig.isBorderRoutingEnabled = true;
 
             mOtDaemon.configureBorderRouter(
