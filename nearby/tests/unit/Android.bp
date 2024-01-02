@@ -43,7 +43,6 @@ android_test {
         "platform-test-annotations",
         "service-nearby-pre-jarjar",
         "truth",
-        // "Robolectric_all-target",
     ],
     // these are needed for Extended Mockito
     jni_libs: [
