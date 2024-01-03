@@ -47,6 +47,7 @@ android_test {
         "android.test.base",
         "android.test.runner",
         "ServiceConnectivityResources",
+        "framework-wifi",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     jni_libs: [
