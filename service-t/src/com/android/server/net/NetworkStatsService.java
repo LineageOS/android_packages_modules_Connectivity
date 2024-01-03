@@ -1987,15 +1987,17 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @Override
     public long getIfaceStats(@NonNull String iface, int type) {
         Objects.requireNonNull(iface);
-        long nativeIfaceStats = getEntryValueForType(nativeGetIfaceStat(iface), type);
-        if (nativeIfaceStats == UNSUPPORTED) {
-            return nativeIfaceStats;
+        final NetworkStats.Entry entry = nativeGetIfaceStat(iface);
+        final long value = getEntryValueForType(entry, type);
+        if (value == UNSUPPORTED) {
+            return UNSUPPORTED;
         } else {
             // When tethering offload is in use, nativeIfaceStats does not contain usage from
             // offload, add it back here. Note that the included statistics might be stale
             // since polling newest stats from hardware might impact system health and not
             // suitable for TrafficStats API use cases.
-            return nativeIfaceStats + getProviderIfaceStats(iface, type);
+            entry.add(getProviderIfaceStats(iface));
+            return getEntryValueForType(entry, type);
         }
     }
 
@@ -2017,16 +2019,18 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     @Override
     public long getTotalStats(int type) {
-        final long nativeTotalStats = getEntryValueForType(nativeGetTotalStat(), type);
-        if (nativeTotalStats == UNSUPPORTED) {
-            return nativeTotalStats;
+        final NetworkStats.Entry entry = nativeGetTotalStat();
+        final long value = getEntryValueForType(entry, type);
+        if (value == UNSUPPORTED) {
+            return UNSUPPORTED;
         } else {
             // Refer to comment in getIfaceStats
-            return nativeTotalStats + getProviderIfaceStats(IFACE_ALL, type);
+            entry.add(getProviderIfaceStats(IFACE_ALL));
+            return getEntryValueForType(entry, type);
         }
     }
 
-    private long getProviderIfaceStats(@Nullable String iface, int type) {
+    private NetworkStats.Entry getProviderIfaceStats(@Nullable String iface) {
         final NetworkStats providerSnapshot = getNetworkStatsFromProviders(STATS_PER_IFACE);
         final HashSet<String> limitIfaces;
         if (iface == IFACE_ALL) {
@@ -2035,19 +2039,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             limitIfaces = new HashSet<>();
             limitIfaces.add(iface);
         }
-        final NetworkStats.Entry entry = providerSnapshot.getTotal(null, limitIfaces);
-        switch (type) {
-            case TrafficStats.TYPE_RX_BYTES:
-                return entry.rxBytes;
-            case TrafficStats.TYPE_RX_PACKETS:
-                return entry.rxPackets;
-            case TrafficStats.TYPE_TX_BYTES:
-                return entry.txBytes;
-            case TrafficStats.TYPE_TX_PACKETS:
-                return entry.txPackets;
-            default:
-                return 0;
-        }
+        return providerSnapshot.getTotal(null, limitIfaces);
     }
 
     /**
