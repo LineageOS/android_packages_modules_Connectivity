@@ -40,6 +40,7 @@ android_test {
         "mockito-target-minus-junit4",
         "net-tests-utils",
         "truth",
+        "service-thread-pre-jarjar",
     ],
     libs: [
         "android.test.base",
