@@ -37,6 +37,7 @@ java_library {
         "framework-connectivity-t-pre-jarjar",
         "framework-location.stubs.module_lib",
         "service-connectivity-pre-jarjar",
+        "ServiceConnectivityResources",
     ],
     static_libs: [
         "modules-utils-shell-command-handler",
