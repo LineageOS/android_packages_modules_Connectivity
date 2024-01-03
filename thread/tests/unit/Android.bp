@@ -31,14 +31,15 @@ android_test {
         "general-tests",
     ],
     static_libs: [
-        "androidx.test.ext.junit",
-        "compatibility-device-util-axt",
+        "frameworks-base-testutils",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
+        "framework-location.stubs.module_lib",
         "guava",
         "guava-android-testlib",
-        "mockito-target-minus-junit4",
+        "mockito-target-extended-minus-junit4",
         "net-tests-utils",
+        "service-thread-pre-jarjar",
         "truth",
     ],
     libs: [
@@ -46,6 +47,11 @@ android_test {
         "android.test.runner",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
+    jni_libs: [
+        // these are needed for Extended Mockito
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
+    ],
     // Test coverage system runs on different devices. Need to
     // compile for all architectures.
     compile_multilib: "both",
