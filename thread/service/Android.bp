@@ -36,6 +36,7 @@ java_library {
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
         "framework-location.stubs.module_lib",
+        "framework-wifi",
         "service-connectivity-pre-jarjar",
         "ServiceConnectivityResources",
     ],
