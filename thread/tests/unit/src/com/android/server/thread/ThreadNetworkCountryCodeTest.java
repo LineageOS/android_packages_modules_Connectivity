@@ -32,6 +32,7 @@ import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -45,6 +46,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.thread.IOperationReceiver;
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.ActiveCountryCodeChangedCallback;
 
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
@@ -78,6 +81,7 @@ public class ThreadNetworkCountryCodeTest {
     @Mock Location mLocation;
     @Mock Resources mResources;
     @Mock ConnectivityResources mConnectivityResources;
+    @Mock WifiManager mWifiManager;
 
     private ThreadNetworkCountryCode mThreadNetworkCountryCode;
     private boolean mErrorSetCountryCode;
@@ -85,6 +89,7 @@ public class ThreadNetworkCountryCodeTest {
     @Captor private ArgumentCaptor<LocationListener> mLocationListenerCaptor;
     @Captor private ArgumentCaptor<Geocoder.GeocodeListener> mGeocodeListenerCaptor;
     @Captor private ArgumentCaptor<IOperationReceiver> mOperationReceiverCaptor;
+    @Captor private ArgumentCaptor<ActiveCountryCodeChangedCallback> mWifiCountryCodeReceiverCaptor;
 
     @Before
     public void setUp() throws Exception {
@@ -118,7 +123,8 @@ public class ThreadNetworkCountryCodeTest {
                         mLocationManager,
                         mThreadNetworkControllerService,
                         mGeocoder,
-                        mConnectivityResources);
+                        mConnectivityResources,
+                        mWifiManager);
     }
 
     private static Address newAddress(String countryCode) {
@@ -159,6 +165,55 @@ public class ThreadNetworkCountryCodeTest {
         mGeocodeListenerCaptor.getValue().onGeocode(List.of(newAddress(TEST_COUNTRY_CODE_US)));
 
         assertThat(mThreadNetworkCountryCode.getCountryCode()).isEqualTo(TEST_COUNTRY_CODE_US);
+    }
+
+    @Test
+    public void wifiCountryCode_bothWifiAndLocationAreAvailable_wifiCountryCodeIsUsed() {
+        mThreadNetworkCountryCode.initialize();
+        verify(mLocationManager)
+                .requestLocationUpdates(
+                        anyString(), anyLong(), anyFloat(), mLocationListenerCaptor.capture());
+        mLocationListenerCaptor.getValue().onLocationChanged(mLocation);
+        verify(mGeocoder)
+                .getFromLocation(
+                        anyDouble(), anyDouble(), anyInt(), mGeocodeListenerCaptor.capture());
+        Address mockAddress = mock(Address.class);
+        when(mockAddress.getCountryCode()).thenReturn(TEST_COUNTRY_CODE_US);
+        List<Address> addresses = List.of(mockAddress);
+        mGeocodeListenerCaptor.getValue().onGeocode(addresses);
+
+        verify(mWifiManager)
+                .registerActiveCountryCodeChangedCallback(
+                        any(), mWifiCountryCodeReceiverCaptor.capture());
+        mWifiCountryCodeReceiverCaptor.getValue().onActiveCountryCodeChanged(TEST_COUNTRY_CODE_CN);
+
+        assertThat(mThreadNetworkCountryCode.getCountryCode()).isEqualTo(TEST_COUNTRY_CODE_CN);
+    }
+
+    @Test
+    public void wifiCountryCode_wifiCountryCodeIsActive_wifiCountryCodeIsUsed() {
+        mThreadNetworkCountryCode.initialize();
+
+        verify(mWifiManager)
+                .registerActiveCountryCodeChangedCallback(
+                        any(), mWifiCountryCodeReceiverCaptor.capture());
+        mWifiCountryCodeReceiverCaptor.getValue().onActiveCountryCodeChanged(TEST_COUNTRY_CODE_US);
+
+        assertThat(mThreadNetworkCountryCode.getCountryCode()).isEqualTo(TEST_COUNTRY_CODE_US);
+    }
+
+    @Test
+    public void wifiCountryCode_wifiCountryCodeIsInactive_defaultCountryCodeIsUsed() {
+        mThreadNetworkCountryCode.initialize();
+        verify(mWifiManager)
+                .registerActiveCountryCodeChangedCallback(
+                        any(), mWifiCountryCodeReceiverCaptor.capture());
+        mWifiCountryCodeReceiverCaptor.getValue().onActiveCountryCodeChanged(TEST_COUNTRY_CODE_US);
+
+        mWifiCountryCodeReceiverCaptor.getValue().onCountryCodeInactive();
+
+        assertThat(mThreadNetworkCountryCode.getCountryCode())
+                .isEqualTo(ThreadNetworkCountryCode.DEFAULT_COUNTRY_CODE);
     }
 
     @Test
