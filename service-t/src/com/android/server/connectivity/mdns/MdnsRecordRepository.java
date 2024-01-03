@@ -321,7 +321,6 @@ public class MdnsRecordRepository {
      *
      * @param serviceId An existing service ID.
      * @param subtypes New subtypes
-     * @return
      */
     public void updateService(int serviceId, @NonNull Set<String> subtypes) {
         final ServiceRegistration existingRegistration = mServices.get(serviceId);
