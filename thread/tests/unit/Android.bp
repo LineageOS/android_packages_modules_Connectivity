@@ -44,6 +44,7 @@ android_test {
         "service-connectivity-pre-jarjar",
         "service-thread-pre-jarjar",
         "truth",
+        "service-thread-pre-jarjar",
     ],
     libs: [
         "android.test.base",
