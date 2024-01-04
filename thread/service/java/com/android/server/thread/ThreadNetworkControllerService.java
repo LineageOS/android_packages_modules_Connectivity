@@ -36,7 +36,6 @@ import static android.net.thread.ThreadNetworkException.ERROR_RESOURCE_EXHAUSTED
 import static android.net.thread.ThreadNetworkException.ERROR_RESPONSE_BAD_FORMAT;
 import static android.net.thread.ThreadNetworkException.ERROR_TIMEOUT;
 import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_CHANNEL;
-import static android.net.thread.ThreadNetworkException.ErrorCode;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
 
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_ABORT;
@@ -54,6 +53,8 @@ import static com.android.server.thread.openthread.IOtDaemon.TUN_IF_NAME;
 import android.Manifest.permission;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresPermission;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.IpPrefix;
@@ -82,6 +83,8 @@ import android.net.thread.OperationalDatasetTimestamp;
 import android.net.thread.PendingOperationalDataset;
 import android.net.thread.ThreadNetworkController;
 import android.net.thread.ThreadNetworkController.DeviceRole;
+import android.net.thread.ThreadNetworkException.ErrorCode;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -117,10 +120,11 @@ import java.util.function.Supplier;
  *
  * <p>Threading model: This class is not Thread-safe and should only be accessed from the
  * ThreadNetworkService class. Additional attention should be paid to handle the threading code
- * correctly: 1. All member fields other than `mHandler` and `mContext` MUST be accessed from
- * `mHandlerThread` 2. In the @Override methods, the actual work MUST be dispatched to the
+ * correctly: 1. All member fields other than `mHandler` and `mContext` MUST be accessed from the
+ * thread of `mHandler` 2. In the @Override methods, the actual work MUST be dispatched to the
  * HandlerThread except for arguments or permissions checking
  */
+@TargetApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 final class ThreadNetworkControllerService extends IThreadNetworkController.Stub {
     private static final String TAG = "ThreadNetworkService";
 
@@ -129,11 +133,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private final Context mContext;
     private final Handler mHandler;
 
-    // Below member fields can only be accessed from the handler thread (`mHandlerThread`). In
+    // Below member fields can only be accessed from the handler thread (`mHandler`). In
     // particular, the constructor does not run on the handler thread, so it must not touch any of
     // the non-final fields, nor must it mutate any of the non-final fields inside these objects.
 
-    private final HandlerThread mHandlerThread;
     private final NetworkProvider mNetworkProvider;
     private final Supplier<IOtDaemon> mOtDaemonSupplier;
     private final ConnectivityManager mConnectivityManager;
@@ -145,8 +148,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     // TODO(b/308310823): read supported channel from Thread dameon
     private final int mSupportedChannelMask = 0x07FFF800; // from channel 11 to 26
 
-    private IOtDaemon mOtDaemon;
-    private NetworkAgent mNetworkAgent;
+    @Nullable private IOtDaemon mOtDaemon;
+    @Nullable private NetworkAgent mNetworkAgent;
+    @Nullable private NetworkAgent mTestNetworkAgent;
+
     private MulticastRoutingConfig mUpstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
     private MulticastRoutingConfig mDownstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
     private Network mUpstreamNetwork;
@@ -160,15 +165,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     @VisibleForTesting
     ThreadNetworkControllerService(
             Context context,
-            HandlerThread handlerThread,
+            Handler handler,
             NetworkProvider networkProvider,
             Supplier<IOtDaemon> otDaemonSupplier,
             ConnectivityManager connectivityManager,
             TunInterfaceController tunIfController,
             InfraInterfaceController infraIfController) {
         mContext = context;
-        mHandlerThread = handlerThread;
-        mHandler = new Handler(handlerThread.getLooper());
+        mHandler = handler;
         mNetworkProvider = networkProvider;
         mOtDaemonSupplier = otDaemonSupplier;
         mConnectivityManager = connectivityManager;
@@ -187,20 +191,12 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
         return new ThreadNetworkControllerService(
                 context,
-                handlerThread,
+                new Handler(handlerThread.getLooper()),
                 networkProvider,
                 () -> IOtDaemon.Stub.asInterface(ServiceManagerWrapper.waitForService("ot_daemon")),
                 context.getSystemService(ConnectivityManager.class),
                 new TunInterfaceController(TUN_IF_NAME),
                 new InfraInterfaceController());
-    }
-
-    private static NetworkCapabilities newNetworkCapabilities() {
-        return new NetworkCapabilities.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_THREAD)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
-                .build();
     }
 
     private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
@@ -298,6 +294,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     private IOtDaemon getOtDaemon() throws RemoteException {
+        checkOnHandlerThread();
+
         if (mOtDaemon != null) {
             return mOtDaemon;
         }
@@ -306,9 +304,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         if (otDaemon == null) {
             throw new RemoteException("Internal error: failed to start OT daemon");
         }
-        otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         otDaemon.initialize(mTunIfController.getTunFd());
         otDaemon.registerStateCallback(mOtDaemonCallbackProxy, -1);
+        otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         mOtDaemon = otDaemon;
         return mOtDaemon;
     }
@@ -423,27 +421,47 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 mHandler);
     }
 
+    /** Injects a {@link NetworkAgent} for testing. */
+    @VisibleForTesting
+    void setTestNetworkAgent(@Nullable NetworkAgent testNetworkAgent) {
+        mTestNetworkAgent = testNetworkAgent;
+    }
+
+    private NetworkAgent newNetworkAgent() {
+        if (mTestNetworkAgent != null) {
+            return mTestNetworkAgent;
+        }
+
+        final NetworkCapabilities netCaps =
+                new NetworkCapabilities.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_THREAD)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
+                        .build();
+        final NetworkScore score =
+                new NetworkScore.Builder()
+                        .setKeepConnectedReason(NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK)
+                        .build();
+        return new NetworkAgent(
+                mContext,
+                mHandler.getLooper(),
+                TAG,
+                netCaps,
+                mLinkProperties,
+                newLocalNetworkConfig(),
+                score,
+                new NetworkAgentConfig.Builder().build(),
+                mNetworkProvider) {};
+    }
+
     private void registerThreadNetwork() {
         if (mNetworkAgent != null) {
             return;
         }
-        NetworkCapabilities netCaps = newNetworkCapabilities();
-        NetworkScore score =
-                new NetworkScore.Builder()
-                        .setKeepConnectedReason(NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK)
-                        .build();
+
         requestThreadNetwork();
-        mNetworkAgent =
-                new NetworkAgent(
-                        mContext,
-                        mHandlerThread.getLooper(),
-                        TAG,
-                        netCaps,
-                        mLinkProperties,
-                        newLocalNetworkConfig(),
-                        score,
-                        new NetworkAgentConfig.Builder().build(),
-                        mNetworkProvider) {};
+
+        mNetworkAgent = newNetworkAgent();
         mNetworkAgent.register();
         mNetworkAgent.markConnected();
         Log.i(TAG, "Registered Thread network");
@@ -630,7 +648,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     private void checkOnHandlerThread() {
-        if (Looper.myLooper() != mHandlerThread.getLooper()) {
+        if (Looper.myLooper() != mHandler.getLooper()) {
             Log.wtf(TAG, "Must be on the handler thread!");
         }
     }
@@ -738,6 +756,32 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             getOtDaemon().leave(newOtStatusReceiver(receiver));
         } catch (RemoteException e) {
             // Oneway AIDL API should never throw?
+            receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        }
+    }
+
+    /**
+     * Sets the country code.
+     *
+     * @param countryCode 2 characters string country code (as defined in ISO 3166) to set.
+     * @param receiver the receiver to receive result of this operation
+     */
+    @RequiresPermission(PERMISSION_THREAD_NETWORK_PRIVILEGED)
+    public void setCountryCode(@NonNull String countryCode, @NonNull IOperationReceiver receiver) {
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+
+        OperationReceiverWrapper receiverWrapper = new OperationReceiverWrapper(receiver);
+        mHandler.post(() -> setCountryCodeInternal(countryCode, receiverWrapper));
+    }
+
+    private void setCountryCodeInternal(
+            String countryCode, @NonNull OperationReceiverWrapper receiver) {
+        checkOnHandlerThread();
+
+        try {
+            getOtDaemon().setCountryCode(countryCode, newOtStatusReceiver(receiver));
+        } catch (RemoteException e) {
+            Log.e(TAG, "otDaemon.setCountryCode failed", e);
             receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
         }
     }
@@ -920,8 +964,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     /**
-     * Handles and forwards Thread daemon callbacks. This class must be accessed from the {@code
-     * mHandlerThread}.
+     * Handles and forwards Thread daemon callbacks. This class must be accessed from the thread of
+     * {@code mHandler}.
      */
     private final class OtDaemonCallbackProxy extends IOtDaemonCallback.Stub {
         private final Map<IStateCallback, CallbackMetadata> mStateCallbacks = new HashMap<>();

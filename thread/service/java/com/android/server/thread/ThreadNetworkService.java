@@ -16,13 +16,20 @@
 
 package com.android.server.thread;
 
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.thread.IThreadNetworkController;
 import android.net.thread.IThreadNetworkManager;
+import android.os.Binder;
+import android.os.ParcelFileDescriptor;
 
 import com.android.server.SystemService;
 
+import java.io.FileDescriptor;
+import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +38,9 @@ import java.util.List;
  */
 public class ThreadNetworkService extends IThreadNetworkManager.Stub {
     private final Context mContext;
+    @Nullable private ThreadNetworkCountryCode mCountryCode;
     @Nullable private ThreadNetworkControllerService mControllerService;
+    @Nullable private ThreadNetworkShellCommand mShellCommand;
 
     /** Creates a new {@link ThreadNetworkService} object. */
     public ThreadNetworkService(Context context) {
@@ -47,6 +56,10 @@ public class ThreadNetworkService extends IThreadNetworkManager.Stub {
         if (phase == SystemService.PHASE_BOOT_COMPLETED) {
             mControllerService = ThreadNetworkControllerService.newInstance(mContext);
             mControllerService.initialize();
+            mCountryCode = ThreadNetworkCountryCode.newInstance(mContext, mControllerService);
+            mCountryCode.initialize();
+
+            mShellCommand = new ThreadNetworkShellCommand(mCountryCode);
         }
     }
 
@@ -56,5 +69,41 @@ public class ThreadNetworkService extends IThreadNetworkManager.Stub {
             return Collections.emptyList();
         }
         return Collections.singletonList(mControllerService);
+    }
+
+    @Override
+    public int handleShellCommand(
+            @NonNull ParcelFileDescriptor in,
+            @NonNull ParcelFileDescriptor out,
+            @NonNull ParcelFileDescriptor err,
+            @NonNull String[] args) {
+        if (mShellCommand == null) {
+            return -1;
+        }
+        return mShellCommand.exec(
+                this,
+                in.getFileDescriptor(),
+                out.getFileDescriptor(),
+                err.getFileDescriptor(),
+                args);
+    }
+
+    @Override
+    protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
+        if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
+                != PERMISSION_GRANTED) {
+            pw.println(
+                    "Permission Denial: can't dump ThreadNetworkService from from pid="
+                            + Binder.getCallingPid()
+                            + ", uid="
+                            + Binder.getCallingUid());
+            return;
+        }
+
+        if (mCountryCode != null) {
+            mCountryCode.dump(fd, pw, args);
+        }
+
+        pw.println();
     }
 }
