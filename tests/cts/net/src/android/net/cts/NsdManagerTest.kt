@@ -81,7 +81,9 @@ import com.android.compatibility.common.util.PropertyUtil
 import com.android.compatibility.common.util.SystemUtil
 import com.android.modules.utils.build.SdkLevel.isAtLeastU
 import com.android.net.module.util.DnsPacket
+import com.android.net.module.util.DnsPacket.ANSECTION
 import com.android.net.module.util.HexDump
+import com.android.net.module.util.HexDump.hexStringToByteArray
 import com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_LEN
 import com.android.net.module.util.PacketBuilder
 import com.android.testutils.ConnectivityModuleTest
@@ -96,6 +98,7 @@ import com.android.testutils.TapPacketReader
 import com.android.testutils.TestableNetworkAgent
 import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.assertContainsExactly
 import com.android.testutils.assertEmpty
 import com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk30
 import com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk33
@@ -138,6 +141,9 @@ private const val REGISTRATION_TIMEOUT_MS = 10_000L
 private const val DBG = false
 private const val TEST_PORT = 12345
 private const val MDNS_PORT = 5353.toShort()
+private const val TYPE_KEY = 25
+private const val QCLASS_INTERNET = 0x0001
+private const val NAME_RECORDS_TTL_MILLIS: Long = 120
 private val multicastIpv6Addr = parseNumericAddress("ff02::fb") as Inet6Address
 private val testSrcAddr = parseNumericAddress("2001:db8::123") as Inet6Address
 
@@ -167,6 +173,12 @@ class NsdManagerTest {
     private val serviceType2 = "_nmt%09d._tcp".format(Random().nextInt(1_000_000_000))
     private val customHostname = "NsdTestHost%09d".format(Random().nextInt(1_000_000_000))
     private val customHostname2 = "NsdTestHost%09d".format(Random().nextInt(1_000_000_000))
+    private val publicKey = hexStringToByteArray(
+            "0201030dc141d0637960b98cbc12cfca"
+                    + "221d2879dac26ee5b460e9007c992e19"
+                    + "02d897c391b03764d448f7d0c772fdb0"
+                    + "3b1d9d6d52ff8886769e8e2362513565"
+                    + "270962d3")
     private val handlerThread = HandlerThread(NsdManagerTest::class.java.simpleName)
     private val ctsNetUtils by lazy{ CtsNetUtils(context) }
 
@@ -2262,6 +2274,165 @@ class NsdManagerTest {
         } cleanup {
             nsdManager.unregisterService(registrationRecord2)
             nsdManager.unregisterService(registrationRecord3)
+        }
+    }
+
+    @Test
+    fun testAdvertising_registerServiceAndPublicKey_keyAnnounced() {
+        val si = NsdServiceInfo().also {
+            it.network = testNetwork1.network
+            it.serviceType = serviceType
+            it.serviceName = serviceName
+            it.port = TEST_PORT
+            it.publicKey = publicKey
+        }
+        val packetReader = TapPacketReader(Handler(handlerThread.looper),
+                testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+        packetReader.startAsyncForTest()
+        handlerThread.waitForIdle(TIMEOUT_MS)
+
+        val registrationRecord = NsdRegistrationRecord()
+        val discoveryRecord = NsdDiscoveryRecord()
+        tryTest {
+            registerService(registrationRecord, si)
+
+            val announcement = packetReader.pollForReply(
+                "$serviceName.$serviceType.local",
+                TYPE_KEY
+            )
+            assertNotNull(announcement)
+            val keyRecords = announcement.records[ANSECTION].filter { it.nsType == TYPE_KEY }
+            assertEquals(1, keyRecords.size)
+            val actualRecord = keyRecords.get(0)
+            assertEquals(TYPE_KEY, actualRecord.nsType)
+            assertEquals("$serviceName.$serviceType.local", actualRecord.dName)
+            assertEquals(NAME_RECORDS_TTL_MILLIS, actualRecord.ttl)
+            assertArrayEquals(publicKey, actualRecord.rr)
+
+            nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD,
+                    testNetwork1.network, Executor { it.run() }, discoveryRecord)
+
+            val discoveredInfo1 = discoveryRecord.waitForServiceDiscovered(
+                    serviceName, serviceType, testNetwork1.network)
+            val resolvedInfo1 = resolveService(discoveredInfo1)
+
+            assertEquals(serviceName, discoveredInfo1.serviceName)
+            assertEquals(TEST_PORT, resolvedInfo1.port)
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(discoveryRecord)
+
+            discoveryRecord.expectCallback<DiscoveryStopped>()
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testAdvertising_registerCustomHostAndPublicKey_keyAnnounced() {
+        val si = NsdServiceInfo().also {
+            it.network = testNetwork1.network
+            it.hostname = customHostname
+            it.hostAddresses = listOf(
+                    parseNumericAddress("192.0.2.23"),
+                    parseNumericAddress("2001:db8::1"),
+                    parseNumericAddress("2001:db8::2"))
+            it.publicKey = publicKey
+        }
+        val packetReader = TapPacketReader(Handler(handlerThread.looper),
+                testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+        packetReader.startAsyncForTest()
+        handlerThread.waitForIdle(TIMEOUT_MS)
+
+        val registrationRecord = NsdRegistrationRecord()
+        tryTest {
+            registerService(registrationRecord, si)
+
+            val announcement = packetReader.pollForReply("$customHostname.local", TYPE_KEY)
+            assertNotNull(announcement)
+            val keyRecords = announcement.records[ANSECTION].filter { it.nsType == TYPE_KEY }
+            assertEquals(1, keyRecords.size)
+            val actualRecord = keyRecords.get(0)
+            assertEquals(TYPE_KEY, actualRecord.nsType)
+            assertEquals("$customHostname.local", actualRecord.dName)
+            assertEquals(NAME_RECORDS_TTL_MILLIS, actualRecord.ttl)
+            assertArrayEquals(publicKey, actualRecord.rr)
+
+            // This test case focuses on key announcement so we don't check the details of the
+            // announcement of the custom host addresses.
+            val addressRecords = announcement.records[ANSECTION].filter {
+                it.nsType == DnsResolver.TYPE_AAAA ||
+                        it.nsType == DnsResolver.TYPE_A
+            }
+            assertEquals(3, addressRecords.size)
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testAdvertising_registerTwoServicesWithSameCustomHostAndPublicKey_keyAnnounced() {
+        val si1 = NsdServiceInfo().also {
+            it.network = testNetwork1.network
+            it.serviceType = serviceType
+            it.serviceName = serviceName
+            it.port = TEST_PORT
+            it.hostname = customHostname
+            it.hostAddresses = listOf(
+                parseNumericAddress("192.0.2.23"),
+                parseNumericAddress("2001:db8::1"),
+                parseNumericAddress("2001:db8::2"))
+            it.publicKey = publicKey
+        }
+        val si2 = NsdServiceInfo().also {
+            it.network = testNetwork1.network
+            it.serviceType = serviceType2
+            it.serviceName = serviceName2
+            it.port = TEST_PORT + 1
+            it.hostname = customHostname
+            it.hostAddresses = listOf()
+            it.publicKey = publicKey
+        }
+        val packetReader = TapPacketReader(Handler(handlerThread.looper),
+            testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+        packetReader.startAsyncForTest()
+        handlerThread.waitForIdle(TIMEOUT_MS)
+
+        val registrationRecord1 = NsdRegistrationRecord()
+        val registrationRecord2 = NsdRegistrationRecord()
+        tryTest {
+            registerService(registrationRecord1, si1)
+
+            var announcement =
+                packetReader.pollForReply("$serviceName.$serviceType.local", TYPE_KEY)
+            assertNotNull(announcement)
+            var keyRecords = announcement.records[ANSECTION].filter { it.nsType == TYPE_KEY }
+            assertEquals(2, keyRecords.size)
+            assertTrue(keyRecords.any { it.dName == "$serviceName.$serviceType.local" })
+            assertTrue(keyRecords.any { it.dName == "$customHostname.local" })
+            assertTrue(keyRecords.all { it.ttl == NAME_RECORDS_TTL_MILLIS })
+            assertTrue(keyRecords.all { it.rr.contentEquals(publicKey) })
+
+            // This test case focuses on key announcement so we don't check the details of the
+            // announcement of the custom host addresses.
+            val addressRecords = announcement.records[ANSECTION].filter {
+                it.nsType == DnsResolver.TYPE_AAAA ||
+                        it.nsType == DnsResolver.TYPE_A
+            }
+            assertEquals(3, addressRecords.size)
+
+            registerService(registrationRecord2, si2)
+
+            announcement = packetReader.pollForReply("$serviceName2.$serviceType2.local", TYPE_KEY)
+            assertNotNull(announcement)
+            keyRecords = announcement.records[ANSECTION].filter { it.nsType == TYPE_KEY }
+            assertEquals(2, keyRecords.size)
+            assertTrue(keyRecords.any { it.dName == "$serviceName2.$serviceType2.local" })
+            assertTrue(keyRecords.any { it.dName == "$customHostname.local" })
+            assertTrue(keyRecords.all { it.ttl == NAME_RECORDS_TTL_MILLIS })
+            assertTrue(keyRecords.all { it.rr.contentEquals(publicKey) })
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord1)
+            nsdManager.unregisterService(registrationRecord2)
         }
     }
 
