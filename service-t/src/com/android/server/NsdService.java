@@ -201,6 +201,7 @@ public class NsdService extends INsdManager.Stub {
     private static final int NO_SENT_QUERY_COUNT = 0;
     private static final int DISCOVERY_QUERY_SENT_CALLBACK = 1000;
     private static final int MAX_SUBTYPE_COUNT = 100;
+    private static final int DNSSEC_PROTOCOL = 3;
     private static final SharedLog LOGGER = new SharedLog("serviceDiscovery");
 
     private final Context mContext;
@@ -1006,6 +1007,17 @@ public class NsdService extends INsdManager.Stub {
                             if (!checkHostname(hostname)) {
                                 clientInfo.onRegisterServiceFailedImmediately(clientRequestId,
                                         NsdManager.FAILURE_BAD_PARAMETERS, false /* isLegacy */);
+                                break;
+                            }
+
+                            if (!checkPublicKey(serviceInfo.getPublicKey())) {
+                                Log.e(TAG,
+                                        "Invalid public key: "
+                                                + Arrays.toString(serviceInfo.getPublicKey()));
+                                clientInfo.onRegisterServiceFailedImmediately(
+                                        clientRequestId,
+                                        NsdManager.FAILURE_BAD_PARAMETERS,
+                                        false /* isLegacy */);
                                 break;
                             }
 
@@ -1840,6 +1852,25 @@ public class NsdService extends INsdManager.Stub {
         }
         String HOSTNAME_REGEX = "^[a-zA-Z0-9]([a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?$";
         return Pattern.compile(HOSTNAME_REGEX).matcher(hostname).matches();
+    }
+
+    /**
+     * Checks if the public key is valid.
+     *
+     * <p>For simplicity, it only checks if the protocol is DNSSEC and the RDATA is not fewer than 4
+     * bytes. See RFC 3445 Section 3.
+     *
+     * <p>Message format: flags (2 bytes), protocol (1 byte), algorithm (1 byte), public key.
+     */
+    private static boolean checkPublicKey(@Nullable byte[] publicKey) {
+        if (publicKey == null) {
+            return true;
+        }
+        if (publicKey.length < 4) {
+            return false;
+        }
+        int protocol = publicKey[2];
+        return protocol == DNSSEC_PROTOCOL;
     }
 
     /** Returns {@code true} if {@code subtype} is a valid DNS-SD subtype label. */

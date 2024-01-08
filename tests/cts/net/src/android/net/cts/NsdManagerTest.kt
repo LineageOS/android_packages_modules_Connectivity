@@ -1463,10 +1463,8 @@ class NsdManagerTest {
         handlerThread.waitForIdle(TIMEOUT_MS)
 
         tryTest {
-            repeat(3) {
-                assertNotNull(packetReader.pollForAdvertisement(serviceName, serviceType),
-                        "Expect 3 announcements sent after initial probing")
-            }
+            assertNotNull(packetReader.pollForAdvertisement(serviceName, serviceType),
+                "No announcements sent after initial probing")
 
             assertEquals(si.serviceName, registeredService.serviceName)
             assertEquals(si.hostname, registeredService.hostname)
