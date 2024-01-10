@@ -2810,12 +2810,10 @@ public class TetheringTest {
         final FileDescriptor mockFd = mock(FileDescriptor.class);
         final PrintWriter mockPw = mock(PrintWriter.class);
         runUsbTethering(null);
-        mLooper.startAutoDispatch();
         mTethering.dump(mockFd, mockPw, new String[0]);
         verify(mConfig).dump(any());
         verify(mEntitleMgr).dump(any());
         verify(mOffloadCtrl).dump(any());
-        mLooper.stopAutoDispatch();
     }
 
     @Test
