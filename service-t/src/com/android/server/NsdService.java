@@ -542,13 +542,13 @@ public class NsdService extends INsdManager.Stub {
         }
 
         private void maybeStartDaemon() {
-            if (mMDnsManager == null) {
-                Log.wtf(TAG, "maybeStartDaemon: mMDnsManager is null");
+            if (mIsDaemonStarted) {
+                if (DBG) Log.d(TAG, "Daemon is already started.");
                 return;
             }
 
-            if (mIsDaemonStarted) {
-                if (DBG) Log.d(TAG, "Daemon is already started.");
+            if (mMDnsManager == null) {
+                Log.wtf(TAG, "maybeStartDaemon: mMDnsManager is null");
                 return;
             }
             mMDnsManager.registerEventListener(mMDnsEventCallback);
@@ -559,13 +559,13 @@ public class NsdService extends INsdManager.Stub {
         }
 
         private void maybeStopDaemon() {
-            if (mMDnsManager == null) {
-                Log.wtf(TAG, "maybeStopDaemon: mMDnsManager is null");
+            if (!mIsDaemonStarted) {
+                if (DBG) Log.d(TAG, "Daemon has not been started.");
                 return;
             }
 
-            if (!mIsDaemonStarted) {
-                if (DBG) Log.d(TAG, "Daemon has not been started.");
+            if (mMDnsManager == null) {
+                Log.wtf(TAG, "maybeStopDaemon: mMDnsManager is null");
                 return;
             }
             mMDnsManager.unregisterEventListener(mMDnsEventCallback);
