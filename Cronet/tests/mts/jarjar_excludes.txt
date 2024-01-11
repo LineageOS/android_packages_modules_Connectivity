@@ -18,3 +18,4 @@ org\.chromium\.net\.NativeTestServer(\$.+)?
 org\.chromium\.net\.MockUrlRequestJobFactory(\$.+)?
 org\.chromium\.net\.QuicTestServer(\$.+)?
 org\.chromium\.net\.MockCertVerifier(\$.+)?
+org\.chromium\.net\.LogcatCapture(\$.+)?
