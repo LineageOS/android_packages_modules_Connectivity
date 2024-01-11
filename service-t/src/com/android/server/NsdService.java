@@ -271,15 +271,11 @@ public class NsdService extends INsdManager.Stub {
         protected final int mClientRequestId;
         protected final int mTransactionId;
         @NonNull
-        protected final NsdServiceInfo mReqServiceInfo;
-        @NonNull
         protected final String mListenedServiceType;
 
-        MdnsListener(int clientRequestId, int transactionId, @NonNull NsdServiceInfo reqServiceInfo,
-                @NonNull String listenedServiceType) {
+        MdnsListener(int clientRequestId, int transactionId, @NonNull String listenedServiceType) {
             mClientRequestId = clientRequestId;
             mTransactionId = transactionId;
-            mReqServiceInfo = reqServiceInfo;
             mListenedServiceType = listenedServiceType;
         }
 
@@ -322,8 +318,8 @@ public class NsdService extends INsdManager.Stub {
     private class DiscoveryListener extends MdnsListener {
 
         DiscoveryListener(int clientRequestId, int transactionId,
-                @NonNull NsdServiceInfo reqServiceInfo, @NonNull String listenServiceType) {
-            super(clientRequestId, transactionId, reqServiceInfo, listenServiceType);
+                @NonNull String listenServiceType) {
+            super(clientRequestId, transactionId, listenServiceType);
         }
 
         @Override
@@ -352,8 +348,8 @@ public class NsdService extends INsdManager.Stub {
     private class ResolutionListener extends MdnsListener {
 
         ResolutionListener(int clientRequestId, int transactionId,
-                @NonNull NsdServiceInfo reqServiceInfo, @NonNull String listenServiceType) {
-            super(clientRequestId, transactionId, reqServiceInfo, listenServiceType);
+                @NonNull String listenServiceType) {
+            super(clientRequestId, transactionId, listenServiceType);
         }
 
         @Override
@@ -374,8 +370,8 @@ public class NsdService extends INsdManager.Stub {
     private class ServiceInfoListener extends MdnsListener {
 
         ServiceInfoListener(int clientRequestId, int transactionId,
-                @NonNull NsdServiceInfo reqServiceInfo, @NonNull String listenServiceType) {
-            super(clientRequestId, transactionId, reqServiceInfo, listenServiceType);
+                @NonNull String listenServiceType) {
+            super(clientRequestId, transactionId, listenServiceType);
         }
 
         @Override
@@ -780,7 +776,7 @@ public class NsdService extends INsdManager.Stub {
                             final String listenServiceType = serviceType + ".local";
                             maybeStartMonitoringSockets();
                             final MdnsListener listener = new DiscoveryListener(clientRequestId,
-                                    transactionId, info, listenServiceType);
+                                    transactionId, listenServiceType);
                             final MdnsSearchOptions.Builder optionsBuilder =
                                     MdnsSearchOptions.newBuilder()
                                             .setNetwork(info.getNetwork())
@@ -1032,7 +1028,7 @@ public class NsdService extends INsdManager.Stub {
 
                             maybeStartMonitoringSockets();
                             final MdnsListener listener = new ResolutionListener(clientRequestId,
-                                    transactionId, info, resolveServiceType);
+                                    transactionId, resolveServiceType);
                             final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                     .setNetwork(info.getNetwork())
                                     .setIsPassiveMode(true)
@@ -1130,7 +1126,7 @@ public class NsdService extends INsdManager.Stub {
 
                         maybeStartMonitoringSockets();
                         final MdnsListener listener = new ServiceInfoListener(clientRequestId,
-                                transactionId, info, resolveServiceType);
+                                transactionId, resolveServiceType);
                         final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                 .setNetwork(info.getNetwork())
                                 .setIsPassiveMode(true)
