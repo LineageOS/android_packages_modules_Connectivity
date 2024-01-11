@@ -56,9 +56,11 @@ import com.android.server.connectivity.ConnectivityResources
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.ProxyTracker
+import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.DeviceInfoUtils
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.tryTest
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -254,13 +256,18 @@ class ConnectivityServiceIntegrationTest {
         na.addCapability(NET_CAPABILITY_INTERNET)
         na.connect()
 
-        testCallback.expectAvailableThenValidatedCallbacks(na.network, TEST_TIMEOUT_MS)
-        val requestedSize = nsInstrumentation.getRequestUrls().size
-        if (requestedSize == 2 || (requestedSize == 1 &&
-                nsInstrumentation.getRequestUrls()[0] == httpsProbeUrl)) {
-            return
+        tryTest {
+            testCallback.expectAvailableThenValidatedCallbacks(na.network, TEST_TIMEOUT_MS)
+            val requestedSize = nsInstrumentation.getRequestUrls().size
+            if (requestedSize == 2 || (requestedSize == 1 &&
+                        nsInstrumentation.getRequestUrls()[0] == httpsProbeUrl)
+            ) {
+                return@tryTest
+            }
+            fail("Unexpected request urls: ${nsInstrumentation.getRequestUrls()}")
+        } cleanup {
+            na.destroy()
         }
-        fail("Unexpected request urls: ${nsInstrumentation.getRequestUrls()}")
     }
 
     @Test
@@ -292,24 +299,32 @@ class ConnectivityServiceIntegrationTest {
         val lp = LinkProperties()
         lp.captivePortalApiUrl = Uri.parse(apiUrl)
         val na = NetworkAgentWrapper(TRANSPORT_CELLULAR, lp, null /* ncTemplate */, context)
-        networkStackClient.verifyNetworkMonitorCreated(na.network, TEST_TIMEOUT_MS)
 
-        na.addCapability(NET_CAPABILITY_INTERNET)
-        na.connect()
+        tryTest {
+            networkStackClient.verifyNetworkMonitorCreated(na.network, TEST_TIMEOUT_MS)
 
-        testCb.expectAvailableCallbacks(na.network, validated = false, tmt = TEST_TIMEOUT_MS)
+            na.addCapability(NET_CAPABILITY_INTERNET)
+            na.connect()
 
-        val capportData = testCb.expect<LinkPropertiesChanged>(na, TEST_TIMEOUT_MS) {
-            it.lp.captivePortalData != null
-        }.lp.captivePortalData
-        assertNotNull(capportData)
-        assertTrue(capportData.isCaptive)
-        assertEquals(Uri.parse("https://login.capport.android.com"), capportData.userPortalUrl)
-        assertEquals(Uri.parse("https://venueinfo.capport.android.com"), capportData.venueInfoUrl)
+            testCb.expectAvailableCallbacks(na.network, validated = false, tmt = TEST_TIMEOUT_MS)
 
-        testCb.expectCaps(na, TEST_TIMEOUT_MS) {
-            it.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL) &&
-                    !it.hasCapability(NET_CAPABILITY_VALIDATED)
+            val capportData = testCb.expect<LinkPropertiesChanged>(na, TEST_TIMEOUT_MS) {
+                it.lp.captivePortalData != null
+            }.lp.captivePortalData
+            assertNotNull(capportData)
+            assertTrue(capportData.isCaptive)
+            assertEquals(Uri.parse("https://login.capport.android.com"), capportData.userPortalUrl)
+            assertEquals(
+                Uri.parse("https://venueinfo.capport.android.com"),
+                capportData.venueInfoUrl
+            )
+
+            testCb.expectCaps(na, TEST_TIMEOUT_MS) {
+                it.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL) &&
+                        !it.hasCapability(NET_CAPABILITY_VALIDATED)
+            }
+        } cleanup {
+            na.destroy()
         }
     }
 
