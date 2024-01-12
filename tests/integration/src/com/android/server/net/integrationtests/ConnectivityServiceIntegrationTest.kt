@@ -37,21 +37,25 @@ import android.net.TestNetworkStackClient
 import android.net.Uri
 import android.net.metrics.IpConnectivityLog
 import android.os.ConditionVariable
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.SystemConfigManager
 import android.os.UserHandle
 import android.os.VintfRuntimeInfo
+import android.telephony.TelephonyManager
 import android.testing.TestableContext
 import android.util.Log
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.SystemUtil
 import com.android.connectivity.resources.R
 import com.android.net.module.util.BpfUtils
+import com.android.networkstack.apishim.TelephonyManagerShimImpl
 import com.android.server.BpfNetMaps
 import com.android.server.ConnectivityService
 import com.android.server.NetworkAgentWrapper
 import com.android.server.TestNetIdManager
+import com.android.server.connectivity.CarrierPrivilegeAuthenticator
 import com.android.server.connectivity.ConnectivityResources
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
@@ -76,12 +80,10 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mock
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyInt
-import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
 import org.mockito.MockitoAnnotations
 import org.mockito.Spy
 
@@ -92,7 +94,8 @@ const val TEST_TIMEOUT_MS = 10_000L
  * Test that exercises an instrumented version of ConnectivityService against an instrumented
  * NetworkStack in a different test process.
  */
-@RunWith(AndroidJUnit4::class)
+@RunWith(DevSdkIgnoreRunner::class)
+@DevSdkIgnoreRunner.MonitorThreadLeak
 class ConnectivityServiceIntegrationTest {
     // lateinit used here for mocks as they need to be reinitialized between each test and the test
     // should crash if they are used before being initialized.
@@ -118,6 +121,8 @@ class ConnectivityServiceIntegrationTest {
     private lateinit var networkStackClient: TestNetworkStackClient
     private lateinit var service: ConnectivityService
     private lateinit var cm: ConnectivityManager
+
+    private val handlerThreads = mutableListOf<HandlerThread>()
 
     companion object {
         // lateinit for this binder token, as it must be initialized before any test code is run
@@ -199,7 +204,7 @@ class ConnectivityServiceIntegrationTest {
         networkStackClient = TestNetworkStackClient(realContext)
         networkStackClient.start()
 
-        service = TestConnectivityService(makeDependencies())
+        service = TestConnectivityService(TestDependencies())
         cm = ConnectivityManager(context, service)
         context.addMockSystemService(Context.CONNECTIVITY_SERVICE, cm)
         context.addMockSystemService(Context.NETWORK_STATS_SERVICE, statsManager)
@@ -210,31 +215,51 @@ class ConnectivityServiceIntegrationTest {
     private inner class TestConnectivityService(deps: Dependencies) : ConnectivityService(
             context, dnsResolver, log, netd, deps)
 
-    private fun makeDependencies(): ConnectivityService.Dependencies {
-        val deps = spy(ConnectivityService.Dependencies())
-        doReturn(networkStackClient).`when`(deps).networkStack
-        doReturn(mock(ProxyTracker::class.java)).`when`(deps).makeProxyTracker(any(), any())
-        doReturn(mock(MockableSystemProperties::class.java)).`when`(deps).systemProperties
-        doReturn(TestNetIdManager()).`when`(deps).makeNetIdManager()
-        doReturn(mock(BpfNetMaps::class.java)).`when`(deps).getBpfNetMaps(any(), any())
-        doAnswer { inv ->
-            MultinetworkPolicyTracker(inv.getArgument(0),
-                    inv.getArgument(1),
-                    inv.getArgument(2),
-                    object : MultinetworkPolicyTracker.Dependencies() {
-                        override fun getResourcesForActiveSubId(
-                                connResources: ConnectivityResources,
-                                activeSubId: Int
-                        ) = resources
-                    })
-        }.`when`(deps).makeMultinetworkPolicyTracker(any(), any(), any())
-        return deps
+    private inner class TestDependencies : ConnectivityService.Dependencies() {
+        override fun getNetworkStack() = networkStackClient
+        override fun makeProxyTracker(context: Context, connServiceHandler: Handler) =
+            mock(ProxyTracker::class.java)
+        override fun getSystemProperties() = mock(MockableSystemProperties::class.java)
+        override fun makeNetIdManager() = TestNetIdManager()
+        override fun getBpfNetMaps(context: Context?, netd: INetd?) = mock(BpfNetMaps::class.java)
+
+        override fun makeMultinetworkPolicyTracker(
+            c: Context,
+            h: Handler,
+            r: Runnable
+        ) = MultinetworkPolicyTracker(c, h, r,
+            object : MultinetworkPolicyTracker.Dependencies() {
+                override fun getResourcesForActiveSubId(
+                    connResources: ConnectivityResources,
+                    activeSubId: Int
+                ) = resources
+            })
+
+        override fun makeHandlerThread(tag: String): HandlerThread =
+            super.makeHandlerThread(tag).also { handlerThreads.add(it) }
+
+        override fun makeCarrierPrivilegeAuthenticator(
+            context: Context,
+            tm: TelephonyManager
+        ): CarrierPrivilegeAuthenticator {
+            return CarrierPrivilegeAuthenticator(context,
+                object : CarrierPrivilegeAuthenticator.Dependencies() {
+                    override fun makeHandlerThread(): HandlerThread =
+                        super.makeHandlerThread().also { handlerThreads.add(it) }
+                },
+                tm, TelephonyManagerShimImpl.newInstance(tm))
+        }
     }
 
     @After
     fun tearDown() {
         nsInstrumentation.clearAllState()
         ConnectivityResources.setResourcesContextForTest(null)
+        handlerThreads.forEach {
+            it.quitSafely()
+            it.join()
+        }
+        handlerThreads.clear()
     }
 
     @Test
