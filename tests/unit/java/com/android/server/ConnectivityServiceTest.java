@@ -502,6 +502,7 @@ import java.util.stream.Collectors;
 // to enable faster testing of smaller groups of functionality.
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
 public class ConnectivityServiceTest {
     private static final String TAG = "ConnectivityServiceTest";
