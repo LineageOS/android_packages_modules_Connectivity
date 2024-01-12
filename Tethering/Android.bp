@@ -104,6 +104,7 @@ android_library {
     lint: {
         strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -122,6 +123,7 @@ android_library {
     lint: {
         strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -215,7 +217,7 @@ android_app {
     apex_available: ["com.android.tethering"],
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -235,7 +237,7 @@ android_app {
     lint: {
         strict_updatability_linting: true,
         error_checks: ["NewApi"],
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -263,9 +265,6 @@ java_library_static {
     static_libs: ["tetheringprotos"],
     apex_available: ["com.android.tethering"],
     min_sdk_version: "30",
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 genrule {

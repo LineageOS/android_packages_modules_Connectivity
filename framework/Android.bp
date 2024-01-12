@@ -137,9 +137,6 @@ java_library {
         "framework-wifi.stubs.module_lib",
     ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_defaults {
@@ -257,9 +254,6 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_genrule {
@@ -320,9 +314,6 @@ droidstubs {
 java_library {
     name: "framework-connectivity-module-api-stubs-including-flagged",
     srcs: [":framework-connectivity-module-api-stubs-including-flagged-droidstubs"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Library providing limited APIs within the connectivity module, so that R+ components like
@@ -347,7 +338,4 @@ java_library {
     visibility: [
         "//packages/modules/Connectivity/Tethering:__subpackages__",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
