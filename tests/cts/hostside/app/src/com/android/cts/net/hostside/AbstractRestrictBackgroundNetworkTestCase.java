@@ -16,6 +16,9 @@
 
 package com.android.cts.net.hostside;
 
+import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+import static android.app.ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE;
+import static android.app.ActivityManager.PROCESS_STATE_TOP;
 import static android.app.job.JobScheduler.RESULT_SUCCESS;
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.os.BatteryManager.BATTERY_PLUGGED_ANY;
@@ -38,7 +41,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import android.annotation.NonNull;
-import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.NotificationManager;
 import android.app.job.JobInfo;
@@ -67,6 +69,7 @@ import androidx.annotation.Nullable;
 import com.android.compatibility.common.util.AmUtils;
 import com.android.compatibility.common.util.BatteryUtils;
 import com.android.compatibility.common.util.DeviceConfigStateHelper;
+import com.android.compatibility.common.util.ThrowingRunnable;
 
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
@@ -76,6 +79,7 @@ import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 /**
  * Superclass for tests related to background network restrictions.
@@ -126,8 +130,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     private static final int SECOND_IN_MS = 1000;
     static final int NETWORK_TIMEOUT_MS = 15 * SECOND_IN_MS;
 
-    private static int PROCESS_STATE_FOREGROUND_SERVICE;
-
     private static final String KEY_NETWORK_STATE_OBSERVER = TEST_PKG + ".observer";
     private static final String KEY_SKIP_VALIDATION_CHECKS = TEST_PKG + ".skip_validation_checks";
 
@@ -171,9 +173,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
             .around(new MeterednessConfigurationRule());
 
     protected void setUp() throws Exception {
-        // TODO: Annotate these constants with @TestApi instead of obtaining them using reflection
-        PROCESS_STATE_FOREGROUND_SERVICE = (Integer) ActivityManager.class
-                .getDeclaredField("PROCESS_STATE_FOREGROUND_SERVICE").get(null);
         mInstrumentation = getInstrumentation();
         mContext = getContext();
         mCm = getConnectivityManager();
@@ -284,44 +283,20 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                 restrictBackgroundValueToString(Integer.parseInt(status)));
     }
 
-    protected void assertBackgroundNetworkAccess(boolean expectAllowed) throws Exception {
-        assertBackgroundNetworkAccess(expectAllowed, null);
-    }
-
     /**
-     * Asserts whether the active network is available or not for the background app. If the network
-     * is unavailable, also checks whether it is blocked by the expected error.
-     *
-     * @param expectAllowed expect background network access to be allowed or not.
-     * @param expectedUnavailableError the expected error when {@code expectAllowed} is false. It's
-     *                                 meaningful only when the {@code expectAllowed} is 'false'.
-     *                                 Throws an IllegalArgumentException when {@code expectAllowed}
-     *                                 is true and this parameter is not null. When the
-     *                                 {@code expectAllowed} is 'false' and this parameter is null,
-     *                                 this function does not compare error type of the networking
-     *                                 access failure.
+     * @deprecated The definition of "background" can be ambiguous. Use separate calls to
+     * {@link #assertProcessStateBelow(int)} with
+     * {@link #assertNetworkAccess(boolean, boolean, String)} to be explicit, instead.
      */
-    protected void assertBackgroundNetworkAccess(boolean expectAllowed,
-            @Nullable final String expectedUnavailableError) throws Exception {
-        assertBackgroundState();
-        if (expectAllowed && expectedUnavailableError != null) {
-            throw new IllegalArgumentException("expectedUnavailableError is not null");
-        }
-        assertNetworkAccess(expectAllowed /* expectAvailable */, false /* needScreenOn */,
-                expectedUnavailableError);
+    @Deprecated
+    protected void assertBackgroundNetworkAccess(boolean expectAllowed) throws Exception {
+        assertProcessStateBelow(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
+        assertNetworkAccess(expectAllowed, false, null);
     }
 
-    protected void assertForegroundNetworkAccess() throws Exception {
-        assertForegroundNetworkAccess(true);
-    }
-
-    protected void assertForegroundNetworkAccess(boolean expectAllowed) throws Exception {
-        assertForegroundState();
-        // We verified that app is in foreground state but if the screen turns-off while
-        // verifying for network access, the app will go into background state (in case app's
-        // foreground status was due to top activity). So, turn the screen on when verifying
-        // network connectivity.
-        assertNetworkAccess(expectAllowed /* expectAvailable */, true /* needScreenOn */);
+    protected void assertTopNetworkAccess(boolean expectAllowed) throws Exception {
+        assertTopState();
+        assertNetworkAccess(expectAllowed, true /* needScreenOn */);
     }
 
     protected void assertForegroundServiceNetworkAccess() throws Exception {
@@ -355,75 +330,65 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         finishExpeditedJob();
     }
 
-    protected final void assertBackgroundState() throws Exception {
-        final int maxTries = 30;
-        ProcessState state = null;
-        for (int i = 1; i <= maxTries; i++) {
-            state = getProcessStateByUid(mUid);
-            Log.v(TAG, "assertBackgroundState(): status for app2 (" + mUid + ") on attempt #" + i
-                    + ": " + state);
-            if (isBackground(state.state)) {
-                return;
-            }
-            Log.d(TAG, "App not on background state (" + state + ") on attempt #" + i
-                    + "; sleeping 1s before trying again");
-            // No sleep after the last turn
-            if (i < maxTries) {
-                SystemClock.sleep(SECOND_IN_MS);
-            }
-        }
-        fail("App2 (" + mUid + ") is not on background state after "
-                + maxTries + " attempts: " + state);
+    /**
+     * Asserts that the process state of the test app is below, in priority, to the given
+     * {@link android.app.ActivityManager.ProcessState}.
+     */
+    protected final void assertProcessStateBelow(int processState) throws Exception {
+        assertProcessState(ps -> ps.state > processState, null);
     }
 
-    protected final void assertForegroundState() throws Exception {
-        final int maxTries = 30;
-        ProcessState state = null;
-        for (int i = 1; i <= maxTries; i++) {
-            state = getProcessStateByUid(mUid);
-            Log.v(TAG, "assertForegroundState(): status for app2 (" + mUid + ") on attempt #" + i
-                    + ": " + state);
-            if (!isBackground(state.state)) {
-                return;
-            }
-            Log.d(TAG, "App not on foreground state on attempt #" + i
-                    + "; sleeping 1s before trying again");
-            turnScreenOn();
-            // No sleep after the last turn
-            if (i < maxTries) {
-                SystemClock.sleep(SECOND_IN_MS);
-            }
-        }
-        fail("App2 (" + mUid + ") is not on foreground state after "
-                + maxTries + " attempts: " + state);
+    protected final void assertTopState() throws Exception {
+        assertProcessState(ps -> ps.state == PROCESS_STATE_TOP, () -> turnScreenOn());
     }
 
     protected final void assertForegroundServiceState() throws Exception {
+        assertProcessState(ps -> ps.state == PROCESS_STATE_FOREGROUND_SERVICE, null);
+    }
+
+    private void assertProcessState(Predicate<ProcessState> statePredicate,
+            ThrowingRunnable onRetry) throws Exception {
         final int maxTries = 30;
         ProcessState state = null;
         for (int i = 1; i <= maxTries; i++) {
+            if (onRetry != null) {
+                onRetry.run();
+            }
             state = getProcessStateByUid(mUid);
-            Log.v(TAG, "assertForegroundServiceState(): status for app2 (" + mUid + ") on attempt #"
-                    + i + ": " + state);
-            if (state.state == PROCESS_STATE_FOREGROUND_SERVICE) {
+            Log.v(TAG, "assertProcessState(): status for app2 (" + mUid + ") on attempt #" + i
+                    + ": " + state);
+            if (statePredicate.test(state)) {
                 return;
             }
-            Log.d(TAG, "App not on foreground service state on attempt #" + i
+            Log.i(TAG, "App not in desired process state on attempt #" + i
                     + "; sleeping 1s before trying again");
-            // No sleep after the last turn
             if (i < maxTries) {
                 SystemClock.sleep(SECOND_IN_MS);
             }
         }
-        fail("App2 (" + mUid + ") is not on foreground service state after "
-                + maxTries + " attempts: " + state);
+        fail("App2 (" + mUid + ") is not in the desired process state after " + maxTries
+                + " attempts: " + state);
     }
 
     /**
-     * Returns whether an app state should be considered "background" for restriction purposes.
+     * Asserts whether the active network is available or not. If the network is unavailable, also
+     * checks whether it is blocked by the expected error.
+     *
+     * @param expectAllowed expect background network access to be allowed or not.
+     * @param expectedUnavailableError the expected error when {@code expectAllowed} is false. It's
+     *                                 meaningful only when the {@code expectAllowed} is 'false'.
+     *                                 Throws an IllegalArgumentException when {@code expectAllowed}
+     *                                 is true and this parameter is not null. When the
+     *                                 {@code expectAllowed} is 'false' and this parameter is null,
+     *                                 this function does not compare error type of the networking
+     *                                 access failure.
      */
-    protected boolean isBackground(int state) {
-        return state > PROCESS_STATE_FOREGROUND_SERVICE;
+    protected void assertNetworkAccess(boolean expectAllowed, String expectedUnavailableError)
+            throws Exception {
+        if (expectAllowed && expectedUnavailableError != null) {
+            throw new IllegalArgumentException("expectedUnavailableError is not null");
+        }
+        assertNetworkAccess(expectAllowed, false, expectedUnavailableError);
     }
 
     /**
@@ -958,7 +923,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                 } else if (resultCode == INetworkStateObserver.RESULT_ERROR_UNEXPECTED_PROC_STATE) {
                     Log.d(TAG, resultData);
                     // App didn't come to foreground when the activity is started, so try again.
-                    assertForegroundNetworkAccess();
+                    assertTopNetworkAccess(true);
                 } else {
                     fail("Unexpected resultCode=" + resultCode + "; received=[" + resultData + "]");
                 }

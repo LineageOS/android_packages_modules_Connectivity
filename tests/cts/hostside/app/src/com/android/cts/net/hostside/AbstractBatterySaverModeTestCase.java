@@ -59,13 +59,13 @@ abstract class AbstractBatterySaverModeTestCase extends AbstractRestrictBackgrou
         setBatterySaverMode(false);
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
         setBatterySaverMode(true);
-        assertForegroundNetworkAccess();
+        assertTopNetworkAccess(true);
 
         // Although it should not have access while the screen is off.
         turnScreenOff();
         assertBackgroundNetworkAccess(false);
         turnScreenOn();
-        assertForegroundNetworkAccess();
+        assertTopNetworkAccess(true);
 
         // Goes back to background state.
         finishActivity();
@@ -75,7 +75,7 @@ abstract class AbstractBatterySaverModeTestCase extends AbstractRestrictBackgrou
         setBatterySaverMode(false);
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
         setBatterySaverMode(true);
-        assertForegroundNetworkAccess();
+        assertForegroundServiceNetworkAccess();
         stopForegroundService();
         assertBackgroundNetworkAccess(false);
     }
