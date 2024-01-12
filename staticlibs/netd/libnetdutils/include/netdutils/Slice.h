@@ -22,6 +22,7 @@
 #include <cstring>
 #include <ostream>
 #include <tuple>
+#include <type_traits>
 #include <vector>
 
 namespace android {
