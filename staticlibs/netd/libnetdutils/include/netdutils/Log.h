@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <deque>
+#include <functional>
 #include <shared_mutex>
 #include <string>
 #include <type_traits>
