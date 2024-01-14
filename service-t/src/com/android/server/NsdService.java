@@ -895,10 +895,18 @@ public class NsdService extends INsdManager.Stub {
                                 serviceType);
                         final String registerServiceType = typeSubtype == null
                                 ? null : typeSubtype.first;
+                        final String hostname = serviceInfo.getHostname();
+                        // Keep compatible with the legacy behavior: It's allowed to set host
+                        // addresses for a service registration although the host addresses
+                        // won't be registered. To register the addresses for a host, the
+                        // hostname must be specified.
+                        if (hostname == null) {
+                            serviceInfo.setHostAddresses(Collections.emptyList());
+                        }
                         if (clientInfo.mUseJavaBackend
                                 || mDeps.isMdnsAdvertiserEnabled(mContext)
                                 || useAdvertiserForType(registerServiceType)) {
-                            if (registerServiceType == null) {
+                            if (serviceType != null && registerServiceType == null) {
                                 Log.e(TAG, "Invalid service type: " + serviceType);
                                 clientInfo.onRegisterServiceFailedImmediately(clientRequestId,
                                         NsdManager.FAILURE_INTERNAL_ERROR, false /* isLegacy */);
@@ -921,14 +929,25 @@ public class NsdService extends INsdManager.Stub {
                             } else {
                                 transactionId = getUniqueId();
                             }
-                            serviceInfo.setServiceType(registerServiceType);
-                            serviceInfo.setServiceName(truncateServiceName(
-                                    serviceInfo.getServiceName()));
+
+                            if (registerServiceType != null) {
+                                serviceInfo.setServiceType(registerServiceType);
+                                serviceInfo.setServiceName(
+                                        truncateServiceName(serviceInfo.getServiceName()));
+                            }
+
+                            if (!checkHostname(hostname)) {
+                                clientInfo.onRegisterServiceFailedImmediately(clientRequestId,
+                                        NsdManager.FAILURE_BAD_PARAMETERS, false /* isLegacy */);
+                                break;
+                            }
 
                             Set<String> subtypes = new ArraySet<>(serviceInfo.getSubtypes());
-                            for (String subType: typeSubtype.second) {
-                                if (!TextUtils.isEmpty(subType)) {
-                                    subtypes.add(subType);
+                            if (typeSubtype != null && typeSubtype.second != null) {
+                                for (String subType : typeSubtype.second) {
+                                    if (!TextUtils.isEmpty(subType)) {
+                                        subtypes.add(subType);
+                                    }
                                 }
                             }
                             subtypes = dedupSubtypeLabels(subtypes);
@@ -945,7 +964,7 @@ public class NsdService extends INsdManager.Stub {
                                     MdnsAdvertisingOptions.newBuilder().setIsOnlyUpdate(
                                             isUpdateOnly).build();
                             mAdvertiser.addOrUpdateService(transactionId, serviceInfo,
-                                    mdnsAdvertisingOptions);
+                                    mdnsAdvertisingOptions, clientInfo.mUid);
                             storeAdvertiserRequestMap(clientRequestId, transactionId, clientInfo,
                                     serviceInfo.getNetwork());
                         } else {
@@ -1535,6 +1554,7 @@ public class NsdService extends INsdManager.Stub {
                                 Log.e(TAG, "Invalid attribute", e);
                             }
                         }
+                        info.setHostname(getHostname(serviceInfo));
                         final List<InetAddress> addresses = getInetAddresses(serviceInfo);
                         if (addresses.size() != 0) {
                             info.setHostAddresses(addresses);
@@ -1571,6 +1591,7 @@ public class NsdService extends INsdManager.Stub {
                             }
                         }
 
+                        info.setHostname(getHostname(serviceInfo));
                         final List<InetAddress> addresses = getInetAddresses(serviceInfo);
                         info.setHostAddresses(addresses);
                         clientInfo.onServiceUpdated(clientRequestId, info, request);
@@ -1615,6 +1636,16 @@ public class NsdService extends INsdManager.Stub {
             }
         }
         return addresses;
+    }
+
+    @NonNull
+    private static String getHostname(@NonNull MdnsServiceInfo serviceInfo) {
+        String[] hostname = serviceInfo.getHostName();
+        // Strip the "local" top-level domain.
+        if (hostname.length >= 2 && hostname[hostname.length - 1].equals("local")) {
+            hostname = Arrays.copyOf(hostname, hostname.length - 1);
+        }
+        return String.join(".", hostname);
     }
 
     private static void setServiceNetworkForCallback(NsdServiceInfo info, int netId, int ifaceIdx) {
@@ -1700,6 +1731,21 @@ public class NsdService extends INsdManager.Stub {
         }
 
         return new Pair<>(queryType, Collections.emptyList());
+    }
+
+    /**
+     * Checks if the hostname is valid.
+     *
+     * <p>For now NsdService only allows single-label hostnames conforming to RFC 1035. In other
+     * words, the hostname should be at most 63 characters long and it only contains letters, digits
+     * and hyphens.
+     */
+    public static boolean checkHostname(@Nullable String hostname) {
+        if (hostname == null) {
+            return true;
+        }
+        String HOSTNAME_REGEX = "^[a-zA-Z]([a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?$";
+        return Pattern.compile(HOSTNAME_REGEX).matcher(hostname).matches();
     }
 
     /** Returns {@code true} if {@code subtype} is a valid DNS-SD subtype label. */
@@ -2031,9 +2077,10 @@ public class NsdService extends INsdManager.Stub {
             final int clientRequestId = getClientRequestIdOrLog(clientInfo, transactionId);
             if (clientRequestId < 0) return;
 
-            // onRegisterServiceSucceeded only has the service name in its info. This aligns with
-            // historical behavior.
+            // onRegisterServiceSucceeded only has the service name and hostname in its info. This
+            // aligns with historical behavior.
             final NsdServiceInfo cbInfo = new NsdServiceInfo(registeredInfo.getServiceName(), null);
+            cbInfo.setHostname(registeredInfo.getHostname());
             final ClientRequest request = clientInfo.mClientRequests.get(clientRequestId);
             clientInfo.onRegisterServiceSucceeded(clientRequestId, cbInfo, request);
         }
@@ -2143,6 +2190,7 @@ public class NsdService extends INsdManager.Stub {
         @Override
         public void registerService(int listenerKey, AdvertisingRequest advertisingRequest)
                 throws RemoteException {
+            NsdManager.checkServiceInfoForRegistration(advertisingRequest.getServiceInfo());
             mNsdStateMachine.sendMessage(mNsdStateMachine.obtainMessage(
                     NsdManager.REGISTER_SERVICE, 0, listenerKey,
                     new AdvertisingArgs(this, advertisingRequest)
