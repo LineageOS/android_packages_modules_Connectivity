@@ -6022,6 +6022,13 @@ public class ConnectivityManager {
     /**
      * Sets data saver switch.
      *
+     * <p>This API configures the bandwidth control, and filling data saver status in BpfMap,
+     * which is intended for internal use by the network stack to optimize performance
+     * when frequently checking data saver status for multiple uids without doing IPC.
+     * It does not directly control the global data saver mode that users manage in settings.
+     * To query the comprehensive data saver status for a specific UID, including allowlist
+     * considerations, use {@link #getRestrictBackgroundStatus}.
+     *
      * @param enable True if enable.
      * @throws IllegalStateException if failed.
      * @hide
