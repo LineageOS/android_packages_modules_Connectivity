@@ -15,6 +15,9 @@
  */
 package com.android.server.connectivity.mdns;
 
+import android.annotation.NonNull;
+import android.annotation.Nullable;
+
 /**
  * The class that contains mDNS feature flags;
  */
@@ -46,6 +49,14 @@ public class MdnsFeatureFlags {
      */
     public static final String NSD_KNOWN_ANSWER_SUPPRESSION = "nsd_known_answer_suppression";
 
+    /**
+     * A feature flag to control whether unicast replies should be enabled.
+     *
+     * <p>Enabling this feature causes replies to queries with the Query Unicast (QU) flag set to be
+     * sent unicast instead of multicast, as per RFC6762 5.4.
+     */
+    public static final String NSD_UNICAST_REPLY_ENABLED = "nsd_unicast_reply_enabled";
+
     // Flag for offload feature
     public final boolean mIsMdnsOffloadFeatureEnabled;
 
@@ -61,6 +72,36 @@ public class MdnsFeatureFlags {
     // Flag for known-answer suppression
     public final boolean mIsKnownAnswerSuppressionEnabled;
 
+    // Flag to enable replying unicast to queries requesting unicast replies
+    public final boolean mIsUnicastReplyEnabled;
+
+    @Nullable
+    private final FlagOverrideProvider mOverrideProvider;
+
+    /**
+     * A provider that can indicate whether a flag should be force-enabled for testing purposes.
+     */
+    public interface FlagOverrideProvider {
+        /**
+         * Indicates whether the flag should be force-enabled for testing purposes.
+         */
+        boolean isForceEnabledForTest(@NonNull String flag);
+    }
+
+    /**
+     * Indicates whether the flag should be force-enabled for testing purposes.
+     */
+    private boolean isForceEnabledForTest(@NonNull String flag) {
+        return mOverrideProvider != null && mOverrideProvider.isForceEnabledForTest(flag);
+    }
+
+    /**
+     * Indicates whether {@link #NSD_UNICAST_REPLY_ENABLED} is enabled, including for testing.
+     */
+    public boolean isUnicastReplyEnabled() {
+        return mIsUnicastReplyEnabled || isForceEnabledForTest(NSD_UNICAST_REPLY_ENABLED);
+    }
+
     /**
      * The constructor for {@link MdnsFeatureFlags}.
      */
@@ -68,12 +109,16 @@ public class MdnsFeatureFlags {
             boolean includeInetAddressRecordsInProbing,
             boolean isExpiredServicesRemovalEnabled,
             boolean isLabelCountLimitEnabled,
-            boolean isKnownAnswerSuppressionEnabled) {
+            boolean isKnownAnswerSuppressionEnabled,
+            boolean isUnicastReplyEnabled,
+            @Nullable FlagOverrideProvider overrideProvider) {
         mIsMdnsOffloadFeatureEnabled = isOffloadFeatureEnabled;
         mIncludeInetAddressRecordsInProbing = includeInetAddressRecordsInProbing;
         mIsExpiredServicesRemovalEnabled = isExpiredServicesRemovalEnabled;
         mIsLabelCountLimitEnabled = isLabelCountLimitEnabled;
         mIsKnownAnswerSuppressionEnabled = isKnownAnswerSuppressionEnabled;
+        mIsUnicastReplyEnabled = isUnicastReplyEnabled;
+        mOverrideProvider = overrideProvider;
     }
 
 
@@ -90,6 +135,8 @@ public class MdnsFeatureFlags {
         private boolean mIsExpiredServicesRemovalEnabled;
         private boolean mIsLabelCountLimitEnabled;
         private boolean mIsKnownAnswerSuppressionEnabled;
+        private boolean mIsUnicastReplyEnabled;
+        private FlagOverrideProvider mOverrideProvider;
 
         /**
          * The constructor for {@link Builder}.
@@ -100,6 +147,8 @@ public class MdnsFeatureFlags {
             mIsExpiredServicesRemovalEnabled = false;
             mIsLabelCountLimitEnabled = true; // Default enabled.
             mIsKnownAnswerSuppressionEnabled = false;
+            mIsUnicastReplyEnabled = true;
+            mOverrideProvider = null;
         }
 
         /**
@@ -154,6 +203,27 @@ public class MdnsFeatureFlags {
         }
 
         /**
+         * Set whether the unicast reply feature is enabled.
+         *
+         * @see #NSD_UNICAST_REPLY_ENABLED
+         */
+        public Builder setIsUnicastReplyEnabled(boolean isUnicastReplyEnabled) {
+            mIsUnicastReplyEnabled = isUnicastReplyEnabled;
+            return this;
+        }
+
+        /**
+         * Set a {@link FlagOverrideProvider} to be used by {@link #isForceEnabledForTest(String)}.
+         *
+         * If non-null, features that use {@link #isForceEnabledForTest(String)} will use that
+         * provider to query whether the flag should be force-enabled.
+         */
+        public Builder setOverrideProvider(@Nullable FlagOverrideProvider overrideProvider) {
+            mOverrideProvider = overrideProvider;
+            return this;
+        }
+
+        /**
          * Builds a {@link MdnsFeatureFlags} with the arguments supplied to this builder.
          */
         public MdnsFeatureFlags build() {
@@ -161,7 +231,9 @@ public class MdnsFeatureFlags {
                     mIncludeInetAddressRecordsInProbing,
                     mIsExpiredServicesRemovalEnabled,
                     mIsLabelCountLimitEnabled,
-                    mIsKnownAnswerSuppressionEnabled);
+                    mIsKnownAnswerSuppressionEnabled,
+                    mIsUnicastReplyEnabled,
+                    mOverrideProvider);
         }
     }
 }
