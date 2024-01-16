@@ -499,26 +499,30 @@ public class MdnsRecordRepository {
     @Nullable
     public MdnsReplyInfo getReply(MdnsPacket packet, InetSocketAddress src) {
         final long now = SystemClock.elapsedRealtime();
-        final boolean replyUnicast = (packet.flags & MdnsConstants.QCLASS_UNICAST) != 0;
 
         // Use LinkedHashSet for preserving the insert order of the RRs, so that RRs of the same
         // service or host are grouped together (which is more developer-friendly).
         final Set<RecordInfo<?>> answerInfo = new LinkedHashSet<>();
         final Set<RecordInfo<?>> additionalAnswerInfo = new LinkedHashSet<>();
-
+        // Reply unicast if the feature is enabled AND all replied questions request unicast
+        final boolean replyUnicastEnabled = mMdnsFeatureFlags.isUnicastReplyEnabled();
+        boolean replyUnicast = replyUnicastEnabled;
         for (MdnsRecord question : packet.questions) {
             // Add answers from general records
-            addReplyFromService(question, mGeneralRecords, null /* servicePtrRecord */,
-                    null /* serviceSrvRecord */, null /* serviceTxtRecord */, replyUnicast, now,
-                    answerInfo, additionalAnswerInfo, Collections.emptyList());
+            if (addReplyFromService(question, mGeneralRecords, null /* servicePtrRecord */,
+                    null /* serviceSrvRecord */, null /* serviceTxtRecord */, replyUnicastEnabled,
+                    now, answerInfo, additionalAnswerInfo, Collections.emptyList())) {
+                replyUnicast &= question.isUnicastReplyRequested();
+            }
 
             // Add answers from each service
             for (int i = 0; i < mServices.size(); i++) {
                 final ServiceRegistration registration = mServices.valueAt(i);
                 if (registration.exiting || registration.isProbing) continue;
                 if (addReplyFromService(question, registration.allRecords, registration.ptrRecords,
-                        registration.srvRecord, registration.txtRecord, replyUnicast, now,
+                        registration.srvRecord, registration.txtRecord, replyUnicastEnabled, now,
                         answerInfo, additionalAnswerInfo, packet.answers)) {
+                    replyUnicast &= question.isUnicastReplyRequested();
                     registration.repliedServiceCount++;
                     registration.sentPacketCount++;
                 }
@@ -570,6 +574,12 @@ public class MdnsRecordRepository {
         // Determine the send destination
         final InetSocketAddress dest;
         if (replyUnicast) {
+            // As per RFC6762 5.4, "if the responder has not multicast that record recently (within
+            // one quarter of its TTL), then the responder SHOULD instead multicast the response so
+            // as to keep all the peer caches up to date": this SHOULD is not implemented to
+            // minimize latency for queriers who have just started, so they did not receive previous
+            // multicast responses. Unicast replies are faster as they do not need to wait for the
+            // beacon interval on Wi-Fi.
             dest = src;
         } else if (src.getAddress() instanceof Inet4Address) {
             dest = IPV4_SOCKET_ADDR;
@@ -608,7 +618,7 @@ public class MdnsRecordRepository {
             @Nullable List<RecordInfo<MdnsPointerRecord>> servicePtrRecords,
             @Nullable RecordInfo<MdnsServiceRecord> serviceSrvRecord,
             @Nullable RecordInfo<MdnsTextRecord> serviceTxtRecord,
-            boolean replyUnicast, long now, @NonNull Set<RecordInfo<?>> answerInfo,
+            boolean replyUnicastEnabled, long now, @NonNull Set<RecordInfo<?>> answerInfo,
             @NonNull Set<RecordInfo<?>> additionalAnswerInfo,
             @NonNull List<MdnsRecord> knownAnswerRecords) {
         boolean hasDnsSdPtrRecordAnswer = false;
@@ -659,7 +669,8 @@ public class MdnsRecordRepository {
 
             // TODO: responses to probe queries should bypass this check and only ensure the
             // reply is sent 250ms after the last sent time (RFC 6762 p.15)
-            if (!replyUnicast && info.lastAdvertisedTimeMs > 0L
+            if (!(replyUnicastEnabled && question.isUnicastReplyRequested())
+                    && info.lastAdvertisedTimeMs > 0L
                     && now - info.lastAdvertisedTimeMs < MIN_MULTICAST_REPLY_INTERVAL_MS) {
                 continue;
             }
