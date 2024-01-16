@@ -61,6 +61,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.platform.test.annotations.AppModeFull
+import android.provider.DeviceConfig.NAMESPACE_TETHERING
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants.AF_INET6
@@ -69,6 +70,7 @@ import android.system.OsConstants.ENETUNREACH
 import android.system.OsConstants.ETH_P_IPV6
 import android.system.OsConstants.IPPROTO_IPV6
 import android.system.OsConstants.IPPROTO_UDP
+import android.system.OsConstants.RT_SCOPE_LINK
 import android.system.OsConstants.SOCK_DGRAM
 import android.util.Log
 import androidx.test.filters.SmallTest
@@ -78,12 +80,14 @@ import com.android.compatibility.common.util.PropertyUtil
 import com.android.modules.utils.build.SdkLevel.isAtLeastU
 import com.android.net.module.util.DnsPacket
 import com.android.net.module.util.HexDump
+import com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_LEN
 import com.android.net.module.util.PacketBuilder
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.DeviceConfigRule
+import com.android.testutils.NSResponder
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TapPacketReader
@@ -133,6 +137,7 @@ private const val DBG = false
 private const val TEST_PORT = 12345
 private const val MDNS_PORT = 5353.toShort()
 private val multicastIpv6Addr = parseNumericAddress("ff02::fb") as Inet6Address
+private val testSrcAddr = parseNumericAddress("2001:db8::123") as Inet6Address
 
 @AppModeFull(reason = "Socket cannot bind in instant app mode")
 @RunWith(DevSdkIgnoreRunner::class)
@@ -143,6 +148,9 @@ class NsdManagerTest {
     // Rule used to filter CtsNetTestCasesMaxTargetSdkXX
     @get:Rule
     val ignoreRule = DevSdkIgnoreRule()
+
+    @get:Rule
+    val deviceConfigRule = DeviceConfigRule()
 
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val nsdManager by lazy {
@@ -682,7 +690,7 @@ class NsdManagerTest {
         assertEquals(OffloadEngine.OFFLOAD_TYPE_REPLY.toLong(), serviceInfo.offloadType)
         val offloadPayload = serviceInfo.offloadPayload
         assertNotNull(offloadPayload)
-        val dnsPacket = TestDnsPacket(offloadPayload)
+        val dnsPacket = TestDnsPacket(offloadPayload, dstAddr = multicastIpv6Addr)
         assertEquals(0x8400, dnsPacket.header.flags)
         assertEquals(0, dnsPacket.records[DnsPacket.QDSECTION].size)
         assertTrue(dnsPacket.records[DnsPacket.ANSECTION].size >= 5)
@@ -1286,7 +1294,8 @@ class NsdManagerTest {
         // Resolve service on testNetwork1
         val resolveRecord = NsdResolveRecord()
         val packetReader = TapPacketReader(Handler(handlerThread.looper),
-                testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+                testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */
+        )
         packetReader.startAsyncForTest()
         handlerThread.waitForIdle(TIMEOUT_MS)
 
@@ -1349,6 +1358,68 @@ class NsdManagerTest {
                 serviceResolved.serviceInfo.hostAddresses.toSet())
     }
 
+    @Test
+    fun testUnicastReplyUsedWhenQueryUnicastFlagSet() {
+        // The flag may be removed in the future but unicast replies should be enabled by default
+        // in that case. The rule will reset flags automatically on teardown.
+        deviceConfigRule.setConfig(NAMESPACE_TETHERING, "test_nsd_unicast_reply_enabled", "1")
+
+        val si = makeTestServiceInfo(testNetwork1.network)
+
+        // Register service on testNetwork1
+        val registrationRecord = NsdRegistrationRecord()
+        var nsResponder: NSResponder? = null
+        tryTest {
+            registerService(registrationRecord, si)
+            val packetReader = TapPacketReader(Handler(handlerThread.looper),
+                testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+            packetReader.startAsyncForTest()
+
+            handlerThread.waitForIdle(TIMEOUT_MS)
+            /*
+            Send a "query unicast" query.
+            Generated with:
+            scapy.raw(scapy.DNS(rd=0, qr=0, aa=0, qd =
+                    scapy.DNSQR(qname='_nmt123456789._tcp.local', qtype='PTR', qclass=0x8001)
+            )).hex()
+            */
+            val mdnsPayload = HexDump.hexStringToByteArray("0000000000010000000000000d5f6e6d74313" +
+                    "233343536373839045f746370056c6f63616c00000c8001")
+            replaceServiceNameAndTypeWithTestSuffix(mdnsPayload)
+
+            val testSrcAddr = makeLinkLocalAddressOfOtherDeviceOnPrefix(testNetwork1.network)
+            nsResponder = NSResponder(packetReader, mapOf(
+                testSrcAddr to MacAddress.fromString("01:02:03:04:05:06")
+            )).apply { start() }
+
+            packetReader.sendResponse(buildMdnsPacket(mdnsPayload, testSrcAddr))
+            // The reply is sent unicast to the source address. There may be announcements sent
+            // multicast around this time, so filter by destination address.
+            val reply = packetReader.pollForMdnsPacket { pkt ->
+                pkt.isReplyFor("$serviceType.local", DnsResolver.TYPE_PTR) &&
+                        pkt.dstAddr == testSrcAddr
+            }
+            assertNotNull(reply)
+        } cleanup {
+            nsResponder?.stop()
+            nsdManager.unregisterService(registrationRecord)
+            registrationRecord.expectCallback<ServiceUnregistered>()
+        }
+    }
+
+    private fun makeLinkLocalAddressOfOtherDeviceOnPrefix(network: Network): Inet6Address {
+        val lp = cm.getLinkProperties(network) ?: fail("No LinkProperties for net $network")
+        // Expect to have a /64 link-local address
+        val linkAddr = lp.linkAddresses.firstOrNull {
+            it.isIPv6 && it.scope == RT_SCOPE_LINK && it.prefixLength == 64
+        } ?: fail("No /64 link-local address found in ${lp.linkAddresses} for net $network")
+
+        // Add one to the device address to simulate the address of another device on the prefix
+        val addrBytes = linkAddr.address.address
+        addrBytes[IPV6_ADDR_LEN - 1]++
+        return Inet6Address.getByAddress(addrBytes) as Inet6Address
+    }
+
     private fun buildConflictingAnnouncement(): ByteBuffer {
         /*
         Generated with:
@@ -1393,7 +1464,10 @@ class NsdManagerTest {
         replaceAll(buffer, source, replacement)
     }
 
-    private fun buildMdnsPacket(mdnsPayload: ByteArray): ByteBuffer {
+    private fun buildMdnsPacket(
+        mdnsPayload: ByteArray,
+        srcAddr: Inet6Address = testSrcAddr
+    ): ByteBuffer {
         val packetBuffer = PacketBuilder.allocate(true /* hasEther */, IPPROTO_IPV6,
                 IPPROTO_UDP, mdnsPayload.size)
         val packetBuilder = PacketBuilder(packetBuffer)
@@ -1408,7 +1482,7 @@ class NsdManagerTest {
                 0x60000000, // version=6, traffic class=0x0, flowlabel=0x0
                 IPPROTO_UDP.toByte(),
                 64 /* hop limit */,
-                parseNumericAddress("2001:db8::123") as Inet6Address /* srcIp */,
+                srcAddr,
                 multicastIpv6Addr /* dstIp */)
         packetBuilder.writeUdpHeader(MDNS_PORT /* srcPort */, MDNS_PORT /* dstPort */)
         packetBuffer.put(mdnsPayload)

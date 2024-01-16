@@ -110,6 +110,12 @@ class ArpRequestFilter : Predicate<ByteArray> {
     override fun test(t: ByteArray) = impl.test(t)
 }
 
+class Icmpv6Filter : Predicate<ByteArray> {
+    private val impl = OffsetFilter(ETHER_TYPE_OFFSET, 0x86.toByte(), 0xdd.toByte() /* IPv6 */).and(
+        OffsetFilter(IPV6_PROTOCOL_OFFSET, 58 /* ICMPv6 */))
+    override fun test(t: ByteArray) = impl.test(t)
+}
+
 /**
  * A [Predicate] that matches ethernet-encapped DHCP packets sent from a DHCP client.
  */
