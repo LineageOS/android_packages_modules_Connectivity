@@ -37,10 +37,9 @@ import libcore.io.IoUtils
  *
  * See {@link PacketForwarder} for more detailed information.
  */
-// TODO: Support multiple addresses.
 class PacketBridge(
     context: Context,
-    address: LinkAddress,
+    addresses: List<LinkAddress>,
     dnsAddr: InetAddress
 ) {
     private val binder = Binder()
@@ -50,9 +49,9 @@ class PacketBridge(
 
     // Create test networks. The needed permissions should be supplied by the callers.
     @SuppressLint("MissingPermission")
-    private val internalIface = tnm.createTunInterface(listOf(address))
+    private val internalIface = tnm.createTunInterface(addresses)
     @SuppressLint("MissingPermission")
-    private val externalIface = tnm.createTunInterface(listOf(address))
+    private val externalIface = tnm.createTunInterface(addresses)
 
     // Register test networks to ConnectivityService.
     private val internalNetworkCallback: TestableNetworkCallback
@@ -60,8 +59,8 @@ class PacketBridge(
     val internalNetwork: Network
     val externalNetwork: Network
     init {
-        val (inCb, inNet) = createTestNetwork(internalIface, address, dnsAddr)
-        val (exCb, exNet) = createTestNetwork(externalIface, address, dnsAddr)
+        val (inCb, inNet) = createTestNetwork(internalIface, addresses, dnsAddr)
+        val (exCb, exNet) = createTestNetwork(externalIface, addresses, dnsAddr)
         internalNetworkCallback = inCb
         externalNetworkCallback = exCb
         internalNetwork = inNet
@@ -94,7 +93,7 @@ class PacketBridge(
      */
     private fun createTestNetwork(
         testIface: TestNetworkInterface,
-        addr: LinkAddress,
+        addresses: List<LinkAddress>,
         dnsAddr: InetAddress
     ): Pair<TestableNetworkCallback, Network> {
         // Make a network request to hold the test network
@@ -107,7 +106,7 @@ class PacketBridge(
         cm.requestNetwork(nr, testCb)
 
         val lp = LinkProperties().apply {
-            addLinkAddress(addr)
+            setLinkAddresses(addresses)
             interfaceName = testIface.interfaceName
             addDnsServer(dnsAddr)
         }
