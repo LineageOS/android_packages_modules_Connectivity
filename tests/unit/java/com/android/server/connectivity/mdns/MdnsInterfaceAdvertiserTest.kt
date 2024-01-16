@@ -35,6 +35,7 @@ import com.android.testutils.waitForIdle
 import java.net.InetSocketAddress
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertTrue
 import org.junit.After
 import org.junit.Before
@@ -213,7 +214,12 @@ class MdnsInterfaceAdvertiserTest {
         packetHandler.handlePacket(query, query.size, src)
 
         val packetCaptor = ArgumentCaptor.forClass(MdnsPacket::class.java)
-        verify(repository).getReply(packetCaptor.capture(), eq(src))
+        val srcCaptor = ArgumentCaptor.forClass(InetSocketAddress::class.java)
+        verify(repository).getReply(packetCaptor.capture(), srcCaptor.capture())
+
+        assertEquals(src, srcCaptor.value)
+        assertNotSame(src, srcCaptor.value, "src will be reused by the packetHandler, references " +
+                "to it should not be used outside of handlePacket.")
 
         packetCaptor.value.let {
             assertEquals(1, it.questions.size)
