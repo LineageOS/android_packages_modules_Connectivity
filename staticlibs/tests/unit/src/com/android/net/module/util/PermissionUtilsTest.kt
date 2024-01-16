@@ -19,6 +19,7 @@ package com.android.net.module.util
 import android.Manifest.permission.NETWORK_STACK
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.pm.PackageManager.NameNotFoundException
 import android.content.pm.PackageManager.PERMISSION_DENIED
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
@@ -28,6 +29,7 @@ import com.android.net.module.util.PermissionUtils.checkAnyPermissionOf
 import com.android.net.module.util.PermissionUtils.enforceAnyPermissionOf
 import com.android.net.module.util.PermissionUtils.enforceNetworkStackPermission
 import com.android.net.module.util.PermissionUtils.enforceNetworkStackPermissionOr
+import com.android.net.module.util.PermissionUtils.enforcePackageNameMatchesUid
 import com.android.net.module.util.PermissionUtils.enforceSystemFeature
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
@@ -42,7 +44,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 
 /** Tests for PermissionUtils */
@@ -53,6 +58,9 @@ class PermissionUtilsTest {
     val ignoreRule = DevSdkIgnoreRule()
     private val TEST_PERMISSION1 = "android.permission.TEST_PERMISSION1"
     private val TEST_PERMISSION2 = "android.permission.TEST_PERMISSION2"
+    private val TEST_UID1 = 1234
+    private val TEST_UID2 = 1235
+    private val TEST_PACKAGE_NAME = "test.package"
     private val mockContext = mock(Context::class.java)
     private val mockPackageManager = mock(PackageManager::class.java)
 
@@ -61,6 +69,7 @@ class PermissionUtilsTest {
     @Before
     fun setup() {
         doReturn(mockPackageManager).`when`(mockContext).packageManager
+        doReturn(mockContext).`when`(mockContext).createContextAsUser(any(), anyInt())
     }
 
     @Test
@@ -140,5 +149,25 @@ class PermissionUtilsTest {
         } catch (e: UnsupportedOperationException) {
             Assert.fail("Exception should have not been thrown with system feature enabled")
         }
+    }
+
+    @Test
+    fun testEnforcePackageNameMatchesUid() {
+        // Verify name not found throws.
+        doThrow(NameNotFoundException()).`when`(mockPackageManager)
+            .getPackageUid(eq(TEST_PACKAGE_NAME), anyInt())
+        assertFailsWith<SecurityException> {
+            enforcePackageNameMatchesUid(mockContext, TEST_UID1, TEST_PACKAGE_NAME)
+        }
+
+        // Verify uid mismatch throws.
+        doReturn(TEST_UID1).`when`(mockPackageManager)
+            .getPackageUid(eq(TEST_PACKAGE_NAME), anyInt())
+        assertFailsWith<SecurityException> {
+            enforcePackageNameMatchesUid(mockContext, TEST_UID2, TEST_PACKAGE_NAME)
+        }
+
+        // Verify uid match passes.
+        enforcePackageNameMatchesUid(mockContext, TEST_UID1, TEST_PACKAGE_NAME)
     }
 }
