@@ -130,6 +130,8 @@ public final class NetworkCapabilities implements Parcelable {
                 "com.android.net.flags.forbidden_capability";
         static final String FLAG_NET_CAPABILITY_LOCAL_NETWORK =
                 "com.android.net.flags.net_capability_local_network";
+        static final String REQUEST_RESTRICTED_WIFI =
+                "com.android.net.flags.request_restricted_wifi";
     }
 
     /**
@@ -2790,10 +2792,9 @@ public final class NetworkCapabilities implements Parcelable {
      * receiver holds the NETWORK_FACTORY permission. In all other cases, it will be the empty set.
      *
      * @return
-     * @hide
      */
     @NonNull
-    @SystemApi
+    @FlaggedApi(Flags.REQUEST_RESTRICTED_WIFI)
     public Set<Integer> getSubscriptionIds() {
         return new ArraySet<>(mSubIds);
     }
