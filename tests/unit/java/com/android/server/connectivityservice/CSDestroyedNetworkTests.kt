@@ -30,6 +30,7 @@ import org.junit.runner.RunWith
 
 private const val LONG_TIMEOUT_MS = 5_000
 
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)
