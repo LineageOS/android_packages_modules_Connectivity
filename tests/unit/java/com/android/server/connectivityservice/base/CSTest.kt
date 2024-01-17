@@ -63,6 +63,7 @@ import com.android.server.connectivity.ClatCoordinator
 import com.android.server.connectivity.ConnectivityFlags
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies
+import com.android.server.connectivity.NetworkRequestStateStatsMetrics
 import com.android.server.connectivity.ProxyTracker
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
@@ -158,6 +159,7 @@ open class CSTest {
     val netd = mock<INetd>()
     val bpfNetMaps = mock<BpfNetMaps>()
     val clatCoordinator = mock<ClatCoordinator>()
+    val networkRequestStateStatsMetrics = mock<NetworkRequestStateStatsMetrics>()
     val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
     val alrmHandlerThread = HandlerThread("TestAlarmManager").also { it.start() }
     val alarmManager = makeMockAlarmManager(alrmHandlerThread)
@@ -206,6 +208,9 @@ open class CSTest {
         override fun makeMultinetworkPolicyTracker(c: Context, h: Handler, r: Runnable) =
                 MultinetworkPolicyTracker(c, h, r,
                         MultinetworkPolicyTrackerTestDependencies(connResources.get()))
+
+        override fun makeNetworkRequestStateStatsMetrics(c: Context) =
+                this@CSTest.networkRequestStateStatsMetrics
 
         // All queried features must be mocked, because the test cannot hold the
         // READ_DEVICE_CONFIG permission and device config utils use static methods for
