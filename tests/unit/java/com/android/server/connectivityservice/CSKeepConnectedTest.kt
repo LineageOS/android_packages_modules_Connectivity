@@ -22,8 +22,8 @@ import android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
 import android.net.NetworkScore
-import android.net.NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK
 import android.net.NetworkScore.KEEP_CONNECTED_FOR_TEST
+import android.net.NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK
 import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
@@ -33,6 +33,7 @@ import com.android.testutils.TestableNetworkCallback
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)

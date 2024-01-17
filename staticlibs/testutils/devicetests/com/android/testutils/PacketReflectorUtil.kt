@@ -112,3 +112,28 @@ fun fixPacketChecksum(buf: ByteArray, len: Int, version: Int, protocol: Byte) {
         else -> throw IllegalArgumentException("Unsupported protocol: $protocol")
     }
 }
+
+fun swapBytes(buf: ByteArray, pos1: Int, pos2: Int, len: Int) {
+    for (i in 0 until len) {
+        val b = buf[pos1 + i]
+        buf[pos1 + i] = buf[pos2 + i]
+        buf[pos2 + i] = b
+    }
+}
+
+fun swapAddresses(buf: ByteArray, version: Int) {
+    val addrPos: Int
+    val addrLen: Int
+    when (version) {
+        4 -> {
+            addrPos = PacketReflector.IPV4_ADDR_OFFSET
+            addrLen = PacketReflector.IPV4_ADDR_LENGTH
+        }
+        6 -> {
+            addrPos = PacketReflector.IPV6_ADDR_OFFSET
+            addrLen = PacketReflector.IPV6_ADDR_LENGTH
+        }
+        else -> throw java.lang.IllegalArgumentException()
+    }
+    swapBytes(buf, addrPos, addrPos + addrLen, addrLen)
+}

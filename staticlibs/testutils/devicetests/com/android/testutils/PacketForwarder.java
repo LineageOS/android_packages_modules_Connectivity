@@ -30,16 +30,13 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
-import androidx.annotation.GuardedBy;
-
 import java.io.FileDescriptor;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Objects;
 
 /**
  * A class that forwards packets from a {@link TestNetworkInterface} to another
- * {@link TestNetworkInterface} with NAT.
+ * {@link TestNetworkInterface}.
  *
  * For testing purposes, a {@link TestNetworkInterface} provides a {@link FileDescriptor}
  * which allows content injection on the test network. However, this could be hard to use
@@ -54,30 +51,14 @@ import java.util.Objects;
  *
  * To make it work, an internal interface and an external interface are defined, where
  * the client might send packets from the internal interface which are originated from
- * multiple addresses to a server that listens on the external address.
- *
- * When forwarding the outgoing packet on the internal interface, a simple NAT mechanism
- * is implemented during forwarding, which will swap the source and destination,
- * but replacing the source address with the external address,
- * e.g. 192.168.1.1:1234 -> 8.8.8.8:80 will be translated into 8.8.8.8:1234 -> 1.2.3.4:80.
- *
- * For the above example, a client who sends http request will have a hallucination that
- * it is talking to a remote server at 8.8.8.8. Also, the server listens on 1.2.3.4 will
- * have a different hallucination that the request is sent from a remote client at 8.8.8.8,
- * to a local address 1.2.3.4.
- *
- * And a NAT mapping is created at the time when the outgoing packet is forwarded.
- * With a different internal source port, the instance learned that when a response with the
- * destination port 1234, it should forward the packet to the internal address 192.168.1.1.
+ * multiple addresses to a server that listens on the different port.
  *
  * For the incoming packet received from external interface, for example a http response sent
  * from the http server, the same mechanism is applied but in a different direction,
- * where the source and destination will be swapped, and the source address will be replaced
- * with the internal address, which is obtained from the NAT mapping described above.
+ * where the source and destination will be swapped.
  */
-public abstract class NatPacketForwarderBase extends Thread {
-    private static final String TAG = "NatPacketForwarder";
-    static final int DESTINATION_PORT_OFFSET = 2;
+public class PacketForwarder extends Thread {
+    private static final String TAG = "PacketForwarder";
 
     // The source fd to read packets from.
     @NonNull
@@ -88,27 +69,12 @@ public abstract class NatPacketForwarderBase extends Thread {
     // The destination fd to write packets to.
     @NonNull
     final FileDescriptor mDstFd;
-    // The NAT mapping table shared between two NatPacketForwarder instances to map from
-    // the source port to the associated internal address. The map can be read/write from two
-    // different threads on any given time whenever receiving packets on the
-    // {@link TestNetworkInterface}. Thus, synchronize on the object when reading/writing is needed.
-    @GuardedBy("mNatMap")
-    @NonNull
-    final PacketBridge.NatMap mNatMap;
-    // The address of the external interface. See {@link NatPacketForwarder}.
-    @NonNull
-    final InetAddress mExtAddr;
 
     /**
-     * Construct a {@link NatPacketForwarderBase}.
+     * Construct a {@link PacketForwarder}.
      *
      * This class reads packets from {@code srcFd} of a {@link TestNetworkInterface}, and
-     * forwards them to the {@code dstFd} of another {@link TestNetworkInterface} with
-     * NAT applied. See {@link NatPacketForwarderBase}.
-     *
-     * To apply NAT, the address of the external interface needs to be supplied through
-     * {@code extAddr} to identify the external interface. And a shared NAT mapping table,
-     * {@code natMap} is needed to be shared between these two instances.
+     * forwards them to the {@code dstFd} of another {@link TestNetworkInterface}.
      *
      * Note that this class is not useful if the instance is not managed by a
      * {@link PacketBridge} to set up a two-way communication.
@@ -116,28 +82,14 @@ public abstract class NatPacketForwarderBase extends Thread {
      * @param srcFd   {@link FileDescriptor} to read packets from.
      * @param mtu     MTU of the test network.
      * @param dstFd   {@link FileDescriptor} to write packets to.
-     * @param extAddr the external address, which is the address of the external interface.
-     *                See {@link NatPacketForwarderBase}.
-     * @param natMap  the NAT mapping table shared between two {@link NatPacketForwarderBase}
-     *                instance.
      */
-    public NatPacketForwarderBase(@NonNull FileDescriptor srcFd, int mtu,
-            @NonNull FileDescriptor dstFd, @NonNull InetAddress extAddr,
-            @NonNull PacketBridge.NatMap natMap) {
+    public PacketForwarder(@NonNull FileDescriptor srcFd, int mtu,
+                           @NonNull FileDescriptor dstFd) {
         super(TAG);
         mSrcFd = Objects.requireNonNull(srcFd);
         mBuf = new byte[mtu];
         mDstFd = Objects.requireNonNull(dstFd);
-        mExtAddr = Objects.requireNonNull(extAddr);
-        mNatMap = Objects.requireNonNull(natMap);
     }
-
-    /**
-     * A method to prepare forwarding packets between two instances of {@link TestNetworkInterface},
-     * which includes re-write addresses, ports and fix up checksums.
-     * Subclasses should override this method to implement a simple NAT.
-     */
-    abstract void preparePacketForForwarding(@NonNull byte[] buf, int len, int version, int proto);
 
     private void forwardPacket(@NonNull byte[] buf, int len) {
         try {
@@ -190,8 +142,9 @@ public abstract class NatPacketForwarderBase extends Thread {
         if (len < ipHdrLen + transportHdrLen) {
             throw new IllegalStateException("Unexpected buffer length: " + len);
         }
-        // Re-write addresses, ports and fix up checksums.
-        preparePacketForForwarding(mBuf, len, version, proto);
+        // Swap addresses.
+        PacketReflectorUtil.swapAddresses(mBuf, version);
+
         // Send the packet to the destination fd.
         forwardPacket(mBuf, len);
     }
