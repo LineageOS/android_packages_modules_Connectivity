@@ -1631,6 +1631,96 @@ class NsdManagerTest {
         }
     }
 
+    @Test
+    fun testReplyWhenKnownAnswerSuppressionFlagSet() {
+        // The flag may be removed in the future but known-answer suppression should be enabled by
+        // default in that case. The rule will reset flags automatically on teardown.
+        deviceConfigRule.setConfig(NAMESPACE_TETHERING, "test_nsd_known_answer_suppression", "1")
+        deviceConfigRule.setConfig(NAMESPACE_TETHERING, "test_nsd_unicast_reply_enabled", "1")
+
+        val si = makeTestServiceInfo(testNetwork1.network)
+
+        // Register service on testNetwork1
+        val registrationRecord = NsdRegistrationRecord()
+        var nsResponder: NSResponder? = null
+        tryTest {
+            registerService(registrationRecord, si)
+            val packetReader = TapPacketReader(Handler(handlerThread.looper),
+                    testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+            packetReader.startAsyncForTest()
+
+            handlerThread.waitForIdle(TIMEOUT_MS)
+            /*
+            Send a query with a known answer. Expect to receive a response containing TXT record
+            only.
+            Generated with:
+            scapy.raw(scapy.DNS(rd=0, qr=0, aa=0, qd =
+                    scapy.DNSQR(qname='_nmt123456789._tcp.local', qtype='PTR',
+                            qclass=0x8001) /
+                    scapy.DNSQR(qname='NsdTest123456789._nmt123456789._tcp.local', qtype='TXT',
+                            qclass=0x8001),
+                    an = scapy.DNSRR(rrname='_nmt123456789._tcp.local', type='PTR', ttl=4500,
+                            rdata='NsdTest123456789._nmt123456789._tcp.local')
+            )).hex()
+            */
+            val query = HexDump.hexStringToByteArray("0000000000020001000000000d5f6e6d74313233343" +
+                    "536373839045f746370056c6f63616c00000c8001104e7364546573743132333435363738390" +
+                    "d5f6e6d74313233343536373839045f746370056c6f63616c00001080010d5f6e6d743132333" +
+                    "43536373839045f746370056c6f63616c00000c000100001194002b104e73645465737431323" +
+                    "33435363738390d5f6e6d74313233343536373839045f746370056c6f63616c00")
+            replaceServiceNameAndTypeWithTestSuffix(query)
+
+            val testSrcAddr = makeLinkLocalAddressOfOtherDeviceOnPrefix(testNetwork1.network)
+            nsResponder = NSResponder(packetReader, mapOf(
+                    testSrcAddr to MacAddress.fromString("01:02:03:04:05:06")
+            )).apply { start() }
+
+            packetReader.sendResponse(buildMdnsPacket(query, testSrcAddr))
+            // The reply is sent unicast to the source address. There may be announcements sent
+            // multicast around this time, so filter by destination address.
+            val reply = packetReader.pollForMdnsPacket { pkt ->
+                pkt.isReplyFor("$serviceName.$serviceType.local", DnsResolver.TYPE_TXT) &&
+                        !pkt.isReplyFor("$serviceType.local", DnsResolver.TYPE_PTR) &&
+                        pkt.dstAddr == testSrcAddr
+            }
+            assertNotNull(reply)
+
+            /*
+            Send a query with a known answer (TTL is less than half). Expect to receive a response
+            containing both PTR and TXT records.
+            Generated with:
+            scapy.raw(scapy.DNS(rd=0, qr=0, aa=0, qd =
+                    scapy.DNSQR(qname='_nmt123456789._tcp.local', qtype='PTR',
+                            qclass=0x8001) /
+                    scapy.DNSQR(qname='NsdTest123456789._nmt123456789._tcp.local', qtype='TXT',
+                            qclass=0x8001),
+                    an = scapy.DNSRR(rrname='_nmt123456789._tcp.local', type='PTR', ttl=2150,
+                            rdata='NsdTest123456789._nmt123456789._tcp.local')
+            )).hex()
+            */
+            val query2 = HexDump.hexStringToByteArray("0000000000020001000000000d5f6e6d7431323334" +
+                    "3536373839045f746370056c6f63616c00000c8001104e736454657374313233343536373839" +
+                    "0d5f6e6d74313233343536373839045f746370056c6f63616c00001080010d5f6e6d74313233" +
+                    "343536373839045f746370056c6f63616c00000c000100000866002b104e7364546573743132" +
+                    "333435363738390d5f6e6d74313233343536373839045f746370056c6f63616c00")
+            replaceServiceNameAndTypeWithTestSuffix(query2)
+
+            packetReader.sendResponse(buildMdnsPacket(query2, testSrcAddr))
+            // The reply is sent unicast to the source address. There may be announcements sent
+            // multicast around this time, so filter by destination address.
+            val reply2 = packetReader.pollForMdnsPacket { pkt ->
+                pkt.isReplyFor("$serviceName.$serviceType.local", DnsResolver.TYPE_TXT) &&
+                        pkt.isReplyFor("$serviceType.local", DnsResolver.TYPE_PTR) &&
+                        pkt.dstAddr == testSrcAddr
+            }
+            assertNotNull(reply2)
+        } cleanup {
+            nsResponder?.stop()
+            nsdManager.unregisterService(registrationRecord)
+            registrationRecord.expectCallback<ServiceUnregistered>()
+        }
+    }
+
     private fun makeLinkLocalAddressOfOtherDeviceOnPrefix(network: Network): Inet6Address {
         val lp = cm.getLinkProperties(network) ?: fail("No LinkProperties for net $network")
         // Expect to have a /64 link-local address

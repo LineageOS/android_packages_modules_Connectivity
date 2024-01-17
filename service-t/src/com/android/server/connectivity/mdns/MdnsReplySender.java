@@ -145,7 +145,7 @@ public class MdnsReplySender {
     public void queueReply(@NonNull MdnsReplyInfo reply) {
         ensureRunningOnHandlerThread(mHandler);
 
-        if (mMdnsFeatureFlags.mIsKnownAnswerSuppressionEnabled) {
+        if (mMdnsFeatureFlags.isKnownAnswerSuppressionEnabled()) {
             mDependencies.removeMessages(mHandler, MSG_SEND, reply.source);
 
             final MdnsReplyInfo queuingReply = mSrcReplies.remove(reply.source);
@@ -231,7 +231,7 @@ public class MdnsReplySender {
         @Override
         public void handleMessage(@NonNull Message msg) {
             final MdnsReplyInfo replyInfo;
-            if (mMdnsFeatureFlags.mIsKnownAnswerSuppressionEnabled) {
+            if (mMdnsFeatureFlags.isKnownAnswerSuppressionEnabled()) {
                 // Retrieve the MdnsReplyInfo from the map via a source address, as the reply info
                 // will be combined or updated.
                 final InetSocketAddress source = (InetSocketAddress) msg.obj;

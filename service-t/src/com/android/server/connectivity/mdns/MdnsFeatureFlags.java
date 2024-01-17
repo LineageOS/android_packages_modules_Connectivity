@@ -118,6 +118,14 @@ public class MdnsFeatureFlags {
     }
 
     /**
+     * Indicates whether {@link #NSD_KNOWN_ANSWER_SUPPRESSION} is enabled, including for testing.
+     */
+    public boolean isKnownAnswerSuppressionEnabled() {
+        return mIsKnownAnswerSuppressionEnabled
+                || isForceEnabledForTest(NSD_KNOWN_ANSWER_SUPPRESSION);
+    }
+
+    /**
      * The constructor for {@link MdnsFeatureFlags}.
      */
     public MdnsFeatureFlags(boolean isOffloadFeatureEnabled,
