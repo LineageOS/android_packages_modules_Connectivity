@@ -26,6 +26,7 @@
 
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="push-file" key="net" value="/storage/emulated/0/chromium_tests_root/net" />
+        <option name="push-file" key="test_server" value="/storage/emulated/0/chromium_tests_root/components/cronet/testing/test_server" />
     </target_preparer>
 
     <option name="test-tag" value="NetHttpTests" />
@@ -46,6 +47,8 @@
         <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestTest#testSSLCertificateError" />
         <!-- b/316559294 -->
         <option name="exclude-filter" value="org.chromium.net.NQETest#testQuicDisabled" />
+        <!-- b/316559294 -->
+        <option name="exclude-filter" value="org.chromium.net.NQETest#testPrefsWriteRead" />
         <!-- b/316554711-->
         <option name="exclude-filter" value="org.chromium.net.NetworkChangesTest" />
         <!-- b/316550794 -->
