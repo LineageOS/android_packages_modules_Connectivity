@@ -19,6 +19,10 @@
         <option name="install-arg" value="-t" />
     </target_preparer>
     <option name="test-tag" value="NetHttpCoverageTests" />
+
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="push-file" key="net" value="/storage/emulated/0/chromium_tests_root/net" />
+    </target_preparer>
     <!-- Tethering/Connectivity is a SDK 30+ module -->
     <!-- TODO Switch back to Sdk30 when b/270049141 is fixed -->
     <object type="module_controller"
@@ -47,6 +51,7 @@
         <!-- b/316550794 -->
         <option name="exclude-filter" value="org.chromium.net.impl.CronetLoggerTest#testEngineCreation" />
         <option name="hidden-api-checks" value="false"/>
+        <option name="isolated-storage" value="false"/>
         <option
             name="device-listeners"
             value="com.android.modules.utils.testing.NativeCoverageHackInstrumentationListener" />
