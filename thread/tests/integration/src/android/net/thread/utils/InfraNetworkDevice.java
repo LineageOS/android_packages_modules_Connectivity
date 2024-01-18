@@ -16,7 +16,7 @@
 package android.net.thread.utils;
 
 import static android.net.thread.utils.IntegrationTestUtils.getRaPios;
-import static android.net.thread.utils.IntegrationTestUtils.readPacketFrom;
+import static android.net.thread.utils.IntegrationTestUtils.pollForPacket;
 import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_SLLA;
@@ -109,7 +109,7 @@ public final class InfraNetworkDevice {
         try {
             sendRsPacket();
 
-            final byte[] raPacket = readPacketFrom(packetReader, p -> !getRaPios(p).isEmpty());
+            final byte[] raPacket = pollForPacket(packetReader, p -> !getRaPios(p).isEmpty());
 
             final List<PrefixInformationOption> options = getRaPios(raPacket);
 
