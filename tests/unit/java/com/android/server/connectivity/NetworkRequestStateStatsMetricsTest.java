@@ -27,7 +27,6 @@ import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import android.net.NetworkCapabilities;
@@ -99,11 +98,10 @@ public class NetworkRequestStateStatsMetricsTest {
         // This call will be used to calculate NR received time
         Mockito.when(mNRStateInfoDeps.getElapsedRealtime()).thenReturn(nrStartTime);
         mNetworkRequestStateStatsMetrics.onNetworkRequestReceived(NOT_METERED_WIFI_NETWORK_REQUEST);
-        HandlerUtils.waitForIdle(mHandlerThread, TIMEOUT_MS);
 
         ArgumentCaptor<NetworkRequestStateInfo> networkRequestStateInfoCaptor =
                 ArgumentCaptor.forClass(NetworkRequestStateInfo.class);
-        verify(mNRStateStatsDeps, times(1))
+        verify(mNRStateStatsDeps, timeout(TIMEOUT_MS))
                 .writeStats(networkRequestStateInfoCaptor.capture());
 
         NetworkRequestStateInfo nrStateInfoSent = networkRequestStateInfoCaptor.getValue();
@@ -120,9 +118,8 @@ public class NetworkRequestStateStatsMetricsTest {
         // This call will be used to calculate NR removed time
         Mockito.when(mNRStateInfoDeps.getElapsedRealtime()).thenReturn(nrEndTime);
         mNetworkRequestStateStatsMetrics.onNetworkRequestRemoved(NOT_METERED_WIFI_NETWORK_REQUEST);
-        HandlerUtils.waitForIdle(mHandlerThread, TIMEOUT_MS);
 
-        verify(mNRStateStatsDeps, times(1))
+        verify(mNRStateStatsDeps, timeout(TIMEOUT_MS))
                 .writeStats(networkRequestStateInfoCaptor.capture());
 
         nrStateInfoSent = networkRequestStateInfoCaptor.getValue();
@@ -147,8 +144,7 @@ public class NetworkRequestStateStatsMetricsTest {
     @Test
     public void testNoMessagesWhenNetworkRequestReceived() {
         mNetworkRequestStateStatsMetrics.onNetworkRequestReceived(NOT_METERED_WIFI_NETWORK_REQUEST);
-        HandlerUtils.waitForIdle(mHandlerThread, TIMEOUT_MS);
-        verify(mNRStateStatsDeps, times(1))
+        verify(mNRStateStatsDeps, timeout(TIMEOUT_MS))
                 .writeStats(any(NetworkRequestStateInfo.class));
 
         clearInvocations(mNRStateStatsDeps);
@@ -184,7 +180,7 @@ public class NetworkRequestStateStatsMetricsTest {
         // Check only first MAX_QUEUED_REQUESTS events are logged.
         ArgumentCaptor<NetworkRequestStateInfo> networkRequestStateInfoCaptor =
                 ArgumentCaptor.forClass(NetworkRequestStateInfo.class);
-        verify(mNRStateStatsDeps, timeout(100).times(
+        verify(mNRStateStatsDeps, timeout(TIMEOUT_MS).times(
                 NetworkRequestStateStatsMetrics.MAX_QUEUED_REQUESTS))
                 .writeStats(networkRequestStateInfoCaptor.capture());
         for (int i = 0; i < NetworkRequestStateStatsMetrics.MAX_QUEUED_REQUESTS; i++) {
