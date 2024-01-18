@@ -25,6 +25,7 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import android.net.TestNetworkInterface;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.Icmpv6Header;
@@ -49,6 +50,12 @@ import java.util.function.Supplier;
 /** Static utility methods relating to Thread integration tests. */
 public final class IntegrationTestUtils {
     private IntegrationTestUtils() {}
+
+    /** Returns whether the device supports simulated Thread radio. */
+    public static boolean isSimulatedThreadRadioSupported() {
+        // The integration test uses SIMULATION Thread radio so that it only supports CuttleFish.
+        return SystemProperties.get("ro.product.model").startsWith("Cuttlefish");
+    }
 
     /**
      * Waits for the given {@link Supplier} to be true until given timeout.
