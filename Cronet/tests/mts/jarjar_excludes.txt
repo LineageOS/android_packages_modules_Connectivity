@@ -2,6 +2,8 @@
 com\.android\.testutils\..+
 # jarjar-gen can't handle some kotlin object expression, exclude packages that include them
 androidx\..+
+# don't jarjar netty as it does JNI
+io\.netty\..+
 kotlin\.test\..+
 kotlin\.reflect\..+
 org\.mockito\..+
@@ -19,3 +21,6 @@ org\.chromium\.net\.MockUrlRequestJobFactory(\$.+)?
 org\.chromium\.net\.QuicTestServer(\$.+)?
 org\.chromium\.net\.MockCertVerifier(\$.+)?
 org\.chromium\.net\.LogcatCapture(\$.+)?
+org\.chromium\.net\.ReportingCollector(\$.+)?
+org\.chromium\.net\.Http2TestServer(\$.+)?
+org\.chromium\.net\.Http2TestHandler(\$.+)?
