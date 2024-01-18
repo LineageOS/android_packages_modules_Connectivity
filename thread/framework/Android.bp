@@ -30,3 +30,14 @@ filegroup {
         "//packages/modules/Connectivity:__subpackages__",
     ],
 }
+
+filegroup {
+    name: "framework-thread-ot-daemon-shared-aidl-sources",
+    srcs: [
+        "java/android/net/thread/ChannelMaxPower.aidl",
+    ],
+    path: "java",
+    visibility: [
+        "//external/ot-br-posix:__subpackages__",
+    ],
+}
