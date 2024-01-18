@@ -14,6 +14,9 @@ android\.net\..+
 org\.chromium\.base\..+
 J\.cronet_tests_N(\$.+)?
 
+# don't jarjar automatically generated FooJni files.
+org\.chromium\.net\..+Jni(\$.+)?
+
 # Do not jarjar the tests and its utils as they also do JNI with cronet_tests.so
 org\.chromium\.net\..*Test.*(\$.+)?
 org\.chromium\.net\.NativeTestServer(\$.+)?
