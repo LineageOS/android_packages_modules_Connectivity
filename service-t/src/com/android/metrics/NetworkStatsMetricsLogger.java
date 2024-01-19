@@ -109,7 +109,7 @@ public class NetworkStatsMetricsLogger {
      */
     private static Pair<Integer, Integer> getStatsFilesAttributes(
             @Nullable File statsDir, @NonNull String prefix) {
-        if (statsDir == null) return new Pair<>(0, 0);
+        if (statsDir == null || !statsDir.isDirectory()) return new Pair<>(0, 0);
 
         // Only counts the matching files.
         // The files are named in the following format:
@@ -117,9 +117,6 @@ public class NetworkStatsMetricsLogger {
         //   e.g. uid_tag.12345-
         // See FileRotator#FileInfo for more detail.
         final Pattern pattern = Pattern.compile("^" + prefix + "\\.[0-9]+-[0-9]*$");
-
-        // Ensure that base path exists.
-        statsDir.mkdirs();
 
         int totalFiles = 0;
         int totalBytes = 0;
