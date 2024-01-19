@@ -41,13 +41,14 @@ class ConnectivityNativeBinderTest : public ::testing::Test {
 
     void SetUp() override {
         restoreBlockedPorts = false;
+
         // Skip test case if not on U.
-        if (!android::modules::sdklevel::IsAtLeastU()) GTEST_SKIP() <<
-                "Should be at least T device.";
+        if (!android::modules::sdklevel::IsAtLeastU())
+            GTEST_SKIP() << "Should be at least U device.";
 
         // Skip test case if not on 5.4 kernel which is required by bpf prog.
-        if (!android::bpf::isAtLeastKernelVersion(5, 4, 0)) GTEST_SKIP() <<
-                "Kernel should be at least 5.4.";
+        if (!android::bpf::isAtLeastKernelVersion(5, 4, 0))
+            GTEST_SKIP() << "Kernel should be at least 5.4.";
 
         // Necessary to use dlopen/dlsym since the lib is only available on U and there
         // is no Sdk34ModuleController in tradefed yet.
