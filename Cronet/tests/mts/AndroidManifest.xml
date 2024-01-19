@@ -19,6 +19,7 @@
           package="android.net.http.mts">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application android:networkSecurityConfig="@xml/network_security_config">

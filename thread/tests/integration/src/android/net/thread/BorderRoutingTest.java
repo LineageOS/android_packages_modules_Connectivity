@@ -18,6 +18,7 @@ package android.net.thread;
 
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.net.thread.IntegrationTestUtils.isExpectedIcmpv6Packet;
+import static android.net.thread.IntegrationTestUtils.isSimulatedThreadRadioSupported;
 import static android.net.thread.IntegrationTestUtils.newPacketReader;
 import static android.net.thread.IntegrationTestUtils.readPacketFrom;
 import static android.net.thread.IntegrationTestUtils.waitFor;
@@ -33,6 +34,7 @@ import static com.google.common.io.BaseEncoding.base16;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
 
 import android.content.Context;
 import android.net.LinkProperties;
@@ -131,6 +133,8 @@ public class BorderRoutingTest {
 
     @Test
     public void infraDevicePingTheadDeviceOmr_Succeeds() throws Exception {
+        assumeTrue(isSimulatedThreadRadioSupported());
+
         /*
          * <pre>
          * Topology:
