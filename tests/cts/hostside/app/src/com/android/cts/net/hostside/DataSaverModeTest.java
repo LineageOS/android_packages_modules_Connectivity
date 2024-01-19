@@ -108,7 +108,7 @@ public class DataSaverModeTest extends AbstractRestrictBackgroundNetworkTestCase
         setRestrictBackground(false);
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
         setRestrictBackground(true);
-        assertForegroundNetworkAccess();
+        assertTopNetworkAccess(true);
 
         // Although it should not have access while the screen is off.
         turnScreenOff();
@@ -119,7 +119,7 @@ public class DataSaverModeTest extends AbstractRestrictBackgroundNetworkTestCase
         if (isTV()) {
             startActivity();
         }
-        assertForegroundNetworkAccess();
+        assertTopNetworkAccess(true);
 
         // Goes back to background state.
         finishActivity();
@@ -129,7 +129,7 @@ public class DataSaverModeTest extends AbstractRestrictBackgroundNetworkTestCase
         setRestrictBackground(false);
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
         setRestrictBackground(true);
-        assertForegroundNetworkAccess();
+        assertForegroundServiceNetworkAccess();
         stopForegroundService();
         assertBackgroundNetworkAccess(false);
     }

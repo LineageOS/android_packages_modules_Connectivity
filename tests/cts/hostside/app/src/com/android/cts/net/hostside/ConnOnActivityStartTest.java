@@ -17,6 +17,8 @@
 package com.android.cts.net.hostside;
 
 
+import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.getUiDevice;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.setRestrictBackground;
 import static com.android.cts.net.hostside.Property.APP_STANDBY_MODE;
@@ -95,7 +97,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
             Log.i(TAG, testName + " start #" + i);
             launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
             getUiDevice().pressHome();
-            assertBackgroundState();
+            assertProcessStateBelow(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
             Log.i(TAG, testName + " end #" + i);
         }
     }
