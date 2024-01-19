@@ -180,7 +180,10 @@ public class InetDiagMessage extends NetlinkMessage {
         while (payload.position() < payloadLength) {
             final StructNlAttr attr = StructNlAttr.parse(payload);
             // Stop parsing for truncated or malformed attribute
-            if (attr == null)  return null;
+            if (attr == null)  {
+                Log.wtf(TAG, "Got truncated or malformed attribute");
+                return null;
+            }
 
             msg.nlAttrs.add(attr);
         }
