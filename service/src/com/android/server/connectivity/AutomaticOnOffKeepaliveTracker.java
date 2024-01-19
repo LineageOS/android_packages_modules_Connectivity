@@ -50,7 +50,6 @@ import android.system.StructTimeval;
 import android.util.LocalLog;
 import android.util.Log;
 import android.util.Pair;
-import android.util.Range;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -75,7 +74,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Manages automatic on/off socket keepalive requests.
@@ -373,27 +371,26 @@ public class AutomaticOnOffKeepaliveTracker {
      * Determine if any state transition is needed for the specific automatic keepalive.
      */
     public void handleMonitorAutomaticKeepalive(@NonNull final AutomaticOnOffKeepalive ki,
-            final int vpnNetId, @NonNull Set<Range<Integer>> vpnUidRanges) {
+            final int vpnNetId) {
         // Might happen if the automatic keepalive was removed by the app just as the alarm fires.
         if (!mAutomaticOnOffKeepalives.contains(ki)) return;
         if (STATE_ALWAYS_ON == ki.mAutomaticOnOffState) {
             throw new IllegalStateException("Should not monitor non-auto keepalive");
         }
 
-        handleMonitorTcpConnections(ki, vpnNetId, vpnUidRanges);
+        handleMonitorTcpConnections(ki, vpnNetId);
     }
 
     /**
      * Determine if disable or re-enable keepalive is needed or not based on TCP sockets status.
      */
-    private void handleMonitorTcpConnections(@NonNull AutomaticOnOffKeepalive ki, int vpnNetId,
-            @NonNull Set<Range<Integer>> vpnUidRanges) {
+    private void handleMonitorTcpConnections(@NonNull AutomaticOnOffKeepalive ki, int vpnNetId) {
         // Might happen if the automatic keepalive was removed by the app just as the alarm fires.
         if (!mAutomaticOnOffKeepalives.contains(ki)) return;
         if (STATE_ALWAYS_ON == ki.mAutomaticOnOffState) {
             throw new IllegalStateException("Should not monitor non-auto keepalive");
         }
-        if (!isAnyTcpSocketConnected(vpnNetId, vpnUidRanges)) {
+        if (!isAnyTcpSocketConnected(vpnNetId)) {
             // No TCP socket exists. Stop keepalive if ENABLED, and remain SUSPENDED if currently
             // SUSPENDED.
             if (ki.mAutomaticOnOffState == STATE_ENABLED) {
@@ -745,7 +742,7 @@ public class AutomaticOnOffKeepaliveTracker {
     }
 
     @VisibleForTesting
-    boolean isAnyTcpSocketConnected(int netId, @NonNull Set<Range<Integer>> vpnUidRanges) {
+    boolean isAnyTcpSocketConnected(int netId) {
         FileDescriptor fd = null;
 
         try {
@@ -758,8 +755,7 @@ public class AutomaticOnOffKeepaliveTracker {
 
             // Send request for each IP family
             for (final int family : ADDRESS_FAMILIES) {
-                if (isAnyTcpSocketConnectedForFamily(
-                        fd, family, networkMark, networkMask, vpnUidRanges)) {
+                if (isAnyTcpSocketConnectedForFamily(fd, family, networkMark, networkMask)) {
                     return true;
                 }
             }
@@ -773,7 +769,7 @@ public class AutomaticOnOffKeepaliveTracker {
     }
 
     private boolean isAnyTcpSocketConnectedForFamily(FileDescriptor fd, int family, int networkMark,
-            int networkMask, @NonNull Set<Range<Integer>> vpnUidRanges)
+            int networkMask)
             throws ErrnoException, InterruptedIOException {
         ensureRunningOnHandlerThread();
         // Build SocketDiag messages and cache it.
@@ -802,7 +798,7 @@ public class AutomaticOnOffKeepaliveTracker {
                     }
 
                     final InetDiagMessage diagMsg = (InetDiagMessage) nlMsg;
-                    if (isTargetTcpSocket(diagMsg, networkMark, networkMask, vpnUidRanges)) {
+                    if (isTargetTcpSocket(diagMsg, networkMark, networkMask)) {
                         if (DBG) {
                             Log.d(TAG, String.format("Found open TCP connection by uid %d to %s"
                                             + " cookie %d",
@@ -828,19 +824,8 @@ public class AutomaticOnOffKeepaliveTracker {
         return false;
     }
 
-    private static boolean containsUid(Set<Range<Integer>> ranges, int uid) {
-        for (final Range<Integer> range: ranges) {
-            if (range.contains(uid)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private boolean isTargetTcpSocket(@NonNull InetDiagMessage diagMsg,
-            int networkMark, int networkMask, @NonNull Set<Range<Integer>> vpnUidRanges) {
-        if (!containsUid(vpnUidRanges, diagMsg.inetDiagMsg.idiag_uid)) return false;
-
+            int networkMark, int networkMask) {
         final int mark = readSocketDataAndReturnMark(diagMsg);
         return (mark & networkMask) == networkMark;
     }
