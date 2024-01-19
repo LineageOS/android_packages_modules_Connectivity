@@ -191,6 +191,6 @@ public class ProcNetTest extends BaseHostJUnit4Test implements IBuildReceiver, I
 
         String path = "/proc/sys/net/ipv4/tcp_congestion_control";
         String value = mDevice.executeAdbCommand("shell", "cat", path).trim();
-        assertEquals(value, "cubic");
+        assertEquals("cubic", value);
     }
 }
