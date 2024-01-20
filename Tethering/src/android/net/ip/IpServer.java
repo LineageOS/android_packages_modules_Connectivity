@@ -59,6 +59,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -900,7 +901,7 @@ public class IpServer extends StateMachineShim {
     }
 
     private void configureLocalIPv6Routes(
-            HashSet<IpPrefix> deprecatedPrefixes, HashSet<IpPrefix> newPrefixes) {
+            ArraySet<IpPrefix> deprecatedPrefixes, ArraySet<IpPrefix> newPrefixes) {
         // [1] Remove the routes that are deprecated.
         if (!deprecatedPrefixes.isEmpty()) {
             removeRoutesFromLocalNetwork(getLocalRoutesFor(mIfaceName, deprecatedPrefixes));
@@ -908,7 +909,7 @@ public class IpServer extends StateMachineShim {
 
         // [2] Add only the routes that have not previously been added.
         if (newPrefixes != null && !newPrefixes.isEmpty()) {
-            HashSet<IpPrefix> addedPrefixes = (HashSet) newPrefixes.clone();
+            ArraySet<IpPrefix> addedPrefixes = new ArraySet<IpPrefix>(newPrefixes);
             if (mLastRaParams != null) {
                 addedPrefixes.removeAll(mLastRaParams.prefixes);
             }
@@ -920,7 +921,7 @@ public class IpServer extends StateMachineShim {
     }
 
     private void configureLocalIPv6Dns(
-            HashSet<Inet6Address> deprecatedDnses, HashSet<Inet6Address> newDnses) {
+            ArraySet<Inet6Address> deprecatedDnses, ArraySet<Inet6Address> newDnses) {
         // TODO: Is this really necessary? Can we not fail earlier if INetd cannot be located?
         if (mNetd == null) {
             if (newDnses != null) newDnses.clear();
@@ -941,7 +942,7 @@ public class IpServer extends StateMachineShim {
 
         // [2] Add only the local DNS IP addresses that have not previously been added.
         if (newDnses != null && !newDnses.isEmpty()) {
-            final HashSet<Inet6Address> addedDnses = (HashSet) newDnses.clone();
+            final ArraySet<Inet6Address> addedDnses = new ArraySet<Inet6Address>(newDnses);
             if (mLastRaParams != null) {
                 addedDnses.removeAll(mLastRaParams.dnses);
             }
@@ -1548,7 +1549,7 @@ public class IpServer extends StateMachineShim {
     // Accumulate routes representing "prefixes to be assigned to the local
     // interface", for subsequent modification of local_network routing.
     private static ArrayList<RouteInfo> getLocalRoutesFor(
-            String ifname, HashSet<IpPrefix> prefixes) {
+            String ifname, ArraySet<IpPrefix> prefixes) {
         final ArrayList<RouteInfo> localRoutes = new ArrayList<RouteInfo>();
         for (IpPrefix ipp : prefixes) {
             localRoutes.add(new RouteInfo(ipp, null, ifname, RTN_UNICAST));
@@ -1579,8 +1580,8 @@ public class IpServer extends StateMachineShim {
     /** Get IPv6 prefixes from LinkProperties */
     @NonNull
     @VisibleForTesting
-    static HashSet<IpPrefix> getTetherableIpv6Prefixes(@NonNull Collection<LinkAddress> addrs) {
-        final HashSet<IpPrefix> prefixes = new HashSet<>();
+    static ArraySet<IpPrefix> getTetherableIpv6Prefixes(@NonNull Collection<LinkAddress> addrs) {
+        final ArraySet<IpPrefix> prefixes = new ArraySet<>();
         for (LinkAddress linkAddr : addrs) {
             if (linkAddr.getPrefixLength() != RFC7421_PREFIX_LENGTH) continue;
             prefixes.add(new IpPrefix(linkAddr.getAddress(), RFC7421_PREFIX_LENGTH));
@@ -1589,7 +1590,7 @@ public class IpServer extends StateMachineShim {
     }
 
     @NonNull
-    private HashSet<IpPrefix> getTetherableIpv6Prefixes(@NonNull LinkProperties lp) {
+    private ArraySet<IpPrefix> getTetherableIpv6Prefixes(@NonNull LinkProperties lp) {
         return getTetherableIpv6Prefixes(lp.getLinkAddresses());
     }
 }
