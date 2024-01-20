@@ -16,6 +16,7 @@
 
 package com.android.net.module.util.netlink;
 
+import static com.android.net.module.util.Inet4AddressUtils.getBroadcastAddress;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_ACK;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REPLACE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
@@ -28,6 +29,7 @@ import androidx.annotation.VisibleForTesting;
 
 import com.android.net.module.util.HexDump;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -48,6 +50,8 @@ import java.util.Objects;
  */
 public class RtNetlinkAddressMessage extends NetlinkMessage {
     public static final short IFA_ADDRESS        = 1;
+    public static final short IFA_LOCAL          = 2;
+    public static final short IFA_BROADCAST      = 4;
     public static final short IFA_CACHEINFO      = 6;
     public static final short IFA_FLAGS          = 8;
 
@@ -71,6 +75,7 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
         mIfacacheInfo = structIfacacheInfo;
         mFlags = flags;
     }
+
     private RtNetlinkAddressMessage(@NonNull StructNlMsgHdr header) {
         this(header, null, null, null, 0);
     }
@@ -158,6 +163,24 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
         // still be packed to ByteBuffer even if the flag is 0.
         final StructNlAttr flags = new StructNlAttr(IFA_FLAGS, mFlags);
         flags.pack(byteBuffer);
+
+        // Add the required IFA_LOCAL and IFA_BROADCAST attributes for IPv4 addresses. The IFA_LOCAL
+        // attribute represents the local address, which is equivalent to IFA_ADDRESS on a normally
+        // configured broadcast interface, however, for PPP interfaces, IFA_ADDRESS indicates the
+        // destination address and the local address is provided in the IFA_LOCAL attribute. If the
+        // IFA_LOCAL attribute is not present in the RTM_NEWADDR message, the kernel replies with an
+        // error netlink message with invalid parameters. IFA_BROADCAST is also required, otherwise
+        // the broadcast on the interface is 0.0.0.0. See include/uapi/linux/if_addr.h for details.
+        // For IPv6 addresses, the IFA_ADDRESS attribute applies and introduces no ambiguity.
+        if (mIpAddress instanceof Inet4Address) {
+            final StructNlAttr localAddress = new StructNlAttr(IFA_LOCAL, mIpAddress);
+            localAddress.pack(byteBuffer);
+
+            final Inet4Address broadcast =
+                    getBroadcastAddress((Inet4Address) mIpAddress, mIfaddrmsg.prefixLen);
+            final StructNlAttr broadcastAddress = new StructNlAttr(IFA_BROADCAST, broadcast);
+            broadcastAddress.pack(byteBuffer);
+        }
     }
 
     /**
@@ -184,7 +207,7 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
                 0 /* tstamp */);
         msg.mFlags = flags;
 
-        final byte[] bytes = new byte[msg.getRequiredSpace()];
+        final byte[] bytes = new byte[msg.getRequiredSpace(family)];
         nlmsghdr.nlmsg_len = bytes.length;
         final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         byteBuffer.order(ByteOrder.nativeOrder());
@@ -237,7 +260,7 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
     // RtNetlinkAddressMessage, e.g. RTM_DELADDR sent from user space to kernel to delete an
     // IP address only requires IFA_ADDRESS attribute. The caller should check if these attributes
     // are necessary to carry when constructing a RtNetlinkAddressMessage.
-    private int getRequiredSpace() {
+    private int getRequiredSpace(int family) {
         int spaceRequired = StructNlMsgHdr.STRUCT_SIZE + StructIfaddrMsg.STRUCT_SIZE;
         // IFA_ADDRESS attr
         spaceRequired += NetlinkConstants.alignedLengthOf(
@@ -247,6 +270,14 @@ public class RtNetlinkAddressMessage extends NetlinkMessage {
                 StructNlAttr.NLA_HEADERLEN + StructIfacacheInfo.STRUCT_SIZE);
         // IFA_FLAGS "u32" attr
         spaceRequired += StructNlAttr.NLA_HEADERLEN + 4;
+        if (family == OsConstants.AF_INET) {
+            // IFA_LOCAL attr
+            spaceRequired += NetlinkConstants.alignedLengthOf(
+                    StructNlAttr.NLA_HEADERLEN + mIpAddress.getAddress().length);
+            // IFA_BROADCAST attr
+            spaceRequired += NetlinkConstants.alignedLengthOf(
+                    StructNlAttr.NLA_HEADERLEN + mIpAddress.getAddress().length);
+        }
         return spaceRequired;
     }
 
