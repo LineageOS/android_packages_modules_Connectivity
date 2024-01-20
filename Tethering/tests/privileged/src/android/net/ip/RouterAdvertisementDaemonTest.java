@@ -47,6 +47,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.util.ArraySet;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
@@ -77,7 +78,6 @@ import org.mockito.MockitoAnnotations;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -236,7 +236,7 @@ public final class RouterAdvertisementDaemonTest {
                         final RdnssOption rdnss = Struct.parse(RdnssOption.class, RdnssBuf);
                         final String msg =
                                 rdnss.lifetime > 0 ? "Unknown dns" : "Unknown deprecated dns";
-                        final HashSet<Inet6Address> dnses =
+                        final ArraySet<Inet6Address> dnses =
                                 rdnss.lifetime > 0 ? mNewParams.dnses : mOldParams.dnses;
                         assertNotNull(msg, dnses);
 
