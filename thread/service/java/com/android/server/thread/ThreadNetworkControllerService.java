@@ -330,25 +330,31 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         @Override
         public void onAvailable(@NonNull Network network) {
             checkOnHandlerThread();
-            Log.i(TAG, "onAvailable: " + network);
+            Log.i(TAG, "Upstream network available: " + network);
         }
 
         @Override
         public void onLost(@NonNull Network network) {
             checkOnHandlerThread();
-            Log.i(TAG, "onLost: " + network);
+            Log.i(TAG, "Upstream network lost: " + network);
+
+            // TODO: disable border routing when upsteam network disconnected
         }
 
         @Override
         public void onLinkPropertiesChanged(
                 @NonNull Network network, @NonNull LinkProperties linkProperties) {
             checkOnHandlerThread();
-            Log.i(
-                    TAG,
-                    String.format(
-                            "onLinkPropertiesChanged: {network: %s, interface: %s}",
-                            network, linkProperties.getInterfaceName()));
-            mNetworkToInterface.put(network, linkProperties.getInterfaceName());
+
+            String existingIfName = mNetworkToInterface.get(network);
+            String newIfName = linkProperties.getInterfaceName();
+            if (Objects.equals(existingIfName, newIfName)) {
+                return;
+            }
+            Log.i(TAG, "Upstream network changed: " + existingIfName + " -> " + newIfName);
+            mNetworkToInterface.put(network, newIfName);
+
+            // TODO: disable border routing if netIfName is null
             if (network.equals(mUpstreamNetwork)) {
                 enableBorderRouting(mNetworkToInterface.get(mUpstreamNetwork));
             }
@@ -359,14 +365,20 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         @Override
         public void onAvailable(@NonNull Network network) {
             checkOnHandlerThread();
-            Log.i(TAG, "onAvailable: Thread network Available");
+            Log.i(TAG, "Thread network available: " + network);
         }
 
         @Override
         public void onLocalNetworkInfoChanged(
                 @NonNull Network network, @NonNull LocalNetworkInfo localNetworkInfo) {
             checkOnHandlerThread();
-            Log.i(TAG, "onLocalNetworkInfoChanged: " + localNetworkInfo);
+            Log.i(
+                    TAG,
+                    "LocalNetworkInfo of Thread network changed: {threadNetwork: "
+                            + network
+                            + ", localNetworkInfo: "
+                            + localNetworkInfo
+                            + "}");
             if (localNetworkInfo.getUpstreamNetwork() == null) {
                 mUpstreamNetwork = null;
                 return;
@@ -792,7 +804,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 && infraIfName.equals(mBorderRouterConfig.infraInterfaceName)) {
             return;
         }
-        Log.i(TAG, "enableBorderRouting on AIL: " + infraIfName);
+        Log.i(TAG, "Enable border routing on AIL: " + infraIfName);
         try {
             mBorderRouterConfig.infraInterfaceName = infraIfName;
             mBorderRouterConfig.infraInterfaceIcmp6Socket =
@@ -878,6 +890,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         if (isMulticastForwardingEnabled() == isEnabled) {
             return;
         }
+
+        Log.i(TAG, "Multicast forwaring is " + (isEnabled ? "enabled" : "disabled"));
+
         if (isEnabled) {
             // When multicast forwarding is enabled, setup upstream forwarding to any address
             // with minimal scope 4
@@ -893,10 +908,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             mDownstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
         }
         sendLocalNetworkConfig();
-        Log.d(
-                TAG,
-                "Sent updated localNetworkConfig with multicast forwarding "
-                        + (isEnabled ? "enabled" : "disabled"));
     }
 
     private void handleMulticastForwardingAddressChanged(byte[] addressBytes, boolean isAdded) {
