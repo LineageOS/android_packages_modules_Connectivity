@@ -41,6 +41,7 @@ import android.net.util.SocketUtils;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.StructTimeval;
+import android.util.ArraySet;
 import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
@@ -134,23 +135,23 @@ public class RouterAdvertisementDaemon {
         public boolean hasDefaultRoute;
         public byte hopLimit;
         public int mtu;
-        public HashSet<IpPrefix> prefixes;
-        public HashSet<Inet6Address> dnses;
+        public ArraySet<IpPrefix> prefixes;
+        public ArraySet<Inet6Address> dnses;
 
         public RaParams() {
             hasDefaultRoute = false;
             hopLimit = DEFAULT_HOPLIMIT;
             mtu = IPV6_MIN_MTU;
-            prefixes = new HashSet<IpPrefix>();
-            dnses = new HashSet<Inet6Address>();
+            prefixes = new ArraySet<IpPrefix>();
+            dnses = new ArraySet<Inet6Address>();
         }
 
         public RaParams(RaParams other) {
             hasDefaultRoute = other.hasDefaultRoute;
             hopLimit = other.hopLimit;
             mtu = other.mtu;
-            prefixes = (HashSet) other.prefixes.clone();
-            dnses = (HashSet) other.dnses.clone();
+            prefixes = new ArraySet<IpPrefix>(other.prefixes);
+            dnses = new ArraySet<Inet6Address>(other.dnses);
         }
 
         /**

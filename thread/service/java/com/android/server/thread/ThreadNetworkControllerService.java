@@ -14,6 +14,7 @@
 
 package com.android.server.thread;
 
+import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.MulticastRoutingConfig.CONFIG_FORWARD_NONE;
 import static android.net.MulticastRoutingConfig.FORWARD_NONE;
 import static android.net.MulticastRoutingConfig.FORWARD_SELECTED;
@@ -251,38 +252,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 .setDownstreamMulticastRoutingConfig(mDownstreamMulticastRoutingConfig)
                 .setUpstreamSelector(mUpstreamNetworkRequest)
                 .build();
-    }
-
-    @Override
-    public void setTestNetworkAsUpstream(
-            @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
-        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
-
-        Log.i(TAG, "setTestNetworkAsUpstream: " + testNetworkInterfaceName);
-        mHandler.post(() -> setTestNetworkAsUpstreamInternal(testNetworkInterfaceName, receiver));
-    }
-
-    private void setTestNetworkAsUpstreamInternal(
-            @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
-        checkOnHandlerThread();
-
-        TestNetworkSpecifier testNetworkSpecifier = null;
-        if (testNetworkInterfaceName != null) {
-            testNetworkSpecifier = new TestNetworkSpecifier(testNetworkInterfaceName);
-        }
-
-        if (!Objects.equals(mUpstreamTestNetworkSpecifier, testNetworkSpecifier)) {
-            cancelRequestUpstreamNetwork();
-            mUpstreamTestNetworkSpecifier = testNetworkSpecifier;
-            mUpstreamNetworkRequest = newUpstreamNetworkRequest();
-            requestUpstreamNetwork();
-            sendLocalNetworkConfig();
-        }
-        try {
-            receiver.onSuccess();
-        } catch (RemoteException ignored) {
-            // do nothing if the client is dead
-        }
     }
 
     private void initializeOtDaemon() {
@@ -783,6 +752,38 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         } catch (RemoteException e) {
             Log.e(TAG, "otDaemon.setCountryCode failed", e);
             receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        }
+    }
+
+    @Override
+    public void setTestNetworkAsUpstream(
+            @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED, NETWORK_SETTINGS);
+
+        Log.i(TAG, "setTestNetworkAsUpstream: " + testNetworkInterfaceName);
+        mHandler.post(() -> setTestNetworkAsUpstreamInternal(testNetworkInterfaceName, receiver));
+    }
+
+    private void setTestNetworkAsUpstreamInternal(
+            @Nullable String testNetworkInterfaceName, @NonNull IOperationReceiver receiver) {
+        checkOnHandlerThread();
+
+        TestNetworkSpecifier testNetworkSpecifier = null;
+        if (testNetworkInterfaceName != null) {
+            testNetworkSpecifier = new TestNetworkSpecifier(testNetworkInterfaceName);
+        }
+
+        if (!Objects.equals(mUpstreamTestNetworkSpecifier, testNetworkSpecifier)) {
+            cancelRequestUpstreamNetwork();
+            mUpstreamTestNetworkSpecifier = testNetworkSpecifier;
+            mUpstreamNetworkRequest = newUpstreamNetworkRequest();
+            requestUpstreamNetwork();
+            sendLocalNetworkConfig();
+        }
+        try {
+            receiver.onSuccess();
+        } catch (RemoteException ignored) {
+            // do nothing if the client is dead
         }
     }
 
