@@ -510,7 +510,8 @@ public final class ThreadNetworkController {
      * @hide
      */
     @VisibleForTesting
-    @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED")
+    @RequiresPermission(
+            allOf = {"android.permission.THREAD_NETWORK_PRIVILEGED", permission.NETWORK_SETTINGS})
     public void setTestNetworkAsUpstream(
             @Nullable String testNetworkInterfaceName,
             @NonNull @CallbackExecutor Executor executor,

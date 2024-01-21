@@ -23,6 +23,7 @@
          obtain CHANGE_NETWORK_STATE for testing once R device is no longer supported. -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.THREAD_NETWORK_PRIVILEGED"/>
+    <uses-permission android:name="android.permission.NETWORK_SETTINGS"/>
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application android:debuggable="true">
