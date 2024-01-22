@@ -132,14 +132,14 @@ public class TetheringConfiguration {
 
     public static final String TETHER_FORCE_RANDOM_PREFIX_BASE_SELECTION =
             "tether_force_random_prefix_base_selection";
-
-    public static final String TETHER_ENABLE_SYNC_SM = "tether_enable_sync_sm";
-
     /**
      * Default value that used to periodic polls tether offload stats from tethering offload HAL
      * to make the data warnings work.
      */
     public static final int DEFAULT_TETHER_OFFLOAD_POLL_INTERVAL_MS = 5000;
+
+    /** A flag for using synchronous or asynchronous state machine. */
+    public static final boolean USE_SYNC_SM = false;
 
     public final String[] tetherableUsbRegexs;
     public final String[] tetherableWifiRegexs;
@@ -174,7 +174,6 @@ public class TetheringConfiguration {
 
     private final boolean mEnableWearTethering;
     private final boolean mRandomPrefixBase;
-    private final boolean mEnableSyncSm;
 
     private final int mUsbTetheringFunction;
     protected final ContentResolver mContentResolver;
@@ -293,7 +292,6 @@ public class TetheringConfiguration {
         mEnableWearTethering = shouldEnableWearTethering(ctx);
 
         mRandomPrefixBase = mDeps.isFeatureEnabled(ctx, TETHER_FORCE_RANDOM_PREFIX_BASE_SELECTION);
-        mEnableSyncSm = mDeps.isFeatureEnabled(ctx, TETHER_ENABLE_SYNC_SM);
 
         configLog.log(toString());
     }
@@ -387,10 +385,6 @@ public class TetheringConfiguration {
         return mRandomPrefixBase;
     }
 
-    public boolean isSyncSM() {
-        return mEnableSyncSm;
-    }
-
     /** Does the dumping.*/
     public void dump(PrintWriter pw) {
         pw.print("activeDataSubId: ");
@@ -444,9 +438,6 @@ public class TetheringConfiguration {
 
         pw.print("mRandomPrefixBase: ");
         pw.println(mRandomPrefixBase);
-
-        pw.print("mEnableSyncSm: ");
-        pw.println(mEnableSyncSm);
     }
 
     /** Returns the string representation of this object.*/
