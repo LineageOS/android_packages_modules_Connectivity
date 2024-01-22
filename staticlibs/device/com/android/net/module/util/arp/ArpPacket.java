@@ -45,14 +45,18 @@ import java.nio.ByteBuffer;
 public class ArpPacket {
     private static final String TAG = "ArpPacket";
 
+    public final MacAddress destination;
+    public final MacAddress source;
     public final short opCode;
     public final Inet4Address senderIp;
     public final Inet4Address targetIp;
     public final MacAddress senderHwAddress;
     public final MacAddress targetHwAddress;
 
-    ArpPacket(short opCode, MacAddress senderHwAddress, Inet4Address senderIp,
-            MacAddress targetHwAddress, Inet4Address targetIp) {
+    ArpPacket(MacAddress destination, MacAddress source, short opCode, MacAddress senderHwAddress,
+            Inet4Address senderIp, MacAddress targetHwAddress, Inet4Address targetIp) {
+        this.destination = destination;
+        this.source = source;
         this.opCode = opCode;
         this.senderHwAddress = senderHwAddress;
         this.senderIp = senderIp;
@@ -145,7 +149,9 @@ public class ArpPacket {
             buffer.get(targetHwAddress);
             buffer.get(targetIp);
 
-            return new ArpPacket(opCode, MacAddress.fromBytes(senderHwAddress),
+            return new ArpPacket(MacAddress.fromBytes(l2dst),
+                    MacAddress.fromBytes(l2src), opCode,
+                    MacAddress.fromBytes(senderHwAddress),
                     (Inet4Address) InetAddress.getByAddress(senderIp),
                     MacAddress.fromBytes(targetHwAddress),
                     (Inet4Address) InetAddress.getByAddress(targetIp));
