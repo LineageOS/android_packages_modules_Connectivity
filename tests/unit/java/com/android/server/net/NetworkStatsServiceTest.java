@@ -85,6 +85,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -130,6 +131,7 @@ import android.system.ErrnoException;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+import android.util.IndentingPrintWriter;
 import android.util.Pair;
 
 import androidx.annotation.Nullable;
@@ -2801,5 +2803,17 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_UMTS);
         final String dump = getDump();
         assertDumpContains(dump, pollReasonNameOf(POLL_REASON_RAT_CHANGED));
+    }
+
+    @Test
+    public void testDumpSkDestroyListenerLogs() throws ErrnoException {
+        doAnswer((invocation) -> {
+            final IndentingPrintWriter ipw = (IndentingPrintWriter) invocation.getArgument(0);
+            ipw.println("Log for testing");
+            return null;
+        }).when(mSkDestroyListener).dump(any());
+
+        final String dump = getDump();
+        assertDumpContains(dump, "Log for testing");
     }
 }
