@@ -61,10 +61,12 @@ import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
 import com.android.server.connectivity.ClatCoordinator
 import com.android.server.connectivity.ConnectivityFlags
+import com.android.server.connectivity.MulticastRoutingCoordinatorService
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies
 import com.android.server.connectivity.NetworkRequestStateStatsMetrics
 import com.android.server.connectivity.ProxyTracker
+import com.android.server.connectivity.RoutingCoordinatorService
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
@@ -170,6 +172,8 @@ open class CSTest {
         doReturn(true).`when`(it).isDataCapable()
     }
 
+    val multicastRoutingCoordinatorService = mock<MulticastRoutingCoordinatorService>()
+
     val deps = CSDeps()
     val service = makeConnectivityService(context, netd, deps).also { it.systemReadyInternal() }
     val cm = ConnectivityManager(context, service)
@@ -191,6 +195,8 @@ open class CSTest {
 
         override fun makeHandlerThread(tag: String) = csHandlerThread
         override fun makeProxyTracker(context: Context, connServiceHandler: Handler) = proxyTracker
+        override fun makeMulticastRoutingCoordinatorService(handler: Handler) =
+                this@CSTest.multicastRoutingCoordinatorService
 
         override fun makeCarrierPrivilegeAuthenticator(
                 context: Context,
