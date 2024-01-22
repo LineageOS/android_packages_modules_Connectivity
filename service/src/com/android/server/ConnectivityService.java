@@ -65,6 +65,7 @@ import static android.net.INetworkMonitor.NETWORK_VALIDATION_PROBE_PRIVDNS;
 import static android.net.INetworkMonitor.NETWORK_VALIDATION_RESULT_PARTIAL;
 import static android.net.INetworkMonitor.NETWORK_VALIDATION_RESULT_SKIPPED;
 import static android.net.INetworkMonitor.NETWORK_VALIDATION_RESULT_VALID;
+import static android.net.MulticastRoutingConfig.FORWARD_NONE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
@@ -4050,6 +4051,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.increaseIndent();
         mNetworkActivityTracker.dump(pw);
         pw.decreaseIndent();
+
+        pw.println();
+        pw.println("Multicast routing supported: " +
+                (mMulticastRoutingCoordinatorService != null));
     }
 
     private void dumpNetworks(IndentingPrintWriter pw) {
@@ -9151,7 +9156,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private void applyMulticastRoutingConfig(@NonNull String localNetworkInterfaceName,
             @NonNull String upstreamNetworkInterfaceName,
             @NonNull final LocalNetworkConfig config) {
-        if (mMulticastRoutingCoordinatorService == null) return;
+        if (mMulticastRoutingCoordinatorService == null) {
+            if (config.getDownstreamMulticastRoutingConfig().getForwardingMode() != FORWARD_NONE ||
+                config.getUpstreamMulticastRoutingConfig().getForwardingMode() != FORWARD_NONE) {
+                loge("Multicast routing is not supported, failed to configure " + config
+                        + " for " + localNetworkInterfaceName + " to "
+                        +  upstreamNetworkInterfaceName);
+            }
+            return;
+        }
 
         mMulticastRoutingCoordinatorService.applyMulticastRoutingConfig(localNetworkInterfaceName,
                 upstreamNetworkInterfaceName, config.getUpstreamMulticastRoutingConfig());
@@ -9162,7 +9175,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void disableMulticastRouting(@NonNull String localNetworkInterfaceName,
             @NonNull String upstreamNetworkInterfaceName) {
-        if (mMulticastRoutingCoordinatorService == null) return;
+        if (mMulticastRoutingCoordinatorService == null) {
+            return;
+        }
 
         mMulticastRoutingCoordinatorService.applyMulticastRoutingConfig(localNetworkInterfaceName,
                 upstreamNetworkInterfaceName, MulticastRoutingConfig.CONFIG_FORWARD_NONE);
