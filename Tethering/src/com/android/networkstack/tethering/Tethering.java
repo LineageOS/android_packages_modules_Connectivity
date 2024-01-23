@@ -370,6 +370,7 @@ public class Tethering {
 
         // Load tethering configuration.
         updateConfiguration();
+        mConfig.readEnableSyncSM(mContext);
         // It is OK for the configuration to be passed to the PrivateAddressCoordinator at
         // construction time because the only part of the configuration it uses is
         // shouldEnableWifiP2pDedicatedIp(), and currently do not support changing that.
