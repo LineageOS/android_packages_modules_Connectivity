@@ -22,6 +22,7 @@ import static com.android.server.connectivity.mdns.MdnsRecord.MAX_LABEL_LENGTH;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresApi;
+import android.content.Context;
 import android.net.LinkAddress;
 import android.net.Network;
 import android.net.nsd.NsdManager;
@@ -34,9 +35,11 @@ import android.util.ArrayMap;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
+import com.android.server.connectivity.ConnectivityResources;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.util.ArrayList;
@@ -84,6 +87,7 @@ public class MdnsAdvertiser {
     private final Map<String, List<OffloadServiceInfoWrapper>> mInterfaceOffloadServices =
             new ArrayMap<>();
     private final MdnsFeatureFlags mMdnsFeatureFlags;
+    private final Map<String, Integer> mServiceTypeToOffloadPriority;
 
     /**
      * Dependencies for {@link MdnsAdvertiser}, useful for testing.
@@ -621,14 +625,16 @@ public class MdnsAdvertiser {
 
     public MdnsAdvertiser(@NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
             @NonNull AdvertiserCallback cb, @NonNull SharedLog sharedLog,
-            @NonNull MdnsFeatureFlags mDnsFeatureFlags) {
-        this(looper, socketProvider, cb, new Dependencies(), sharedLog, mDnsFeatureFlags);
+            @NonNull MdnsFeatureFlags mDnsFeatureFlags, @NonNull Context context) {
+        this(looper, socketProvider, cb, new Dependencies(), sharedLog, mDnsFeatureFlags,
+                context);
     }
 
     @VisibleForTesting
     MdnsAdvertiser(@NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
             @NonNull AdvertiserCallback cb, @NonNull Dependencies deps,
-            @NonNull SharedLog sharedLog, @NonNull MdnsFeatureFlags mDnsFeatureFlags) {
+            @NonNull SharedLog sharedLog, @NonNull MdnsFeatureFlags mDnsFeatureFlags,
+            @NonNull Context context) {
         mLooper = looper;
         mCb = cb;
         mSocketProvider = socketProvider;
@@ -636,6 +642,31 @@ public class MdnsAdvertiser {
         mDeviceHostName = deps.generateHostname();
         mSharedLog = sharedLog;
         mMdnsFeatureFlags = mDnsFeatureFlags;
+        final ConnectivityResources res = new ConnectivityResources(context);
+        mServiceTypeToOffloadPriority = parseOffloadPriorityList(
+                res.get().getStringArray(R.array.config_nsdOffloadServicesPriority), sharedLog);
+    }
+
+    private static Map<String, Integer> parseOffloadPriorityList(
+            @NonNull String[] resValues, SharedLog sharedLog) {
+        final Map<String, Integer> priorities = new ArrayMap<>(resValues.length);
+        for (String entry : resValues) {
+            final String[] priorityAndType = entry.split(":", 2);
+            if (priorityAndType.length != 2) {
+                sharedLog.wtf("Invalid config_nsdOffloadServicesPriority ignored: " + entry);
+                continue;
+            }
+
+            final int priority;
+            try {
+                priority = Integer.parseInt(priorityAndType[0]);
+            } catch (NumberFormatException e) {
+                sharedLog.wtf("Invalid priority in config_nsdOffloadServicesPriority: " + entry);
+                continue;
+            }
+            priorities.put(MdnsUtils.toDnsLowerCase(priorityAndType[1]), priority);
+        }
+        return priorities;
     }
 
     private void checkThread() {
@@ -777,16 +808,17 @@ public class MdnsAdvertiser {
     private OffloadServiceInfoWrapper createOffloadService(int serviceId,
             @NonNull Registration registration, byte[] rawOffloadPacket) {
         final NsdServiceInfo nsdServiceInfo = registration.getServiceInfo();
+        final Integer mapPriority = mServiceTypeToOffloadPriority.get(
+                MdnsUtils.toDnsLowerCase(nsdServiceInfo.getServiceType()));
+        // Higher values of priority are less prioritized
+        final int priority = mapPriority == null ? Integer.MAX_VALUE : mapPriority;
         final OffloadServiceInfo offloadServiceInfo = new OffloadServiceInfo(
                 new OffloadServiceInfo.Key(nsdServiceInfo.getServiceName(),
                         nsdServiceInfo.getServiceType()),
                 new ArrayList<>(nsdServiceInfo.getSubtypes()),
                 String.join(".", mDeviceHostName),
                 rawOffloadPacket,
-                // TODO: define overlayable resources in
-                // ServiceConnectivityResources that set the priority based on
-                // service type.
-                0 /* priority */,
+                priority,
                 // TODO: set the offloadType based on the callback timing.
                 OffloadEngine.OFFLOAD_TYPE_REPLY);
         return new OffloadServiceInfoWrapper(serviceId, offloadServiceInfo);
