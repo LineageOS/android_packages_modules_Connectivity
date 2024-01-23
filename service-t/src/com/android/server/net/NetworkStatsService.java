@@ -481,6 +481,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @Nullable
     private final SkDestroyListener mSkDestroyListener;
 
+    private static final int MAX_SOCKET_DESTROY_LISTENER_LOGS = 20;
+
     private static @NonNull Clock getDefaultClock() {
         return new BestClock(ZoneOffset.UTC, SystemClock.currentNetworkTimeClock(),
                 Clock.systemUTC());
@@ -881,7 +883,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Create a new SkDestroyListener. */
         public SkDestroyListener makeSkDestroyListener(
                 IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap, Handler handler) {
-            return new SkDestroyListener(cookieTagMap, handler, new SharedLog(TAG));
+            return new SkDestroyListener(
+                    cookieTagMap, handler, new SharedLog(MAX_SOCKET_DESTROY_LISTENER_LOGS, TAG));
         }
 
         /**
@@ -2911,6 +2914,12 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             dumpStatsMapLocked(mStatsMapA, pw, "mStatsMapA");
             dumpStatsMapLocked(mStatsMapB, pw, "mStatsMapB");
             dumpIfaceStatsMapLocked(pw);
+            pw.decreaseIndent();
+
+            pw.println();
+            pw.println("SkDestroyListener logs:");
+            pw.increaseIndent();
+            mSkDestroyListener.dump(pw);
             pw.decreaseIndent();
         }
     }
