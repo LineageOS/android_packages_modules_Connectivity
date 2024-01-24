@@ -109,6 +109,17 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     }
 
     /**
+     * Create a R/W BpfMap map wrapper with "path" of filesystem.
+     *
+     * @throws ErrnoException if the BPF map associated with {@code path} cannot be retrieved.
+     * @throws NullPointerException if {@code path} is null.
+     */
+    public BpfMap(@NonNull final String path, final Class<K> key,
+            final Class<V> value) throws ErrnoException, NullPointerException {
+        this(path, BPF_F_RDWR, key, value);
+    }
+
+    /**
      * Update an existing or create a new key -> value entry in an eBbpf map.
      * (use insertOrReplaceEntry() if you need to know whether insert or replace happened)
      */
