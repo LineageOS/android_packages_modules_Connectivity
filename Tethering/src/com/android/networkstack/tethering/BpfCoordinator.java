@@ -379,7 +379,7 @@ public class BpfCoordinator {
             if (!isAtLeastS()) return null;
             try {
                 return new BpfMap<>(TETHER_DOWNSTREAM4_MAP_PATH,
-                    BpfMap.BPF_F_RDWR, Tether4Key.class, Tether4Value.class);
+                    Tether4Key.class, Tether4Value.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create downstream4 map: " + e);
                 return null;
@@ -391,7 +391,7 @@ public class BpfCoordinator {
             if (!isAtLeastS()) return null;
             try {
                 return new BpfMap<>(TETHER_UPSTREAM4_MAP_PATH,
-                    BpfMap.BPF_F_RDWR, Tether4Key.class, Tether4Value.class);
+                    Tether4Key.class, Tether4Value.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create upstream4 map: " + e);
                 return null;
@@ -403,7 +403,7 @@ public class BpfCoordinator {
             if (!isAtLeastS()) return null;
             try {
                 return new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH,
-                    BpfMap.BPF_F_RDWR, TetherDownstream6Key.class, Tether6Value.class);
+                    TetherDownstream6Key.class, Tether6Value.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create downstream6 map: " + e);
                 return null;
@@ -414,7 +414,7 @@ public class BpfCoordinator {
         @Nullable public IBpfMap<TetherUpstream6Key, Tether6Value> getBpfUpstream6Map() {
             if (!isAtLeastS()) return null;
             try {
-                return new BpfMap<>(TETHER_UPSTREAM6_FS_PATH, BpfMap.BPF_F_RDWR,
+                return new BpfMap<>(TETHER_UPSTREAM6_FS_PATH,
                         TetherUpstream6Key.class, Tether6Value.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create upstream6 map: " + e);
@@ -427,7 +427,7 @@ public class BpfCoordinator {
             if (!isAtLeastS()) return null;
             try {
                 return new BpfMap<>(TETHER_STATS_MAP_PATH,
-                    BpfMap.BPF_F_RDWR, TetherStatsKey.class, TetherStatsValue.class);
+                    TetherStatsKey.class, TetherStatsValue.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create stats map: " + e);
                 return null;
@@ -439,7 +439,7 @@ public class BpfCoordinator {
             if (!isAtLeastS()) return null;
             try {
                 return new BpfMap<>(TETHER_LIMIT_MAP_PATH,
-                    BpfMap.BPF_F_RDWR, TetherLimitKey.class, TetherLimitValue.class);
+                    TetherLimitKey.class, TetherLimitValue.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create limit map: " + e);
                 return null;
@@ -451,7 +451,7 @@ public class BpfCoordinator {
             if (!isAtLeastS()) return null;
             try {
                 return new BpfMap<>(TETHER_DEV_MAP_PATH,
-                    BpfMap.BPF_F_RDWR, TetherDevKey.class, TetherDevValue.class);
+                    TetherDevKey.class, TetherDevValue.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create dev map: " + e);
                 return null;

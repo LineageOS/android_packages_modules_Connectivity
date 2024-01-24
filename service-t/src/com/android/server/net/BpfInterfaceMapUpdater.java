@@ -66,7 +66,7 @@ public class BpfInterfaceMapUpdater {
         /** Create BpfMap for updating interface and index mapping. */
         public IBpfMap<S32, InterfaceMapValue> getInterfaceMap() {
             try {
-                return new BpfMap<>(IFACE_INDEX_NAME_MAP_PATH, BpfMap.BPF_F_RDWR,
+                return new BpfMap<>(IFACE_INDEX_NAME_MAP_PATH,
                     S32.class, InterfaceMapValue.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create interface map: " + e);
