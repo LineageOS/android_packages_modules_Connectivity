@@ -45,6 +45,11 @@ const BpfMapRO<uint32_t, IfaceValue>& getIfaceIndexNameMap() {
     return ifaceIndexNameMap;
 }
 
+const BpfMapRO<uint32_t, StatsValue>& getIfaceStatsMap() {
+    static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
+    return ifaceStatsMap;
+}
+
 int bpfGetUidStatsInternal(uid_t uid, StatsValue* stats,
                            const BpfMapRO<uint32_t, StatsValue>& appUidStatsMap) {
     auto statsEntry = appUidStatsMap.readValue(uid);
@@ -89,8 +94,7 @@ int bpfGetIfaceStatsInternal(const char* iface, StatsValue* stats,
 }
 
 int bpfGetIfaceStats(const char* iface, StatsValue* stats) {
-    static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
-    return bpfGetIfaceStatsInternal(iface, stats, ifaceStatsMap, getIfaceIndexNameMap());
+    return bpfGetIfaceStatsInternal(iface, stats, getIfaceStatsMap(), getIfaceIndexNameMap());
 }
 
 int bpfGetIfIndexStatsInternal(uint32_t ifindex, StatsValue* stats,
@@ -105,8 +109,7 @@ int bpfGetIfIndexStatsInternal(uint32_t ifindex, StatsValue* stats,
 }
 
 int bpfGetIfIndexStats(int ifindex, StatsValue* stats) {
-    static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
-    return bpfGetIfIndexStatsInternal(ifindex, stats, ifaceStatsMap);
+    return bpfGetIfIndexStatsInternal(ifindex, stats, getIfaceStatsMap());
 }
 
 stats_line populateStatsEntry(const StatsKey& statsKey, const StatsValue& statsEntry,
@@ -245,8 +248,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
 }
 
 int parseBpfNetworkStatsDev(std::vector<stats_line>* lines) {
-    static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
-    return parseBpfNetworkStatsDevInternal(*lines, ifaceStatsMap, getIfaceIndexNameMap());
+    return parseBpfNetworkStatsDevInternal(*lines, getIfaceStatsMap(), getIfaceIndexNameMap());
 }
 
 void groupNetworkStats(std::vector<stats_line>& lines) {
