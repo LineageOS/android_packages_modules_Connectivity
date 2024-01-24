@@ -40,6 +40,11 @@ namespace bpf {
 
 using base::Result;
 
+const BpfMapRO<uint32_t, IfaceValue>& getIfaceIndexNameMap() {
+    static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
+    return ifaceIndexNameMap;
+}
+
 int bpfGetUidStatsInternal(uid_t uid, StatsValue* stats,
                            const BpfMapRO<uint32_t, StatsValue>& appUidStatsMap) {
     auto statsEntry = appUidStatsMap.readValue(uid);
@@ -85,8 +90,7 @@ int bpfGetIfaceStatsInternal(const char* iface, StatsValue* stats,
 
 int bpfGetIfaceStats(const char* iface, StatsValue* stats) {
     static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
-    static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
-    return bpfGetIfaceStatsInternal(iface, stats, ifaceStatsMap, ifaceIndexNameMap);
+    return bpfGetIfaceStatsInternal(iface, stats, ifaceStatsMap, getIfaceIndexNameMap());
 }
 
 int bpfGetIfIndexStatsInternal(uint32_t ifindex, StatsValue* stats,
@@ -166,7 +170,6 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>& lines,
 }
 
 int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
-    static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
     static BpfMapRO<uint32_t, uint32_t> configurationMap(CONFIGURATION_MAP_PATH);
     static BpfMap<StatsKey, StatsValue> statsMapA(STATS_MAP_A_PATH);
     static BpfMap<StatsKey, StatsValue> statsMapB(STATS_MAP_B_PATH);
@@ -196,7 +199,7 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
     // TODO: the above comment feels like it may be obsolete / out of date,
     // since we no longer swap the map via netd binder rpc - though we do
     // still swap it.
-    int ret = parseBpfNetworkStatsDetailInternal(*lines, *inactiveStatsMap, ifaceIndexNameMap);
+    int ret = parseBpfNetworkStatsDetailInternal(*lines, *inactiveStatsMap, getIfaceIndexNameMap());
     if (ret) {
         ALOGE("parse detail network stats failed: %s", strerror(errno));
         return ret;
@@ -242,9 +245,8 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
 }
 
 int parseBpfNetworkStatsDev(std::vector<stats_line>* lines) {
-    static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
     static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
-    return parseBpfNetworkStatsDevInternal(*lines, ifaceStatsMap, ifaceIndexNameMap);
+    return parseBpfNetworkStatsDevInternal(*lines, ifaceStatsMap, getIfaceIndexNameMap());
 }
 
 void groupNetworkStats(std::vector<stats_line>& lines) {
