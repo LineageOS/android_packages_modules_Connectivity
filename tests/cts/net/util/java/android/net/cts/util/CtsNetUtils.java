@@ -173,21 +173,39 @@ public final class CtsNetUtils {
         return cb;
     }
 
-    // Toggle WiFi twice, leaving it in the state it started in
-    public void toggleWifi() throws Exception {
-        if (mWifiManager.isWifiEnabled()) {
-            Network wifiNetwork = getWifiNetwork();
-            // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
-            expectNetworkIsSystemDefault(wifiNetwork);
-            disconnectFromWifi(wifiNetwork);
-            connectToWifi();
-        } else {
-            connectToWifi();
-            Network wifiNetwork = getWifiNetwork();
-            // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
-            expectNetworkIsSystemDefault(wifiNetwork);
-            disconnectFromWifi(wifiNetwork);
+    /**
+     * Toggle Wi-Fi off and on, waiting for the {@link ConnectivityManager#CONNECTIVITY_ACTION}
+     * broadcast in both cases.
+     */
+    public void reconnectWifiAndWaitForConnectivityAction() throws Exception {
+        assertTrue(mWifiManager.isWifiEnabled());
+        Network wifiNetwork = getWifiNetwork();
+        // Ensure system default network is WIFI because it's expected in disconnectFromWifi()
+        expectNetworkIsSystemDefault(wifiNetwork);
+        disconnectFromWifi(wifiNetwork, true /* expectLegacyBroadcast */);
+        connectToWifi(true /* expectLegacyBroadcast */);
+    }
+
+    /**
+     * Turn Wi-Fi off, then back on and make sure it connects, if it is supported.
+     */
+    public void reconnectWifiIfSupported() throws Exception {
+        if (!mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI)) {
+            return;
         }
+        disableWifi();
+        ensureWifiConnected();
+    }
+
+    /**
+     * Turn cell data off, then back on and make sure it connects, if it is supported.
+     */
+    public void reconnectCellIfSupported() throws Exception {
+        if (!mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
+            return;
+        }
+        setMobileDataEnabled(false);
+        setMobileDataEnabled(true);
     }
 
     public Network expectNetworkIsSystemDefault(Network network)

@@ -199,7 +199,8 @@ public class BatteryStatsManagerTest{
         Log.d(TAG, "Generate traffic on wifi network.");
         generateNetworkTraffic(wifiNetwork, url);
         // Wifi battery stats are updated when wifi on.
-        mCtsNetUtils.toggleWifi();
+        mCtsNetUtils.disableWifi();
+        mCtsNetUtils.ensureWifiConnected();
 
         // Check wifi battery stats are updated.
         runAsShell(UPDATE_DEVICE_STATS,
