@@ -86,9 +86,9 @@ public class DscpPolicyTracker {
         mAttachedIfaces = new HashSet<String>();
         mIfaceIndexToPolicyIdBpfMapIndex = new HashMap<Integer, SparseIntArray>();
         mBpfDscpIpv4Policies = new BpfMap<Struct.S32, DscpPolicyValue>(IPV4_POLICY_MAP_PATH,
-                BpfMap.BPF_F_RDWR, Struct.S32.class, DscpPolicyValue.class);
+                Struct.S32.class, DscpPolicyValue.class);
         mBpfDscpIpv6Policies = new BpfMap<Struct.S32, DscpPolicyValue>(IPV6_POLICY_MAP_PATH,
-                BpfMap.BPF_F_RDWR, Struct.S32.class, DscpPolicyValue.class);
+                Struct.S32.class, DscpPolicyValue.class);
     }
 
     private boolean isUnusedIndex(int index) {
