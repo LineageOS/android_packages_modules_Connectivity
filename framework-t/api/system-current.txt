@@ -532,6 +532,7 @@ package android.net.thread {
     field public static final int ERROR_RESPONSE_BAD_FORMAT = 9; // 0x9
     field public static final int ERROR_TIMEOUT = 3; // 0x3
     field public static final int ERROR_UNAVAILABLE = 4; // 0x4
+    field public static final int ERROR_UNKNOWN = 11; // 0xb
     field public static final int ERROR_UNSUPPORTED_CHANNEL = 7; // 0x7
   }
 
