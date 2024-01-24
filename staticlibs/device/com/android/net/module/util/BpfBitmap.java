@@ -38,8 +38,7 @@ public class BpfBitmap {
      * @param path The path of the BPF map.
      */
     public BpfBitmap(@NonNull String path) throws ErrnoException {
-        mBpfMap = new BpfMap<Struct.S32, Struct.S64>(path, BpfMap.BPF_F_RDWR,
-                Struct.S32.class, Struct.S64.class);
+        mBpfMap = new BpfMap<>(path, Struct.S32.class, Struct.S64.class);
     }
 
     /**
