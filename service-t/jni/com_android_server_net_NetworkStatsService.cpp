@@ -38,6 +38,9 @@ using android::bpf::NetworkTraceHandler;
 
 namespace android {
 
+static void nativeRegisterIface(JNIEnv* env, jclass clazz, jstring iface) {
+}
+
 static jobject statsValueToEntry(JNIEnv* env, StatsValue* stats) {
     // Find the Java class that represents the structure
     jclass gEntryClass = env->FindClass("android/net/NetworkStats$Entry");
@@ -100,6 +103,11 @@ static void nativeInitNetworkTracing(JNIEnv* env, jclass clazz) {
 }
 
 static const JNINativeMethod gMethods[] = {
+        {
+            "nativeRegisterIface",
+            "(Ljava/lang/String;)V",
+            (void*)nativeRegisterIface
+        },
         {
             "nativeGetTotalStat",
             "()Landroid/net/NetworkStats$Entry;",

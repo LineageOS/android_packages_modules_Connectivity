@@ -2211,6 +2211,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             // both total usage and UID details.
             final String baseIface = snapshot.getLinkProperties().getInterfaceName();
             if (baseIface != null) {
+                nativeRegisterIface(baseIface);
                 findOrCreateNetworkIdentitySet(mActiveIfaces, baseIface).add(ident);
                 findOrCreateNetworkIdentitySet(mActiveUidIfaces, baseIface).add(ident);
 
@@ -2282,6 +2283,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 // baseIface has been handled, so ignore it.
                 if (TextUtils.equals(baseIface, iface)) continue;
                 if (iface != null) {
+                    nativeRegisterIface(iface);
                     findOrCreateNetworkIdentitySet(mActiveIfaces, iface).add(ident);
                     findOrCreateNetworkIdentitySet(mActiveUidIfaces, iface).add(ident);
                     if (isMobile) {
@@ -3415,6 +3417,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     }
 
     // TODO: Read stats by using BpfNetMapsReader.
+    private static native void nativeRegisterIface(String iface);
     @Nullable
     private static native NetworkStats.Entry nativeGetTotalStat();
     @Nullable
