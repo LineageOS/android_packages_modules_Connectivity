@@ -16,8 +16,6 @@
 
 package com.android.cts.net;
 
-import static com.android.cts.net.arguments.InstrumentationArguments.ARG_WAIVE_BIND_PRIORITY;
-
 import android.platform.test.annotations.FlakyTest;
 
 import com.android.testutils.SkipPresubmit;
@@ -28,12 +26,9 @@ import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
 
 import org.junit.Test;
 
-import java.util.Map;
-
 @SkipPresubmit(reason = "Out of SLO flakiness")
 public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     private static final String TEST_CLASS = TEST_PKG + ".ConnOnActivityStartTest";
-
     @BeforeClassWithInfo
     public static void setUpOnce(TestInformation testInfo) throws Exception {
         uninstallPackage(testInfo, TEST_APP2_PKG, false);
@@ -64,12 +59,5 @@ public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     @Test
     public void testStartActivity_appStandby() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_appStandby");
-    }
-
-    // TODO(b/321848487): Annotate with @RequiresFlagsEnabled to mirror the device-side test.
-    @Test
-    public void testStartActivity_default() throws Exception {
-        runDeviceTestsWithArgs(TEST_PKG, TEST_CLASS, "testStartActivity_default",
-                Map.of(ARG_WAIVE_BIND_PRIORITY, "true"));
     }
 }
