@@ -21,4 +21,5 @@ service ot-daemon /apex/com.android.tethering/bin/ot-daemon -I thread-wpan --aut
     user thread_network
     group thread_network inet system
     seclabel u:r:ot_daemon:s0
+    socket ot-daemon/thread-wpan.sock stream 0666 thread_network thread_network
     override
