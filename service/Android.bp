@@ -70,9 +70,6 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // The library name match the service-connectivity jarjar rules that put the JNI utils in the
@@ -206,6 +203,7 @@ java_library {
     lint: {
         strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
+
     },
     visibility: [
         "//packages/modules/Connectivity/service-t",
@@ -231,7 +229,7 @@ java_library {
     ],
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 
@@ -290,18 +288,12 @@ java_defaults {
 java_library {
     name: "service-connectivity-for-tests",
     defaults: ["service-connectivity-defaults"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_library {
     name: "service-connectivity",
     defaults: ["service-connectivity-defaults"],
     installable: true,
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 java_library_static {
@@ -316,9 +308,6 @@ java_library_static {
     ],
     static_libs: ["ConnectivityServiceprotos"],
     apex_available: ["com.android.tethering"],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 genrule {
