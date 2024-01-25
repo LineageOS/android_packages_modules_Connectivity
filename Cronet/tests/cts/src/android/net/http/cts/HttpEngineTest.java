@@ -247,10 +247,8 @@ public class HttpEngineTest {
     @Test
     public void testHttpEngine_requestUsesDefaultUserAgent() throws Exception {
         mEngine = mEngineBuilder.build();
-        HttpCtsTestServer server =
-                new HttpCtsTestServer(ApplicationProvider.getApplicationContext());
 
-        String url = server.getUserAgentUrl();
+        String url = mTestServer.getUserAgentUrl();
         UrlRequest request =
                 mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback).build();
         request.start();
@@ -266,14 +264,12 @@ public class HttpEngineTest {
     @Test
     public void testHttpEngine_requestUsesCustomUserAgent() throws Exception {
         String userAgent = "CtsTests User Agent";
-        HttpCtsTestServer server =
-                new HttpCtsTestServer(ApplicationProvider.getApplicationContext());
         mEngine =
                 new HttpEngine.Builder(ApplicationProvider.getApplicationContext())
                         .setUserAgent(userAgent)
                         .build();
 
-        String url = server.getUserAgentUrl();
+        String url = mTestServer.getUserAgentUrl();
         UrlRequest request =
                 mEngine.newUrlRequestBuilder(url, mCallback.getExecutor(), mCallback).build();
         request.start();
