@@ -352,7 +352,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestUnknownIfaceError) {
             .counterSet = TEST_COUNTERSET0,
             .ifaceIndex = ifaceIndex,
     };
-    char ifname[IFNAMSIZ];
+    IfaceValue ifname;
     int64_t unknownIfaceBytesTotal = 0;
     ASSERT_EQ(-ENODEV, getIfaceNameFromMap(mFakeIfaceIndexNameMap, mFakeStatsMap, ifaceIndex,
                                            ifname, curKey, &unknownIfaceBytesTotal));

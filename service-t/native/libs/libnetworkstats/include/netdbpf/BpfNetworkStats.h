@@ -75,14 +75,14 @@ int cleanStatsMapInternal(const base::unique_fd& cookieTagMap, const base::uniqu
 template <class Key>
 int getIfaceNameFromMap(const BpfMapRO<uint32_t, IfaceValue>& ifaceMap,
                         const BpfMapRO<Key, StatsValue>& statsMap,
-                        uint32_t ifaceIndex, char* ifname,
+                        uint32_t ifaceIndex, IfaceValue& ifname,
                         const Key& curKey, int64_t* unknownIfaceBytesTotal) {
     auto iface = ifaceMap.readValue(ifaceIndex);
     if (!iface.ok()) {
         maybeLogUnknownIface(ifaceIndex, statsMap, curKey, unknownIfaceBytesTotal);
         return -ENODEV;
     }
-    strlcpy(ifname, iface.value().name, sizeof(IfaceValue));
+    ifname = iface.value();
     return 0;
 }
 
