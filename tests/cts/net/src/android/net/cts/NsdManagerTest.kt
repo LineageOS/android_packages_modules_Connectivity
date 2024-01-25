@@ -686,7 +686,8 @@ class NsdManagerTest {
         assertEquals(listOf("_subtype"), serviceInfo.subtypes)
         assertTrue(serviceInfo.hostname.startsWith("Android_"))
         assertTrue(serviceInfo.hostname.endsWith("local"))
-        assertEquals(0, serviceInfo.priority)
+        // Test service types should not be in the priority list
+        assertEquals(Integer.MAX_VALUE, serviceInfo.priority)
         assertEquals(OffloadEngine.OFFLOAD_TYPE_REPLY.toLong(), serviceInfo.offloadType)
         val offloadPayload = serviceInfo.offloadPayload
         assertNotNull(offloadPayload)

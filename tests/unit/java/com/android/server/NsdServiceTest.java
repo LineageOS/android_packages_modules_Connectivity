@@ -234,7 +234,8 @@ public class NsdServiceTest {
         doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any(), any());
         doReturn(DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF).when(mDeps).getDeviceConfigInt(
                 eq(NsdService.MDNS_CONFIG_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF), anyInt());
-        doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any());
+        doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any(),
+                any());
         doReturn(mMetrics).when(mDeps).makeNetworkNsdReportedMetrics(anyInt());
         doReturn(mClock).when(mDeps).makeClock();
         doReturn(TEST_TIME_MS).when(mClock).elapsedRealtime();
@@ -1320,7 +1321,7 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1371,7 +1372,7 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, "invalid_type");
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1398,7 +1399,7 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("a".repeat(70), SERVICE_TYPE);
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
