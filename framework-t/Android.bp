@@ -191,6 +191,9 @@ java_sdk_library {
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
+    aconfig_declarations: [
+        "com.android.net.flags-aconfig",
+    ],
 }
 
 // This rule is not used anymore(b/268440216).
