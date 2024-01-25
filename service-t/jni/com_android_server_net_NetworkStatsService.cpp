@@ -63,7 +63,7 @@ static jobject statsValueToEntry(JNIEnv* env, StatsValue* stats) {
 static jobject nativeGetTotalStat(JNIEnv* env, jclass clazz) {
     StatsValue stats = {};
 
-    if (bpfGetIfaceStats(NULL, &stats) == 0) {
+    if (bpfGetIfaceStats(nullptr, &stats) == 0) {
         return statsValueToEntry(env, &stats);
     } else {
         return nullptr;
@@ -72,7 +72,7 @@ static jobject nativeGetTotalStat(JNIEnv* env, jclass clazz) {
 
 static jobject nativeGetIfaceStat(JNIEnv* env, jclass clazz, jstring iface) {
     ScopedUtfChars iface8(env, iface);
-    if (iface8.c_str() == NULL) {
+    if (iface8.c_str() == nullptr) {
         return nullptr;
     }
 
