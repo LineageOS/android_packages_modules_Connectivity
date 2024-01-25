@@ -18,7 +18,6 @@ package com.android.cts.net.hostside;
 
 
 import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
-import static android.app.ActivityManager.PROCESS_STATE_TOP_SLEEPING;
 
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.getUiDevice;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.setRestrictBackground;
@@ -29,12 +28,7 @@ import static com.android.cts.net.hostside.Property.DOZE_MODE;
 import static com.android.cts.net.hostside.Property.METERED_NETWORK;
 import static com.android.cts.net.hostside.Property.NON_METERED_NETWORK;
 
-import android.os.SystemClock;
-import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.util.Log;
-
-import com.android.compatibility.common.util.ThrowingRunnable;
-import com.android.server.net.Flags;
 
 import org.junit.After;
 import org.junit.Before;
@@ -69,14 +63,14 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @RequiredProperties({BATTERY_SAVER_MODE})
     public void testStartActivity_batterySaver() throws Exception {
         setBatterySaverMode(true);
-        assertLaunchedActivityHasNetworkAccess("testStartActivity_batterySaver", null);
+        assertLaunchedActivityHasNetworkAccess("testStartActivity_batterySaver");
     }
 
     @Test
     @RequiredProperties({DATA_SAVER_MODE, METERED_NETWORK})
     public void testStartActivity_dataSaver() throws Exception {
         setRestrictBackground(true);
-        assertLaunchedActivityHasNetworkAccess("testStartActivity_dataSaver", null);
+        assertLaunchedActivityHasNetworkAccess("testStartActivity_dataSaver");
     }
 
     @Test
@@ -85,7 +79,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
         setDozeMode(true);
         // TODO (235284115): We need to turn on Doze every time before starting
         // the activity.
-        assertLaunchedActivityHasNetworkAccess("testStartActivity_doze", null);
+        assertLaunchedActivityHasNetworkAccess("testStartActivity_doze");
     }
 
     @Test
@@ -95,24 +89,11 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
         setAppIdle(true);
         // TODO (235284115): We need to put the app into app standby mode every
         // time before starting the activity.
-        assertLaunchedActivityHasNetworkAccess("testStartActivity_appStandby", null);
+        assertLaunchedActivityHasNetworkAccess("testStartActivity_appStandby");
     }
 
-    @Test
-    @RequiresFlagsEnabled(Flags.FLAG_NETWORK_BLOCKED_FOR_TOP_SLEEPING_AND_ABOVE)
-    public void testStartActivity_default() throws Exception {
-        assertLaunchedActivityHasNetworkAccess("testStartActivity_default", () -> {
-            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
-        });
-    }
-
-    private void assertLaunchedActivityHasNetworkAccess(String testName,
-            ThrowingRunnable onBeginIteration) throws Exception {
+    private void assertLaunchedActivityHasNetworkAccess(String testName) throws Exception {
         for (int i = 0; i < TEST_ITERATION_COUNT; ++i) {
-            if (onBeginIteration != null) {
-                onBeginIteration.run();
-            }
             Log.i(TAG, testName + " start #" + i);
             launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
             getUiDevice().pressHome();
