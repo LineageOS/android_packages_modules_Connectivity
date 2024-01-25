@@ -1751,7 +1751,8 @@ public class NsdService extends INsdManager.Stub {
                 mMdnsSocketClient, LOGGER.forSubComponent("MdnsDiscoveryManager"), flags);
         handler.post(() -> mMdnsSocketClient.setCallback(mMdnsDiscoveryManager));
         mAdvertiser = deps.makeMdnsAdvertiser(handler.getLooper(), mMdnsSocketProvider,
-                new AdvertiserCallback(), LOGGER.forSubComponent("MdnsAdvertiser"), flags);
+                new AdvertiserCallback(), LOGGER.forSubComponent("MdnsAdvertiser"), flags,
+                mContext);
         mClock = deps.makeClock();
     }
 
@@ -1830,8 +1831,8 @@ public class NsdService extends INsdManager.Stub {
         public MdnsAdvertiser makeMdnsAdvertiser(
                 @NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
                 @NonNull MdnsAdvertiser.AdvertiserCallback cb, @NonNull SharedLog sharedLog,
-                MdnsFeatureFlags featureFlags) {
-            return new MdnsAdvertiser(looper, socketProvider, cb, sharedLog, featureFlags);
+                MdnsFeatureFlags featureFlags, Context context) {
+            return new MdnsAdvertiser(looper, socketProvider, cb, sharedLog, featureFlags, context);
         }
 
         /**
