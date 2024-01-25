@@ -27,7 +27,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.NoSuchElementException;
@@ -107,6 +106,17 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
         mKeySize = Struct.getSize(key);
         mValueSize = Struct.getSize(value);
         mMapFd = cachedBpfFdGet(path, flag, mKeySize, mValueSize);
+    }
+
+    /**
+     * Create a R/W BpfMap map wrapper with "path" of filesystem.
+     *
+     * @throws ErrnoException if the BPF map associated with {@code path} cannot be retrieved.
+     * @throws NullPointerException if {@code path} is null.
+     */
+    public BpfMap(@NonNull final String path, final Class<K> key,
+            final Class<V> value) throws ErrnoException, NullPointerException {
+        this(path, BPF_F_RDWR, key, value);
     }
 
     /**

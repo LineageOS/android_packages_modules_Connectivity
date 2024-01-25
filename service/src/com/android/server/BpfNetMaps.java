@@ -187,7 +187,7 @@ public class BpfNetMaps {
     private static IBpfMap<S32, U32> getConfigurationMap() {
         try {
             return new BpfMap<>(
-                    CONFIGURATION_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U32.class);
+                    CONFIGURATION_MAP_PATH, S32.class, U32.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open netd configuration map", e);
         }
@@ -196,7 +196,7 @@ public class BpfNetMaps {
     private static IBpfMap<S32, UidOwnerValue> getUidOwnerMap() {
         try {
             return new BpfMap<>(
-                    UID_OWNER_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, UidOwnerValue.class);
+                    UID_OWNER_MAP_PATH, S32.class, UidOwnerValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid owner map", e);
         }
@@ -205,7 +205,7 @@ public class BpfNetMaps {
     private static IBpfMap<S32, U8> getUidPermissionMap() {
         try {
             return new BpfMap<>(
-                    UID_PERMISSION_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U8.class);
+                    UID_PERMISSION_MAP_PATH, S32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid permission map", e);
         }
@@ -213,7 +213,7 @@ public class BpfNetMaps {
 
     private static IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
         try {
-            return new BpfMap<>(COOKIE_TAG_MAP_PATH, BpfMap.BPF_F_RDWR,
+            return new BpfMap<>(COOKIE_TAG_MAP_PATH,
                     CookieTagMapKey.class, CookieTagMapValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open cookie tag map", e);
@@ -223,7 +223,7 @@ public class BpfNetMaps {
     private static IBpfMap<S32, U8> getDataSaverEnabledMap() {
         try {
             return new BpfMap<>(
-                    DATA_SAVER_ENABLED_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U8.class);
+                    DATA_SAVER_ENABLED_MAP_PATH, S32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open data saver enabled map", e);
         }
@@ -231,7 +231,7 @@ public class BpfNetMaps {
 
     private static IBpfMap<IngressDiscardKey, IngressDiscardValue> getIngressDiscardMap() {
         try {
-            return new BpfMap<>(INGRESS_DISCARD_MAP_PATH, BpfMap.BPF_F_RDWR,
+            return new BpfMap<>(INGRESS_DISCARD_MAP_PATH,
                     IngressDiscardKey.class, IngressDiscardValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open ingress discard map", e);
