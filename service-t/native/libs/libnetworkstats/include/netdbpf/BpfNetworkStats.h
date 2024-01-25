@@ -114,6 +114,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
                                     const BpfMapRO<uint32_t, StatsValue>& statsMap,
                                     const BpfMapRO<uint32_t, IfaceValue>& ifaceMap);
 
+void bpfRegisterIface(const char* iface);
 int bpfGetUidStats(uid_t uid, StatsValue* stats);
 int bpfGetIfaceStats(const char* iface, StatsValue* stats);
 int bpfGetIfIndexStats(int ifindex, StatsValue* stats);
