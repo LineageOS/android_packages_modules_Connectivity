@@ -75,12 +75,12 @@ int bpfGetIfaceStatsInternal(const char* iface, StatsValue* stats,
             [iface, stats, &ifaceNameMap, &unknownIfaceBytesTotal](
                     const uint32_t& key,
                     const BpfMapRO<uint32_t, StatsValue>& ifaceStatsMap) -> Result<void> {
-        char ifname[IFNAMSIZ];
+        IfaceValue ifname;
         if (getIfaceNameFromMap(ifaceNameMap, ifaceStatsMap, key, ifname, key,
                                 &unknownIfaceBytesTotal)) {
             return Result<void>();
         }
-        if (!iface || !strcmp(iface, ifname)) {
+        if (!iface || !strcmp(iface, ifname.name)) {
             Result<StatsValue> statsEntry = ifaceStatsMap.readValue(key);
             if (!statsEntry.ok()) {
                 return statsEntry.error();
@@ -113,9 +113,9 @@ int bpfGetIfIndexStats(int ifindex, StatsValue* stats) {
 }
 
 stats_line populateStatsEntry(const StatsKey& statsKey, const StatsValue& statsEntry,
-                              const char* ifname) {
+                              const IfaceValue& ifname) {
     stats_line newLine;
-    strlcpy(newLine.iface, ifname, sizeof(newLine.iface));
+    strlcpy(newLine.iface, ifname.name, sizeof(newLine.iface));
     newLine.uid = (int32_t)statsKey.uid;
     newLine.set = (int32_t)statsKey.counterSet;
     newLine.tag = (int32_t)statsKey.tag;
@@ -134,7 +134,7 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>& lines,
             [&lines, &unknownIfaceBytesTotal, &ifaceMap](
                     const StatsKey& key,
                     const BpfMapRO<StatsKey, StatsValue>& statsMap) -> Result<void> {
-        char ifname[IFNAMSIZ];
+        IfaceValue ifname;
         if (getIfaceNameFromMap(ifaceMap, statsMap, key.ifaceIndex, ifname, key,
                                 &unknownIfaceBytesTotal)) {
             return Result<void>();
@@ -224,7 +224,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
     const auto processDetailIfaceStats = [&lines, &unknownIfaceBytesTotal, &ifaceMap, &statsMap](
                                              const uint32_t& key, const StatsValue& value,
                                              const BpfMapRO<uint32_t, StatsValue>&) {
-        char ifname[IFNAMSIZ];
+        IfaceValue ifname;
         if (getIfaceNameFromMap(ifaceMap, statsMap, key, ifname, key, &unknownIfaceBytesTotal)) {
             return Result<void>();
         }
