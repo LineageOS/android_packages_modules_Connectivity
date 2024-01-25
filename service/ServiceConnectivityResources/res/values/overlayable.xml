@@ -31,6 +31,7 @@
             <item type="integer" name="config_networkWakeupPacketMask"/>
             <item type="integer" name="config_networkNotifySwitchType"/>
             <item type="array" name="config_networkNotifySwitches"/>
+            <item type="array" name="config_nsdOffloadServicesPriority"/>
             <item type="bool" name="config_ongoingSignInNotification"/>
             <item type="bool" name="config_autoCancelNetworkNotifications"/>
             <item type="bool" name="config_notifyNoInternetAsDialogWhenHighPriority"/>
