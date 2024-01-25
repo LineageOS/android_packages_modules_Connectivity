@@ -85,9 +85,9 @@ public class DscpPolicyTracker {
     public DscpPolicyTracker() throws ErrnoException {
         mAttachedIfaces = new HashSet<String>();
         mIfaceIndexToPolicyIdBpfMapIndex = new HashMap<Integer, SparseIntArray>();
-        mBpfDscpIpv4Policies = new BpfMap<Struct.S32, DscpPolicyValue>(IPV4_POLICY_MAP_PATH,
+        mBpfDscpIpv4Policies = new BpfMap<>(IPV4_POLICY_MAP_PATH,
                 Struct.S32.class, DscpPolicyValue.class);
-        mBpfDscpIpv6Policies = new BpfMap<Struct.S32, DscpPolicyValue>(IPV6_POLICY_MAP_PATH,
+        mBpfDscpIpv6Policies = new BpfMap<>(IPV6_POLICY_MAP_PATH,
                 Struct.S32.class, DscpPolicyValue.class);
     }
 
