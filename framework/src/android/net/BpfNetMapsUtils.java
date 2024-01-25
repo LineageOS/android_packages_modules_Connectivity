@@ -125,13 +125,11 @@ public class BpfNetMapsUtils {
         return sj.toString();
     }
 
-    public static final boolean PRE_T = !SdkLevel.isAtLeastT();
-
     /**
      * Throw UnsupportedOperationException if SdkLevel is before T.
      */
     public static void throwIfPreT(final String msg) {
-        if (PRE_T) {
+        if (!SdkLevel.isAtLeastT()) {
             throw new UnsupportedOperationException(msg);
         }
     }
