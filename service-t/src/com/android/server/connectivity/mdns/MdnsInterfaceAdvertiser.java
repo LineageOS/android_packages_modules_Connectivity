@@ -162,10 +162,11 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         @NonNull
         public MdnsReplySender makeReplySender(@NonNull String interfaceTag, @NonNull Looper looper,
                 @NonNull MdnsInterfaceSocket socket, @NonNull byte[] packetCreationBuffer,
-                @NonNull SharedLog sharedLog) {
+                @NonNull SharedLog sharedLog, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
             return new MdnsReplySender(looper, socket, packetCreationBuffer,
                     sharedLog.forSubComponent(
-                            MdnsReplySender.class.getSimpleName() + "/" + interfaceTag), DBG);
+                            MdnsReplySender.class.getSimpleName() + "/" + interfaceTag), DBG,
+                    mdnsFeatureFlags);
         }
 
         /** @see MdnsAnnouncer */
@@ -208,7 +209,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         mCb = cb;
         mCbHandler = new Handler(looper);
         mReplySender = deps.makeReplySender(sharedLog.getTag(), looper, socket,
-                packetCreationBuffer, sharedLog);
+                packetCreationBuffer, sharedLog, mdnsFeatureFlags);
         mPacketCreationBuffer = packetCreationBuffer;
         mAnnouncer = deps.makeMdnsAnnouncer(sharedLog.getTag(), looper, mReplySender,
                 mAnnouncingCallback, sharedLog);
