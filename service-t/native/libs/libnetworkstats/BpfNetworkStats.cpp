@@ -40,14 +40,24 @@ namespace bpf {
 
 using base::Result;
 
-const BpfMapRO<uint32_t, IfaceValue>& getIfaceIndexNameMap() {
-    static BpfMapRO<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
+BpfMap<uint32_t, IfaceValue>& getIfaceIndexNameMap() {
+    static BpfMap<uint32_t, IfaceValue> ifaceIndexNameMap(IFACE_INDEX_NAME_MAP_PATH);
     return ifaceIndexNameMap;
 }
 
 const BpfMapRO<uint32_t, StatsValue>& getIfaceStatsMap() {
     static BpfMapRO<uint32_t, StatsValue> ifaceStatsMap(IFACE_STATS_MAP_PATH);
     return ifaceStatsMap;
+}
+
+void bpfRegisterIface(const char* iface) {
+    if (!iface) return;
+    if (strlen(iface) >= sizeof(IfaceValue)) return;
+    uint32_t ifindex = if_nametoindex(iface);
+    if (!ifindex) return;
+    IfaceValue ifname = {};
+    strlcpy(ifname.name, iface, sizeof(ifname.name));
+    getIfaceIndexNameMap().writeValue(ifindex, ifname, BPF_ANY);
 }
 
 int bpfGetUidStatsInternal(uid_t uid, StatsValue* stats,
