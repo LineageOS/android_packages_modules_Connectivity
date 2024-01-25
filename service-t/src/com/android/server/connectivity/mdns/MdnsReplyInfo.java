@@ -32,22 +32,32 @@ public final class MdnsReplyInfo {
     public final long sendDelayMs;
     @NonNull
     public final InetSocketAddress destination;
+    @NonNull
+    public final InetSocketAddress source;
+    @NonNull
+    public final List<MdnsRecord> knownAnswers;
 
     public MdnsReplyInfo(
             @NonNull List<MdnsRecord> answers,
             @NonNull List<MdnsRecord> additionalAnswers,
             long sendDelayMs,
-            @NonNull InetSocketAddress destination) {
+            @NonNull InetSocketAddress destination,
+            @NonNull InetSocketAddress source,
+            @NonNull List<MdnsRecord> knownAnswers) {
         this.answers = answers;
         this.additionalAnswers = additionalAnswers;
         this.sendDelayMs = sendDelayMs;
         this.destination = destination;
+        this.source = source;
+        this.knownAnswers = knownAnswers;
     }
 
     @Override
     public String toString() {
-        return "{MdnsReplyInfo to " + destination + ", answers: " + answers.size()
+        return "{MdnsReplyInfo: " + source + " to " + destination
+                + ", answers: " + answers.size()
                 + ", additionalAnswers: " + additionalAnswers.size()
+                + ", knownAnswers: " + knownAnswers.size()
                 + ", sendDelayMs " + sendDelayMs + "}";
     }
 }

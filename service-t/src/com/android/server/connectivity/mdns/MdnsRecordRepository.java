@@ -490,6 +490,16 @@ public class MdnsRecordRepository {
         return ret;
     }
 
+    private boolean isTruncatedKnownAnswerPacket(MdnsPacket packet) {
+        if (!mMdnsFeatureFlags.mIsKnownAnswerSuppressionEnabled
+                // Should ignore the response packet.
+                || (packet.flags & MdnsConstants.FLAGS_RESPONSE) != 0) {
+            return false;
+        }
+        // Check the packet contains no questions and as many more Known-Answer records as will fit.
+        return packet.questions.size() == 0 && packet.answers.size() != 0;
+    }
+
     /**
      * Get the reply to send to an incoming packet.
      *
@@ -550,7 +560,20 @@ public class MdnsRecordRepository {
                 answerInfo.iterator(), additionalAnswerInfo.iterator());
 
         if (answerInfo.size() == 0 && additionalAnswerRecords.size() == 0) {
-            return null;
+            // RFC6762 7.2. Multipacket Known-Answer Suppression
+            // Sometimes a Multicast DNS querier will already have too many answers
+            // to fit in the Known-Answer Section of its query packets. In this
+            // case, it should issue a Multicast DNS query containing a question and
+            // as many Known-Answer records as will fit.  It MUST then set the TC
+            // (Truncated) bit in the header before sending the query.  It MUST
+            // immediately follow the packet with another query packet containing no
+            // questions and as many more Known-Answer records as will fit.  If
+            // there are still too many records remaining to fit in the packet, it
+            // again sets the TC bit and continues until all the Known-Answer
+            // records have been sent.
+            if (!isTruncatedKnownAnswerPacket(packet)) {
+                return null;
+            }
         }
 
         // Determine the send delay
@@ -598,7 +621,8 @@ public class MdnsRecordRepository {
             answerRecords.add(info.record);
         }
 
-        return new MdnsReplyInfo(answerRecords, additionalAnswerRecords, delayMs, dest);
+        return new MdnsReplyInfo(answerRecords, additionalAnswerRecords, delayMs, dest, src,
+                new ArrayList<>(packet.answers));
     }
 
     private boolean isKnownAnswer(MdnsRecord answer, @NonNull List<MdnsRecord> knownAnswerRecords) {

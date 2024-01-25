@@ -61,6 +61,7 @@ class MdnsProberTest {
     private val cb = mock(MdnsPacketRepeater.PacketRepeaterCallback::class.java)
         as MdnsPacketRepeater.PacketRepeaterCallback<ProbingInfo>
     private val buffer = ByteArray(1500)
+    private val flags = MdnsFeatureFlags.newBuilder().build()
 
     @Before
     fun setUp() {
@@ -120,7 +121,7 @@ class MdnsProberTest {
     @Test
     fun testProbe() {
         val replySender = MdnsReplySender(
-                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */)
+                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */, flags)
         val prober = TestProber(thread.looper, replySender, cb, sharedLog)
         val probeInfo = TestProbeInfo(
                 listOf(makeServiceRecord(TEST_SERVICE_NAME_1, 37890)))
@@ -145,7 +146,7 @@ class MdnsProberTest {
     @Test
     fun testProbeMultipleRecords() {
         val replySender = MdnsReplySender(
-                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */)
+                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */, flags)
         val prober = TestProber(thread.looper, replySender, cb, sharedLog)
         val probeInfo = TestProbeInfo(listOf(
                 makeServiceRecord(TEST_SERVICE_NAME_1, 37890),
@@ -184,7 +185,7 @@ class MdnsProberTest {
     @Test
     fun testStopProbing() {
         val replySender = MdnsReplySender(
-                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */)
+                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */, flags)
         val prober = TestProber(thread.looper, replySender, cb, sharedLog)
         val probeInfo = TestProbeInfo(
                 listOf(makeServiceRecord(TEST_SERVICE_NAME_1, 37890)),
