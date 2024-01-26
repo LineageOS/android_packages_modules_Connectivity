@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.ACTIVE_QUERY_MODE;
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.PASSIVE_QUERY_MODE;
 import static com.android.server.connectivity.mdns.MdnsServiceTypeClient.EVENT_START_QUERYTASK;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
@@ -267,8 +269,8 @@ public class MdnsServiceTypeClientTests {
 
     @Test
     public void sendQueries_activeScanMode() {
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(ACTIVE_QUERY_MODE).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -319,8 +321,8 @@ public class MdnsServiceTypeClientTests {
 
     @Test
     public void sendQueries_reentry_activeScanMode() {
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(ACTIVE_QUERY_MODE).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -333,7 +335,7 @@ public class MdnsServiceTypeClientTests {
                 MdnsSearchOptions.newBuilder()
                         .addSubtype(SUBTYPE)
                         .addSubtype("_subtype2")
-                        .setIsPassiveMode(false)
+                        .setQueryMode(ACTIVE_QUERY_MODE)
                         .build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // The previous scheduled task should be canceled.
@@ -353,8 +355,8 @@ public class MdnsServiceTypeClientTests {
 
     @Test
     public void sendQueries_passiveScanMode() {
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(PASSIVE_QUERY_MODE).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -380,8 +382,10 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_activeScanWithQueryBackoff() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(
-                        false).setNumOfQueriesBeforeBackoff(11).build();
+                MdnsSearchOptions.newBuilder()
+                        .addSubtype(SUBTYPE)
+                        .setQueryMode(ACTIVE_QUERY_MODE)
+                        .setNumOfQueriesBeforeBackoff(11).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -439,8 +443,10 @@ public class MdnsServiceTypeClientTests {
     @Test
     public void sendQueries_passiveScanWithQueryBackoff() {
         MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(
-                        true).setNumOfQueriesBeforeBackoff(3).build();
+                MdnsSearchOptions.newBuilder()
+                        .addSubtype(SUBTYPE)
+                        .setQueryMode(PASSIVE_QUERY_MODE)
+                        .setNumOfQueriesBeforeBackoff(3).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -497,8 +503,8 @@ public class MdnsServiceTypeClientTests {
 
     @Test
     public void sendQueries_reentry_passiveScanMode() {
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(PASSIVE_QUERY_MODE).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Always try to remove the task.
         verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
@@ -511,7 +517,7 @@ public class MdnsServiceTypeClientTests {
                 MdnsSearchOptions.newBuilder()
                         .addSubtype(SUBTYPE)
                         .addSubtype("_subtype2")
-                        .setIsPassiveMode(true)
+                        .setQueryMode(PASSIVE_QUERY_MODE)
                         .build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // The previous scheduled task should be canceled.
@@ -533,10 +539,10 @@ public class MdnsServiceTypeClientTests {
     @Ignore("MdnsConfigs is not configurable currently.")
     public void testQueryTaskConfig_alwaysAskForUnicastResponse() {
         //MdnsConfigsFlagsImpl.alwaysAskForUnicastResponseInEachBurst.override(true);
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(ACTIVE_QUERY_MODE).build();
         QueryTaskConfig config = new QueryTaskConfig(
-                searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
+                searchOptions.getSubtypes(), searchOptions.getQueryMode(),
                 false /* onlyUseIpv6OnIpv6OnlyNetworks */, 3 /* numOfQueriesBeforeBackoff */,
                 socketKey);
 
@@ -564,10 +570,10 @@ public class MdnsServiceTypeClientTests {
 
     @Test
     public void testQueryTaskConfig_askForUnicastInFirstQuery() {
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(false).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(ACTIVE_QUERY_MODE).build();
         QueryTaskConfig config = new QueryTaskConfig(
-                searchOptions.getSubtypes(), searchOptions.isPassiveMode(),
+                searchOptions.getSubtypes(), searchOptions.getQueryMode(),
                 false /* onlyUseIpv6OnIpv6OnlyNetworks */, 3 /* numOfQueriesBeforeBackoff */,
                 socketKey);
 
@@ -595,8 +601,8 @@ public class MdnsServiceTypeClientTests {
 
     @Test
     public void testIfPreviousTaskIsCanceledWhenNewSessionStarts() {
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(PASSIVE_QUERY_MODE).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         Runnable firstMdnsTask = currentThreadExecutor.getAndClearSubmittedRunnable();
 
@@ -605,7 +611,7 @@ public class MdnsServiceTypeClientTests {
                 MdnsSearchOptions.newBuilder()
                         .addSubtype(SUBTYPE)
                         .addSubtype("_subtype2")
-                        .setIsPassiveMode(true)
+                        .setQueryMode(PASSIVE_QUERY_MODE)
                         .build();
         startSendAndReceive(mockListenerOne, searchOptions);
 
@@ -624,8 +630,8 @@ public class MdnsServiceTypeClientTests {
     @Ignore("MdnsConfigs is not configurable currently.")
     public void testIfPreviousTaskIsCanceledWhenSessionStops() {
         //MdnsConfigsFlagsImpl.shouldCancelScanTaskWhenFutureIsNull.override(true);
-        MdnsSearchOptions searchOptions =
-                MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE).setIsPassiveMode(true).build();
+        MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(PASSIVE_QUERY_MODE).build();
         startSendAndReceive(mockListenerOne, searchOptions);
         // Change the sutypes and start a new session.
         stopSendAndReceive(mockListenerOne);
