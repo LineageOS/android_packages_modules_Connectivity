@@ -124,8 +124,8 @@ public class ThreadNetworkException extends Exception {
     public static final int ERROR_RESOURCE_EXHAUSTED = 10;
 
     /**
-     * The operation failed because of an unknown error in the system. This typically indicates
-     * that the caller doesn't understand error codes added in newer Android versions.
+     * The operation failed because of an unknown error in the system. This typically indicates that
+     * the caller doesn't understand error codes added in newer Android versions.
      */
     public static final int ERROR_UNKNOWN = 11;
 

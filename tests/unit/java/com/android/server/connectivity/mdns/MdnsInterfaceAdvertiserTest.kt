@@ -45,6 +45,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyInt
 import org.mockito.Mockito.anyString
+import org.mockito.Mockito.argThat
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.eq
@@ -87,7 +88,8 @@ class MdnsInterfaceAdvertiserTest {
     private val announcer = mock(MdnsAnnouncer::class.java)
     private val prober = mock(MdnsProber::class.java)
     private val sharedlog = SharedLog("MdnsInterfaceAdvertiserTest")
-    private val flags = MdnsFeatureFlags.newBuilder().build()
+    private val flags = MdnsFeatureFlags.newBuilder()
+            .setIsKnownAnswerSuppressionEnabled(true).build()
     @Suppress("UNCHECKED_CAST")
     private val probeCbCaptor = ArgumentCaptor.forClass(PacketRepeaterCallback::class.java)
             as ArgumentCaptor<PacketRepeaterCallback<ProbingInfo>>
@@ -118,7 +120,8 @@ class MdnsInterfaceAdvertiserTest {
     @Before
     fun setUp() {
         doReturn(repository).`when`(deps).makeRecordRepository(any(), eq(TEST_HOSTNAME), any())
-        doReturn(replySender).`when`(deps).makeReplySender(anyString(), any(), any(), any(), any())
+        doReturn(replySender).`when`(deps).makeReplySender(
+                anyString(), any(), any(), any(), any(), any())
         doReturn(announcer).`when`(deps).makeMdnsAnnouncer(anyString(), any(), any(), any(), any())
         doReturn(prober).`when`(deps).makeMdnsProber(anyString(), any(), any(), any(), any())
 
@@ -200,7 +203,8 @@ class MdnsInterfaceAdvertiserTest {
     fun testReplyToQuery() {
         addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
-        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 0, InetSocketAddress(0))
+        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 0, InetSocketAddress(0),
+                InetSocketAddress(0), emptyList())
         doReturn(testReply).`when`(repository).getReply(any(), any())
 
         // Query obtained with:
@@ -232,6 +236,112 @@ class MdnsInterfaceAdvertiserTest {
         }
 
         verify(replySender).queueReply(testReply)
+    }
+
+    @Test
+    fun testReplyToQuery_TruncatedBitSet() {
+        addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
+        val src = InetSocketAddress(parseNumericAddress("2001:db8::456"), MdnsConstants.MDNS_PORT)
+        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 400L, InetSocketAddress(0), src,
+                emptyList())
+        val knownAnswersReply = MdnsReplyInfo(emptyList(), emptyList(), 400L, InetSocketAddress(0),
+                src, emptyList())
+        val knownAnswersReply2 = MdnsReplyInfo(emptyList(), emptyList(), 0L, InetSocketAddress(0),
+                src, emptyList())
+        doReturn(testReply).`when`(repository).getReply(
+                argThat { pkg -> pkg.questions.size != 0 && pkg.answers.size == 0 &&
+                        (pkg.flags and MdnsConstants.FLAG_TRUNCATED) != 0},
+                eq(src))
+        doReturn(knownAnswersReply).`when`(repository).getReply(
+                argThat { pkg -> pkg.questions.size == 0 && pkg.answers.size != 0 &&
+                        (pkg.flags and MdnsConstants.FLAG_TRUNCATED) != 0},
+                eq(src))
+        doReturn(knownAnswersReply2).`when`(repository).getReply(
+                argThat { pkg -> pkg.questions.size == 0 && pkg.answers.size != 0 &&
+                        (pkg.flags and MdnsConstants.FLAG_TRUNCATED) == 0},
+                eq(src))
+
+        // Query obtained with:
+        // scapy.raw(scapy.DNS(
+        //  tc = 1, qd = scapy.DNSQR(qtype='PTR', qname='_testservice._tcp.local'))
+        // ).hex().upper()
+        val query = HexDump.hexStringToByteArray(
+                "0000030000010000000000000C5F7465737473657276696365045F746370056C6F63616C00000C0001"
+        )
+
+        packetHandler.handlePacket(query, query.size, src)
+
+        val packetCaptor = ArgumentCaptor.forClass(MdnsPacket::class.java)
+        verify(repository).getReply(packetCaptor.capture(), eq(src))
+
+        packetCaptor.value.let {
+            assertTrue((it.flags and MdnsConstants.FLAG_TRUNCATED) != 0)
+            assertEquals(1, it.questions.size)
+            assertEquals(0, it.answers.size)
+            assertEquals(0, it.authorityRecords.size)
+            assertEquals(0, it.additionalRecords.size)
+
+            assertTrue(it.questions[0] is MdnsPointerRecord)
+            assertContentEquals(arrayOf("_testservice", "_tcp", "local"), it.questions[0].name)
+        }
+
+        verify(replySender).queueReply(testReply)
+
+        // Known-Answer packet with truncated bit set obtained with:
+        // scapy.raw(scapy.DNS(
+        //   tc = 1, qd = None, an = scapy.DNSRR(type='PTR', rrname='_testtype._tcp.local',
+        //   rdata='othertestservice._testtype._tcp.local', rclass='IN', ttl=4500))
+        // ).hex().upper()
+        val knownAnswers = HexDump.hexStringToByteArray(
+                "000003000000000100000000095F7465737474797065045F746370056C6F63616C00000C0001000" +
+                        "011940027106F746865727465737473657276696365095F7465737474797065045F7463" +
+                        "70056C6F63616C00"
+        )
+
+        packetHandler.handlePacket(knownAnswers, knownAnswers.size, src)
+
+        verify(repository, times(2)).getReply(packetCaptor.capture(), eq(src))
+
+        packetCaptor.value.let {
+            assertTrue((it.flags and MdnsConstants.FLAG_TRUNCATED) != 0)
+            assertEquals(0, it.questions.size)
+            assertEquals(1, it.answers.size)
+            assertEquals(0, it.authorityRecords.size)
+            assertEquals(0, it.additionalRecords.size)
+
+            assertTrue(it.answers[0] is MdnsPointerRecord)
+            assertContentEquals(arrayOf("_testtype", "_tcp", "local"), it.answers[0].name)
+        }
+
+        verify(replySender).queueReply(knownAnswersReply)
+
+        // Known-Answer packet obtained with:
+        // scapy.raw(scapy.DNS(
+        //   qd = None, an = scapy.DNSRR(type='PTR', rrname='_testtype._tcp.local',
+        //   rdata='testservice._testtype._tcp.local', rclass='IN', ttl=4500))
+        // ).hex().upper()
+        val knownAnswers2 = HexDump.hexStringToByteArray(
+                "000001000000000100000000095F7465737474797065045F746370056C6F63616C00000C0001000" +
+                        "0119400220B7465737473657276696365095F7465737474797065045F746370056C6F63" +
+                        "616C00"
+        )
+
+        packetHandler.handlePacket(knownAnswers2, knownAnswers2.size, src)
+
+        verify(repository, times(3)).getReply(packetCaptor.capture(), eq(src))
+
+        packetCaptor.value.let {
+            assertTrue((it.flags and MdnsConstants.FLAG_TRUNCATED) == 0)
+            assertEquals(0, it.questions.size)
+            assertEquals(1, it.answers.size)
+            assertEquals(0, it.authorityRecords.size)
+            assertEquals(0, it.additionalRecords.size)
+
+            assertTrue(it.answers[0] is MdnsPointerRecord)
+            assertContentEquals(arrayOf("_testtype", "_tcp", "local"), it.answers[0].name)
+        }
+
+        verify(replySender).queueReply(knownAnswersReply2)
     }
 
     @Test

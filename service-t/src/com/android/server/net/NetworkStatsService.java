@@ -808,8 +808,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Get counter sets map for each UID. */
         public IBpfMap<S32, U8> getUidCounterSetMap() {
             try {
-                return new BpfMap<S32, U8>(UID_COUNTERSET_MAP_PATH,
-                        S32.class, U8.class);
+                return new BpfMap<>(UID_COUNTERSET_MAP_PATH, S32.class, U8.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open uid counter set map: " + e);
                 return null;
@@ -819,7 +818,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Gets the cookie tag map */
         public IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
             try {
-                return new BpfMap<CookieTagMapKey, CookieTagMapValue>(COOKIE_TAG_MAP_PATH,
+                return new BpfMap<>(COOKIE_TAG_MAP_PATH,
                         CookieTagMapKey.class, CookieTagMapValue.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open cookie tag map: " + e);
@@ -830,8 +829,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Gets stats map A */
         public IBpfMap<StatsMapKey, StatsMapValue> getStatsMapA() {
             try {
-                return new BpfMap<StatsMapKey, StatsMapValue>(STATS_MAP_A_PATH,
-                        StatsMapKey.class, StatsMapValue.class);
+                return new BpfMap<>(STATS_MAP_A_PATH, StatsMapKey.class, StatsMapValue.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open stats map A: " + e);
                 return null;
@@ -841,8 +839,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Gets stats map B */
         public IBpfMap<StatsMapKey, StatsMapValue> getStatsMapB() {
             try {
-                return new BpfMap<StatsMapKey, StatsMapValue>(STATS_MAP_B_PATH,
-                        StatsMapKey.class, StatsMapValue.class);
+                return new BpfMap<>(STATS_MAP_B_PATH, StatsMapKey.class, StatsMapValue.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open stats map B: " + e);
                 return null;
@@ -852,8 +849,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Gets the uid stats map */
         public IBpfMap<UidStatsMapKey, StatsMapValue> getAppUidStatsMap() {
             try {
-                return new BpfMap<UidStatsMapKey, StatsMapValue>(APP_UID_STATS_MAP_PATH,
-                       UidStatsMapKey.class, StatsMapValue.class);
+                return new BpfMap<>(APP_UID_STATS_MAP_PATH,
+                        UidStatsMapKey.class, StatsMapValue.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open app uid stats map: " + e);
                 return null;
@@ -863,8 +860,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         /** Gets interface stats map */
         public IBpfMap<S32, StatsMapValue> getIfaceStatsMap() {
             try {
-                return new BpfMap<S32, StatsMapValue>(IFACE_STATS_MAP_PATH,
-                       S32.class, StatsMapValue.class);
+                return new BpfMap<>(IFACE_STATS_MAP_PATH, S32.class, StatsMapValue.class);
             } catch (ErrnoException e) {
                 throw new IllegalStateException("Failed to open interface stats map", e);
             }
@@ -2215,6 +2211,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             // both total usage and UID details.
             final String baseIface = snapshot.getLinkProperties().getInterfaceName();
             if (baseIface != null) {
+                nativeRegisterIface(baseIface);
                 findOrCreateNetworkIdentitySet(mActiveIfaces, baseIface).add(ident);
                 findOrCreateNetworkIdentitySet(mActiveUidIfaces, baseIface).add(ident);
 
@@ -2286,6 +2283,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 // baseIface has been handled, so ignore it.
                 if (TextUtils.equals(baseIface, iface)) continue;
                 if (iface != null) {
+                    nativeRegisterIface(iface);
                     findOrCreateNetworkIdentitySet(mActiveIfaces, iface).add(ident);
                     findOrCreateNetworkIdentitySet(mActiveUidIfaces, iface).add(ident);
                     if (isMobile) {
@@ -3419,6 +3417,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     }
 
     // TODO: Read stats by using BpfNetMapsReader.
+    private static native void nativeRegisterIface(String iface);
     @Nullable
     private static native NetworkStats.Entry nativeGetTotalStat();
     @Nullable

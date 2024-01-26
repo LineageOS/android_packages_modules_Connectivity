@@ -128,6 +128,13 @@
     <string-array translatable="false" name="config_networkNotifySwitches">
     </string-array>
 
+    <!-- An array of priorities of service types for services to be offloaded via
+         NsdManager#registerOffloadEngine.
+         Format is [priority int]:[service type], for example: "0:_testservice._tcp"
+    -->
+    <string-array translatable="false" name="config_nsdOffloadServicesPriority">
+    </string-array>
+
     <!-- Whether to use an ongoing notification for signing in to captive portals, instead of a
          notification that can be dismissed. -->
     <bool name="config_ongoingSignInNotification">false</bool>
