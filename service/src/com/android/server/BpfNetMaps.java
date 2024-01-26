@@ -184,6 +184,7 @@ public class BpfNetMaps {
         sIngressDiscardMap = ingressDiscardMap;
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U32> getConfigurationMap() {
         try {
             return new BpfMap<>(
@@ -193,6 +194,7 @@ public class BpfNetMaps {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, UidOwnerValue> getUidOwnerMap() {
         try {
             return new BpfMap<>(
@@ -202,6 +204,7 @@ public class BpfNetMaps {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U8> getUidPermissionMap() {
         try {
             return new BpfMap<>(
@@ -211,6 +214,7 @@ public class BpfNetMaps {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
         try {
             return new BpfMap<>(COOKIE_TAG_MAP_PATH,
@@ -220,6 +224,7 @@ public class BpfNetMaps {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U8> getDataSaverEnabledMap() {
         try {
             return new BpfMap<>(
@@ -229,6 +234,7 @@ public class BpfNetMaps {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<IngressDiscardKey, IngressDiscardValue> getIngressDiscardMap() {
         try {
             return new BpfMap<>(INGRESS_DISCARD_MAP_PATH,
@@ -238,6 +244,7 @@ public class BpfNetMaps {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static void initBpfMaps() {
         if (sConfigurationMap == null) {
             sConfigurationMap = getConfigurationMap();
@@ -295,6 +302,7 @@ public class BpfNetMaps {
      * Initializes the class if it is not already initialized. This method will open maps but not
      * cause any other effects. This method may be called multiple times on any thread.
      */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static synchronized void ensureInitialized(final Context context) {
         if (sInitialized) return;
         initBpfMaps();
