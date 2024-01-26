@@ -3,17 +3,6 @@
 
     <issue
         id="NewApi"
-        message="Call requires API level 31 (current min is 30): `BpfMap`"
-        errorLine1="                return new BpfMap&lt;&gt;(IFACE_INDEX_NAME_MAP_PATH, BpfMap.BPF_F_RDWR,"
-        errorLine2="                       ~~~~~~~~~~~~">
-        <location
-            file="packages/modules/Connectivity/service-t/src/com/android/server/net/BpfInterfaceMapUpdater.java"
-            line="69"
-            column="24"/>
-    </issue>
-
-    <issue
-        id="NewApi"
         message="Call requires API level 31 (current min is 30): `new android.net.EthernetNetworkSpecifier`"
         errorLine1="                .setNetworkSpecifier(new EthernetNetworkSpecifier(ifaceName))"
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
