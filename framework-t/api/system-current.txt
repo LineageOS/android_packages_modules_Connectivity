@@ -500,6 +500,7 @@ package android.net.thread {
     method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_NETWORK_STATE, "android.permission.THREAD_NETWORK_PRIVILEGED"}) public void registerOperationalDatasetCallback(@NonNull java.util.concurrent.Executor, @NonNull android.net.thread.ThreadNetworkController.OperationalDatasetCallback);
     method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void registerStateCallback(@NonNull java.util.concurrent.Executor, @NonNull android.net.thread.ThreadNetworkController.StateCallback);
     method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void scheduleMigration(@NonNull android.net.thread.PendingOperationalDataset, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
+    method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void setEnabled(boolean, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
     method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_NETWORK_STATE, "android.permission.THREAD_NETWORK_PRIVILEGED"}) public void unregisterOperationalDatasetCallback(@NonNull android.net.thread.ThreadNetworkController.OperationalDatasetCallback);
     method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void unregisterStateCallback(@NonNull android.net.thread.ThreadNetworkController.StateCallback);
     field public static final int DEVICE_ROLE_CHILD = 2; // 0x2
@@ -507,6 +508,9 @@ package android.net.thread {
     field public static final int DEVICE_ROLE_LEADER = 4; // 0x4
     field public static final int DEVICE_ROLE_ROUTER = 3; // 0x3
     field public static final int DEVICE_ROLE_STOPPED = 0; // 0x0
+    field public static final int STATE_DISABLED = 0; // 0x0
+    field public static final int STATE_DISABLING = 2; // 0x2
+    field public static final int STATE_ENABLED = 1; // 0x1
     field public static final int THREAD_VERSION_1_3 = 4; // 0x4
   }
 
@@ -518,6 +522,7 @@ package android.net.thread {
   public static interface ThreadNetworkController.StateCallback {
     method public void onDeviceRoleChanged(int);
     method public default void onPartitionIdChanged(long);
+    method public default void onThreadEnableStateChanged(int);
   }
 
   @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkException extends java.lang.Exception {
@@ -530,6 +535,7 @@ package android.net.thread {
     field public static final int ERROR_REJECTED_BY_PEER = 8; // 0x8
     field public static final int ERROR_RESOURCE_EXHAUSTED = 10; // 0xa
     field public static final int ERROR_RESPONSE_BAD_FORMAT = 9; // 0x9
+    field public static final int ERROR_THREAD_DISABLED = 12; // 0xc
     field public static final int ERROR_TIMEOUT = 3; // 0x3
     field public static final int ERROR_UNAVAILABLE = 4; // 0x4
     field public static final int ERROR_UNKNOWN = 11; // 0xb

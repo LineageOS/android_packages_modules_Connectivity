@@ -27,6 +27,9 @@ import static android.net.thread.ActiveOperationalDataset.LENGTH_PSKC;
 import static android.net.thread.ActiveOperationalDataset.MESH_LOCAL_PREFIX_FIRST_BYTE;
 import static android.net.thread.ActiveOperationalDataset.SecurityPolicy.DEFAULT_ROTATION_TIME_HOURS;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_DETACHED;
+import static android.net.thread.ThreadNetworkController.STATE_DISABLED;
+import static android.net.thread.ThreadNetworkController.STATE_DISABLING;
+import static android.net.thread.ThreadNetworkController.STATE_ENABLED;
 import static android.net.thread.ThreadNetworkController.THREAD_VERSION_1_3;
 import static android.net.thread.ThreadNetworkException.ERROR_ABORTED;
 import static android.net.thread.ThreadNetworkException.ERROR_BUSY;
@@ -35,6 +38,7 @@ import static android.net.thread.ThreadNetworkException.ERROR_INTERNAL_ERROR;
 import static android.net.thread.ThreadNetworkException.ERROR_REJECTED_BY_PEER;
 import static android.net.thread.ThreadNetworkException.ERROR_RESOURCE_EXHAUSTED;
 import static android.net.thread.ThreadNetworkException.ERROR_RESPONSE_BAD_FORMAT;
+import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 import static android.net.thread.ThreadNetworkException.ERROR_TIMEOUT;
 import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_CHANNEL;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
@@ -48,7 +52,11 @@ import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_REASSEMBLY_TIMEOUT;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_REJECTED;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_RESPONSE_TIMEOUT;
+import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_THREAD_DISABLED;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_UNSUPPORTED_CHANNEL;
+import static com.android.server.thread.openthread.IOtDaemon.OT_STATE_DISABLED;
+import static com.android.server.thread.openthread.IOtDaemon.OT_STATE_DISABLING;
+import static com.android.server.thread.openthread.IOtDaemon.OT_STATE_ENABLED;
 import static com.android.server.thread.openthread.IOtDaemon.TUN_IF_NAME;
 
 import android.Manifest.permission;
@@ -160,6 +168,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private UpstreamNetworkCallback mUpstreamNetworkCallback;
     private TestNetworkSpecifier mUpstreamTestNetworkSpecifier;
     private final HashMap<Network, String> mNetworkToInterface;
+    private final ThreadPersistentSettings mPersistentSettings;
 
     private BorderRouterConfigurationParcel mBorderRouterConfig;
 
@@ -171,7 +180,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             Supplier<IOtDaemon> otDaemonSupplier,
             ConnectivityManager connectivityManager,
             TunInterfaceController tunIfController,
-            InfraInterfaceController infraIfController) {
+            InfraInterfaceController infraIfController,
+            ThreadPersistentSettings persistentSettings) {
         mContext = context;
         mHandler = handler;
         mNetworkProvider = networkProvider;
@@ -182,9 +192,11 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mUpstreamNetworkRequest = newUpstreamNetworkRequest();
         mNetworkToInterface = new HashMap<Network, String>();
         mBorderRouterConfig = new BorderRouterConfigurationParcel();
+        mPersistentSettings = persistentSettings;
     }
 
-    public static ThreadNetworkControllerService newInstance(Context context) {
+    public static ThreadNetworkControllerService newInstance(
+            Context context, ThreadPersistentSettings persistentSettings) {
         HandlerThread handlerThread = new HandlerThread("ThreadHandlerThread");
         handlerThread.start();
         NetworkProvider networkProvider =
@@ -197,7 +209,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 () -> IOtDaemon.Stub.asInterface(ServiceManagerWrapper.waitForService("ot_daemon")),
                 context.getSystemService(ConnectivityManager.class),
                 new TunInterfaceController(TUN_IF_NAME),
-                new InfraInterfaceController());
+                new InfraInterfaceController(),
+                persistentSettings);
     }
 
     private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
@@ -273,7 +286,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         if (otDaemon == null) {
             throw new RemoteException("Internal error: failed to start OT daemon");
         }
-        otDaemon.initialize(mTunIfController.getTunFd());
+        otDaemon.initialize(
+                mTunIfController.getTunFd(),
+                mPersistentSettings.get(ThreadPersistentSettings.THREAD_ENABLED));
         otDaemon.registerStateCallback(mOtDaemonCallbackProxy, -1);
         otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         mOtDaemon = otDaemon;
@@ -306,6 +321,26 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
                     initializeOtDaemon();
                 });
+    }
+
+    public void setEnabled(@NonNull boolean isEnabled, @NonNull IOperationReceiver receiver) {
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+
+        mHandler.post(() -> setEnabledInternal(isEnabled, new OperationReceiverWrapper(receiver)));
+    }
+
+    private void setEnabledInternal(
+            @NonNull boolean isEnabled, @Nullable OperationReceiverWrapper receiver) {
+        // The persistent setting keeps the desired enabled state, thus it's set regardless
+        // the otDaemon set enabled state operation succeeded or not, so that it can recover
+        // to the desired value after reboot.
+        mPersistentSettings.put(ThreadPersistentSettings.THREAD_ENABLED.key, isEnabled);
+        try {
+            getOtDaemon().setThreadEnabled(isEnabled, newOtStatusReceiver(receiver));
+        } catch (RemoteException e) {
+            Log.e(TAG, "otDaemon.setThreadEnabled failed", e);
+            receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        }
     }
 
     private void requestUpstreamNetwork() {
@@ -658,6 +693,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 return ERROR_REJECTED_BY_PEER;
             case OT_ERROR_UNSUPPORTED_CHANNEL:
                 return ERROR_UNSUPPORTED_CHANNEL;
+            case OT_ERROR_THREAD_DISABLED:
+                return ERROR_THREAD_DISABLED;
             default:
                 return ERROR_INTERNAL_ERROR;
         }
@@ -1001,6 +1038,15 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             }
         }
 
+        private void notifyThreadEnabledUpdated(IStateCallback callback, int enabledState) {
+            try {
+                callback.onThreadEnableStateChanged(enabledState);
+                Log.i(TAG, "onThreadEnableStateChanged " + enabledState);
+            } catch (RemoteException ignored) {
+                // do nothing if the client is dead
+            }
+        }
+
         public void unregisterStateCallback(IStateCallback callback) {
             checkOnHandlerThread();
             if (!mStateCallbacks.containsKey(callback)) {
@@ -1061,6 +1107,31 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 } catch (RemoteException ignored) {
                     // do nothing if the client is dead
                 }
+            }
+        }
+
+        @Override
+        public void onThreadEnabledChanged(int state) {
+            mHandler.post(() -> onThreadEnabledChangedInternal(state));
+        }
+
+        private void onThreadEnabledChangedInternal(int state) {
+            checkOnHandlerThread();
+            for (IStateCallback callback : mStateCallbacks.keySet()) {
+                notifyThreadEnabledUpdated(callback, otStateToAndroidState(state));
+            }
+        }
+
+        private static int otStateToAndroidState(int state) {
+            switch (state) {
+                case OT_STATE_ENABLED:
+                    return STATE_ENABLED;
+                case OT_STATE_DISABLED:
+                    return STATE_DISABLED;
+                case OT_STATE_DISABLING:
+                    return STATE_DISABLING;
+                default:
+                    throw new IllegalArgumentException("Unknown ot state " + state);
             }
         }
 
