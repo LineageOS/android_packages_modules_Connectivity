@@ -71,20 +71,6 @@ int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>& lines,
                                        const BpfMapRO<uint32_t, IfaceValue>& ifaceMap);
 // For test only
 int cleanStatsMapInternal(const base::unique_fd& cookieTagMap, const base::unique_fd& tagStatsMap);
-// For test only
-template <class Key>
-int getIfaceNameFromMap(const BpfMapRO<uint32_t, IfaceValue>& ifaceMap,
-                        const BpfMapRO<Key, StatsValue>& statsMap,
-                        uint32_t ifaceIndex, IfaceValue& ifname,
-                        const Key& curKey, int64_t* unknownIfaceBytesTotal) {
-    auto iface = ifaceMap.readValue(ifaceIndex);
-    if (!iface.ok()) {
-        maybeLogUnknownIface(ifaceIndex, statsMap, curKey, unknownIfaceBytesTotal);
-        return -ENODEV;
-    }
-    ifname = iface.value();
-    return 0;
-}
 
 template <class Key>
 void maybeLogUnknownIface(int ifaceIndex, const BpfMapRO<Key, StatsValue>& statsMap,
