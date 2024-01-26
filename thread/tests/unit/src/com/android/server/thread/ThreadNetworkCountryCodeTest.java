@@ -86,6 +86,7 @@ public class ThreadNetworkCountryCodeTest {
     private static final String TEST_COUNTRY_CODE_US = "US";
     private static final String TEST_COUNTRY_CODE_CN = "CN";
     private static final String TEST_COUNTRY_CODE_INVALID = "INVALID";
+    private static final String TEST_WIFI_DEFAULT_COUNTRY_CODE = "00";
     private static final int TEST_SIM_SLOT_INDEX_0 = 0;
     private static final int TEST_SIM_SLOT_INDEX_1 = 1;
 
@@ -256,6 +257,21 @@ public class ThreadNetworkCountryCodeTest {
         mWifiCountryCodeReceiverCaptor.getValue().onActiveCountryCodeChanged(TEST_COUNTRY_CODE_US);
 
         assertThat(mThreadNetworkCountryCode.getCountryCode()).isEqualTo(TEST_COUNTRY_CODE_US);
+    }
+
+    @Test
+    public void wifiCountryCode_wifiDefaultCountryCodeIsActive_wifiCountryCodeIsNotUsed() {
+        mThreadNetworkCountryCode.initialize();
+
+        verify(mWifiManager)
+                .registerActiveCountryCodeChangedCallback(
+                        any(), mWifiCountryCodeReceiverCaptor.capture());
+        mWifiCountryCodeReceiverCaptor
+                .getValue()
+                .onActiveCountryCodeChanged(TEST_WIFI_DEFAULT_COUNTRY_CODE);
+
+        assertThat(mThreadNetworkCountryCode.getCountryCode())
+                .isNotEqualTo(TEST_WIFI_DEFAULT_COUNTRY_CODE);
     }
 
     @Test
