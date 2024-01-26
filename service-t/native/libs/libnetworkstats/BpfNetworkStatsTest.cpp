@@ -352,14 +352,16 @@ TEST_F(BpfNetworkStatsHelperTest, TestUnknownIfaceError) {
             .counterSet = TEST_COUNTERSET0,
             .ifaceIndex = ifaceIndex,
     };
-    IfaceValue ifname;
     int64_t unknownIfaceBytesTotal = 0;
-    ASSERT_EQ(-ENODEV, getIfaceNameFromMap(mFakeIfaceIndexNameMap, mFakeStatsMap, ifaceIndex,
-                                           ifname, curKey, &unknownIfaceBytesTotal));
+    ASSERT_EQ(false, mFakeIfaceIndexNameMap.readValue(ifaceIndex).ok());
+    maybeLogUnknownIface(ifaceIndex, mFakeStatsMap, curKey, &unknownIfaceBytesTotal);
+
     ASSERT_EQ(((int64_t)(TEST_BYTES0 * 20 + TEST_BYTES1 * 20)), unknownIfaceBytesTotal);
     curKey.ifaceIndex = IFACE_INDEX2;
-    ASSERT_EQ(-ENODEV, getIfaceNameFromMap(mFakeIfaceIndexNameMap, mFakeStatsMap, ifaceIndex,
-                                           ifname, curKey, &unknownIfaceBytesTotal));
+
+    ASSERT_EQ(false, mFakeIfaceIndexNameMap.readValue(ifaceIndex).ok());
+    maybeLogUnknownIface(ifaceIndex, mFakeStatsMap, curKey, &unknownIfaceBytesTotal);
+
     ASSERT_EQ(-1, unknownIfaceBytesTotal);
     std::vector<stats_line> lines;
     // TODO: find a way to test the total of unknown Iface Bytes go above limit.
