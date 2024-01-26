@@ -17,6 +17,7 @@
 package android.net.nsd;
 
 import android.os.Messenger;
+import android.net.nsd.DiscoveryRequest;
 import android.net.nsd.NsdServiceInfo;
 
 /**
@@ -24,7 +25,7 @@ import android.net.nsd.NsdServiceInfo;
  * @hide
  */
 oneway interface INsdManagerCallback {
-    void onDiscoverServicesStarted(int listenerKey, in NsdServiceInfo info);
+    void onDiscoverServicesStarted(int listenerKey, in DiscoveryRequest discoveryRequest);
     void onDiscoverServicesFailed(int listenerKey, int error);
     void onServiceFound(int listenerKey, in NsdServiceInfo info);
     void onServiceLost(int listenerKey, in NsdServiceInfo info);
