@@ -54,6 +54,7 @@ java_defaults {
         "junit",
         "junit-params",
         "modules-utils-build",
+        "net-tests-utils",
         "net-utils-framework-common",
         "truth",
         "TetheringIntegrationTestsBaseLib",
