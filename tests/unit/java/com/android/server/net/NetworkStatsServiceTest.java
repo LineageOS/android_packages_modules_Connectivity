@@ -254,7 +254,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private @Mock AlarmManager mAlarmManager;
     @Mock
     private NetworkStatsSubscriptionsMonitor mNetworkStatsSubscriptionsMonitor;
-    private @Mock BpfInterfaceMapUpdater mBpfInterfaceMapUpdater;
+    private @Mock BpfInterfaceMapHelper mBpfInterfaceMapHelper;
     private HandlerThread mHandlerThread;
     @Mock
     private LocationPermissionChecker mLocationPermissionChecker;
@@ -519,9 +519,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         }
 
         @Override
-        public BpfInterfaceMapUpdater makeBpfInterfaceMapUpdater(
-                @NonNull Context ctx, @NonNull Handler handler) {
-            return mBpfInterfaceMapUpdater;
+        public BpfInterfaceMapHelper makeBpfInterfaceMapHelper() {
+            return mBpfInterfaceMapHelper;
         }
 
         @Override
@@ -2764,13 +2763,13 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     @Test
     public void testDumpStatsMap() throws ErrnoException {
-        doReturn("wlan0").when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
+        doReturn("wlan0").when(mBpfInterfaceMapHelper).getIfNameByIndex(10 /* index */);
         doTestDumpStatsMap("wlan0");
     }
 
     @Test
     public void testDumpStatsMapUnknownInterface() throws ErrnoException {
-        doReturn(null).when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
+        doReturn(null).when(mBpfInterfaceMapHelper).getIfNameByIndex(10 /* index */);
         doTestDumpStatsMap("unknown");
     }
 
@@ -2785,13 +2784,13 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     @Test
     public void testDumpIfaceStatsMap() throws Exception {
-        doReturn("wlan0").when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
+        doReturn("wlan0").when(mBpfInterfaceMapHelper).getIfNameByIndex(10 /* index */);
         doTestDumpIfaceStatsMap("wlan0");
     }
 
     @Test
     public void testDumpIfaceStatsMapUnknownInterface() throws Exception {
-        doReturn(null).when(mBpfInterfaceMapUpdater).getIfNameByIndex(10 /* index */);
+        doReturn(null).when(mBpfInterfaceMapHelper).getIfNameByIndex(10 /* index */);
         doTestDumpIfaceStatsMap("unknown");
     }
 

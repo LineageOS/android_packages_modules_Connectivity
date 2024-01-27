@@ -16,12 +16,6 @@
 package com.android.server.net;
 
 import android.os.Build;
-import android.content.Context;
-import android.net.INetd;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.RemoteException;
-import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
@@ -29,37 +23,29 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
-import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.Struct.S32;
 
 /**
  * Monitor interface added (without removed) and right interface name and its index to bpf map.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-public class BpfInterfaceMapUpdater {
-    private static final String TAG = BpfInterfaceMapUpdater.class.getSimpleName();
+public class BpfInterfaceMapHelper {
+    private static final String TAG = BpfInterfaceMapHelper.class.getSimpleName();
     // This is current path but may be changed soon.
     private static final String IFACE_INDEX_NAME_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_iface_index_name_map";
     private final IBpfMap<S32, InterfaceMapValue> mIndexToIfaceBpfMap;
-    private final INetd mNetd;
-    private final Handler mHandler;
-    private final Dependencies mDeps;
 
-    public BpfInterfaceMapUpdater(Context ctx, Handler handler) {
-        this(ctx, handler, new Dependencies());
+    public BpfInterfaceMapHelper() {
+        this(new Dependencies());
     }
 
     @VisibleForTesting
-    public BpfInterfaceMapUpdater(Context ctx, Handler handler, Dependencies deps) {
-        mDeps = deps;
+    public BpfInterfaceMapHelper(Dependencies deps) {
         mIndexToIfaceBpfMap = deps.getInterfaceMap();
-        mNetd = deps.getINetd(ctx);
-        mHandler = handler;
     }
 
     /**
@@ -76,70 +62,6 @@ public class BpfInterfaceMapUpdater {
                 Log.e(TAG, "Cannot create interface map: " + e);
                 return null;
             }
-        }
-
-        /** Get InterfaceParams for giving interface name. */
-        public InterfaceParams getInterfaceParams(String ifaceName) {
-            return InterfaceParams.getByName(ifaceName);
-        }
-
-        /** Get INetd binder object. */
-        public INetd getINetd(Context ctx) {
-            return INetd.Stub.asInterface((IBinder) ctx.getSystemService(Context.NETD_SERVICE));
-        }
-    }
-
-    /**
-     * Start listening interface update event.
-     * Query current interface names before listening.
-     */
-    public void start() {
-        mHandler.post(() -> {
-            if (mIndexToIfaceBpfMap == null) {
-                Log.wtf(TAG, "Fail to start: Null bpf map");
-                return;
-            }
-
-            try {
-                // TODO: use a NetlinkMonitor and listen for RTM_NEWLINK messages instead.
-                mNetd.registerUnsolicitedEventListener(new InterfaceChangeObserver());
-            } catch (RemoteException e) {
-                Log.wtf(TAG, "Unable to register netd UnsolicitedEventListener, " + e);
-            }
-
-            final String[] ifaces;
-            try {
-                // TODO: use a netlink dump to get the current interface list.
-                ifaces = mNetd.interfaceGetList();
-            } catch (RemoteException | ServiceSpecificException e) {
-                Log.wtf(TAG, "Unable to query interface names by netd, " + e);
-                return;
-            }
-
-            for (String ifaceName : ifaces) {
-                addInterface(ifaceName);
-            }
-        });
-    }
-
-    private void addInterface(String ifaceName) {
-        final InterfaceParams iface = mDeps.getInterfaceParams(ifaceName);
-        if (iface == null) {
-            Log.e(TAG, "Unable to get InterfaceParams for " + ifaceName);
-            return;
-        }
-
-        try {
-            mIndexToIfaceBpfMap.updateEntry(new S32(iface.index), new InterfaceMapValue(ifaceName));
-        } catch (ErrnoException e) {
-            Log.e(TAG, "Unable to update entry for " + ifaceName + ", " + e);
-        }
-    }
-
-    private class InterfaceChangeObserver extends BaseNetdUnsolicitedEventListener {
-        @Override
-        public void onInterfaceAdded(String ifName) {
-            mHandler.post(() -> addInterface(ifName));
         }
     }
 
