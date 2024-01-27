@@ -60,18 +60,18 @@ import java.io.StringWriter;
 @SmallTest
 @RunWith(DevSdkIgnoreRunner.class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
-public final class BpfInterfaceMapUpdaterTest {
+public final class BpfInterfaceMapHelperTest {
     private static final int TEST_INDEX = 1;
     private static final int TEST_INDEX2 = 2;
     private static final String TEST_INTERFACE_NAME = "test1";
     private static final String TEST_INTERFACE_NAME2 = "test2";
 
     private BaseNetdUnsolicitedEventListener mListener;
-    private BpfInterfaceMapUpdater mUpdater;
+    private BpfInterfaceMapHelper mUpdater;
     private IBpfMap<S32, InterfaceMapValue> mBpfMap =
             spy(new TestBpfMap<>(S32.class, InterfaceMapValue.class));
 
-    private class TestDependencies extends BpfInterfaceMapUpdater.Dependencies {
+    private class TestDependencies extends BpfInterfaceMapHelper.Dependencies {
         @Override
         public IBpfMap<S32, InterfaceMapValue> getInterfaceMap() {
             return mBpfMap;
@@ -81,7 +81,7 @@ public final class BpfInterfaceMapUpdaterTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        mUpdater = new BpfInterfaceMapUpdater(new TestDependencies());
+        mUpdater = new BpfInterfaceMapHelper(new TestDependencies());
     }
 
     @Test
