@@ -53,6 +53,7 @@ import android.net.cts.NsdServiceInfoCallbackRecord.ServiceInfoCallbackEvent.Ser
 import android.net.cts.NsdServiceInfoCallbackRecord.ServiceInfoCallbackEvent.ServiceUpdatedLost
 import android.net.cts.NsdServiceInfoCallbackRecord.ServiceInfoCallbackEvent.UnregisterCallbackSucceeded
 import android.net.cts.util.CtsNetUtils
+import android.net.nsd.DiscoveryRequest
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.nsd.OffloadEngine
@@ -113,6 +114,7 @@ import java.util.concurrent.Executor
 import kotlin.math.min
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
@@ -1042,9 +1044,11 @@ class NsdManagerTest {
             nsdManager.discoverServices("_subtype1.$serviceType",
                     NsdManager.PROTOCOL_DNS_SD,
                     testNetwork1.network, Executor { it.run() }, subtype1DiscoveryRecord)
-            nsdManager.discoverServices("_subtype2.$serviceType",
-                    NsdManager.PROTOCOL_DNS_SD,
-                    testNetwork1.network, Executor { it.run() }, subtype2DiscoveryRecord)
+
+            nsdManager.discoverServices(
+                    DiscoveryRequest.Builder(serviceType).setSubtype("_subtype2")
+                            .setNetwork(testNetwork1.network).build(),
+                    Executor { it.run() }, subtype2DiscoveryRecord)
 
             val info1 = subtype1DiscoveryRecord.waitForServiceDiscovered(
                     serviceName, serviceType, testNetwork1.network)
@@ -1093,6 +1097,28 @@ class NsdManagerTest {
         } cleanupStep {
             nsdManager.stopServiceDiscovery(subtype3DiscoveryRecord)
             subtype3DiscoveryRecord.expectCallback<DiscoveryStopped>()
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testSubtypeDiscovery_typeMatchButSubtypeNotMatch_notDiscovered() {
+        val si1 = makeTestServiceInfo(network = testNetwork1.network).apply {
+            serviceType += ",_subtype1"
+        }
+        val registrationRecord = NsdRegistrationRecord()
+        val subtype2DiscoveryRecord = NsdDiscoveryRecord()
+        tryTest {
+            registerService(registrationRecord, si1)
+            val request = DiscoveryRequest.Builder(serviceType)
+                    .setSubtype("_subtype2").setNetwork(testNetwork1.network).build()
+            nsdManager.discoverServices(request, { it.run() }, subtype2DiscoveryRecord)
+            subtype2DiscoveryRecord.expectCallback<DiscoveryStarted>()
+            subtype2DiscoveryRecord.assertNoCallback(timeoutMs = 2000)
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(subtype2DiscoveryRecord)
+            subtype2DiscoveryRecord.expectCallback<DiscoveryStopped>()
         } cleanup {
             nsdManager.unregisterService(registrationRecord)
         }

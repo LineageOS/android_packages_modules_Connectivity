@@ -54,6 +54,7 @@ import android.net.mdns.aidl.IMDnsEventListener;
 import android.net.mdns.aidl.RegistrationInfo;
 import android.net.mdns.aidl.ResolutionInfo;
 import android.net.nsd.AdvertisingRequest;
+import android.net.nsd.DiscoveryRequest;
 import android.net.nsd.INsdManager;
 import android.net.nsd.INsdManagerCallback;
 import android.net.nsd.INsdServiceConnector;
@@ -742,8 +743,8 @@ public class NsdService extends INsdManager.Stub {
                 switch (msg.what) {
                     case NsdManager.DISCOVER_SERVICES: {
                         if (DBG) Log.d(TAG, "Discover services");
-                        final ListenerArgs args = (ListenerArgs) msg.obj;
-                        clientInfo = mClients.get(args.connector);
+                        final DiscoveryArgs discoveryArgs = (DiscoveryArgs) msg.obj;
+                        clientInfo = mClients.get(discoveryArgs.connector);
                         // If the binder death notification for a INsdManagerCallback was received
                         // before any calls are received by NsdService, the clientInfo would be
                         // cleared and cause NPE. Add a null check here to prevent this corner case.
@@ -758,10 +759,10 @@ public class NsdService extends INsdManager.Stub {
                             break;
                         }
 
-                        final NsdServiceInfo info = args.serviceInfo;
+                        final DiscoveryRequest discoveryRequest = discoveryArgs.discoveryRequest;
                         transactionId = getUniqueId();
                         final Pair<String, List<String>> typeAndSubtype =
-                                parseTypeAndSubtype(info.getServiceType());
+                                parseTypeAndSubtype(discoveryRequest.getServiceType());
                         final String serviceType = typeAndSubtype == null
                                 ? null : typeAndSubtype.first;
                         if (clientInfo.mUseJavaBackend
@@ -773,41 +774,53 @@ public class NsdService extends INsdManager.Stub {
                                 break;
                             }
 
+                            String subtype = discoveryRequest.getSubtype();
+                            if (subtype == null && !typeAndSubtype.second.isEmpty()) {
+                                subtype = typeAndSubtype.second.get(0);
+                            }
+
+                            if (subtype != null && !checkSubtypeLabel(subtype)) {
+                                clientInfo.onDiscoverServicesFailedImmediately(clientRequestId,
+                                        NsdManager.FAILURE_BAD_PARAMETERS, false /* isLegacy */);
+                                break;
+                            }
+
                             final String listenServiceType = serviceType + ".local";
                             maybeStartMonitoringSockets();
                             final MdnsListener listener = new DiscoveryListener(clientRequestId,
                                     transactionId, listenServiceType);
                             final MdnsSearchOptions.Builder optionsBuilder =
                                     MdnsSearchOptions.newBuilder()
-                                            .setNetwork(info.getNetwork())
+                                            .setNetwork(discoveryRequest.getNetwork())
                                             .setRemoveExpiredService(true)
                                             .setIsPassiveMode(true);
-                            if (!typeAndSubtype.second.isEmpty()) {
-                                // The parsing ensures subtype starts with an underscore.
+
+                            if (subtype != null) {
+                                // checkSubtypeLabels() ensures that subtypes start with '_' but
                                 // MdnsSearchOptions expects the underscore to not be present.
-                                optionsBuilder.addSubtype(
-                                        typeAndSubtype.second.get(0).substring(1));
+                                optionsBuilder.addSubtype(subtype.substring(1));
                             }
                             mMdnsDiscoveryManager.registerListener(
                                     listenServiceType, listener, optionsBuilder.build());
                             final ClientRequest request = storeDiscoveryManagerRequestMap(
                                     clientRequestId, transactionId, listener, clientInfo,
-                                    info.getNetwork());
-                            clientInfo.onDiscoverServicesStarted(clientRequestId, info, request);
+                                    discoveryRequest.getNetwork());
+                            clientInfo.onDiscoverServicesStarted(
+                                    clientRequestId, discoveryRequest, request);
                             clientInfo.log("Register a DiscoveryListener " + transactionId
                                     + " for service type:" + listenServiceType);
                         } else {
                             maybeStartDaemon();
-                            if (discoverServices(transactionId, info)) {
+                            if (discoverServices(transactionId, discoveryRequest)) {
                                 if (DBG) {
                                     Log.d(TAG, "Discover " + msg.arg2 + " " + transactionId
-                                            + info.getServiceType());
+                                            + discoveryRequest.getServiceType());
                                 }
                                 final ClientRequest request = storeLegacyRequestMap(clientRequestId,
                                         transactionId, clientInfo, msg.what,
                                         mClock.elapsedRealtime());
                                 clientInfo.onDiscoverServicesStarted(
-                                        clientRequestId, info, request);
+                                        clientRequestId, discoveryRequest, request);
                             } else {
                                 stopServiceDiscovery(transactionId);
                                 clientInfo.onDiscoverServicesFailedImmediately(clientRequestId,
@@ -2115,6 +2128,15 @@ public class NsdService extends INsdManager.Stub {
         }
     }
 
+    private static final class DiscoveryArgs {
+        public final NsdServiceConnector connector;
+        public final DiscoveryRequest discoveryRequest;
+        DiscoveryArgs(NsdServiceConnector connector, DiscoveryRequest discoveryRequest) {
+            this.connector = connector;
+            this.discoveryRequest = discoveryRequest;
+        }
+    }
+
     private class NsdServiceConnector extends INsdServiceConnector.Stub
             implements IBinder.DeathRecipient  {
 
@@ -2135,10 +2157,10 @@ public class NsdService extends INsdManager.Stub {
         }
 
         @Override
-        public void discoverServices(int listenerKey, NsdServiceInfo serviceInfo) {
+        public void discoverServices(int listenerKey, DiscoveryRequest discoveryRequest) {
             mNsdStateMachine.sendMessage(mNsdStateMachine.obtainMessage(
                     NsdManager.DISCOVER_SERVICES, 0, listenerKey,
-                    new ListenerArgs(this, serviceInfo)));
+                    new DiscoveryArgs(this, discoveryRequest)));
         }
 
         @Override
@@ -2277,15 +2299,15 @@ public class NsdService extends INsdManager.Stub {
         return mMDnsManager.stopOperation(transactionId);
     }
 
-    private boolean discoverServices(int transactionId, NsdServiceInfo serviceInfo) {
+    private boolean discoverServices(int transactionId, DiscoveryRequest discoveryRequest) {
         if (mMDnsManager == null) {
             Log.wtf(TAG, "discoverServices: mMDnsManager is null");
             return false;
         }
 
-        final String type = serviceInfo.getServiceType();
-        final int discoverInterface = getNetworkInterfaceIndex(serviceInfo);
-        if (serviceInfo.getNetwork() != null && discoverInterface == IFACE_IDX_ANY) {
+        final String type = discoveryRequest.getServiceType();
+        final int discoverInterface = getNetworkInterfaceIndex(discoveryRequest);
+        if (discoveryRequest.getNetwork() != null && discoverInterface == IFACE_IDX_ANY) {
             Log.e(TAG, "Interface to discover service on not found");
             return false;
         }
@@ -2335,7 +2357,26 @@ public class NsdService extends INsdManager.Stub {
             }
             return IFACE_IDX_ANY;
         }
+        return getNetworkInterfaceIndex(network);
+    }
 
+    /**
+     * Returns the interface to use to discover a service on a specific network, or {@link
+     * IFACE_IDX_ANY} if no network is specified.
+     */
+    private int getNetworkInterfaceIndex(DiscoveryRequest discoveryRequest) {
+        final Network network = discoveryRequest.getNetwork();
+        if (network == null) {
+            return IFACE_IDX_ANY;
+        }
+        return getNetworkInterfaceIndex(network);
+    }
+
+    /**
+     * Returns the interface of a specific network, or {@link IFACE_IDX_ANY} if no interface is
+     * associated with {@code network}.
+     */
+    private int getNetworkInterfaceIndex(@NonNull Network network) {
         String interfaceName = getNetworkInterfaceName(network);
         if (interfaceName == null) {
             return IFACE_IDX_ANY;
@@ -2710,12 +2751,12 @@ public class NsdService extends INsdManager.Stub {
                     && !(request instanceof AdvertiserClientRequest);
         }
 
-        void onDiscoverServicesStarted(int listenerKey, NsdServiceInfo info,
+        void onDiscoverServicesStarted(int listenerKey, DiscoveryRequest discoveryRequest,
                 ClientRequest request) {
             mMetrics.reportServiceDiscoveryStarted(
                     isLegacyClientRequest(request), request.mTransactionId);
             try {
-                mCb.onDiscoverServicesStarted(listenerKey, info);
+                mCb.onDiscoverServicesStarted(listenerKey, discoveryRequest);
             } catch (RemoteException e) {
                 Log.e(TAG, "Error calling onDiscoverServicesStarted", e);
             }

@@ -24,6 +24,7 @@ import static com.android.testutils.TestPermissionUtil.runAsShell;
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -85,6 +86,7 @@ public final class ThreadNetworkControllerServiceTest {
     @Mock private TunInterfaceController mMockTunIfController;
     @Mock private ParcelFileDescriptor mMockTunFd;
     @Mock private InfraInterfaceController mMockInfraIfController;
+    @Mock private ThreadPersistentSettings mMockPersistentSettings;
     private Context mContext;
     private TestLooper mTestLooper;
     private FakeOtDaemon mFakeOtDaemon;
@@ -104,6 +106,8 @@ public final class ThreadNetworkControllerServiceTest {
 
         when(mMockTunIfController.getTunFd()).thenReturn(mMockTunFd);
 
+        when(mMockPersistentSettings.get(any())).thenReturn(true);
+
         mService =
                 new ThreadNetworkControllerService(
                         ApplicationProvider.getApplicationContext(),
@@ -112,7 +116,8 @@ public final class ThreadNetworkControllerServiceTest {
                         () -> mFakeOtDaemon,
                         mMockConnectivityManager,
                         mMockTunIfController,
-                        mMockInfraIfController);
+                        mMockInfraIfController,
+                        mMockPersistentSettings);
         mService.setTestNetworkAgent(mMockNetworkAgent);
     }
 
