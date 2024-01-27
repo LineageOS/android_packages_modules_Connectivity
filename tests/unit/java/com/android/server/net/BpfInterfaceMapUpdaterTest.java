@@ -66,71 +66,22 @@ public final class BpfInterfaceMapUpdaterTest {
     private static final String TEST_INTERFACE_NAME = "test1";
     private static final String TEST_INTERFACE_NAME2 = "test2";
 
-    private final TestLooper mLooper = new TestLooper();
     private BaseNetdUnsolicitedEventListener mListener;
     private BpfInterfaceMapUpdater mUpdater;
     private IBpfMap<S32, InterfaceMapValue> mBpfMap =
             spy(new TestBpfMap<>(S32.class, InterfaceMapValue.class));
-    @Mock private INetd mNetd;
-    @Mock private Context mContext;
 
     private class TestDependencies extends BpfInterfaceMapUpdater.Dependencies {
         @Override
         public IBpfMap<S32, InterfaceMapValue> getInterfaceMap() {
             return mBpfMap;
         }
-
-        @Override
-        public InterfaceParams getInterfaceParams(String ifaceName) {
-            if (ifaceName.equals(TEST_INTERFACE_NAME)) {
-                return new InterfaceParams(TEST_INTERFACE_NAME, TEST_INDEX,
-                        MacAddress.ALL_ZEROS_ADDRESS);
-            } else if (ifaceName.equals(TEST_INTERFACE_NAME2)) {
-                return new InterfaceParams(TEST_INTERFACE_NAME2, TEST_INDEX2,
-                        MacAddress.ALL_ZEROS_ADDRESS);
-            }
-
-            return null;
-        }
-
-        @Override
-        public INetd getINetd(Context ctx) {
-            return mNetd;
-        }
     }
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        when(mNetd.interfaceGetList()).thenReturn(new String[] {TEST_INTERFACE_NAME});
-        mUpdater = new BpfInterfaceMapUpdater(mContext, new Handler(mLooper.getLooper()),
-                new TestDependencies());
-    }
-
-    private void verifyStartUpdater() throws Exception {
-        mUpdater.start();
-        mLooper.dispatchAll();
-        final ArgumentCaptor<BaseNetdUnsolicitedEventListener> listenerCaptor =
-                ArgumentCaptor.forClass(BaseNetdUnsolicitedEventListener.class);
-        verify(mNetd).registerUnsolicitedEventListener(listenerCaptor.capture());
-        mListener = listenerCaptor.getValue();
-        verify(mBpfMap).updateEntry(eq(new S32(TEST_INDEX)),
-                eq(new InterfaceMapValue(TEST_INTERFACE_NAME)));
-    }
-
-    @Test
-    public void testUpdateInterfaceMap() throws Exception {
-        verifyStartUpdater();
-
-        mListener.onInterfaceAdded(TEST_INTERFACE_NAME2);
-        mLooper.dispatchAll();
-        verify(mBpfMap).updateEntry(eq(new S32(TEST_INDEX2)),
-                eq(new InterfaceMapValue(TEST_INTERFACE_NAME2)));
-
-        // Check that when onInterfaceRemoved is called, nothing happens.
-        mListener.onInterfaceRemoved(TEST_INTERFACE_NAME);
-        mLooper.dispatchAll();
-        verifyNoMoreInteractions(mBpfMap);
+        mUpdater = new BpfInterfaceMapUpdater(new TestDependencies());
     }
 
     @Test
