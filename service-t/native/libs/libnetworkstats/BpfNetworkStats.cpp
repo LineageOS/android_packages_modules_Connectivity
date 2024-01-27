@@ -51,7 +51,12 @@ const BpfMapRO<uint32_t, StatsValue>& getIfaceStatsMap() {
 }
 
 Result<IfaceValue> ifindex2name(const uint32_t ifindex) {
-    return getIfaceIndexNameMap().readValue(ifindex);
+    Result<IfaceValue> v = getIfaceIndexNameMap().readValue(ifindex);
+    if (v.ok()) return v;
+    IfaceValue iv = {};
+    if (!if_indextoname(ifindex, iv.name)) return v;
+    getIfaceIndexNameMap().writeValue(ifindex, iv, BPF_ANY);
+    return iv;
 }
 
 void bpfRegisterIface(const char* iface) {
