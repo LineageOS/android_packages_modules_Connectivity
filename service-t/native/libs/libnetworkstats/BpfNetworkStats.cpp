@@ -50,6 +50,10 @@ const BpfMapRO<uint32_t, StatsValue>& getIfaceStatsMap() {
     return ifaceStatsMap;
 }
 
+Result<IfaceValue> ifindex2name(const uint32_t ifindex) {
+    return getIfaceIndexNameMap().readValue(ifindex);
+}
+
 void bpfRegisterIface(const char* iface) {
     if (!iface) return;
     if (strlen(iface) >= sizeof(IfaceValue)) return;
@@ -78,14 +82,14 @@ int bpfGetUidStats(uid_t uid, StatsValue* stats) {
 
 int bpfGetIfaceStatsInternal(const char* iface, StatsValue* stats,
                              const BpfMapRO<uint32_t, StatsValue>& ifaceStatsMap,
-                             const BpfMapRO<uint32_t, IfaceValue>& ifaceNameMap) {
+                             const IfIndexToNameFunc ifindex2name) {
     *stats = {};
     int64_t unknownIfaceBytesTotal = 0;
     const auto processIfaceStats =
-            [iface, stats, &ifaceNameMap, &unknownIfaceBytesTotal](
+            [iface, stats, ifindex2name, &unknownIfaceBytesTotal](
                     const uint32_t& key,
                     const BpfMapRO<uint32_t, StatsValue>& ifaceStatsMap) -> Result<void> {
-        Result<IfaceValue> ifname = ifaceNameMap.readValue(key);
+        Result<IfaceValue> ifname = ifindex2name(key);
         if (!ifname.ok()) {
             maybeLogUnknownIface(key, ifaceStatsMap, key, &unknownIfaceBytesTotal);
             return Result<void>();
@@ -104,7 +108,7 @@ int bpfGetIfaceStatsInternal(const char* iface, StatsValue* stats,
 }
 
 int bpfGetIfaceStats(const char* iface, StatsValue* stats) {
-    return bpfGetIfaceStatsInternal(iface, stats, getIfaceStatsMap(), getIfaceIndexNameMap());
+    return bpfGetIfaceStatsInternal(iface, stats, getIfaceStatsMap(), ifindex2name);
 }
 
 int bpfGetIfIndexStatsInternal(uint32_t ifindex, StatsValue* stats,
@@ -138,13 +142,13 @@ stats_line populateStatsEntry(const StatsKey& statsKey, const StatsValue& statsE
 
 int parseBpfNetworkStatsDetailInternal(std::vector<stats_line>& lines,
                                        const BpfMapRO<StatsKey, StatsValue>& statsMap,
-                                       const BpfMapRO<uint32_t, IfaceValue>& ifaceMap) {
+                                       const IfIndexToNameFunc ifindex2name) {
     int64_t unknownIfaceBytesTotal = 0;
     const auto processDetailUidStats =
-            [&lines, &unknownIfaceBytesTotal, &ifaceMap](
+            [&lines, &unknownIfaceBytesTotal, &ifindex2name](
                     const StatsKey& key,
                     const BpfMapRO<StatsKey, StatsValue>& statsMap) -> Result<void> {
-        Result<IfaceValue> ifname = ifaceMap.readValue(key.ifaceIndex);
+        Result<IfaceValue> ifname = ifindex2name(key.ifaceIndex);
         if (!ifname.ok()) {
             maybeLogUnknownIface(key.ifaceIndex, statsMap, key, &unknownIfaceBytesTotal);
             return Result<void>();
@@ -212,7 +216,7 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
     // TODO: the above comment feels like it may be obsolete / out of date,
     // since we no longer swap the map via netd binder rpc - though we do
     // still swap it.
-    int ret = parseBpfNetworkStatsDetailInternal(*lines, *inactiveStatsMap, getIfaceIndexNameMap());
+    int ret = parseBpfNetworkStatsDetailInternal(*lines, *inactiveStatsMap, ifindex2name);
     if (ret) {
         ALOGE("parse detail network stats failed: %s", strerror(errno));
         return ret;
@@ -229,12 +233,12 @@ int parseBpfNetworkStatsDetail(std::vector<stats_line>* lines) {
 
 int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
                                     const BpfMapRO<uint32_t, StatsValue>& statsMap,
-                                    const BpfMapRO<uint32_t, IfaceValue>& ifaceMap) {
+                                    const IfIndexToNameFunc ifindex2name) {
     int64_t unknownIfaceBytesTotal = 0;
-    const auto processDetailIfaceStats = [&lines, &unknownIfaceBytesTotal, &ifaceMap, &statsMap](
+    const auto processDetailIfaceStats = [&lines, &unknownIfaceBytesTotal, ifindex2name, &statsMap](
                                              const uint32_t& key, const StatsValue& value,
                                              const BpfMapRO<uint32_t, StatsValue>&) {
-        Result<IfaceValue> ifname = ifaceMap.readValue(key);
+        Result<IfaceValue> ifname = ifindex2name(key);
         if (!ifname.ok()) {
             maybeLogUnknownIface(key, statsMap, key, &unknownIfaceBytesTotal);
             return Result<void>();
@@ -259,7 +263,7 @@ int parseBpfNetworkStatsDevInternal(std::vector<stats_line>& lines,
 }
 
 int parseBpfNetworkStatsDev(std::vector<stats_line>* lines) {
-    return parseBpfNetworkStatsDevInternal(*lines, getIfaceStatsMap(), getIfaceIndexNameMap());
+    return parseBpfNetworkStatsDevInternal(*lines, getIfaceStatsMap(), ifindex2name);
 }
 
 void groupNetworkStats(std::vector<stats_line>& lines) {
