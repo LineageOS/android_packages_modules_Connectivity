@@ -519,8 +519,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         }
 
         @Override
-        public BpfInterfaceMapUpdater makeBpfInterfaceMapUpdater(
-                @NonNull Context ctx, @NonNull Handler handler) {
+        public BpfInterfaceMapUpdater makeBpfInterfaceMapUpdater() {
             return mBpfInterfaceMapUpdater;
         }
 
