@@ -16,12 +16,6 @@
 package com.android.server.net;
 
 import android.os.Build;
-import android.content.Context;
-import android.net.INetd;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.RemoteException;
-import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
@@ -29,11 +23,9 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
-import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.Struct.S32;
 
 /**

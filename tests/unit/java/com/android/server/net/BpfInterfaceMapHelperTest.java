@@ -21,19 +21,10 @@ import static android.system.OsConstants.EPERM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
 
-import android.content.Context;
-import android.net.INetd;
-import android.net.MacAddress;
 import android.os.Build;
-import android.os.Handler;
-import android.os.test.TestLooper;
 import android.system.ErrnoException;
 import android.util.IndentingPrintWriter;
 
@@ -41,7 +32,6 @@ import androidx.test.filters.SmallTest;
 
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.IBpfMap;
-import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.Struct.S32;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -50,8 +40,6 @@ import com.android.testutils.TestBpfMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.PrintWriter;
