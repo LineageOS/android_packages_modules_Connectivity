@@ -40,19 +40,19 @@ import com.android.net.module.util.Struct.S32;
  * Monitor interface added (without removed) and right interface name and its index to bpf map.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-public class BpfInterfaceMapUpdater {
-    private static final String TAG = BpfInterfaceMapUpdater.class.getSimpleName();
+public class BpfInterfaceMapHelper {
+    private static final String TAG = BpfInterfaceMapHelper.class.getSimpleName();
     // This is current path but may be changed soon.
     private static final String IFACE_INDEX_NAME_MAP_PATH =
             "/sys/fs/bpf/netd_shared/map_netd_iface_index_name_map";
     private final IBpfMap<S32, InterfaceMapValue> mIndexToIfaceBpfMap;
 
-    public BpfInterfaceMapUpdater() {
+    public BpfInterfaceMapHelper() {
         this(new Dependencies());
     }
 
     @VisibleForTesting
-    public BpfInterfaceMapUpdater(Dependencies deps) {
+    public BpfInterfaceMapHelper(Dependencies deps) {
         mIndexToIfaceBpfMap = deps.getInterfaceMap();
     }
 
