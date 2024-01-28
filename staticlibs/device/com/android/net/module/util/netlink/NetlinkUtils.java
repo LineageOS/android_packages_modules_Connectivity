@@ -85,6 +85,7 @@ public class NetlinkUtils {
 
     public static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
     public static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
+    public static final int SOCKET_DUMP_RECV_BUFSIZE = 128 * 1024;
 
     /**
      * Return whether the input ByteBuffer contains enough remaining bytes for
@@ -159,7 +160,7 @@ public class NetlinkUtils {
      */
     public static void sendOneShotKernelMessage(int nlProto, byte[] msg) throws ErrnoException {
         final String errPrefix = "Error in NetlinkSocket.sendOneShotKernelMessage";
-        final FileDescriptor fd = netlinkSocketForProto(nlProto);
+        final FileDescriptor fd = netlinkSocketForProto(nlProto, SOCKET_RECV_BUFSIZE);
 
         try {
             connectToKernel(fd);
@@ -225,12 +226,18 @@ public class NetlinkUtils {
     /**
      * Create netlink socket with the given netlink protocol type.
      *
+     * @param nlProto the netlink protocol
+     * @param bufferSize the receive buffer size to set when the value is not 0
+     *
      * @return fd the fileDescriptor of the socket.
      * @throws ErrnoException if the FileDescriptor not connect to be created successfully
      */
-    public static FileDescriptor netlinkSocketForProto(int nlProto) throws ErrnoException {
+    public static FileDescriptor netlinkSocketForProto(int nlProto, int bufferSize)
+            throws ErrnoException {
         final FileDescriptor fd = Os.socket(AF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC, nlProto);
-        Os.setsockoptInt(fd, SOL_SOCKET, SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+        if (bufferSize > 0) {
+            Os.setsockoptInt(fd, SOL_SOCKET, SO_RCVBUF, bufferSize);
+        }
         return fd;
     }
 
@@ -238,7 +245,7 @@ public class NetlinkUtils {
      * Construct a netlink inet_diag socket.
      */
     public static FileDescriptor createNetLinkInetDiagSocket() throws ErrnoException {
-        return Os.socket(AF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC, NETLINK_INET_DIAG);
+        return netlinkSocketForProto(NETLINK_INET_DIAG, 0);
     }
 
     /**
@@ -373,7 +380,7 @@ public class NetlinkUtils {
             Consumer<T> func)
             throws SocketException, InterruptedIOException, ErrnoException {
         // Create socket
-        final FileDescriptor fd = netlinkSocketForProto(nlFamily);
+        final FileDescriptor fd = netlinkSocketForProto(nlFamily, SOCKET_DUMP_RECV_BUFSIZE);
         try {
             getAndProcessNetlinkDumpMessagesWithFd(fd, dumpRequestMessage, nlFamily,
                     msgClass, func);
