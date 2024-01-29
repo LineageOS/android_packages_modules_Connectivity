@@ -29,6 +29,7 @@ import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_RCVBUF;
 import static android.system.OsConstants.SO_RCVTIMEO;
 import static android.system.OsConstants.SO_SNDTIMEO;
+
 import static com.android.net.module.util.netlink.NetlinkConstants.hexify;
 import static com.android.net.module.util.netlink.NetlinkConstants.NLMSG_DONE;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
@@ -49,6 +50,7 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -56,7 +58,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * Utilities for netlink related class that may not be able to fit into a specific class.
@@ -177,19 +178,19 @@ public class NetlinkUtils {
     }
 
     /**
-     * Send an RTM_NEWADDR message to kernel to add or update an IPv6 address.
+     * Send an RTM_NEWADDR message to kernel to add or update an IP address.
      *
      * @param ifIndex interface index.
-     * @param ip IPv6 address to be added.
-     * @param prefixlen IPv6 address prefix length.
-     * @param flags IPv6 address flags.
-     * @param scope IPv6 address scope.
-     * @param preferred The preferred lifetime of IPv6 address.
-     * @param valid The valid lifetime of IPv6 address.
+     * @param ip IP address to be added.
+     * @param prefixlen IP address prefix length.
+     * @param flags IP address flags.
+     * @param scope IP address scope.
+     * @param preferred The preferred lifetime of IP address.
+     * @param valid The valid lifetime of IP address.
      */
-    public static boolean sendRtmNewAddressRequest(int ifIndex, @NonNull final Inet6Address ip,
+    public static boolean sendRtmNewAddressRequest(int ifIndex, @NonNull final InetAddress ip,
             short prefixlen, int flags, byte scope, long preferred, long valid) {
-        Objects.requireNonNull(ip, "IPv6 address to be added should not be null.");
+        Objects.requireNonNull(ip, "IP address to be added should not be null.");
         final byte[] msg = RtNetlinkAddressMessage.newRtmNewAddressMessage(1 /* seqNo*/, ip,
                 prefixlen, flags, scope, ifIndex, preferred, valid);
         try {
