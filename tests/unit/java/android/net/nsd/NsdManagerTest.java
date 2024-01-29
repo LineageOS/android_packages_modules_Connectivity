@@ -52,6 +52,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.net.InetAddress;
+import java.util.List;
+
 @DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
@@ -370,6 +373,9 @@ public class NsdManagerTest {
         NsdManager.RegistrationListener listener1 = mock(NsdManager.RegistrationListener.class);
         NsdManager.DiscoveryListener listener2 = mock(NsdManager.DiscoveryListener.class);
         NsdManager.ResolveListener listener3 = mock(NsdManager.ResolveListener.class);
+        NsdManager.RegistrationListener listener4 = mock(NsdManager.RegistrationListener.class);
+        NsdManager.RegistrationListener listener5 = mock(NsdManager.RegistrationListener.class);
+        NsdManager.RegistrationListener listener6 = mock(NsdManager.RegistrationListener.class);
 
         NsdServiceInfo invalidService = new NsdServiceInfo(null, null);
         NsdServiceInfo validService = new NsdServiceInfo("a_name", "_a_type._tcp");
@@ -379,12 +385,40 @@ public class NsdManagerTest {
                 "_a_type._tcp,_sub1,_s2");
         NsdServiceInfo otherSubtypeUpdate = new NsdServiceInfo("a_name", "_a_type._tcp,_sub1,_s3");
         NsdServiceInfo dotSyntaxSubtypeUpdate = new NsdServiceInfo("a_name", "_sub1._a_type._tcp");
+
         validService.setPort(2222);
         otherServiceWithSubtype.setPort(2222);
         validServiceDuplicate.setPort(2222);
         validServiceSubtypeUpdate.setPort(2222);
         otherSubtypeUpdate.setPort(2222);
         dotSyntaxSubtypeUpdate.setPort(2222);
+
+        NsdServiceInfo invalidMissingHostnameWithAddresses = new NsdServiceInfo(null, null);
+        invalidMissingHostnameWithAddresses.setHostAddresses(
+                List.of(
+                        InetAddress.parseNumericAddress("192.168.82.14"),
+                        InetAddress.parseNumericAddress("2001::1")));
+
+        NsdServiceInfo validCustomHostWithAddresses = new NsdServiceInfo(null, null);
+        validCustomHostWithAddresses.setHostname("a_host");
+        validCustomHostWithAddresses.setHostAddresses(
+                List.of(
+                        InetAddress.parseNumericAddress("192.168.82.14"),
+                        InetAddress.parseNumericAddress("2001::1")));
+
+        NsdServiceInfo validServiceWithCustomHostAndAddresses =
+                new NsdServiceInfo("a_name", "_a_type._tcp");
+        validServiceWithCustomHostAndAddresses.setPort(2222);
+        validServiceWithCustomHostAndAddresses.setHostname("a_host");
+        validServiceWithCustomHostAndAddresses.setHostAddresses(
+                List.of(
+                        InetAddress.parseNumericAddress("192.168.82.14"),
+                        InetAddress.parseNumericAddress("2001::1")));
+
+        NsdServiceInfo validServiceWithCustomHostNoAddresses =
+                new NsdServiceInfo("a_name", "_a_type._tcp");
+        validServiceWithCustomHostNoAddresses.setPort(2222);
+        validServiceWithCustomHostNoAddresses.setHostname("a_host");
 
         // Service registration
         //  - invalid arguments
@@ -394,6 +428,8 @@ public class NsdManagerTest {
         mustFail(() -> { manager.registerService(invalidService, PROTOCOL, listener1); });
         mustFail(() -> { manager.registerService(validService, -1, listener1); });
         mustFail(() -> { manager.registerService(validService, PROTOCOL, null); });
+        mustFail(() -> {
+            manager.registerService(invalidMissingHostnameWithAddresses, PROTOCOL, listener1); });
         manager.registerService(validService, PROTOCOL, listener1);
         //  - update without subtype is not allowed
         mustFail(() -> { manager.registerService(validServiceDuplicate, PROTOCOL, listener1); });
@@ -415,6 +451,15 @@ public class NsdManagerTest {
         // TODO: make listener immediately reusable
         //mustFail(() -> { manager.unregisterService(listener1); });
         //manager.registerService(validService, PROTOCOL, listener1);
+        //  - registering a custom host without a service is valid
+        manager.registerService(validCustomHostWithAddresses, PROTOCOL, listener4);
+        manager.unregisterService(listener4);
+        //  - registering a service with a custom host is valid
+        manager.registerService(validServiceWithCustomHostAndAddresses, PROTOCOL, listener5);
+        manager.unregisterService(listener5);
+        //  - registering a service with a custom host with no addresses is valid
+        manager.registerService(validServiceWithCustomHostNoAddresses, PROTOCOL, listener6);
+        manager.unregisterService(listener6);
 
         // Discover service
         //  - invalid arguments

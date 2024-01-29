@@ -119,6 +119,7 @@ public class NsdServiceInfoTest {
         fullInfo.setSubtypes(Set.of("_thread", "_matter"));
         fullInfo.setPort(4242);
         fullInfo.setHostAddresses(List.of(IPV4_ADDRESS));
+        fullInfo.setHostname("home");
         fullInfo.setNetwork(new Network(123));
         fullInfo.setInterfaceIndex(456);
         checkParcelable(fullInfo);
@@ -134,6 +135,7 @@ public class NsdServiceInfoTest {
         attributedInfo.setServiceType("_kitten._tcp");
         attributedInfo.setPort(4242);
         attributedInfo.setHostAddresses(List.of(IPV6_ADDRESS, IPV4_ADDRESS));
+        attributedInfo.setHostname("home");
         attributedInfo.setAttribute("color", "pink");
         attributedInfo.setAttribute("sound", (new String("にゃあ")).getBytes("UTF-8"));
         attributedInfo.setAttribute("adorable", (String) null);
@@ -169,6 +171,7 @@ public class NsdServiceInfoTest {
         assertEquals(original.getServiceName(), result.getServiceName());
         assertEquals(original.getServiceType(), result.getServiceType());
         assertEquals(original.getHost(), result.getHost());
+        assertEquals(original.getHostname(), result.getHostname());
         assertTrue(original.getPort() == result.getPort());
         assertEquals(original.getNetwork(), result.getNetwork());
         assertEquals(original.getInterfaceIndex(), result.getInterfaceIndex());
