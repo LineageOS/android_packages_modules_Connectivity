@@ -1220,8 +1220,7 @@ class NsdManagerTest {
             // Registration must use an updated hostname to avoid the conflict
             val cb = registrationRecord.expectCallback<ServiceRegistered>(REGISTRATION_TIMEOUT_MS)
             // Service name is not renamed because there's no conflict on the service name.
-            // TODO: b/283053491 - enable this check
-//            assertEquals(serviceName, cb.serviceInfo.serviceName)
+            assertEquals(serviceName, cb.serviceInfo.serviceName)
             val hostname = cb.serviceInfo.hostname ?: fail("Missing hostname")
             hostname.let {
                 assertTrue("Unexpected registered hostname: $it",
@@ -1346,8 +1345,77 @@ class NsdManagerTest {
         }
     }
 
-    // TODO: b/322282952 - Add the test case that the hostname is renamed due to a conflict after
-    //  probing succeeded.
+    @Test
+    fun testRegisterServiceWithCustomHostAndAddresses_conflictAfterProbing_hostRenamed() {
+        val si = makeTestServiceInfo(testNetwork1.network).apply {
+            hostname = customHostname
+            hostAddresses = listOf(
+                    parseNumericAddress("192.0.2.24"),
+                    parseNumericAddress("2001:db8::3"))
+        }
+
+        // Register service on testNetwork1
+        val registrationRecord = NsdRegistrationRecord()
+        val discoveryRecord = NsdDiscoveryRecord()
+        val registeredService = registerService(registrationRecord, si)
+        val packetReader = TapPacketReader(
+                Handler(handlerThread.looper),
+                testNetwork1.iface.fileDescriptor.fileDescriptor, 1500 /* maxPacketSize */)
+        packetReader.startAsyncForTest()
+        handlerThread.waitForIdle(TIMEOUT_MS)
+
+        tryTest {
+            repeat(3) {
+                assertNotNull(packetReader.pollForAdvertisement(serviceName, serviceType),
+                        "Expect 3 announcements sent after initial probing")
+            }
+
+            assertEquals(si.serviceName, registeredService.serviceName)
+            assertEquals(si.hostname, registeredService.hostname)
+
+            nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD,
+                    testNetwork1.network, { it.run() }, discoveryRecord)
+            val discoveredInfo = discoveryRecord.waitForServiceDiscovered(
+                    si.serviceName, serviceType)
+
+            // Send a conflicting announcement
+            val conflictingAnnouncement = buildConflictingAnnouncementForCustomHost()
+            packetReader.sendResponse(conflictingAnnouncement)
+
+            // Expect to see probes (RFC6762 9., service is reset to probing state)
+            assertNotNull(packetReader.pollForProbe(serviceName, serviceType),
+                    "Probe not received within timeout after conflict")
+
+            // Send the conflicting packet again to reply to the probe
+            packetReader.sendResponse(conflictingAnnouncement)
+
+            val newRegistration =
+                    registrationRecord
+                            .expectCallbackEventually<ServiceRegistered>(REGISTRATION_TIMEOUT_MS) {
+                                it.serviceInfo.serviceName == serviceName
+                                        && it.serviceInfo.hostname.let { hostname ->
+                                    hostname != null
+                                            && hostname.startsWith(customHostname)
+                                            && hostname != customHostname
+                                }
+                            }
+
+            val resolvedInfo = resolveService(discoveredInfo)
+            assertEquals(newRegistration.serviceInfo.serviceName, resolvedInfo.serviceName)
+            assertEquals(newRegistration.serviceInfo.hostname, resolvedInfo.hostname)
+
+            discoveryRecord.assertNoCallback()
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(discoveryRecord)
+            discoveryRecord.expectCallback<DiscoveryStopped>()
+        } cleanupStep {
+            nsdManager.unregisterService(registrationRecord)
+            registrationRecord.expectCallback<ServiceUnregistered>()
+        } cleanup {
+            packetReader.handler.post { packetReader.stop() }
+            handlerThread.waitForIdle(TIMEOUT_MS)
+        }
+    }
 
     @Test
     fun testRegisterServiceWithCustomHostNoAddresses_noConflictAfterProbing_notRenamed() {
