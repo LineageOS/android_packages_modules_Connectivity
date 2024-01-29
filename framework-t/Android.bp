@@ -34,6 +34,7 @@ java_defaults {
     name: "enable-framework-connectivity-t-targets",
     enabled: true,
 }
+
 // The above defaults can be used to disable framework-connectivity t
 // targets while minimizing merge conflicts in the build rules.
 
@@ -116,6 +117,7 @@ java_library {
         "framework-bluetooth",
         "framework-wifi",
         "framework-connectivity-pre-jarjar",
+        "framework-location.stubs.module_lib",
     ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
@@ -138,6 +140,7 @@ java_sdk_library {
         "sdk_module-lib_current_framework-connectivity",
     ],
     libs: [
+        "framework-location.stubs.module_lib",
         "sdk_module-lib_current_framework-connectivity",
     ],
     permitted_packages: [
