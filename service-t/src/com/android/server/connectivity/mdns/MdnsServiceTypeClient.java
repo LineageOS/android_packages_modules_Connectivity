@@ -81,7 +81,7 @@ public class MdnsServiceTypeClient {
                     notifyRemovedServiceToListeners(previousResponse, "Service record expired");
                 }
             };
-    private final ArrayMap<MdnsServiceBrowserListener, MdnsSearchOptions> listeners =
+    private final ArrayMap<MdnsServiceBrowserListener, ListenerInfo> listeners =
             new ArrayMap<>();
     private final boolean removeServiceAfterTtlExpires =
             MdnsConfigs.removeServiceAfterTtlExpires();
@@ -94,6 +94,32 @@ public class MdnsServiceTypeClient {
     // new subtypes. It stays the same between packets for same subtypes.
     private long currentSessionId = 0;
     private long lastSentTime;
+
+    private static class ListenerInfo {
+        @NonNull
+        final MdnsSearchOptions searchOptions;
+        final Set<String> discoveredServiceNames;
+
+        ListenerInfo(@NonNull MdnsSearchOptions searchOptions,
+                @Nullable ListenerInfo previousInfo) {
+            this.searchOptions = searchOptions;
+            this.discoveredServiceNames = previousInfo == null
+                    ? MdnsUtils.newSet() : previousInfo.discoveredServiceNames;
+        }
+
+        /**
+         * Set the given service name as discovered.
+         *
+         * @return true if the service name was not discovered before.
+         */
+        boolean setServiceDiscovered(@NonNull String serviceName) {
+            return discoveredServiceNames.add(MdnsUtils.toDnsLowerCase(serviceName));
+        }
+
+        void unsetServiceDiscovered(@NonNull String serviceName) {
+            discoveredServiceNames.remove(MdnsUtils.toDnsLowerCase(serviceName));
+        }
+    }
 
     private class QueryTaskHandler extends Handler {
         QueryTaskHandler(Looper looper) {
@@ -311,12 +337,16 @@ public class MdnsServiceTypeClient {
         ensureRunningOnHandlerThread(handler);
         this.searchOptions = searchOptions;
         boolean hadReply = false;
-        if (listeners.put(listener, searchOptions) == null) {
+        final ListenerInfo existingInfo = listeners.get(listener);
+        final ListenerInfo listenerInfo = new ListenerInfo(searchOptions, existingInfo);
+        listeners.put(listener, listenerInfo);
+        if (existingInfo == null) {
             for (MdnsResponse existingResponse : serviceCache.getCachedServices(cacheKey)) {
                 if (!responseMatchesOptions(existingResponse, searchOptions)) continue;
                 final MdnsServiceInfo info =
                         buildMdnsServiceInfoFromResponse(existingResponse, serviceTypeLabels);
                 listener.onServiceNameDiscovered(info, true /* isServiceFromCache */);
+                listenerInfo.setServiceDiscovered(info.getServiceInstanceName());
                 if (existingResponse.isComplete()) {
                     listener.onServiceFound(info, true /* isServiceFromCache */);
                     hadReply = true;
@@ -480,9 +510,10 @@ public class MdnsServiceTypeClient {
     private void notifyRemovedServiceToListeners(@NonNull MdnsResponse response,
             @NonNull String message) {
         for (int i = 0; i < listeners.size(); i++) {
-            if (!responseMatchesOptions(response, listeners.valueAt(i))) continue;
+            if (!responseMatchesOptions(response, listeners.valueAt(i).searchOptions)) continue;
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             if (response.getServiceInstanceName() != null) {
+                listeners.valueAt(i).unsetServiceDiscovered(response.getServiceInstanceName());
                 final MdnsServiceInfo serviceInfo = buildMdnsServiceInfoFromResponse(
                         response, serviceTypeLabels);
                 if (response.isComplete()) {
@@ -511,10 +542,9 @@ public class MdnsServiceTypeClient {
         final MdnsResponse currentResponse =
                 serviceCache.getCachedService(serviceInstanceName, cacheKey);
 
-        boolean newServiceFound = false;
+        final boolean newInCache = currentResponse == null;
         boolean serviceBecomesComplete = false;
-        if (currentResponse == null) {
-            newServiceFound = true;
+        if (newInCache) {
             if (serviceInstanceName != null) {
                 serviceCache.addOrUpdateService(cacheKey, response);
             }
@@ -525,25 +555,28 @@ public class MdnsServiceTypeClient {
             serviceBecomesComplete = !before && after;
         }
         sharedLog.i(String.format(
-                "Handling response from service: %s, newServiceFound: %b, serviceBecomesComplete:"
+                "Handling response from service: %s, newInCache: %b, serviceBecomesComplete:"
                         + " %b, responseIsComplete: %b",
-                serviceInstanceName, newServiceFound, serviceBecomesComplete,
+                serviceInstanceName, newInCache, serviceBecomesComplete,
                 response.isComplete()));
         MdnsServiceInfo serviceInfo =
                 buildMdnsServiceInfoFromResponse(response, serviceTypeLabels);
 
         for (int i = 0; i < listeners.size(); i++) {
-            if (!responseMatchesOptions(response, listeners.valueAt(i))) continue;
+            // If a service stops matching the options (currently can only happen if it loses a
+            // subtype), service lost callbacks should also be sent; this is not done today as
+            // only expiration of SRV records is used, not PTR records used for subtypes, so
+            // services never lose PTR record subtypes.
+            if (!responseMatchesOptions(response, listeners.valueAt(i).searchOptions)) continue;
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
+            final ListenerInfo listenerInfo = listeners.valueAt(i);
+            final boolean newServiceFound = listenerInfo.setServiceDiscovered(serviceInstanceName);
             if (newServiceFound) {
                 sharedLog.log("onServiceNameDiscovered: " + serviceInfo);
                 listener.onServiceNameDiscovered(serviceInfo, false /* isServiceFromCache */);
             }
 
             if (response.isComplete()) {
-                // There is a bug here: the newServiceFound is global right now. The state needs
-                // to be per listener because of the  responseMatchesOptions() filter.
-                // Otherwise, it won't handle the subType update properly.
                 if (newServiceFound || serviceBecomesComplete) {
                     sharedLog.log("onServiceFound: " + serviceInfo);
                     listener.onServiceFound(serviceInfo, false /* isServiceFromCache */);
@@ -579,7 +612,7 @@ public class MdnsServiceTypeClient {
     private List<MdnsResponse> makeResponsesForResolve(@NonNull SocketKey socketKey) {
         final List<MdnsResponse> resolveResponses = new ArrayList<>();
         for (int i = 0; i < listeners.size(); i++) {
-            final String resolveName = listeners.valueAt(i).getResolveInstanceName();
+            final String resolveName = listeners.valueAt(i).searchOptions.getResolveInstanceName();
             if (resolveName == null) {
                 continue;
             }

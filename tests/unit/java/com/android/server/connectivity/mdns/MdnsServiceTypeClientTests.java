@@ -1492,6 +1492,91 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
+    public void testProcessResponse_SubtypeChange() {
+        client = new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
+                mockDecoderClock, socketKey, mockSharedLog, thread.getLooper(), mockDeps,
+                serviceCache);
+
+        final String matchingInstance = "instance1";
+        final String subtype = "_subtype";
+        final String ipV4Address = "192.0.2.0";
+        final String ipV6Address = "2001:db8::";
+
+        final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
+                .addSubtype("othersub").build();
+
+        startSendAndReceive(mockListenerOne, options);
+
+        // Complete response from instanceName
+        final MdnsPacket packetWithoutSubtype = createResponse(
+                matchingInstance, ipV4Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap() /* textAttributes */, TEST_TTL);
+        final MdnsPointerRecord originalPtr = (MdnsPointerRecord) CollectionUtils.findFirst(
+                packetWithoutSubtype.answers, r -> r instanceof MdnsPointerRecord);
+
+        // Add a subtype PTR record
+        final ArrayList<MdnsRecord> newAnswers = new ArrayList<>(packetWithoutSubtype.answers);
+        newAnswers.add(new MdnsPointerRecord(
+                // PTR should be _subtype._sub._type._tcp.local -> instance1._type._tcp.local
+                Stream.concat(Stream.of(subtype, "_sub"), Arrays.stream(SERVICE_TYPE_LABELS))
+                        .toArray(String[]::new),
+                originalPtr.getReceiptTime(), originalPtr.getCacheFlush(), originalPtr.getTtl(),
+                originalPtr.getPointer()));
+        processResponse(new MdnsPacket(
+                packetWithoutSubtype.flags,
+                packetWithoutSubtype.questions,
+                newAnswers,
+                packetWithoutSubtype.authorityRecords,
+                packetWithoutSubtype.additionalRecords), socketKey);
+
+        // The subtype does not match
+        final InOrder inOrder = inOrder(mockListenerOne);
+        inOrder.verify(mockListenerOne, never()).onServiceNameDiscovered(any(), anyBoolean());
+
+        // Add another matching subtype
+        newAnswers.add(new MdnsPointerRecord(
+                // PTR should be _subtype._sub._type._tcp.local -> instance1._type._tcp.local
+                Stream.concat(Stream.of("_othersub", "_sub"), Arrays.stream(SERVICE_TYPE_LABELS))
+                        .toArray(String[]::new),
+                originalPtr.getReceiptTime(), originalPtr.getCacheFlush(), originalPtr.getTtl(),
+                originalPtr.getPointer()));
+        processResponse(new MdnsPacket(
+                packetWithoutSubtype.flags,
+                packetWithoutSubtype.questions,
+                newAnswers,
+                packetWithoutSubtype.authorityRecords,
+                packetWithoutSubtype.additionalRecords), socketKey);
+
+        final ArgumentMatcher<MdnsServiceInfo> subtypeInstanceMatcher = info ->
+                info.getServiceInstanceName().equals(matchingInstance)
+                        && info.getSubtypes().equals(List.of("_subtype", "_othersub"));
+
+        // Service found callbacks are sent now
+        inOrder.verify(mockListenerOne).onServiceNameDiscovered(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
+        inOrder.verify(mockListenerOne).onServiceFound(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
+
+        // Address update: update callbacks are sent
+        processResponse(createResponse(
+                matchingInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), socketKey);
+
+        inOrder.verify(mockListenerOne).onServiceUpdated(argThat(info ->
+                subtypeInstanceMatcher.matches(info)
+                        && info.getIpv4Addresses().equals(List.of(ipV4Address))
+                        && info.getIpv6Addresses().equals(List.of(ipV6Address))));
+
+        // Goodbye: service removed callbacks are sent
+        processResponse(createResponse(
+                matchingInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), 0L /* ttl */), socketKey);
+
+        inOrder.verify(mockListenerOne).onServiceRemoved(matchServiceName(matchingInstance));
+        inOrder.verify(mockListenerOne).onServiceNameRemoved(matchServiceName(matchingInstance));
+    }
+
+    @Test
     public void testNotifySocketDestroyed() throws Exception {
         client = new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
                 mockDecoderClock, socketKey, mockSharedLog, thread.getLooper(), mockDeps,
