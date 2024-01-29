@@ -41,11 +41,13 @@ android_test {
     name: "ThreadNetworkIntegrationTests",
     platform_apis: true,
     manifest: "AndroidManifest.xml",
+    test_config: "AndroidTest.xml",
     defaults: [
         "framework-connectivity-test-defaults",
         "ThreadNetworkIntegrationTestsDefaults",
     ],
     test_suites: [
+        "mts-tethering",
         "general-tests",
     ],
     srcs: [
