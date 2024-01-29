@@ -458,7 +458,7 @@ public class ThreadNetworkCountryCode {
      *   <li>5. Location country code - Country code retrieved from LocationManager passive location
      *       provider.
      *   <li>6. OEM country code - Country code retrieved from the system property
-     *       `ro.boot.threadnetwork.country_code`.
+     *       `threadnetwork.country_code`.
      *   <li>7. Default country code `WW`.
      * </ul>
      *
