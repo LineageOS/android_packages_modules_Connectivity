@@ -22,10 +22,12 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresApi;
 import android.net.LinkAddress;
+import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.ArraySet;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.HexDump;
@@ -37,6 +39,7 @@ import com.android.server.connectivity.mdns.util.MdnsUtils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,6 +47,9 @@ import java.util.Set;
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHandler {
+    public static final int CONFLICT_SERVICE = 1 << 0;
+    public static final int CONFLICT_HOST = 1 << 1;
+
     private static final boolean DBG = MdnsAdvertiser.DBG;
     @VisibleForTesting
     public static final long EXIT_ANNOUNCEMENT_DELAY_MS = 100L;
@@ -85,10 +91,15 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         /**
          * Called by the advertiser when a conflict was found, during or after probing.
          *
-         * If a conflict is found during probing, the {@link #renameServiceForConflict} must be
+         * <p>If a conflict is found during probing, the {@link #renameServiceForConflict} must be
          * called to restart probing and attempt registration with a different name.
+         *
+         * <p>{@code conflictType} is a bitmap telling which part of the service is conflicting. See
+         * {@link MdnsInterfaceAdvertiser#CONFLICT_SERVICE} and {@link
+         * MdnsInterfaceAdvertiser#CONFLICT_HOST}.
          */
-        void onServiceConflict(@NonNull MdnsInterfaceAdvertiser advertiser, int serviceId);
+        void onServiceConflict(
+                @NonNull MdnsInterfaceAdvertiser advertiser, int serviceId, int conflictType);
 
         /**
          * Called by the advertiser when it destroyed itself.
@@ -384,8 +395,16 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
                     + packet.additionalRecords.size() + " additional from " + srcCopy);
         }
 
-        for (int conflictServiceId : mRecordRepository.getConflictingServices(packet)) {
-            mCbHandler.post(() -> mCb.onServiceConflict(this, conflictServiceId));
+        Map<Integer, Integer> conflictingServices =
+                mRecordRepository.getConflictingServices(packet);
+
+        for (Map.Entry<Integer, Integer> entry : conflictingServices.entrySet()) {
+            int serviceId = entry.getKey();
+            int conflictType = entry.getValue();
+            mCbHandler.post(
+                    () -> {
+                        mCb.onServiceConflict(this, serviceId, conflictType);
+                    });
         }
 
         // Even in case of conflict, add replies for other services. But in general conflicts would
