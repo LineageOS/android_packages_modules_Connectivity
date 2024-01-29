@@ -35,6 +35,7 @@ import static com.android.networkstack.apishim.ConstantsShim.REGISTER_NSD_OFFLOA
 import static com.android.server.connectivity.mdns.MdnsAdvertiser.AdvertiserMetrics;
 import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
 import static com.android.server.connectivity.mdns.MdnsRecord.MAX_LABEL_LENGTH;
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.PASSIVE_QUERY_MODE;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 
 import android.annotation.NonNull;
@@ -793,8 +794,7 @@ public class NsdService extends INsdManager.Stub {
                                     MdnsSearchOptions.newBuilder()
                                             .setNetwork(discoveryRequest.getNetwork())
                                             .setRemoveExpiredService(true)
-                                            .setIsPassiveMode(true);
-
+                                            .setQueryMode(PASSIVE_QUERY_MODE);
                             if (subtype != null) {
                                 // checkSubtypeLabels() ensures that subtypes start with '_' but
                                 // MdnsSearchOptions expects the underscore to not be present.
@@ -1044,7 +1044,7 @@ public class NsdService extends INsdManager.Stub {
                                     transactionId, resolveServiceType);
                             final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                     .setNetwork(info.getNetwork())
-                                    .setIsPassiveMode(true)
+                                    .setQueryMode(PASSIVE_QUERY_MODE)
                                     .setResolveInstanceName(info.getServiceName())
                                     .setRemoveExpiredService(true)
                                     .build();
@@ -1142,7 +1142,7 @@ public class NsdService extends INsdManager.Stub {
                                 transactionId, resolveServiceType);
                         final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                 .setNetwork(info.getNetwork())
-                                .setIsPassiveMode(true)
+                                .setQueryMode(PASSIVE_QUERY_MODE)
                                 .setResolveInstanceName(info.getServiceName())
                                 .setRemoveExpiredService(true)
                                 .build();

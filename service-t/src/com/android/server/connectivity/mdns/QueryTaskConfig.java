@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.PASSIVE_QUERY_MODE;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 
@@ -45,7 +47,7 @@ public class QueryTaskConfig {
     final List<String> subtypes;
     private final boolean alwaysAskForUnicastResponse =
             MdnsConfigs.alwaysAskForUnicastResponseInEachBurst();
-    private final boolean usePassiveMode;
+    private final int queryMode;
     final boolean onlyUseIpv6OnIpv6OnlyNetworks;
     private final int numOfQueriesBeforeBackoff;
     @VisibleForTesting
@@ -66,7 +68,7 @@ public class QueryTaskConfig {
             int queriesPerBurst, int timeBetweenBurstsInMs,
             long delayUntilNextTaskWithoutBackoffMs) {
         this.subtypes = new ArrayList<>(other.subtypes);
-        this.usePassiveMode = other.usePassiveMode;
+        this.queryMode = other.queryMode;
         this.onlyUseIpv6OnIpv6OnlyNetworks = other.onlyUseIpv6OnIpv6OnlyNetworks;
         this.numOfQueriesBeforeBackoff = other.numOfQueriesBeforeBackoff;
         this.transactionId = transactionId;
@@ -80,11 +82,11 @@ public class QueryTaskConfig {
         this.socketKey = other.socketKey;
     }
     QueryTaskConfig(@NonNull Collection<String> subtypes,
-            boolean usePassiveMode,
+            int queryMode,
             boolean onlyUseIpv6OnIpv6OnlyNetworks,
             int numOfQueriesBeforeBackoff,
             @Nullable SocketKey socketKey) {
-        this.usePassiveMode = usePassiveMode;
+        this.queryMode = queryMode;
         this.onlyUseIpv6OnIpv6OnlyNetworks = onlyUseIpv6OnIpv6OnlyNetworks;
         this.numOfQueriesBeforeBackoff = numOfQueriesBeforeBackoff;
         this.subtypes = new ArrayList<>(subtypes);
@@ -94,7 +96,7 @@ public class QueryTaskConfig {
         this.expectUnicastResponse = true;
         this.isFirstBurst = true;
         // Config the scan frequency based on the scan mode.
-        if (this.usePassiveMode) {
+        if (this.queryMode == PASSIVE_QUERY_MODE) {
             // In passive scan mode, sends a single burst of QUERIES_PER_BURST queries, and then
             // in each TIME_BETWEEN_BURSTS interval, sends QUERIES_PER_BURST_PASSIVE_MODE
             // queries.
@@ -138,7 +140,7 @@ public class QueryTaskConfig {
             // queries.
             if (isFirstBurst) {
                 newIsFirstBurst = false;
-                if (usePassiveMode) {
+                if (queryMode == PASSIVE_QUERY_MODE) {
                     newQueriesPerBurst = QUERIES_PER_BURST_PASSIVE_MODE;
                 }
             }
