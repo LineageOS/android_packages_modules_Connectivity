@@ -23,17 +23,21 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.content.res.Resources;
 import android.os.PersistableBundle;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.AtomicFile;
 
 import androidx.test.runner.AndroidJUnit4;
+
+import com.android.connectivity.resources.R;
+import com.android.server.connectivity.ConnectivityResources;
 
 import org.junit.After;
 import org.junit.Before;
@@ -51,16 +55,22 @@ import java.io.FileOutputStream;
 @SmallTest
 public class ThreadPersistentSettingsTest {
     @Mock private AtomicFile mAtomicFile;
+    @Mock Resources mResources;
+    @Mock ConnectivityResources mConnectivityResources;
 
-    private ThreadPersistentSettings mThreadPersistentSetting;
+    private ThreadPersistentSettings mThreadPersistentSettings;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
+        when(mConnectivityResources.get()).thenReturn(mResources);
+        when(mResources.getBoolean(eq(R.bool.config_thread_default_enabled))).thenReturn(true);
+
         FileOutputStream fos = mock(FileOutputStream.class);
         when(mAtomicFile.startWrite()).thenReturn(fos);
-        mThreadPersistentSetting = new ThreadPersistentSettings(mAtomicFile);
+        mThreadPersistentSettings =
+                new ThreadPersistentSettings(mAtomicFile, mConnectivityResources);
     }
 
     /** Called after each test */
@@ -70,10 +80,42 @@ public class ThreadPersistentSettingsTest {
     }
 
     @Test
-    public void put_ThreadFeatureEnabledTrue_returnsTrue() throws Exception {
-        mThreadPersistentSetting.put(THREAD_ENABLED.key, true);
+    public void initialize_readsFromFile() throws Exception {
+        byte[] data = createXmlForParsing(THREAD_ENABLED.key, false);
+        setupAtomicFileMockForRead(data);
 
-        assertThat(mThreadPersistentSetting.get(THREAD_ENABLED)).isTrue();
+        mThreadPersistentSettings.initialize();
+
+        assertThat(mThreadPersistentSettings.get(THREAD_ENABLED)).isFalse();
+    }
+
+    @Test
+    public void initialize_ThreadDisabledInResources_returnsThreadDisabled() throws Exception {
+        when(mResources.getBoolean(eq(R.bool.config_thread_default_enabled))).thenReturn(false);
+        setupAtomicFileMockForRead(new byte[0]);
+
+        mThreadPersistentSettings.initialize();
+
+        assertThat(mThreadPersistentSettings.get(THREAD_ENABLED)).isFalse();
+    }
+
+    @Test
+    public void initialize_ThreadDisabledInResourcesButEnabledInXml_returnsThreadEnabled()
+            throws Exception {
+        when(mResources.getBoolean(eq(R.bool.config_thread_default_enabled))).thenReturn(false);
+        byte[] data = createXmlForParsing(THREAD_ENABLED.key, true);
+        setupAtomicFileMockForRead(data);
+
+        mThreadPersistentSettings.initialize();
+
+        assertThat(mThreadPersistentSettings.get(THREAD_ENABLED)).isTrue();
+    }
+
+    @Test
+    public void put_ThreadFeatureEnabledTrue_returnsTrue() throws Exception {
+        mThreadPersistentSettings.put(THREAD_ENABLED.key, true);
+
+        assertThat(mThreadPersistentSettings.get(THREAD_ENABLED)).isTrue();
         // Confirm that file writes have been triggered.
         verify(mAtomicFile).startWrite();
         verify(mAtomicFile).finishWrite(any());
@@ -81,24 +123,12 @@ public class ThreadPersistentSettingsTest {
 
     @Test
     public void put_ThreadFeatureEnabledFalse_returnsFalse() throws Exception {
-        mThreadPersistentSetting.put(THREAD_ENABLED.key, false);
+        mThreadPersistentSettings.put(THREAD_ENABLED.key, false);
 
-        assertThat(mThreadPersistentSetting.get(THREAD_ENABLED)).isFalse();
+        assertThat(mThreadPersistentSettings.get(THREAD_ENABLED)).isFalse();
         // Confirm that file writes have been triggered.
         verify(mAtomicFile).startWrite();
         verify(mAtomicFile).finishWrite(any());
-    }
-
-    @Test
-    public void initialize_readsFromFile() throws Exception {
-        byte[] data = createXmlForParsing(THREAD_ENABLED.key, false);
-        setupAtomicFileMockForRead(data);
-
-        // Trigger file read.
-        mThreadPersistentSetting.initialize();
-
-        assertThat(mThreadPersistentSetting.get(THREAD_ENABLED)).isFalse();
-        verify(mAtomicFile, never()).startWrite();
     }
 
     private byte[] createXmlForParsing(String key, Boolean value) throws Exception {
