@@ -1220,8 +1220,7 @@ class NsdManagerTest {
             // Registration must use an updated hostname to avoid the conflict
             val cb = registrationRecord.expectCallback<ServiceRegistered>(REGISTRATION_TIMEOUT_MS)
             // Service name is not renamed because there's no conflict on the service name.
-            // TODO: b/283053491 - enable this check
-//            assertEquals(serviceName, cb.serviceInfo.serviceName)
+            assertEquals(serviceName, cb.serviceInfo.serviceName)
             val hostname = cb.serviceInfo.hostname ?: fail("Missing hostname")
             hostname.let {
                 assertTrue("Unexpected registered hostname: $it",

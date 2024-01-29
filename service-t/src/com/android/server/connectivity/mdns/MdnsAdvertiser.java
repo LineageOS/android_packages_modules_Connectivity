@@ -253,12 +253,13 @@ public class MdnsAdvertiser {
 
     private boolean hasAnyServiceConflict(
             @NonNull BiPredicate<Network, InterfaceAdvertiserRequest> applicableAdvertiserFilter,
-            @NonNull NsdServiceInfo newInfo) {
+            @NonNull NsdServiceInfo newInfo,
+            @NonNull Registration originalRegistration) {
         return any(
                 mAdvertiserRequests,
                 (network, adv) ->
                         applicableAdvertiserFilter.test(network, adv)
-                                && adv.hasServiceConflict(newInfo));
+                                && adv.hasServiceConflict(newInfo, originalRegistration));
     }
 
     private boolean hasAnyHostConflict(
@@ -283,7 +284,7 @@ public class MdnsAdvertiser {
         NsdServiceInfo newInfo = registration.getServiceInfo();
 
         int renameServiceCount = 0;
-        while (hasAnyServiceConflict(applicableAdvertiserFilter, newInfo)) {
+        while (hasAnyServiceConflict(applicableAdvertiserFilter, newInfo, registration)) {
             renameServiceCount++;
             newInfo = registration.makeNewServiceInfoForServiceConflict(renameServiceCount);
         }
@@ -378,8 +379,9 @@ public class MdnsAdvertiser {
          * Return whether using the proposed new {@link NsdServiceInfo} to add a registration would
          * cause a conflict of the service in this {@link InterfaceAdvertiserRequest}.
          */
-        boolean hasServiceConflict(@NonNull NsdServiceInfo newInfo) {
-            return getConflictingRegistrationDueToService(newInfo) >= 0;
+        boolean hasServiceConflict(
+                @NonNull NsdServiceInfo newInfo, @NonNull Registration originalRegistration) {
+            return getConflictingRegistrationDueToService(newInfo, originalRegistration) >= 0;
         }
 
         /**
@@ -393,11 +395,16 @@ public class MdnsAdvertiser {
         }
 
         /** Get the ID of a conflicting registration due to service, or -1 if none. */
-        int getConflictingRegistrationDueToService(@NonNull NsdServiceInfo info) {
+        int getConflictingRegistrationDueToService(
+                @NonNull NsdServiceInfo info, @NonNull Registration originalRegistration) {
             if (TextUtils.isEmpty(info.getServiceName())) {
                 return -1;
             }
             for (int i = 0; i < mPendingRegistrations.size(); i++) {
+                // Never conflict with itself
+                if (mPendingRegistrations.valueAt(i) == originalRegistration) {
+                    continue;
+                }
                 final NsdServiceInfo other = mPendingRegistrations.valueAt(i).getServiceInfo();
                 if (MdnsUtils.equalsIgnoreDnsCase(info.getServiceName(), other.getServiceName())
                         && MdnsUtils.equalsIgnoreDnsCase(info.getServiceType(),
