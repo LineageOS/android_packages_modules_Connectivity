@@ -330,7 +330,7 @@ public class MdnsServiceTypeClient {
         // interested anymore.
         final QueryTaskConfig taskConfig = new QueryTaskConfig(
                 searchOptions.getSubtypes(),
-                searchOptions.isPassiveMode(),
+                searchOptions.getQueryMode(),
                 searchOptions.onlyUseIpv6OnIpv6OnlyNetworks(),
                 searchOptions.numOfQueriesBeforeBackoff(),
                 socketKey);
