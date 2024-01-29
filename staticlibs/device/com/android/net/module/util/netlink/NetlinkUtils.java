@@ -230,7 +230,7 @@ public class NetlinkUtils {
      * @throws ErrnoException if the FileDescriptor not connect to be created successfully
      */
     public static FileDescriptor netlinkSocketForProto(int nlProto) throws ErrnoException {
-        final FileDescriptor fd = Os.socket(AF_NETLINK, SOCK_DGRAM, nlProto);
+        final FileDescriptor fd = Os.socket(AF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC, nlProto);
         Os.setsockoptInt(fd, SOL_SOCKET, SO_RCVBUF, SOCKET_RECV_BUFSIZE);
         return fd;
     }
