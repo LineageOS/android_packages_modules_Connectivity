@@ -347,6 +347,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         final MdnsProber.ProbingInfo probingInfo = mRecordRepository.setServiceProbing(serviceId);
         if (probingInfo == null) return false;
 
+        mAnnouncer.stop(serviceId);
         mProber.restartForConflict(probingInfo);
         return true;
     }
