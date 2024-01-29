@@ -43,7 +43,7 @@ android_test {
     manifest: "AndroidManifest.xml",
     defaults: [
         "framework-connectivity-test-defaults",
-        "ThreadNetworkIntegrationTestsDefaults"
+        "ThreadNetworkIntegrationTestsDefaults",
     ],
     test_suites: [
         "general-tests",
