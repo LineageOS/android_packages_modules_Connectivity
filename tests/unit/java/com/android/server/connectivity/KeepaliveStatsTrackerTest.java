@@ -1297,8 +1297,8 @@ public class KeepaliveStatsTrackerTest {
 
         assertTrue(mKeepaliveStatsTracker.allMetricsExpected(dailyKeepaliveInfoReported));
 
-        // Write time after 26 hours.
-        final int writeTime2 = 26 * 60 * 60 * 1000;
+        // Write time after 27 hours.
+        final int writeTime2 = 27 * 60 * 60 * 1000;
         setElapsedRealtime(writeTime2);
 
         visibleOnHandlerThread(mTestHandler, () -> mKeepaliveStatsTracker.writeAndResetMetrics());
