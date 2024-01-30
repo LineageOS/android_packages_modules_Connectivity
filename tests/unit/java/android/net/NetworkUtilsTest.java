@@ -159,10 +159,9 @@ public class NetworkUtilsTest {
         return timeval;
     }
 
-    @Test
-    public void testSetSockOptBytes() throws ErrnoException {
-        final FileDescriptor sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6);
-        final StructTimeval writeTimeval = StructTimeval.fromMillis(1200);
+    private void testSetSockOptBytes(FileDescriptor sock, long timeValMillis)
+            throws ErrnoException {
+        final StructTimeval writeTimeval = StructTimeval.fromMillis(timeValMillis);
         byte[] timeval = getTimevalBytes(writeTimeval);
         final StructTimeval readTimeval;
 
@@ -170,6 +169,16 @@ public class NetworkUtilsTest {
         readTimeval = Os.getsockoptTimeval(sock, SOL_SOCKET, SO_RCVTIMEO);
 
         assertEquals(writeTimeval, readTimeval);
+    }
+
+    @Test
+    public void testSetSockOptBytes() throws ErrnoException {
+        final FileDescriptor sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6);
+
+        testSetSockOptBytes(sock, 3000);
+
+        testSetSockOptBytes(sock, 5000);
+
         SocketUtils.closeSocketQuietly(sock);
     }
 
