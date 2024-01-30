@@ -510,6 +510,27 @@ public class NetworkStatsManager {
      * Query network usage statistics details for a given uid.
      * This may take a long time, and apps should avoid calling this on their main thread.
      *
+     * @param networkType As defined in {@link ConnectivityManager}, e.g.
+     *            {@link ConnectivityManager#TYPE_MOBILE}, {@link ConnectivityManager#TYPE_WIFI}
+     *            etc.
+     * @param subscriberId If applicable, the subscriber id of the network interface.
+     *                     <p>Starting with API level 29, the {@code subscriberId} is guarded by
+     *                     additional restrictions. Calling apps that do not meet the new
+     *                     requirements to access the {@code subscriberId} can provide a {@code
+     *                     null} value when querying for the mobile network type to receive usage
+     *                     for all mobile networks. For additional details see {@link
+     *                     TelephonyManager#getSubscriberId()}.
+     *                     <p>Starting with API level 31, calling apps can provide a
+     *                     {@code subscriberId} with wifi network type to receive usage for
+     *                     wifi networks which is under the given subscription if applicable.
+     *                     Otherwise, pass {@code null} when querying all wifi networks.
+     * @param startTime Start of period. Defined in terms of "Unix time", see
+     *            {@link java.lang.System#currentTimeMillis}.
+     * @param endTime End of period. Defined in terms of "Unix time", see
+     *            {@link java.lang.System#currentTimeMillis}.
+     * @param uid UID of app
+     * @return Statistics which is described above.
+     * @throws SecurityException if permissions are insufficient to read network statistics.
      * @see #queryDetailsForUidTagState(int, String, long, long, int, int, int)
      */
     @NonNull
