@@ -52,8 +52,14 @@ static jobject statsValueToEntry(JNIEnv* env, StatsValue* stats) {
         return nullptr;
     }
 
+    // Find the constructor.
+    jmethodID constructorID = env->GetMethodID(gEntryClass, "<init>", "()V");
+    if (constructorID == nullptr) {
+        return nullptr;
+    }
+
     // Create a new instance of the Java class
-    jobject result = env->AllocObject(gEntryClass);
+    jobject result = env->NewObject(gEntryClass, constructorID);
     if (result == nullptr) {
         return nullptr;
     }
