@@ -42,6 +42,7 @@ import android.net.NetworkPolicyManager
 import android.net.NetworkProvider
 import android.net.NetworkScore
 import android.net.PacProxyManager
+import android.net.connectivity.ConnectivityCompatChanges.ENABLE_MATCH_LOCAL_NETWORK
 import android.net.networkstack.NetworkStackClientBase
 import android.os.BatteryStatsManager
 import android.os.Bundle
@@ -53,7 +54,6 @@ import android.os.UserManager
 import android.permission.PermissionManager.PermissionResult
 import android.telephony.TelephonyManager
 import android.testing.TestableContext
-import android.util.ArraySet
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.internal.app.IBatteryStats
 import com.android.internal.util.test.BroadcastInterceptingContext
@@ -75,8 +75,8 @@ import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.function.Consumer
 import java.util.function.BiConsumer
+import java.util.function.Consumer
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
@@ -264,7 +264,7 @@ open class CSTest {
                 enabledFeatures[name] ?: fail("Unmocked feature $name, see CSTest.enabledFeatures")
 
         // Mocked change IDs
-        private val enabledChangeIds = ArraySet<Long>()
+        private val enabledChangeIds = arrayListOf(ENABLE_MATCH_LOCAL_NETWORK)
         fun setChangeIdEnabled(enabled: Boolean, changeId: Long) {
             // enabledChangeIds is read on the handler thread and maybe the test thread, so
             // make sure both threads see it before continuing.

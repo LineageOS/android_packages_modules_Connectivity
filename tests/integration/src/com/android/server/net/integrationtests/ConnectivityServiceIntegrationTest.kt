@@ -66,6 +66,8 @@ import com.android.testutils.DeviceInfoUtils
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.tryTest
+import java.util.function.BiConsumer
+import java.util.function.Consumer
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -87,8 +89,6 @@ import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
 import org.mockito.MockitoAnnotations
 import org.mockito.Spy
-import java.util.function.Consumer
-import java.util.function.BiConsumer
 
 const val SERVICE_BIND_TIMEOUT_MS = 5_000L
 const val TEST_TIMEOUT_MS = 10_000L
@@ -225,6 +225,7 @@ class ConnectivityServiceIntegrationTest {
         override fun getSystemProperties() = mock(MockableSystemProperties::class.java)
         override fun makeNetIdManager() = TestNetIdManager()
         override fun getBpfNetMaps(context: Context?, netd: INetd?) = mock(BpfNetMaps::class.java)
+        override fun isChangeEnabled(changeId: Long, uid: Int) = true
 
         override fun makeMultinetworkPolicyTracker(
             c: Context,
