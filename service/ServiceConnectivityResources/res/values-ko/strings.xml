@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"네트워크에 로그인"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"인터넷 연결 없음"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"<xliff:g id="NETWORK_CARRIER">%1$s</xliff:g>에서 제공하는 데이터를 모두 소진했을 수 있습니다. 탭하여 옵션을 확인하세요."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"데이터를 모두 소진했을 수 있습니다. 탭하여 옵션을 확인하세요."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g>이(가) 인터넷에 액세스할 수 없습니다."</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"탭하여 옵션 보기"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"모바일 네트워크에 인터넷이 연결되어 있지 않습니다."</string>

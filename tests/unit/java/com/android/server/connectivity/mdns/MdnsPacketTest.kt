@@ -21,6 +21,7 @@ import com.android.net.module.util.HexDump
 import com.android.testutils.DevSdkIgnoreRunner
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,5 +71,18 @@ class MdnsPacketTest {
                 (packet.authorityRecords[2] as MdnsInetAddressRecord).inet6Address!!)
         assertEquals(InetAddresses.parseNumericAddress("2001:db8::789"),
                 (packet.authorityRecords[3] as MdnsInetAddressRecord).inet6Address!!)
+    }
+
+    @Test
+    fun testParseQueryWithLabelLoop_ThrowsParseException() {
+        val packetWithErrorHex = "000084000000000100000000054C4142454C0454455354C006000C800100000" +
+                "07800140454455354056C6F63616C00"
+
+        val bytes = HexDump.hexStringToByteArray(packetWithErrorHex)
+        val reader = MdnsPacketReader(
+                bytes, bytes.size, makeFlags(isLabelCountLimitEnabled = true))
+        assertFailsWith<MdnsPacket.ParseException> {
+            MdnsPacket.parse(reader)
+        }
     }
 }
