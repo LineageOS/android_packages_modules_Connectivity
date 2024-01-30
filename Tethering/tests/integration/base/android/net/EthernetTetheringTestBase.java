@@ -865,12 +865,12 @@ public abstract class EthernetTetheringTestBase {
         // trigger the reselection, the total test time may over test suite 1 minmute timeout.
         // Probably need to disable/restore all internet networks in a common place of test
         // process. Currently, EthernetTetheringTest is part of CTS test which needs wifi network
-        // connection if device has wifi feature. CtsNetUtils#toggleWifi() checks wifi connection
-        // during the toggling process.
-        // See Tethering#chooseUpstreamType, CtsNetUtils#toggleWifi.
+        // connection if device has wifi feature.
+        // See Tethering#chooseUpstreamType
         // TODO: toggle cellular network if the device has no WIFI feature.
         Log.d(TAG, "Toggle WIFI to retry upstream selection");
-        sCtsNetUtils.toggleWifi();
+        sCtsNetUtils.disableWifi();
+        sCtsNetUtils.ensureWifiConnected();
 
         // Wait for expected upstream.
         final CompletableFuture<Network> future = new CompletableFuture<>();
