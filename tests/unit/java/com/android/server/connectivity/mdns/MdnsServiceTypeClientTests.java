@@ -1777,13 +1777,6 @@ public class MdnsServiceTypeClientTests {
                 socketKey);
     }
 
-    private int getBetweenBurstTime(int burstCounter, int currentBetweenTime, int maxBetweenTime,
-            int initialBetweenTime) {
-        return currentBetweenTime < maxBetweenTime
-                ? Math.min(initialBetweenTime * (int) Math.pow(2, burstCounter), maxBetweenTime)
-                : currentBetweenTime;
-    }
-
     @Test
     public void sendQueries_aggressiveScanMode() {
         final MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
@@ -1799,9 +1792,9 @@ public class MdnsServiceTypeClientTests {
             verifyAndSendQuery(i + 1, /* timeInMs= */ 0, /* expectsUnicastResponse= */ false);
             verifyAndSendQuery(i + 2, TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS,
                     /* expectsUnicastResponse= */ false);
-            betweenBurstTime = getBetweenBurstTime(burstCounter, betweenBurstTime,
-                    MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS,
-                    INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS);
+            betweenBurstTime = Math.min(
+                    INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS * (int) Math.pow(2, burstCounter),
+                    MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS);
             burstCounter++;
         }
         // Verify that Task is not removed before stopSendAndReceive was called.
@@ -1860,9 +1853,9 @@ public class MdnsServiceTypeClientTests {
             verifyAndSendQuery(i + 1, /* timeInMs= */ 0, /* expectsUnicastResponse= */ false);
             verifyAndSendQuery(i + 2, TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS,
                     /* expectsUnicastResponse= */ false);
-            betweenBurstTime = getBetweenBurstTime(burstCounter, betweenBurstTime,
-                    MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS,
-                    INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS);
+            betweenBurstTime = Math.min(
+                    INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS * (int) Math.pow(2, burstCounter),
+                    MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS);
             burstCounter++;
         }
         // In backoff mode, the current scheduled task will be canceled and reschedule if the
