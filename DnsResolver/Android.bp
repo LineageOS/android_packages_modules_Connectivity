@@ -14,6 +14,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -56,7 +57,10 @@ cc_library {
 cc_test {
     name: "dns_helper_unit_test",
     defaults: ["netd_defaults"],
-    test_suites: ["general-tests", "mts-tethering"],
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
     test_config_template: ":net_native_test_config_template",
     header_libs: [
         "bpf_connectivity_headers",
@@ -68,8 +72,8 @@ cc_test {
         "libcom.android.tethering.dns_helper",
     ],
     shared_libs: [
-       "libbase",
-       "libcutils",
+        "libbase",
+        "libcutils",
     ],
     compile_multilib: "both",
     multilib: {
