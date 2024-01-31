@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -38,7 +39,10 @@ cc_library_static {
 cc_test {
     name: "libclat_test",
     defaults: ["netd_defaults"],
-    test_suites: ["general-tests", "mts-tethering"],
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
     test_config_template: ":net_native_test_config_template",
     srcs: [
         "clatutils_test.cpp",

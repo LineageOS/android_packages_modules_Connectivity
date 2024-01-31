@@ -17,6 +17,7 @@
 // They must be fast and stable, and exercise public or test APIs.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }

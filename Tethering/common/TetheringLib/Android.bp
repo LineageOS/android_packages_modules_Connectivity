@@ -14,6 +14,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -55,14 +56,16 @@ java_sdk_library {
 
     hostdex: true, // for hiddenapi check
     permitted_packages: ["android.net"],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }
 
 java_library {
-  name: "framework-tethering-pre-jarjar",
-  defaults: [
-    "framework-tethering-defaults",
-  ],
+    name: "framework-tethering-pre-jarjar",
+    defaults: [
+        "framework-tethering-defaults",
+    ],
 }
 
 java_genrule {
@@ -88,7 +91,7 @@ java_defaults {
     name: "framework-tethering-defaults",
     defaults: ["framework-module-defaults"],
     srcs: [
-      ":framework-tethering-srcs"
+        ":framework-tethering-srcs",
     ],
     libs: ["framework-connectivity.stubs.module_lib"],
     aidl: {
@@ -107,5 +110,5 @@ filegroup {
         "src/**/*.aidl",
         "src/**/*.java",
     ],
-    path: "src"
+    path: "src",
 }
