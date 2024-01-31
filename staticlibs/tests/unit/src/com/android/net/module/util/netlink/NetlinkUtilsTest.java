@@ -21,6 +21,8 @@ import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.AF_UNSPEC;
 import static android.system.OsConstants.EACCES;
 import static android.system.OsConstants.NETLINK_ROUTE;
+import static android.system.OsConstants.SOL_SOCKET;
+import static android.system.OsConstants.SO_RCVBUF;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
@@ -33,6 +35,8 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
 import android.content.Context;
+import android.net.util.SocketUtils;
+import android.os.Build;
 import android.system.ErrnoException;
 import android.system.NetlinkSocketAddress;
 import android.system.Os;
@@ -43,6 +47,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.Struct;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
 import libcore.io.IoUtils;
 
@@ -203,5 +208,24 @@ public class NetlinkUtilsTest {
             assertNotNull("Route doesn't contain source: " + route, route.getSource());
             assertNotNull("Route doesn't contain destination: " + route, route.getDestination());
         }
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) // getsockoptInt requires > R
+    public void testNetlinkSocketForProto_defaultBufferSize() throws Exception {
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE, 0);
+        final int bufferSize = Os.getsockoptInt(fd, SOL_SOCKET, SO_RCVBUF) / 2;
+
+        assertTrue("bufferSize: " + bufferSize, bufferSize > 0); // whatever the default value is
+        SocketUtils.closeSocket(fd);
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) // getsockoptInt requires > R
+    public void testNetlinkSocketForProto_setBufferSize() throws Exception {
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE,
+                8000);
+        final int bufferSize = Os.getsockoptInt(fd, SOL_SOCKET, SO_RCVBUF) / 2;
+
+        assertEquals(8000, bufferSize);
+        SocketUtils.closeSocket(fd);
     }
 }
