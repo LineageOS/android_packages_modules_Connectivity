@@ -179,6 +179,8 @@ java_library {
         "unsupportedappusage",
         "ServiceConnectivityResources",
         "framework-statsd",
+        "framework-permission",
+        "framework-permission-s",
     ],
     static_libs: [
         // Do not add libs here if they are already included
@@ -265,6 +267,8 @@ java_defaults {
         "framework-tethering.impl",
         "framework-wifi",
         "libprotobuf-java-nano",
+        "framework-permission",
+        "framework-permission-s",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     apex_available: [
