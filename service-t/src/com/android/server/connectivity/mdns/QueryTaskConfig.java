@@ -24,10 +24,6 @@ import android.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 /**
  * A configuration for the PeriodicalQueryTask that contains parameters to build a query packet.
  * Call to getConfigForNextRun returns a config that can be used to build the next query task.
@@ -53,9 +49,6 @@ public class QueryTaskConfig {
     // they only listen once every [multiplier] DTIM intervals).
     static final int TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS = 100;
     static final int MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS = 60000;
-    // The following fields are used by QueryTask so we need to test them.
-    @VisibleForTesting
-    final List<String> subtypes;
     private final boolean alwaysAskForUnicastResponse =
             MdnsConfigs.alwaysAskForUnicastResponseInEachBurst();
     private final int queryMode;
@@ -78,7 +71,6 @@ public class QueryTaskConfig {
             boolean expectUnicastResponse, boolean isFirstBurst, int burstCounter,
             int queriesPerBurst, int timeBetweenBurstsInMs,
             long delayUntilNextTaskWithoutBackoffMs) {
-        this.subtypes = new ArrayList<>(other.subtypes);
         this.queryMode = other.queryMode;
         this.onlyUseIpv6OnIpv6OnlyNetworks = other.onlyUseIpv6OnIpv6OnlyNetworks;
         this.numOfQueriesBeforeBackoff = other.numOfQueriesBeforeBackoff;
@@ -93,15 +85,13 @@ public class QueryTaskConfig {
         this.socketKey = other.socketKey;
     }
 
-    QueryTaskConfig(@NonNull Collection<String> subtypes,
-            int queryMode,
+    QueryTaskConfig(int queryMode,
             boolean onlyUseIpv6OnIpv6OnlyNetworks,
             int numOfQueriesBeforeBackoff,
             @Nullable SocketKey socketKey) {
         this.queryMode = queryMode;
         this.onlyUseIpv6OnIpv6OnlyNetworks = onlyUseIpv6OnIpv6OnlyNetworks;
         this.numOfQueriesBeforeBackoff = numOfQueriesBeforeBackoff;
-        this.subtypes = new ArrayList<>(subtypes);
         this.queriesPerBurst = QUERIES_PER_BURST;
         this.burstCounter = 0;
         this.transactionId = 1;
