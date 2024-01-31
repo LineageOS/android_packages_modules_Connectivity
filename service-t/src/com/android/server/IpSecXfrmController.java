@@ -15,6 +15,7 @@
  */
 package com.android.server;
 
+import static com.android.net.module.util.netlink.NetlinkUtils.SOCKET_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.IPPROTO_ESP;
 import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.NETLINK_XFRM;
 import static com.android.net.module.util.netlink.xfrm.XfrmNetlinkMessage.XFRM_MSG_NEWSA;
@@ -106,7 +107,8 @@ public class IpSecXfrmController {
     public static class Dependencies {
         /** Get a new XFRM netlink socket and connect it */
         public FileDescriptor newNetlinkSocket() throws ErrnoException, SocketException {
-            final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_XFRM);
+            final FileDescriptor fd =
+                    NetlinkUtils.netlinkSocketForProto(NETLINK_XFRM, SOCKET_RECV_BUFSIZE);
             NetlinkUtils.connectToKernel(fd);
             return fd;
         }
