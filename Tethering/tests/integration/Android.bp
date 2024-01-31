@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -50,7 +51,7 @@ android_library {
     visibility: [
         "//packages/modules/Connectivity/Tethering/tests/mts",
         "//packages/modules/Connectivity/tests/cts/net",
-    ]
+    ],
 }
 
 // Library including tethering integration tests targeting the latest stable SDK.
@@ -67,7 +68,7 @@ android_library {
         "//packages/modules/Connectivity/tests/cts/tethering",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
-    ]
+    ],
 }
 
 // Library including tethering integration tests targeting current development SDK.
@@ -83,7 +84,7 @@ android_library {
     visibility: [
         "//packages/modules/Connectivity/tests/cts/tethering",
         "//packages/modules/Connectivity/Tethering/tests/mts",
-    ]
+    ],
 }
 
 // TODO: remove because TetheringIntegrationTests has been covered by ConnectivityCoverageTests.

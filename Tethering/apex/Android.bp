@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -24,6 +25,7 @@ java_defaults {
     name: "ConnectivityNextEnableDefaults",
     enabled: true,
 }
+
 java_defaults {
     name: "NetworkStackApiShimSettingsForCurrentBranch",
     // API shims to include in the networking modules built from the branch. Branches that disable
@@ -31,6 +33,7 @@ java_defaults {
     // (X_current API level).
     static_libs: ["NetworkStackApiCurrentShims"],
 }
+
 apex_defaults {
     name: "ConnectivityApexDefaults",
     // Tethering app to include in the AOSP apex. Branches that disable the "next" targets may use
@@ -38,6 +41,7 @@ apex_defaults {
     // package names and keys, so that apex will be unused anyway.
     apps: ["TetheringNext"], // Replace to "Tethering" if ConnectivityNextEnableDefaults is false.
 }
+
 enable_tethering_next_apex = true
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may have different "enabled" values
@@ -92,7 +96,7 @@ apex {
         both: {
             jni_libs: [
                 "libframework-connectivity-jni",
-                "libframework-connectivity-tiramisu-jni"
+                "libframework-connectivity-tiramisu-jni",
             ],
         },
     },
