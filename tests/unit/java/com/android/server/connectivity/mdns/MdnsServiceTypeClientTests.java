@@ -17,8 +17,12 @@
 package com.android.server.connectivity.mdns;
 
 import static com.android.server.connectivity.mdns.MdnsSearchOptions.ACTIVE_QUERY_MODE;
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.AGGRESSIVE_QUERY_MODE;
 import static com.android.server.connectivity.mdns.MdnsSearchOptions.PASSIVE_QUERY_MODE;
 import static com.android.server.connectivity.mdns.MdnsServiceTypeClient.EVENT_START_QUERYTASK;
+import static com.android.server.connectivity.mdns.QueryTaskConfig.INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS;
+import static com.android.server.connectivity.mdns.QueryTaskConfig.MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS;
+import static com.android.server.connectivity.mdns.QueryTaskConfig.TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -147,8 +151,8 @@ public class MdnsServiceTypeClientTests {
         MockitoAnnotations.initMocks(this);
         doReturn(TEST_ELAPSED_REALTIME).when(mockDecoderClock).elapsedRealtime();
 
-        expectedIPv4Packets = new DatagramPacket[16];
-        expectedIPv6Packets = new DatagramPacket[16];
+        expectedIPv4Packets = new DatagramPacket[24];
+        expectedIPv6Packets = new DatagramPacket[24];
         socketKey = new SocketKey(mockNetwork, INTERFACE_INDEX);
 
         for (int i = 0; i < expectedIPv4Packets.length; ++i) {
@@ -173,7 +177,15 @@ public class MdnsServiceTypeClientTests {
                 .thenReturn(expectedIPv4Packets[12])
                 .thenReturn(expectedIPv4Packets[13])
                 .thenReturn(expectedIPv4Packets[14])
-                .thenReturn(expectedIPv4Packets[15]);
+                .thenReturn(expectedIPv4Packets[15])
+                .thenReturn(expectedIPv4Packets[16])
+                .thenReturn(expectedIPv4Packets[17])
+                .thenReturn(expectedIPv4Packets[18])
+                .thenReturn(expectedIPv4Packets[19])
+                .thenReturn(expectedIPv4Packets[20])
+                .thenReturn(expectedIPv4Packets[21])
+                .thenReturn(expectedIPv4Packets[22])
+                .thenReturn(expectedIPv4Packets[23]);
 
         when(mockPacketWriter.getPacket(IPV6_ADDRESS))
                 .thenReturn(expectedIPv6Packets[0])
@@ -191,7 +203,15 @@ public class MdnsServiceTypeClientTests {
                 .thenReturn(expectedIPv6Packets[12])
                 .thenReturn(expectedIPv6Packets[13])
                 .thenReturn(expectedIPv6Packets[14])
-                .thenReturn(expectedIPv6Packets[15]);
+                .thenReturn(expectedIPv6Packets[15])
+                .thenReturn(expectedIPv6Packets[16])
+                .thenReturn(expectedIPv6Packets[17])
+                .thenReturn(expectedIPv6Packets[18])
+                .thenReturn(expectedIPv6Packets[19])
+                .thenReturn(expectedIPv6Packets[20])
+                .thenReturn(expectedIPv6Packets[21])
+                .thenReturn(expectedIPv6Packets[22])
+                .thenReturn(expectedIPv6Packets[23]);
 
         thread = new HandlerThread("MdnsServiceTypeClientTests");
         thread.start();
@@ -1498,6 +1518,91 @@ public class MdnsServiceTypeClientTests {
     }
 
     @Test
+    public void testProcessResponse_SubtypeChange() {
+        client = new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
+                mockDecoderClock, socketKey, mockSharedLog, thread.getLooper(), mockDeps,
+                serviceCache);
+
+        final String matchingInstance = "instance1";
+        final String subtype = "_subtype";
+        final String ipV4Address = "192.0.2.0";
+        final String ipV6Address = "2001:db8::";
+
+        final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
+                .addSubtype("othersub").build();
+
+        startSendAndReceive(mockListenerOne, options);
+
+        // Complete response from instanceName
+        final MdnsPacket packetWithoutSubtype = createResponse(
+                matchingInstance, ipV4Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap() /* textAttributes */, TEST_TTL);
+        final MdnsPointerRecord originalPtr = (MdnsPointerRecord) CollectionUtils.findFirst(
+                packetWithoutSubtype.answers, r -> r instanceof MdnsPointerRecord);
+
+        // Add a subtype PTR record
+        final ArrayList<MdnsRecord> newAnswers = new ArrayList<>(packetWithoutSubtype.answers);
+        newAnswers.add(new MdnsPointerRecord(
+                // PTR should be _subtype._sub._type._tcp.local -> instance1._type._tcp.local
+                Stream.concat(Stream.of(subtype, "_sub"), Arrays.stream(SERVICE_TYPE_LABELS))
+                        .toArray(String[]::new),
+                originalPtr.getReceiptTime(), originalPtr.getCacheFlush(), originalPtr.getTtl(),
+                originalPtr.getPointer()));
+        processResponse(new MdnsPacket(
+                packetWithoutSubtype.flags,
+                packetWithoutSubtype.questions,
+                newAnswers,
+                packetWithoutSubtype.authorityRecords,
+                packetWithoutSubtype.additionalRecords), socketKey);
+
+        // The subtype does not match
+        final InOrder inOrder = inOrder(mockListenerOne);
+        inOrder.verify(mockListenerOne, never()).onServiceNameDiscovered(any(), anyBoolean());
+
+        // Add another matching subtype
+        newAnswers.add(new MdnsPointerRecord(
+                // PTR should be _subtype._sub._type._tcp.local -> instance1._type._tcp.local
+                Stream.concat(Stream.of("_othersub", "_sub"), Arrays.stream(SERVICE_TYPE_LABELS))
+                        .toArray(String[]::new),
+                originalPtr.getReceiptTime(), originalPtr.getCacheFlush(), originalPtr.getTtl(),
+                originalPtr.getPointer()));
+        processResponse(new MdnsPacket(
+                packetWithoutSubtype.flags,
+                packetWithoutSubtype.questions,
+                newAnswers,
+                packetWithoutSubtype.authorityRecords,
+                packetWithoutSubtype.additionalRecords), socketKey);
+
+        final ArgumentMatcher<MdnsServiceInfo> subtypeInstanceMatcher = info ->
+                info.getServiceInstanceName().equals(matchingInstance)
+                        && info.getSubtypes().equals(List.of("_subtype", "_othersub"));
+
+        // Service found callbacks are sent now
+        inOrder.verify(mockListenerOne).onServiceNameDiscovered(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
+        inOrder.verify(mockListenerOne).onServiceFound(
+                argThat(subtypeInstanceMatcher), eq(false) /* isServiceFromCache */);
+
+        // Address update: update callbacks are sent
+        processResponse(createResponse(
+                matchingInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), socketKey);
+
+        inOrder.verify(mockListenerOne).onServiceUpdated(argThat(info ->
+                subtypeInstanceMatcher.matches(info)
+                        && info.getIpv4Addresses().equals(List.of(ipV4Address))
+                        && info.getIpv6Addresses().equals(List.of(ipV6Address))));
+
+        // Goodbye: service removed callbacks are sent
+        processResponse(createResponse(
+                matchingInstance, ipV6Address, 5353, SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), 0L /* ttl */), socketKey);
+
+        inOrder.verify(mockListenerOne).onServiceRemoved(matchServiceName(matchingInstance));
+        inOrder.verify(mockListenerOne).onServiceNameRemoved(matchServiceName(matchingInstance));
+    }
+
+    @Test
     public void testNotifySocketDestroyed() throws Exception {
         client = new MdnsServiceTypeClient(SERVICE_TYPE, mockSocketClient, currentThreadExecutor,
                 mockDecoderClock, socketKey, mockSharedLog, thread.getLooper(), mockDeps,
@@ -1670,6 +1775,118 @@ public class MdnsServiceTypeClientTests {
                 Collections.singletonList(SUBTYPE) /* subTypes */,
                 Collections.singletonMap("key", "value") /* attributes */,
                 socketKey);
+    }
+
+    private int getBetweenBurstTime(int burstCounter, int currentBetweenTime, int maxBetweenTime,
+            int initialBetweenTime) {
+        return currentBetweenTime < maxBetweenTime
+                ? Math.min(initialBetweenTime * (int) Math.pow(2, burstCounter), maxBetweenTime)
+                : currentBetweenTime;
+    }
+
+    @Test
+    public void sendQueries_aggressiveScanMode() {
+        final MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(AGGRESSIVE_QUERY_MODE).build();
+        startSendAndReceive(mockListenerOne, searchOptions);
+        // Always try to remove the task.
+        verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+
+        int burstCounter = 0;
+        int betweenBurstTime = 0;
+        for (int i = 0; i < expectedIPv4Packets.length; i += 3) {
+            verifyAndSendQuery(i, betweenBurstTime, /* expectsUnicastResponse= */ true);
+            verifyAndSendQuery(i + 1, /* timeInMs= */ 0, /* expectsUnicastResponse= */ false);
+            verifyAndSendQuery(i + 2, TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS,
+                    /* expectsUnicastResponse= */ false);
+            betweenBurstTime = getBetweenBurstTime(burstCounter, betweenBurstTime,
+                    MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS,
+                    INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS);
+            burstCounter++;
+        }
+        // Verify that Task is not removed before stopSendAndReceive was called.
+        verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+
+        // Stop sending packets.
+        stopSendAndReceive(mockListenerOne);
+        verify(mockDeps, times(2)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+    }
+
+    @Test
+    public void sendQueries_reentry_aggressiveScanMode() {
+        final MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE).setQueryMode(AGGRESSIVE_QUERY_MODE).build();
+        startSendAndReceive(mockListenerOne, searchOptions);
+        // Always try to remove the task.
+        verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+
+        // First burst, first query is sent.
+        verifyAndSendQuery(0, /* timeInMs= */ 0, /* expectsUnicastResponse= */ true);
+
+        // After the first query is sent, change the subtypes, and restart.
+        final MdnsSearchOptions searchOptions2 = MdnsSearchOptions.newBuilder().addSubtype(SUBTYPE)
+                .addSubtype("_subtype2").setQueryMode(AGGRESSIVE_QUERY_MODE).build();
+        startSendAndReceive(mockListenerOne, searchOptions2);
+        // The previous scheduled task should be canceled.
+        verify(mockDeps, times(2)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+
+        // Queries should continue to be sent.
+        verifyAndSendQuery(1, /* timeInMs= */ 0, /* expectsUnicastResponse= */ true);
+        verifyAndSendQuery(2, /* timeInMs= */ 0, /* expectsUnicastResponse= */ false);
+        verifyAndSendQuery(3, TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS,
+                /* expectsUnicastResponse= */ false);
+
+        // Stop sending packets.
+        stopSendAndReceive(mockListenerOne);
+        verify(mockDeps, times(3)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+    }
+
+    @Test
+    public void sendQueries_blendScanWithQueryBackoff() {
+        final int numOfQueriesBeforeBackoff = 11;
+        final MdnsSearchOptions searchOptions = MdnsSearchOptions.newBuilder()
+                .addSubtype(SUBTYPE)
+                .setQueryMode(AGGRESSIVE_QUERY_MODE)
+                .setNumOfQueriesBeforeBackoff(numOfQueriesBeforeBackoff)
+                .build();
+        startSendAndReceive(mockListenerOne, searchOptions);
+        // Always try to remove the task.
+        verify(mockDeps, times(1)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+
+        int burstCounter = 0;
+        int betweenBurstTime = 0;
+        for (int i = 0; i < numOfQueriesBeforeBackoff; i += 3) {
+            verifyAndSendQuery(i, betweenBurstTime, /* expectsUnicastResponse= */ true);
+            verifyAndSendQuery(i + 1, /* timeInMs= */ 0, /* expectsUnicastResponse= */ false);
+            verifyAndSendQuery(i + 2, TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS,
+                    /* expectsUnicastResponse= */ false);
+            betweenBurstTime = getBetweenBurstTime(burstCounter, betweenBurstTime,
+                    MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS,
+                    INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS);
+            burstCounter++;
+        }
+        // In backoff mode, the current scheduled task will be canceled and reschedule if the
+        // 0.8 * smallestRemainingTtl is larger than time to next run.
+        long currentTime = TEST_TTL / 2 + TEST_ELAPSED_REALTIME;
+        doReturn(currentTime).when(mockDecoderClock).elapsedRealtime();
+        doReturn(true).when(mockDeps).hasMessages(any(), eq(EVENT_START_QUERYTASK));
+        processResponse(createResponse(
+                "service-instance-1", "192.0.2.123", 5353,
+                SERVICE_TYPE_LABELS,
+                Collections.emptyMap(), TEST_TTL), socketKey);
+        verify(mockDeps, times(2)).removeMessages(any(), eq(EVENT_START_QUERYTASK));
+        assertNotNull(delayMessage);
+        verifyAndSendQuery(12 /* index */, (long) (TEST_TTL / 2 * 0.8) /* timeInMs */,
+                true /* expectsUnicastResponse */, true /* multipleSocketDiscovery */,
+                14 /* scheduledCount */);
+        currentTime += (long) (TEST_TTL / 2 * 0.8);
+        doReturn(currentTime).when(mockDecoderClock).elapsedRealtime();
+        verifyAndSendQuery(13 /* index */, 0 /* timeInMs */,
+                false /* expectsUnicastResponse */, true /* multipleSocketDiscovery */,
+                15 /* scheduledCount */);
+        verifyAndSendQuery(14 /* index */, TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS,
+                false /* expectsUnicastResponse */, true /* multipleSocketDiscovery */,
+                16 /* scheduledCount */);
     }
 
     private static MdnsServiceInfo matchServiceName(String name) {

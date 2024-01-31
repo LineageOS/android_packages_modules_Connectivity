@@ -1,4 +1,0 @@
-# Ensure the callback methods are not stripped
--keepclassmembers class **.ThreadNetworkControllerService$ThreadNetworkCallback {
-    *;
-}
