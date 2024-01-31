@@ -2108,6 +2108,46 @@ class NsdManagerTest {
     }
 
     @Test
+    fun testRegisterService_registerImmediatelyAfterUnregister_serviceFound() {
+        val info1 = makeTestServiceInfo(network = testNetwork1.network).apply {
+            serviceName = "service11111"
+            port = 11111
+        }
+        val info2 = makeTestServiceInfo(network = testNetwork1.network).apply {
+            serviceName = "service22222"
+            port = 22222
+        }
+        val registrationRecord1 = NsdRegistrationRecord()
+        val discoveryRecord1 = NsdDiscoveryRecord()
+        val registrationRecord2 = NsdRegistrationRecord()
+        val discoveryRecord2 = NsdDiscoveryRecord()
+        tryTest {
+            registerService(registrationRecord1, info1)
+            nsdManager.discoverServices(serviceType,
+                    NsdManager.PROTOCOL_DNS_SD, testNetwork1.network, { it.run() },
+                    discoveryRecord1)
+            discoveryRecord1.waitForServiceDiscovered(info1.serviceName,
+                    serviceType, testNetwork1.network)
+            nsdManager.stopServiceDiscovery(discoveryRecord1)
+
+            nsdManager.unregisterService(registrationRecord1)
+            registerService(registrationRecord2, info2)
+            nsdManager.discoverServices(serviceType,
+                    NsdManager.PROTOCOL_DNS_SD, testNetwork1.network, { it.run() },
+                    discoveryRecord2)
+            val infoDiscovered = discoveryRecord2.waitForServiceDiscovered(info2.serviceName,
+                    serviceType, testNetwork1.network)
+            val infoResolved = resolveService(infoDiscovered)
+            assertEquals(22222, infoResolved.port)
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(discoveryRecord2)
+            discoveryRecord2.expectCallback<DiscoveryStopped>()
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord2)
+        }
+    }
+
+    @Test
     fun testServiceTypeClientRemovedAfterSocketDestroyed() {
         val si = makeTestServiceInfo(testNetwork1.network)
         // Register service on testNetwork1
