@@ -159,8 +159,7 @@ public class QueryTaskConfig {
         }
         final int maxTimeBetweenBursts = queryMode == AGGRESSIVE_QUERY_MODE
                 ? MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS : MAX_TIME_BETWEEN_ACTIVE_PASSIVE_BURSTS_MS;
-        return timeBetweenBurstsInMs < maxTimeBetweenBursts
-                ? Math.min(timeBetweenBurstsInMs * 2, maxTimeBetweenBursts) : timeBetweenBurstsInMs;
+        return Math.min(timeBetweenBurstsInMs * 2, maxTimeBetweenBursts);
     }
 
     /**
@@ -172,21 +171,19 @@ public class QueryTaskConfig {
         if (newTransactionId > UNSIGNED_SHORT_MAX_VALUE) {
             newTransactionId = 1;
         }
-        boolean newIsFirstBurst = isFirstBurst;
+
         int newQueriesPerBurst = queriesPerBurst;
         int newBurstCounter = burstCounter + 1;
         final boolean isFirstQueryInBurst = newBurstCounter == 1;
         final boolean isLastQueryInBurst = newBurstCounter == queriesPerBurst;
+        boolean newIsFirstBurst = isFirstBurst && !isLastQueryInBurst;
         if (isLastQueryInBurst) {
             newBurstCounter = 0;
-            if (isFirstBurst) {
-                newIsFirstBurst = false;
-                // In passive scan mode, sends a single burst of QUERIES_PER_BURST queries, and
-                // then in each TIME_BETWEEN_BURSTS interval, sends QUERIES_PER_BURST_PASSIVE_MODE
-                // queries.
-                if (queryMode == PASSIVE_QUERY_MODE) {
-                    newQueriesPerBurst = QUERIES_PER_BURST_PASSIVE_MODE;
-                }
+            // In passive scan mode, sends a single burst of QUERIES_PER_BURST queries, and
+            // then in each TIME_BETWEEN_BURSTS interval, sends QUERIES_PER_BURST_PASSIVE_MODE
+            // queries.
+            if (isFirstBurst && queryMode == PASSIVE_QUERY_MODE) {
+                newQueriesPerBurst = QUERIES_PER_BURST_PASSIVE_MODE;
             }
         }
 
