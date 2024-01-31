@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -92,7 +93,7 @@ apex {
         both: {
             jni_libs: [
                 "libframework-connectivity-jni",
-                "libframework-connectivity-tiramisu-jni"
+                "libframework-connectivity-tiramisu-jni",
             ],
         },
     },

@@ -1,4 +1,5 @@
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -22,7 +23,10 @@ cc_library {
         "Utils.cpp",
     ],
     defaults: ["netd_defaults"],
-    cflags: ["-Wall", "-Werror"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
     shared_libs: [
         "libbase",
         "liblog",
