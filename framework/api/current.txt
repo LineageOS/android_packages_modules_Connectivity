@@ -362,6 +362,7 @@ package android.net {
     field public static final int TRANSPORT_CELLULAR = 0; // 0x0
     field public static final int TRANSPORT_ETHERNET = 3; // 0x3
     field public static final int TRANSPORT_LOWPAN = 6; // 0x6
+    field @FlaggedApi("com.android.net.flags.support_transport_satellite") public static final int TRANSPORT_SATELLITE = 10; // 0xa
     field public static final int TRANSPORT_THREAD = 9; // 0x9
     field public static final int TRANSPORT_USB = 8; // 0x8
     field public static final int TRANSPORT_VPN = 4; // 0x4
