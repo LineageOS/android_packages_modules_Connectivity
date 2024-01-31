@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.net.thread;
+package android.net.thread.utils;
 
-import static android.net.thread.IntegrationTestUtils.waitFor;
+import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
 import static com.google.common.io.BaseEncoding.base16;
 
@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import android.net.InetAddresses;
 import android.net.IpPrefix;
+import android.net.thread.ActiveOperationalDataset;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Inet6Address;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -115,10 +117,10 @@ public final class FullThreadDevice {
      *
      * @param states the list of states to wait for. Valid states are "disabled", "detached",
      *     "child", "router" and "leader".
-     * @param timeoutSeconds the number of seconds to wait for.
+     * @param timeout the time to wait for the expected state before throwing
      */
-    public void waitForStateAnyOf(List<String> states, int timeoutSeconds) throws TimeoutException {
-        waitFor(() -> states.contains(getState()), timeoutSeconds);
+    public void waitForStateAnyOf(List<String> states, Duration timeout) throws TimeoutException {
+        waitFor(() -> states.contains(getState()), timeout);
     }
 
     /**
