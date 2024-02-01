@@ -17,7 +17,10 @@
 package com.android.server.thread;
 
 import android.annotation.Nullable;
+import android.net.IpPrefix;
 import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.RouteInfo;
 import android.net.util.SocketUtils;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
@@ -31,6 +34,7 @@ import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 /** Controller for virtual/tunnel network interfaces. */
 public class TunInterfaceController {
@@ -43,13 +47,21 @@ public class TunInterfaceController {
     }
 
     private final String mIfName;
+    private final LinkProperties mLinkProperties = new LinkProperties();
     private ParcelFileDescriptor mParcelTunFd;
     private FileDescriptor mNetlinkSocket;
     private static int sNetlinkSeqNo = 0;
 
     /** Creates a new {@link TunInterfaceController} instance for given interface. */
     public TunInterfaceController(String interfaceName) {
-        this.mIfName = interfaceName;
+        mIfName = interfaceName;
+        mLinkProperties.setInterfaceName(mIfName);
+        mLinkProperties.setMtu(MTU);
+    }
+
+    /** Returns link properties of the Thread TUN interface. */
+    public LinkProperties getLinkProperties() {
+        return mLinkProperties;
     }
 
     /**
@@ -87,13 +99,18 @@ public class TunInterfaceController {
 
     /** Sets the interface up or down according to {@code isUp}. */
     public void setInterfaceUp(boolean isUp) throws IOException {
+        if (!isUp) {
+            for (LinkAddress address : mLinkProperties.getAllLinkAddresses()) {
+                removeAddress(address);
+            }
+        }
         nativeSetInterfaceUp(mIfName, isUp);
     }
 
     private native void nativeSetInterfaceUp(String interfaceName, boolean isUp) throws IOException;
 
     /** Adds a new address to the interface. */
-    public void addAddress(LinkAddress address) throws IOException {
+    public void addAddress(LinkAddress address) {
         Log.d(TAG, "Adding address " + address + " with flags: " + address.getFlags());
 
         long validLifetimeSeconds;
@@ -121,7 +138,7 @@ public class TunInterfaceController {
 
         byte[] message =
                 RtNetlinkAddressMessage.newRtmNewAddressMessage(
-                        sNetlinkSeqNo,
+                        sNetlinkSeqNo++,
                         address.getAddress(),
                         (short) address.getPrefixLength(),
                         address.getFlags(),
@@ -131,13 +148,51 @@ public class TunInterfaceController {
                         preferredLifetimeSeconds);
         try {
             Os.write(mNetlinkSocket, message, 0, message.length);
-        } catch (ErrnoException e) {
-            throw new IOException("Failed to send netlink message", e);
+        } catch (ErrnoException | InterruptedIOException e) {
+            Log.e(TAG, "Failed to add address " + address, e);
+            return;
         }
+        mLinkProperties.addLinkAddress(address);
+        mLinkProperties.addRoute(getRouteForAddress(address));
     }
 
     /** Removes an address from the interface. */
-    public void removeAddress(LinkAddress address) throws IOException {
-        // TODO(b/263222068): remove address with netlink
+    public void removeAddress(LinkAddress address) {
+        Log.d(TAG, "Removing address " + address);
+        byte[] message =
+                RtNetlinkAddressMessage.newRtmDelAddressMessage(
+                        sNetlinkSeqNo++,
+                        address.getAddress(),
+                        (short) address.getPrefixLength(),
+                        Os.if_nametoindex(mIfName));
+
+        // Intentionally update the mLinkProperties before send netlink message because the
+        // address is already removed from ot-daemon and apps can't reach to the address even
+        // when the netlink request below fails
+        mLinkProperties.removeLinkAddress(address);
+        mLinkProperties.removeRoute(getRouteForAddress(address));
+        try {
+            Os.write(mNetlinkSocket, message, 0, message.length);
+        } catch (ErrnoException | InterruptedIOException e) {
+            Log.e(TAG, "Failed to remove address " + address, e);
+        }
+    }
+
+    private RouteInfo getRouteForAddress(LinkAddress linkAddress) {
+        return new RouteInfo(
+                new IpPrefix(linkAddress.getAddress(), linkAddress.getPrefixLength()),
+                null,
+                mIfName,
+                RouteInfo.RTN_UNICAST,
+                MTU);
+    }
+
+    /** Called by {@link ThreadNetworkControllerService} to do clean up when ot-daemon is dead. */
+    public void onOtDaemonDied() {
+        try {
+            setInterfaceUp(false);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to set Thread TUN interface down");
+        }
     }
 }
