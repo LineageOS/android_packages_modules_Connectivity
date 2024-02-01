@@ -212,7 +212,7 @@ public class NetlinkUtilsTest {
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.R) // getsockoptInt requires > R
     public void testNetlinkSocketForProto_defaultBufferSize() throws Exception {
-        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE, 0);
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
         final int bufferSize = Os.getsockoptInt(fd, SOL_SOCKET, SO_RCVBUF) / 2;
 
         assertTrue("bufferSize: " + bufferSize, bufferSize > 0); // whatever the default value is
