@@ -31,6 +31,8 @@
         <option name="mainline-module-package-name" value="com.google.android.tethering" />
     </object>
 
+    <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer" />
+
     <!-- Install test -->
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="ThreadNetworkIntegrationTests.apk" />
