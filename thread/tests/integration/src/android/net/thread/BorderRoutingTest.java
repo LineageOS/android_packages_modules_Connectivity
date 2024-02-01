@@ -18,14 +18,15 @@ package android.net.thread;
 
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.Manifest.permission.NETWORK_SETTINGS;
-import static android.net.thread.IntegrationTestUtils.isExpectedIcmpv6Packet;
-import static android.net.thread.IntegrationTestUtils.isSimulatedThreadRadioSupported;
-import static android.net.thread.IntegrationTestUtils.newPacketReader;
-import static android.net.thread.IntegrationTestUtils.readPacketFrom;
-import static android.net.thread.IntegrationTestUtils.waitFor;
-import static android.net.thread.IntegrationTestUtils.waitForStateAnyOf;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_LEADER;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
+import static android.net.thread.utils.IntegrationTestUtils.JOIN_TIMEOUT;
+import static android.net.thread.utils.IntegrationTestUtils.isExpectedIcmpv6Packet;
+import static android.net.thread.utils.IntegrationTestUtils.isSimulatedThreadRadioSupported;
+import static android.net.thread.utils.IntegrationTestUtils.newPacketReader;
+import static android.net.thread.utils.IntegrationTestUtils.readPacketFrom;
+import static android.net.thread.utils.IntegrationTestUtils.waitFor;
+import static android.net.thread.utils.IntegrationTestUtils.waitForStateAnyOf;
 
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ECHO_REPLY_TYPE;
 import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
@@ -41,6 +42,8 @@ import static org.junit.Assume.assumeTrue;
 import android.content.Context;
 import android.net.LinkProperties;
 import android.net.MacAddress;
+import android.net.thread.utils.FullThreadDevice;
+import android.net.thread.utils.InfraNetworkDevice;
 import android.os.Handler;
 import android.os.HandlerThread;
 
@@ -57,6 +60,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.Inet6Address;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -155,14 +159,14 @@ public class BorderRoutingTest {
         runAsShell(
                 PERMISSION_THREAD_NETWORK_PRIVILEGED,
                 () -> mController.join(DEFAULT_DATASET, directExecutor(), result -> {}));
-        waitForStateAnyOf(mController, List.of(DEVICE_ROLE_LEADER), 30 /* timeoutSeconds */);
+        waitForStateAnyOf(mController, List.of(DEVICE_ROLE_LEADER), JOIN_TIMEOUT);
 
         // Creates a Full Thread Device (FTD) and lets it join the network.
         FullThreadDevice ftd = new FullThreadDevice(5 /* node ID */);
         ftd.factoryReset();
         ftd.joinNetwork(DEFAULT_DATASET);
-        ftd.waitForStateAnyOf(List.of("router", "child"), 10 /* timeoutSeconds */);
-        waitFor(() -> ftd.getOmrAddress() != null, 60 /* timeoutSeconds */);
+        ftd.waitForStateAnyOf(List.of("router", "child"), JOIN_TIMEOUT);
+        waitFor(() -> ftd.getOmrAddress() != null, Duration.ofSeconds(60));
         Inet6Address ftdOmr = ftd.getOmrAddress();
         assertNotNull(ftdOmr);
 
@@ -171,7 +175,7 @@ public class BorderRoutingTest {
                 newPacketReader(mInfraNetworkTracker.getTestIface(), mHandler);
         InfraNetworkDevice infraDevice =
                 new InfraNetworkDevice(MacAddress.fromString("1:2:3:4:5:6"), infraNetworkReader);
-        infraDevice.runSlaac(60 /* timeoutSeconds */);
+        infraDevice.runSlaac(Duration.ofSeconds(60));
         assertNotNull(infraDevice.ipv6Addr);
 
         // Infra device sends an echo request to FTD's OMR.
