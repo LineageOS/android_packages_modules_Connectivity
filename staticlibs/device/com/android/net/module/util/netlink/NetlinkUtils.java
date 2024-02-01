@@ -225,7 +225,7 @@ public class NetlinkUtils {
     }
 
     /**
-     * Create netlink socket with the given netlink protocol type.
+     * Create netlink socket with the given netlink protocol type and buffersize.
      *
      * @param nlProto the netlink protocol
      * @param bufferSize the receive buffer size to set when the value is not 0
@@ -243,10 +243,23 @@ public class NetlinkUtils {
     }
 
     /**
+     * Create netlink socket with the given netlink protocol type. Receive buffer size is not set.
+     *
+     * @param nlProto the netlink protocol
+     *
+     * @return fd the fileDescriptor of the socket.
+     * @throws ErrnoException if the FileDescriptor not connect to be created successfully
+     */
+    public static FileDescriptor netlinkSocketForProto(int nlProto)
+            throws ErrnoException {
+        return netlinkSocketForProto(nlProto, 0);
+    }
+
+    /**
      * Construct a netlink inet_diag socket.
      */
     public static FileDescriptor createNetLinkInetDiagSocket() throws ErrnoException {
-        return netlinkSocketForProto(NETLINK_INET_DIAG, 0);
+        return netlinkSocketForProto(NETLINK_INET_DIAG);
     }
 
     /**
