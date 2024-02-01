@@ -60,8 +60,7 @@ public class TunInterfaceController {
     public void createTunInterface() throws IOException {
         mParcelTunFd = ParcelFileDescriptor.adoptFd(nativeCreateTunInterface(mIfName, MTU));
         try {
-            mNetlinkSocket =
-                    NetlinkUtils.netlinkSocketForProto(OsConstants.NETLINK_ROUTE, 0);
+            mNetlinkSocket = NetlinkUtils.netlinkSocketForProto(OsConstants.NETLINK_ROUTE);
         } catch (ErrnoException e) {
             throw new IOException("Failed to create netlink socket", e);
         }
