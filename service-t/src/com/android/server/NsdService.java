@@ -2295,7 +2295,7 @@ public class NsdService extends INsdManager.Stub {
                 permissionsList.add(DEVICE_POWER);
             }
 
-            if (PermissionUtils.checkAnyPermissionOf(context,
+            if (PermissionUtils.hasAnyPermissionOf(context,
                     permissionsList.toArray(new String[0]))) {
                 return;
             }
@@ -2492,7 +2492,7 @@ public class NsdService extends INsdManager.Stub {
 
     @Override
     public void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
-        if (!PermissionUtils.checkDumpPermission(mContext, TAG, writer)) return;
+        if (!PermissionUtils.hasDumpPermission(mContext, TAG, writer)) return;
 
         final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
         // Dump state machine logs
