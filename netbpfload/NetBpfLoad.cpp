@@ -173,11 +173,40 @@ int main(int argc, char** argv, char * const envp[]) {
     (void)argc;
     android::base::InitLogging(argv, &android::base::KernelLogger);
 
-    const int device_api_level = android_get_device_api_level();
-    const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
+    ALOGI("NetBpfLoad '%s' starting...", argv[0]);
 
-    if (!android::bpf::isAtLeastKernelVersion(4, 19, 0)) {
-        ALOGE("Android U QPR2 requires kernel 4.19.");
+    // true iff we are running from the module
+    const bool is_mainline = !strcmp(argv[0], "/apex/com.android.tethering/bin/netbpfload");
+
+    // true iff we are running from the platform
+    const bool is_platform = !strcmp(argv[0], "/system/bin/netbpfload");
+
+    const int device_api_level = android_get_device_api_level();
+    const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
+    const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
+    const bool isAtLeastV = (device_api_level >= __ANDROID_API_V__);
+
+    ALOGI("NetBpfLoad api:%d/%d kver:%07x platform:%d mainline:%d",
+          android_get_application_target_sdk_version(), device_api_level,
+          android::bpf::kernelVersion(), is_platform, is_mainline);
+
+    if (!is_platform && !is_mainline) {
+        ALOGE("Unable to determine if we're platform or mainline netbpfload.");
+        return 1;
+    }
+
+    if (isAtLeastT && !android::bpf::isAtLeastKernelVersion(4, 9, 0)) {
+        ALOGE("Android T requires kernel 4.9.");
+        return 1;
+    }
+
+    if (isAtLeastU && !android::bpf::isAtLeastKernelVersion(4, 14, 0)) {
+        ALOGE("Android U requires kernel 4.14.");
+        return 1;
+    }
+
+    if (isAtLeastV && !android::bpf::isAtLeastKernelVersion(4, 19, 0)) {
+        ALOGE("Android V requires kernel 4.19.");
         return 1;
     }
 
