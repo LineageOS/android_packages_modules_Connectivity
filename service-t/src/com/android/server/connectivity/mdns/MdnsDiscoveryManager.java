@@ -55,7 +55,8 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     @NonNull private final DiscoveryExecutor discoveryExecutor;
     @NonNull private final MdnsFeatureFlags mdnsFeatureFlags;
 
-    // Only accessed on the handler thread, set to non-null right after initializing the handler
+    // Only accessed on the handler thread, initialized before first use
+    @Nullable
     private MdnsServiceCache serviceCache;
 
     private static class PerSocketServiceTypeClients {
@@ -129,11 +130,6 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
         this.perSocketServiceTypeClients = new PerSocketServiceTypeClients();
         this.mdnsFeatureFlags = mdnsFeatureFlags;
         this.discoveryExecutor = new DiscoveryExecutor(socketClient.getLooper());
-
-        // The very first posted task is to initialize the service cache, so it will be always
-        // set in other tasks running on the handler
-        discoveryExecutor.execute(() ->
-                serviceCache = new MdnsServiceCache(Looper.myLooper(), mdnsFeatureFlags));
     }
 
     private static class DiscoveryExecutor implements Executor {
@@ -358,9 +354,13 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
         sharedLog.log("createServiceTypeClient for type:" + serviceType + " " + socketKey);
         final String tag = serviceType + "-" + socketKey.getNetwork()
                 + "/" + socketKey.getInterfaceIndex();
+        final Looper looper = Looper.myLooper();
+        if (serviceCache == null) {
+            serviceCache = new MdnsServiceCache(looper, mdnsFeatureFlags);
+        }
         return new MdnsServiceTypeClient(
                 serviceType, socketClient,
                 executorProvider.newServiceTypeClientSchedulerExecutor(), socketKey,
-                sharedLog.forSubComponent(tag), Looper.myLooper(), serviceCache);
+                sharedLog.forSubComponent(tag), looper, serviceCache);
     }
 }
