@@ -12929,7 +12929,7 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(NETWORK_STACK, PERMISSION_GRANTED);
         assertTrue(
                 "NetworkStack permission not applied",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid(), Process.myUid(), naiWithoutUid,
                         mContext.getOpPackageName()));
     }
@@ -12941,7 +12941,7 @@ public class ConnectivityServiceTest {
         mServiceContext.setPermission(STATUS_BAR_SERVICE, PERMISSION_GRANTED);
         assertTrue(
                 "SysUi permission (STATUS_BAR_SERVICE) not applied",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid(), Process.myUid(), naiWithoutUid,
                         mContext.getOpPackageName()));
     }
@@ -12958,7 +12958,7 @@ public class ConnectivityServiceTest {
 
         assertFalse(
                 "Mismatched uid/package name should not pass the location permission check",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid() + 1, wrongUid, naiWithUid, mContext.getOpPackageName()));
     }
 
@@ -12969,7 +12969,7 @@ public class ConnectivityServiceTest {
         assertEquals(
                 "Unexpected ConnDiags permission",
                 expectPermission,
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid(), Process.myUid(), info, mContext.getOpPackageName()));
     }
 
@@ -13011,7 +13011,7 @@ public class ConnectivityServiceTest {
         waitForIdle();
         assertTrue(
                 "Active VPN permission not applied",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid(), Process.myUid(), naiWithoutUid,
                         mContext.getOpPackageName()));
 
@@ -13019,7 +13019,7 @@ public class ConnectivityServiceTest {
         waitForIdle();
         assertFalse(
                 "VPN shouldn't receive callback on non-underlying network",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid(), Process.myUid(), naiWithoutUid,
                         mContext.getOpPackageName()));
     }
@@ -13036,7 +13036,7 @@ public class ConnectivityServiceTest {
 
         assertTrue(
                 "NetworkCapabilities administrator uid permission not applied",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid(), Process.myUid(), naiWithUid, mContext.getOpPackageName()));
     }
 
@@ -13054,7 +13054,7 @@ public class ConnectivityServiceTest {
         // Use wrong pid and uid
         assertFalse(
                 "Permissions allowed when they shouldn't be granted",
-                mService.checkConnectivityDiagnosticsPermissions(
+                mService.hasConnectivityDiagnosticsPermissions(
                         Process.myPid() + 1, Process.myUid() + 1, naiWithUid,
                         mContext.getOpPackageName()));
     }

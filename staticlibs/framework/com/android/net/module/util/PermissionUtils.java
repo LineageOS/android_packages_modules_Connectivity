@@ -23,6 +23,7 @@ import static android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 
+import android.annotation.CheckResult;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -45,8 +46,9 @@ public final class PermissionUtils {
     /**
      * Return true if the context has one of given permission.
      */
-    public static boolean checkAnyPermissionOf(@NonNull Context context,
-            @NonNull String... permissions) {
+    @CheckResult
+    public static boolean hasAnyPermissionOf(@NonNull Context context,
+                                             @NonNull String... permissions) {
         for (String permission : permissions) {
             if (context.checkCallingOrSelfPermission(permission) == PERMISSION_GRANTED) {
                 return true;
@@ -56,11 +58,12 @@ public final class PermissionUtils {
     }
 
     /**
-     * Return true if the context has one of give permission that is allowed
+     * Return true if the context has one of given permission that is allowed
      * for a particular process and user ID running in the system.
      */
-    public static boolean checkAnyPermissionOf(@NonNull Context context,
-            int pid, int uid, @NonNull String... permissions) {
+    @CheckResult
+    public static boolean hasAnyPermissionOf(@NonNull Context context,
+                                             int pid, int uid, @NonNull String... permissions) {
         for (String permission : permissions) {
             if (context.checkPermission(permission, pid, uid) == PERMISSION_GRANTED) {
                 return true;
@@ -74,7 +77,7 @@ public final class PermissionUtils {
      */
     public static void enforceAnyPermissionOf(@NonNull Context context,
             @NonNull String... permissions) {
-        if (!checkAnyPermissionOf(context, permissions)) {
+        if (!hasAnyPermissionOf(context, permissions)) {
             throw new SecurityException("Requires one of the following permissions: "
                     + String.join(", ", permissions) + ".");
         }
@@ -133,7 +136,8 @@ public final class PermissionUtils {
     /**
      * Return true if the context has DUMP permission.
      */
-    public static boolean checkDumpPermission(Context context, String tag, PrintWriter pw) {
+    @CheckResult
+    public static boolean hasDumpPermission(Context context, String tag, PrintWriter pw) {
         if (context.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
                 != PERMISSION_GRANTED) {
             pw.println("Permission Denial: can't dump " + tag + " from from pid="
