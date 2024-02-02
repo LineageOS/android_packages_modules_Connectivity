@@ -39,6 +39,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -139,6 +140,7 @@ public class MdnsServiceTypeClient {
                     // before sending the query, it needs to be called just before sending it.
                     final List<MdnsResponse> servicesToResolve = makeResponsesForResolve(socketKey);
                     final QueryTask queryTask = new QueryTask(taskArgs, servicesToResolve,
+                            getAllDiscoverySubtypes(),
                             servicesToResolve.size() < listeners.size() /* sendDiscoveryQueries */);
                     executor.submit(queryTask);
                     break;
@@ -359,7 +361,6 @@ public class MdnsServiceTypeClient {
         // Keep tracking the ScheduledFuture for the task so we can cancel it if caller is not
         // interested anymore.
         final QueryTaskConfig taskConfig = new QueryTaskConfig(
-                searchOptions.getSubtypes(),
                 searchOptions.getQueryMode(),
                 searchOptions.onlyUseIpv6OnIpv6OnlyNetworks(),
                 searchOptions.numOfQueriesBeforeBackoff(),
@@ -387,11 +388,21 @@ public class MdnsServiceTypeClient {
             final QueryTask queryTask = new QueryTask(
                     mdnsQueryScheduler.scheduleFirstRun(taskConfig, now,
                             minRemainingTtl, currentSessionId), servicesToResolve,
+                    getAllDiscoverySubtypes(),
                     servicesToResolve.size() < listeners.size() /* sendDiscoveryQueries */);
             executor.submit(queryTask);
         }
 
         serviceCache.registerServiceExpiredCallback(cacheKey, serviceExpiredCallback);
+    }
+
+    private Set<String> getAllDiscoverySubtypes() {
+        final Set<String> subtypes = MdnsUtils.newSet();
+        for (int i = 0; i < listeners.size(); i++) {
+            final MdnsSearchOptions listenerOptions = listeners.valueAt(i).searchOptions;
+            subtypes.addAll(listenerOptions.getSubtypes());
+        }
+        return subtypes;
     }
 
     /**
@@ -664,11 +675,15 @@ public class MdnsServiceTypeClient {
     private class QueryTask implements Runnable {
         private final MdnsQueryScheduler.ScheduledQueryTaskArgs taskArgs;
         private final List<MdnsResponse> servicesToResolve = new ArrayList<>();
+        private final List<String> subtypes = new ArrayList<>();
         private final boolean sendDiscoveryQueries;
         QueryTask(@NonNull MdnsQueryScheduler.ScheduledQueryTaskArgs taskArgs,
-                @NonNull List<MdnsResponse> servicesToResolve, boolean sendDiscoveryQueries) {
+                @NonNull Collection<MdnsResponse> servicesToResolve,
+                @NonNull Collection<String> subtypes,
+                boolean sendDiscoveryQueries) {
             this.taskArgs = taskArgs;
             this.servicesToResolve.addAll(servicesToResolve);
+            this.subtypes.addAll(subtypes);
             this.sendDiscoveryQueries = sendDiscoveryQueries;
         }
 
@@ -681,7 +696,7 @@ public class MdnsServiceTypeClient {
                                 socketClient,
                                 createMdnsPacketWriter(),
                                 serviceType,
-                                taskArgs.config.subtypes,
+                                subtypes,
                                 taskArgs.config.expectUnicastResponse,
                                 taskArgs.config.transactionId,
                                 taskArgs.config.socketKey,
@@ -693,7 +708,7 @@ public class MdnsServiceTypeClient {
                                 .call();
             } catch (RuntimeException e) {
                 sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
-                        TextUtils.join(",", taskArgs.config.subtypes)), e);
+                        TextUtils.join(",", subtypes)), e);
                 result = Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
             }
             dependencies.sendMessage(

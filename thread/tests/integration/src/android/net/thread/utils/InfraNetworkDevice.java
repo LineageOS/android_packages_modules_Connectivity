@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.net.thread;
+package android.net.thread.utils;
 
-import static android.net.thread.IntegrationTestUtils.getRaPios;
-import static android.net.thread.IntegrationTestUtils.readPacketFrom;
-import static android.net.thread.IntegrationTestUtils.waitFor;
+import static android.net.thread.utils.IntegrationTestUtils.getRaPios;
+import static android.net.thread.utils.IntegrationTestUtils.readPacketFrom;
+import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_SLLA;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ALL_ROUTERS_MULTICAST;
@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
@@ -100,8 +101,8 @@ public final class InfraNetworkDevice {
      * @param timeoutSeconds the number of seconds to wait for.
      * @throws TimeoutException when the device fails to generate a SLAAC address in given timeout.
      */
-    public void runSlaac(int timeoutSeconds) throws TimeoutException {
-        waitFor(() -> (ipv6Addr = runSlaac()) != null, timeoutSeconds, 5 /* intervalSeconds */);
+    public void runSlaac(Duration timeout) throws TimeoutException {
+        waitFor(() -> (ipv6Addr = runSlaac()) != null, timeout);
     }
 
     private Inet6Address runSlaac() {

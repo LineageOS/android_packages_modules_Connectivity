@@ -17,6 +17,7 @@
 // Tests in this folder are included both in unit tests and CTS.
 // They must be fast and stable, and exercise public or test APIs.
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -93,7 +94,10 @@ android_test {
     name: "ConnectivityCoverageTests",
     // Tethering started on SDK 30
     min_sdk_version: "30",
-    test_suites: ["general-tests", "mts-tethering"],
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
     defaults: [
         "ConnectivityTestsLatestSdkDefaults",
         "framework-connectivity-internal-test-defaults",
@@ -185,7 +189,7 @@ java_defaults {
 // See SuiteModuleLoader.java.
 // TODO: why are the modules separated by + instead of being separate entries in the array?
 mainline_presubmit_modules = [
-        "CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex",
+    "CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex",
 ]
 
 cc_defaults {

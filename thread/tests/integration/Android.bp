@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_thread_network",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -23,12 +24,14 @@ java_defaults {
     min_sdk_version: "30",
     static_libs: [
         "androidx.test.rules",
+        "compatibility-device-util-axt",
         "guava",
         "mockito-target-minus-junit4",
         "net-tests-utils",
         "net-utils-device-common",
         "net-utils-device-common-bpf",
         "testables",
+        "truth",
     ],
     libs: [
         "android.test.runner",
