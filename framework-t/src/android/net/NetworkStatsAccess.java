@@ -128,7 +128,7 @@ public final class NetworkStatsAccess {
 
         final int appId = UserHandle.getAppId(callingUid);
 
-        final boolean isNetworkStack = PermissionUtils.checkAnyPermissionOf(
+        final boolean isNetworkStack = PermissionUtils.hasAnyPermissionOf(
                 context, callingPid, callingUid, android.Manifest.permission.NETWORK_STACK,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
 

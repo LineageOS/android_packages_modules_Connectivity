@@ -1461,7 +1461,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     private int restrictFlagsForCaller(int flags, @Nullable String callingPackage) {
         // All non-privileged callers are not allowed to turn off POLL_ON_OPEN.
-        final boolean isPrivileged = PermissionUtils.checkAnyPermissionOf(mContext,
+        final boolean isPrivileged = PermissionUtils.hasAnyPermissionOf(mContext,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
                 android.Manifest.permission.NETWORK_STACK);
         if (!isPrivileged) {
@@ -2667,7 +2667,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     @Override
     protected void dump(FileDescriptor fd, PrintWriter rawWriter, String[] args) {
-        if (!PermissionUtils.checkDumpPermission(mContext, TAG, rawWriter)) return;
+        if (!PermissionUtils.hasDumpPermission(mContext, TAG, rawWriter)) return;
 
         long duration = DateUtils.DAY_IN_MILLIS;
         final HashSet<String> argSet = new HashSet<String>();
