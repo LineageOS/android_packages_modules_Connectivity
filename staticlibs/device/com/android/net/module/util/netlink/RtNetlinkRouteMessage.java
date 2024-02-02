@@ -19,10 +19,8 @@ package com.android.net.module.util.netlink;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
 
-import static android.system.OsConstants.NETLINK_ROUTE;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_ANY;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ANY;
-import static com.android.net.module.util.netlink.NetlinkConstants.hexify;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 
 import android.annotation.SuppressLint;
@@ -38,9 +36,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.util.Arrays;
 
 /**
  * A NetlinkMessage subclass for rtnetlink route messages.
@@ -86,16 +81,25 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     private long mSinceLastUseMillis; // Milliseconds since the route was used,
                                       // for resolved multicast routes
 
-    public RtNetlinkRouteMessage(StructNlMsgHdr header, StructRtMsg rtMsg) {
+
+    @VisibleForTesting
+    public RtNetlinkRouteMessage(final StructNlMsgHdr header, final StructRtMsg rtMsg,
+            final IpPrefix source, final IpPrefix destination, final InetAddress gateway,
+            int iif, int oif, final StructRtaCacheInfo cacheInfo) {
         super(header);
         mRtmsg = rtMsg;
-        mSource = null;
-        mDestination = null;
-        mGateway = null;
-        mIifIndex = 0;
-        mOifIndex = 0;
-        mRtaCacheInfo = null;
+        mSource = source;
+        mDestination = destination;
+        mGateway = gateway;
+        mIifIndex = iif;
+        mOifIndex = oif;
+        mRtaCacheInfo = cacheInfo;
         mSinceLastUseMillis = -1;
+    }
+
+    public RtNetlinkRouteMessage(StructNlMsgHdr header, StructRtMsg rtMsg) {
+        this(header, rtMsg, null /* source */, null /* destination */, null /* gateway */,
+                0 /* iif */, 0 /* oif */, null /* cacheInfo */);
     }
 
     /**
