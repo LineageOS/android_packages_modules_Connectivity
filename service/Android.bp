@@ -202,7 +202,6 @@ java_library {
         "com.android.tethering",
     ],
     lint: {
-        strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
 
     },
@@ -273,9 +272,6 @@ java_defaults {
     ],
     optimize: {
         proguard_flags_files: ["proguard.flags"],
-    },
-    lint: {
-        strict_updatability_linting: true,
     },
 }
 
