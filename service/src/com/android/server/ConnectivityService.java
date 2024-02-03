@@ -108,15 +108,14 @@ import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_EGRESS;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_INGRESS;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_SOCK_CREATE;
 import static com.android.net.module.util.NetworkMonitorUtils.isPrivateDnsValidationRequired;
-import static com.android.net.module.util.PermissionUtils.checkAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermission;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermissionOr;
+import static com.android.net.module.util.PermissionUtils.hasAnyPermissionOf;
 import static com.android.server.ConnectivityStatsLog.CONNECTIVITY_STATE_SAMPLE;
 
-import static java.util.Map.Entry;
-
 import android.Manifest;
+import android.annotation.CheckResult;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
@@ -351,7 +350,6 @@ import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
@@ -2651,7 +2649,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         Objects.requireNonNull(packageName);
         Objects.requireNonNull(lp);
         enforceNetworkStackOrSettingsPermission();
-        if (!checkAccessPermission(-1 /* pid */, uid)) {
+        if (!hasAccessPermission(-1 /* pid */, uid)) {
             return null;
         }
         return linkPropertiesRestrictedForCallerPermissions(lp, -1 /* callerPid */, uid);
@@ -2687,7 +2685,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         Objects.requireNonNull(nc);
         Objects.requireNonNull(packageName);
         enforceNetworkStackOrSettingsPermission();
-        if (!checkAccessPermission(-1 /* pid */, uid)) {
+        if (!hasAccessPermission(-1 /* pid */, uid)) {
             return null;
         }
         return createWithLocationInfoSanitizedIfNecessaryWhenParceled(
@@ -2698,14 +2696,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void redactUnderlyingNetworksForCapabilities(NetworkCapabilities nc, int pid, int uid) {
         if (nc.getUnderlyingNetworks() != null
-                && !checkNetworkFactoryOrSettingsPermission(pid, uid)) {
+                && !hasNetworkFactoryOrSettingsPermission(pid, uid)) {
             nc.setUnderlyingNetworks(null);
         }
     }
 
     private boolean canSeeAllowedUids(final int pid, final int uid, final int netOwnerUid) {
         return Process.SYSTEM_UID == uid
-                || checkAnyPermissionOf(mContext, pid, uid,
+                || hasAnyPermissionOf(mContext, pid, uid,
                         android.Manifest.permission.NETWORK_FACTORY);
     }
 
@@ -2718,14 +2716,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // it happens for some reason (e.g. the package is uninstalled while CS is trying to
         // send the callback) it would crash the system server with NPE.
         final NetworkCapabilities newNc = new NetworkCapabilities(nc);
-        if (!checkSettingsPermission(callerPid, callerUid)) {
+        if (!hasSettingsPermission(callerPid, callerUid)) {
             newNc.setUids(null);
             newNc.setSSID(null);
         }
         if (newNc.getNetworkSpecifier() != null) {
             newNc.setNetworkSpecifier(newNc.getNetworkSpecifier().redact());
         }
-        if (!checkAnyPermissionOf(mContext, callerPid, callerUid,
+        if (!hasAnyPermissionOf(mContext, callerPid, callerUid,
                 android.Manifest.permission.NETWORK_STACK,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)) {
             newNc.setAdministratorUids(new int[0]);
@@ -2793,11 +2791,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * Returns whether the app holds local mac address permission or not (might return cached
          * result if the permission was already checked before).
          */
+        @CheckResult
         public boolean hasLocalMacAddressPermission() {
             if (mHasLocalMacAddressPermission == null) {
                 // If there is no cached result, perform the check now.
-                mHasLocalMacAddressPermission =
-                        checkLocalMacAddressPermission(mCallingPid, mCallingUid);
+                mHasLocalMacAddressPermission = ConnectivityService.this
+                        .hasLocalMacAddressPermission(mCallingPid, mCallingUid);
             }
             return mHasLocalMacAddressPermission;
         }
@@ -2806,10 +2805,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
          * Returns whether the app holds settings permission or not (might return cached
          * result if the permission was already checked before).
          */
+        @CheckResult
         public boolean hasSettingsPermission() {
             if (mHasSettingsPermission == null) {
                 // If there is no cached result, perform the check now.
-                mHasSettingsPermission = checkSettingsPermission(mCallingPid, mCallingUid);
+                mHasSettingsPermission =
+                        ConnectivityService.this.hasSettingsPermission(mCallingPid, mCallingUid);
             }
             return mHasSettingsPermission;
         }
@@ -2913,7 +2914,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return new LinkProperties(lp);
         }
 
-        if (checkSettingsPermission(callerPid, callerUid)) {
+        if (hasSettingsPermission(callerPid, callerUid)) {
             return new LinkProperties(lp, true /* parcelSensitiveFields */);
         }
 
@@ -2929,7 +2930,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             int callerUid, String callerPackageName) {
         // There is no need to track the effective UID of the request here. If the caller
         // lacks the settings permission, the effective UID is the same as the calling ID.
-        if (!checkSettingsPermission()) {
+        if (!hasSettingsPermission()) {
             // Unprivileged apps can only pass in null or their own UID.
             if (nc.getUids() == null) {
                 // If the caller passes in null, the callback will also match networks that do not
@@ -3383,7 +3384,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 "ConnectivityService");
     }
 
-    private boolean checkAccessPermission(int pid, int uid) {
+    @CheckResult
+    private boolean hasAccessPermission(int pid, int uid) {
         return mContext.checkPermission(android.Manifest.permission.ACCESS_NETWORK_STATE, pid, uid)
                 == PERMISSION_GRANTED;
     }
@@ -3469,7 +3471,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
     }
 
-    private boolean checkNetworkFactoryOrSettingsPermission(int pid, int uid) {
+    @CheckResult
+    private boolean hasNetworkFactoryOrSettingsPermission(int pid, int uid) {
         return PERMISSION_GRANTED == mContext.checkPermission(
                 android.Manifest.permission.NETWORK_FACTORY, pid, uid)
                 || PERMISSION_GRANTED == mContext.checkPermission(
@@ -3479,13 +3482,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 || UserHandle.getAppId(uid) == Process.BLUETOOTH_UID;
     }
 
-    private boolean checkSettingsPermission() {
-        return PermissionUtils.checkAnyPermissionOf(mContext,
-                android.Manifest.permission.NETWORK_SETTINGS,
+    @CheckResult
+    private boolean hasSettingsPermission() {
+        return hasAnyPermissionOf(mContext, android.Manifest.permission.NETWORK_SETTINGS,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
     }
 
-    private boolean checkSettingsPermission(int pid, int uid) {
+    @CheckResult
+    private boolean hasSettingsPermission(int pid, int uid) {
         return PERMISSION_GRANTED == mContext.checkPermission(
                 android.Manifest.permission.NETWORK_SETTINGS, pid, uid)
                 || PERMISSION_GRANTED == mContext.checkPermission(
@@ -3522,33 +3526,36 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 "ConnectivityService");
     }
 
-    private boolean checkNetworkStackPermission() {
-        return PermissionUtils.checkAnyPermissionOf(mContext,
-                android.Manifest.permission.NETWORK_STACK,
+    @CheckResult
+    private boolean hasNetworkStackPermission() {
+        return hasAnyPermissionOf(mContext, android.Manifest.permission.NETWORK_STACK,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
     }
 
-    private boolean checkNetworkStackPermission(int pid, int uid) {
-        return checkAnyPermissionOf(mContext, pid, uid,
-                android.Manifest.permission.NETWORK_STACK,
+    @CheckResult
+    private boolean hasNetworkStackPermission(int pid, int uid) {
+        return hasAnyPermissionOf(mContext, pid, uid, android.Manifest.permission.NETWORK_STACK,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK);
     }
 
-    private boolean checkSystemBarServicePermission(int pid, int uid) {
-        return checkAnyPermissionOf(mContext, pid, uid,
+    @CheckResult
+    private boolean hasSystemBarServicePermission(int pid, int uid) {
+        return hasAnyPermissionOf(mContext, pid, uid,
                 android.Manifest.permission.STATUS_BAR_SERVICE);
     }
 
-    private boolean checkNetworkSignalStrengthWakeupPermission(int pid, int uid) {
-        return checkAnyPermissionOf(mContext, pid, uid,
+    @CheckResult
+    private boolean hasNetworkSignalStrengthWakeupPermission(int pid, int uid) {
+        return hasAnyPermissionOf(mContext, pid, uid,
                 android.Manifest.permission.NETWORK_SIGNAL_STRENGTH_WAKEUP,
                 NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
                 android.Manifest.permission.NETWORK_SETTINGS);
     }
 
-    private boolean checkConnectivityRestrictedNetworksPermission(int callingUid,
+    @CheckResult
+    private boolean hasConnectivityRestrictedNetworksPermission(int callingUid,
             boolean checkUidsAllowedList) {
-        if (PermissionUtils.checkAnyPermissionOf(mContext,
+        if (hasAnyPermissionOf(mContext,
                 android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS)) {
             return true;
         }
@@ -3556,8 +3563,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // fallback to ConnectivityInternalPermission
         // TODO: Remove this fallback check after all apps have declared
         //  CONNECTIVITY_USE_RESTRICTED_NETWORKS.
-        if (PermissionUtils.checkAnyPermissionOf(mContext,
-                android.Manifest.permission.CONNECTIVITY_INTERNAL)) {
+        if (hasAnyPermissionOf(mContext, android.Manifest.permission.CONNECTIVITY_INTERNAL)) {
             return true;
         }
 
@@ -3571,7 +3577,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private void enforceConnectivityRestrictedNetworksPermission(boolean checkUidsAllowedList) {
         final int callingUid = mDeps.getCallingUid();
-        if (!checkConnectivityRestrictedNetworksPermission(callingUid, checkUidsAllowedList)) {
+        if (!hasConnectivityRestrictedNetworksPermission(callingUid, checkUidsAllowedList)) {
             throw new SecurityException("ConnectivityService: user " + callingUid
                     + " has no permission to access restricted network.");
         }
@@ -3581,7 +3587,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mContext.enforceCallingOrSelfPermission(KeepaliveTracker.PERMISSION, "ConnectivityService");
     }
 
-    private boolean checkLocalMacAddressPermission(int pid, int uid) {
+    @CheckResult
+    private boolean hasLocalMacAddressPermission(int pid, int uid) {
         return PERMISSION_GRANTED == mContext.checkPermission(
                 Manifest.permission.LOCAL_MAC_ADDRESS, pid, uid);
     }
@@ -3875,12 +3882,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
     @Override
     protected void dump(@NonNull FileDescriptor fd, @NonNull PrintWriter writer,
             @Nullable String[] args) {
-        if (!checkDumpPermission(mContext, TAG, writer)) return;
+        if (!hasDumpPermission(mContext, TAG, writer)) return;
 
         mPriorityDumper.dump(fd, writer, args);
     }
 
-    private boolean checkDumpPermission(Context context, String tag, PrintWriter pw) {
+    @CheckResult
+    private boolean hasDumpPermission(Context context, String tag, PrintWriter pw) {
         if (context.checkCallingOrSelfPermission(android.Manifest.permission.DUMP)
                 != PackageManager.PERMISSION_GRANTED) {
             pw.println("Permission Denial: can't dump " + tag + " from from pid="
@@ -5697,7 +5705,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private RequestInfoPerUidCounter getRequestCounter(NetworkRequestInfo nri) {
-        return checkAnyPermissionOf(mContext,
+        return hasAnyPermissionOf(mContext,
                 nri.mPid, nri.mUid, NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)
                 ? mSystemNetworkRequestCounter : mNetworkRequestCounter;
     }
@@ -5921,7 +5929,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (nm == null) return;
 
             if (request == CaptivePortal.APP_REQUEST_REEVALUATION_REQUIRED) {
-                checkNetworkStackPermission();
+                hasNetworkStackPermission();
                 nm.forceReevaluation(mDeps.getCallingUid());
             }
         }
@@ -5951,7 +5959,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * @see MultinetworkPolicyTracker#getAvoidBadWifi()
      */
     public boolean shouldAvoidBadWifi() {
-        if (!checkNetworkStackPermission()) {
+        if (!hasNetworkStackPermission()) {
             throw new SecurityException("avoidBadWifi requires NETWORK_STACK permission");
         }
         return avoidBadWifi();
@@ -7471,12 +7479,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // specific SSID/SignalStrength, or the calling app has permission to do so.
     private void ensureSufficientPermissionsForRequest(NetworkCapabilities nc,
             int callerPid, int callerUid, String callerPackageName) {
-        if (null != nc.getSsid() && !checkSettingsPermission(callerPid, callerUid)) {
+        if (null != nc.getSsid() && !hasSettingsPermission(callerPid, callerUid)) {
             throw new SecurityException("Insufficient permissions to request a specific SSID");
         }
 
         if (nc.hasSignalStrength()
-                && !checkNetworkSignalStrengthWakeupPermission(callerPid, callerUid)) {
+                && !hasNetworkSignalStrengthWakeupPermission(callerPid, callerUid)) {
             throw new SecurityException(
                     "Insufficient permissions to request a specific signal strength");
         }
@@ -7574,7 +7582,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             int reqTypeInt, Messenger messenger, int timeoutMs, final IBinder binder,
             int legacyType, int callbackFlags, @NonNull String callingPackageName,
             @Nullable String callingAttributionTag) {
-        if (legacyType != TYPE_NONE && !checkNetworkStackPermission()) {
+        if (legacyType != TYPE_NONE && !hasNetworkStackPermission()) {
             if (isTargetSdkAtleast(Build.VERSION_CODES.M, mDeps.getCallingUid(),
                     callingPackageName)) {
                 throw new SecurityException("Insufficient permissions to specify legacy type");
@@ -11324,7 +11332,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         // Connection owner UIDs are visible only to the network stack and to the VpnService-based
         // VPN, if any, that applies to the UID that owns the connection.
-        if (checkNetworkStackPermission()) return uid;
+        if (hasNetworkStackPermission()) return uid;
 
         final NetworkAgentInfo vpn = getVpnForUid(uid);
         if (vpn == null || getVpnType(vpn) != VpnManager.TYPE_VPN_SERVICE
@@ -11584,7 +11592,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (report == null) {
                 continue;
             }
-            if (!checkConnectivityDiagnosticsPermissions(
+            if (!hasConnectivityDiagnosticsPermissions(
                     nri.mPid, nri.mUid, nai, cbInfo.mCallingPackageName)) {
                 continue;
             }
@@ -11747,7 +11755,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 continue;
             }
 
-            if (!checkConnectivityDiagnosticsPermissions(
+            if (!hasConnectivityDiagnosticsPermissions(
                     nri.mPid, nri.mUid, nai, cbInfo.mCallingPackageName)) {
                 continue;
             }
@@ -11791,14 +11799,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return false;
     }
 
+    @CheckResult
     @VisibleForTesting
-    boolean checkConnectivityDiagnosticsPermissions(
+    boolean hasConnectivityDiagnosticsPermissions(
             int callbackPid, int callbackUid, NetworkAgentInfo nai, String callbackPackageName) {
-        if (checkNetworkStackPermission(callbackPid, callbackUid)) {
+        if (hasNetworkStackPermission(callbackPid, callbackUid)) {
             return true;
         }
         if (mAllowSysUiConnectivityReports
-                && checkSystemBarServicePermission(callbackPid, callbackUid)) {
+                && hasSystemBarServicePermission(callbackPid, callbackUid)) {
             return true;
         }
 
