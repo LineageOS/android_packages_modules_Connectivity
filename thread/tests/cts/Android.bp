@@ -51,4 +51,5 @@ android_test {
     // Test coverage system runs on different devices. Need to
     // compile for all architectures.
     compile_multilib: "both",
+    platform_apis: true,
 }
