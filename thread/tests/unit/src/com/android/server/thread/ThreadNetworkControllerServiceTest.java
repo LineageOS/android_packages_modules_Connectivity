@@ -87,6 +87,7 @@ public final class ThreadNetworkControllerServiceTest {
     @Mock private ParcelFileDescriptor mMockTunFd;
     @Mock private InfraInterfaceController mMockInfraIfController;
     @Mock private ThreadPersistentSettings mMockPersistentSettings;
+    @Mock private NsdPublisher mMockNsdPublisher;
     private Context mContext;
     private TestLooper mTestLooper;
     private FakeOtDaemon mFakeOtDaemon;
@@ -117,12 +118,13 @@ public final class ThreadNetworkControllerServiceTest {
                         mMockConnectivityManager,
                         mMockTunIfController,
                         mMockInfraIfController,
-                        mMockPersistentSettings);
+                        mMockPersistentSettings,
+                        mMockNsdPublisher);
         mService.setTestNetworkAgent(mMockNetworkAgent);
     }
 
     @Test
-    public void initialize_tunInterfaceSetToOtDaemon() throws Exception {
+    public void initialize_tunInterfaceAndNsdPublisherSetToOtDaemon() throws Exception {
         when(mMockTunIfController.getTunFd()).thenReturn(mMockTunFd);
 
         mService.initialize();
@@ -130,6 +132,7 @@ public final class ThreadNetworkControllerServiceTest {
 
         verify(mMockTunIfController, times(1)).createTunInterface();
         assertThat(mFakeOtDaemon.getTunFd()).isEqualTo(mMockTunFd);
+        assertThat(mFakeOtDaemon.getNsdPublisher()).isEqualTo(mMockNsdPublisher);
     }
 
     @Test
