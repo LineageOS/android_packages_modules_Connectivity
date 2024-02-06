@@ -82,6 +82,9 @@ java_defaults {
         "framework-tethering.impl",
     ],
     manifest: "AndroidManifestBase.xml",
+    lint: {
+        error_checks: ["NewApi"],
+    },
 }
 
 // build tethering static library, used to compile both variants of the tethering.

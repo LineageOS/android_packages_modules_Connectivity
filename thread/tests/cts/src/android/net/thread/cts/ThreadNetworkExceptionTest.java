@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import androidx.test.filters.SmallTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** Tests for {@link ThreadNetworkException}. */
+/** CTS tests for {@link ThreadNetworkException}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
 public final class ThreadNetworkExceptionTest {
@@ -57,8 +57,9 @@ public final class ThreadNetworkExceptionTest {
     }
 
     @Test
-    public void constructor_invalidErrorCode_throwsIllegalArgumentException() throws Exception {
+    public void constructor_tooSmallErrorCode_throwsIllegalArgumentException() throws Exception {
         assertThrows(IllegalArgumentException.class, () -> new ThreadNetworkException(0, "0"));
-        assertThrows(IllegalArgumentException.class, () -> new ThreadNetworkException(13, "13"));
+        // TODO: add argument check for too large error code when mainline CTS is ready. This was
+        // not added here for CTS forward copatibility.
     }
 }
