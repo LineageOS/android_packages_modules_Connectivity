@@ -32,6 +32,7 @@ import android.util.Log;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -57,8 +58,9 @@ import java.util.Objects;
  * from the http server, the same mechanism is applied but in a different direction,
  * where the source and destination will be swapped.
  */
-public class PacketForwarder extends Thread {
+public abstract class PacketForwarderBase extends Thread {
     private static final String TAG = "PacketForwarder";
+    static final int DESTINATION_PORT_OFFSET = 2;
 
     // The source fd to read packets from.
     @NonNull
@@ -70,8 +72,10 @@ public class PacketForwarder extends Thread {
     @NonNull
     final FileDescriptor mDstFd;
 
+    @NonNull
+    final Map<Integer, Integer> mPortRemapRules;
     /**
-     * Construct a {@link PacketForwarder}.
+     * Construct a {@link PacketForwarderBase}.
      *
      * This class reads packets from {@code srcFd} of a {@link TestNetworkInterface}, and
      * forwards them to the {@code dstFd} of another {@link TestNetworkInterface}.
@@ -82,13 +86,49 @@ public class PacketForwarder extends Thread {
      * @param srcFd   {@link FileDescriptor} to read packets from.
      * @param mtu     MTU of the test network.
      * @param dstFd   {@link FileDescriptor} to write packets to.
+     * @param portRemapRules    port remap rules
      */
-    public PacketForwarder(@NonNull FileDescriptor srcFd, int mtu,
-                           @NonNull FileDescriptor dstFd) {
+    public PacketForwarderBase(@NonNull FileDescriptor srcFd, int mtu,
+                           @NonNull FileDescriptor dstFd,
+                           @NonNull Map<Integer, Integer> portRemapRules) {
         super(TAG);
         mSrcFd = Objects.requireNonNull(srcFd);
         mBuf = new byte[mtu];
         mDstFd = Objects.requireNonNull(dstFd);
+        mPortRemapRules = Objects.requireNonNull(portRemapRules);
+    }
+
+    /**
+     * A method to prepare forwarding packets between two instances of {@link TestNetworkInterface},
+     * which includes ports mapping.
+     * Subclasses should override this method to implement the needed port remapping.
+     * For internal forwarder will remapped destination port,
+     * external forwarder will remapped source port.
+     * Example:
+     * An outgoing packet from the internal interface with
+     * source 1.2.3.4:1234 and destination 8.8.8.8:80
+     * might be translated to 8.8.8.8:1234 -> 1.2.3.4:8080 before forwarding.
+     * An outgoing packet from the external interface with
+     * source 1.2.3.4:8080 and destination 8.8.8.8:1234
+     * might be translated to 8.8.8.8:80 -> 1.2.3.4:1234 before forwarding.
+     */
+    abstract void remapPort(@NonNull byte[] buf, int version);
+
+    /**
+     * Retrieves a potentially remapped port number from a packet.
+     *
+     * @param buf            The packet data as a byte array.
+     * @param transportOffset The offset within the packet where the transport layer port begins.
+     * @return The remapped port if a mapping exists in the internal forwarding map,
+     *         otherwise returns 0 (indicating no remapping).
+     */
+    int getRemappedPort(@NonNull byte[] buf, int transportOffset) {
+        int port = PacketReflectorUtil.getPortAt(buf, transportOffset);
+        return mPortRemapRules.getOrDefault(port, 0);
+    }
+
+    int getTransportOffset(int version) {
+        return version == 4 ? IPV4_HEADER_LENGTH : IPV6_HEADER_LENGTH;
     }
 
     private void forwardPacket(@NonNull byte[] buf, int len) {
@@ -99,7 +139,13 @@ public class PacketForwarder extends Thread {
         }
     }
 
-    // Reads one packet from mSrcFd, and writes the packet to the mDstFd for supported protocols.
+    /**
+     * Reads one packet from mSrcFd, and writes the packet to the mDestFd for supported protocols.
+     * This includes:
+     * 1.Address Swapping: Swaps source and destination IP addresses.
+     * 2.Port Remapping: Remap port if necessary.
+     * 3.Checksum Recalculation: Updates IP and transport layer checksums to reflect changes.
+     */
     private void processPacket() {
         final int len = PacketReflectorUtil.readPacket(mSrcFd, mBuf);
         if (len < 1) {
@@ -142,13 +188,19 @@ public class PacketForwarder extends Thread {
         if (len < ipHdrLen + transportHdrLen) {
             throw new IllegalStateException("Unexpected buffer length: " + len);
         }
-        // Swap addresses.
+
+        // Swap source and destination address.
         PacketReflectorUtil.swapAddresses(mBuf, version);
+
+        // Remapping the port.
+        remapPort(mBuf, version);
+
+        // Fix IP and Transport layer checksum.
+        PacketReflectorUtil.fixPacketChecksum(mBuf, len, version, proto);
 
         // Send the packet to the destination fd.
         forwardPacket(mBuf, len);
     }
-
     @Override
     public void run() {
         Log.i(TAG, "starting fd=" + mSrcFd + " valid=" + mSrcFd.valid());
