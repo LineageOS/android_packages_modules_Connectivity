@@ -17,6 +17,7 @@
 aconfig_declarations {
     name: "com.android.net.flags-aconfig",
     package: "com.android.net.flags",
+    container: "system",
     srcs: ["flags.aconfig"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
