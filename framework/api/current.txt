@@ -332,6 +332,7 @@ package android.net {
     field public static final int NET_CAPABILITY_IA = 7; // 0x7
     field public static final int NET_CAPABILITY_IMS = 4; // 0x4
     field public static final int NET_CAPABILITY_INTERNET = 12; // 0xc
+    field @FlaggedApi("com.android.net.flags.net_capability_local_network") public static final int NET_CAPABILITY_LOCAL_NETWORK = 36; // 0x24
     field public static final int NET_CAPABILITY_MCX = 23; // 0x17
     field public static final int NET_CAPABILITY_MMS = 0; // 0x0
     field public static final int NET_CAPABILITY_MMTEL = 33; // 0x21
