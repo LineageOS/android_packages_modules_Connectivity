@@ -59,6 +59,7 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException
 import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
+import com.android.server.connectivity.CarrierPrivilegeAuthenticator.CarrierPrivilegesLostListener
 import com.android.server.connectivity.ClatCoordinator
 import com.android.server.connectivity.ConnectivityFlags
 import com.android.server.connectivity.MulticastRoutingCoordinatorService
@@ -66,7 +67,6 @@ import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies
 import com.android.server.connectivity.NetworkRequestStateStatsMetrics
 import com.android.server.connectivity.ProxyTracker
-import com.android.server.connectivity.RoutingCoordinatorService
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
@@ -133,6 +133,7 @@ open class CSTest {
     // permissions using static contexts.
     val enabledFeatures = HashMap<String, Boolean>().also {
         it[ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER] = true
+        it[ConnectivityFlags.REQUEST_RESTRICTED_WIFI] = true
         it[ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS] = true
@@ -200,7 +201,9 @@ open class CSTest {
 
         override fun makeCarrierPrivilegeAuthenticator(
                 context: Context,
-                tm: TelephonyManager
+                tm: TelephonyManager,
+                requestRestrictedWifiEnabled: Boolean,
+                listener: CarrierPrivilegesLostListener
         ) = if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
 
         private inner class AOOKTDeps(c: Context) : AutomaticOnOffKeepaliveTracker.Dependencies(c) {

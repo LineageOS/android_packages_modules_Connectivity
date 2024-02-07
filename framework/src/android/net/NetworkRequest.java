@@ -34,6 +34,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
+import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
@@ -145,6 +146,12 @@ import java.util.Set;
  * Look up the specific capability to learn whether its usage requires this self-certification.
  */
 public class NetworkRequest implements Parcelable {
+
+    /** @hide */
+    public static class Flags {
+        static final String REQUEST_RESTRICTED_WIFI =
+                "com.android.net.flags.request_restricted_wifi";
+    }
     /**
      * The first requestId value that will be allocated.
      * @hide only used by ConnectivityService.
@@ -630,10 +637,9 @@ public class NetworkRequest implements Parcelable {
          * NETWORK_FACTORY permission.
          *
          * @param subIds A {@code Set} that represents subscription IDs.
-         * @hide
          */
         @NonNull
-        @SystemApi
+        @FlaggedApi(Flags.REQUEST_RESTRICTED_WIFI)
         public Builder setSubscriptionIds(@NonNull Set<Integer> subIds) {
             mNetworkCapabilities.setSubscriptionIds(subIds);
             return this;
@@ -889,5 +895,18 @@ public class NetworkRequest implements Parcelable {
         // No need to make a defensive copy here as NC#getTransportTypes() already returns
         // a new array.
         return networkCapabilities.getTransportTypes();
+    }
+
+    /**
+     * Gets all the subscription ids set on this {@code NetworkRequest} instance.
+     *
+     * @return Set of Integer values for this instance.
+     */
+    @NonNull
+    @FlaggedApi(Flags.REQUEST_RESTRICTED_WIFI)
+    public Set<Integer> getSubscriptionIds() {
+        // No need to make a defensive copy here as NC#getSubscriptionIds() already returns
+        // a new set.
+        return networkCapabilities.getSubscriptionIds();
     }
 }
