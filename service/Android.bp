@@ -186,7 +186,7 @@ java_library {
         "androidx.annotation_annotation",
         "connectivity-net-module-utils-bpf",
         "connectivity_native_aidl_interface-lateststable-java",
-        "dnsresolver_aidl_interface-V13-java",
+        "dnsresolver_aidl_interface-V14-java",
         "modules-utils-shell-command-handler",
         "net-utils-device-common",
         "net-utils-device-common-ip",
