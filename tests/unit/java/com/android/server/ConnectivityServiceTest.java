@@ -157,6 +157,7 @@ import static android.system.OsConstants.IPPROTO_TCP;
 import static android.telephony.DataConnectionRealTimeInfo.DC_POWER_STATE_HIGH;
 import static android.telephony.DataConnectionRealTimeInfo.DC_POWER_STATE_LOW;
 
+import static com.android.server.ConnectivityService.ALLOW_SATALLITE_NETWORK_FALLBACK;
 import static com.android.server.ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION;
 import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
 import static com.android.server.ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS;
@@ -421,6 +422,7 @@ import com.android.server.connectivity.NetworkNotificationManager;
 import com.android.server.connectivity.NetworkNotificationManager.NotificationType;
 import com.android.server.connectivity.ProxyTracker;
 import com.android.server.connectivity.QosCallbackTracker;
+import com.android.server.connectivity.SatelliteAccessController;
 import com.android.server.connectivity.TcpKeepaliveController;
 import com.android.server.connectivity.UidRangeUtils;
 import com.android.server.connectivity.VpnProfileStore;
@@ -642,6 +644,7 @@ public class ConnectivityServiceTest {
     @Mock DestroySocketsWrapper mDestroySocketsWrapper;
     @Mock SubscriptionManager mSubscriptionManager;
     @Mock KeepaliveTracker.Dependencies mMockKeepaliveTrackerDependencies;
+    @Mock SatelliteAccessController mSatelliteAccessController;
 
     // BatteryStatsManager is final and cannot be mocked with regular mockito, so just mock the
     // underlying binder calls.
@@ -2061,6 +2064,14 @@ public class ConnectivityServiceTest {
         }
 
         @Override
+        public SatelliteAccessController makeSatelliteAccessController(
+                @NonNull final Context context,
+                Consumer<Set<Integer>> updateSatelliteNetworkFallbackUidCallback,
+                @NonNull final Handler connectivityServiceInternalHandler) {
+            return mSatelliteAccessController;
+        }
+
+        @Override
         public boolean intentFilterEquals(final PendingIntent a, final PendingIntent b) {
             return runAsShell(GET_INTENT_SENDER_INTENT, () -> a.intentFilterEquals(b));
         }
@@ -2167,6 +2178,8 @@ public class ConnectivityServiceTest {
                 case ALLOW_SYSUI_CONNECTIVITY_REPORTS:
                     return true;
                 case LOG_BPF_RC:
+                    return true;
+                case ALLOW_SATALLITE_NETWORK_FALLBACK:
                     return true;
                 default:
                     return super.isFeatureNotChickenedOut(context, name);
