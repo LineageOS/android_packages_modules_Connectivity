@@ -56,6 +56,7 @@ import com.android.server.ConnectivityService
 import com.android.server.NetworkAgentWrapper
 import com.android.server.TestNetIdManager
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
+import com.android.server.connectivity.CarrierPrivilegeAuthenticator.CarrierPrivilegesLostListener
 import com.android.server.connectivity.ConnectivityResources
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
@@ -240,14 +241,17 @@ class ConnectivityServiceIntegrationTest {
 
         override fun makeCarrierPrivilegeAuthenticator(
             context: Context,
-            tm: TelephonyManager
+            tm: TelephonyManager,
+            requestRestrictedWifiEnabled: Boolean,
+            listener: CarrierPrivilegesLostListener
         ): CarrierPrivilegeAuthenticator {
             return CarrierPrivilegeAuthenticator(context,
                 object : CarrierPrivilegeAuthenticator.Dependencies() {
                     override fun makeHandlerThread(): HandlerThread =
                         super.makeHandlerThread().also { handlerThreads.add(it) }
                 },
-                tm, TelephonyManagerShimImpl.newInstance(tm))
+                tm, TelephonyManagerShimImpl.newInstance(tm),
+                requestRestrictedWifiEnabled, listener)
         }
     }
 

@@ -20,6 +20,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.telephony.TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED;
 
+import static com.android.server.connectivity.CarrierPrivilegeAuthenticator.CarrierPrivilegesLostListener;
 import static com.android.server.connectivity.ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK;
 
 import static org.junit.Assert.assertEquals;
@@ -54,10 +55,12 @@ import com.android.networkstack.apishim.TelephonyManagerShimImpl;
 import com.android.networkstack.apishim.common.TelephonyManagerShim.CarrierPrivilegesListenerShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator.Dependencies;
+import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -67,6 +70,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Tests for CarrierPrivilegeAuthenticatorTest.
@@ -77,6 +81,9 @@ import java.util.Map;
 @RunWith(DevSdkIgnoreRunner.class)
 @IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class CarrierPrivilegeAuthenticatorTest {
+    @Rule
+    public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
+
     private static final int SUBSCRIPTION_COUNT = 2;
     private static final int TEST_SUBSCRIPTION_ID = 1;
 
@@ -85,7 +92,9 @@ public class CarrierPrivilegeAuthenticatorTest {
     @NonNull private final TelephonyManagerShimImpl mTelephonyManagerShim;
     @NonNull private final PackageManager mPackageManager;
     @NonNull private TestCarrierPrivilegeAuthenticator mCarrierPrivilegeAuthenticator;
+    @NonNull private final CarrierPrivilegesLostListener mListener;
     private final int mCarrierConfigPkgUid = 12345;
+    private final boolean mUseCallbacks;
     private final String mTestPkg = "com.android.server.connectivity.test";
     private final BroadcastReceiver mMultiSimBroadcastReceiver;
     @NonNull private final HandlerThread mHandlerThread;
@@ -94,7 +103,8 @@ public class CarrierPrivilegeAuthenticatorTest {
         TestCarrierPrivilegeAuthenticator(@NonNull final Context c,
                 @NonNull final Dependencies deps,
                 @NonNull final TelephonyManager t) {
-            super(c, deps, t, mTelephonyManagerShim);
+            super(c, deps, t, mTelephonyManagerShim, true /* requestRestrictedWifiEnabled */,
+                    mListener);
         }
         @Override
         protected int getSlotIndex(int subId) {
@@ -119,7 +129,9 @@ public class CarrierPrivilegeAuthenticatorTest {
         mTelephonyManager = mock(TelephonyManager.class);
         mTelephonyManagerShim = mock(TelephonyManagerShimImpl.class);
         mPackageManager = mock(PackageManager.class);
+        mListener = mock(CarrierPrivilegesLostListener.class);
         mHandlerThread = new HandlerThread(CarrierPrivilegeAuthenticatorTest.class.getSimpleName());
+        mUseCallbacks = useCallbacks;
         final Dependencies deps = mock(Dependencies.class);
         doReturn(useCallbacks).when(deps).isFeatureEnabled(any() /* context */,
                 eq(CARRIER_SERVICE_CHANGED_USE_CALLBACK));
@@ -220,6 +232,18 @@ public class CarrierPrivilegeAuthenticatorTest {
     }
 
     @Test
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testCarrierPrivilegesLostDueToCarrierServiceUpdate() throws Exception {
+        final CarrierPrivilegesListenerShim l = getCarrierPrivilegesListeners().get(0);
+
+        l.onCarrierServiceChanged(null, mCarrierConfigPkgUid);
+        l.onCarrierServiceChanged(null, mCarrierConfigPkgUid + 1);
+        if (mUseCallbacks) {
+            verify(mListener).onCarrierPrivilegesLost(eq(mCarrierConfigPkgUid));
+        }
+    }
+
+    @Test
     public void testOnCarrierPrivilegesChanged() throws Exception {
         final CarrierPrivilegesListenerShim listener = getCarrierPrivilegesListeners().get(0);
 
@@ -261,6 +285,34 @@ public class CarrierPrivilegeAuthenticatorTest {
         ncBuilder.removeTransportType(TRANSPORT_CELLULAR);
         ncBuilder.addTransportType(TRANSPORT_WIFI);
         ncBuilder.setNetworkSpecifier(new TelephonyNetworkSpecifier(0));
+        assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
+                mCarrierConfigPkgUid, ncBuilder.build()));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testNetworkCapabilitiesContainOneSubId() throws Exception {
+        final CarrierPrivilegesListenerShim listener = getCarrierPrivilegesListeners().get(0);
+        listener.onCarrierServiceChanged(null, mCarrierConfigPkgUid);
+
+        final NetworkCapabilities.Builder ncBuilder = new NetworkCapabilities.Builder();
+        ncBuilder.addTransportType(TRANSPORT_WIFI);
+        ncBuilder.removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
+        ncBuilder.setSubscriptionIds(Set.of(0));
+        assertTrue(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
+                mCarrierConfigPkgUid, ncBuilder.build()));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testNetworkCapabilitiesContainTwoSubIds() throws Exception {
+        final CarrierPrivilegesListenerShim listener = getCarrierPrivilegesListeners().get(0);
+        listener.onCarrierServiceChanged(null, mCarrierConfigPkgUid);
+
+        final NetworkCapabilities.Builder ncBuilder = new NetworkCapabilities.Builder();
+        ncBuilder.addTransportType(TRANSPORT_WIFI);
+        ncBuilder.removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
+        ncBuilder.setSubscriptionIds(Set.of(0, 1));
         assertFalse(mCarrierPrivilegeAuthenticator.isCarrierServiceUidForNetworkCapabilities(
                 mCarrierConfigPkgUid, ncBuilder.build()));
     }
