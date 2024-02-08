@@ -59,6 +59,7 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException
 import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
+import com.android.server.connectivity.CarrierPrivilegeAuthenticator.CarrierPrivilegesLostListener
 import com.android.server.connectivity.ClatCoordinator
 import com.android.server.connectivity.ConnectivityFlags
 import com.android.server.connectivity.MulticastRoutingCoordinatorService
@@ -66,7 +67,7 @@ import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.MultinetworkPolicyTrackerTestDependencies
 import com.android.server.connectivity.NetworkRequestStateStatsMetrics
 import com.android.server.connectivity.ProxyTracker
-import com.android.server.connectivity.RoutingCoordinatorService
+import com.android.server.connectivity.SatelliteAccessController
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
@@ -77,6 +78,7 @@ import org.mockito.AdditionalAnswers.delegatesTo
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
+import java.util.function.Consumer
 
 internal const val HANDLER_TIMEOUT_MS = 2_000
 internal const val BROADCAST_TIMEOUT_MS = 3_000L
@@ -133,10 +135,12 @@ open class CSTest {
     // permissions using static contexts.
     val enabledFeatures = HashMap<String, Boolean>().also {
         it[ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER] = true
+        it[ConnectivityFlags.REQUEST_RESTRICTED_WIFI] = true
         it[ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS] = true
         it[ConnectivityService.LOG_BPF_RC] = true
+        it[ConnectivityService.ALLOW_SATALLITE_NETWORK_FALLBACK] = true
     }
     fun enableFeature(f: String) = enabledFeatures.set(f, true)
     fun disableFeature(f: String) = enabledFeatures.set(f, false)
@@ -173,6 +177,7 @@ open class CSTest {
     }
 
     val multicastRoutingCoordinatorService = mock<MulticastRoutingCoordinatorService>()
+    val satelliteAccessController = mock<SatelliteAccessController>()
 
     val deps = CSDeps()
     val service = makeConnectivityService(context, netd, deps).also { it.systemReadyInternal() }
@@ -200,8 +205,20 @@ open class CSTest {
 
         override fun makeCarrierPrivilegeAuthenticator(
                 context: Context,
-                tm: TelephonyManager
+                tm: TelephonyManager,
+                requestRestrictedWifiEnabled: Boolean,
+                listener: CarrierPrivilegesLostListener
         ) = if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
+
+        var satelliteNetworkFallbackUidUpdate: Consumer<Set<Int>>? = null
+        override fun makeSatelliteAccessController(
+            context: Context,
+            updateSatelliteNetworkFallackUid: Consumer<Set<Int>>?,
+            csHandlerThread: Handler
+        ): SatelliteAccessController? {
+            satelliteNetworkFallbackUidUpdate = updateSatelliteNetworkFallackUid
+            return satelliteAccessController
+        }
 
         private inner class AOOKTDeps(c: Context) : AutomaticOnOffKeepaliveTracker.Dependencies(c) {
             override fun isTetheringFeatureNotChickenedOut(name: String): Boolean {

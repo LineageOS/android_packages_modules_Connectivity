@@ -20,6 +20,7 @@ import static com.android.internal.annotations.VisibleForTesting.Visibility.PRIV
 import static com.android.net.module.util.BitUtils.appendStringRepresentationOfBitMaskToStringBuilder;
 import static com.android.net.module.util.BitUtils.describeDifferences;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.LongDef;
 import android.annotation.NonNull;
@@ -29,9 +30,6 @@ import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.net.ConnectivityManager.NetworkCallback;
-// Can't be imported because aconfig tooling doesn't exist on udc-mainline-prod yet
-// See inner class Flags which mimics this for the time being
-// import android.net.flags.Flags;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -130,6 +128,12 @@ public final class NetworkCapabilities implements Parcelable {
     public static class Flags {
         static final String FLAG_FORBIDDEN_CAPABILITY =
                 "com.android.net.flags.forbidden_capability";
+        static final String FLAG_NET_CAPABILITY_LOCAL_NETWORK =
+                "com.android.net.flags.net_capability_local_network";
+        static final String REQUEST_RESTRICTED_WIFI =
+                "com.android.net.flags.request_restricted_wifi";
+        static final String SUPPORT_TRANSPORT_SATELLITE =
+                "com.android.net.flags.support_transport_satellite";
     }
 
     /**
@@ -716,17 +720,13 @@ public final class NetworkCapabilities implements Parcelable {
     public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
 
     /**
-     * This is a local network, e.g. a tethering downstream or a P2P direct network.
+     * Indicates that this network is a local network, e.g. thread network
      *
-     * <p>
-     * Note that local networks are not sent to callbacks by default. To receive callbacks about
-     * them, the {@link NetworkRequest} instance must be prepared to see them, either by
-     * adding the capability with {@link NetworkRequest.Builder#addCapability}, by removing
-     * this forbidden capability with {@link NetworkRequest.Builder#removeForbiddenCapability},
-     * or by clearing all capabilites with {@link NetworkRequest.Builder#clearCapabilities()}.
-     * </p>
-     * @hide
+     * Apps that target an SDK before {@link Build.VERSION_CODES.VANILLA_ICE_CREAM} will not see
+     * networks with this capability unless they explicitly set the NET_CAPABILITY_LOCAL_NETWORK
+     * in their NetworkRequests.
      */
+    @FlaggedApi(Flags.FLAG_NET_CAPABILITY_LOCAL_NETWORK)
     public static final int NET_CAPABILITY_LOCAL_NETWORK = 36;
 
     private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_LOCAL_NETWORK;
@@ -1257,6 +1257,7 @@ public final class NetworkCapabilities implements Parcelable {
             TRANSPORT_TEST,
             TRANSPORT_USB,
             TRANSPORT_THREAD,
+            TRANSPORT_SATELLITE,
     })
     public @interface Transport { }
 
@@ -1313,10 +1314,16 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public static final int TRANSPORT_THREAD = 9;
 
+    /**
+     * Indicates this network uses a Satellite transport.
+     */
+    @FlaggedApi(Flags.SUPPORT_TRANSPORT_SATELLITE)
+    public static final int TRANSPORT_SATELLITE = 10;
+
     /** @hide */
     public static final int MIN_TRANSPORT = TRANSPORT_CELLULAR;
     /** @hide */
-    public static final int MAX_TRANSPORT = TRANSPORT_THREAD;
+    public static final int MAX_TRANSPORT = TRANSPORT_SATELLITE;
 
     private static final int ALL_VALID_TRANSPORTS;
     static {
@@ -1343,6 +1350,7 @@ public final class NetworkCapabilities implements Parcelable {
         "TEST",
         "USB",
         "THREAD",
+        "SATELLITE",
     };
 
     /**
@@ -2794,10 +2802,9 @@ public final class NetworkCapabilities implements Parcelable {
      * receiver holds the NETWORK_FACTORY permission. In all other cases, it will be the empty set.
      *
      * @return
-     * @hide
      */
     @NonNull
-    @SystemApi
+    @FlaggedApi(Flags.REQUEST_RESTRICTED_WIFI)
     public Set<Integer> getSubscriptionIds() {
         return new ArraySet<>(mSubIds);
     }
