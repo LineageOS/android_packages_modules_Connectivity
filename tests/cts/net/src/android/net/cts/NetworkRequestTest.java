@@ -32,6 +32,8 @@ import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.VANILLA_ICE_CREAM;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static junit.framework.Assert.fail;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -170,6 +172,20 @@ public class NetworkRequestTest {
                 .clearCapabilities()
                 .build()
                 .getNetworkSpecifier());
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S)
+    public void testSubscriptionIds() {
+        int[] subIds = {1, 2};
+        assertTrue(
+                new NetworkRequest.Builder().build()
+                        .getSubscriptionIds().isEmpty());
+        assertThat(new NetworkRequest.Builder()
+                .setSubscriptionIds(Set.of(subIds[0], subIds[1]))
+                .build()
+                .getSubscriptionIds())
+                .containsExactly(subIds[0], subIds[1]);
     }
 
     @Test
