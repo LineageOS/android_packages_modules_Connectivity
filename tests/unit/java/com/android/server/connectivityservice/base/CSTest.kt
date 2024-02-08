@@ -16,6 +16,7 @@
 
 package com.android.server
 
+import android.app.AlarmManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -71,14 +72,15 @@ import com.android.server.connectivity.SatelliteAccessController
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
+import java.util.function.Consumer
 import kotlin.test.assertNull
 import kotlin.test.fail
 import org.junit.After
+import org.junit.Before
 import org.mockito.AdditionalAnswers.delegatesTo
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
-import java.util.function.Consumer
 
 internal const val HANDLER_TIMEOUT_MS = 2_000
 internal const val BROADCAST_TIMEOUT_MS = 3_000L
@@ -167,8 +169,6 @@ open class CSTest {
     val clatCoordinator = mock<ClatCoordinator>()
     val networkRequestStateStatsMetrics = mock<NetworkRequestStateStatsMetrics>()
     val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
-    val alrmHandlerThread = HandlerThread("TestAlarmManager").also { it.start() }
-    val alarmManager = makeMockAlarmManager(alrmHandlerThread)
     val systemConfigManager = makeMockSystemConfigManager()
     val batteryStats = mock<IBatteryStats>()
     val batteryManager = BatteryStatsManager(batteryStats)
@@ -180,16 +180,31 @@ open class CSTest {
     val satelliteAccessController = mock<SatelliteAccessController>()
 
     val deps = CSDeps()
-    val service = makeConnectivityService(context, netd, deps).also { it.systemReadyInternal() }
-    val cm = ConnectivityManager(context, service)
-    val csHandler = Handler(csHandlerThread.looper)
+
+    // Initializations that start threads are done from setUp to avoid thread leak
+    lateinit var alarmHandlerThread: HandlerThread
+    lateinit var alarmManager: AlarmManager
+    lateinit var service: ConnectivityService
+    lateinit var cm: ConnectivityManager
+    lateinit var csHandler: Handler
+
+    @Before
+    fun setUp() {
+        alarmHandlerThread = HandlerThread("TestAlarmManager").also { it.start() }
+        alarmManager = makeMockAlarmManager(alarmHandlerThread)
+        service = makeConnectivityService(context, netd, deps).also { it.systemReadyInternal() }
+        cm = ConnectivityManager(context, service)
+        // csHandler initialization must be after makeConnectivityService since ConnectivityService
+        // constructor starts csHandlerThread
+        csHandler = Handler(csHandlerThread.looper)
+    }
 
     @After
     fun tearDown() {
         csHandlerThread.quitSafely()
         csHandlerThread.join()
-        alrmHandlerThread.quitSafely()
-        alrmHandlerThread.join()
+        alarmHandlerThread.quitSafely()
+        alarmHandlerThread.join()
     }
 
     inner class CSDeps : ConnectivityService.Dependencies() {
