@@ -3,6 +3,17 @@
 
     <issue
         id="NewApi"
+        message="Call requires API level 33 (current min is 30): `getUidRule`"
+        errorLine1="        return BpfNetMapsReader.getUidRule(sUidOwnerMap, childChain, uid);"
+        errorLine2="                                ~~~~~~~~~~">
+        <location
+            file="packages/modules/Connectivity/service/src/com/android/server/BpfNetMaps.java"
+            line="643"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="NewApi"
         message="Call requires API level 31 (current min is 30): `BpfBitmap`"
         errorLine1="                return new BpfBitmap(BLOCKED_PORTS_MAP_PATH);"
         errorLine2="                       ~~~~~~~~~~~~~">
