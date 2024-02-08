@@ -407,6 +407,9 @@ static __always_inline inline int bpf_owner_match(struct __sk_buff* skb, uint32_
 
     BpfConfig enabledRules = getConfig(UID_RULES_CONFIGURATION_KEY);
 
+    // BACKGROUND match does not apply to loopback traffic
+    if (skb->ifindex == 1) enabledRules &= ~BACKGROUND_MATCH;
+
     UidOwnerValue* uidEntry = bpf_uid_owner_map_lookup_elem(&uid);
     uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
     uint32_t allowed_iif = uidEntry ? uidEntry->iif : 0;
