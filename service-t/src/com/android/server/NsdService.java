@@ -1880,13 +1880,6 @@ public class NsdService extends INsdManager.Stub {
         }
 
         /**
-         * @see DeviceConfigUtils#isTrunkStableFeatureEnabled
-         */
-        public boolean isTrunkStableFeatureEnabled(String feature) {
-            return DeviceConfigUtils.isTrunkStableFeatureEnabled(feature);
-        }
-
-        /**
          * @see MdnsDiscoveryManager
          */
         public MdnsDiscoveryManager makeMdnsDiscoveryManager(
