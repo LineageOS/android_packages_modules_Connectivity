@@ -57,7 +57,6 @@ import com.android.net.module.util.CollectionUtils;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.regex.Matcher;
@@ -167,7 +166,28 @@ public final class NsdManager {
      * A regex for the acceptable format of a type or subtype label.
      * @hide
      */
-    public static final String TYPE_SUBTYPE_LABEL_REGEX = "_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]";
+    public static final String TYPE_LABEL_REGEX = "_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]";
+
+    /**
+     * A regex for the acceptable format of a subtype label.
+     *
+     * As per RFC 6763 7.1, "Subtype strings are not required to begin with an underscore, though
+     * they often do.", and "Subtype strings [...] may be constructed using arbitrary 8-bit data
+     * values.  In many cases these data values may be UTF-8 [RFC3629] representations of text, or
+     * even (as in the example above) plain ASCII [RFC20], but they do not have to be.".
+     *
+     * This regex is overly conservative as it mandates the underscore and only allows printable
+     * ASCII characters (codes 0x20 to 0x7e, space to tilde), except for comma (0x2c) and dot
+     * (0x2e); so the NsdManager API does not allow everything the RFC allows. This may be revisited
+     * in the future, but using arbitrary bytes makes logging and testing harder, and using other
+     * characters would probably be a bad idea for interoperability for apps.
+     * @hide
+     */
+    public static final String SUBTYPE_LABEL_REGEX = "_["
+            + "\\x20-\\x2b"
+            + "\\x2d"
+            + "\\x2f-\\x7e"
+            + "]{1,62}";
 
     /**
      * A regex for the acceptable format of a service type specification.
@@ -180,14 +200,14 @@ public final class NsdManager {
     public static final String TYPE_REGEX =
             // Optional leading subtype (_subtype._type._tcp)
             // (?: xxx) is a non-capturing parenthesis, don't capture the dot
-            "^(?:(" + TYPE_SUBTYPE_LABEL_REGEX + ")\\.)?"
+            "^(?:(" + SUBTYPE_LABEL_REGEX + ")\\.)?"
                     // Actual type (_type._tcp.local)
-                    + "(" + TYPE_SUBTYPE_LABEL_REGEX + "\\._(?:tcp|udp))"
+                    + "(" + TYPE_LABEL_REGEX + "\\._(?:tcp|udp))"
                     // Drop '.' at the end of service type that is compatible with old backend.
                     // e.g. allow "_type._tcp.local."
                     + "\\.?"
                     // Optional subtype after comma, for "_type._tcp,_subtype1,_subtype2" format
-                    + "((?:," + TYPE_SUBTYPE_LABEL_REGEX + ")*)"
+                    + "((?:," + SUBTYPE_LABEL_REGEX + ")*)"
                     + "$";
 
     /**
