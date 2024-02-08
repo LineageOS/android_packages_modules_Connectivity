@@ -626,12 +626,13 @@ DEFINE_XTBPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_al
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     if (is_system_uid(sock_uid)) return BPF_MATCH;
 
-    // 65534 is the overflow 'nobody' uid, usually this being returned means
-    // that skb->sk is NULL during RX (early decap socket lookup failure),
-    // which commonly happens for incoming packets to an unconnected udp socket.
-    // Additionally bpf_get_socket_cookie() returns 0 if skb->sk is NULL
-    if ((sock_uid == 65534) && !bpf_get_socket_cookie(skb) && is_received_skb(skb))
-        return BPF_MATCH;
+    // kernel's DEFAULT_OVERFLOWUID is 65534, this is the overflow 'nobody' uid,
+    // usually this being returned means that skb->sk is NULL during RX
+    // (early decap socket lookup failure), which commonly happens for incoming
+    // packets to an unconnected udp socket.
+    // But it can also happen for egress from a timewait socket.
+    // Let's treat such cases as 'root' which is_system_uid()
+    if (sock_uid == 65534) return BPF_MATCH;
 
     UidOwnerValue* allowlistMatch = bpf_uid_owner_map_lookup_elem(&sock_uid);
     if (allowlistMatch) return allowlistMatch->rule & HAPPY_BOX_MATCH ? BPF_MATCH : BPF_NOMATCH;
