@@ -169,6 +169,10 @@ int writeProcSysFile(const char *filename, const char *value) {
     return 0;
 }
 
+const char * const platformBpfLoader = "/system/bin/bpfloader";
+const char * const platformNetBpfLoad = "/system/bin/netbpfload";
+const char * const apexNetBpfLoad = "/apex/com.android.tethering/bin/netbpfload";
+
 int main(int argc, char** argv, char * const envp[]) {
     (void)argc;
     android::base::InitLogging(argv, &android::base::KernelLogger);
@@ -176,10 +180,10 @@ int main(int argc, char** argv, char * const envp[]) {
     ALOGI("NetBpfLoad '%s' starting...", argv[0]);
 
     // true iff we are running from the module
-    const bool is_mainline = !strcmp(argv[0], "/apex/com.android.tethering/bin/netbpfload");
+    const bool is_mainline = !strcmp(argv[0], apexNetBpfLoad);
 
     // true iff we are running from the platform
-    const bool is_platform = !strcmp(argv[0], "/system/bin/netbpfload");
+    const bool is_platform = !strcmp(argv[0], platformNetBpfLoad);
 
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
@@ -193,6 +197,12 @@ int main(int argc, char** argv, char * const envp[]) {
     if (!is_platform && !is_mainline) {
         ALOGE("Unable to determine if we're platform or mainline netbpfload.");
         return 1;
+    }
+
+    if (is_platform) {
+        const char * args[] = { apexNetBpfLoad, NULL, };
+        execve(args[0], (char**)args, envp);
+        ALOGW("exec '%s' fail: %d[%s]", apexNetBpfLoad, errno, strerror(errno));
     }
 
     if (isAtLeastT && !android::bpf::isAtLeastKernelVersion(4, 9, 0)) {
@@ -295,10 +305,8 @@ int main(int argc, char** argv, char * const envp[]) {
 
     ALOGI("done, transferring control to platform bpfloader.");
 
-    const char * args[] = { "/system/bin/bpfloader", NULL, };
-    if (execve(args[0], (char**)args, envp)) {
-        ALOGE("FATAL: execve('/system/bin/bpfloader'): %d[%s]", errno, strerror(errno));
-    }
-
+    const char * args[] = { platformBpfLoader, NULL, };
+    execve(args[0], (char**)args, envp);
+    ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
     return 1;
 }
