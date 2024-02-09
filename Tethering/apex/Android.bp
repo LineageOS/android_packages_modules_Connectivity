@@ -54,16 +54,6 @@ apex_defaults {
         "//external/cronet/third_party/boringssl:libcrypto",
         "//external/cronet/third_party/boringssl:libssl",
     ],
-    arch: {
-        riscv64: {
-            // TODO: remove this when there is a riscv64 libcronet
-            exclude_jni_libs: [
-                "cronet_aml_components_cronet_android_cronet",
-                "//external/cronet/third_party/boringssl:libcrypto",
-                "//external/cronet/third_party/boringssl:libssl",
-            ],
-        },
-    },
 }
 
 apex {
