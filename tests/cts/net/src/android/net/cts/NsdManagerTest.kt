@@ -114,7 +114,6 @@ import java.util.concurrent.Executor
 import kotlin.math.min
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
@@ -127,7 +126,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.test.assertNotEquals
 
 private const val TAG = "NsdManagerTest"
 private const val TIMEOUT_MS = 2000L
@@ -1104,6 +1102,51 @@ class NsdManagerTest {
             subtype3DiscoveryRecord.expectCallback<DiscoveryStopped>()
         } cleanup {
             nsdManager.unregisterService(registrationRecord)
+        }
+    }
+
+    @Test
+    fun testSubtypeAdvertisingAndDiscovery_nonAlphanumericalSubtypes() {
+        // All non-alphanumerical characters between 0x20 and 0x7e, with a leading underscore
+        val nonAlphanumSubtype = "_ !\"#\$%&'()*+-/:;<=>?@[\\]^_`{|}"
+        // Test both legacy syntax and the subtypes setter, on different networks
+        val si1 = makeTestServiceInfo(network = testNetwork1.network).apply {
+            serviceType = "$serviceType,_test1,$nonAlphanumSubtype"
+        }
+        val si2 = makeTestServiceInfo(network = testNetwork2.network).apply {
+            subtypes = setOf("_test2", nonAlphanumSubtype)
+        }
+
+        val registrationRecord1 = NsdRegistrationRecord()
+        val registrationRecord2 = NsdRegistrationRecord()
+        val subtypeDiscoveryRecord1 = NsdDiscoveryRecord()
+        val subtypeDiscoveryRecord2 = NsdDiscoveryRecord()
+        tryTest {
+            registerService(registrationRecord1, si1)
+            registerService(registrationRecord2, si2)
+            nsdManager.discoverServices(DiscoveryRequest.Builder(serviceType)
+                .setSubtype(nonAlphanumSubtype)
+                .setNetwork(testNetwork1.network)
+                .build(), { it.run() }, subtypeDiscoveryRecord1)
+            nsdManager.discoverServices("$nonAlphanumSubtype.$serviceType",
+                NsdManager.PROTOCOL_DNS_SD, testNetwork2.network, { it.run() },
+                subtypeDiscoveryRecord2)
+
+            val discoveredInfo1 = subtypeDiscoveryRecord1.waitForServiceDiscovered(serviceName,
+                serviceType, testNetwork1.network)
+            val discoveredInfo2 = subtypeDiscoveryRecord2.waitForServiceDiscovered(serviceName,
+                serviceType, testNetwork2.network)
+            assertTrue(discoveredInfo1.subtypes.contains(nonAlphanumSubtype))
+            assertTrue(discoveredInfo2.subtypes.contains(nonAlphanumSubtype))
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(subtypeDiscoveryRecord1)
+            subtypeDiscoveryRecord1.expectCallback<DiscoveryStopped>()
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(subtypeDiscoveryRecord2)
+            subtypeDiscoveryRecord2.expectCallback<DiscoveryStopped>()
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord1)
+            nsdManager.unregisterService(registrationRecord2)
         }
     }
 
