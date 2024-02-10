@@ -64,9 +64,6 @@ public final class DeviceConfigUtils {
     @VisibleForTesting
     public static final long DEFAULT_PACKAGE_VERSION = 1000;
 
-    private static final String CORE_NETWORKING_TRUNK_STABLE_NAMESPACE = "android_core_networking";
-    private static final String CORE_NETWORKING_TRUNK_STABLE_FLAG_PACKAGE = "com.android.net.flags";
-
     @VisibleForTesting
     public static void resetPackageVersionCacheForTest() {
         sPackageVersion = -1;
@@ -408,32 +405,5 @@ public final class DeviceConfigUtils {
         }
 
         return pkgs.get(0).activityInfo.applicationInfo.packageName;
-    }
-
-    /**
-     * Check whether one specific trunk stable flag in android_core_networking namespace is enabled.
-     * This method reads trunk stable feature flag value from DeviceConfig directly since
-     * java_aconfig_library soong module is not available in the mainline branch.
-     * After the mainline branch support the aconfig soong module, this function must be removed and
-     * java_aconfig_library must be used instead to check if the feature is enabled.
-     *
-     * @param flagName The name of the trunk stable flag
-     * @return true if this feature is enabled, or false if disabled.
-     */
-    public static boolean isTrunkStableFeatureEnabled(final String flagName) {
-        return isTrunkStableFeatureEnabled(
-                CORE_NETWORKING_TRUNK_STABLE_NAMESPACE,
-                CORE_NETWORKING_TRUNK_STABLE_FLAG_PACKAGE,
-                flagName
-        );
-    }
-
-    private static boolean isTrunkStableFeatureEnabled(final String namespace,
-            final String packageName, final String flagName) {
-        return DeviceConfig.getBoolean(
-                namespace,
-                packageName + "." + flagName,
-                false /* defaultValue */
-        );
     }
 }

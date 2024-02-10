@@ -26,8 +26,8 @@ import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 import static android.net.nsd.NsdManager.MDNS_DISCOVERY_MANAGER_EVENT;
 import static android.net.nsd.NsdManager.MDNS_SERVICE_EVENT;
 import static android.net.nsd.NsdManager.RESOLVE_SERVICE_SUCCEEDED;
+import static android.net.nsd.NsdManager.SUBTYPE_LABEL_REGEX;
 import static android.net.nsd.NsdManager.TYPE_REGEX;
-import static android.net.nsd.NsdManager.TYPE_SUBTYPE_LABEL_REGEX;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
 import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
@@ -1760,7 +1760,7 @@ public class NsdService extends INsdManager.Stub {
 
     /** Returns {@code true} if {@code subtype} is a valid DNS-SD subtype label. */
     private static boolean checkSubtypeLabel(String subtype) {
-        return Pattern.compile("^" + TYPE_SUBTYPE_LABEL_REGEX + "$").matcher(subtype).matches();
+        return Pattern.compile("^" + SUBTYPE_LABEL_REGEX + "$").matcher(subtype).matches();
     }
 
     @VisibleForTesting
@@ -1877,13 +1877,6 @@ public class NsdService extends INsdManager.Stub {
          */
         public boolean isTetheringFeatureNotChickenedOut(Context context, String feature) {
             return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context, feature);
-        }
-
-        /**
-         * @see DeviceConfigUtils#isTrunkStableFeatureEnabled
-         */
-        public boolean isTrunkStableFeatureEnabled(String feature) {
-            return DeviceConfigUtils.isTrunkStableFeatureEnabled(feature);
         }
 
         /**
