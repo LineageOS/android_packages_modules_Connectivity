@@ -440,4 +440,7 @@ public class NetworkUtils {
 
     /** Returns whether the Linux Kernel is 64 bit */
     public static native boolean isKernel64Bit();
+
+    /** Returns whether the Linux Kernel is x86 */
+    public static native boolean isKernelX86();
 }
