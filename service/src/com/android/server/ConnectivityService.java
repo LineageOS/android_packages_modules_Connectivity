@@ -38,6 +38,7 @@ import static android.net.ConnectivityManager.BLOCKED_REASON_LOCKDOWN_VPN;
 import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.CALLBACK_IP_CHANGED;
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DEFAULT;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
@@ -11278,17 +11279,28 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 err.getFileDescriptor(), args);
     }
 
-    private Boolean parseBooleanArgument(final String arg) {
-        if ("true".equals(arg)) {
-            return true;
-        } else if ("false".equals(arg)) {
-            return false;
-        } else {
-            return null;
-        }
-    }
-
     private class ShellCmd extends BasicShellCommandHandler {
+
+        private Boolean parseBooleanArgument(final String arg) {
+            if ("true".equals(arg)) {
+                return true;
+            } else if ("false".equals(arg)) {
+                return false;
+            } else {
+                getOutPrintWriter().println("Invalid boolean argument: " + arg);
+                return null;
+            }
+        }
+
+        private Integer parseIntegerArgument(final String arg) {
+            try {
+                return Integer.valueOf(arg);
+            } catch (NumberFormatException ne) {
+                getOutPrintWriter().println("Invalid integer argument: " + arg);
+                return null;
+            }
+        }
+
         @Override
         public int onCommand(String cmd) {
             if (cmd == null) {
@@ -11365,6 +11377,38 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         }
                         return 0;
                     }
+                    case "set-background-networking-enabled-for-uid": {
+                        final Integer uid = parseIntegerArgument(getNextArg());
+                        final Boolean enabled = parseBooleanArgument(getNextArg());
+                        if (null == enabled || null == uid) {
+                            onHelp();
+                            return -1;
+                        }
+                        final int rule = enabled ? FIREWALL_RULE_ALLOW : FIREWALL_RULE_DEFAULT;
+                        setUidFirewallRule(FIREWALL_CHAIN_BACKGROUND, uid, rule);
+                        final String msg = (enabled ? "Enabled" : "Disabled")
+                                + " background networking for  uid " + uid;
+                        Log.i(TAG, msg);
+                        pw.println(msg);
+                        return 0;
+                    }
+                    case "get-background-networking-enabled-for-uid": {
+                        final Integer uid = parseIntegerArgument(getNextArg());
+                        if (null == uid) {
+                            onHelp();
+                            return -1;
+                        }
+                        final int rule = getUidFirewallRule(FIREWALL_CHAIN_BACKGROUND, uid);
+                        if (FIREWALL_RULE_ALLOW == rule) {
+                            pw.println(uid + ": allow");
+                        } else if (FIREWALL_RULE_DENY == rule  || FIREWALL_RULE_DEFAULT == rule) {
+                            pw.println(uid + ": deny");
+                        } else {
+                            throw new IllegalStateException(
+                                    "Unknown rule " + rule + " for uid " + uid);
+                        }
+                        return 0;
+                    }
                     case "reevaluate":
                         // Usage : adb shell cmd connectivity reevaluate <netId>
                         // If netId is omitted, then reevaluate the default network
@@ -11425,6 +11469,10 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + "    no effect if the chain is disabled.");
             pw.println("  get-package-networking-enabled [package name]");
             pw.println("    Get the deny bit in FIREWALL_CHAIN_OEM_DENY_3 for package.");
+            pw.println("  set-background-networking-enabled-for-uid [uid] [true|false]");
+            pw.println("    Set the allow bit in FIREWALL_CHAIN_BACKGROUND for the given uid.");
+            pw.println("  get-background-networking-enabled-for-uid [uid]");
+            pw.println("    Get the allow bit in FIREWALL_CHAIN_BACKGROUND for the given uid.");
         }
     }
 
