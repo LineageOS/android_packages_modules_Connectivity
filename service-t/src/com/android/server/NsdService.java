@@ -2616,7 +2616,15 @@ public class NsdService extends INsdManager.Stub {
     /* Information tracked per client */
     private class ClientInfo {
 
-        private static final int MAX_LIMIT = 10;
+        /**
+         * Maximum number of requests (callbacks) for a client.
+         *
+         * 200 listeners should be more than enough for most use-cases: even if a client tries to
+         * file callbacks for every service on a local network, there are generally much less than
+         * 200 devices on a local network (a /24 only allows 255 IPv4 devices), and while some
+         * devices may have multiple services, many devices do not advertise any.
+         */
+        private static final int MAX_LIMIT = 200;
         private final INsdManagerCallback mCb;
         /* Remembers a resolved service until getaddrinfo completes */
         private NsdServiceInfo mResolvedService;
