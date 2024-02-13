@@ -118,6 +118,7 @@ java_library {
         "framework-bluetooth",
         "framework-wifi",
         "framework-connectivity-pre-jarjar",
+        "framework-location.stubs.module_lib",
     ],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
@@ -140,6 +141,7 @@ java_sdk_library {
         "sdk_module-lib_current_framework-connectivity",
     ],
     libs: [
+        "framework-location.stubs.module_lib",
         "sdk_module-lib_current_framework-connectivity",
     ],
     permitted_packages: [
