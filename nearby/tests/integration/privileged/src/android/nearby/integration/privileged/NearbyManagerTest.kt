@@ -29,6 +29,7 @@ import android.nearby.ScanRequest
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,5 +96,50 @@ class NearbyManagerTest {
             broadcastRequest, /* executor */ { it.run() }, broadcastCallback
         )
         nearbyManager.stopBroadcast(broadcastCallback)
+    }
+
+    /** Verify privileged app can set powered off finding ephemeral IDs without exception. */
+    @Test
+    fun testNearbyManagerSetPoweredOffFindingEphemeralIds_fromPrivilegedApp_succeed() {
+        val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+        // Only test supporting devices.
+        if (nearbyManager.getPoweredOffFindingMode()
+                == NearbyManager.POWERED_OFF_FINDING_MODE_UNSUPPORTED) return
+
+        val eid = ByteArray(20)
+
+        nearbyManager.setPoweredOffFindingEphemeralIds(listOf(eid))
+    }
+
+    /**
+     * Verifies that [NearbyManager.setPoweredOffFindingEphemeralIds] checkes the ephemeral ID
+     * length.
+     */
+    @Test
+    fun testNearbyManagerSetPoweredOffFindingEphemeralIds_wrongSize_throwsException() {
+        val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+        // Only test supporting devices.
+        if (nearbyManager.getPoweredOffFindingMode()
+                == NearbyManager.POWERED_OFF_FINDING_MODE_UNSUPPORTED) return
+
+        assertThrows(IllegalArgumentException::class.java) {
+            nearbyManager.setPoweredOffFindingEphemeralIds(listOf(ByteArray(21)))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            nearbyManager.setPoweredOffFindingEphemeralIds(listOf(ByteArray(19)))
+        }
+    }
+
+    /** Verify privileged app can set and get powered off finding mode without exception. */
+    @Test
+    fun testNearbyManagerSetGetPoweredOffMode_fromPrivilegedApp_succeed() {
+        val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+        // Only test supporting devices.
+        if (nearbyManager.getPoweredOffFindingMode()
+                == NearbyManager.POWERED_OFF_FINDING_MODE_UNSUPPORTED) return
+
+        nearbyManager.setPoweredOffFindingMode(NearbyManager.POWERED_OFF_FINDING_MODE_DISABLED)
+        assertThat(nearbyManager.getPoweredOffFindingMode())
+                .isEqualTo(NearbyManager.POWERED_OFF_FINDING_MODE_DISABLED)
     }
 }
