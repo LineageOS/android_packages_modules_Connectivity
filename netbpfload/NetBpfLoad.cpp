@@ -243,9 +243,15 @@ int main(int argc, char** argv, char * const envp[]) {
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
     const bool isAtLeastV = (device_api_level >= __ANDROID_API_V__);
 
-    ALOGI("NetBpfLoad api:%d/%d kver:%07x platform:%d mainline:%d",
+    // last in U QPR2 beta1
+    const bool has_platform_bpfloader_rc = exists("/system/etc/init/bpfloader.rc");
+    // first in U QPR2 beta~2
+    const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
+
+    ALOGI("NetBpfLoad api:%d/%d kver:%07x platform:%d mainline:%d rc:%d%d",
           android_get_application_target_sdk_version(), device_api_level,
-          android::bpf::kernelVersion(), is_platform, is_mainline);
+          android::bpf::kernelVersion(), is_platform, is_mainline,
+          has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!is_platform && !is_mainline) {
         ALOGE("Unable to determine if we're platform or mainline netbpfload.");
@@ -258,7 +264,27 @@ int main(int argc, char** argv, char * const envp[]) {
         ALOGW("exec '%s' fail: %d[%s]", apexNetBpfLoad, errno, strerror(errno));
     }
 
+    if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
+        ALOGE("Unable to find platform's bpfloader & netbpfload init scripts.");
+        return 1;
+    }
+
+    if (has_platform_bpfloader_rc && has_platform_netbpfload_rc) {
+        ALOGE("Platform has *both* bpfloader & netbpfload init scripts.");
+        return 1;
+    }
+
     logTetheringApexVersion();
+
+    if (is_mainline && has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
+        // Tethering apex shipped initrc file causes us to reach here
+        // but we're not ready to correctly handle anything before U QPR2
+        // in which the 'bpfloader' vs 'netbpfload' split happened
+        const char * args[] = { platformBpfLoader, NULL, };
+        execve(args[0], (char**)args, envp);
+        ALOGE("exec '%s' fail: %d[%s]", platformBpfLoader, errno, strerror(errno));
+        return 1;
+    }
 
     if (isAtLeastT && !android::bpf::isAtLeastKernelVersion(4, 9, 0)) {
         ALOGE("Android T requires kernel 4.9.");
