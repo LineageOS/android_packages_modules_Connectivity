@@ -1956,8 +1956,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mMulticastRoutingCoordinatorService =
                 mDeps.makeMulticastRoutingCoordinatorService(mHandler);
 
-        mDestroyFrozenSockets = mDeps.isAtLeastU()
-                && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION);
+        mDestroyFrozenSockets = mDeps.isAtLeastV() || (mDeps.isAtLeastU()
+                && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION));
         mDelayDestroyFrozenSockets = mDeps.isAtLeastU()
                 && mDeps.isFeatureEnabled(context, DELAY_DESTROY_FROZEN_SOCKETS_VERSION);
         mAllowSysUiConnectivityReports = mDeps.isFeatureNotChickenedOut(
