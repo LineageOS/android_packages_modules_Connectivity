@@ -34,6 +34,7 @@ import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_PLATFORM
 import static android.net.connectivity.ConnectivityCompatChanges.RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER;
 import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
+import static android.net.nsd.NsdManager.FAILURE_MAX_LIMIT;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
 
 import static com.android.networkstack.apishim.api33.ConstantsShim.REGISTER_NSD_OFFLOAD_ENGINE;
@@ -131,10 +132,12 @@ import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -257,6 +260,10 @@ public class NsdServiceTest {
             mThread.quitSafely();
             mThread.join();
         }
+
+        // Clear inline mocks as there are possible memory leaks if not done (see mockito
+        // doc for clearInlineMocks), and some tests create many of them.
+        Mockito.framework().clearInlineMocks();
     }
 
     // Native mdns provided by Netd is removed after U.
@@ -715,6 +722,86 @@ public class NsdServiceTest {
                 .onResolveFailed(any(), eq(FAILURE_INTERNAL_ERROR));
         verify(mMetrics).reportServiceResolutionFailed(
                 true /* isLegacy */, getAddrId, 10L /* durationMs */);
+    }
+
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    @Test
+    public void testPerClientListenerLimit() throws Exception {
+        final NsdManager client1 = connectClient(mService);
+        final NsdManager client2 = connectClient(mService);
+
+        final String testType1 = "_testtype1._tcp";
+        final NsdServiceInfo testServiceInfo1 = new NsdServiceInfo("MyTestService1", testType1);
+        testServiceInfo1.setPort(12345);
+        final String testType2 = "_testtype2._tcp";
+        final NsdServiceInfo testServiceInfo2 = new NsdServiceInfo("MyTestService2", testType2);
+        testServiceInfo2.setPort(12345);
+
+        // Each client can register 200 requests (for example 100 discover and 100 register).
+        final int numEachListener = 100;
+        final ArrayList<DiscoveryListener> discListeners = new ArrayList<>(numEachListener);
+        final ArrayList<RegistrationListener> regListeners = new ArrayList<>(numEachListener);
+        for (int i = 0; i < numEachListener; i++) {
+            final DiscoveryListener discListener1 = mock(DiscoveryListener.class);
+            discListeners.add(discListener1);
+            final RegistrationListener regListener1 = mock(RegistrationListener.class);
+            regListeners.add(regListener1);
+            final DiscoveryListener discListener2 = mock(DiscoveryListener.class);
+            discListeners.add(discListener2);
+            final RegistrationListener regListener2 = mock(RegistrationListener.class);
+            regListeners.add(regListener2);
+            client1.discoverServices(testType1, NsdManager.PROTOCOL_DNS_SD,
+                    (Network) null, Runnable::run, discListener1);
+            client1.registerService(testServiceInfo1, NsdManager.PROTOCOL_DNS_SD, Runnable::run,
+                    regListener1);
+
+            client2.registerService(testServiceInfo2, NsdManager.PROTOCOL_DNS_SD, Runnable::run,
+                    regListener2);
+            client2.discoverServices(testType2, NsdManager.PROTOCOL_DNS_SD,
+                    (Network) null, Runnable::run, discListener2);
+        }
+
+        // Use a longer timeout than usual for the handler to process all the events. The
+        // registrations take about 1s on a high-end 2013 device.
+        HandlerUtils.waitForIdle(mHandler, 30_000L);
+        for (int i = 0; i < discListeners.size(); i++) {
+            // Callbacks are sent on the manager handler which is different from mHandler, so use
+            // a short timeout (each callback should come quickly after the previous one).
+            verify(discListeners.get(i), timeout(TEST_TIME_MS))
+                    .onDiscoveryStarted(i % 2 == 0 ? testType1 : testType2);
+
+            // registerService does not get a callback before probing finishes (will not happen as
+            // this is mocked)
+            verifyNoMoreInteractions(regListeners.get(i));
+        }
+
+        // The next registrations should fail
+        final DiscoveryListener failDiscListener1 = mock(DiscoveryListener.class);
+        final RegistrationListener failRegListener1 = mock(RegistrationListener.class);
+        final DiscoveryListener failDiscListener2 = mock(DiscoveryListener.class);
+        final RegistrationListener failRegListener2 = mock(RegistrationListener.class);
+
+        client1.discoverServices(testType1, NsdManager.PROTOCOL_DNS_SD,
+                (Network) null, Runnable::run, failDiscListener1);
+        verify(failDiscListener1, timeout(TEST_TIME_MS))
+                .onStartDiscoveryFailed(testType1, FAILURE_MAX_LIMIT);
+
+        client1.registerService(testServiceInfo1, NsdManager.PROTOCOL_DNS_SD, Runnable::run,
+                failRegListener1);
+        verify(failRegListener1, timeout(TEST_TIME_MS)).onRegistrationFailed(
+                argThat(a -> testServiceInfo1.getServiceName().equals(a.getServiceName())),
+                eq(FAILURE_MAX_LIMIT));
+
+        client1.discoverServices(testType2, NsdManager.PROTOCOL_DNS_SD,
+                (Network) null, Runnable::run, failDiscListener2);
+        verify(failDiscListener2, timeout(TEST_TIME_MS))
+                .onStartDiscoveryFailed(testType2, FAILURE_MAX_LIMIT);
+
+        client1.registerService(testServiceInfo2, NsdManager.PROTOCOL_DNS_SD, Runnable::run,
+                failRegListener2);
+        verify(failRegListener2, timeout(TEST_TIME_MS)).onRegistrationFailed(
+                argThat(a -> testServiceInfo2.getServiceName().equals(a.getServiceName())),
+                eq(FAILURE_MAX_LIMIT));
     }
 
     @Test
