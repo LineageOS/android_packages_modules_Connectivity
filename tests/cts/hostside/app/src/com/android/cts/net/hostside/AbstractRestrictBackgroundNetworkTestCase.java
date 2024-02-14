@@ -23,6 +23,7 @@ import static android.app.job.JobScheduler.RESULT_SUCCESS;
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.os.BatteryManager.BATTERY_PLUGGED_ANY;
 
+import static com.android.cts.net.arguments.InstrumentationArguments.ARG_WAIVE_BIND_PRIORITY;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.executeShellCommand;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.forceRunJob;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.getConnectivityManager;
@@ -65,11 +66,13 @@ import android.util.Log;
 import android.util.Pair;
 
 import androidx.annotation.Nullable;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.compatibility.common.util.AmUtils;
 import com.android.compatibility.common.util.BatteryUtils;
 import com.android.compatibility.common.util.DeviceConfigStateHelper;
 import com.android.compatibility.common.util.ThrowingRunnable;
+import com.android.modules.utils.build.SdkLevel;
 
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
@@ -90,6 +93,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     protected static final String TEST_PKG = "com.android.cts.net.hostside";
     protected static final String TEST_APP2_PKG = "com.android.cts.net.hostside.app2";
+    // TODO(b/321797685): Configure it via device-config once it is available.
+    protected static final long PROCESS_STATE_TRANSITION_DELAY_MS = TimeUnit.SECONDS.toMillis(5);
 
     private static final String TEST_APP2_ACTIVITY_CLASS = TEST_APP2_PKG + ".MyActivity";
     private static final String TEST_APP2_SERVICE_CLASS = TEST_APP2_PKG + ".MyForegroundService";
@@ -97,7 +102,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     private static final ComponentName TEST_JOB_COMPONENT = new ComponentName(
             TEST_APP2_PKG, TEST_APP2_JOB_SERVICE_CLASS);
-
     private static final int TEST_JOB_ID = 7357437;
 
     private static final int SLEEP_TIME_SEC = 1;
@@ -152,8 +156,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     private static final IntentFilter BATTERY_CHANGED_FILTER =
             new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-    private static final String APP_NOT_FOREGROUND_ERROR = "app_not_fg";
-
     protected static final long TEMP_POWERSAVE_WHITELIST_DURATION_MS = 20_000; // 20 sec
 
     private static final long BROADCAST_TIMEOUT_MS = 5_000;
@@ -181,7 +183,16 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         mUid = getUid(TEST_APP2_PKG);
         mMyUid = getUid(mContext.getPackageName());
         mServiceClient = new MyServiceClient(mContext);
-        mServiceClient.bind();
+
+        final Bundle args = InstrumentationRegistry.getArguments();
+        final int bindPriorityFlags;
+        if (Boolean.valueOf(args.getString(ARG_WAIVE_BIND_PRIORITY, "false"))) {
+            bindPriorityFlags = Context.BIND_WAIVE_PRIORITY;
+        } else {
+            bindPriorityFlags = Context.BIND_NOT_FOREGROUND;
+        }
+        mServiceClient.bind(bindPriorityFlags);
+
         mPowerManager = mContext.getSystemService(PowerManager.class);
         executeShellCommand("cmd netpolicy start-watching " + mUid);
         // Some of the test cases assume that Data saver mode is initially disabled, which might not
@@ -203,6 +214,22 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         mServiceClient.unbind();
         final PowerManager.WakeLock lock = mLock;
         if (null != lock && lock.isHeld()) lock.release();
+    }
+
+    /**
+     * Check if the feature blocking network for top_sleeping and lower priority proc-states is
+     * enabled. This is a manual check because the feature flag infrastructure may not be available
+     * in all the branches that will get this code.
+     * TODO: b/322115994 - Use @RequiresFlagsEnabled with
+     * Flags.FLAG_NETWORK_BLOCKED_FOR_TOP_SLEEPING_AND_ABOVE once the tests are moved to cts.
+     */
+    protected boolean isNetworkBlockedForTopSleepingAndAbove() {
+        if (!SdkLevel.isAtLeastV()) {
+            return false;
+        }
+        final String output = executeShellCommand("device_config get backstage_power"
+                + " com.android.server.net.network_blocked_for_top_sleeping_and_above");
+        return Boolean.parseBoolean(output);
     }
 
     protected int getUid(String packageName) throws Exception {
