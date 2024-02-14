@@ -20,6 +20,8 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+build = ["FlaggedApi.bp"]
+
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may not exist
 // depending on the branch
