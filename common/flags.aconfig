@@ -46,3 +46,9 @@ flag {
   bug: "308011229"
 }
 
+flag {
+  name: "tethering_request_with_soft_ap_config"
+  namespace: "android_core_networking"
+  description: "The flag controls the access for the parcelable TetheringRequest with getSoftApConfiguration/setSoftApConfiguration API"
+  bug: "216524590"
+}
