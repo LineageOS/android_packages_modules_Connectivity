@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f3a3ce0f_f536112b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2024-02-15T07:33:27Z",
+      "side": 1,
+      "message": "I don\u0027t have any USB based ethernet device, but maybe nvidia and/or some of the boards we support use it.\nwould you mind checking?\n\nsee https://jordemort.dev/blog/why-android-cant-use-cdc-ethernet/",
+      "revId": "9401f3ffab3c21d659bc9b74002c0b2de65b8d8c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
