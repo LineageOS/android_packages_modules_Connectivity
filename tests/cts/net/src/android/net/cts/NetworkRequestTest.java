@@ -64,6 +64,7 @@ import com.android.networkstack.apishim.ConstantsShim;
 import com.android.networkstack.apishim.NetworkRequestShimImpl;
 import com.android.networkstack.apishim.common.NetworkRequestShim;
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
+import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
@@ -74,6 +75,7 @@ import org.junit.runner.RunWith;
 import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
+@ConnectivityModuleTest
 public class NetworkRequestTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
