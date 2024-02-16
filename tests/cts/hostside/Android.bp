@@ -27,7 +27,10 @@ java_test_host {
     name: "CtsHostsideNetworkTests",
     defaults: ["cts_defaults"],
     // Only compile source java files in this apk.
-    srcs: ["src/**/*.java"],
+    srcs: [
+        "src/**/*.java",
+        ":ArgumentConstants",
+    ],
     libs: [
         "net-tests-utils-host-device-common",
         "cts-tradefed",
