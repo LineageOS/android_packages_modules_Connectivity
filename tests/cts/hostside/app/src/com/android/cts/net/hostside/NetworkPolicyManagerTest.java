@@ -17,6 +17,7 @@
 package com.android.cts.net.hostside;
 
 import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+import static android.app.ActivityManager.PROCESS_STATE_TOP_SLEEPING;
 import static android.os.Process.SYSTEM_UID;
 
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.assertIsUidRestrictedOnMeteredNetworks;
@@ -28,6 +29,9 @@ import static com.android.cts.net.hostside.Property.DATA_SAVER_MODE;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
+import android.os.SystemClock;
 
 import org.junit.After;
 import org.junit.Before;
@@ -236,6 +240,35 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
             // false.
             setRestrictBackground(false);
             assertIsUidRestrictedOnMeteredNetworks(mUid, false /* expectedResult */);
+        }
+    }
+
+    @Test
+    public void testIsUidNetworkingBlocked_whenInBackground() throws Exception {
+        assumeTrue("Feature not enabled", isNetworkBlockedForTopSleepingAndAbove());
+
+        try {
+            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            assertNetworkingBlockedStatusForUid(mUid, METERED, true /* expectedResult */);
+            assertTrue(isUidNetworkingBlocked(mUid, NON_METERED));
+
+            launchActivity();
+            assertTopState();
+            assertNetworkingBlockedStatusForUid(mUid, METERED, false /* expectedResult */);
+            assertFalse(isUidNetworkingBlocked(mUid, NON_METERED));
+
+            finishActivity();
+            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            assertNetworkingBlockedStatusForUid(mUid, METERED, true /* expectedResult */);
+            assertTrue(isUidNetworkingBlocked(mUid, NON_METERED));
+
+            addPowerSaveModeWhitelist(TEST_APP2_PKG);
+            assertNetworkingBlockedStatusForUid(mUid, METERED, false /* expectedResult */);
+            assertFalse(isUidNetworkingBlocked(mUid, NON_METERED));
+        } finally {
+            removePowerSaveModeWhitelist(TEST_APP2_PKG);
         }
     }
 }
