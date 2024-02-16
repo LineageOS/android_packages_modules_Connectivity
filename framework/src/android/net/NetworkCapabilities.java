@@ -720,7 +720,18 @@ public final class NetworkCapabilities implements Parcelable {
     public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
 
     /**
-     * Indicates that this network is a local network, e.g. thread network
+     * Indicates that this network is a local network.
+     *
+     * Local networks are networks where the device is not obtaining IP addresses from the
+     * network, but advertising IP addresses itself. Examples of local networks are:
+     * <ul>
+     * <li>USB tethering or Wi-Fi hotspot networks to which the device is sharing its Internet
+     * connectivity.
+     * <li>Thread networks where the current device is the Thread Border Router.
+     * <li>Wi-Fi P2P networks where the current device is the Group Owner.
+     * </ul>
+     *
+     * Networks used to obtain Internet access are never local networks.
      *
      * Apps that target an SDK before {@link Build.VERSION_CODES.VANILLA_ICE_CREAM} will not see
      * networks with this capability unless they explicitly set the NET_CAPABILITY_LOCAL_NETWORK
