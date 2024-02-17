@@ -71,14 +71,14 @@ Result<void> Firewall::addRule(uint32_t uid, UidOwnerMatchType match, uint32_t i
     if (oldMatch.ok()) {
         UidOwnerValue newMatch = {
                 .iif = iif ? iif : oldMatch.value().iif,
-                .rule = static_cast<uint8_t>(oldMatch.value().rule | match),
+                .rule = static_cast<uint32_t>(oldMatch.value().rule | match),
         };
         auto res = mUidOwnerMap.writeValue(uid, newMatch, BPF_ANY);
         if (!res.ok()) return Errorf("Failed to update rule: {}", res.error().message());
     } else {
         UidOwnerValue newMatch = {
                 .iif = iif,
-                .rule = static_cast<uint8_t>(match),
+                .rule = static_cast<uint32_t>(match),
         };
         auto res = mUidOwnerMap.writeValue(uid, newMatch, BPF_ANY);
         if (!res.ok()) return Errorf("Failed to add rule: {}", res.error().message());
@@ -93,7 +93,7 @@ Result<void> Firewall::removeRule(uint32_t uid, UidOwnerMatchType match) {
 
     UidOwnerValue newMatch = {
             .iif = (match == IIF_MATCH) ? 0 : oldMatch.value().iif,
-            .rule = static_cast<uint8_t>(oldMatch.value().rule & ~match),
+            .rule = static_cast<uint32_t>(oldMatch.value().rule & ~match),
     };
     if (newMatch.rule == 0) {
         auto res = mUidOwnerMap.deleteValue(uid);
