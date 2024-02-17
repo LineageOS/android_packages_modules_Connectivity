@@ -301,6 +301,11 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
+    if (isAtLeastV && android::bpf::isX86() && !android::bpf::isKernel64Bit()) {
+        ALOGE("Android V requires X86 kernel to be 64-bit.");
+        return 1;
+    }
+
     if (android::bpf::isUserspace32bit() && android::bpf::isAtLeastKernelVersion(6, 2, 0)) {
         /* Android 14/U should only launch on 64-bit kernels
          *   T launches on 5.10/5.15
