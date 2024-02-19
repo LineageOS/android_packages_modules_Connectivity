@@ -73,8 +73,11 @@ import com.android.server.connectivity.SatelliteAccessController
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import java.util.function.BiConsumer
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
 import org.junit.After
@@ -84,7 +87,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 
-internal const val HANDLER_TIMEOUT_MS = 2_000
+internal const val HANDLER_TIMEOUT_MS = 2_000L
 internal const val BROADCAST_TIMEOUT_MS = 3_000L
 internal const val TEST_PACKAGE_NAME = "com.android.test.package"
 internal const val WIFI_WOL_IFNAME = "test_wlan_wol"
@@ -307,6 +310,7 @@ open class CSTest {
         // For permissions only granted to a combination of uid/pid, the key
         // is "<permission name>,<pid>,<uid>". PID+UID permissions have priority over generic ones.
         private val mMockedPermissions: HashMap<String, Int> = HashMap()
+        private val mStartedActivities = LinkedBlockingQueue<Intent>()
         override fun getPackageManager() = this@CSTest.packageManager
         override fun getContentResolver() = this@CSTest.contentResolver
 
@@ -416,6 +420,16 @@ open class CSTest {
                 initialExtras: Bundle?
         ) {
             orderedBroadcastAsUserHistory.add(intent)
+        }
+
+        override fun startActivityAsUser(intent: Intent, handle: UserHandle) {
+            mStartedActivities.put(intent)
+        }
+
+        fun expectStartActivityIntent(timeoutMs: Long = HANDLER_TIMEOUT_MS): Intent {
+            val intent = mStartedActivities.poll(timeoutMs, TimeUnit.MILLISECONDS)
+            assertNotNull(intent, "Did not receive sign-in intent after " + timeoutMs + "ms")
+            return intent
         }
     }
 
