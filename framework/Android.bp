@@ -195,6 +195,9 @@ java_sdk_library {
     lint: {
         baseline_filename: "lint-baseline.xml",
     },
+    aconfig_declarations: [
+        "com.android.net.flags-aconfig",
+    ],
 }
 
 platform_compat_config {
