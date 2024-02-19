@@ -188,6 +188,33 @@ java_library {
     },
 }
 
+// The net-utils-multicast-forwarding-structs library requires the callers to
+// contain net-utils-device-common-bpf.
+java_library {
+    name: "net-utils-multicast-forwarding-structs",
+    srcs: [
+        "device/com/android/net/module/util/structs/StructMf6cctl.java",
+        "device/com/android/net/module/util/structs/StructMif6ctl.java",
+        "device/com/android/net/module/util/structs/StructMrt6Msg.java",
+    ],
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+    visibility: [
+        "//packages/modules/Connectivity:__subpackages__",
+    ],
+    libs: [
+        // Only Struct.java is needed from "net-utils-device-common-bpf"
+        "net-utils-device-common-bpf",
+    ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
+}
+
 // The net-utils-device-common-netlink library requires the callers to contain
 // net-utils-device-common-struct.
 java_library {
