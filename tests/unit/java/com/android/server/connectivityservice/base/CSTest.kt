@@ -60,7 +60,6 @@ import com.android.net.module.util.ArrayTrackRecord
 import com.android.networkstack.apishim.common.UnsupportedApiLevelException
 import com.android.server.connectivity.AutomaticOnOffKeepaliveTracker
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
-import com.android.server.connectivity.CarrierPrivilegeAuthenticator.CarrierPrivilegesLostListener
 import com.android.server.connectivity.ClatCoordinator
 import com.android.server.connectivity.ConnectivityFlags
 import com.android.server.connectivity.MulticastRoutingCoordinatorService
@@ -73,6 +72,7 @@ import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
 import java.util.function.Consumer
+import java.util.function.BiConsumer
 import kotlin.test.assertNull
 import kotlin.test.fail
 import org.junit.After
@@ -222,7 +222,7 @@ open class CSTest {
                 context: Context,
                 tm: TelephonyManager,
                 requestRestrictedWifiEnabled: Boolean,
-                listener: CarrierPrivilegesLostListener
+                listener: BiConsumer<Int, Int>
         ) = if (SdkLevel.isAtLeastT()) mock<CarrierPrivilegeAuthenticator>() else null
 
         var satelliteNetworkFallbackUidUpdate: Consumer<Set<Int>>? = null
