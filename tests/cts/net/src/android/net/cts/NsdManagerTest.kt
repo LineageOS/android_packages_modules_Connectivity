@@ -684,6 +684,48 @@ class NsdManagerTest {
         }
     }
 
+    @Test
+    fun testRegisterService_twoServicesWithSameNameButDifferentTypes_registeredAndDiscoverable() {
+        val si1 = NsdServiceInfo().also {
+            it.network = testNetwork1.network
+            it.serviceName = serviceName
+            it.serviceType = serviceType
+            it.port = TEST_PORT
+        }
+        val si2 = NsdServiceInfo().also {
+            it.network = testNetwork1.network
+            it.serviceName = serviceName
+            it.serviceType = serviceType2
+            it.port = TEST_PORT + 1
+        }
+        val registrationRecord1 = NsdRegistrationRecord()
+        val registrationRecord2 = NsdRegistrationRecord()
+        val discoveryRecord1 = NsdDiscoveryRecord()
+        val discoveryRecord2 = NsdDiscoveryRecord()
+        tryTest {
+            registerService(registrationRecord1, si1)
+            registerService(registrationRecord2, si2)
+
+            nsdManager.discoverServices(serviceType,
+                    NsdManager.PROTOCOL_DNS_SD,
+                    testNetwork1.network, Executor { it.run() }, discoveryRecord1)
+            nsdManager.discoverServices(serviceType2,
+                    NsdManager.PROTOCOL_DNS_SD,
+                    testNetwork1.network, Executor { it.run() }, discoveryRecord2)
+
+            discoveryRecord1.waitForServiceDiscovered(serviceName, serviceType,
+                    testNetwork1.network)
+            discoveryRecord2.waitForServiceDiscovered(serviceName, serviceType2,
+                    testNetwork1.network)
+        } cleanupStep {
+            nsdManager.stopServiceDiscovery(discoveryRecord1)
+            nsdManager.stopServiceDiscovery(discoveryRecord2)
+        } cleanup {
+            nsdManager.unregisterService(registrationRecord1)
+            nsdManager.unregisterService(registrationRecord2)
+        }
+    }
+
     fun checkOffloadServiceInfo(serviceInfo: OffloadServiceInfo, si: NsdServiceInfo) {
         val expectedServiceType = si.serviceType.split(",")[0]
         assertEquals(si.serviceName, serviceInfo.key.serviceName)

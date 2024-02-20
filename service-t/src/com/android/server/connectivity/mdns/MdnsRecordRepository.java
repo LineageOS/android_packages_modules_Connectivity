@@ -388,7 +388,8 @@ public class MdnsRecordRepository {
                     "Service ID must not be reused across registrations: " + serviceId);
         }
 
-        final int existing = getServiceByName(serviceInfo.getServiceName());
+        final int existing =
+                getServiceByNameAndType(serviceInfo.getServiceName(), serviceInfo.getServiceType());
         // It's OK to re-add a service that is exiting
         if (existing >= 0 && !mServices.get(existing).exiting) {
             throw new NameConflictException(existing);
@@ -405,16 +406,17 @@ public class MdnsRecordRepository {
     }
 
     /**
-     * @return The ID of the service identified by its name, or -1 if none.
+     * @return The ID of the service identified by its name and type, or -1 if none.
      */
-    private int getServiceByName(@Nullable String serviceName) {
-        if (TextUtils.isEmpty(serviceName)) {
+    private int getServiceByNameAndType(
+            @Nullable String serviceName, @Nullable String serviceType) {
+        if (TextUtils.isEmpty(serviceName) || TextUtils.isEmpty(serviceType)) {
             return -1;
         }
         for (int i = 0; i < mServices.size(); i++) {
-            final ServiceRegistration registration = mServices.valueAt(i);
-            if (MdnsUtils.equalsIgnoreDnsCase(
-                    serviceName, registration.serviceInfo.getServiceName())) {
+            final NsdServiceInfo info = mServices.valueAt(i).serviceInfo;
+            if (MdnsUtils.equalsIgnoreDnsCase(serviceName, info.getServiceName())
+                    && MdnsUtils.equalsIgnoreDnsCase(serviceType, info.getServiceType())) {
                 return mServices.keyAt(i);
             }
         }
