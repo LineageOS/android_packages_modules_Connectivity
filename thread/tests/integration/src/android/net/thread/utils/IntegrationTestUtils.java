@@ -39,6 +39,12 @@ import com.android.testutils.TapPacketReader;
 import com.google.common.util.concurrent.SettableFuture;
 
 import java.io.FileDescriptor;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -218,5 +224,27 @@ public final class IntegrationTestUtils {
             }
         }
         return pioList;
+    }
+
+    /**
+     * Sends a UDP message to a destination.
+     *
+     * @param dstAddress the IP address of the destination
+     * @param dstPort the port of the destination
+     * @param message the message in UDP payload
+     * @throws IOException if failed to send the message
+     */
+    public static void sendUdpMessage(InetAddress dstAddress, int dstPort, String message)
+            throws IOException {
+        SocketAddress dstSockAddr = new InetSocketAddress(dstAddress, dstPort);
+
+        try (DatagramSocket socket = new DatagramSocket()) {
+            socket.connect(dstSockAddr);
+
+            byte[] msgBytes = message.getBytes();
+            DatagramPacket packet = new DatagramPacket(msgBytes, msgBytes.length);
+
+            socket.send(packet);
+        }
     }
 }
