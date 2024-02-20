@@ -56,7 +56,6 @@ import com.android.server.ConnectivityService
 import com.android.server.NetworkAgentWrapper
 import com.android.server.TestNetIdManager
 import com.android.server.connectivity.CarrierPrivilegeAuthenticator
-import com.android.server.connectivity.CarrierPrivilegeAuthenticator.CarrierPrivilegesLostListener
 import com.android.server.connectivity.ConnectivityResources
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
@@ -89,6 +88,7 @@ import org.mockito.Mockito.mock
 import org.mockito.MockitoAnnotations
 import org.mockito.Spy
 import java.util.function.Consumer
+import java.util.function.BiConsumer
 
 const val SERVICE_BIND_TIMEOUT_MS = 5_000L
 const val TEST_TIMEOUT_MS = 10_000L
@@ -245,7 +245,7 @@ class ConnectivityServiceIntegrationTest {
             context: Context,
             tm: TelephonyManager,
             requestRestrictedWifiEnabled: Boolean,
-            listener: CarrierPrivilegesLostListener
+            listener: BiConsumer<Int, Int>
         ): CarrierPrivilegeAuthenticator {
             return CarrierPrivilegeAuthenticator(context,
                 object : CarrierPrivilegeAuthenticator.Dependencies() {
