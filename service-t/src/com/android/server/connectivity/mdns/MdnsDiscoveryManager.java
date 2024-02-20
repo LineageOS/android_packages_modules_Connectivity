@@ -34,6 +34,7 @@ import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -362,5 +363,19 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
                 serviceType, socketClient,
                 executorProvider.newServiceTypeClientSchedulerExecutor(), socketKey,
                 sharedLog.forSubComponent(tag), looper, serviceCache);
+    }
+
+    /**
+     * Dump DiscoveryManager state.
+     */
+    public void dump(PrintWriter pw) {
+        discoveryExecutor.checkAndRunOnHandlerThread(() -> {
+            pw.println();
+            // Dump ServiceTypeClients
+            for (MdnsServiceTypeClient serviceTypeClient
+                    : perSocketServiceTypeClients.getAllMdnsServiceTypeClient()) {
+                serviceTypeClient.dump(pw);
+            }
+        });
     }
 }
