@@ -23,6 +23,7 @@ import static android.net.DnsResolver.TYPE_A;
 import static android.net.DnsResolver.TYPE_AAAA;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
+import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 import static android.system.OsConstants.ETIMEDOUT;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
@@ -59,11 +60,14 @@ import androidx.test.runner.AndroidJUnit4;
 import com.android.net.module.util.DnsPacket;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.DeviceConfigRule;
 import com.android.testutils.DnsResolverModuleTest;
 import com.android.testutils.SkipPresubmit;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -80,6 +84,8 @@ import java.util.concurrent.TimeUnit;
 @AppModeFull(reason = "WRITE_SECURE_SETTINGS permission can't be granted to instant apps")
 @RunWith(AndroidJUnit4.class)
 public class DnsResolverTest {
+    @ClassRule
+    public static final DeviceConfigRule DEVICE_CONFIG_CLASS_RULE = new DeviceConfigRule();
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
 
@@ -123,6 +129,20 @@ public class DnsResolverTest {
 
     private TestNetworkCallback mWifiRequestCallback = null;
 
+    /**
+     * @see BeforeClass
+     */
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        // Use async private DNS resolution to avoid flakes due to races applying the setting
+        DEVICE_CONFIG_CLASS_RULE.setConfig(NAMESPACE_CONNECTIVITY,
+                "networkmonitor_async_privdns_resolution", "1");
+        // Make sure NetworkMonitor is restarted before and after the test so the flag is applied
+        // and cleaned up.
+        maybeToggleWifiAndCell();
+        DEVICE_CONFIG_CLASS_RULE.runAfterNextCleanup(DnsResolverTest::maybeToggleWifiAndCell);
+    }
+
     @Before
     public void setUp() throws Exception {
         mContext = InstrumentationRegistry.getContext();
@@ -142,6 +162,12 @@ public class DnsResolverTest {
         if (mWifiRequestCallback != null) {
             mCM.unregisterNetworkCallback(mWifiRequestCallback);
         }
+    }
+
+    private static void maybeToggleWifiAndCell() throws Exception {
+        final CtsNetUtils utils = new CtsNetUtils(InstrumentationRegistry.getContext());
+        utils.reconnectWifiIfSupported();
+        utils.reconnectCellIfSupported();
     }
 
     private static String byteArrayToHexString(byte[] bytes) {

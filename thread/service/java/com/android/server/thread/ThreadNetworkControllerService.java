@@ -41,6 +41,7 @@ import static android.net.thread.ThreadNetworkException.ERROR_RESPONSE_BAD_FORMA
 import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 import static android.net.thread.ThreadNetworkException.ERROR_TIMEOUT;
 import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_CHANNEL;
+import static android.net.thread.ThreadNetworkManager.DISALLOW_THREAD_NETWORK;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
 
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_ABORT;
@@ -64,7 +65,10 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -98,6 +102,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.UserManager;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -167,6 +172,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private TestNetworkSpecifier mUpstreamTestNetworkSpecifier;
     private final HashMap<Network, String> mNetworkToInterface;
     private final ThreadPersistentSettings mPersistentSettings;
+    private final UserManager mUserManager;
+    private boolean mUserRestricted;
 
     private BorderRouterConfigurationParcel mBorderRouterConfig;
 
@@ -180,7 +187,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             TunInterfaceController tunIfController,
             InfraInterfaceController infraIfController,
             ThreadPersistentSettings persistentSettings,
-            NsdPublisher nsdPublisher) {
+            NsdPublisher nsdPublisher,
+            UserManager userManager) {
         mContext = context;
         mHandler = handler;
         mNetworkProvider = networkProvider;
@@ -193,6 +201,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mBorderRouterConfig = new BorderRouterConfigurationParcel();
         mPersistentSettings = persistentSettings;
         mNsdPublisher = nsdPublisher;
+        mUserManager = userManager;
     }
 
     public static ThreadNetworkControllerService newInstance(
@@ -212,7 +221,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 new TunInterfaceController(TUN_IF_NAME),
                 new InfraInterfaceController(),
                 persistentSettings,
-                NsdPublisher.newInstance(context, handler));
+                NsdPublisher.newInstance(context, handler),
+                context.getSystemService(UserManager.class));
     }
 
     private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
@@ -288,10 +298,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         if (otDaemon == null) {
             throw new RemoteException("Internal error: failed to start OT daemon");
         }
-        otDaemon.initialize(
-                mTunIfController.getTunFd(),
-                mPersistentSettings.get(ThreadPersistentSettings.THREAD_ENABLED),
-                mNsdPublisher);
+        otDaemon.initialize(mTunIfController.getTunFd(), isEnabled(), mNsdPublisher);
         otDaemon.registerStateCallback(mOtDaemonCallbackProxy, -1);
         otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         mOtDaemon = otDaemon;
@@ -323,29 +330,106 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                     mConnectivityManager.registerNetworkProvider(mNetworkProvider);
                     requestUpstreamNetwork();
                     requestThreadNetwork();
-
+                    mUserRestricted = isThreadUserRestricted();
+                    registerUserRestrictionsReceiver();
                     initializeOtDaemon();
                 });
     }
 
-    public void setEnabled(@NonNull boolean isEnabled, @NonNull IOperationReceiver receiver) {
+    public void setEnabled(boolean isEnabled, @NonNull IOperationReceiver receiver) {
         enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
 
-        mHandler.post(() -> setEnabledInternal(isEnabled, new OperationReceiverWrapper(receiver)));
+        mHandler.post(
+                () ->
+                        setEnabledInternal(
+                                isEnabled,
+                                true /* persist */,
+                                new OperationReceiverWrapper(receiver)));
     }
 
     private void setEnabledInternal(
-            @NonNull boolean isEnabled, @Nullable OperationReceiverWrapper receiver) {
-        // The persistent setting keeps the desired enabled state, thus it's set regardless
-        // the otDaemon set enabled state operation succeeded or not, so that it can recover
-        // to the desired value after reboot.
-        mPersistentSettings.put(ThreadPersistentSettings.THREAD_ENABLED.key, isEnabled);
+            boolean isEnabled, boolean persist, @NonNull OperationReceiverWrapper receiver) {
+        if (isEnabled && isThreadUserRestricted()) {
+            receiver.onError(
+                    ERROR_FAILED_PRECONDITION,
+                    "Cannot enable Thread: forbidden by user restriction");
+            return;
+        }
+
+        if (persist) {
+            // The persistent setting keeps the desired enabled state, thus it's set regardless
+            // the otDaemon set enabled state operation succeeded or not, so that it can recover
+            // to the desired value after reboot.
+            mPersistentSettings.put(ThreadPersistentSettings.THREAD_ENABLED.key, isEnabled);
+        }
+
         try {
             getOtDaemon().setThreadEnabled(isEnabled, newOtStatusReceiver(receiver));
         } catch (RemoteException e) {
             Log.e(TAG, "otDaemon.setThreadEnabled failed", e);
             receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
         }
+    }
+
+    private void registerUserRestrictionsReceiver() {
+        mContext.registerReceiver(
+                new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        onUserRestrictionsChanged(isThreadUserRestricted());
+                    }
+                },
+                new IntentFilter(UserManager.ACTION_USER_RESTRICTIONS_CHANGED),
+                null /* broadcastPermission */,
+                mHandler);
+    }
+
+    private void onUserRestrictionsChanged(boolean newUserRestrictedState) {
+        checkOnHandlerThread();
+        if (mUserRestricted == newUserRestrictedState) {
+            return;
+        }
+        Log.i(
+                TAG,
+                "Thread user restriction changed: "
+                        + mUserRestricted
+                        + " -> "
+                        + newUserRestrictedState);
+        mUserRestricted = newUserRestrictedState;
+
+        final boolean isEnabled = isEnabled();
+        final IOperationReceiver receiver =
+                new IOperationReceiver.Stub() {
+                    @Override
+                    public void onSuccess() {
+                        Log.d(
+                                TAG,
+                                (isEnabled ? "Enabled" : "Disabled")
+                                        + " Thread due to user restriction change");
+                    }
+
+                    @Override
+                    public void onError(int otError, String messages) {
+                        Log.e(
+                                TAG,
+                                "Failed to "
+                                        + (isEnabled ? "enable" : "disable")
+                                        + " Thread for user restriction change");
+                    }
+                };
+        // Do not save the user restriction state to persistent settings so that the user
+        // configuration won't be overwritten
+        setEnabledInternal(isEnabled, false /* persist */, new OperationReceiverWrapper(receiver));
+    }
+
+    /** Returns {@code true} if Thread is set enabled. */
+    private boolean isEnabled() {
+        return !mUserRestricted && mPersistentSettings.get(ThreadPersistentSettings.THREAD_ENABLED);
+    }
+
+    /** Returns {@code true} if Thread has been restricted for the user. */
+    private boolean isThreadUserRestricted() {
+        return mUserManager.hasUserRestriction(DISALLOW_THREAD_NETWORK);
     }
 
     private void requestUpstreamNetwork() {
