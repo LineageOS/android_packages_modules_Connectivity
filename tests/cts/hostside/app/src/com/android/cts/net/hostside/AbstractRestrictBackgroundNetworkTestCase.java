@@ -160,10 +160,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     private static final long BROADCAST_TIMEOUT_MS = 5_000;
 
-    // Should be kept in sync with the constant in NetworkPolicyManagerService.
-    // TODO: b/322115994 - remove once the feature is in staging.
-    private static final boolean ALWAYS_RESTRICT_BACKGROUND_NETWORK = false;
-
     protected Context mContext;
     protected Instrumentation mInstrumentation;
     protected ConnectivityManager mCm;
@@ -233,8 +229,9 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         }
         final String output = executeShellCommand("device_config get backstage_power"
                 + " com.android.server.net.network_blocked_for_top_sleeping_and_above");
-        return Boolean.parseBoolean(output) && ALWAYS_RESTRICT_BACKGROUND_NETWORK;
+        return Boolean.parseBoolean(output);
     }
+
     protected int getUid(String packageName) throws Exception {
         return mContext.getPackageManager().getPackageUid(packageName, 0);
     }
