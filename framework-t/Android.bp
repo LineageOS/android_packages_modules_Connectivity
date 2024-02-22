@@ -197,6 +197,7 @@ java_sdk_library {
     ],
     aconfig_declarations: [
         "com.android.net.flags-aconfig",
+        "com.android.net.thread.flags-aconfig",
         "nearby_flags",
     ],
 }
