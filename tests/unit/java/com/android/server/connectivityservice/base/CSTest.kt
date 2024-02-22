@@ -47,8 +47,10 @@ import android.os.BatteryStatsManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
+import android.permission.PermissionManager.PermissionResult
 import android.telephony.TelephonyManager
 import android.testing.TestableContext
 import android.util.ArraySet
@@ -71,8 +73,11 @@ import com.android.server.connectivity.SatelliteAccessController
 import com.android.testutils.visibleOnHandlerThread
 import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import java.util.function.BiConsumer
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
 import org.junit.After
@@ -82,7 +87,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 
-internal const val HANDLER_TIMEOUT_MS = 2_000
+internal const val HANDLER_TIMEOUT_MS = 2_000L
 internal const val BROADCAST_TIMEOUT_MS = 3_000L
 internal const val TEST_PACKAGE_NAME = "com.android.test.package"
 internal const val WIFI_WOL_IFNAME = "test_wlan_wol"
@@ -300,13 +305,65 @@ open class CSTest {
         val pacProxyManager = mock<PacProxyManager>()
         val networkPolicyManager = mock<NetworkPolicyManager>()
 
+        // Map of permission name -> PermissionManager.Permission_{GRANTED|DENIED} constant
+        // For permissions granted across the board, the key is only the permission name.
+        // For permissions only granted to a combination of uid/pid, the key
+        // is "<permission name>,<pid>,<uid>". PID+UID permissions have priority over generic ones.
+        private val mMockedPermissions: HashMap<String, Int> = HashMap()
+        private val mStartedActivities = LinkedBlockingQueue<Intent>()
         override fun getPackageManager() = this@CSTest.packageManager
         override fun getContentResolver() = this@CSTest.contentResolver
 
-        // TODO : buff up the capabilities of this permission scheme to allow checking for
-        // permission rejections
-        override fun checkPermission(permission: String, pid: Int, uid: Int) = PERMISSION_GRANTED
-        override fun checkCallingOrSelfPermission(permission: String) = PERMISSION_GRANTED
+        // If the permission result does not set in the mMockedPermissions, it will be
+        // considered as PERMISSION_GRANTED as existing design to prevent breaking other tests.
+        override fun checkPermission(permission: String, pid: Int, uid: Int) =
+            checkMockedPermission(permission, pid, uid, PERMISSION_GRANTED)
+
+        override fun enforceCallingOrSelfPermission(permission: String, message: String?) {
+            // If the permission result does not set in the mMockedPermissions, it will be
+            // considered as PERMISSION_GRANTED as existing design to prevent breaking other tests.
+            val granted = checkMockedPermission(permission, Process.myPid(), Process.myUid(),
+                PERMISSION_GRANTED)
+            if (!granted.equals(PERMISSION_GRANTED)) {
+                throw SecurityException("[Test] permission denied: " + permission)
+            }
+        }
+
+        // If the permission result does not set in the mMockedPermissions, it will be
+        // considered as PERMISSION_GRANTED as existing design to prevent breaking other tests.
+        override fun checkCallingOrSelfPermission(permission: String) =
+            checkMockedPermission(permission, Process.myPid(), Process.myUid(), PERMISSION_GRANTED)
+
+        private fun checkMockedPermission(permission: String, pid: Int, uid: Int, default: Int):
+                Int {
+            val processSpecificKey = "$permission,$pid,$uid"
+            return mMockedPermissions[processSpecificKey]
+                    ?: mMockedPermissions[permission] ?: default
+        }
+
+        /**
+         * Mock checks for the specified permission, and have them behave as per `granted` or
+         * `denied`.
+         *
+         * This will apply to all calls no matter what the checked UID and PID are.
+         *
+         * @param granted One of {@link PackageManager#PermissionResult}.
+         */
+        fun setPermission(permission: String, @PermissionResult granted: Int) {
+            mMockedPermissions.put(permission, granted)
+        }
+
+        /**
+         * Mock checks for the specified permission, and have them behave as per `granted` or
+         * `denied`.
+         *
+         * This will only apply to the passed UID and PID.
+         *
+         * @param granted One of {@link PackageManager#PermissionResult}.
+         */
+        fun setPermission(permission: String, pid: Int, uid: Int, @PermissionResult granted: Int) {
+            mMockedPermissions.put("$permission,$pid,$uid", granted)
+        }
 
         // Necessary for MultinetworkPolicyTracker, which tries to register a receiver for
         // all users. The test can't do that since it doesn't hold INTERACT_ACROSS_USERS.
@@ -363,6 +420,16 @@ open class CSTest {
                 initialExtras: Bundle?
         ) {
             orderedBroadcastAsUserHistory.add(intent)
+        }
+
+        override fun startActivityAsUser(intent: Intent, handle: UserHandle) {
+            mStartedActivities.put(intent)
+        }
+
+        fun expectStartActivityIntent(timeoutMs: Long = HANDLER_TIMEOUT_MS): Intent {
+            val intent = mStartedActivities.poll(timeoutMs, TimeUnit.MILLISECONDS)
+            assertNotNull(intent, "Did not receive sign-in intent after " + timeoutMs + "ms")
+            return intent
         }
     }
 
