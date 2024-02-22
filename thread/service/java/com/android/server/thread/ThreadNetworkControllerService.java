@@ -45,7 +45,6 @@ import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_
 
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_ABORT;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_BUSY;
-import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_DETACHED;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_FAILED_PRECONDITION;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_INVALID_STATE;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_NO_BUFS;
@@ -672,7 +671,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 return ERROR_THREAD_DISABLED;
             case OT_ERROR_FAILED_PRECONDITION:
                 return ERROR_FAILED_PRECONDITION;
-            case OT_ERROR_DETACHED:
             case OT_ERROR_INVALID_STATE:
             default:
                 return ERROR_INTERNAL_ERROR;
