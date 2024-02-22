@@ -21,3 +21,11 @@ aconfig_declarations {
     srcs: ["flags.aconfig"],
     visibility: ["//packages/modules/Connectivity:__subpackages__"],
 }
+
+aconfig_declarations {
+    name: "nearby_flags",
+    package: "com.android.nearby.flags",
+    container: "system",
+    srcs: ["nearby_flags.aconfig"],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
