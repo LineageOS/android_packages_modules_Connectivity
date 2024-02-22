@@ -40,7 +40,8 @@ import libcore.io.IoUtils
 class PacketBridge(
     context: Context,
     addresses: List<LinkAddress>,
-    dnsAddr: InetAddress
+    dnsAddr: InetAddress,
+    portMapping: List<Pair<Int, Int>>
 ) {
     private val binder = Binder()
 
@@ -56,6 +57,10 @@ class PacketBridge(
     // Register test networks to ConnectivityService.
     private val internalNetworkCallback: TestableNetworkCallback
     private val externalNetworkCallback: TestableNetworkCallback
+
+    private val internalForwardMap = HashMap<Int, Int>()
+    private val externalForwardMap = HashMap<Int, Int>()
+
     val internalNetwork: Network
     val externalNetwork: Network
     init {
@@ -65,14 +70,28 @@ class PacketBridge(
         externalNetworkCallback = exCb
         internalNetwork = inNet
         externalNetwork = exNet
+        for (mapping in portMapping) {
+            internalForwardMap[mapping.first] = mapping.second
+            externalForwardMap[mapping.second] = mapping.first
+        }
     }
 
     // Set up the packet bridge.
     private val internalFd = internalIface.fileDescriptor.fileDescriptor
     private val externalFd = externalIface.fileDescriptor.fileDescriptor
 
-    private val pr1 = PacketForwarder(internalFd, 1500, externalFd)
-    private val pr2 = PacketForwarder(externalFd, 1500, internalFd)
+    private val pr1 = InternalPacketForwarder(
+        internalFd,
+        1500,
+        externalFd,
+        internalForwardMap
+    )
+    private val pr2 = ExternalPacketForwarder(
+        externalFd,
+        1500,
+        internalFd,
+        externalForwardMap
+    )
 
     fun start() {
         IoUtils.setBlocking(internalFd, true /* blocking */)
