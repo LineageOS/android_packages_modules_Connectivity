@@ -47,6 +47,7 @@ java_defaults {
 
     // Change to system current when TetheringManager move to bootclass path.
     platform_apis: true,
+    min_sdk_version: "30",
     host_required: ["net-tests-utils-host-common"],
 }
 
@@ -80,8 +81,8 @@ android_test {
 
 // Tethering CTS tests for development and release. These tests always target the platform SDK
 // version, and are subject to all the restrictions appropriate to that version. Before SDK
-// finalization, these tests have a min_sdk_version of 10000, and cannot be installed on release
-// devices.
+// finalization, these tests have a min_sdk_version of 10000, but they can still be installed on
+// release devices as their min_sdk_version is set to a production version.
 android_test {
     name: "CtsTetheringTest",
     defaults: ["CtsTetheringTestDefaults"],
@@ -93,6 +94,14 @@ android_test {
     // Tag this module as a cts test artifact
     test_suites: [
         "cts",
+        "mts-dnsresolver",
+        "mts-networking",
+        "mts-tethering",
+        "mts-wifi",
+        "mcts-dnsresolver",
+        "mcts-networking",
+        "mcts-tethering",
+        "mcts-wifi",
         "general-tests",
     ],
 
