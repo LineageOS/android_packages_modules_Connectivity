@@ -538,7 +538,7 @@ public class MdnsRecordRepository {
     }
 
     private boolean isTruncatedKnownAnswerPacket(MdnsPacket packet) {
-        if (!mMdnsFeatureFlags.mIsKnownAnswerSuppressionEnabled
+        if (!mMdnsFeatureFlags.isKnownAnswerSuppressionEnabled()
                 // Should ignore the response packet.
                 || (packet.flags & MdnsConstants.FLAGS_RESPONSE) != 0) {
             return false;
@@ -745,7 +745,7 @@ public class MdnsRecordRepository {
             // RR TTL as known by the Multicast DNS responder, the responder MUST
             // send an answer so as to update the querier's cache before the record
             // becomes in danger of expiration.
-            if (mMdnsFeatureFlags.mIsKnownAnswerSuppressionEnabled
+            if (mMdnsFeatureFlags.isKnownAnswerSuppressionEnabled()
                     && isKnownAnswer(info.record, knownAnswerRecords)) {
                 continue;
             }
