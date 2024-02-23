@@ -46,7 +46,7 @@ import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_
 
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_ABORT;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_BUSY;
-import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_DETACHED;
+import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_FAILED_PRECONDITION;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_INVALID_STATE;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_NO_BUFS;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_PARSE;
@@ -740,9 +740,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 return ERROR_ABORTED;
             case OT_ERROR_BUSY:
                 return ERROR_BUSY;
-            case OT_ERROR_DETACHED:
-            case OT_ERROR_INVALID_STATE:
-                return ERROR_FAILED_PRECONDITION;
             case OT_ERROR_NO_BUFS:
                 return ERROR_RESOURCE_EXHAUSTED;
             case OT_ERROR_PARSE:
@@ -756,6 +753,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 return ERROR_UNSUPPORTED_CHANNEL;
             case OT_ERROR_THREAD_DISABLED:
                 return ERROR_THREAD_DISABLED;
+            case OT_ERROR_FAILED_PRECONDITION:
+                return ERROR_FAILED_PRECONDITION;
+            case OT_ERROR_INVALID_STATE:
             default:
                 return ERROR_INTERNAL_ERROR;
         }
