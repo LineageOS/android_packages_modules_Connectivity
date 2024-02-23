@@ -68,6 +68,12 @@ public final class OtDaemonController {
         return output.contains("up");
     }
 
+    /** Returns the ML-EID of the device. */
+    public Inet6Address getMlEid() {
+        String addressStr = executeCommand("ipaddr mleid").split("\n")[0].trim();
+        return (Inet6Address) InetAddresses.parseNumericAddress(addressStr);
+    }
+
     public String executeCommand(String cmd) {
         return SystemUtil.runShellCommand(OT_CTL + " " + cmd);
     }
