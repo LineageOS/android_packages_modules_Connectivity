@@ -21,9 +21,12 @@ import android.app.role.RoleManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.pm.UserInfo
 import android.os.Build
 import android.os.Handler
 import android.os.UserHandle
+import android.util.ArraySet
+import com.android.server.makeMockUserManager
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import org.junit.Before
@@ -36,18 +39,31 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
-import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.util.concurrent.Executor
 import java.util.function.Consumer
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
-private const val DEFAULT_MESSAGING_APP1 = "default_messaging_app_1"
-private const val DEFAULT_MESSAGING_APP2 = "default_messaging_app_2"
-private const val DEFAULT_MESSAGING_APP1_UID = 1234
-private const val DEFAULT_MESSAGING_APP2_UID = 5678
+private const val USER = 0
+val USER_INFO = UserInfo(USER, "" /* name */, UserInfo.FLAG_PRIMARY)
+val USER_HANDLE = UserHandle(USER)
+private const val PRIMARY_USER = 0
+private const val SECONDARY_USER = 10
+private val PRIMARY_USER_HANDLE = UserHandle.of(PRIMARY_USER)
+private val SECONDARY_USER_HANDLE = UserHandle.of(SECONDARY_USER)
+// sms app names
+private const val SMS_APP1 = "sms_app_1"
+private const val SMS_APP2 = "sms_app_2"
+// sms app ids
+private const val SMS_APP_ID1 = 100
+private const val SMS_APP_ID2 = 101
+// UID for app1 and app2 on primary user
+// These app could become default sms app for user1
+private val PRIMARY_USER_SMS_APP_UID1 = UserHandle.getUid(PRIMARY_USER, SMS_APP_ID1)
+private val PRIMARY_USER_SMS_APP_UID2 = UserHandle.getUid(PRIMARY_USER, SMS_APP_ID2)
+// UID for app1 and app2 on secondary user
+// These app could become default sms app for user2
+private val SECONDARY_USER_SMS_APP_UID1 = UserHandle.getUid(SECONDARY_USER, SMS_APP_ID1)
+private val SECONDARY_USER_SMS_APP_UID2 = UserHandle.getUid(SECONDARY_USER, SMS_APP_ID2)
 
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
@@ -58,33 +74,36 @@ class SatelliteAccessControllerTest {
     private val mRoleManager =
         mock(SatelliteAccessController.Dependencies::class.java)
     private val mCallback = mock(Consumer::class.java) as Consumer<Set<Int>>
-    private val mSatelliteAccessController by lazy {
-        SatelliteAccessController(context, mRoleManager, mCallback, mHandler)}
-    private var mRoleHolderChangedListener: OnRoleHoldersChangedListener? = null
+    private val mSatelliteAccessController =
+        SatelliteAccessController(context, mRoleManager, mCallback, mHandler)
+    private lateinit var mRoleHolderChangedListener: OnRoleHoldersChangedListener
     @Before
     @Throws(PackageManager.NameNotFoundException::class)
     fun setup() {
+        makeMockUserManager(USER_INFO, USER_HANDLE)
+        doReturn(context).`when`(context).createContextAsUser(any(), anyInt())
         doReturn(mPackageManager).`when`(context).packageManager
-        doReturn(PackageManager.PERMISSION_GRANTED)
-            .`when`(mPackageManager)
-            .checkPermission(Manifest.permission.SATELLITE_COMMUNICATION, DEFAULT_MESSAGING_APP1)
-        doReturn(PackageManager.PERMISSION_GRANTED)
-            .`when`(mPackageManager)
-            .checkPermission(Manifest.permission.SATELLITE_COMMUNICATION, DEFAULT_MESSAGING_APP2)
 
-        // Initialise default message application package1
+        doReturn(PackageManager.PERMISSION_GRANTED)
+            .`when`(mPackageManager)
+            .checkPermission(Manifest.permission.SATELLITE_COMMUNICATION, SMS_APP1)
+        doReturn(PackageManager.PERMISSION_GRANTED)
+            .`when`(mPackageManager)
+            .checkPermission(Manifest.permission.SATELLITE_COMMUNICATION, SMS_APP2)
+
+        // Initialise default message application primary user package1
         val applicationInfo1 = ApplicationInfo()
-        applicationInfo1.uid = DEFAULT_MESSAGING_APP1_UID
+        applicationInfo1.uid = PRIMARY_USER_SMS_APP_UID1
         doReturn(applicationInfo1)
             .`when`(mPackageManager)
-            .getApplicationInfo(eq(DEFAULT_MESSAGING_APP1), anyInt())
+            .getApplicationInfo(eq(SMS_APP1), anyInt())
 
-        // Initialise default message application package2
+        // Initialise default message application primary user package2
         val applicationInfo2 = ApplicationInfo()
-        applicationInfo2.uid = DEFAULT_MESSAGING_APP2_UID
+        applicationInfo2.uid = PRIMARY_USER_SMS_APP_UID2
         doReturn(applicationInfo2)
             .`when`(mPackageManager)
-            .getApplicationInfo(eq(DEFAULT_MESSAGING_APP2), anyInt())
+            .getApplicationInfo(eq(SMS_APP2), anyInt())
 
         // Get registered listener using captor
         val listenerCaptor = ArgumentCaptor.forClass(
@@ -97,80 +116,107 @@ class SatelliteAccessControllerTest {
     }
 
     @Test
-    fun test_onRoleHoldersChanged_SatellitePreferredUid_Changed() {
-        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        val satelliteNetworkPreferredSet =
-            ArgumentCaptor.forClass(Set::class.java) as ArgumentCaptor<Set<Int>>
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback, never()).accept(satelliteNetworkPreferredSet.capture())
+    fun test_onRoleHoldersChanged_SatelliteFallbackUid_Changed_SingleUser() {
+        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback, never()).accept(any())
 
-        // check DEFAULT_MESSAGING_APP1 is available as satellite network preferred uid
-        doReturn(listOf(DEFAULT_MESSAGING_APP1))
-            .`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback).accept(satelliteNetworkPreferredSet.capture())
-        var satelliteNetworkPreferredUids = satelliteNetworkPreferredSet.value
-        assertEquals(1, satelliteNetworkPreferredUids.size)
-        assertTrue(satelliteNetworkPreferredUids.contains(DEFAULT_MESSAGING_APP1_UID))
-        assertFalse(satelliteNetworkPreferredUids.contains(DEFAULT_MESSAGING_APP2_UID))
+        // check DEFAULT_MESSAGING_APP1 is available as satellite network fallback uid
+        doReturn(listOf(SMS_APP1))
+            .`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(PRIMARY_USER_SMS_APP_UID1))
 
-        // check DEFAULT_MESSAGING_APP1 and DEFAULT_MESSAGING_APP2 is available
-        // as satellite network preferred uid
-        val dmas: MutableList<String> = ArrayList()
-        dmas.add(DEFAULT_MESSAGING_APP1)
-        dmas.add(DEFAULT_MESSAGING_APP2)
-        doReturn(dmas).`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback, times(2))
-            .accept(satelliteNetworkPreferredSet.capture())
-        satelliteNetworkPreferredUids = satelliteNetworkPreferredSet.value
-        assertEquals(2, satelliteNetworkPreferredUids.size)
-        assertTrue(satelliteNetworkPreferredUids.contains(DEFAULT_MESSAGING_APP1_UID))
-        assertTrue(satelliteNetworkPreferredUids.contains(DEFAULT_MESSAGING_APP2_UID))
+        // check SMS_APP2 is available as satellite network Fallback uid
+        doReturn(listOf(SMS_APP2)).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(PRIMARY_USER_SMS_APP_UID2))
 
-        // check no uid is available as satellite network preferred uid
-        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback, times(3))
-            .accept(satelliteNetworkPreferredSet.capture())
-        satelliteNetworkPreferredUids = satelliteNetworkPreferredSet.value
-        assertEquals(0, satelliteNetworkPreferredUids.size)
-        assertFalse(satelliteNetworkPreferredUids.contains(DEFAULT_MESSAGING_APP1_UID))
-        assertFalse(satelliteNetworkPreferredUids.contains(DEFAULT_MESSAGING_APP2_UID))
-
-        // No Change received at OnRoleSmsChanged, check callback not triggered
-        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback, times(3))
-            .accept(satelliteNetworkPreferredSet.capture())
+        // check no uid is available as satellite network fallback uid
+        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback).accept(ArraySet())
     }
 
     @Test
     fun test_onRoleHoldersChanged_NoSatelliteCommunicationPermission() {
-        doReturn(listOf<Any>()).`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        val satelliteNetworkPreferredSet =
-            ArgumentCaptor.forClass(Set::class.java) as ArgumentCaptor<Set<Int>>
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback, never()).accept(satelliteNetworkPreferredSet.capture())
+        doReturn(listOf<Any>()).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback, never()).accept(any())
 
-        // check DEFAULT_MESSAGING_APP1 is not available as satellite network preferred uid
+        // check DEFAULT_MESSAGING_APP1 is not available as satellite network fallback uid
         // since satellite communication permission not available.
         doReturn(PackageManager.PERMISSION_DENIED)
             .`when`(mPackageManager)
-            .checkPermission(Manifest.permission.SATELLITE_COMMUNICATION, DEFAULT_MESSAGING_APP1)
-        doReturn(listOf(DEFAULT_MESSAGING_APP1))
-            .`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_SMS, UserHandle.ALL)
-        verify(mCallback, never()).accept(satelliteNetworkPreferredSet.capture())
+            .checkPermission(Manifest.permission.SATELLITE_COMMUNICATION, SMS_APP1)
+        doReturn(listOf(SMS_APP1))
+            .`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback, never()).accept(any())
     }
 
     @Test
     fun test_onRoleHoldersChanged_RoleSms_NotAvailable() {
-        doReturn(listOf(DEFAULT_MESSAGING_APP1))
-            .`when`(mRoleManager).getRoleHolders(RoleManager.ROLE_SMS)
-        val satelliteNetworkPreferredSet =
-            ArgumentCaptor.forClass(Set::class.java) as ArgumentCaptor<Set<Int>>
-        mRoleHolderChangedListener?.onRoleHoldersChanged(RoleManager.ROLE_BROWSER, UserHandle.ALL)
-        verify(mCallback, never()).accept(satelliteNetworkPreferredSet.capture())
+        doReturn(listOf(SMS_APP1))
+            .`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_BROWSER,
+            PRIMARY_USER_HANDLE)
+        verify(mCallback, never()).accept(any())
+    }
+
+    @Test
+    fun test_onRoleHoldersChanged_SatelliteNetworkFallbackUid_Changed_multiUser() {
+        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback, never()).accept(any())
+
+        // check SMS_APP1 is available as satellite network fallback uid at primary user
+        doReturn(listOf(SMS_APP1))
+            .`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(PRIMARY_USER_SMS_APP_UID1))
+
+        // check SMS_APP2 is available as satellite network fallback uid at primary user
+        doReturn(listOf(SMS_APP2)).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, PRIMARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(PRIMARY_USER_SMS_APP_UID2))
+
+        // check SMS_APP1 is available as satellite network fallback uid at secondary user
+        val applicationInfo1 = ApplicationInfo()
+        applicationInfo1.uid = SECONDARY_USER_SMS_APP_UID1
+        doReturn(applicationInfo1).`when`(mPackageManager)
+            .getApplicationInfo(eq(SMS_APP1), anyInt())
+        doReturn(listOf(SMS_APP1)).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            SECONDARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, SECONDARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(PRIMARY_USER_SMS_APP_UID2, SECONDARY_USER_SMS_APP_UID1))
+
+        // check no uid is available as satellite network fallback uid at primary user
+        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS,
+            PRIMARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(SECONDARY_USER_SMS_APP_UID1))
+
+        // check SMS_APP2 is available as satellite network fallback uid at secondary user
+        applicationInfo1.uid = SECONDARY_USER_SMS_APP_UID2
+        doReturn(applicationInfo1).`when`(mPackageManager)
+            .getApplicationInfo(eq(SMS_APP2), anyInt())
+        doReturn(listOf(SMS_APP2))
+            .`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS, SECONDARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, SECONDARY_USER_HANDLE)
+        verify(mCallback).accept(setOf(SECONDARY_USER_SMS_APP_UID2))
+
+        // check no uid is available as satellite network fallback uid at secondary user
+        doReturn(listOf<String>()).`when`(mRoleManager).getRoleHoldersAsUser(RoleManager.ROLE_SMS,
+            SECONDARY_USER_HANDLE)
+        mRoleHolderChangedListener.onRoleHoldersChanged(RoleManager.ROLE_SMS, SECONDARY_USER_HANDLE)
+        verify(mCallback).accept(ArraySet())
     }
 }
