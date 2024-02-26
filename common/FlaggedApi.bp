@@ -23,6 +23,14 @@ aconfig_declarations {
 }
 
 aconfig_declarations {
+    name: "com.android.net.thread.flags-aconfig",
+    package: "com.android.net.thread.flags",
+    container: "system",
+    srcs: ["thread_flags.aconfig"],
+    visibility: ["//packages/modules/Connectivity:__subpackages__"],
+}
+
+aconfig_declarations {
     name: "nearby_flags",
     package: "com.android.nearby.flags",
     container: "system",
