@@ -83,8 +83,8 @@ public final class ThreadNetworkManager {
      * This user restriction specifies if Thread network is disallowed on the device. If Thread
      * network is disallowed it cannot be turned on via Settings.
      *
-     * <p>this is a mirror of {@link UserManager#DISALLOW_THREAD_NETWORK} which is not available
-     * on Android U devices.
+     * <p>this is a mirror of {@link UserManager#DISALLOW_THREAD_NETWORK} which is not available on
+     * Android U devices.
      *
      * @hide
      */
