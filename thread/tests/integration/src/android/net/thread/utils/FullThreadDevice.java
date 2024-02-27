@@ -75,6 +75,10 @@ public final class FullThreadDevice {
         mActiveOperationalDataset = null;
     }
 
+    public void destroy() {
+        mProcess.destroy();
+    }
+
     /**
      * Returns an OMR (Off-Mesh-Routable) address on this device if any.
      *
@@ -180,6 +184,27 @@ public final class FullThreadDevice {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to run factoryreset on ot-cli-ftd", e);
         }
+    }
+
+    public void subscribeMulticastAddress(Inet6Address address) {
+        executeCommand("ipmaddr add " + address.getHostAddress());
+    }
+
+    public void ping(Inet6Address address, Inet6Address source, int size, int count) {
+        String cmd =
+                "ping"
+                        + ((source == null) ? "" : (" -I " + source.getHostAddress()))
+                        + " "
+                        + address.getHostAddress()
+                        + " "
+                        + size
+                        + " "
+                        + count;
+        executeCommand(cmd);
+    }
+
+    public void ping(Inet6Address address) {
+        ping(address, null, 100 /* size */, 1 /* count */);
     }
 
     private List<String> executeCommand(String command) {
