@@ -41,6 +41,7 @@ import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeNotNull;
@@ -448,6 +449,55 @@ public class BorderRoutingTest {
         assertNull(
                 pollForPacketOnInfraNetwork(
                         ICMPV6_ECHO_REQUEST_TYPE, ftd.getOmrAddress(), GROUP_ADDR_SCOPE_3));
+    }
+
+    @Test
+    public void multicastRouting_outboundForwarding_llaToScope4IsNotForwarded() throws Exception {
+        assumeTrue(isKernelVersionAtLeast(KERNEL_VERSION_MULTICAST_ROUTING_SUPPORTED));
+        /*
+         * <pre>
+         * Topology:
+         *                 infra network                       Thread
+         * infra device -------------------- Border Router -------------- Full Thread device
+         *                                   (Cuttlefish)
+         * </pre>
+         */
+
+        FullThreadDevice ftd = mFtds.get(0);
+        startFtdChild(ftd);
+        Inet6Address ftdLla = ftd.getLinkLocalAddress();
+        assertNotNull(ftdLla);
+
+        ftd.ping(GROUP_ADDR_SCOPE_4, ftdLla, 100 /* size */, 1 /* count */);
+
+        assertNull(
+                pollForPacketOnInfraNetwork(ICMPV6_ECHO_REQUEST_TYPE, ftdLla, GROUP_ADDR_SCOPE_4));
+    }
+
+    @Test
+    public void multicastRouting_outboundForwarding_mlaToScope4IsNotForwarded() throws Exception {
+        assumeTrue(isKernelVersionAtLeast(KERNEL_VERSION_MULTICAST_ROUTING_SUPPORTED));
+        /*
+         * <pre>
+         * Topology:
+         *                 infra network                       Thread
+         * infra device -------------------- Border Router -------------- Full Thread device
+         *                                   (Cuttlefish)
+         * </pre>
+         */
+
+        FullThreadDevice ftd = mFtds.get(0);
+        startFtdChild(ftd);
+        List<Inet6Address> ftdMlas = ftd.getMeshLocalAddresses();
+        assertFalse(ftdMlas.isEmpty());
+
+        for (Inet6Address ftdMla : ftdMlas) {
+            ftd.ping(GROUP_ADDR_SCOPE_4, ftdMla, 100 /* size */, 1 /* count */);
+
+            assertNull(
+                    pollForPacketOnInfraNetwork(
+                            ICMPV6_ECHO_REQUEST_TYPE, ftdMla, GROUP_ADDR_SCOPE_4));
+        }
     }
 
     @Test
