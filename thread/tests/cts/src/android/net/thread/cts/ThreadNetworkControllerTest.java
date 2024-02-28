@@ -17,6 +17,7 @@
 package android.net.thread.cts;
 
 import static android.Manifest.permission.ACCESS_NETWORK_STATE;
+import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_CHILD;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_LEADER;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_ROUTER;
@@ -32,6 +33,7 @@ import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
 
+import static com.android.testutils.TestNetworkTrackerKt.initTestNetwork;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -46,6 +48,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.LinkAddress;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
@@ -59,9 +62,7 @@ import android.net.thread.ThreadNetworkController.OperationalDatasetCallback;
 import android.net.thread.ThreadNetworkController.StateCallback;
 import android.net.thread.ThreadNetworkException;
 import android.net.thread.ThreadNetworkManager;
-import android.net.thread.utils.TapTestNetworkTracker;
 import android.os.Build;
-import android.os.HandlerThread;
 import android.os.OutcomeReceiver;
 
 import androidx.annotation.NonNull;
@@ -73,6 +74,7 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.FunctionalUtils.ThrowingRunnable;
+import com.android.testutils.TestNetworkTracker;
 
 import org.junit.After;
 import org.junit.Before;
@@ -108,7 +110,7 @@ public class ThreadNetworkControllerTest {
     private static final int NETWORK_CALLBACK_TIMEOUT_MILLIS = 10 * 1000;
     private static final int CALLBACK_TIMEOUT_MILLIS = 1_000;
     private static final int ENABLED_TIMEOUT_MILLIS = 2_000;
-    private static final int SERVICE_DISCOVERY_TIMEOUT_MILLIS = 30_000;
+    private static final int SERVICE_DISCOVERY_TIMEOUT_MILLIS = 10 * 1000;
     private static final String MESHCOP_SERVICE_TYPE = "_meshcop._udp";
     private static final String THREAD_NETWORK_PRIVILEGED =
             "android.permission.THREAD_NETWORK_PRIVILEGED";
@@ -121,8 +123,6 @@ public class ThreadNetworkControllerTest {
     private NsdManager mNsdManager;
 
     private Set<String> mGrantedPermissions;
-    private HandlerThread mHandlerThread;
-    private TapTestNetworkTracker mTestNetworkTracker;
 
     @Before
     public void setUp() throws Exception {
@@ -141,8 +141,6 @@ public class ThreadNetworkControllerTest {
         setEnabledAndWait(mController, true);
 
         mNsdManager = mContext.getSystemService(NsdManager.class);
-        mHandlerThread = new HandlerThread(this.getClass().getSimpleName());
-        mHandlerThread.start();
     }
 
     @After
@@ -154,7 +152,6 @@ public class ThreadNetworkControllerTest {
             future.get(LEAVE_TIMEOUT_MILLIS, MILLISECONDS);
         }
         dropAllPermissions();
-        tearDownTestNetwork();
     }
 
     @Test
@@ -832,7 +829,7 @@ public class ThreadNetworkControllerTest {
 
     @Test
     public void meshcopService_threadEnabledButNotJoined_discoveredButNoNetwork() throws Exception {
-        setUpTestNetwork();
+        TestNetworkTracker testNetwork = setUpTestNetwork();
 
         setEnabledAndWait(mController, true);
         leaveAndWait(mController);
@@ -848,11 +845,13 @@ public class ThreadNetworkControllerTest {
         assertThat(txtMap.get("rv")).isNotNull();
         assertThat(txtMap.get("tv")).isNotNull();
         assertThat(txtMap.get("sb")).isNotNull();
+
+        tearDownTestNetwork(testNetwork);
     }
 
     @Test
     public void meshcopService_joinedNetwork_discoveredHasNetwork() throws Exception {
-        setUpTestNetwork();
+        TestNetworkTracker testNetwork = setUpTestNetwork();
 
         String networkName = "TestNet" + new Random().nextInt(10_000);
         joinRandomizedDatasetAndWait(mController, networkName);
@@ -873,26 +872,27 @@ public class ThreadNetworkControllerTest {
         assertThat(txtMap.get("tv")).isNotNull();
         assertThat(txtMap.get("sb")).isNotNull();
         assertThat(txtMap.get("id").length).isEqualTo(16);
+
+        tearDownTestNetwork(testNetwork);
     }
 
     @Test
     public void meshcopService_threadDisabled_notDiscovered() throws Exception {
-        setUpTestNetwork();
+        TestNetworkTracker testNetwork = setUpTestNetwork();
 
         CompletableFuture<NsdServiceInfo> serviceLostFuture = new CompletableFuture<>();
         NsdManager.DiscoveryListener listener =
                 discoverForServiceLost(MESHCOP_SERVICE_TYPE, serviceLostFuture);
         setEnabledAndWait(mController, false);
+
         try {
-            serviceLostFuture.get(SERVICE_DISCOVERY_TIMEOUT_MILLIS, MILLISECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
-            // It's fine if the service lost event didn't show up. The service may not ever be
-            // advertised.
+            serviceLostFuture.get(10_000, MILLISECONDS);
         } finally {
             mNsdManager.stopServiceDiscovery(listener);
         }
-
         assertThrows(TimeoutException.class, () -> discoverService(MESHCOP_SERVICE_TYPE));
+
+        tearDownTestNetwork(testNetwork);
     }
 
     private static void dropAllPermissions() {
@@ -1163,17 +1163,14 @@ public class ThreadNetworkControllerTest {
         }
     }
 
-    private void setUpTestNetwork() {
-        assertThat(mTestNetworkTracker).isNull();
-        mTestNetworkTracker = new TapTestNetworkTracker(mContext, mHandlerThread.getLooper());
+    TestNetworkTracker setUpTestNetwork() {
+        return runAsShell(
+                MANAGE_TEST_NETWORKS,
+                () -> initTestNetwork(mContext, new LinkAddress("2001:db8:123::/64"), 10_000));
     }
 
-    private void tearDownTestNetwork() throws InterruptedException {
-        if (mTestNetworkTracker != null) {
-            mTestNetworkTracker.tearDown();
-        }
-        mHandlerThread.quitSafely();
-        mHandlerThread.join();
+    void tearDownTestNetwork(TestNetworkTracker testNetwork) {
+        runAsShell(MANAGE_TEST_NETWORKS, () -> testNetwork.teardown());
     }
 
     private static class DefaultDiscoveryListener implements NsdManager.DiscoveryListener {
