@@ -802,7 +802,9 @@ public class ConnectivityManagerTest {
             assertNull(redactedNormal.getUids());
             assertNull(redactedNormal.getSsid());
             assertNull(redactedNormal.getUnderlyingNetworks());
-            assertEquals(0, redactedNormal.getSubscriptionIds().size());
+            // TODO: Make subIds public and update to verify the size is 2
+            final int subIdsSize = redactedNormal.getSubscriptionIds().size();
+            assertTrue(subIdsSize == 0 || subIdsSize == 2);
             assertEquals(WifiInfo.DEFAULT_MAC_ADDRESS,
                     ((WifiInfo) redactedNormal.getTransportInfo()).getBSSID());
             assertEquals(rssi, ((WifiInfo) redactedNormal.getTransportInfo()).getRssi());
