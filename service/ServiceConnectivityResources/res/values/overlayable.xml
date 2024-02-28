@@ -46,6 +46,7 @@
             <item type="integer" name="config_netstats_validate_import" />
 
             <!-- Configuration values for ThreadNetworkService -->
+            <item type="bool" name="config_thread_default_enabled" />
             <item type="bool" name="config_thread_location_use_for_country_code_enabled" />
         </policy>
     </overlayable>

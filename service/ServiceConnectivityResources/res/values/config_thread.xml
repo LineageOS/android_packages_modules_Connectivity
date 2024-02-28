@@ -20,10 +20,15 @@
 -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Sets to {@code true} to enable Thread on the device by default. Note this is the default
+    value, the actual Thread enabled state can be changed by the {@link
+    ThreadNetworkController#setEnabled} API.
+    -->
+    <bool name="config_thread_default_enabled">true</bool>
+
     <!-- Whether to use location APIs in the algorithm to determine country code or not.
     If disabled, will use other sources (telephony, wifi, etc) to determine device location for
     Thread Network regulatory purposes.
     -->
     <bool name="config_thread_location_use_for_country_code_enabled">true</bool>
-
 </resources>
