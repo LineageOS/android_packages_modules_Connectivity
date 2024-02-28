@@ -1770,9 +1770,13 @@ public final class NetworkCapabilities implements Parcelable {
     public @NonNull NetworkCapabilities setNetworkSpecifier(
             @NonNull NetworkSpecifier networkSpecifier) {
         if (networkSpecifier != null
-                // Transport can be test, or test + a single other transport
+                // Transport can be test, or test + a single other transport or cellular + satellite
+                // transport. Note: cellular + satellite combination is allowed since both transport
+                // use the same specifier, TelephonyNetworkSpecifier.
                 && mTransportTypes != (1L << TRANSPORT_TEST)
-                && Long.bitCount(mTransportTypes & ~(1L << TRANSPORT_TEST)) != 1) {
+                && Long.bitCount(mTransportTypes & ~(1L << TRANSPORT_TEST)) != 1
+                && (mTransportTypes & ~(1L << TRANSPORT_TEST))
+                != (1 << TRANSPORT_CELLULAR | 1 << TRANSPORT_SATELLITE)) {
             throw new IllegalStateException("Must have a single non-test transport specified to "
                     + "use setNetworkSpecifier");
         }

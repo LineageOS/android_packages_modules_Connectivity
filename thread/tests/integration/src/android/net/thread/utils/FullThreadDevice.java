@@ -75,6 +75,10 @@ public final class FullThreadDevice {
         mActiveOperationalDataset = null;
     }
 
+    public void destroy() {
+        mProcess.destroy();
+    }
+
     /**
      * Returns an OMR (Off-Mesh-Routable) address on this device if any.
      *
@@ -100,6 +104,39 @@ public final class FullThreadDevice {
     public Inet6Address getMlEid() {
         List<String> addresses = executeCommand("ipaddr mleid");
         return (Inet6Address) InetAddresses.parseNumericAddress(addresses.get(0));
+    }
+
+    /**
+     * Returns the link-local address of the device.
+     *
+     * <p>This methods goes through all unicast addresses on the device and returns the address that
+     * begins with fe80.
+     */
+    public Inet6Address getLinkLocalAddress() {
+        List<String> output = executeCommand("ipaddr linklocal");
+        if (!output.isEmpty() && output.get(0).startsWith("fe80:")) {
+            return (Inet6Address) InetAddresses.parseNumericAddress(output.get(0));
+        }
+        return null;
+    }
+
+    /**
+     * Returns the mesh-local addresses of the device.
+     *
+     * <p>This methods goes through all unicast addresses on the device and returns the address that
+     * begins with mesh-local prefix.
+     */
+    public List<Inet6Address> getMeshLocalAddresses() {
+        List<String> addresses = executeCommand("ipaddr");
+        List<Inet6Address> meshLocalAddresses = new ArrayList<>();
+        IpPrefix meshLocalPrefix = mActiveOperationalDataset.getMeshLocalPrefix();
+        for (String address : addresses) {
+            Inet6Address addr = (Inet6Address) InetAddresses.parseNumericAddress(address);
+            if (meshLocalPrefix.contains(addr)) {
+                meshLocalAddresses.add(addr);
+            }
+        }
+        return meshLocalAddresses;
     }
 
     /**
@@ -180,6 +217,27 @@ public final class FullThreadDevice {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to run factoryreset on ot-cli-ftd", e);
         }
+    }
+
+    public void subscribeMulticastAddress(Inet6Address address) {
+        executeCommand("ipmaddr add " + address.getHostAddress());
+    }
+
+    public void ping(Inet6Address address, Inet6Address source, int size, int count) {
+        String cmd =
+                "ping"
+                        + ((source == null) ? "" : (" -I " + source.getHostAddress()))
+                        + " "
+                        + address.getHostAddress()
+                        + " "
+                        + size
+                        + " "
+                        + count;
+        executeCommand(cmd);
+    }
+
+    public void ping(Inet6Address address) {
+        ping(address, null, 100 /* size */, 1 /* count */);
     }
 
     private List<String> executeCommand(String command) {
