@@ -2054,12 +2054,16 @@ public class ConnectivityServiceTest {
             };
         }
 
+        private BiConsumer<Integer, Integer> mCarrierPrivilegesLostListener;
+
         @Override
         public CarrierPrivilegeAuthenticator makeCarrierPrivilegeAuthenticator(
                 @NonNull final Context context,
                 @NonNull final TelephonyManager tm,
                 final boolean requestRestrictedWifiEnabled,
-                BiConsumer<Integer, Integer> listener) {
+                BiConsumer<Integer, Integer> listener,
+                @NonNull final Handler handler) {
+            mCarrierPrivilegesLostListener = listener;
             return mDeps.isAtLeastT() ? mCarrierPrivilegeAuthenticator : null;
         }
 
@@ -17446,7 +17450,10 @@ public class ConnectivityServiceTest {
                 .isCarrierServiceUidForNetworkCapabilities(eq(Process.myUid()), any());
         doReturn(TEST_SUBSCRIPTION_ID).when(mCarrierPrivilegeAuthenticator)
                 .getSubIdFromNetworkCapabilities(any());
-        mService.onCarrierPrivilegesLost(lostPrivilegeUid, lostPrivilegeSubId);
+
+        visibleOnHandlerThread(mCsHandlerThread.getThreadHandler(), () -> {
+            mDeps.mCarrierPrivilegesLostListener.accept(lostPrivilegeUid, lostPrivilegeSubId);
+        });
         waitForIdle();
 
         if (expectCapChanged) {
