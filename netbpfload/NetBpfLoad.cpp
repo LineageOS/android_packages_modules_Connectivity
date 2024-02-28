@@ -259,9 +259,11 @@ int main(int argc, char** argv, char * const envp[]) {
     }
 
     if (is_platform) {
+        ALOGI("Executing apex netbpfload...");
         const char * args[] = { apexNetBpfLoad, NULL, };
         execve(args[0], (char**)args, envp);
-        ALOGW("exec '%s' fail: %d[%s]", apexNetBpfLoad, errno, strerror(errno));
+        ALOGE("exec '%s' fail: %d[%s]", apexNetBpfLoad, errno, strerror(errno));
+        return 1;
     }
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
