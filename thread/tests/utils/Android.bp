@@ -19,39 +19,19 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-android_test {
-    name: "CtsThreadNetworkTestCases",
-    defaults: ["cts_defaults"],
-    min_sdk_version: "33",
-    sdk_version: "test_current",
-    manifest: "AndroidManifest.xml",
-    test_config: "AndroidTest.xml",
+java_library {
+    name: "ThreadNetworkTestUtils",
+    min_sdk_version: "30",
+    static_libs: [
+        "compatibility-device-util-axt",
+        "net-tests-utils",
+        "net-utils-device-common",
+        "net-utils-device-common-bpf",
+    ],
     srcs: [
         "src/**/*.java",
     ],
-    test_suites: [
-        "cts",
-        "general-tests",
-        "mcts-tethering",
-        "mts-tethering",
+    defaults: [
+        "framework-connectivity-test-defaults",
     ],
-    static_libs: [
-        "androidx.test.ext.junit",
-        "compatibility-device-util-axt",
-        "ctstestrunner-axt",
-        "guava",
-        "guava-android-testlib",
-        "net-tests-utils",
-        "ThreadNetworkTestUtils",
-        "truth",
-    ],
-    libs: [
-        "android.test.base",
-        "android.test.runner",
-        "framework-connectivity-module-api-stubs-including-flagged",
-    ],
-    // Test coverage system runs on different devices. Need to
-    // compile for all architectures.
-    compile_multilib: "both",
-    platform_apis: true,
 }
