@@ -296,6 +296,16 @@ public class BorderRoutingTest {
     }
 
     @Test
+    public void multicastRouting_inboundForwarding_afterBrRejoinFtdRepliesSubscribedAddress()
+            throws Exception {
+        assumeTrue(isKernelVersionAtLeast(KERNEL_VERSION_MULTICAST_ROUTING_SUPPORTED));
+
+        // TODO (b/327311034): Testing bbr state switch from primary mode to secondary mode and back
+        // to primary mode requires an additional BR in the Thread network. This is not currently
+        // supported, to be implemented when possible.
+    }
+
+    @Test
     public void multicastRouting_ftdSubscribedScope3MulticastAddress_cannotPingfromInfraLink()
             throws Exception {
         assumeTrue(isKernelVersionAtLeast(KERNEL_VERSION_MULTICAST_ROUTING_SUPPORTED));
