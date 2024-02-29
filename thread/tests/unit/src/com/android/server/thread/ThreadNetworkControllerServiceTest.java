@@ -16,7 +16,6 @@
 
 package com.android.server.thread;
 
-import static android.Manifest.permission.ACCESS_NETWORK_STATE;
 import static android.net.thread.ActiveOperationalDataset.CHANNEL_PAGE_24_GHZ;
 import static android.net.thread.ThreadNetworkController.STATE_DISABLED;
 import static android.net.thread.ThreadNetworkController.STATE_ENABLED;
