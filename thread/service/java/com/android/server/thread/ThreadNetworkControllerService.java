@@ -16,7 +16,6 @@ package com.android.server.thread;
 
 import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.MulticastRoutingConfig.CONFIG_FORWARD_NONE;
-import static android.net.MulticastRoutingConfig.FORWARD_NONE;
 import static android.net.MulticastRoutingConfig.FORWARD_SELECTED;
 import static android.net.MulticastRoutingConfig.FORWARD_WITH_MIN_SCOPE;
 import static android.net.thread.ActiveOperationalDataset.CHANNEL_PAGE_24_GHZ;
@@ -70,6 +69,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.InetAddresses;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalNetworkConfig;
@@ -108,6 +108,7 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.ServiceManagerWrapper;
+import com.android.server.thread.openthread.BackboneRouterState;
 import com.android.server.thread.openthread.BorderRouterConfigurationParcel;
 import com.android.server.thread.openthread.IChannelMasksReceiver;
 import com.android.server.thread.openthread.IOtDaemon;
@@ -123,6 +124,7 @@ import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -1001,11 +1003,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         }
     }
 
-    private boolean isMulticastForwardingEnabled() {
-        return !(mUpstreamMulticastRoutingConfig.getForwardingMode() == FORWARD_NONE
-                && mDownstreamMulticastRoutingConfig.getForwardingMode() == FORWARD_NONE);
-    }
-
     private void sendLocalNetworkConfig() {
         if (mNetworkAgent == null) {
             return;
@@ -1015,72 +1012,44 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         Log.d(TAG, "Sent localNetworkConfig: " + localNetworkConfig);
     }
 
-    private void handleMulticastForwardingStateChanged(boolean isEnabled) {
-        if (isMulticastForwardingEnabled() == isEnabled) {
-            return;
-        }
+    private void handleMulticastForwardingChanged(BackboneRouterState state) {
+        MulticastRoutingConfig upstreamMulticastRoutingConfig;
+        MulticastRoutingConfig downstreamMulticastRoutingConfig;
 
-        Log.i(TAG, "Multicast forwaring is " + (isEnabled ? "enabled" : "disabled"));
-
-        if (isEnabled) {
+        if (state.multicastForwardingEnabled) {
             // When multicast forwarding is enabled, setup upstream forwarding to any address
             // with minimal scope 4
             // setup downstream forwarding with addresses subscribed from Thread network
-            mUpstreamMulticastRoutingConfig =
+            upstreamMulticastRoutingConfig =
                     new MulticastRoutingConfig.Builder(FORWARD_WITH_MIN_SCOPE, 4).build();
-            mDownstreamMulticastRoutingConfig =
-                    new MulticastRoutingConfig.Builder(FORWARD_SELECTED).build();
+            downstreamMulticastRoutingConfig =
+                    buildDownstreamMulticastRoutingConfigSelected(state.listeningAddresses);
         } else {
             // When multicast forwarding is disabled, set both upstream and downstream
             // forwarding config to FORWARD_NONE.
-            mUpstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
-            mDownstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
+            upstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
+            downstreamMulticastRoutingConfig = CONFIG_FORWARD_NONE;
         }
+
+        if (upstreamMulticastRoutingConfig.equals(mUpstreamMulticastRoutingConfig)
+                && downstreamMulticastRoutingConfig.equals(mDownstreamMulticastRoutingConfig)) {
+            return;
+        }
+
+        mUpstreamMulticastRoutingConfig = upstreamMulticastRoutingConfig;
+        mDownstreamMulticastRoutingConfig = downstreamMulticastRoutingConfig;
         sendLocalNetworkConfig();
     }
 
-    private void handleMulticastForwardingAddressChanged(byte[] addressBytes, boolean isAdded) {
-        Inet6Address address = bytesToInet6Address(addressBytes);
-        MulticastRoutingConfig newDownstreamConfig;
-        MulticastRoutingConfig.Builder builder;
-
-        if (mDownstreamMulticastRoutingConfig.getForwardingMode()
-                != MulticastRoutingConfig.FORWARD_SELECTED) {
-            Log.e(
-                    TAG,
-                    "Ignore multicast listening address updates when downstream multicast "
-                            + "forwarding mode is not FORWARD_SELECTED");
-            // Don't update the address set if downstream multicast forwarding is disabled.
-            return;
-        }
-        if (isAdded
-                == mDownstreamMulticastRoutingConfig.getListeningAddresses().contains(address)) {
-            return;
-        }
-
-        builder = new MulticastRoutingConfig.Builder(FORWARD_SELECTED);
-        for (Inet6Address listeningAddress :
-                mDownstreamMulticastRoutingConfig.getListeningAddresses()) {
-            builder.addListeningAddress(listeningAddress);
-        }
-
-        if (isAdded) {
+    private MulticastRoutingConfig buildDownstreamMulticastRoutingConfigSelected(
+            List<String> listeningAddresses) {
+        MulticastRoutingConfig.Builder builder =
+                new MulticastRoutingConfig.Builder(FORWARD_SELECTED);
+        for (String addressStr : listeningAddresses) {
+            Inet6Address address = (Inet6Address) InetAddresses.parseNumericAddress(addressStr);
             builder.addListeningAddress(address);
-        } else {
-            builder.clearListeningAddress(address);
         }
-
-        newDownstreamConfig = builder.build();
-        if (!newDownstreamConfig.equals(mDownstreamMulticastRoutingConfig)) {
-            Log.d(
-                    TAG,
-                    "Multicast listening address "
-                            + address.getHostAddress()
-                            + " is "
-                            + (isAdded ? "added" : "removed"));
-            mDownstreamMulticastRoutingConfig = newDownstreamConfig;
-            sendLocalNetworkConfig();
-        }
+        return builder.build();
     }
 
     private static final class CallbackMetadata {
@@ -1248,7 +1217,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             onInterfaceStateChanged(newState.isInterfaceUp);
             onDeviceRoleChanged(newState.deviceRole, listenerId);
             onPartitionIdChanged(newState.partitionId, listenerId);
-            onMulticastForwardingStateChanged(newState.multicastForwardingEnabled);
             mState = newState;
 
             ActiveOperationalDataset newActiveDataset;
@@ -1357,19 +1325,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             }
         }
 
-        private void onMulticastForwardingStateChanged(boolean isEnabled) {
-            checkOnHandlerThread();
-            handleMulticastForwardingStateChanged(isEnabled);
-        }
-
         @Override
         public void onAddressChanged(Ipv6AddressInfo addressInfo, boolean isAdded) {
             mHandler.post(() -> handleAddressChanged(addressInfo, isAdded));
         }
 
         @Override
-        public void onMulticastForwardingAddressChanged(byte[] address, boolean isAdded) {
-            mHandler.post(() -> handleMulticastForwardingAddressChanged(address, isAdded));
+        public void onBackboneRouterStateChanged(BackboneRouterState state) {
+            mHandler.post(() -> handleMulticastForwardingChanged(state));
         }
     }
 }

@@ -16,6 +16,7 @@ import android.net.NetworkCapabilities.NET_ENTERPRISE_ID_3
 import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkScore
+import android.net.NetworkScore.KEEP_CONNECTED_FOR_TEST
 import android.net.NetworkScore.POLICY_EXITING
 import android.net.NetworkScore.POLICY_TRANSPORT_PRIMARY
 import android.os.Build
@@ -86,7 +87,10 @@ class ConnectivitySampleMetricsTest : CSTest() {
                 .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
                 .addCapability(NET_CAPABILITY_NOT_ROAMING)
                 .build()
-        val wifi1Score = NetworkScore.Builder().setExiting(true).build()
+        val wifi1Score = NetworkScore.Builder()
+                .setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST)
+                .setExiting(true)
+                .build()
         val agentWifi1 = Agent(nc = wifi1Caps, score = FromS(wifi1Score)).also { it.connect() }
 
         val wifi2Caps = NetworkCapabilities.Builder()
@@ -96,7 +100,10 @@ class ConnectivitySampleMetricsTest : CSTest() {
                 .addCapability(NET_CAPABILITY_NOT_ROAMING)
                 .addEnterpriseId(NET_ENTERPRISE_ID_3)
                 .build()
-        val wifi2Score = NetworkScore.Builder().setTransportPrimary(true).build()
+        val wifi2Score = NetworkScore.Builder()
+                .setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST)
+                .setTransportPrimary(true)
+                .build()
         val agentWifi2 = Agent(nc = wifi2Caps, score = FromS(wifi2Score)).also { it.connect() }
 
         val cellCaps = NetworkCapabilities.Builder()
@@ -107,7 +114,9 @@ class ConnectivitySampleMetricsTest : CSTest() {
                 .addCapability(NET_CAPABILITY_NOT_ROAMING)
                 .addEnterpriseId(NET_ENTERPRISE_ID_1)
                 .build()
-        val cellScore = NetworkScore.Builder().build()
+        val cellScore = NetworkScore.Builder()
+                .setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST)
+                .build()
         val agentCell = Agent(nc = cellCaps, score = FromS(cellScore)).also { it.connect() }
 
         val stats = csHandler.onHandler { service.sampleConnectivityState() }
