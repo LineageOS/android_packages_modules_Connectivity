@@ -167,14 +167,12 @@ java_sdk_library {
         "//packages/modules/Connectivity/framework-t",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/service-t",
-        "//frameworks/base/packages/Connectivity/service",
         "//frameworks/base",
 
         // Tests using hidden APIs
         "//cts/tests/netlegacy22.api",
         "//cts/tests/tests/app.usage", // NetworkUsageStatsTest
         "//external/sl4a:__subpackages__",
-        "//frameworks/base/packages/Connectivity/tests:__subpackages__",
         "//frameworks/base/core/tests/bandwidthtests",
         "//frameworks/base/core/tests/benchmarks",
         "//frameworks/base/core/tests/utillib",
