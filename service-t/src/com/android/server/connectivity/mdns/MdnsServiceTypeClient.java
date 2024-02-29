@@ -35,6 +35,7 @@ import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
+import java.io.PrintWriter;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.util.ArrayList;
@@ -755,5 +756,14 @@ public class MdnsServiceTypeClient {
         sharedLog.log(String.format("Next run: sessionId: %d, in %d ms",
                 args.sessionId, timeToNextTasksWithBackoffInMs));
         return timeToNextTasksWithBackoffInMs;
+    }
+
+    /**
+     * Dump ServiceTypeClient state.
+     */
+    public void dump(PrintWriter pw) {
+        ensureRunningOnHandlerThread(handler);
+        pw.println("ServiceTypeClient: Type{" + serviceType + "} " + socketKey + " with "
+                + listeners.size() + " listeners.");
     }
 }

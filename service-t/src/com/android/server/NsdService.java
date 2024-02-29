@@ -92,6 +92,7 @@ import com.android.metrics.NetworkNsdReportedMetrics;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DeviceConfigUtils;
+import com.android.net.module.util.HandlerUtils;
 import com.android.net.module.util.InetAddressUtils;
 import com.android.net.module.util.PermissionUtils;
 import com.android.net.module.util.SharedLog;
@@ -2509,6 +2510,14 @@ public class NsdService extends INsdManager.Stub {
         pw.println("Logs:");
         pw.increaseIndent();
         mServiceLogs.reverseDump(pw);
+        pw.decreaseIndent();
+
+        //Dump DiscoveryManager
+        pw.println();
+        pw.println("DiscoveryManager:");
+        pw.increaseIndent();
+        HandlerUtils.runWithScissorsForDump(
+                mNsdStateMachine.getHandler(), () -> mMdnsDiscoveryManager.dump(pw), 10_000);
         pw.decreaseIndent();
     }
 
