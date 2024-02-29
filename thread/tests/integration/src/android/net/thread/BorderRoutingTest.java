@@ -374,9 +374,13 @@ public class BorderRoutingTest {
         subscribeMulticastAddressAndWait(ftd2, GROUP_ADDR_SCOPE_4);
 
         mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_5);
-        mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_4);
 
         assertNotNull(pollForPacketOnInfraNetwork(ICMPV6_ECHO_REPLY_TYPE, ftd1.getOmrAddress()));
+
+        // Verify ping reply from ftd1 and ftd2 separately as the order of replies can't be
+        // predicted.
+        mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_4);
+
         assertNotNull(pollForPacketOnInfraNetwork(ICMPV6_ECHO_REPLY_TYPE, ftd2.getOmrAddress()));
     }
 
@@ -405,11 +409,13 @@ public class BorderRoutingTest {
         startFtdChild(ftd2);
         subscribeMulticastAddressAndWait(ftd2, GROUP_ADDR_SCOPE_5);
 
-        // Send the request twice as the order of replies from ftd1 and ftd2 are not guaranteed
-        mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_5);
         mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_5);
 
         assertNotNull(pollForPacketOnInfraNetwork(ICMPV6_ECHO_REPLY_TYPE, ftd1.getOmrAddress()));
+
+        // Send the request twice as the order of replies from ftd1 and ftd2 are not guaranteed
+        mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_5);
+
         assertNotNull(pollForPacketOnInfraNetwork(ICMPV6_ECHO_REPLY_TYPE, ftd2.getOmrAddress()));
     }
 
