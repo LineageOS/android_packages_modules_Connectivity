@@ -369,6 +369,13 @@ int main(int argc, char** argv, char * const envp[]) {
         if (createSysFsBpfSubDir(location.prefix)) return 1;
     }
 
+    // Note: there's no actual src dir for fs_bpf_loader .o's,
+    // so it is not listed in 'locations[].prefix'.
+    // This is because this is primarily meant for triggering genfscon rules,
+    // and as such this will likely always be the case.
+    // Thus we need to manually create the /sys/fs/bpf/loader subdirectory.
+    if (createSysFsBpfSubDir("loader")) return 1;
+
     // Load all ELF objects, create programs and maps, and pin them
     for (const auto& location : locations) {
         if (loadAllElfObjects(location) != 0) {
