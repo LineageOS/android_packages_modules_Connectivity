@@ -16,8 +16,6 @@
 
 package android.net.nsd;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -35,6 +33,7 @@ import com.android.net.module.util.InetAddressUtils;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -71,6 +70,10 @@ public final class NsdServiceInfo implements Parcelable {
 
     private int mInterfaceIndex;
 
+    // The timestamp that all resource records associated with this service are considered invalid.
+    @Nullable
+    private Instant mExpirationTime;
+
     public NsdServiceInfo() {
         mSubtypes = new ArraySet<>();
         mTxtRecord = new ArrayMap<>();
@@ -99,6 +102,7 @@ public final class NsdServiceInfo implements Parcelable {
         mPort = other.getPort();
         mNetwork = other.getNetwork();
         mInterfaceIndex = other.getInterfaceIndex();
+        mExpirationTime = other.getExpirationTime();
     }
 
     /** Get the service name */
@@ -490,6 +494,38 @@ public final class NsdServiceInfo implements Parcelable {
         return Collections.unmodifiableSet(mSubtypes);
     }
 
+    /**
+     * Sets the timestamp after when this service is expired.
+     *
+     * Note: only number of seconds of {@code expirationTime} is used.
+     *
+     * @hide
+     */
+    public void setExpirationTime(@Nullable Instant expirationTime) {
+        if (expirationTime == null) {
+            mExpirationTime = null;
+        } else {
+            mExpirationTime = Instant.ofEpochSecond(expirationTime.getEpochSecond());
+        }
+    }
+
+    /**
+     * Returns the timestamp after when this service is expired or {@code null} if it's unknown.
+     *
+     * A service is considered expired if any of its DNS record is expired.
+     *
+     * Clients that are depending on the refreshness of the service information should not continue
+     * use this service after the returned timestamp. Instead, clients may re-send queries for the
+     * service to get updated the service information.
+     *
+     * @hide
+     */
+    // @FlaggedApi(NsdManager.Flags.NSD_CUSTOM_TTL_ENABLED)
+    @Nullable
+    public Instant getExpirationTime() {
+        return mExpirationTime;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -499,7 +535,8 @@ public final class NsdServiceInfo implements Parcelable {
                 .append(", hostAddresses: ").append(TextUtils.join(", ", mHostAddresses))
                 .append(", hostname: ").append(mHostname)
                 .append(", port: ").append(mPort)
-                .append(", network: ").append(mNetwork);
+                .append(", network: ").append(mNetwork)
+                .append(", expirationTime: ").append(mExpirationTime);
 
         byte[] txtRecord = getTxtRecord();
         sb.append(", txtRecord: ").append(new String(txtRecord, StandardCharsets.UTF_8));
@@ -539,6 +576,7 @@ public final class NsdServiceInfo implements Parcelable {
             InetAddressUtils.parcelInetAddress(dest, address, flags);
         }
         dest.writeString(mHostname);
+        dest.writeLong(mExpirationTime != null ? mExpirationTime.getEpochSecond() : -1);
     }
 
     /** Implement the Parcelable interface */
@@ -569,6 +607,8 @@ public final class NsdServiceInfo implements Parcelable {
                     info.mHostAddresses.add(InetAddressUtils.unparcelInetAddress(in));
                 }
                 info.mHostname = in.readString();
+                final long seconds = in.readLong();
+                info.setExpirationTime(seconds < 0 ? null : Instant.ofEpochSecond(seconds));
                 return info;
             }
 
