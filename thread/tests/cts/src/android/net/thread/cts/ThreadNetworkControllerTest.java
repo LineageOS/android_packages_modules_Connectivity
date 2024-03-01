@@ -126,9 +126,6 @@ public class ThreadNetworkControllerTest {
 
     @Before
     public void setUp() throws Exception {
-
-        mGrantedPermissions = new HashSet<String>();
-        mExecutor = Executors.newSingleThreadExecutor();
         ThreadNetworkManager manager = mContext.getSystemService(ThreadNetworkManager.class);
         if (manager != null) {
             mController = manager.getAllThreadNetworkControllers().get(0);
@@ -138,22 +135,22 @@ public class ThreadNetworkControllerTest {
         // tests if a feature is not available.
         assumeNotNull(mController);
 
-        setEnabledAndWait(mController, true);
-
+        mGrantedPermissions = new HashSet<String>();
+        mExecutor = Executors.newSingleThreadExecutor();
         mNsdManager = mContext.getSystemService(NsdManager.class);
         mHandlerThread = new HandlerThread(this.getClass().getSimpleName());
         mHandlerThread.start();
+
+        setEnabledAndWait(mController, true);
     }
 
     @After
     public void tearDown() throws Exception {
-        if (mController != null) {
-            grantPermissions(THREAD_NETWORK_PRIVILEGED);
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            mController.leave(mExecutor, future::complete);
-            future.get(LEAVE_TIMEOUT_MILLIS, MILLISECONDS);
+        if (mController == null) {
+            return;
         }
         dropAllPermissions();
+        leaveAndWait(mController);
         tearDownTestNetwork();
     }
 
