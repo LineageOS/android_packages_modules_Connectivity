@@ -66,13 +66,11 @@ filegroup {
         "java/android/net/netstats/NetworkStatsDataMigrationUtilsTest.kt",
         "java/com/android/internal/net/NetworkUtilsInternalTest.java",
         "java/com/android/internal/net/VpnProfileTest.java",
-        "java/com/android/server/VpnManagerServiceTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
         "java/com/android/server/connectivity/IpConnectivityMetricsTest.java",
         "java/com/android/server/connectivity/MetricsTestUtil.java",
         "java/com/android/server/connectivity/MultipathPolicyTrackerTest.java",
         "java/com/android/server/connectivity/NetdEventListenerServiceTest.java",
-        "java/com/android/server/connectivity/VpnTest.java",
         "java/com/android/server/net/ipmemorystore/*.java",
     ],
 }
