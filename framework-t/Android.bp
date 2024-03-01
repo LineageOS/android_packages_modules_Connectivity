@@ -182,6 +182,7 @@ java_sdk_library {
         "//frameworks/base/core/tests/bandwidthtests",
         "//frameworks/base/core/tests/benchmarks",
         "//frameworks/base/core/tests/utillib",
+        "//frameworks/base/services/tests/VpnTests",
         "//frameworks/base/tests/vcn",
         "//frameworks/opt/net/ethernet/tests:__subpackages__",
         "//frameworks/opt/telephony/tests/telephonytests",
