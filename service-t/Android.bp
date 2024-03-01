@@ -75,6 +75,7 @@ java_library {
         "com.android.tethering",
     ],
     visibility: [
+        "//frameworks/base/services/tests/VpnTests",
         "//frameworks/base/tests/vcn",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",

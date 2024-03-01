@@ -37,6 +37,7 @@ java_sdk_library {
         "//frameworks/base/core/tests/benchmarks",
         "//frameworks/base/core/tests/utillib",
         "//frameworks/base/packages/Connectivity/tests:__subpackages__",
+        "//frameworks/base/services/tests/VpnTests",
         "//frameworks/base/tests/vcn",
         "//frameworks/opt/telephony/tests/telephonytests",
         "//packages/modules/CaptivePortalLogin/tests",
