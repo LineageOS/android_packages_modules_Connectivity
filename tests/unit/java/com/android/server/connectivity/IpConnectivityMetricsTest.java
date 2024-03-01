@@ -18,7 +18,6 @@ package com.android.server.connectivity;
 
 import static android.net.metrics.INetdEventListener.EVENT_GETADDRINFO;
 import static android.net.metrics.INetdEventListener.EVENT_GETHOSTBYNAME;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
@@ -50,23 +49,20 @@ import android.os.Build;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.system.OsConstants;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Base64;
-
+import androidx.test.filters.SmallTest;
 import com.android.internal.util.BitUtils;
 import com.android.server.connectivity.metrics.nano.IpConnectivityLogClass;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
-
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
