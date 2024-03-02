@@ -38,6 +38,7 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.waitForIdle
 import java.net.NetworkInterface
+import java.time.Duration
 import java.util.Objects
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -313,9 +314,9 @@ class MdnsAdvertiserTest {
                 eq(thread.looper), any(), intAdvCbCaptor2.capture(), eq(TEST_HOSTNAME), any(), any()
         )
         verify(mockInterfaceAdvertiser1).addService(
-                anyInt(), eq(ALL_NETWORKS_SERVICE_SUBTYPE))
+                anyInt(), eq(ALL_NETWORKS_SERVICE_SUBTYPE), any())
         verify(mockInterfaceAdvertiser2).addService(
-                anyInt(), eq(ALL_NETWORKS_SERVICE_SUBTYPE))
+                anyInt(), eq(ALL_NETWORKS_SERVICE_SUBTYPE), any())
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
         postSync { intAdvCbCaptor1.value.onServiceProbingSucceeded(
@@ -489,15 +490,15 @@ class MdnsAdvertiserTest {
                 eq(thread.looper), any(), intAdvCbCaptor.capture(), eq(TEST_HOSTNAME), any(), any()
         )
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_1),
-                argThat { it.matches(SERVICE_1) })
+                argThat { it.matches(SERVICE_1) }, any())
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_2),
-                argThat { it.matches(expectedRenamed) })
+                argThat { it.matches(expectedRenamed) }, any())
         verify(mockInterfaceAdvertiser1).addService(eq(LONG_SERVICE_ID_1),
-                argThat { it.matches(LONG_SERVICE_1) })
+                argThat { it.matches(LONG_SERVICE_1) }, any())
         verify(mockInterfaceAdvertiser1).addService(eq(LONG_SERVICE_ID_2),
-            argThat { it.matches(expectedLongRenamed) })
+            argThat { it.matches(expectedLongRenamed) }, any())
         verify(mockInterfaceAdvertiser1).addService(eq(CASE_INSENSITIVE_TEST_SERVICE_ID),
-            argThat { it.matches(expectedCaseInsensitiveRenamed) })
+            argThat { it.matches(expectedCaseInsensitiveRenamed) }, any())
 
         doReturn(false).`when`(mockInterfaceAdvertiser1).isProbing(SERVICE_ID_1)
         postSync { intAdvCbCaptor.value.onServiceProbingSucceeded(
@@ -532,7 +533,7 @@ class MdnsAdvertiserTest {
         postSync { socketCb.onSocketCreated(TEST_SOCKETKEY_1, mockSocket1, listOf(TEST_LINKADDR)) }
 
         verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_1),
-                argThat { it.matches(ALL_NETWORKS_SERVICE) })
+                argThat { it.matches(ALL_NETWORKS_SERVICE) }, any())
 
         val updateOptions = MdnsAdvertisingOptions.newBuilder().setIsOnlyUpdate(true).build()
 
@@ -554,7 +555,24 @@ class MdnsAdvertiserTest {
         // Newly created MdnsInterfaceAdvertiser will get addService() call.
         postSync { socketCb.onSocketCreated(TEST_SOCKETKEY_2, mockSocket2, listOf(TEST_LINKADDR2)) }
         verify(mockInterfaceAdvertiser2).addService(eq(SERVICE_ID_1),
-                argThat { it.matches(ALL_NETWORKS_SERVICE_SUBTYPE) })
+                argThat { it.matches(ALL_NETWORKS_SERVICE_SUBTYPE) }, any())
+    }
+
+    @Test
+    fun testAddOrUpdateService_customTtl_registeredSuccess() {
+        val advertiser = MdnsAdvertiser(
+                thread.looper, socketProvider, cb, mockDeps, sharedlog, flags, context)
+        val updateOptions =
+                MdnsAdvertisingOptions.newBuilder().setTtl(Duration.ofSeconds(30)).build()
+
+        postSync { advertiser.addOrUpdateService(SERVICE_ID_1, ALL_NETWORKS_SERVICE,
+                updateOptions, TEST_CLIENT_UID_1) }
+
+        val socketCbCaptor = ArgumentCaptor.forClass(SocketCallback::class.java)
+        verify(socketProvider).requestSocket(eq(null), socketCbCaptor.capture())
+        val socketCb = socketCbCaptor.value
+        postSync { socketCb.onSocketCreated(TEST_SOCKETKEY_1, mockSocket1, listOf(TEST_LINKADDR)) }
+        verify(mockInterfaceAdvertiser1).addService(eq(SERVICE_ID_1), any(), eq(updateOptions))
     }
 
     @Test

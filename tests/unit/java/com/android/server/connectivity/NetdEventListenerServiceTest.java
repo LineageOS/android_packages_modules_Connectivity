@@ -18,9 +18,7 @@ package com.android.server.connectivity;
 
 import static android.net.metrics.INetdEventListener.EVENT_GETADDRINFO;
 import static android.net.metrics.INetdEventListener.EVENT_GETHOSTBYNAME;
-
 import static com.android.testutils.MiscAsserts.assertStringContains;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,27 +32,23 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.system.OsConstants;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Base64;
-
+import androidx.test.filters.SmallTest;
 import com.android.server.connectivity.metrics.nano.IpConnectivityLogClass.IpConnectivityEvent;
 import com.android.server.connectivity.metrics.nano.IpConnectivityLogClass.IpConnectivityLog;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
-
-import libcore.util.EmptyArray;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import libcore.util.EmptyArray;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest

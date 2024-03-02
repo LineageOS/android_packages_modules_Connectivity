@@ -449,7 +449,8 @@ public class MdnsAdvertiser {
             mPendingRegistrations.put(id, registration);
             for (int i = 0; i < mAdvertisers.size(); i++) {
                 try {
-                    mAdvertisers.valueAt(i).addService(id, registration.getServiceInfo());
+                    mAdvertisers.valueAt(i).addService(id, registration.getServiceInfo(),
+                            registration.getAdvertisingOptions());
                 } catch (NameConflictException e) {
                     mSharedLog.wtf("Name conflict adding services that should have unique names",
                             e);
@@ -515,7 +516,7 @@ public class MdnsAdvertiser {
                 final Registration registration = mPendingRegistrations.valueAt(i);
                 try {
                     advertiser.addService(mPendingRegistrations.keyAt(i),
-                            registration.getServiceInfo());
+                            registration.getServiceInfo(), registration.getAdvertisingOptions());
                 } catch (NameConflictException e) {
                     mSharedLog.wtf("Name conflict adding services that should have unique names",
                             e);
@@ -587,15 +588,17 @@ public class MdnsAdvertiser {
         @NonNull
         private NsdServiceInfo mServiceInfo;
         final int mClientUid;
+        private final MdnsAdvertisingOptions mAdvertisingOptions;
         int mConflictDuringProbingCount;
         int mConflictAfterProbingCount;
 
-
-        private Registration(@NonNull NsdServiceInfo serviceInfo, int clientUid) {
+        private Registration(@NonNull NsdServiceInfo serviceInfo, int clientUid,
+                @NonNull MdnsAdvertisingOptions advertisingOptions) {
             this.mOriginalServiceName = serviceInfo.getServiceName();
             this.mOriginalHostname = serviceInfo.getHostname();
             this.mServiceInfo = serviceInfo;
             this.mClientUid = clientUid;
+            this.mAdvertisingOptions = advertisingOptions;
         }
 
         /** Check if the new {@link NsdServiceInfo} doesn't update any data other than subtypes. */
@@ -696,6 +699,11 @@ public class MdnsAdvertiser {
         @NonNull
         public NsdServiceInfo getServiceInfo() {
             return mServiceInfo;
+        }
+
+        @NonNull
+        public MdnsAdvertisingOptions getAdvertisingOptions() {
+            return mAdvertisingOptions;
         }
     }
 
@@ -855,7 +863,7 @@ public class MdnsAdvertiser {
             }
             mSharedLog.i("Adding service " + service + " with ID " + id + " and subtypes "
                     + subtypes + " advertisingOptions " + advertisingOptions);
-            registration = new Registration(service, clientUid);
+            registration = new Registration(service, clientUid, advertisingOptions);
             final BiPredicate<Network, InterfaceAdvertiserRequest> checkConflictFilter;
             if (network == null) {
                 // If registering on all networks, no advertiser must have conflicts

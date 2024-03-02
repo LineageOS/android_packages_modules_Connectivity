@@ -35,6 +35,7 @@ import com.android.testutils.DevSdkIgnoreRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -202,7 +203,8 @@ public class MdnsServiceInfoTest {
                         List.of(),
                         /* textEntries= */ null,
                         /* interfaceIndex= */ 20,
-                        network);
+                        network,
+                        Instant.MAX /* expirationTime */);
 
         assertEquals(network, info2.getNetwork());
     }
@@ -225,7 +227,8 @@ public class MdnsServiceInfoTest {
                                 MdnsServiceInfo.TextEntry.fromString("mn=Google Nest Hub Max"),
                                 MdnsServiceInfo.TextEntry.fromString("test=")),
                         20 /* interfaceIndex */,
-                        new Network(123));
+                        new Network(123),
+                        Instant.MAX /* expirationTime */);
 
         beforeParcel.writeToParcel(parcel, 0);
         parcel.setDataPosition(0);
