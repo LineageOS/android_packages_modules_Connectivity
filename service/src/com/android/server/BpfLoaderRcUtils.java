@@ -72,17 +72,6 @@ public class BpfLoaderRcUtils {
             "updatable"
     );
 
-    private static final List<String> BPF_LOADER_RC_UQPR3 = List.of(
-            "service bpfloader /apex/com.android.tethering/bin/netbpfload",
-            "capabilities CHOWN SYS_ADMIN NET_ADMIN",
-            "group root graphics network_stack net_admin net_bw_acct net_bw_stats net_raw system",
-            "user root",
-            "rlimit memlock 1073741824 1073741824",
-            "oneshot",
-            "reboot_on_failure reboot,bpfloader-failed",
-            "updatable"
-    );
-
 
     private static final String BPF_LOADER_RC_FILE_PATH = "/etc/init/bpfloader.rc";
     private static final String NET_BPF_LOAD_RC_FILE_PATH = "/etc/init/netbpfload.rc";
@@ -143,31 +132,30 @@ public class BpfLoaderRcUtils {
                                 + " exist.");
                 return false;
             }
-            // Check bpf rc file in U QPR2 and U QPR3
-            return compareBpfLoaderRc(bpfRcFile, List.of(BPF_LOADER_RC_UQPR2, BPF_LOADER_RC_UQPR3));
+            // Check bpf rc file in U QPR2
+            return compareBpfLoaderRc(bpfRcFile, BPF_LOADER_RC_UQPR2);
         }
 
         if (SdkLevel.isAtLeastU()) {
             // Check bpf rc file in U
-            return compareBpfLoaderRc(bpfRcFile, List.of(BPF_LOADER_RC_U));
+            return compareBpfLoaderRc(bpfRcFile, BPF_LOADER_RC_U);
         }
         // Check bpf rc file in S/T
-        return compareBpfLoaderRc(bpfRcFile, List.of(BPF_LOADER_RC_S_T));
+        return compareBpfLoaderRc(bpfRcFile, BPF_LOADER_RC_S_T);
     }
 
     private static boolean compareBpfLoaderRc(@NonNull File bpfRcFile,
-            @NonNull List<List<String>> templates) {
-        List<String> actualContent;
+            @NonNull List<String> template) {
         try {
-            actualContent = loadExistingBpfRcFile(new FileInputStream(bpfRcFile));
+            List<String> actualContent = loadExistingBpfRcFile(new FileInputStream(bpfRcFile));
+            if (!actualContent.equals(template)) {
+                Log.wtf(TAG, "BPF rc file is not same as the template files " + actualContent);
+                return false;
+            }
         } catch (FileNotFoundException e) {
             Log.wtf(bpfRcFile.getPath() + " doesn't exist.", e);
             return false;
         }
-        for (List<String> template : templates) {
-            if (actualContent.equals(template)) return true;
-        }
-        Log.wtf(TAG, "BPF rc file is not same as the template files " + actualContent);
-        return false;
+        return true;
     }
 }
