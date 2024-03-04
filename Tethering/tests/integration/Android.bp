@@ -46,7 +46,6 @@ java_defaults {
 android_library {
     name: "TetheringIntegrationTestsBaseLib",
     target_sdk_version: "current",
-    platform_apis: true,
     defaults: ["TetheringIntegrationTestsDefaults"],
     visibility: [
         "//packages/modules/Connectivity/Tethering/tests/mts",
@@ -59,7 +58,6 @@ android_library {
 android_library {
     name: "TetheringIntegrationTestsLatestSdkLib",
     target_sdk_version: "33",
-    platform_apis: true,
     defaults: ["TetheringIntegrationTestsDefaults"],
     srcs: [
         "src/**/*.java",
@@ -76,7 +74,6 @@ android_library {
 android_library {
     name: "TetheringIntegrationTestsLib",
     target_sdk_version: "current",
-    platform_apis: true,
     defaults: ["TetheringIntegrationTestsDefaults"],
     srcs: [
         "src/**/*.java",
