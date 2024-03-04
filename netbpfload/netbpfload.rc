@@ -17,7 +17,7 @@
 on load_bpf_programs
     exec_start bpfloader
 
-service bpfloader /apex/com.android.tethering/bin/netbpfload
+service bpfloader /system/bin/netbpfload
     # netbpfload will do network bpf loading, then execute /system/bin/bpfloader
     capabilities CHOWN SYS_ADMIN NET_ADMIN
     # The following group memberships are a workaround for lack of DAC_OVERRIDE
