@@ -18,6 +18,7 @@ package com.android.server.nearby.managers;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -32,6 +33,8 @@ import android.os.IBinder;
 import android.os.IBinder.DeathRecipient;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+
+import com.android.modules.utils.build.SdkLevel;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -68,6 +71,8 @@ public class BluetoothFinderManagerTest {
 
     @Before
     public void setup() {
+        // Replace with minSdkVersion when Build.VERSION_CODES.VANILLA_ICE_CREAM can be used.
+        assumeTrue(SdkLevel.isAtLeastV());
         MockitoAnnotations.initMocks(this);
         mBluetoothFinderManager = new BluetoothFinderManagerSpy();
     }
