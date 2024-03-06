@@ -20,7 +20,6 @@ import static android.net.nsd.NsdManager.PROTOCOL_DNS_SD;
 
 import android.annotation.NonNull;
 import android.content.Context;
-import android.net.InetAddresses;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
@@ -34,7 +33,6 @@ import com.android.server.thread.openthread.DnsTxtAttribute;
 import com.android.server.thread.openthread.INsdPublisher;
 import com.android.server.thread.openthread.INsdStatusReceiver;
 
-import java.net.InetAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -117,30 +115,6 @@ public final class NsdPublisher extends INsdPublisher.Stub {
         for (DnsTxtAttribute attribute : txt) {
             serviceInfo.setAttribute(attribute.name, attribute.value);
         }
-
-        return serviceInfo;
-    }
-
-    @Override
-    public void registerHost(
-            String name, List<String> addresses, INsdStatusReceiver receiver, int listenerId) {
-        postRegistrationJob(
-                () -> {
-                    NsdServiceInfo serviceInfo = buildServiceInfoForHost(name, addresses);
-                    registerInternal(serviceInfo, receiver, listenerId, "host");
-                });
-    }
-
-    private static NsdServiceInfo buildServiceInfoForHost(
-            String name, List<String> addressStrings) {
-        NsdServiceInfo serviceInfo = new NsdServiceInfo();
-
-        serviceInfo.setHostname(name);
-        ArrayList<InetAddress> addresses = new ArrayList<>(addressStrings.size());
-        for (String addressString : addressStrings) {
-            addresses.add(InetAddresses.parseNumericAddress(addressString));
-        }
-        serviceInfo.setHostAddresses(addresses);
 
         return serviceInfo;
     }
