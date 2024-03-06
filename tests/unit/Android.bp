@@ -58,14 +58,11 @@ java_defaults {
 filegroup {
     name: "non-connectivity-module-test",
     srcs: [
-        "java/android/net/Ikev2VpnProfileTest.java",
         "java/android/net/IpMemoryStoreTest.java",
         "java/android/net/TelephonyNetworkSpecifierTest.java",
-        "java/android/net/VpnManagerTest.java",
         "java/android/net/ipmemorystore/*.java",
         "java/android/net/netstats/NetworkStatsDataMigrationUtilsTest.kt",
         "java/com/android/internal/net/NetworkUtilsInternalTest.java",
-        "java/com/android/internal/net/VpnProfileTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
         "java/com/android/server/connectivity/IpConnectivityMetricsTest.java",
         "java/com/android/server/connectivity/MetricsTestUtil.java",
