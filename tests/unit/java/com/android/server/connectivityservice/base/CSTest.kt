@@ -146,7 +146,6 @@ open class CSTest {
         it[ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS] = true
-        it[ConnectivityService.LOG_BPF_RC] = true
         it[ConnectivityService.ALLOW_SATALLITE_NETWORK_FALLBACK] = true
     }
     fun enableFeature(f: String) = enabledFeatures.set(f, true)

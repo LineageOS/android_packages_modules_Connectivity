@@ -162,7 +162,6 @@ import static com.android.server.ConnectivityService.DELAY_DESTROY_FROZEN_SOCKET
 import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
 import static com.android.server.ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS;
 import static com.android.server.ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION;
-import static com.android.server.ConnectivityService.LOG_BPF_RC;
 import static com.android.server.ConnectivityService.MAX_NETWORK_REQUESTS_PER_SYSTEM_UID;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_MOBILE_DATA_PREFERERRED;
 import static com.android.server.ConnectivityService.PREFERENCE_ORDER_OEM;
@@ -2177,8 +2176,6 @@ public class ConnectivityServiceTest {
         public boolean isFeatureNotChickenedOut(Context context, String name) {
             switch (name) {
                 case ALLOW_SYSUI_CONNECTIVITY_REPORTS:
-                    return true;
-                case LOG_BPF_RC:
                     return true;
                 case ALLOW_SATALLITE_NETWORK_FALLBACK:
                     return true;
