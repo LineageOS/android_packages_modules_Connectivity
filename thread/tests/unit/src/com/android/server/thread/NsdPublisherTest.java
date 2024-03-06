@@ -28,7 +28,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import android.net.InetAddresses;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
@@ -43,8 +42,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -285,189 +282,6 @@ public final class NsdPublisherTest {
     }
 
     @Test
-    public void registerHost_nsdManagerSucceeds_serviceRegistrationSucceeds() throws Exception {
-        prepareTest();
-
-        mNsdPublisher.registerHost(
-                "MyHost",
-                List.of("2001:db8::1", "2001:db8::2", "2001:db8::3"),
-                mRegistrationReceiver,
-                16 /* listenerId */);
-
-        mTestLooper.dispatchAll();
-
-        ArgumentCaptor<NsdServiceInfo> actualServiceInfoCaptor =
-                ArgumentCaptor.forClass(NsdServiceInfo.class);
-        ArgumentCaptor<NsdManager.RegistrationListener> actualRegistrationListenerCaptor =
-                ArgumentCaptor.forClass(NsdManager.RegistrationListener.class);
-
-        verify(mMockNsdManager, times(1))
-                .registerService(
-                        actualServiceInfoCaptor.capture(),
-                        eq(PROTOCOL_DNS_SD),
-                        any(),
-                        actualRegistrationListenerCaptor.capture());
-
-        NsdServiceInfo actualServiceInfo = actualServiceInfoCaptor.getValue();
-        NsdManager.RegistrationListener actualRegistrationListener =
-                actualRegistrationListenerCaptor.getValue();
-
-        actualRegistrationListener.onServiceRegistered(actualServiceInfo);
-        mTestLooper.dispatchAll();
-
-        assertThat(actualServiceInfo.getServiceName()).isNull();
-        assertThat(actualServiceInfo.getServiceType()).isNull();
-        assertThat(actualServiceInfo.getSubtypes()).isEmpty();
-        assertThat(actualServiceInfo.getPort()).isEqualTo(0);
-        assertThat(actualServiceInfo.getAttributes()).isEmpty();
-        assertThat(actualServiceInfo.getHostname()).isEqualTo("MyHost");
-        assertThat(actualServiceInfo.getHostAddresses())
-                .isEqualTo(makeAddresses("2001:db8::1", "2001:db8::2", "2001:db8::3"));
-
-        verify(mRegistrationReceiver, times(1)).onSuccess();
-    }
-
-    @Test
-    public void registerHost_nsdManagerFails_serviceRegistrationFails() throws Exception {
-        prepareTest();
-
-        mNsdPublisher.registerHost(
-                "MyHost",
-                List.of("2001:db8::1", "2001:db8::2", "2001:db8::3"),
-                mRegistrationReceiver,
-                16 /* listenerId */);
-
-        mTestLooper.dispatchAll();
-
-        ArgumentCaptor<NsdServiceInfo> actualServiceInfoCaptor =
-                ArgumentCaptor.forClass(NsdServiceInfo.class);
-        ArgumentCaptor<NsdManager.RegistrationListener> actualRegistrationListenerCaptor =
-                ArgumentCaptor.forClass(NsdManager.RegistrationListener.class);
-
-        verify(mMockNsdManager, times(1))
-                .registerService(
-                        actualServiceInfoCaptor.capture(),
-                        eq(PROTOCOL_DNS_SD),
-                        any(),
-                        actualRegistrationListenerCaptor.capture());
-        mTestLooper.dispatchAll();
-
-        NsdServiceInfo actualServiceInfo = actualServiceInfoCaptor.getValue();
-        NsdManager.RegistrationListener actualRegistrationListener =
-                actualRegistrationListenerCaptor.getValue();
-
-        actualRegistrationListener.onRegistrationFailed(actualServiceInfo, FAILURE_INTERNAL_ERROR);
-        mTestLooper.dispatchAll();
-
-        assertThat(actualServiceInfo.getServiceName()).isNull();
-        assertThat(actualServiceInfo.getServiceType()).isNull();
-        assertThat(actualServiceInfo.getSubtypes()).isEmpty();
-        assertThat(actualServiceInfo.getPort()).isEqualTo(0);
-        assertThat(actualServiceInfo.getAttributes()).isEmpty();
-        assertThat(actualServiceInfo.getHostname()).isEqualTo("MyHost");
-        assertThat(actualServiceInfo.getHostAddresses())
-                .isEqualTo(makeAddresses("2001:db8::1", "2001:db8::2", "2001:db8::3"));
-
-        verify(mRegistrationReceiver, times(1)).onError(FAILURE_INTERNAL_ERROR);
-    }
-
-    @Test
-    public void registerHost_nsdManagerThrows_serviceRegistrationFails() throws Exception {
-        prepareTest();
-
-        doThrow(new IllegalArgumentException("NsdManager fails"))
-                .when(mMockNsdManager)
-                .registerService(any(), anyInt(), any(Executor.class), any());
-
-        mNsdPublisher.registerHost(
-                "MyHost",
-                List.of("2001:db8::1", "2001:db8::2", "2001:db8::3"),
-                mRegistrationReceiver,
-                16 /* listenerId */);
-
-        mTestLooper.dispatchAll();
-
-        verify(mRegistrationReceiver, times(1)).onError(FAILURE_INTERNAL_ERROR);
-    }
-
-    @Test
-    public void unregisterHost_nsdManagerSucceeds_serviceUnregistrationSucceeds() throws Exception {
-        prepareTest();
-
-        mNsdPublisher.registerHost(
-                "MyHost",
-                List.of("2001:db8::1", "2001:db8::2", "2001:db8::3"),
-                mRegistrationReceiver,
-                16 /* listenerId */);
-
-        mTestLooper.dispatchAll();
-
-        ArgumentCaptor<NsdServiceInfo> actualServiceInfoCaptor =
-                ArgumentCaptor.forClass(NsdServiceInfo.class);
-        ArgumentCaptor<NsdManager.RegistrationListener> actualRegistrationListenerCaptor =
-                ArgumentCaptor.forClass(NsdManager.RegistrationListener.class);
-
-        verify(mMockNsdManager, times(1))
-                .registerService(
-                        actualServiceInfoCaptor.capture(),
-                        eq(PROTOCOL_DNS_SD),
-                        any(Executor.class),
-                        actualRegistrationListenerCaptor.capture());
-
-        NsdServiceInfo actualServiceInfo = actualServiceInfoCaptor.getValue();
-        NsdManager.RegistrationListener actualRegistrationListener =
-                actualRegistrationListenerCaptor.getValue();
-
-        actualRegistrationListener.onServiceRegistered(actualServiceInfo);
-        mNsdPublisher.unregister(mUnregistrationReceiver, 16 /* listenerId */);
-        mTestLooper.dispatchAll();
-        verify(mMockNsdManager, times(1)).unregisterService(actualRegistrationListener);
-
-        actualRegistrationListener.onServiceUnregistered(actualServiceInfo);
-        mTestLooper.dispatchAll();
-        verify(mUnregistrationReceiver, times(1)).onSuccess();
-    }
-
-    @Test
-    public void unregisterHost_nsdManagerFails_serviceUnregistrationFails() throws Exception {
-        prepareTest();
-
-        mNsdPublisher.registerHost(
-                "MyHost",
-                List.of("2001:db8::1", "2001:db8::2", "2001:db8::3"),
-                mRegistrationReceiver,
-                16 /* listenerId */);
-
-        mTestLooper.dispatchAll();
-
-        ArgumentCaptor<NsdServiceInfo> actualServiceInfoCaptor =
-                ArgumentCaptor.forClass(NsdServiceInfo.class);
-        ArgumentCaptor<NsdManager.RegistrationListener> actualRegistrationListenerCaptor =
-                ArgumentCaptor.forClass(NsdManager.RegistrationListener.class);
-
-        verify(mMockNsdManager, times(1))
-                .registerService(
-                        actualServiceInfoCaptor.capture(),
-                        eq(PROTOCOL_DNS_SD),
-                        any(Executor.class),
-                        actualRegistrationListenerCaptor.capture());
-
-        NsdServiceInfo actualServiceInfo = actualServiceInfoCaptor.getValue();
-        NsdManager.RegistrationListener actualRegistrationListener =
-                actualRegistrationListenerCaptor.getValue();
-
-        actualRegistrationListener.onServiceRegistered(actualServiceInfo);
-        mNsdPublisher.unregister(mUnregistrationReceiver, 16 /* listenerId */);
-        mTestLooper.dispatchAll();
-        verify(mMockNsdManager, times(1)).unregisterService(actualRegistrationListener);
-
-        actualRegistrationListener.onUnregistrationFailed(
-                actualServiceInfo, FAILURE_INTERNAL_ERROR);
-        mTestLooper.dispatchAll();
-        verify(mUnregistrationReceiver, times(1)).onError(0);
-    }
-
-    @Test
     public void onOtDaemonDied_unregisterAll() {
         prepareTest();
 
@@ -522,30 +336,11 @@ public final class NsdPublisherTest {
                 actualRegistrationListenerCaptor.getAllValues().get(1);
         actualListener2.onServiceRegistered(actualServiceInfoCaptor.getValue());
 
-        mNsdPublisher.registerHost(
-                "Myhost",
-                List.of("2001:db8::1", "2001:db8::2", "2001:db8::3"),
-                mRegistrationReceiver,
-                18 /* listenerId */);
-
-        mTestLooper.dispatchAll();
-
-        verify(mMockNsdManager, times(3))
-                .registerService(
-                        actualServiceInfoCaptor.capture(),
-                        eq(PROTOCOL_DNS_SD),
-                        any(Executor.class),
-                        actualRegistrationListenerCaptor.capture());
-        NsdManager.RegistrationListener actualListener3 =
-                actualRegistrationListenerCaptor.getAllValues().get(1);
-        actualListener3.onServiceRegistered(actualServiceInfoCaptor.getValue());
-
         mNsdPublisher.onOtDaemonDied();
         mTestLooper.dispatchAll();
 
         verify(mMockNsdManager, times(1)).unregisterService(actualListener1);
         verify(mMockNsdManager, times(1)).unregisterService(actualListener2);
-        verify(mMockNsdManager, times(1)).unregisterService(actualListener3);
     }
 
     private static DnsTxtAttribute makeTxtAttribute(String name, List<Integer> value) {
@@ -559,15 +354,6 @@ public final class NsdPublisherTest {
         }
 
         return txtAttribute;
-    }
-
-    private static List<InetAddress> makeAddresses(String... addressStrings) {
-        List<InetAddress> addresses = new ArrayList<>();
-
-        for (String addressString : addressStrings) {
-            addresses.add(InetAddresses.parseNumericAddress(addressString));
-        }
-        return addresses;
     }
 
     // @Before and @Test run in different threads. NsdPublisher requires the jobs are run on the
