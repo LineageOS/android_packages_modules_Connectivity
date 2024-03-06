@@ -26,19 +26,11 @@ install_symlink {
     installed_location: "bin/ethtool",
 }
 
-install_symlink {
-    name: "platform_netbpfload_symlink",
-    symlink_target: "/apex/com.android.tethering/bin/netbpfload",
-    installed_location: "bin/netbpfload",
-    init_rc: ["netbpfload.rc"],
-}
-
 phony {
     name: "mainline_tethering_platform_components",
     required: [
-        "bpfloader",
+        "netbpfload",
         "platform_ethtool_symlink",
-        "platform_netbpfload_symlink",
     ],
 }
 
@@ -73,7 +65,9 @@ cc_binary {
     // module "netbpfload" variant "android_x86_apex30": should support
     // min_sdk_version(30) for "com.android.tethering": newer SDK(34).
     min_sdk_version: "30",
-    installable: false,
+
+    init_rc: ["netbpfload.rc"],
+    required: ["bpfloader"],
 }
 
 // Versioned netbpfload init rc: init system will process it only on api T/33+ devices
