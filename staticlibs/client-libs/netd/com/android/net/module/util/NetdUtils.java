@@ -258,7 +258,7 @@ public class NetdUtils {
     }
 
     /** Add or remove |route|. */
-    private static void modifyRoute(final INetd netd, final ModifyOperation op, final int netId,
+    public static void modifyRoute(final INetd netd, final ModifyOperation op, final int netId,
             final RouteInfo route) {
         final String ifName = route.getInterface();
         final String dst = route.getDestination().toString();

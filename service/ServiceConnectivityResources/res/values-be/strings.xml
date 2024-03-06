@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"Увайдзіце ў сетку"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"Няма падключэння да інтэрнэту"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"Магчыма, скончыўся трафік, выдзелены аператарам \"<xliff:g id="NETWORK_CARRIER">%1$s</xliff:g>\". Націсніце, каб паглядзець даступныя дзеянні."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Магчыма, скончыўся трафік. Націсніце, каб паглядзець даступныя дзеянні."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> не мае доступу ў інтэрнэт"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Дакраніцеся, каб убачыць параметры"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Мабільная сетка не мае доступу ў інтэрнэт"</string>
