@@ -87,7 +87,7 @@ public class BpfLoaderRcUtils {
         List<String> contents = new ArrayList<>();
         boolean bpfSectionFound = false;
         try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(inputStream, StandardCharsets.ISO_8859_1))) {
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
