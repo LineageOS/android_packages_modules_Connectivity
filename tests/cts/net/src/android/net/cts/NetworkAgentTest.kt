@@ -21,6 +21,7 @@ import android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE
 import android.app.Instrumentation
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.pm.PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION
 import android.net.ConnectivityManager
 import android.net.EthernetNetworkSpecifier
 import android.net.INetworkAgent
@@ -70,6 +71,7 @@ import android.net.SocketKeepalive
 import android.net.TelephonyNetworkSpecifier
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
+import android.net.TransportInfo
 import android.net.Uri
 import android.net.VpnManager
 import android.net.VpnTransportInfo
@@ -150,6 +152,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -574,27 +577,13 @@ class NetworkAgentTest {
     }
 
     private fun doTestAllowedUids(
-            subId: Int,
-            transport: Int,
-            uid: Int,
-            expectUidsPresent: Boolean
-    ) {
-        doTestAllowedUids(subId, intArrayOf(transport), uid, expectUidsPresent)
-    }
-
-    private fun doTestAllowedUids(
-            subId: Int,
             transports: IntArray,
             uid: Int,
-            expectUidsPresent: Boolean
+            expectUidsPresent: Boolean,
+            specifier: NetworkSpecifier?,
+            transportInfo: TransportInfo?
     ) {
         val callback = TestableNetworkCallback(DEFAULT_TIMEOUT_MS)
-        val specifier = when {
-            transports.size != 1 -> null
-            TRANSPORT_ETHERNET in transports -> EthernetNetworkSpecifier("testInterface")
-            TRANSPORT_CELLULAR in transports -> TelephonyNetworkSpecifier(subId)
-            else -> null
-        }
         val agent = createNetworkAgent(initialNc = NetworkCapabilities.Builder().run {
             addTransportType(TRANSPORT_TEST)
             transports.forEach { addTransportType(it) }
@@ -602,10 +591,7 @@ class NetworkAgentTest {
             addCapability(NET_CAPABILITY_NOT_SUSPENDED)
             removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
             setNetworkSpecifier(specifier)
-            if (TRANSPORT_WIFI in transports && SdkLevel.isAtLeastV()) {
-                // setSubscriptionId only exists in V+
-                setTransportInfo(WifiInfo.Builder().setSubscriptionId(subId).build())
-            }
+            setTransportInfo(transportInfo)
             setAllowedUids(setOf(uid))
             setOwnerUid(Process.myUid())
             setAdministratorUids(intArrayOf(Process.myUid()))
@@ -628,6 +614,45 @@ class NetworkAgentTest {
         agent.unregister()
         callback.eventuallyExpect<Lost> { it.network == agent.network }
         // callback will be unregistered in tearDown()
+    }
+
+    private fun doTestAllowedUids(
+            transport: Int,
+            uid: Int,
+            expectUidsPresent: Boolean
+    ) {
+        doTestAllowedUids(intArrayOf(transport), uid, expectUidsPresent,
+                specifier = null, transportInfo = null)
+    }
+
+    private fun doTestAllowedUidsWithSubId(
+            subId: Int,
+            transport: Int,
+            uid: Int,
+            expectUidsPresent: Boolean
+    ) {
+        doTestAllowedUidsWithSubId(subId, intArrayOf(transport), uid, expectUidsPresent)
+    }
+
+    private fun doTestAllowedUidsWithSubId(
+            subId: Int,
+            transports: IntArray,
+            uid: Int,
+            expectUidsPresent: Boolean
+    ) {
+        val specifier = when {
+            transports.size != 1 -> null
+            TRANSPORT_ETHERNET in transports -> EthernetNetworkSpecifier("testInterface")
+            TRANSPORT_CELLULAR in transports -> TelephonyNetworkSpecifier(subId)
+            else -> null
+        }
+        val transportInfo = if (TRANSPORT_WIFI in transports && SdkLevel.isAtLeastV()) {
+            // setSubscriptionId only exists in V+
+            WifiInfo.Builder().setSubscriptionId(subId).build()
+        } else {
+            null
+        }
+        doTestAllowedUids(transports, uid, expectUidsPresent, specifier, transportInfo)
     }
 
     private fun setHoldCarrierPrivilege(hold: Boolean, subId: Int) {
@@ -723,6 +748,19 @@ class NetworkAgentTest {
     @Test
     @IgnoreUpTo(Build.VERSION_CODES.S)
     fun testAllowedUids() {
+        doTestAllowedUids(TRANSPORT_CELLULAR, Process.myUid(), expectUidsPresent = false)
+        doTestAllowedUids(TRANSPORT_WIFI, Process.myUid(), expectUidsPresent = false)
+        doTestAllowedUids(TRANSPORT_BLUETOOTH, Process.myUid(), expectUidsPresent = false)
+
+        // TODO(b/315136340): Allow ownerUid to see allowedUids and add cases that expect uids
+        // present
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S)
+    fun testAllowedUids_WithCarrierServicePackage() {
+        assumeTrue(realContext.packageManager.hasSystemFeature(FEATURE_TELEPHONY_SUBSCRIPTION))
+
         // Use a different package than this one to make sure that a package that doesn't hold
         // carrier service permission can be set as an allowed UID.
         val servicePackage = "android.net.cts.carrierservicepackage"
@@ -735,12 +773,17 @@ class NetworkAgentTest {
 
         val tm = realContext.getSystemService(TelephonyManager::class.java)!!
         val defaultSubId = SubscriptionManager.getDefaultSubscriptionId()
+        assertTrue(defaultSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID,
+                "getDefaultSubscriptionId returns INVALID_SUBSCRIPTION_ID")
         tryTest {
             // This process is not the carrier service UID, so allowedUids should be ignored in all
             // the following cases.
-            doTestAllowedUids(defaultSubId, TRANSPORT_CELLULAR, uid, expectUidsPresent = false)
-            doTestAllowedUids(defaultSubId, TRANSPORT_WIFI, uid, expectUidsPresent = false)
-            doTestAllowedUids(defaultSubId, TRANSPORT_BLUETOOTH, uid, expectUidsPresent = false)
+            doTestAllowedUidsWithSubId(defaultSubId, TRANSPORT_CELLULAR, uid,
+                    expectUidsPresent = false)
+            doTestAllowedUidsWithSubId(defaultSubId, TRANSPORT_WIFI, uid,
+                    expectUidsPresent = false)
+            doTestAllowedUidsWithSubId(defaultSubId, TRANSPORT_BLUETOOTH, uid,
+                    expectUidsPresent = false)
 
             // The tools to set the carrier service package override do not exist before U,
             // so there is no way to test the rest of this test on < U.
@@ -783,9 +826,10 @@ class NetworkAgentTest {
                 // TODO(b/315136340): Allow ownerUid to see allowedUids and enable below test case
                 // doTestAllowedUids(defaultSubId, TRANSPORT_WIFI, uid, expectUidsPresent = true)
             }
-            doTestAllowedUids(defaultSubId, TRANSPORT_BLUETOOTH, uid, expectUidsPresent = false)
-            doTestAllowedUids(defaultSubId, intArrayOf(TRANSPORT_CELLULAR, TRANSPORT_WIFI), uid,
+            doTestAllowedUidsWithSubId(defaultSubId, TRANSPORT_BLUETOOTH, uid,
                     expectUidsPresent = false)
+            doTestAllowedUidsWithSubId(defaultSubId, intArrayOf(TRANSPORT_CELLULAR, TRANSPORT_WIFI),
+                    uid, expectUidsPresent = false)
         } cleanupStep {
             if (SdkLevel.isAtLeastU()) setCarrierServicePackageOverride(defaultSubId, null)
         } cleanup {
