@@ -31,7 +31,6 @@ java_defaults {
         "net-utils-device-common",
         "net-utils-device-common-bpf",
         "testables",
-        "ThreadNetworkTestUtils",
         "truth",
     ],
     libs: [
