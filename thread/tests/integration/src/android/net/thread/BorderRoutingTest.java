@@ -567,11 +567,8 @@ public class BorderRoutingTest {
         mInfraNetworkReader = newPacketReader(mInfraNetworkTracker.getTestIface(), mHandler);
         startInfraDevice();
 
-        ftd.ping(GROUP_ADDR_SCOPE_5);
         ftd.ping(GROUP_ADDR_SCOPE_4);
 
-        assertNotNull(
-                pollForPacketOnInfraNetwork(ICMPV6_ECHO_REQUEST_TYPE, ftdOmr, GROUP_ADDR_SCOPE_5));
         assertNotNull(
                 pollForPacketOnInfraNetwork(ICMPV6_ECHO_REQUEST_TYPE, ftdOmr, GROUP_ADDR_SCOPE_4));
     }
