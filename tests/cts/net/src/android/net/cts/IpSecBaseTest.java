@@ -26,12 +26,15 @@ import static android.net.IpSecAlgorithm.CRYPT_AES_CBC;
 import static android.system.OsConstants.FIONREAD;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.IpSecAlgorithm;
 import android.net.IpSecManager;
 import android.net.IpSecTransform;
+import android.net.IpSecTransformState;
+import android.os.OutcomeReceiver;
 import android.platform.test.annotations.AppModeFull;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -65,8 +68,12 @@ import java.net.SocketException;
 import java.net.SocketImpl;
 import java.net.SocketOptions;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @RunWith(AndroidJUnit4.class)
@@ -83,6 +90,7 @@ public class IpSecBaseTest {
     protected static final byte[] TEST_DATA = "Best test data ever!".getBytes();
     protected static final int DATA_BUFFER_LEN = 4096;
     protected static final int SOCK_TIMEOUT = 500;
+    protected static final int REPLAY_BITMAP_LEN_BYTE = 512;
 
     private static final byte[] KEY_DATA = {
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -120,6 +128,47 @@ public class IpSecBaseTest {
                 (ConnectivityManager)
                         InstrumentationRegistry.getContext()
                                 .getSystemService(Context.CONNECTIVITY_SERVICE);
+    }
+
+    protected static void checkTransformState(
+            IpSecTransform transform,
+            long txHighestSeqNum,
+            long rxHighestSeqNum,
+            long packetCnt,
+            long byteCnt,
+            byte[] replayBitmap)
+            throws Exception {
+        final CompletableFuture<IpSecTransformState> futureIpSecTransform =
+                new CompletableFuture<>();
+        transform.requestIpSecTransformState(
+                Executors.newSingleThreadExecutor(),
+                new OutcomeReceiver<IpSecTransformState, RuntimeException>() {
+                    @Override
+                    public void onResult(IpSecTransformState state) {
+                        futureIpSecTransform.complete(state);
+                    }
+                });
+
+        final IpSecTransformState transformState =
+                futureIpSecTransform.get(SOCK_TIMEOUT, TimeUnit.MILLISECONDS);
+
+        assertEquals(txHighestSeqNum, transformState.getTxHighestSequenceNumber());
+        assertEquals(rxHighestSeqNum, transformState.getRxHighestSequenceNumber());
+        assertEquals(packetCnt, transformState.getPacketCount());
+        assertEquals(byteCnt, transformState.getByteCount());
+        assertArrayEquals(replayBitmap, transformState.getReplayBitmap());
+    }
+
+    protected static void checkTransformStateNoTraffic(IpSecTransform transform) throws Exception {
+        checkTransformState(transform, 0L, 0L, 0L, 0L, newReplayBitmap(0));
+    }
+
+    protected static byte[] newReplayBitmap(int receivedPktCnt) {
+        final BitSet bitSet = new BitSet(REPLAY_BITMAP_LEN_BYTE * 8);
+        for (int i = 0; i < receivedPktCnt; i++) {
+            bitSet.set(i);
+        }
+        return Arrays.copyOf(bitSet.toByteArray(), REPLAY_BITMAP_LEN_BYTE);
     }
 
     /** Checks if an IPsec algorithm is enabled on the device */
