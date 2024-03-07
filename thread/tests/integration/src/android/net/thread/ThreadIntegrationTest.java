@@ -87,6 +87,9 @@ public class ThreadIntegrationTest {
 
         mOtCtl = new OtDaemonController();
         leaveAndWait(mController);
+
+        // TODO: b/323301831 - This is a workaround to avoid unnecessary delay to re-form a network
+        mOtCtl.factoryReset();
     }
 
     @After
