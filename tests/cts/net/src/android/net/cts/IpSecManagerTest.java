@@ -63,11 +63,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
+import android.net.InetAddresses;
 import android.net.IpSecAlgorithm;
 import android.net.IpSecManager;
 import android.net.IpSecManager.SecurityParameterIndex;
 import android.net.IpSecManager.UdpEncapsulationSocket;
 import android.net.IpSecTransform;
+import android.net.NetworkUtils;
 import android.net.TrafficStats;
 import android.os.Build;
 import android.platform.test.annotations.AppModeFull;
@@ -379,6 +381,22 @@ public class IpSecManagerTest extends IpSecBaseTest {
     static void assumeExperimentalIpv6UdpEncapSupported() throws Exception {
         assumeTrue("Not supported before U", SdkLevel.isAtLeastU());
         assumeTrue("Not supported by kernel", isIpv6UdpEncapSupportedByKernel());
+    }
+
+    // TODO: b/319532485 Figure out whether to support x86_32
+    private static boolean isRequestTransformStateSupportedByKernel() {
+        return NetworkUtils.isKernel64Bit() || !NetworkUtils.isKernelX86();
+    }
+
+    // Package private for use in IpSecManagerTunnelTest
+    static boolean isRequestTransformStateSupported() {
+        return SdkLevel.isAtLeastV() && isRequestTransformStateSupportedByKernel();
+    }
+
+    // Package private for use in IpSecManagerTunnelTest
+    static void assumeRequestIpSecTransformStateSupported() {
+        assumeTrue("Not supported before V", SdkLevel.isAtLeastV());
+        assumeTrue("Not supported by kernel", isRequestTransformStateSupportedByKernel());
     }
 
     @Test
@@ -1594,6 +1612,34 @@ public class IpSecManagerTest extends IpSecBaseTest {
     public void testOpenUdpEncapSocketRandomPort() throws Exception {
         try (UdpEncapsulationSocket encapSocket = mISM.openUdpEncapsulationSocket()) {
             assertTrue("Returned invalid port", encapSocket.getPort() != 0);
+        }
+    }
+
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    public void testRequestIpSecTransformState() throws Exception {
+        assumeRequestIpSecTransformStateSupported();
+
+        final InetAddress localAddr = InetAddresses.parseNumericAddress(IPV6_LOOPBACK);
+        try (SecurityParameterIndex spi = mISM.allocateSecurityParameterIndex(localAddr);
+                IpSecTransform transform =
+                        buildTransportModeTransform(spi, localAddr, null /* encapSocket*/)) {
+            final SocketPair<JavaUdpSocket> sockets =
+                    getJavaUdpSocketPair(localAddr, mISM, transform, false);
+
+            sockets.mLeftSock.sendTo(TEST_DATA, localAddr, sockets.mRightSock.getPort());
+            sockets.mRightSock.receive();
+
+            final int expectedPacketCount = 1;
+            final int expectedInnerPacketSize = TEST_DATA.length + UDP_HDRLEN;
+
+            checkTransformState(
+                    transform,
+                    expectedPacketCount,
+                    expectedPacketCount,
+                    2 * (long) expectedPacketCount,
+                    2 * (long) expectedInnerPacketSize,
+                    newReplayBitmap(expectedPacketCount));
         }
     }
 }
