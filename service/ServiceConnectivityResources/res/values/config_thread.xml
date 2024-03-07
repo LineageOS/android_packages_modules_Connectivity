@@ -31,4 +31,26 @@
     Thread Network regulatory purposes.
     -->
     <bool name="config_thread_location_use_for_country_code_enabled">true</bool>
+
+    <!-- Specifies the UTF-8 vendor name of this device. If this value is not an empty string, it
+    will be included in TXT value (key is 'vn') of the "_meshcop._udp" mDNS service which is
+    published by the Thread service. A non-empty string value must not exceed length of 24 UTF-8
+    bytes.
+    -->
+    <string translatable="false" name="config_thread_vendor_name">Android</string>
+
+    <!-- Specifies the 24 bits vendor OUI of this device. If this value is not an empty string, it
+    will be included in TXT (key is 'vo') value of the "_meshcop._udp" mDNS service which is
+    published by the Thread service. The OUI can be represented as a base-16 number of six
+    hexadecimal digits, or octets separated by hyphens or dots. For example, "ACDE48", "AC-DE-48"
+    and "AC:DE:48" are all valid representations of the same OUI value.
+    -->
+    <string translatable="false" name="config_thread_vendor_oui"></string>
+
+    <!-- Specifies the UTF-8 product model name of this device. If this value is not an empty
+    string, it will be included in TXT (key is 'mn') value of the "_meshcop._udp" mDNS service
+    which is published by the Thread service. A non-empty string value must not exceed length of 24
+    UTF-8 bytes.
+    -->
+    <string translatable="false" name="config_thread_model_name">Thread Border Router</string>
 </resources>
