@@ -19,7 +19,7 @@ package com.android.networkstack.tethering.wear;
 import android.companion.AssociationInfo;
 import android.companion.CompanionDeviceManager;
 import android.content.Context;
-import android.net.connectivity.TiramisuConnectivityInternalApiUtil;
+import android.net.connectivity.ConnectivityInternalApiUtil;
 import android.net.wear.ICompanionDeviceManagerProxy;
 import android.os.Build;
 import android.os.RemoteException;
@@ -39,7 +39,7 @@ public class CompanionDeviceManagerProxy {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public CompanionDeviceManagerProxy(Context context) {
         mService = ICompanionDeviceManagerProxy.Stub.asInterface(
-                TiramisuConnectivityInternalApiUtil.getCompanionDeviceManagerProxyService(context));
+                ConnectivityInternalApiUtil.getCompanionDeviceManagerProxyService(context));
     }
 
     /**

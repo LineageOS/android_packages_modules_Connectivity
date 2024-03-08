@@ -61,6 +61,21 @@ message NetworkNsdReported {
 
   // Record query service count before unregistered service
   optional int32 replied_requests_count = 11;
+
+  // Record sent query count before stopped discovery
+  optional int32 sent_query_count = 12;
+
+  // Record sent packet count before unregistered service
+  optional int32 sent_packet_count = 13;
+
+  // Record number of conflict during probing
+  optional int32 conflict_during_probing_count = 14;
+
+  // Record number of conflict after probing
+  optional int32 conflict_after_probing_count = 15;
+
+  // The random number between 0 ~ 999 for sampling
+  optional int32 random_number = 16;
 }
 
 /**

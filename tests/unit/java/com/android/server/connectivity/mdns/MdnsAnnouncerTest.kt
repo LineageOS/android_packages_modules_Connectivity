@@ -21,6 +21,7 @@ import android.os.Build
 import android.os.HandlerThread
 import android.os.SystemClock
 import com.android.internal.util.HexDump
+import com.android.net.module.util.SharedLog
 import com.android.server.connectivity.mdns.MdnsAnnouncer.AnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsAnnouncer.BaseAnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsRecordRepository.getReverseDnsAddress
@@ -52,6 +53,7 @@ class MdnsAnnouncerTest {
 
     private val thread = HandlerThread(MdnsAnnouncerTest::class.simpleName)
     private val socket = mock(MdnsInterfaceSocket::class.java)
+    private val sharedLog = mock(SharedLog::class.java)
     private val buffer = ByteArray(1500)
 
     @Before
@@ -80,11 +82,12 @@ class MdnsAnnouncerTest {
 
     @Test
     fun testAnnounce() {
-        val replySender = MdnsReplySender("testiface", thread.looper, socket, buffer)
+        val replySender = MdnsReplySender(
+                thread.looper, socket, buffer, sharedLog, true /* enableDebugLog */)
         @Suppress("UNCHECKED_CAST")
         val cb = mock(MdnsPacketRepeater.PacketRepeaterCallback::class.java)
                 as MdnsPacketRepeater.PacketRepeaterCallback<BaseAnnouncementInfo>
-        val announcer = MdnsAnnouncer("testiface", thread.looper, replySender, cb)
+        val announcer = MdnsAnnouncer(thread.looper, replySender, cb, sharedLog)
         /*
         The expected packet replicates records announced when registering a service, as observed in
         the legacy mDNS implementation (some ordering differs to be more readable).
@@ -251,7 +254,7 @@ class MdnsAnnouncerTest {
 
         val captor = ArgumentCaptor.forClass(DatagramPacket::class.java)
         repeat(FIRST_ANNOUNCES_COUNT) { i ->
-            verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(i, request)
+            verify(cb, timeout(TEST_TIMEOUT_MS)).onSent(i, request, 1 /* sentPacketCount */)
             verify(socket, atLeast(i + 1)).send(any())
             val now = SystemClock.elapsedRealtime()
             assertTrue(now > timeStart + startDelay + i * FIRST_ANNOUNCES_DELAY)

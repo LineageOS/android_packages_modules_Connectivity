@@ -161,8 +161,7 @@ public class NetworkTest {
         assertEquals(16290598925L, three.getNetworkHandle());
     }
 
-    // getNetId() did not exist in Q
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testGetNetId() {
         assertEquals(1234, new Network(1234).getNetId());
         assertEquals(2345, new Network(2345, true).getNetId());

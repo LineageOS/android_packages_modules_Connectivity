@@ -57,6 +57,10 @@ public class NetworkInterfaceWrapper {
         return networkInterface.getInterfaceAddresses();
     }
 
+    public int getIndex() {
+        return networkInterface.getIndex();
+    }
+
     @Override
     public String toString() {
         return networkInterface.toString();

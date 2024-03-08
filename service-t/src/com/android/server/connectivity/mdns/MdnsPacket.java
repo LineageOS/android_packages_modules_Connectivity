@@ -18,7 +18,6 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.util.Log;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -32,6 +31,7 @@ import java.util.List;
 public class MdnsPacket {
     private static final String TAG = MdnsPacket.class.getSimpleName();
 
+    public final int transactionId;
     public final int flags;
     @NonNull
     public final List<MdnsRecord> questions;
@@ -47,6 +47,15 @@ public class MdnsPacket {
             @NonNull List<MdnsRecord> answers,
             @NonNull List<MdnsRecord> authorityRecords,
             @NonNull List<MdnsRecord> additionalRecords) {
+        this(0, flags, questions, answers, authorityRecords, additionalRecords);
+    }
+
+    MdnsPacket(int transactionId, int flags,
+            @NonNull List<MdnsRecord> questions,
+            @NonNull List<MdnsRecord> answers,
+            @NonNull List<MdnsRecord> authorityRecords,
+            @NonNull List<MdnsRecord> additionalRecords) {
+        this.transactionId = transactionId;
         this.flags = flags;
         this.questions = Collections.unmodifiableList(questions);
         this.answers = Collections.unmodifiableList(answers);
@@ -71,15 +80,16 @@ public class MdnsPacket {
      */
     @NonNull
     public static MdnsPacket parse(@NonNull MdnsPacketReader reader) throws ParseException {
+        final int transactionId;
         final int flags;
         try {
-            reader.readUInt16(); // transaction ID (not used)
+            transactionId = reader.readUInt16();
             flags = reader.readUInt16();
         } catch (EOFException e) {
             throw new ParseException(MdnsResponseErrorCode.ERROR_END_OF_FILE,
                     "Reached the end of the mDNS response unexpectedly.", e);
         }
-        return parseRecordsSection(reader, flags);
+        return parseRecordsSection(reader, flags, transactionId);
     }
 
     /**
@@ -87,8 +97,8 @@ public class MdnsPacket {
      *
      * The records section starts with the questions count, just after the packet flags.
      */
-    public static MdnsPacket parseRecordsSection(@NonNull MdnsPacketReader reader, int flags)
-            throws ParseException {
+    public static MdnsPacket parseRecordsSection(@NonNull MdnsPacketReader reader, int flags,
+            int transactionId) throws ParseException {
         try {
             final int numQuestions = reader.readUInt16();
             final int numAnswers = reader.readUInt16();
@@ -100,7 +110,7 @@ public class MdnsPacket {
             final ArrayList<MdnsRecord> authority = parseRecords(reader, numAuthority, false);
             final ArrayList<MdnsRecord> additional = parseRecords(reader, numAdditional, false);
 
-            return new MdnsPacket(flags, questions, answers, authority, additional);
+            return new MdnsPacket(transactionId, flags, questions, answers, authority, additional);
         } catch (EOFException e) {
             throw new ParseException(MdnsResponseErrorCode.ERROR_END_OF_FILE,
                     "Reached the end of the mDNS response unexpectedly.", e);
@@ -206,9 +216,6 @@ public class MdnsPacket {
 
             default: {
                 try {
-                    if (MdnsAdvertiser.DBG) {
-                        Log.i(TAG, "Skipping parsing of record of unhandled type " + type);
-                    }
                     skipMdnsRecord(reader, isQuestion);
                     return null;
                 } catch (IOException e) {

@@ -41,7 +41,7 @@ android_test {
         "mockwebserver",
         "junit",
         "junit-params",
-        "truth-prebuilt",
+        "truth",
     ],
 
     platform_apis: true,

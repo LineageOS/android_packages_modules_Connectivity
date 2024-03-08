@@ -100,9 +100,6 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.DeviceConfig;
 import android.provider.Settings;
-import android.support.test.uiautomator.UiDevice;
-import android.support.test.uiautomator.UiObject;
-import android.support.test.uiautomator.UiSelector;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -114,6 +111,9 @@ import android.util.Log;
 import android.util.Range;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.UiObject;
+import androidx.test.uiautomator.UiSelector;
 
 import com.android.compatibility.common.util.BlockingBroadcastReceiver;
 import com.android.modules.utils.build.SdkLevel;
@@ -154,7 +154,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -809,26 +808,12 @@ public class VpnTest {
                 mOldPrivateDnsSpecifier);
     }
 
-    // TODO: replace with CtsNetUtils.awaitPrivateDnsSetting in Q or above.
     private void expectPrivateDnsHostname(final String hostname) throws Exception {
-        final NetworkRequest request = new NetworkRequest.Builder()
-                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                .build();
-        final CountDownLatch latch = new CountDownLatch(1);
-        final NetworkCallback callback = new NetworkCallback() {
-            @Override
-            public void onLinkPropertiesChanged(Network network, LinkProperties lp) {
-                if (network.equals(mNetwork) &&
-                        Objects.equals(lp.getPrivateDnsServerName(), hostname)) {
-                    latch.countDown();
-                }
-            }
-        };
-
-        registerNetworkCallback(request, callback);
-
-        assertTrue("Private DNS hostname was not " + hostname + " after " + TIMEOUT_MS + "ms",
-                latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+            // Wait for private DNS setting to propagate.
+            mCtsNetUtils.awaitPrivateDnsSetting("Test wait private DNS setting timeout",
+                    network, hostname, false);
+        }
     }
 
     private void setAndVerifyPrivateDns(boolean strictMode) throws Exception {
@@ -1190,8 +1175,8 @@ public class VpnTest {
 
         final String origMode = runWithShellPermissionIdentity(() -> {
             final String mode = DeviceConfig.getProperty(
-                    DeviceConfig.NAMESPACE_CONNECTIVITY, AUTOMATIC_ON_OFF_KEEPALIVE_VERSION);
-            DeviceConfig.setProperty(DeviceConfig.NAMESPACE_CONNECTIVITY,
+                    DeviceConfig.NAMESPACE_TETHERING, AUTOMATIC_ON_OFF_KEEPALIVE_VERSION);
+            DeviceConfig.setProperty(DeviceConfig.NAMESPACE_TETHERING,
                     AUTOMATIC_ON_OFF_KEEPALIVE_VERSION,
                     AUTOMATIC_ON_OFF_KEEPALIVE_ENABLED, false /* makeDefault */);
             return mode;
@@ -1231,7 +1216,7 @@ public class VpnTest {
 
             runWithShellPermissionIdentity(() -> {
                 DeviceConfig.setProperty(
-                                DeviceConfig.NAMESPACE_CONNECTIVITY,
+                                DeviceConfig.NAMESPACE_TETHERING,
                                 AUTOMATIC_ON_OFF_KEEPALIVE_VERSION,
                                 origMode, false);
                 mCM.setTestLowTcpPollingTimerForKeepalive(0);
@@ -1741,10 +1726,21 @@ public class VpnTest {
         assertEquals(VpnManager.TYPE_VPN_SERVICE, ((VpnTransportInfo) ti).getType());
     }
 
-    private void assertDefaultProxy(ProxyInfo expected) {
+    private void assertDefaultProxy(ProxyInfo expected) throws Exception {
         assertEquals("Incorrect proxy config.", expected, mCM.getDefaultProxy());
         String expectedHost = expected == null ? null : expected.getHost();
         String expectedPort = expected == null ? null : String.valueOf(expected.getPort());
+
+        // ActivityThread may not have time to set it in the properties yet which will cause flakes.
+        // Wait for some time to deflake the test.
+        int attempt = 0;
+        while (!(Objects.equals(expectedHost, System.getProperty("http.proxyHost"))
+                && Objects.equals(expectedPort, System.getProperty("http.proxyPort")))
+                && attempt < 300) {
+            attempt++;
+            Log.d(TAG, "Wait for proxy being updated, attempt=" + attempt);
+            Thread.sleep(100);
+        }
         assertEquals("Incorrect proxy host system property.", expectedHost,
             System.getProperty("http.proxyHost"));
         assertEquals("Incorrect proxy port system property.", expectedPort,

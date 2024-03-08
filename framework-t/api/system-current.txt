@@ -305,6 +305,7 @@ package android.net {
     ctor public NetworkStats(long, int);
     method @NonNull public android.net.NetworkStats add(@NonNull android.net.NetworkStats);
     method @NonNull public android.net.NetworkStats addEntry(@NonNull android.net.NetworkStats.Entry);
+    method public android.net.NetworkStats clone();
     method public int describeContents();
     method @NonNull public java.util.Iterator<android.net.NetworkStats.Entry> iterator();
     method @NonNull public android.net.NetworkStats subtract(@NonNull android.net.NetworkStats);
@@ -370,6 +371,172 @@ package android.net.netstats.provider {
     method public abstract void onSetLimit(@NonNull String, long);
     method public void onSetWarningAndLimit(@NonNull String, long, long);
     field public static final int QUOTA_UNLIMITED = -1; // 0xffffffff
+  }
+
+}
+
+package android.net.nsd {
+
+  public final class NsdManager {
+    method @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void registerOffloadEngine(@NonNull String, long, long, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.OffloadEngine);
+    method @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK}) public void unregisterOffloadEngine(@NonNull android.net.nsd.OffloadEngine);
+  }
+
+  @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") public interface OffloadEngine {
+    method public void onOffloadServiceRemoved(@NonNull android.net.nsd.OffloadServiceInfo);
+    method public void onOffloadServiceUpdated(@NonNull android.net.nsd.OffloadServiceInfo);
+    field public static final int OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK = 1; // 0x1
+    field public static final int OFFLOAD_TYPE_FILTER_QUERIES = 2; // 0x2
+    field public static final int OFFLOAD_TYPE_FILTER_REPLIES = 4; // 0x4
+    field public static final int OFFLOAD_TYPE_REPLY = 1; // 0x1
+  }
+
+  @FlaggedApi("com.android.net.flags.register_nsd_offload_engine_api") public final class OffloadServiceInfo implements android.os.Parcelable {
+    ctor public OffloadServiceInfo(@NonNull android.net.nsd.OffloadServiceInfo.Key, @NonNull java.util.List<java.lang.String>, @NonNull String, @Nullable byte[], @IntRange(from=0, to=java.lang.Integer.MAX_VALUE) int, long);
+    method public int describeContents();
+    method @NonNull public String getHostname();
+    method @NonNull public android.net.nsd.OffloadServiceInfo.Key getKey();
+    method @Nullable public byte[] getOffloadPayload();
+    method public long getOffloadType();
+    method public int getPriority();
+    method @NonNull public java.util.List<java.lang.String> getSubtypes();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.nsd.OffloadServiceInfo> CREATOR;
+  }
+
+  public static final class OffloadServiceInfo.Key implements android.os.Parcelable {
+    ctor public OffloadServiceInfo.Key(@NonNull String, @NonNull String);
+    method public int describeContents();
+    method @NonNull public String getServiceName();
+    method @NonNull public String getServiceType();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.nsd.OffloadServiceInfo.Key> CREATOR;
+  }
+
+}
+
+package android.net.thread {
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class ActiveOperationalDataset implements android.os.Parcelable {
+    method public int describeContents();
+    method @NonNull public static android.net.thread.ActiveOperationalDataset fromThreadTlvs(@NonNull byte[]);
+    method @NonNull public android.net.thread.OperationalDatasetTimestamp getActiveTimestamp();
+    method @IntRange(from=0, to=65535) public int getChannel();
+    method @NonNull @Size(min=1) public android.util.SparseArray<byte[]> getChannelMask();
+    method @IntRange(from=0, to=255) public int getChannelPage();
+    method @NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_EXTENDED_PAN_ID) public byte[] getExtendedPanId();
+    method @NonNull public android.net.IpPrefix getMeshLocalPrefix();
+    method @NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_NETWORK_KEY) public byte[] getNetworkKey();
+    method @NonNull @Size(min=android.net.thread.ActiveOperationalDataset.LENGTH_MIN_NETWORK_NAME_BYTES, max=android.net.thread.ActiveOperationalDataset.LENGTH_MAX_NETWORK_NAME_BYTES) public String getNetworkName();
+    method @IntRange(from=0, to=65534) public int getPanId();
+    method @NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_PSKC) public byte[] getPskc();
+    method @NonNull public android.net.thread.ActiveOperationalDataset.SecurityPolicy getSecurityPolicy();
+    method @NonNull public byte[] toThreadTlvs();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field public static final int CHANNEL_MAX_24_GHZ = 26; // 0x1a
+    field public static final int CHANNEL_MIN_24_GHZ = 11; // 0xb
+    field public static final int CHANNEL_PAGE_24_GHZ = 0; // 0x0
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.thread.ActiveOperationalDataset> CREATOR;
+    field public static final int LENGTH_EXTENDED_PAN_ID = 8; // 0x8
+    field public static final int LENGTH_MAX_DATASET_TLVS = 254; // 0xfe
+    field public static final int LENGTH_MAX_NETWORK_NAME_BYTES = 16; // 0x10
+    field public static final int LENGTH_MESH_LOCAL_PREFIX_BITS = 64; // 0x40
+    field public static final int LENGTH_MIN_NETWORK_NAME_BYTES = 1; // 0x1
+    field public static final int LENGTH_NETWORK_KEY = 16; // 0x10
+    field public static final int LENGTH_PSKC = 16; // 0x10
+  }
+
+  public static final class ActiveOperationalDataset.Builder {
+    ctor public ActiveOperationalDataset.Builder(@NonNull android.net.thread.ActiveOperationalDataset);
+    ctor public ActiveOperationalDataset.Builder();
+    method @NonNull public android.net.thread.ActiveOperationalDataset build();
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setActiveTimestamp(@NonNull android.net.thread.OperationalDatasetTimestamp);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setChannel(@IntRange(from=0, to=255) int, @IntRange(from=0, to=65535) int);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setChannelMask(@NonNull @Size(min=1) android.util.SparseArray<byte[]>);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setExtendedPanId(@NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_EXTENDED_PAN_ID) byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setMeshLocalPrefix(@NonNull android.net.IpPrefix);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setNetworkKey(@NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_NETWORK_KEY) byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setNetworkName(@NonNull @Size(min=android.net.thread.ActiveOperationalDataset.LENGTH_MIN_NETWORK_NAME_BYTES, max=android.net.thread.ActiveOperationalDataset.LENGTH_MAX_NETWORK_NAME_BYTES) String);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setPanId(@IntRange(from=0, to=65534) int);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setPskc(@NonNull @Size(android.net.thread.ActiveOperationalDataset.LENGTH_PSKC) byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset.Builder setSecurityPolicy(@NonNull android.net.thread.ActiveOperationalDataset.SecurityPolicy);
+  }
+
+  public static final class ActiveOperationalDataset.SecurityPolicy {
+    ctor public ActiveOperationalDataset.SecurityPolicy(@IntRange(from=1, to=65535) int, @NonNull @Size(min=android.net.thread.ActiveOperationalDataset.SecurityPolicy.LENGTH_MIN_SECURITY_POLICY_FLAGS) byte[]);
+    method @NonNull @Size(min=android.net.thread.ActiveOperationalDataset.SecurityPolicy.LENGTH_MIN_SECURITY_POLICY_FLAGS) public byte[] getFlags();
+    method @IntRange(from=1, to=65535) public int getRotationTimeHours();
+    field public static final int DEFAULT_ROTATION_TIME_HOURS = 672; // 0x2a0
+    field public static final int LENGTH_MIN_SECURITY_POLICY_FLAGS = 1; // 0x1
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class OperationalDatasetTimestamp {
+    ctor public OperationalDatasetTimestamp(@IntRange(from=0, to=281474976710655L) long, @IntRange(from=0, to=32767) int, boolean);
+    method @NonNull public static android.net.thread.OperationalDatasetTimestamp fromInstant(@NonNull java.time.Instant);
+    method @IntRange(from=0, to=281474976710655L) public long getSeconds();
+    method @IntRange(from=0, to=32767) public int getTicks();
+    method public boolean isAuthoritativeSource();
+    method @NonNull public java.time.Instant toInstant();
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class PendingOperationalDataset implements android.os.Parcelable {
+    ctor public PendingOperationalDataset(@NonNull android.net.thread.ActiveOperationalDataset, @NonNull android.net.thread.OperationalDatasetTimestamp, @NonNull java.time.Duration);
+    method public int describeContents();
+    method @NonNull public static android.net.thread.PendingOperationalDataset fromThreadTlvs(@NonNull byte[]);
+    method @NonNull public android.net.thread.ActiveOperationalDataset getActiveOperationalDataset();
+    method @NonNull public java.time.Duration getDelayTimer();
+    method @NonNull public android.net.thread.OperationalDatasetTimestamp getPendingTimestamp();
+    method @NonNull public byte[] toThreadTlvs();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.thread.PendingOperationalDataset> CREATOR;
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class ThreadNetworkController {
+    method public void createRandomizedDataset(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<android.net.thread.ActiveOperationalDataset,android.net.thread.ThreadNetworkException>);
+    method public int getThreadVersion();
+    method public static boolean isAttached(int);
+    method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void join(@NonNull android.net.thread.ActiveOperationalDataset, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
+    method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void leave(@NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
+    method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_NETWORK_STATE, "android.permission.THREAD_NETWORK_PRIVILEGED"}) public void registerOperationalDatasetCallback(@NonNull java.util.concurrent.Executor, @NonNull android.net.thread.ThreadNetworkController.OperationalDatasetCallback);
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void registerStateCallback(@NonNull java.util.concurrent.Executor, @NonNull android.net.thread.ThreadNetworkController.StateCallback);
+    method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void scheduleMigration(@NonNull android.net.thread.PendingOperationalDataset, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
+    method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_NETWORK_STATE, "android.permission.THREAD_NETWORK_PRIVILEGED"}) public void unregisterOperationalDatasetCallback(@NonNull android.net.thread.ThreadNetworkController.OperationalDatasetCallback);
+    method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void unregisterStateCallback(@NonNull android.net.thread.ThreadNetworkController.StateCallback);
+    field public static final int DEVICE_ROLE_CHILD = 2; // 0x2
+    field public static final int DEVICE_ROLE_DETACHED = 1; // 0x1
+    field public static final int DEVICE_ROLE_LEADER = 4; // 0x4
+    field public static final int DEVICE_ROLE_ROUTER = 3; // 0x3
+    field public static final int DEVICE_ROLE_STOPPED = 0; // 0x0
+    field public static final int THREAD_VERSION_1_3 = 4; // 0x4
+  }
+
+  public static interface ThreadNetworkController.OperationalDatasetCallback {
+    method public void onActiveOperationalDatasetChanged(@Nullable android.net.thread.ActiveOperationalDataset);
+    method public default void onPendingOperationalDatasetChanged(@Nullable android.net.thread.PendingOperationalDataset);
+  }
+
+  public static interface ThreadNetworkController.StateCallback {
+    method public void onDeviceRoleChanged(int);
+    method public default void onPartitionIdChanged(long);
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkException extends java.lang.Exception {
+    ctor public ThreadNetworkException(int, @NonNull String);
+    method public int getErrorCode();
+    field public static final int ERROR_ABORTED = 2; // 0x2
+    field public static final int ERROR_BUSY = 5; // 0x5
+    field public static final int ERROR_FAILED_PRECONDITION = 6; // 0x6
+    field public static final int ERROR_INTERNAL_ERROR = 1; // 0x1
+    field public static final int ERROR_REJECTED_BY_PEER = 8; // 0x8
+    field public static final int ERROR_RESOURCE_EXHAUSTED = 10; // 0xa
+    field public static final int ERROR_RESPONSE_BAD_FORMAT = 9; // 0x9
+    field public static final int ERROR_TIMEOUT = 3; // 0x3
+    field public static final int ERROR_UNAVAILABLE = 4; // 0x4
+    field public static final int ERROR_UNSUPPORTED_CHANNEL = 7; // 0x7
+  }
+
+  @FlaggedApi("com.android.net.thread.flags.thread_enabled") public final class ThreadNetworkManager {
+    method @NonNull public java.util.List<android.net.thread.ThreadNetworkController> getAllThreadNetworkControllers();
   }
 
 }

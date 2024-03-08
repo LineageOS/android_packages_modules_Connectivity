@@ -16,6 +16,7 @@
 
 package com.android.server.nearby.managers;
 
+import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.nearby.PresenceCredential.IDENTITY_TYPE_PRIVATE;
 import static android.nearby.ScanRequest.SCAN_TYPE_NEARBY_PRESENCE;
 
@@ -23,10 +24,12 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.app.AppOpsManager;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.nearby.DataElement;
 import android.nearby.IScanListener;
@@ -35,6 +38,8 @@ import android.nearby.PresenceScanFilter;
 import android.nearby.PublicCredential;
 import android.nearby.ScanRequest;
 import android.os.IBinder;
+
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.server.nearby.injector.Injector;
 import com.android.server.nearby.provider.BleDiscoveryProvider;
@@ -86,6 +91,8 @@ public class DiscoveryProviderManagerLegacyTest {
     DiscoveryProviderManagerLegacy.ScanListenerDeathRecipient mScanListenerDeathRecipient;
     @Mock
     IBinder mIBinder;
+    @Mock
+    BluetoothAdapter mBluetoothAdapter;
     private DiscoveryProviderManagerLegacy mDiscoveryProviderManager;
     private Map<IBinder, DiscoveryProviderManagerLegacy.ScanListenerRecord>
             mScanTypeScanListenerRecordMap;
@@ -135,10 +142,15 @@ public class DiscoveryProviderManagerLegacyTest {
 
     @Before
     public void setup() {
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().adoptShellPermissionIdentity(
+                READ_DEVICE_CONFIG);
         MockitoAnnotations.initMocks(this);
         when(mInjector.getAppOpsManager()).thenReturn(mAppOpsManager);
+        when(mInjector.getBluetoothAdapter()).thenReturn(mBluetoothAdapter);
         when(mBleDiscoveryProvider.getController()).thenReturn(mBluetoothController);
         when(mChreDiscoveryProvider.getController()).thenReturn(mChreController);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
+        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
 
         mScanTypeScanListenerRecordMap = new HashMap<>();
         mDiscoveryProviderManager =
@@ -161,6 +173,13 @@ public class DiscoveryProviderManagerLegacyTest {
     @Test
     public void testInvalidateProviderScanMode() {
         mDiscoveryProviderManager.invalidateProviderScanMode();
+    }
+
+    @Test
+    public void test_enableBleWhenBleOff() throws Exception {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(false);
+        mDiscoveryProviderManager.init();
+        verify(mBluetoothAdapter, times(1)).enableBLE();
     }
 
     @Test
@@ -374,5 +393,63 @@ public class DiscoveryProviderManagerLegacyTest {
         assertThat(manager.mChreDiscoveryProvider.getController().isStarted())
                 .isTrue();
         assertThat(manager.mChreDiscoveryProvider.getFiltersLocked()).isNotNull();
+    }
+
+    @Test
+    public void isBluetoothEnabledTest_bluetoothEnabled() {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
+        when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
+        when(mBluetoothAdapter.enableBLE()).thenReturn(true);
+
+        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+    }
+
+    @Test
+    public void isBluetoothEnabledTest_bleEnabled() {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isLeEnabled()).thenReturn(true);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
+        when(mBluetoothAdapter.enableBLE()).thenReturn(true);
+
+        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+    }
+
+    @Test
+    public void enabledTest_enabled() {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
+        when(mBluetoothAdapter.enableBLE()).thenReturn(true);
+
+        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+    }
+
+    @Test
+    public void enabledTest_enableFailed() {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(true);
+        when(mBluetoothAdapter.enableBLE()).thenReturn(false);
+
+        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isFalse();
+    }
+
+    @Test
+    public void enabledTest_scanIsOn() {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(true);
+        when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(false);
+
+        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isTrue();
+    }
+
+    @Test
+    public void enabledTest_failed() {
+        when(mBluetoothAdapter.isEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isLeEnabled()).thenReturn(false);
+        when(mBluetoothAdapter.isBleScanAlwaysAvailable()).thenReturn(false);
+
+        assertThat(mDiscoveryProviderManager.setBleScanEnabled()).isFalse();
     }
 }

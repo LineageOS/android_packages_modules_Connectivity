@@ -1033,9 +1033,8 @@ public class PermissionMonitor {
      * @param ranges The updated UID ranges under VPN Lockdown. This function does not treat the VPN
      *               app's UID in any special way. The caller is responsible for excluding the VPN
      *               app UID from the passed-in ranges.
-     *               Ranges can have duplications and/or contain the range that is already subject
-     *               to lockdown. However, ranges can not have overlaps with other ranges including
-     *               ranges that are currently subject to lockdown.
+     *               Ranges can have duplications, overlaps, and/or contain the range that is
+     *               already subject to lockdown.
      */
     public synchronized void updateVpnLockdownUidRanges(boolean add, UidRange[] ranges) {
         final Set<UidRange> affectedUidRanges = new HashSet<>();

@@ -19,6 +19,7 @@ package com.android.server;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
+import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
@@ -64,6 +65,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
+    // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+    // please add it in CSAgentWrapper and use subclasses of CSTest instead of adding more
+    // tools in ConnectivityServiceTest.
     private final NetworkCapabilities mNetworkCapabilities;
     private final HandlerThread mHandlerThread;
     private final Context mContext;
@@ -120,6 +124,10 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
         mNetworkCapabilities.addCapability(NET_CAPABILITY_NOT_VCN_MANAGED);
         mNetworkCapabilities.addTransportType(transport);
         switch (transport) {
+            case TRANSPORT_BLUETOOTH:
+                // Score for Wear companion proxy network; not BLUETOOTH tethering.
+                mScore = new NetworkScore.Builder().setLegacyInt(100).build();
+                break;
             case TRANSPORT_ETHERNET:
                 mScore = new NetworkScore.Builder().setLegacyInt(70).build();
                 break;
@@ -468,4 +476,8 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
     public boolean isBypassableVpn() {
         return mNetworkAgentConfig.isBypassableVpn();
     }
+
+    // Note : Please do not add any new instrumentation here. If you need new instrumentation,
+    // please add it in CSAgentWrapper and use subclasses of CSTest instead of adding more
+    // tools in ConnectivityServiceTest.
 }

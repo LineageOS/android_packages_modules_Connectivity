@@ -19,8 +19,10 @@ package com.android.server.connectivity.mdns;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
+import com.android.net.module.util.HexDump;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -75,12 +77,25 @@ public class MdnsPacketReaderTests {
                     + "the packet length");
         } catch (IOException e) {
             // Expected
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             fail(String.format(
                     Locale.ROOT,
                     "Should not have thrown any other exception except " + "for IOException: %s",
                     e.getMessage()));
         }
         assertEquals(data.length, packetReader.getRemaining());
+    }
+
+    @Test
+    public void testInfinitePtrLoop() {
+        // Fake mdns response packet label portion which has infinite ptr loop.
+        final byte[] infinitePtrLoopData = HexDump.hexStringToByteArray(
+                "054C4142454C" // label "LABEL"
+                        + "0454455354" // label "TEST"
+                        + "C006"); // PTR to second label.
+        MdnsPacketReader packetReader = new MdnsPacketReader(
+                infinitePtrLoopData, infinitePtrLoopData.length,
+                MdnsFeatureFlags.newBuilder().setIsLabelCountLimitEnabled(true).build());
+        assertThrows(IOException.class, packetReader::readLabels);
     }
 }

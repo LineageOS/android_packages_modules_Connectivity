@@ -17,11 +17,11 @@
 package com.android.server.connectivity.mdns;
 
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketAddress;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -180,7 +180,7 @@ public class MdnsPacketWriter {
             int existingOffset = entry.getKey();
             String[] existingLabels = entry.getValue();
 
-            if (Arrays.equals(existingLabels, labels)) {
+            if (MdnsUtils.equalsDnsLabelIgnoreDnsCase(existingLabels, labels)) {
                 writePointer(existingOffset);
                 return;
             } else if (MdnsRecord.labelsAreSuffix(existingLabels, labels)) {

@@ -31,6 +31,7 @@ import android.net.ConnectivityManager.NetworkCallback;
 import android.net.Network;
 import android.net.NetworkRequest;
 
+import com.android.net.module.util.SharedLog;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -49,6 +50,7 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
     @Mock private Context mContext;
     @Mock private ConnectivityMonitor.Listener mockListener;
     @Mock private ConnectivityManager mConnectivityManager;
+    @Mock private SharedLog sharedLog;
 
     private ConnectivityMonitorWithConnectivityManager monitor;
 
@@ -57,7 +59,7 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
         MockitoAnnotations.initMocks(this);
         doReturn(mConnectivityManager).when(mContext)
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
-        monitor = new ConnectivityMonitorWithConnectivityManager(mContext, mockListener);
+        monitor = new ConnectivityMonitorWithConnectivityManager(mContext, mockListener, sharedLog);
     }
 
     @Test

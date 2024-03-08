@@ -34,6 +34,8 @@ import static android.net.SocketKeepalive.NO_KEEPALIVE;
 import static android.net.SocketKeepalive.SUCCESS;
 import static android.net.SocketKeepalive.SUCCESS_PAUSED;
 
+import static com.android.net.module.util.FeatureVersions.FEATURE_CLAT_ADDRESS_TRANSLATE;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -54,14 +56,18 @@ import android.os.RemoteException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
+import android.util.Pair;
 
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.DeviceConfigUtils;
 import com.android.net.module.util.HexDump;
 import com.android.net.module.util.IpUtils;
 
 import java.io.FileDescriptor;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -82,6 +88,9 @@ public class KeepaliveTracker {
     private static final boolean DBG = false;
 
     public static final String PERMISSION = android.Manifest.permission.PACKET_KEEPALIVE_OFFLOAD;
+
+    private static final String CONFIG_DISABLE_CLAT_ADDRESS_TRANSLATE =
+            "disable_clat_address_translate";
 
     /** Keeps track of keepalive requests. */
     private final HashMap <NetworkAgentInfo, HashMap<Integer, KeepaliveInfo>> mKeepalives =
@@ -104,19 +113,21 @@ public class KeepaliveTracker {
     // Allowed unprivileged keepalive slots per uid. Caller's permission will be enforced if
     // the number of remaining keepalive slots is less than or equal to the threshold.
     private final int mAllowedUnprivilegedSlotsForUid;
-
+    private final Dependencies mDependencies;
     public KeepaliveTracker(Context context, Handler handler) {
-        this(context, handler, new TcpKeepaliveController(handler));
+        this(context, handler, new TcpKeepaliveController(handler), new Dependencies());
     }
 
     @VisibleForTesting
-    KeepaliveTracker(Context context, Handler handler, TcpKeepaliveController tcpController) {
+    public KeepaliveTracker(Context context, Handler handler, TcpKeepaliveController tcpController,
+            Dependencies deps) {
         mTcpController = tcpController;
         mContext = context;
+        mDependencies = deps;
 
-        mSupportedKeepalives = KeepaliveResourceUtil.getSupportedKeepalives(context);
+        mSupportedKeepalives = mDependencies.getSupportedKeepalives(mContext);
 
-        final ConnectivityResources res = new ConnectivityResources(mContext);
+        final ConnectivityResources res = mDependencies.createConnectivityResources(mContext);
         mReservedPrivilegedSlots = res.get().getInteger(
                 R.integer.config_reservedPrivilegedKeepaliveSlots);
         mAllowedUnprivilegedSlotsForUid = res.get().getInteger(
@@ -290,10 +301,14 @@ public class KeepaliveTracker {
 
         private int checkSourceAddress() {
             // Check that we have the source address.
-            for (InetAddress address : mNai.linkProperties.getAddresses()) {
+            for (InetAddress address : mNai.linkProperties.getAllAddresses()) {
                 if (address.equals(mPacket.getSrcAddress())) {
                     return SUCCESS;
                 }
+            }
+            // Or the address is the clat source address.
+            if (mPacket.getSrcAddress().equals(mNai.getClatv6SrcAddress())) {
+                return SUCCESS;
             }
             return ERROR_INVALID_IP_ADDRESS;
         }
@@ -477,6 +492,15 @@ public class KeepaliveTracker {
             return new KeepaliveInfo(mCallback, mNai, mPacket, mPid, mUid, mInterval, mType,
                     fd, mSlot, true /* resumed */);
         }
+
+        /**
+         * Construct a new KeepaliveInfo from existing KeepaliveInfo with a new KeepalivePacketData.
+         */
+        public KeepaliveInfo withPacketData(@NonNull KeepalivePacketData packet)
+                throws InvalidSocketException {
+            return new KeepaliveInfo(mCallback, mNai, packet, mPid, mUid, mInterval, mType,
+                    mFd, mSlot, mResumed);
+        }
     }
 
     void notifyErrorCallback(ISocketKeepaliveCallback cb, int error) {
@@ -510,15 +534,51 @@ public class KeepaliveTracker {
      * Handle start keepalives with the message.
      *
      * @param ki the keepalive to start.
-     * @return SUCCESS if the keepalive is successfully starting and the error reason otherwise.
+     * @return Pair of (SUCCESS if the keepalive is successfully starting and the error reason
+     *         otherwise, the started KeepaliveInfo object)
      */
-    public int handleStartKeepalive(KeepaliveInfo ki) {
-        NetworkAgentInfo nai = ki.getNai();
+    public Pair<Integer, KeepaliveInfo> handleStartKeepalive(KeepaliveInfo ki) {
+        final KeepaliveInfo newKi;
+        try {
+            newKi = handleUpdateKeepaliveForClat(ki);
+        } catch (InvalidSocketException | InvalidPacketException e) {
+            Log.e(TAG, "Fail to construct keepalive packet");
+            notifyErrorCallback(ki.mCallback, ERROR_INVALID_IP_ADDRESS);
+            // Fail to create new keepalive packet for clat. Return the original keepalive info.
+            return new Pair<>(ERROR_INVALID_IP_ADDRESS, ki);
+        }
+
+        final NetworkAgentInfo nai = newKi.getNai();
         // If this was a paused keepalive, then reuse the same slot that was kept for it. Otherwise,
         // use the first free slot for this network agent.
-        final int slot = NO_KEEPALIVE != ki.mSlot ? ki.mSlot : findFirstFreeSlot(nai);
-        mKeepalives.get(nai).put(slot, ki);
-        return ki.start(slot);
+        final int slot = NO_KEEPALIVE != newKi.mSlot ? newKi.mSlot : findFirstFreeSlot(nai);
+        mKeepalives.get(nai).put(slot, newKi);
+
+        return new Pair<>(newKi.start(slot), newKi);
+    }
+
+    private KeepaliveInfo handleUpdateKeepaliveForClat(KeepaliveInfo ki)
+            throws InvalidSocketException, InvalidPacketException {
+        if (!mDependencies.isAddressTranslationEnabled(mContext)) return ki;
+
+        // Translation applies to only NAT-T keepalive
+        if (ki.mType != KeepaliveInfo.TYPE_NATT) return ki;
+        // Only try to translate address if the packet source address is the clat's source address.
+        if (!ki.mPacket.getSrcAddress().equals(ki.getNai().getClatv4SrcAddress())) return ki;
+
+        final InetAddress dstAddr = ki.mPacket.getDstAddress();
+        // Do not perform translation for a v6 dst address.
+        if (!(dstAddr instanceof Inet4Address)) return ki;
+
+        final Inet6Address address = ki.getNai().translateV4toClatV6((Inet4Address) dstAddr);
+
+        if (address == null) return ki;
+
+        final int srcPort = ki.mPacket.getSrcPort();
+        final KeepaliveInfo newInfo = ki.withPacketData(NattKeepalivePacketData.nattKeepalivePacket(
+                ki.getNai().getClatv6SrcAddress(), srcPort, address, NATT_PORT));
+        Log.d(TAG, "Src is clat v4 address. Convert from " + ki + " to " + newInfo);
+        return newInfo;
     }
 
     public void handleStopAllKeepalives(NetworkAgentInfo nai, int reason) {
@@ -526,8 +586,12 @@ public class KeepaliveTracker {
         if (networkKeepalives != null) {
             final ArrayList<KeepaliveInfo> kalist = new ArrayList(networkKeepalives.values());
             for (KeepaliveInfo ki : kalist) {
-                // Check if keepalive is already stopped
+                // If the keepalive is paused, then it is already stopped with the hardware and so
+                // continue. Note that to send the appropriate stop reason callback,
+                // AutomaticOnOffKeepaliveTracker will call finalizePausedKeepalive which will also
+                // finally remove this keepalive slot from the array.
                 if (ki.mStopReason == SUCCESS_PAUSED) continue;
+
                 ki.stop(reason);
                 // Clean up keepalives since the network agent is disconnected and unable to pass
                 // back asynchronous result of stop().
@@ -748,6 +812,7 @@ public class KeepaliveTracker {
             srcAddress = InetAddresses.parseNumericAddress(srcAddrString);
             dstAddress = InetAddresses.parseNumericAddress(dstAddrString);
         } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Fail to construct address", e);
             notifyErrorCallback(cb, ERROR_INVALID_IP_ADDRESS);
             return null;
         }
@@ -757,6 +822,7 @@ public class KeepaliveTracker {
             packet = NattKeepalivePacketData.nattKeepalivePacket(
                     srcAddress, srcPort, dstAddress, NATT_PORT);
         } catch (InvalidPacketException e) {
+            Log.e(TAG, "Fail to construct keepalive packet", e);
             notifyErrorCallback(cb, e.getError());
             return null;
         }
@@ -888,5 +954,47 @@ public class KeepaliveTracker {
             pw.decreaseIndent();
         }
         pw.decreaseIndent();
+    }
+
+    /**
+     * Dependencies class for testing.
+     */
+    @VisibleForTesting
+    public static class Dependencies {
+        /**
+         * Read supported keepalive count for each transport type from overlay resource. This should
+         * be used to create a local variable store of resource customization, and set as the
+         * input for {@link getSupportedKeepalivesForNetworkCapabilities}.
+         *
+         * @param context The context to read resource from.
+         * @return An array of supported keepalive count for each transport type.
+         */
+        @NonNull
+        public int[] getSupportedKeepalives(@NonNull Context context) {
+            return KeepaliveResourceUtil.getSupportedKeepalives(context);
+        }
+
+        /**
+         * Create a new {@link ConnectivityResources}.
+         */
+        @NonNull
+        public ConnectivityResources createConnectivityResources(@NonNull Context context) {
+            return new ConnectivityResources(context);
+        }
+
+        /**
+         * Return if keepalive address translation with clat feature is supported or not.
+         *
+         * This is controlled by both isFeatureSupported() and isFeatureEnabled(). The
+         * isFeatureSupported() checks whether device contains the minimal required module
+         * version for FEATURE_CLAT_ADDRESS_TRANSLATE. The isTetheringFeatureForceDisabled()
+         * checks the DeviceConfig flag that can be updated via DeviceConfig push to control
+         * the overall feature.
+         */
+        public boolean isAddressTranslationEnabled(@NonNull Context context) {
+            return DeviceConfigUtils.isFeatureSupported(context, FEATURE_CLAT_ADDRESS_TRANSLATE)
+                    && DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context,
+                            CONFIG_DISABLE_CLAT_ADDRESS_TRANSLATE);
+        }
     }
 }

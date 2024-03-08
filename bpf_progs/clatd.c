@@ -30,8 +30,8 @@
 #define __kernel_udphdr udphdr
 #include <linux/udp.h>
 
-// The resulting .o needs to load on the Android T beta 3 bpfloader
-#define BPFLOADER_MIN_VER BPFLOADER_T_BETA3_VERSION
+// The resulting .o needs to load on the Android T bpfloader
+#define BPFLOADER_MIN_VER BPFLOADER_T_VERSION
 
 #include "bpf_helpers.h"
 #include "bpf_net_helpers.h"
@@ -55,8 +55,10 @@ struct frag_hdr {
 DEFINE_BPF_MAP_GRW(clat_ingress6_map, HASH, ClatIngress6Key, ClatIngress6Value, 16, AID_SYSTEM)
 
 static inline __always_inline int nat64(struct __sk_buff* skb,
-                                        const bool is_ethernet,
-                                        const unsigned kver) {
+                                        const struct rawip_bool rawip,
+                                        const struct kver_uint kver) {
+    const bool is_ethernet = !rawip.rawip;
+
     // Require ethernet dst mac address to be our unicast address.
     if (is_ethernet && (skb->pkt_type != PACKET_HOST)) return TC_ACT_PIPE;
 
@@ -115,7 +117,7 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
 
     if (proto == IPPROTO_FRAGMENT) {
         // Fragment handling requires bpf_skb_adjust_room which is 4.14+
-        if (kver < KVER_4_14) return TC_ACT_PIPE;
+        if (!KVER_IS_AT_LEAST(kver, 4, 14, 0)) return TC_ACT_PIPE;
 
         // Must have (ethernet and) ipv6 header and ipv6 fragment extension header
         if (data + l2_header_size + sizeof(*ip6) + sizeof(struct frag_hdr) > data_end)
@@ -138,10 +140,11 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
     }
 
     switch (proto) {
-        case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
-        case IPPROTO_UDP:  // address means there is no need to update their checksums.
-        case IPPROTO_GRE:  // We do not need to bother looking at GRE/ESP headers,
-        case IPPROTO_ESP:  // since there is never a checksum to update.
+        case IPPROTO_TCP:      // For TCP, UDP & UDPLITE the checksum neutrality of the chosen
+        case IPPROTO_UDP:      // IPv6 address means there is no need to update their checksums.
+        case IPPROTO_UDPLITE:  //
+        case IPPROTO_GRE:      // We do not need to bother looking at GRE/ESP headers,
+        case IPPROTO_ESP:      // since there is never a checksum to update.
             break;
 
         default:  // do not know how to handle anything else
@@ -232,12 +235,14 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
     //
     // Note: we currently have no TreeHugger coverage for 4.9-T devices (there are no such
     // Pixel or cuttlefish devices), so likely you won't notice for months if this breaks...
-    if (kver >= KVER_4_14 && frag_off != htons(IP_DF)) {
+    if (KVER_IS_AT_LEAST(kver, 4, 14, 0) && frag_off != htons(IP_DF)) {
         // If we're converting an IPv6 Fragment, we need to trim off 8 more bytes
         // We're beyond recovery on error here... but hard to imagine how this could fail.
         if (bpf_skb_adjust_room(skb, -(__s32)sizeof(struct frag_hdr), BPF_ADJ_ROOM_NET, /*flags*/0))
             return TC_ACT_SHOT;
     }
+
+    try_make_writable(skb, l2_header_size + sizeof(struct iphdr));
 
     // bpf_skb_change_proto() invalidates all pointers - reload them.
     data = (void*)(long)skb->data;
@@ -328,12 +333,13 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
     if (ip4->frag_off & ~htons(IP_DF)) return TC_ACT_PIPE;
 
     switch (ip4->protocol) {
-        case IPPROTO_TCP:  // For TCP & UDP the checksum neutrality of the chosen IPv6
-        case IPPROTO_GRE:  // address means there is no need to update their checksums.
-        case IPPROTO_ESP:  // We do not need to bother looking at GRE/ESP headers,
-            break;         // since there is never a checksum to update.
+        case IPPROTO_TCP:      // For TCP, UDP & UDPLITE the checksum neutrality of the chosen
+        case IPPROTO_UDPLITE:  // IPv6 address means there is no need to update their checksums.
+        case IPPROTO_GRE:      // We do not need to bother looking at GRE/ESP headers,
+        case IPPROTO_ESP:      // since there is never a checksum to update.
+            break;
 
-        case IPPROTO_UDP:  // See above comment, but must also have UDP header...
+        case IPPROTO_UDP:      // See above comment, but must also have UDP header...
             if (data + sizeof(*ip4) + sizeof(struct udphdr) > data_end) return TC_ACT_PIPE;
             const struct udphdr* uh = (const struct udphdr*)(ip4 + 1);
             // If IPv4/UDP checksum is 0 then fallback to clatd so it can calculate the
@@ -416,3 +422,4 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
 
 LICENSE("Apache 2.0");
 CRITICAL("Connectivity");
+DISABLE_BTF_ON_USER_BUILDS();

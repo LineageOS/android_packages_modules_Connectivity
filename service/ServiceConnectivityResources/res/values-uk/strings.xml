@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"Вхід у мережу"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"Немає Інтернету"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"Можливо, обсяг мобільного трафіку від <xliff:g id="NETWORK_CARRIER">%1$s</xliff:g> вичерпано. Торкніться, щоб відкрити опції."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Можливо, обсяг мобільного трафіку вичерпано. Торкніться, щоб відкрити опції."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"Мережа <xliff:g id="NETWORK_SSID">%1$s</xliff:g> не має доступу до Інтернету"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Торкніться, щоб відкрити опції"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Мобільна мережа не має доступу до Інтернету"</string>

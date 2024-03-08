@@ -21,7 +21,7 @@ import android.annotation.Nullable;
 import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -37,8 +37,6 @@ import java.util.List;
  * @see MulticastSocket for javadoc of each public method.
  */
 public class MdnsSocket {
-    private static final MdnsLogger LOGGER = new MdnsLogger("MdnsSocket");
-
     static final int INTERFACE_INDEX_UNSPECIFIED = -1;
     public static final InetSocketAddress MULTICAST_IPV4_ADDRESS =
             new InetSocketAddress(MdnsConstants.getMdnsIPv4Address(), MdnsConstants.MDNS_PORT);
@@ -47,19 +45,22 @@ public class MdnsSocket {
     private final MulticastNetworkInterfaceProvider multicastNetworkInterfaceProvider;
     private final MulticastSocket multicastSocket;
     private boolean isOnIPv6OnlyNetwork;
+    private final SharedLog sharedLog;
 
     public MdnsSocket(
-            @NonNull MulticastNetworkInterfaceProvider multicastNetworkInterfaceProvider, int port)
+            @NonNull MulticastNetworkInterfaceProvider multicastNetworkInterfaceProvider, int port,
+            SharedLog sharedLog)
             throws IOException {
-        this(multicastNetworkInterfaceProvider, new MulticastSocket(port));
+        this(multicastNetworkInterfaceProvider, new MulticastSocket(port), sharedLog);
     }
 
     @VisibleForTesting
     MdnsSocket(@NonNull MulticastNetworkInterfaceProvider multicastNetworkInterfaceProvider,
-            MulticastSocket multicastSocket) throws IOException {
+            MulticastSocket multicastSocket, SharedLog sharedLog) throws IOException {
         this.multicastNetworkInterfaceProvider = multicastNetworkInterfaceProvider;
         this.multicastNetworkInterfaceProvider.startWatchingConnectivityChanges();
         this.multicastSocket = multicastSocket;
+        this.sharedLog = sharedLog;
         // RFC Spec: https://tools.ietf.org/html/rfc6762
         // Time to live is set 255, which is similar to the jMDNS implementation.
         multicastSocket.setTimeToLive(255);
@@ -93,6 +94,10 @@ public class MdnsSocket {
         }
         for (NetworkInterfaceWrapper networkInterface : networkInterfaces) {
             multicastSocket.joinGroup(multicastAddress, networkInterface.getNetworkInterface());
+            if (!isOnIPv6OnlyNetwork) {
+                multicastSocket.joinGroup(
+                        MULTICAST_IPV6_ADDRESS, networkInterface.getNetworkInterface());
+            }
         }
     }
 
@@ -105,6 +110,10 @@ public class MdnsSocket {
         }
         for (NetworkInterfaceWrapper networkInterface : networkInterfaces) {
             multicastSocket.leaveGroup(multicastAddress, networkInterface.getNetworkInterface());
+            if (!isOnIPv6OnlyNetwork) {
+                multicastSocket.leaveGroup(
+                        MULTICAST_IPV6_ADDRESS, networkInterface.getNetworkInterface());
+            }
         }
     }
 
@@ -119,10 +128,14 @@ public class MdnsSocket {
      * cannot be determined, returns -1.
      */
     public int getInterfaceIndex() {
+        if (multicastSocket.isClosed()) {
+            sharedLog.e("Socket is closed");
+            return -1;
+        }
         try {
             return multicastSocket.getNetworkInterface().getIndex();
-        } catch (SocketException e) {
-            LOGGER.e("Failed to retrieve interface index for socket.", e);
+        } catch (SocketException | NullPointerException e) {
+            sharedLog.e("Failed to retrieve interface index for socket.", e);
             return -1;
         }
     }

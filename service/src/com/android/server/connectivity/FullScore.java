@@ -124,7 +124,7 @@ public class FullScore {
             new Class[]{FullScore.class, NetworkScore.class}, new String[]{"POLICY_"});
 
     @VisibleForTesting
-    static @NonNull String policyNameOf(final int policy) {
+    public static @NonNull String policyNameOf(final int policy) {
         final String name = sMessageNames.get(policy);
         if (name == null) {
             // Don't throw here because name might be null due to proguard stripping out the
@@ -301,6 +301,18 @@ public class FullScore {
      */
     public FullScore asValidated() {
         return new FullScore(mPolicies | (1L << POLICY_IS_VALIDATED), mKeepConnectedReason);
+    }
+
+    /**
+     * Gets the policies as an long. Internal callers only.
+     *
+     * DO NOT USE if not immediately collapsing back into a scalar. Instead, use
+     * {@link #hasPolicy}.
+     * @return the internal, version-dependent int representing the policies.
+     * @hide
+     */
+    public long getPoliciesInternal() {
+        return mPolicies;
     }
 
     /**

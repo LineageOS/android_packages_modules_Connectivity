@@ -113,7 +113,7 @@ TEST_F(NetworkTraceHandlerTest, WriteBasicFields) {
           .length = 100,
           .uid = 10,
           .tag = 123,
-          .ipProto = 6,
+          .ipProto = IPPROTO_TCP,
           .tcpFlags = 1,
       },
   };
@@ -138,12 +138,14 @@ TEST_F(NetworkTraceHandlerTest, WriteDirectionAndPorts) {
           .sport = htons(8080),
           .dport = htons(443),
           .egress = true,
+          .ipProto = IPPROTO_TCP,
       },
       PacketTrace{
           .timestampNs = 2,
           .sport = htons(443),
           .dport = htons(8080),
           .egress = false,
+          .ipProto = IPPROTO_TCP,
       },
   };
 
@@ -161,6 +163,42 @@ TEST_F(NetworkTraceHandlerTest, WriteDirectionAndPorts) {
               TrafficDirection::DIR_INGRESS);
 }
 
+TEST_F(NetworkTraceHandlerTest, WriteIcmpTypeAndCode) {
+  std::vector<PacketTrace> input = {
+      PacketTrace{
+          .timestampNs = 1,
+          .sport = htons(11),  // type
+          .dport = htons(22),  // code
+          .egress = true,
+          .ipProto = IPPROTO_ICMP,
+      },
+      PacketTrace{
+          .timestampNs = 2,
+          .sport = htons(33),  // type
+          .dport = htons(44),  // code
+          .egress = false,
+          .ipProto = IPPROTO_ICMPV6,
+      },
+  };
+
+  std::vector<TracePacket> events;
+  ASSERT_TRUE(TraceAndSortPackets(input, &events));
+
+  ASSERT_EQ(events.size(), 2);
+  EXPECT_FALSE(events[0].network_packet().has_local_port());
+  EXPECT_FALSE(events[0].network_packet().has_remote_port());
+  EXPECT_THAT(events[0].network_packet().icmp_type(), 11);
+  EXPECT_THAT(events[0].network_packet().icmp_code(), 22);
+  EXPECT_THAT(events[0].network_packet().direction(),
+              TrafficDirection::DIR_EGRESS);
+  EXPECT_FALSE(events[1].network_packet().local_port());
+  EXPECT_FALSE(events[1].network_packet().remote_port());
+  EXPECT_THAT(events[1].network_packet().icmp_type(), 33);
+  EXPECT_THAT(events[1].network_packet().icmp_code(), 44);
+  EXPECT_THAT(events[1].network_packet().direction(),
+              TrafficDirection::DIR_INGRESS);
+}
+
 TEST_F(NetworkTraceHandlerTest, BasicBundling) {
   // TODO: remove this once bundling becomes default. Until then, set arbitrary
   // aggregation threshold to enable bundling.
@@ -168,12 +206,12 @@ TEST_F(NetworkTraceHandlerTest, BasicBundling) {
   config.set_aggregation_threshold(10);
 
   std::vector<PacketTrace> input = {
-      PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
-      PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
-      PacketTrace{.uid = 123, .timestampNs = 4, .length = 300},
+      PacketTrace{.timestampNs = 2, .length = 200, .uid = 123},
+      PacketTrace{.timestampNs = 1, .length = 100, .uid = 123},
+      PacketTrace{.timestampNs = 4, .length = 300, .uid = 123},
 
-      PacketTrace{.uid = 456, .timestampNs = 2, .length = 400},
-      PacketTrace{.uid = 456, .timestampNs = 4, .length = 100},
+      PacketTrace{.timestampNs = 2, .length = 400, .uid = 456},
+      PacketTrace{.timestampNs = 4, .length = 100, .uid = 456},
   };
 
   std::vector<TracePacket> events;
@@ -203,12 +241,12 @@ TEST_F(NetworkTraceHandlerTest, AggregationThreshold) {
   config.set_aggregation_threshold(3);
 
   std::vector<PacketTrace> input = {
-      PacketTrace{.uid = 123, .timestampNs = 2, .length = 200},
-      PacketTrace{.uid = 123, .timestampNs = 1, .length = 100},
-      PacketTrace{.uid = 123, .timestampNs = 4, .length = 300},
+      PacketTrace{.timestampNs = 2, .length = 200, .uid = 123},
+      PacketTrace{.timestampNs = 1, .length = 100, .uid = 123},
+      PacketTrace{.timestampNs = 4, .length = 300, .uid = 123},
 
-      PacketTrace{.uid = 456, .timestampNs = 2, .length = 400},
-      PacketTrace{.uid = 456, .timestampNs = 4, .length = 100},
+      PacketTrace{.timestampNs = 2, .length = 400, .uid = 456},
+      PacketTrace{.timestampNs = 4, .length = 100, .uid = 456},
   };
 
   std::vector<TracePacket> events;
@@ -239,11 +277,16 @@ TEST_F(NetworkTraceHandlerTest, DropLocalPort) {
   __be16 b = htons(10001);
   std::vector<PacketTrace> input = {
       // Recall that local is `src` for egress and `dst` for ingress.
-      PacketTrace{.timestampNs = 1, .length = 2, .egress = true, .sport = a},
-      PacketTrace{.timestampNs = 2, .length = 4, .egress = false, .dport = a},
-      PacketTrace{.timestampNs = 3, .length = 6, .egress = true, .sport = b},
-      PacketTrace{.timestampNs = 4, .length = 8, .egress = false, .dport = b},
+      PacketTrace{.timestampNs = 1, .length = 2, .sport = a, .egress = true},
+      PacketTrace{.timestampNs = 2, .length = 4, .dport = a, .egress = false},
+      PacketTrace{.timestampNs = 3, .length = 6, .sport = b, .egress = true},
+      PacketTrace{.timestampNs = 4, .length = 8, .dport = b, .egress = false},
   };
+
+  // Set common fields.
+  for (PacketTrace& pkt : input) {
+    pkt.ipProto = IPPROTO_TCP;
+  }
 
   std::vector<TracePacket> events;
   ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
@@ -274,11 +317,16 @@ TEST_F(NetworkTraceHandlerTest, DropRemotePort) {
   __be16 b = htons(80);
   std::vector<PacketTrace> input = {
       // Recall that remote is `dst` for egress and `src` for ingress.
-      PacketTrace{.timestampNs = 1, .length = 2, .egress = true, .dport = a},
-      PacketTrace{.timestampNs = 2, .length = 4, .egress = false, .sport = a},
-      PacketTrace{.timestampNs = 3, .length = 6, .egress = true, .dport = b},
-      PacketTrace{.timestampNs = 4, .length = 8, .egress = false, .sport = b},
+      PacketTrace{.timestampNs = 1, .length = 2, .dport = a, .egress = true},
+      PacketTrace{.timestampNs = 2, .length = 4, .sport = a, .egress = false},
+      PacketTrace{.timestampNs = 3, .length = 6, .dport = b, .egress = true},
+      PacketTrace{.timestampNs = 4, .length = 8, .sport = b, .egress = false},
   };
+
+  // Set common fields.
+  for (PacketTrace& pkt : input) {
+    pkt.ipProto = IPPROTO_TCP;
+  }
 
   std::vector<TracePacket> events;
   ASSERT_TRUE(TraceAndSortPackets(input, &events, config));
@@ -306,11 +354,16 @@ TEST_F(NetworkTraceHandlerTest, DropTcpFlags) {
   config.set_aggregation_threshold(10);
 
   std::vector<PacketTrace> input = {
-      PacketTrace{.timestampNs = 1, .uid = 123, .length = 1, .tcpFlags = 1},
-      PacketTrace{.timestampNs = 2, .uid = 123, .length = 2, .tcpFlags = 2},
-      PacketTrace{.timestampNs = 3, .uid = 456, .length = 3, .tcpFlags = 1},
-      PacketTrace{.timestampNs = 4, .uid = 456, .length = 4, .tcpFlags = 2},
+      PacketTrace{.timestampNs = 1, .length = 1, .uid = 123, .tcpFlags = 1},
+      PacketTrace{.timestampNs = 2, .length = 2, .uid = 123, .tcpFlags = 2},
+      PacketTrace{.timestampNs = 3, .length = 3, .uid = 456, .tcpFlags = 1},
+      PacketTrace{.timestampNs = 4, .length = 4, .uid = 456, .tcpFlags = 2},
   };
+
+  // Set common fields.
+  for (PacketTrace& pkt : input) {
+    pkt.ipProto = IPPROTO_TCP;
+  }
 
   std::vector<TracePacket> events;
   ASSERT_TRUE(TraceAndSortPackets(input, &events, config));

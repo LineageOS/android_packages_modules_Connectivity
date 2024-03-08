@@ -19,18 +19,18 @@ package com.android.cts.net.hostside;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.clearSnoozeTimestamps;
 
 import android.content.pm.PackageManager;
-import android.support.test.uiautomator.By;
-import android.support.test.uiautomator.Direction;
-import android.support.test.uiautomator.UiObject2;
-import android.support.test.uiautomator.Until;
 import android.telephony.SubscriptionManager;
 import android.telephony.SubscriptionPlan;
 
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.Direction;
 import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.UiObject2;
+import androidx.test.uiautomator.Until;
 
 import com.android.compatibility.common.util.SystemUtil;
-import com.android.compatibility.common.util.UiAutomatorUtils;
+import com.android.compatibility.common.util.UiAutomatorUtils2;
 
 import org.junit.After;
 import org.junit.Assume;
@@ -84,7 +84,7 @@ public class DataWarningReceiverTest extends AbstractRestrictBackgroundNetworkTe
             final UiDevice uiDevice = UiDevice.getInstance(mInstrumentation);
             uiDevice.openNotification();
             try {
-                final UiObject2 uiObject = UiAutomatorUtils.waitFindObject(
+                final UiObject2 uiObject = UiAutomatorUtils2.waitFindObject(
                         By.text("Data warning"));
                 Assume.assumeNotNull(uiObject);
                 uiObject.wait(Until.clickable(true), 10_000L);

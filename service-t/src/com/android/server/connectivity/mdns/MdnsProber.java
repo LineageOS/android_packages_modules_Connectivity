@@ -17,13 +17,16 @@
 package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Looper;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.SharedLog;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,16 +35,13 @@ import java.util.List;
  *
  * TODO: implement receiving replies and handling conflicts.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
     private static final long CONFLICT_RETRY_DELAY_MS = 5_000L;
-    @NonNull
-    private final String mLogTag;
 
-    public MdnsProber(@NonNull String interfaceTag, @NonNull Looper looper,
-            @NonNull MdnsReplySender replySender,
-            @NonNull PacketRepeaterCallback<ProbingInfo> cb) {
-        super(looper, replySender, cb);
-        mLogTag = MdnsProber.class.getSimpleName() + "/" + interfaceTag;
+    public MdnsProber(@NonNull Looper looper, @NonNull MdnsReplySender replySender,
+            @NonNull PacketRepeaterCallback<ProbingInfo> cb, @NonNull SharedLog sharedLog) {
+        super(looper, replySender, cb, sharedLog, MdnsAdvertiser.DBG);
     }
 
     /** Probing request to send with {@link MdnsProber}. */
@@ -113,15 +113,11 @@ public class MdnsProber extends MdnsPacketRepeater<MdnsProber.ProbingInfo> {
          */
         private static boolean containsName(@NonNull List<MdnsRecord> records,
                 @NonNull String[] name) {
-            return CollectionUtils.any(records, r -> Arrays.equals(name, r.getName()));
+            return CollectionUtils.any(records,
+                    r -> MdnsUtils.equalsDnsLabelIgnoreDnsCase(name, r.getName()));
         }
     }
 
-    @NonNull
-    @Override
-    protected String getTag() {
-        return mLogTag;
-    }
 
     @VisibleForTesting
     protected long getInitialDelay() {

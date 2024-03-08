@@ -16,49 +16,57 @@
 
 package com.android.cts.net;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 public class HostsideNetworkPolicyManagerTests extends HostsideNetworkTestCase {
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         uninstallPackage(TEST_APP2_PKG, false);
         installPackage(TEST_APP2_APK);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
+    @After
+    public void tearDown() throws Exception {
         uninstallPackage(TEST_APP2_PKG, true);
     }
 
+    @Test
     public void testIsUidNetworkingBlocked_withUidNotBlocked() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkPolicyManagerTest",
                 "testIsUidNetworkingBlocked_withUidNotBlocked");
     }
 
+    @Test
     public void testIsUidNetworkingBlocked_withSystemUid() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkPolicyManagerTest", "testIsUidNetworkingBlocked_withSystemUid");
     }
 
+    @Test
     public void testIsUidNetworkingBlocked_withDataSaverMode() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkPolicyManagerTest",
                 "testIsUidNetworkingBlocked_withDataSaverMode");
     }
 
+    @Test
     public void testIsUidNetworkingBlocked_withRestrictedNetworkingMode() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkPolicyManagerTest",
                 "testIsUidNetworkingBlocked_withRestrictedNetworkingMode");
     }
 
+    @Test
     public void testIsUidNetworkingBlocked_withPowerSaverMode() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkPolicyManagerTest",
                 "testIsUidNetworkingBlocked_withPowerSaverMode");
     }
 
+    @Test
     public void testIsUidRestrictedOnMeteredNetworks() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkPolicyManagerTest", "testIsUidRestrictedOnMeteredNetworks");

@@ -26,6 +26,10 @@ extern "C" {
 #include "checksum.h"
 }
 
+#include <aidl/android/net/INetd.h>
+#include "clat_mark.h"
+static_assert(aidl::android::net::INetd::CLAT_MARK == CLAT_MARK, "must be 0xDEADC1A7");
+
 // Default translation parameters.
 static const char kIPv4LocalAddr[] = "192.0.0.4";
 

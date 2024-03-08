@@ -22,6 +22,10 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.google.common.hash.Hashing;
+
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -30,22 +34,28 @@ import javax.crypto.spec.SecretKeySpec;
 
 /** Class for encryption/decryption functionality. */
 public abstract class Cryptor {
+    /**
+     * In the form of "algorithm/mode/padding". Must be the same across broadcast and scan devices.
+     */
+    public static final String CIPHER_ALGORITHM = "AES/CTR/NoPadding";
+
+    public static final byte[] NP_HKDF_SALT = "Google Nearby".getBytes(StandardCharsets.US_ASCII);
 
     /** AES only supports key sizes of 16, 24 or 32 bytes. */
     static final int AUTHENTICITY_KEY_BYTE_SIZE = 16;
 
-    private static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
+    public static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
 
     /**
      * Encrypt the provided data blob.
      *
      * @param data data blob to be encrypted.
-     * @param salt used for IV
+     * @param iv advertisement nonce
      * @param secretKeyBytes secrete key accessed from credentials
      * @return encrypted data, {@code null} if failed to encrypt.
      */
     @Nullable
-    public byte[] encrypt(byte[] data, byte[] salt, byte[] secretKeyBytes) {
+    public byte[] encrypt(byte[] data, byte[] iv, byte[] secretKeyBytes) {
         return data;
     }
 
@@ -53,12 +63,12 @@ public abstract class Cryptor {
      * Decrypt the original data blob from the provided byte array.
      *
      * @param encryptedData data blob to be decrypted.
-     * @param salt used for IV
+     * @param iv advertisement nonce
      * @param secretKeyBytes secrete key accessed from credentials
      * @return decrypted data, {@code null} if failed to decrypt.
      */
     @Nullable
-    public byte[] decrypt(byte[] encryptedData, byte[] salt, byte[] secretKeyBytes) {
+    public byte[] decrypt(byte[] encryptedData, byte[] iv, byte[] secretKeyBytes) {
         return encryptedData;
     }
 
@@ -90,7 +100,7 @@ public abstract class Cryptor {
      * A HAMC sha256 based HKDF algorithm to pseudo randomly hash data and salt into a byte array of
      * given size.
      */
-    // Based on google3/third_party/tink/java/src/main/java/com/google/crypto/tink/subtle/Hkdf.java
+    // Based on crypto/tink/subtle/Hkdf.java
     @Nullable
     static byte[] computeHkdf(byte[] ikm, byte[] salt, int size) {
         Mac mac;
@@ -145,5 +155,67 @@ public abstract class Cryptor {
         }
 
         return result;
+    }
+
+    /**
+     * Computes an HKDF.
+     *
+     * @param macAlgorithm the MAC algorithm used for computing the Hkdf. I.e., "HMACSHA1" or
+     *                     "HMACSHA256".
+     * @param ikm          the input keying material.
+     * @param salt         optional salt. A possibly non-secret random value.
+     *                     (If no salt is provided i.e. if salt has length 0)
+     *                     then an array of 0s of the same size as the hash
+     *                     digest is used as salt.
+     * @param info         optional context and application specific information.
+     * @param size         The length of the generated pseudorandom string in bytes.
+     * @throws GeneralSecurityException if the {@code macAlgorithm} is not supported or if {@code
+     *                                  size} is too large or if {@code salt} is not a valid key for
+     *                                  macAlgorithm (which should not
+     *                                  happen since HMAC allows key sizes up to 2^64).
+     */
+    public static byte[] computeHkdf(
+            String macAlgorithm, final byte[] ikm, final byte[] salt, final byte[] info, int size)
+            throws GeneralSecurityException {
+        Mac mac = Mac.getInstance(macAlgorithm);
+        if (size > 255 * mac.getMacLength()) {
+            throw new GeneralSecurityException("size too large");
+        }
+        if (salt == null || salt.length == 0) {
+            // According to RFC 5869, Section 2.2 the salt is optional. If no salt is provided
+            // then HKDF uses a salt that is an array of zeros of the same length as the hash
+            // digest.
+            mac.init(new SecretKeySpec(new byte[mac.getMacLength()], macAlgorithm));
+        } else {
+            mac.init(new SecretKeySpec(salt, macAlgorithm));
+        }
+        byte[] prk = mac.doFinal(ikm);
+        byte[] result = new byte[size];
+        int ctr = 1;
+        int pos = 0;
+        mac.init(new SecretKeySpec(prk, macAlgorithm));
+        byte[] digest = new byte[0];
+        while (true) {
+            mac.update(digest);
+            mac.update(info);
+            mac.update((byte) ctr);
+            digest = mac.doFinal();
+            if (pos + digest.length < size) {
+                System.arraycopy(digest, 0, result, pos, digest.length);
+                pos += digest.length;
+                ctr++;
+            } else {
+                System.arraycopy(digest, 0, result, pos, size - pos);
+                break;
+            }
+        }
+        return result;
+    }
+
+    /** Generates the HMAC bytes. */
+    public static byte[] generateHmac(String algorithm, byte[] input, byte[] key) {
+        return Hashing.hmacSha256(new SecretKeySpec(key, algorithm))
+                .hashBytes(input)
+                .asBytes();
     }
 }

@@ -44,6 +44,7 @@ import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,6 +85,14 @@ public class ConntrackSocketTest {
         mOffloadHw = new OffloadHardwareInterface(mHandler, mLog, mDeps);
     }
 
+    @After
+    public void tearDown() throws Exception {
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            mHandlerThread.join();
+        }
+    }
+
     void findConnectionOrThrow(FileDescriptor fd, InetSocketAddress local, InetSocketAddress remote)
             throws Exception {
         Log.d(TAG, "Looking for socket " + local + " -> " + remote);
@@ -106,6 +115,7 @@ public class ConntrackSocketTest {
                 ConntrackMessage.Tuple tuple = ctmsg.tupleOrig;
 
                 if (nlmsghdr.nlmsg_type == (NFNL_SUBSYS_CTNETLINK << 8 | IPCTNL_MSG_CT_NEW)
+                        && tuple != null
                         && tuple.protoNum == IPPROTO_TCP
                         && tuple.srcIp.equals(local.getAddress())
                         && tuple.dstIp.equals(remote.getAddress())

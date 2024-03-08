@@ -20,9 +20,9 @@ import android.os.Parcel
 import android.os.Parcelable
 
 data class HttpResponse(
-    val requestUrl: String,
+    val requestUrl: String?,
     val responseCode: Int,
-    val content: String = "",
+    val content: String? = "",
     val redirectUrl: String? = null
 ) : Parcelable {
     constructor(p: Parcel): this(p.readString(), p.readInt(), p.readString(), p.readString())

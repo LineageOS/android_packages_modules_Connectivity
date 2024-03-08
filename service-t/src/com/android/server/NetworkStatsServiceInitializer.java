@@ -22,6 +22,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.DeviceConfigUtils;
 import com.android.server.net.NetworkStatsService;
 
 /**
@@ -30,6 +31,8 @@ import com.android.server.net.NetworkStatsService;
  */
 public final class NetworkStatsServiceInitializer extends SystemService {
     private static final String TAG = NetworkStatsServiceInitializer.class.getSimpleName();
+    private static final String ENABLE_NETWORK_TRACING = "enable_network_tracing";
+    private final boolean mNetworkTracingFlagEnabled;
     private final NetworkStatsService mStatsService;
 
     public NetworkStatsServiceInitializer(Context context) {
@@ -37,6 +40,8 @@ public final class NetworkStatsServiceInitializer extends SystemService {
         // Load JNI libraries used by NetworkStatsService and its dependencies
         System.loadLibrary("service-connectivity");
         mStatsService = maybeCreateNetworkStatsService(context);
+        mNetworkTracingFlagEnabled = DeviceConfigUtils.isTetheringFeatureEnabled(
+            context, ENABLE_NETWORK_TRACING);
     }
 
     @Override
@@ -48,11 +53,10 @@ public final class NetworkStatsServiceInitializer extends SystemService {
             TrafficStats.init(getContext());
         }
 
-        // The following code registers the Perfetto Network Trace Handler on non-user builds.
-        // The enhanced tracing is intended to be used for debugging and diagnosing issues. This
-        // is conditional on the build type rather than `isDebuggable` to match the system_server
-        // selinux rules which only allow the Perfetto connection under the same circumstances.
-        if (SdkLevel.isAtLeastU() && !Build.TYPE.equals("user")) {
+        // The following code registers the Perfetto Network Trace Handler. The enhanced tracing
+        // is intended to be used for debugging and diagnosing issues. This is enabled by default
+        // on userdebug/eng builds and flag protected in user builds.
+        if (SdkLevel.isAtLeastU() && (mNetworkTracingFlagEnabled || !Build.TYPE.equals("user"))) {
             Log.i(TAG, "Initializing network tracing hooks");
             NetworkStatsService.nativeInitNetworkTracing();
         }

@@ -29,13 +29,17 @@ public class TetherUpstream6Key extends Struct {
     @Field(order = 0, type = Type.S32)
     public final int iif; // The input interface index.
 
-    @Field(order = 1, type = Type.EUI48, padding = 2)
+    @Field(order = 1, type = Type.EUI48, padding = 6)
     public final MacAddress dstMac; // Destination ethernet mac address (zeroed iff rawip ingress).
 
-    public TetherUpstream6Key(int iif, @NonNull final MacAddress dstMac) {
+    @Field(order = 2, type = Type.ByteArray, arraysize = 8)
+    public final byte[] src64; // The top 64-bits of the source ip.
+
+    public TetherUpstream6Key(int iif, @NonNull final MacAddress dstMac, final byte[] src64) {
         Objects.requireNonNull(dstMac);
 
         this.iif = iif;
         this.dstMac = dstMac;
+        this.src64 = src64;
     }
 }

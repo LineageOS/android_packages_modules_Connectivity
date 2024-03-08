@@ -49,7 +49,7 @@ DEFINE_BPF_MAP_GRW(tether_downstream6_map, HASH, TetherDownstream6Key, Tether6Va
 DEFINE_BPF_MAP_GRW(bitmap, ARRAY, int, uint64_t, 2, TETHERING_GID)
 
 DEFINE_BPF_PROG_KVER("xdp/drop_ipv4_udp_ether", TETHERING_UID, TETHERING_GID,
-                      xdp_test, KVER(5, 9, 0))
+                      xdp_test, KVER_5_9)
 (struct xdp_md *ctx) {
     void *data = (void *)(long)ctx->data;
     void *data_end = (void *)(long)ctx->data_end;
@@ -67,3 +67,4 @@ DEFINE_BPF_PROG_KVER("xdp/drop_ipv4_udp_ether", TETHERING_UID, TETHERING_GID,
 }
 
 LICENSE("Apache 2.0");
+DISABLE_BTF_ON_USER_BUILDS();

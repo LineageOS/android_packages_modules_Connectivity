@@ -34,6 +34,8 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
 import java.util.WeakHashMap;
@@ -63,6 +65,7 @@ public class NearbyManager {
             ScanStatus.SUCCESS,
             ScanStatus.ERROR,
     })
+    @Retention(RetentionPolicy.SOURCE)
     public @interface ScanStatus {
         // The undetermined status, some modules may be initializing. Retry is suggested.
         int UNKNOWN = 0;
@@ -281,6 +284,8 @@ public class NearbyManager {
      */
     public void queryOffloadCapability(@NonNull @CallbackExecutor Executor executor,
             @NonNull Consumer<OffloadCapability> callback) {
+        Objects.requireNonNull(executor);
+        Objects.requireNonNull(callback);
         try {
             mService.queryOffloadCapability(new OffloadTransport(executor, callback));
         } catch (RemoteException e) {

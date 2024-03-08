@@ -29,6 +29,9 @@ import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.net.ConnectivityManager.NetworkCallback;
+// Can't be imported because aconfig tooling doesn't exist on udc-mainline-prod yet
+// See inner class Flags which mimics this for the time being
+// import android.net.flags.Flags;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -120,6 +123,14 @@ import java.util.StringJoiner;
  */
 public final class NetworkCapabilities implements Parcelable {
     private static final String TAG = "NetworkCapabilities";
+
+    // TODO : remove this class when udc-mainline-prod is abandoned and android.net.flags.Flags is
+    // available here
+    /** @hide */
+    public static class Flags {
+        static final String FLAG_FORBIDDEN_CAPABILITY =
+                "com.android.net.flags.forbidden_capability";
+    }
 
     /**
      * Mechanism to support redaction of fields in NetworkCapabilities that are guarded by specific
@@ -258,6 +269,19 @@ public final class NetworkCapabilities implements Parcelable {
      * See {@link #addEnterpriseId(int)} for details on how masks are added
      */
     private int mEnterpriseId;
+
+    /**
+     * Gets the enterprise IDs as an int. Internal callers only.
+     *
+     * DO NOT USE THIS if not immediately collapsing back into a scalar. Instead,
+     * prefer getEnterpriseIds/hasEnterpriseId.
+     *
+     * @return the internal, version-dependent int representing enterprise ids
+     * @hide
+     */
+    public int getEnterpriseIdsInternal() {
+        return mEnterpriseId;
+    }
 
     /**
      * Get enteprise identifiers set.
@@ -429,6 +453,7 @@ public final class NetworkCapabilities implements Parcelable {
             NET_CAPABILITY_MMTEL,
             NET_CAPABILITY_PRIORITIZE_LATENCY,
             NET_CAPABILITY_PRIORITIZE_BANDWIDTH,
+            NET_CAPABILITY_LOCAL_NETWORK,
     })
     public @interface NetCapability { }
 
@@ -690,17 +715,24 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public static final int NET_CAPABILITY_PRIORITIZE_BANDWIDTH = 35;
 
-    private static final int MIN_NET_CAPABILITY = NET_CAPABILITY_MMS;
-    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_PRIORITIZE_BANDWIDTH;
+    /**
+     * This is a local network, e.g. a tethering downstream or a P2P direct network.
+     *
+     * <p>
+     * Note that local networks are not sent to callbacks by default. To receive callbacks about
+     * them, the {@link NetworkRequest} instance must be prepared to see them, either by
+     * adding the capability with {@link NetworkRequest.Builder#addCapability}, by removing
+     * this forbidden capability with {@link NetworkRequest.Builder#removeForbiddenCapability},
+     * or by clearing all capabilites with {@link NetworkRequest.Builder#clearCapabilities()}.
+     * </p>
+     * @hide
+     */
+    public static final int NET_CAPABILITY_LOCAL_NETWORK = 36;
 
-    private static final int ALL_VALID_CAPABILITIES;
-    static {
-        int caps = 0;
-        for (int i = MIN_NET_CAPABILITY; i <= MAX_NET_CAPABILITY; ++i) {
-            caps |= 1 << i;
-        }
-        ALL_VALID_CAPABILITIES = caps;
-    }
+    private static final int MAX_NET_CAPABILITY = NET_CAPABILITY_LOCAL_NETWORK;
+
+    // Set all bits up to the MAX_NET_CAPABILITY-th bit
+    private static final long ALL_VALID_CAPABILITIES = (2L << MAX_NET_CAPABILITY) - 1;
 
     /**
      * Network capabilities that are expected to be mutable, i.e., can change while a particular
@@ -748,8 +780,10 @@ public final class NetworkCapabilities implements Parcelable {
 
     /**
      * Capabilities that are managed by ConnectivityService.
+     * @hide
      */
-    private static final long CONNECTIVITY_MANAGED_CAPABILITIES =
+    @VisibleForTesting
+    public static final long CONNECTIVITY_MANAGED_CAPABILITIES =
             BitUtils.packBitList(
                     NET_CAPABILITY_VALIDATED,
                     NET_CAPABILITY_CAPTIVE_PORTAL,
@@ -785,6 +819,10 @@ public final class NetworkCapabilities implements Parcelable {
      * Adds the given capability to this {@code NetworkCapability} instance.
      * Note that when searching for a network to satisfy a request, all capabilities
      * requested must be satisfied.
+     * <p>
+     * If the capability was previously added to the list of forbidden capabilities (either
+     * by default or added using {@link #addForbiddenCapability(int)}), then it will be removed
+     * from the list of forbidden capabilities as well.
      *
      * @param capability the capability to be added.
      * @return This NetworkCapabilities instance, to facilitate chaining.
@@ -793,8 +831,7 @@ public final class NetworkCapabilities implements Parcelable {
     public @NonNull NetworkCapabilities addCapability(@NetCapability int capability) {
         // If the given capability was previously added to the list of forbidden capabilities
         // then the capability will also be removed from the list of forbidden capabilities.
-        // TODO: Consider adding forbidden capabilities to the public API and mention this
-        // in the documentation.
+        // TODO: Add forbidden capabilities to the public API
         checkValidCapability(capability);
         mNetworkCapabilities |= 1L << capability;
         // remove from forbidden capability list
@@ -837,7 +874,7 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
-     * Removes (if found) the given forbidden capability from this {@code NetworkCapability}
+     * Removes (if found) the given forbidden capability from this {@link NetworkCapabilities}
      * instance that were added via addForbiddenCapability(int) or setCapabilities(int[], int[]).
      *
      * @param capability the capability to be removed.
@@ -847,6 +884,16 @@ public final class NetworkCapabilities implements Parcelable {
     public @NonNull NetworkCapabilities removeForbiddenCapability(@NetCapability int capability) {
         checkValidCapability(capability);
         mForbiddenNetworkCapabilities &= ~(1L << capability);
+        return this;
+    }
+
+    /**
+     * Removes all forbidden capabilities from this {@link NetworkCapabilities} instance.
+     * @return This NetworkCapabilities instance, to facilitate chaining.
+     * @hide
+     */
+    public @NonNull NetworkCapabilities removeAllForbiddenCapabilities() {
+        mForbiddenNetworkCapabilities = 0;
         return this;
     }
 
@@ -866,6 +913,19 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     /**
+     * Gets the capabilities as an int. Internal callers only.
+     *
+     * DO NOT USE THIS if not immediately collapsing back into a scalar. Instead,
+     * prefer getCapabilities/hasCapability.
+     *
+     * @return an internal, version-dependent int representing the capabilities
+     * @hide
+     */
+    public long getCapabilitiesInternal() {
+        return mNetworkCapabilities;
+    }
+
+    /**
      * Gets all the capabilities set on this {@code NetworkCapability} instance.
      *
      * @return an array of capability values for this instance.
@@ -880,6 +940,8 @@ public final class NetworkCapabilities implements Parcelable {
      * @return an array of forbidden capability values for this instance.
      * @hide
      */
+    @NonNull
+    // TODO : @FlaggedApi(Flags.FLAG_FORBIDDEN_CAPABILITY) and public
     public @NetCapability int[] getForbiddenCapabilities() {
         return BitUtils.unpackBits(mForbiddenNetworkCapabilities);
     }
@@ -979,7 +1041,7 @@ public final class NetworkCapabilities implements Parcelable {
     /**
      * Tests for the presence of a capability on this instance.
      *
-     * @param capability the capabilities to be tested for.
+     * @param capability the capability to be tested for.
      * @return {@code true} if set on this instance.
      */
     public boolean hasCapability(@NetCapability int capability) {
@@ -987,19 +1049,27 @@ public final class NetworkCapabilities implements Parcelable {
                 && ((mNetworkCapabilities & (1L << capability)) != 0);
     }
 
-    /** @hide */
+    /**
+     * Tests for the presence of a forbidden capability on this instance.
+     *
+     * @param capability the capability to be tested for.
+     * @return {@code true} if this capability is set forbidden on this instance.
+     * @hide
+     */
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+    // TODO : @FlaggedApi(Flags.FLAG_FORBIDDEN_CAPABILITY) and public
     public boolean hasForbiddenCapability(@NetCapability int capability) {
         return isValidCapability(capability)
                 && ((mForbiddenNetworkCapabilities & (1L << capability)) != 0);
     }
 
     /**
-     * Check if this NetworkCapabilities has system managed capabilities or not.
+     * Check if this NetworkCapabilities has connectivity-managed capabilities or not.
      * @hide
      */
     public boolean hasConnectivityManagedCapability() {
-        return ((mNetworkCapabilities & CONNECTIVITY_MANAGED_CAPABILITIES) != 0);
+        return (mNetworkCapabilities & CONNECTIVITY_MANAGED_CAPABILITIES) != 0
+                || mForbiddenNetworkCapabilities != 0;
     }
 
     /**
@@ -1385,6 +1455,18 @@ public final class NetworkCapabilities implements Parcelable {
      */
     public boolean hasSingleTransport(@Transport int transportType) {
         return mTransportTypes == (1 << transportType);
+    }
+
+    /**
+     * Returns true iff this NC has the specified transport and no other, ignoring TRANSPORT_TEST.
+     *
+     * If this NC has the passed transport and no other, this method returns true.
+     * If this NC has the passed transport, TRANSPORT_TEST and no other, this method returns true.
+     * Otherwise, this method returns false.
+     * @hide
+     */
+    public boolean hasSingleTransportBesidesTest(@Transport int transportType) {
+        return (mTransportTypes & ~(1 << TRANSPORT_TEST)) == (1 << transportType);
     }
 
     private boolean satisfiedByTransportTypes(NetworkCapabilities nc) {
@@ -2479,6 +2561,7 @@ public final class NetworkCapabilities implements Parcelable {
             case NET_CAPABILITY_MMTEL:                return "MMTEL";
             case NET_CAPABILITY_PRIORITIZE_LATENCY:          return "PRIORITIZE_LATENCY";
             case NET_CAPABILITY_PRIORITIZE_BANDWIDTH:        return "PRIORITIZE_BANDWIDTH";
+            case NET_CAPABILITY_LOCAL_NETWORK:        return "LOCAL_NETWORK";
             default:                                  return Integer.toString(capability);
         }
     }
@@ -2519,7 +2602,7 @@ public final class NetworkCapabilities implements Parcelable {
     }
 
     private static boolean isValidCapability(@NetworkCapabilities.NetCapability int capability) {
-        return capability >= MIN_NET_CAPABILITY && capability <= MAX_NET_CAPABILITY;
+        return capability >= 0 && capability <= MAX_NET_CAPABILITY;
     }
 
     private static void checkValidCapability(@NetworkCapabilities.NetCapability int capability) {
@@ -2864,6 +2947,44 @@ public final class NetworkCapabilities implements Parcelable {
         @NonNull
         public Builder removeCapability(@NetCapability final int capability) {
             mCaps.setCapability(capability, false);
+            return this;
+        }
+
+        /**
+         * Adds the given capability to the list of forbidden capabilities.
+         *
+         * A network with a capability will not match a {@link NetworkCapabilities} or
+         * {@link NetworkRequest} which has said capability set as forbidden. For example, if
+         * a request has NET_CAPABILITY_INTERNET in the list of forbidden capabilities, networks
+         * with NET_CAPABILITY_INTERNET will not match the request.
+         *
+         * If the capability was previously added to the list of required capabilities (for
+         * example, it was there by default or added using {@link #addCapability(int)} method), then
+         * it will be removed from the list of required capabilities as well.
+         *
+         * @param capability the capability
+         * @return this builder
+         * @hide
+         */
+        @NonNull
+        // TODO : @FlaggedApi(Flags.FLAG_FORBIDDEN_CAPABILITY) and public
+        public Builder addForbiddenCapability(@NetCapability final int capability) {
+            mCaps.addForbiddenCapability(capability);
+            return this;
+        }
+
+        /**
+         * Removes the given capability from the list of forbidden capabilities.
+         *
+         * @see #addForbiddenCapability(int)
+         * @param capability the capability
+         * @return this builder
+         * @hide
+         */
+        @NonNull
+        // TODO : @FlaggedApi(Flags.FLAG_FORBIDDEN_CAPABILITY) and public
+        public Builder removeForbiddenCapability(@NetCapability final int capability) {
+            mCaps.removeForbiddenCapability(capability);
             return this;
         }
 

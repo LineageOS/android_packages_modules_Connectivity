@@ -37,10 +37,10 @@ java_sdk_library {
         "//frameworks/base/core/tests/utillib",
         "//frameworks/base/packages/Connectivity/tests:__subpackages__",
         "//frameworks/base/tests/vcn",
-        "//frameworks/libs/net/common/testutils",
-        "//frameworks/libs/net/common/tests:__subpackages__",
         "//frameworks/opt/telephony/tests/telephonytests",
         "//packages/modules/CaptivePortalLogin/tests",
+        "//packages/modules/Connectivity/staticlibs/testutils",
+        "//packages/modules/Connectivity/staticlibs/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
@@ -55,25 +55,6 @@ java_sdk_library {
     hostdex: true, // for hiddenapi check
     permitted_packages: ["android.net"],
     lint: { strict_updatability_linting: true },
-}
-
-java_defaults {
-    name: "CronetJavaDefaults",
-    srcs: [":cronet_aml_api_sources"],
-    libs: [
-        "androidx.annotation_annotation",
-    ],
-    impl_only_static_libs: [
-        "cronet_aml_java",
-    ],
-}
-
-java_defaults {
-  name: "CronetJavaPrejarjarDefaults",
-  static_libs: [
-    "cronet_aml_api_java",
-    "cronet_aml_java"
-  ],
 }
 
 java_library {

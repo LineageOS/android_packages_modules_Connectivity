@@ -50,9 +50,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
+import android.net.TelephonyNetworkSpecifier;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -60,6 +62,7 @@ import android.os.UserHandle;
 import android.telephony.TelephonyManager;
 import android.testing.PollingCheck;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -74,7 +77,6 @@ import androidx.test.uiautomator.UiSelector;
 import androidx.test.uiautomator.Until;
 
 import com.android.connectivity.resources.R;
-import com.android.modules.utils.build.SdkLevel;
 import com.android.server.connectivity.NetworkNotificationManager.NotificationType;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -106,12 +108,16 @@ public class NetworkNotificationManagerTest {
     private static final long TEST_TIMEOUT_MS = 10_000L;
     private static final long UI_AUTOMATOR_WAIT_TIME_MILLIS = TEST_TIMEOUT_MS;
 
-    static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
-    static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
-    static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
+    private static final int TEST_SUB_ID = 43;
+    private static final String TEST_OPERATOR_NAME = "Test Operator";
+    private static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
+    private static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
+    private static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
     static {
         CELL_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
         CELL_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        CELL_CAPABILITIES.setNetworkSpecifier(new TelephonyNetworkSpecifier.Builder()
+                .setSubscriptionId(TEST_SUB_ID).build());
 
         WIFI_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
         WIFI_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
@@ -148,6 +154,7 @@ public class NetworkNotificationManagerTest {
     @Mock DisplayMetrics mDisplayMetrics;
     @Mock PackageManager mPm;
     @Mock TelephonyManager mTelephonyManager;
+    @Mock TelephonyManager mTestSubIdTelephonyManager;
     @Mock NotificationManager mNotificationManager;
     @Mock NetworkAgentInfo mWifiNai;
     @Mock NetworkAgentInfo mCellNai;
@@ -169,18 +176,21 @@ public class NetworkNotificationManagerTest {
         mVpnNai.networkInfo = mNetworkInfo;
         mDisplayMetrics.density = 2.275f;
         doReturn(true).when(mVpnNai).isVPN();
-        when(mCtx.getResources()).thenReturn(mResources);
-        when(mCtx.getPackageManager()).thenReturn(mPm);
-        when(mCtx.getApplicationInfo()).thenReturn(new ApplicationInfo());
+        doReturn(mResources).when(mCtx).getResources();
+        doReturn(mPm).when(mCtx).getPackageManager();
+        doReturn(new ApplicationInfo()).when(mCtx).getApplicationInfo();
         final Context asUserCtx = mock(Context.class, AdditionalAnswers.delegatesTo(mCtx));
         doReturn(UserHandle.ALL).when(asUserCtx).getUser();
-        when(mCtx.createContextAsUser(eq(UserHandle.ALL), anyInt())).thenReturn(asUserCtx);
-        when(mCtx.getSystemService(eq(Context.NOTIFICATION_SERVICE)))
-                .thenReturn(mNotificationManager);
-        when(mNetworkInfo.getExtraInfo()).thenReturn(TEST_EXTRA_INFO);
+        doReturn(asUserCtx).when(mCtx).createContextAsUser(eq(UserHandle.ALL), anyInt());
+        doReturn(mNotificationManager).when(mCtx)
+                .getSystemService(eq(Context.NOTIFICATION_SERVICE));
+        doReturn(TEST_EXTRA_INFO).when(mNetworkInfo).getExtraInfo();
         ConnectivityResources.setResourcesContextForTest(mCtx);
-        when(mResources.getColor(anyInt(), any())).thenReturn(0xFF607D8B);
-        when(mResources.getDisplayMetrics()).thenReturn(mDisplayMetrics);
+        doReturn(0xFF607D8B).when(mResources).getColor(anyInt(), any());
+        doReturn(mDisplayMetrics).when(mResources).getDisplayMetrics();
+        doReturn(mTestSubIdTelephonyManager).when(mTelephonyManager)
+                .createForSubscriptionId(TEST_SUB_ID);
+        doReturn(TEST_OPERATOR_NAME).when(mTestSubIdTelephonyManager).getNetworkOperatorName();
 
         // Come up with some credible-looking transport names. The actual values do not matter.
         String[] transportNames = new String[NetworkCapabilities.MAX_TRANSPORT + 1];
@@ -387,66 +397,29 @@ public class NetworkNotificationManagerTest {
         verify(mNotificationManager, never()).cancel(eq(tag), eq(PARTIAL_CONNECTIVITY.eventId));
     }
 
-    private static final int EXPECT_DIALOG = 0;
-    private static final int EXPECT_NOTIFICATION = 1;
     @Test
-    public void testNotifyNoInternet_asNotification_ActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
-                true /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_NOTIFICATION);
+    public void testNotifyNoInternet_asNotification() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(false, NO_INTERNET);
+    }
+    @Test
+        public void testNotifyNoInternet_asDialog() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(true, NO_INTERNET);
     }
 
     @Test
-    public void testNotifyNoInternet_asNotification_NotActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
-                false /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_NOTIFICATION);
+    public void testNotifyLostInternet_asNotification() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(false, LOST_INTERNET);
     }
 
     @Test
-    public void testNotifyNoInternet_asDialog_ActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
-                true /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_DIALOG);
+    public void testNotifyLostInternet_asDialog() throws Exception {
+        doTestNotifyNotificationAsDialogWhenHighPriority(true, LOST_INTERNET);
     }
 
-    @Test
-    public void testNotifyNoInternet_asDialog_NotActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
-                false /* activelyPreferBadWifi */, NO_INTERNET, EXPECT_DIALOG);
-    }
-
-    @Test
-    public void testNotifyLostInternet_asNotification_ActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
-                true /* activelyPreferBadWifi */, LOST_INTERNET, EXPECT_NOTIFICATION);
-    }
-
-    @Test
-    public void testNotifyLostInternet_asNotification_NotActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(false /* notifyAsDialog */,
-                false /* activelyPreferBadWifi */, LOST_INTERNET, EXPECT_NOTIFICATION);
-    }
-
-    @Test
-    public void testNotifyLostInternet_asDialog_ActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
-                true /* activelyPreferBadWifi */, LOST_INTERNET,
-                SdkLevel.isAtLeastT() ? EXPECT_DIALOG : EXPECT_NOTIFICATION);
-    }
-
-    @Test
-    public void testNotifyLostInternet_asDialog_NotActivelyPrefer() throws Exception {
-        doTestNotifyNotificationAsDialogWhenHighPriority(true /* notifyAsDialog */,
-                false /* activelyPreferBadWifi */, LOST_INTERNET,
-                SdkLevel.isAtLeastU() ? EXPECT_DIALOG : EXPECT_NOTIFICATION);
-    }
-
-    // Pass EXPECT_DIALOG or EXPECT_NOTIFICATION to |expectBehavior|
-    public void doTestNotifyNotificationAsDialogWhenHighPriority(
-            final boolean notifyAsDialog, final boolean activelyPreferBadWifi,
-            @NonNull final NotificationType notifType, final int expectBehavior) throws Exception {
-        doReturn(notifyAsDialog).when(mResources).getBoolean(
+    public void doTestNotifyNotificationAsDialogWhenHighPriority(final boolean configActive,
+            @NonNull final NotificationType notifType) throws Exception {
+        doReturn(configActive).when(mResources).getBoolean(
                 R.bool.config_notifyNoInternetAsDialogWhenHighPriority);
-        doReturn(activelyPreferBadWifi ? 1 : 0).when(mResources).getInteger(
-                R.integer.config_activelyPreferBadWifi);
 
         final Instrumentation instr = InstrumentationRegistry.getInstrumentation();
         final UiDevice uiDevice =  UiDevice.getInstance(instr);
@@ -466,6 +439,22 @@ public class NetworkNotificationManagerTest {
 
         // UiDevice.getLauncherPackageName() requires the test manifest to have a <queries> tag for
         // the launcher intent.
+        // Attempted workaround for b/286550950 where Settings is reported as the launcher
+        PollingCheck.check(
+                "Launcher package name was still settings after " + TEST_TIMEOUT_MS + "ms",
+                TEST_TIMEOUT_MS,
+                () -> {
+                    if ("com.android.settings".equals(uiDevice.getLauncherPackageName())) {
+                        final Intent intent = new Intent(Intent.ACTION_MAIN);
+                        intent.addCategory(Intent.CATEGORY_HOME);
+                        final List<ResolveInfo> acts = ctx.getPackageManager()
+                                .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                        Log.e(NetworkNotificationManagerTest.class.getSimpleName(),
+                                "Got settings as launcher name; launcher activities: " + acts);
+                        return false;
+                    }
+                    return true;
+                });
         final String launcherPackageName = uiDevice.getLauncherPackageName();
         assertTrue(String.format("Launcher (%s) is not shown", launcherPackageName),
                 uiDevice.wait(Until.hasObject(By.pkg(launcherPackageName)),
@@ -494,7 +483,7 @@ public class NetworkNotificationManagerTest {
             verify(mNotificationManager).cancel(TEST_NOTIF_TAG, NETWORK_SWITCH.eventId);
         }
 
-        if (expectBehavior == EXPECT_DIALOG) {
+        if (configActive) {
             // Verify that the activity is shown (the activity shows the action on screen)
             final UiObject actionText = uiDevice.findObject(new UiSelector().text(testAction));
             assertTrue("Activity not shown", actionText.waitForExists(TEST_TIMEOUT_MS));
@@ -551,5 +540,45 @@ public class NetworkNotificationManagerTest {
         doNotificationTextTest(PARTIAL_CONNECTIVITY,
                 R.string.wifi_no_internet, TEST_EXTRA_INFO,
                 R.string.wifi_no_internet_detailed);
+    }
+
+    private void runTelephonySignInNotificationTest(String testTitle, String testContents) {
+        final int id = 101;
+        final String tag = NetworkNotificationManager.tagFor(id);
+        mManager.showNotification(id, SIGN_IN, mCellNai, null, null, false);
+
+        final ArgumentCaptor<Notification> noteCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(mNotificationManager).notify(eq(tag), eq(SIGN_IN.eventId), noteCaptor.capture());
+        final Bundle noteExtras = noteCaptor.getValue().extras;
+        assertEquals(testTitle, noteExtras.getString(Notification.EXTRA_TITLE));
+        assertEquals(testContents, noteExtras.getString(Notification.EXTRA_TEXT));
+    }
+
+    @Test
+    public void testTelephonySignInNotification() {
+        final String testTitle = "Telephony no internet title";
+        final String testContents = "Add data for " + TEST_OPERATOR_NAME;
+        // The test does not use real resources as they are in the ConnectivityResources package,
+        // which is tricky to use (requires resolving the package, QUERY_ALL_PACKAGES permission).
+        doReturn(testTitle).when(mResources).getString(
+                R.string.mobile_network_available_no_internet);
+        doReturn(testContents).when(mResources).getString(
+                R.string.mobile_network_available_no_internet_detailed, TEST_OPERATOR_NAME);
+
+        runTelephonySignInNotificationTest(testTitle, testContents);
+    }
+
+    @Test
+    public void testTelephonySignInNotification_NoOperator() {
+        doReturn("").when(mTestSubIdTelephonyManager).getNetworkOperatorName();
+
+        final String testTitle = "Telephony no internet title";
+        final String testContents = "Add data";
+        doReturn(testTitle).when(mResources).getString(
+                R.string.mobile_network_available_no_internet);
+        doReturn(testContents).when(mResources).getString(
+                R.string.mobile_network_available_no_internet_detailed_unknown_carrier);
+
+        runTelephonySignInNotificationTest(testTitle, testContents);
     }
 }

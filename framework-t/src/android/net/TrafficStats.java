@@ -682,33 +682,13 @@ public class TrafficStats {
     /** {@hide} */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static long getMobileTcpRxPackets() {
-        long total = 0;
-        for (String iface : getMobileIfaces()) {
-            long stat = UNSUPPORTED;
-            try {
-                stat = getStatsService().getIfaceStats(iface, TYPE_TCP_RX_PACKETS);
-            } catch (RemoteException e) {
-                throw e.rethrowFromSystemServer();
-            }
-            total += addIfSupported(stat);
-        }
-        return total;
+        return UNSUPPORTED;
     }
 
     /** {@hide} */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static long getMobileTcpTxPackets() {
-        long total = 0;
-        for (String iface : getMobileIfaces()) {
-            long stat = UNSUPPORTED;
-            try {
-                stat = getStatsService().getIfaceStats(iface, TYPE_TCP_TX_PACKETS);
-            } catch (RemoteException e) {
-                throw e.rethrowFromSystemServer();
-            }
-            total += addIfSupported(stat);
-        }
-        return total;
+        return UNSUPPORTED;
     }
 
     /**
@@ -1140,8 +1120,4 @@ public class TrafficStats {
     public static final int TYPE_TX_BYTES = 2;
     /** {@hide} */
     public static final int TYPE_TX_PACKETS = 3;
-    /** {@hide} */
-    public static final int TYPE_TCP_RX_PACKETS = 4;
-    /** {@hide} */
-    public static final int TYPE_TCP_TX_PACKETS = 5;
 }

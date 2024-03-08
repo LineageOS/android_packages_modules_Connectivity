@@ -18,13 +18,15 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.Nullable;
 
-import com.android.internal.annotations.VisibleForTesting;
+import androidx.annotation.VisibleForTesting;
+
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 /** An mDNS "PTR" record, which holds a name (the "pointer"). */
-@VisibleForTesting
+@VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
 public class MdnsPointerRecord extends MdnsRecord {
     private String[] pointer;
 
@@ -35,6 +37,12 @@ public class MdnsPointerRecord extends MdnsRecord {
     public MdnsPointerRecord(String[] name, MdnsPacketReader reader, boolean isQuestion)
             throws IOException {
         super(name, TYPE_PTR, reader, isQuestion);
+    }
+
+    public MdnsPointerRecord(String[] name, boolean isUnicast) {
+        super(name, TYPE_PTR,
+                MdnsConstants.QCLASS_INTERNET | (isUnicast ? MdnsConstants.QCLASS_UNICAST : 0),
+                0L /* receiptTimeMillis */, false /* cacheFlush */, 0L /* ttlMillis */);
     }
 
     public MdnsPointerRecord(String[] name, long receiptTimeMillis, boolean cacheFlush,
@@ -60,7 +68,8 @@ public class MdnsPointerRecord extends MdnsRecord {
     }
 
     public boolean hasSubtype() {
-        return (name != null) && (name.length > 2) && name[1].equals(MdnsConstants.SUBTYPE_LABEL);
+        return (name != null) && (name.length > 2) && MdnsUtils.equalsIgnoreDnsCase(name[1],
+                MdnsConstants.SUBTYPE_LABEL);
     }
 
     public String getSubtype() {
@@ -74,7 +83,7 @@ public class MdnsPointerRecord extends MdnsRecord {
 
     @Override
     public int hashCode() {
-        return (super.hashCode() * 31) + Arrays.hashCode(pointer);
+        return (super.hashCode() * 31) + Arrays.hashCode(MdnsUtils.toDnsLabelsLowerCase(pointer));
     }
 
     @Override
@@ -86,6 +95,7 @@ public class MdnsPointerRecord extends MdnsRecord {
             return false;
         }
 
-        return super.equals(other) && Arrays.equals(pointer, ((MdnsPointerRecord) other).pointer);
+        return super.equals(other) && MdnsUtils.equalsDnsLabelIgnoreDnsCase(pointer,
+                ((MdnsPointerRecord) other).pointer);
     }
 }

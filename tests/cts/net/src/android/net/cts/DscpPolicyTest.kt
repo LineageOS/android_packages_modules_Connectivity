@@ -125,7 +125,7 @@ class DscpPolicyTest {
     private val TEST_TARGET_MAC_ADDR = MacAddress.fromString("12:34:56:78:9a:bc")
 
     private val realContext = InstrumentationRegistry.getContext()
-    private val cm = realContext.getSystemService(ConnectivityManager::class.java)
+    private val cm = realContext.getSystemService(ConnectivityManager::class.java)!!
 
     private val agentsToCleanUp = mutableListOf<NetworkAgent>()
     private val callbacksToCleanUp = mutableListOf<TestableNetworkCallback>()
@@ -160,7 +160,7 @@ class DscpPolicyTest {
         assumeTrue(kernelIsAtLeast(5, 15))
 
         runAsShell(MANAGE_TEST_NETWORKS) {
-            val tnm = realContext.getSystemService(TestNetworkManager::class.java)
+            val tnm = realContext.getSystemService(TestNetworkManager::class.java)!!
 
             // Only statically configure the IPv4 address; for IPv6, use the SLAAC generated
             // address.
@@ -306,7 +306,7 @@ class DscpPolicyTest {
 
         val socket = Os.socket(if (sendV6) AF_INET6 else AF_INET, SOCK_DGRAM or SOCK_NONBLOCK,
                 IPPROTO_UDP)
-        agent.network.bindSocket(socket)
+        checkNotNull(agent.network).bindSocket(socket)
 
         val originalPacket = testPacket.readAsArray()
         Os.sendto(socket, originalPacket, 0 /* bytesOffset */, originalPacket.size, 0 /* flags */,

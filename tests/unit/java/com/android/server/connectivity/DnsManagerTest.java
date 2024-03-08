@@ -19,6 +19,7 @@ package com.android.server.connectivity;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_DEFAULT_MODE;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF;
+import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE_PROVIDER_HOSTNAME;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_SPECIFIER;
 import static android.net.NetworkCapabilities.MAX_TRANSPORT;
@@ -139,7 +140,9 @@ public class DnsManagerTest {
         assertEquals(actual.tlsConnectTimeoutMs, expected.tlsConnectTimeoutMs);
         assertResolverOptionsEquals(actual.resolverOptions, expected.resolverOptions);
         assertContainsExactly(actual.transportTypes, expected.transportTypes);
-        assertFieldCountEquals(16, ResolverParamsParcel.class);
+        assertEquals(actual.meteredNetwork, expected.meteredNetwork);
+        assertEquals(actual.dohParams, expected.dohParams);
+        assertFieldCountEquals(18, ResolverParamsParcel.class);
     }
 
     @Before
@@ -169,10 +172,12 @@ public class DnsManagerTest {
         lp.addDnsServer(InetAddress.getByName("4.4.4.4"));
 
         // Send a validation event that is tracked on the alternate netId
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setTransportTypes(TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
-        mDnsManager.updateTransportsForNetwork(TEST_NETID_ALTERNATE, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID_ALTERNATE, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID_ALTERNATE, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -205,7 +210,7 @@ public class DnsManagerTest {
                     InetAddress.parseNumericAddress("6.6.6.6"),
                     InetAddress.parseNumericAddress("2001:db8:66:66::1")
                     }));
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         fixedLp = new LinkProperties(lp);
@@ -242,7 +247,9 @@ public class DnsManagerTest {
         // be tracked.
         LinkProperties lp = new LinkProperties();
         lp.addDnsServer(InetAddress.getByName("3.3.3.3"));
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setTransportTypes(TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -256,7 +263,7 @@ public class DnsManagerTest {
         // Validation event has untracked netId
         mDnsManager.updatePrivateDns(new Network(TEST_NETID),
                 mDnsManager.getPrivateDnsConfig());
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -307,7 +314,7 @@ public class DnsManagerTest {
         ConnectivitySettingsManager.setPrivateDnsMode(mCtx, PRIVATE_DNS_MODE_OFF);
         mDnsManager.updatePrivateDns(new Network(TEST_NETID),
                 mDnsManager.getPrivateDnsConfig());
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
         mDnsManager.updatePrivateDnsValidation(
@@ -323,14 +330,14 @@ public class DnsManagerTest {
     public void testOverrideDefaultMode() throws Exception {
         // Hard-coded default is opportunistic mode.
         final PrivateDnsConfig cfgAuto = DnsManager.getPrivateDnsConfig(mCtx);
-        assertTrue(cfgAuto.useTls);
+        assertEquals(PRIVATE_DNS_MODE_OPPORTUNISTIC, cfgAuto.mode);
         assertEquals("", cfgAuto.hostname);
         assertEquals(new InetAddress[0], cfgAuto.ips);
 
         // Pretend a gservices push sets the default to "off".
         ConnectivitySettingsManager.setPrivateDnsDefaultMode(mCtx, PRIVATE_DNS_MODE_OFF);
         final PrivateDnsConfig cfgOff = DnsManager.getPrivateDnsConfig(mCtx);
-        assertFalse(cfgOff.useTls);
+        assertEquals(PRIVATE_DNS_MODE_OFF, cfgOff.mode);
         assertEquals("", cfgOff.hostname);
         assertEquals(new InetAddress[0], cfgOff.ips);
 
@@ -338,7 +345,7 @@ public class DnsManagerTest {
         ConnectivitySettingsManager.setPrivateDnsMode(mCtx, PRIVATE_DNS_MODE_PROVIDER_HOSTNAME);
         ConnectivitySettingsManager.setPrivateDnsHostname(mCtx, "strictmode.com");
         final PrivateDnsConfig cfgStrict = DnsManager.getPrivateDnsConfig(mCtx);
-        assertTrue(cfgStrict.useTls);
+        assertEquals(PRIVATE_DNS_MODE_PROVIDER_HOSTNAME, cfgStrict.mode);
         assertEquals("strictmode.com", cfgStrict.hostname);
         assertEquals(new InetAddress[0], cfgStrict.ips);
     }
@@ -352,7 +359,9 @@ public class DnsManagerTest {
         lp.setInterfaceName(TEST_IFACENAME);
         lp.addDnsServer(InetAddress.getByName("3.3.3.3"));
         lp.addDnsServer(InetAddress.getByName("4.4.4.4"));
-        mDnsManager.updateTransportsForNetwork(TEST_NETID, TEST_TRANSPORT_TYPES);
+        final NetworkCapabilities nc = new NetworkCapabilities();
+        nc.setTransportTypes(TEST_TRANSPORT_TYPES);
+        mDnsManager.updateCapabilitiesForNetwork(TEST_NETID, nc);
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
 
@@ -373,6 +382,8 @@ public class DnsManagerTest {
         expectedParams.tlsServers = new String[]{"3.3.3.3", "4.4.4.4"};
         expectedParams.transportTypes = TEST_TRANSPORT_TYPES;
         expectedParams.resolverOptions = null;
+        expectedParams.meteredNetwork = true;
+        expectedParams.dohParams = null;
         assertResolverParamsEquals(actualParams, expectedParams);
     }
 
@@ -409,7 +420,7 @@ public class DnsManagerTest {
 
         // The PrivateDnsConfig map is empty, so the default PRIVATE_DNS_OFF is returned.
         PrivateDnsConfig privateDnsCfg = mDnsManager.getPrivateDnsConfig(network);
-        assertFalse(privateDnsCfg.useTls);
+        assertEquals(PRIVATE_DNS_MODE_OFF, privateDnsCfg.mode);
         assertEquals("", privateDnsCfg.hostname);
         assertEquals(new InetAddress[0], privateDnsCfg.ips);
 
@@ -421,7 +432,7 @@ public class DnsManagerTest {
                         VALIDATION_RESULT_SUCCESS));
         mDnsManager.updatePrivateDnsStatus(TEST_NETID, lp);
         privateDnsCfg = mDnsManager.getPrivateDnsConfig(network);
-        assertTrue(privateDnsCfg.useTls);
+        assertEquals(PRIVATE_DNS_MODE_OPPORTUNISTIC, privateDnsCfg.mode);
         assertEquals("", privateDnsCfg.hostname);
         assertEquals(new InetAddress[0], privateDnsCfg.ips);
 
@@ -429,14 +440,14 @@ public class DnsManagerTest {
         mDnsManager.updatePrivateDns(network, new PrivateDnsConfig(tlsName, tlsAddrs));
         mDnsManager.updatePrivateDnsStatus(TEST_NETID, lp);
         privateDnsCfg = mDnsManager.getPrivateDnsConfig(network);
-        assertTrue(privateDnsCfg.useTls);
+        assertEquals(PRIVATE_DNS_MODE_PROVIDER_HOSTNAME, privateDnsCfg.mode);
         assertEquals(tlsName, privateDnsCfg.hostname);
         assertEquals(tlsAddrs, privateDnsCfg.ips);
 
         // The network is removed, so the PrivateDnsConfig map becomes empty again.
         mDnsManager.removeNetwork(network);
         privateDnsCfg = mDnsManager.getPrivateDnsConfig(network);
-        assertFalse(privateDnsCfg.useTls);
+        assertEquals(PRIVATE_DNS_MODE_OFF, privateDnsCfg.mode);
         assertEquals("", privateDnsCfg.hostname);
         assertEquals(new InetAddress[0], privateDnsCfg.ips);
     }

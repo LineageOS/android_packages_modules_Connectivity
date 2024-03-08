@@ -24,7 +24,9 @@ import static com.android.server.nearby.NearbyConfiguration.NEARBY_SUPPORT_TEST_
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.app.UiAutomation;
 import android.content.Context;
@@ -34,6 +36,7 @@ import android.nearby.IBroadcastListener;
 import android.nearby.PresenceBroadcastRequest;
 import android.nearby.PresenceCredential;
 import android.nearby.PrivateCredential;
+import android.os.IBinder;
 import android.provider.DeviceConfig;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -74,6 +77,8 @@ public class BroadcastProviderManagerTest {
     IBroadcastListener mBroadcastListener;
     @Mock
     BleBroadcastProvider mBleBroadcastProvider;
+    @Mock
+    IBinder mBinder;
     private Context mContext;
     private BroadcastProviderManager mBroadcastProviderManager;
     private BroadcastRequest mBroadcastRequest;
@@ -82,9 +87,12 @@ public class BroadcastProviderManagerTest {
 
     @Before
     public void setUp() {
+        when(mBroadcastListener.asBinder()).thenReturn(mBinder);
         mUiAutomation.adoptShellPermissionIdentity(WRITE_DEVICE_CONFIG, READ_DEVICE_CONFIG);
         DeviceConfig.setProperty(
                 NAMESPACE, NEARBY_ENABLE_PRESENCE_BROADCAST_LEGACY, "true", false);
+        DeviceConfig.setProperty(
+                NAMESPACE, NEARBY_SUPPORT_TEST_APP, "true", false);
 
         mContext = ApplicationProvider.getApplicationContext();
         mBroadcastProviderManager = new BroadcastProviderManager(
@@ -104,15 +112,28 @@ public class BroadcastProviderManagerTest {
     }
 
     @Test
-    public void testStartAdvertising() {
+    public void testStartAdvertising() throws Exception {
         mBroadcastProviderManager.startBroadcast(mBroadcastRequest, mBroadcastListener);
         verify(mBleBroadcastProvider).start(eq(BroadcastRequest.PRESENCE_VERSION_V0),
                 any(byte[].class), any(BleBroadcastProvider.BroadcastListener.class));
+        verify(mBinder).linkToDeath(any(), eq(0));
     }
 
     @Test
     public void testStopAdvertising() {
+        mBroadcastProviderManager.startBroadcast(mBroadcastRequest, mBroadcastListener);
         mBroadcastProviderManager.stopBroadcast(mBroadcastListener);
+        verify(mBinder).unlinkToDeath(any(), eq(0));
+    }
+
+    @Test
+    public void testRegisterAdvertising_twoTimes_fail() throws Exception {
+        IBroadcastListener newListener = mock(IBroadcastListener.class);
+        IBinder newBinder = mock(IBinder.class);
+        when(newListener.asBinder()).thenReturn(newBinder);
+        mBroadcastProviderManager.startBroadcast(mBroadcastRequest, mBroadcastListener);
+        mBroadcastProviderManager.startBroadcast(mBroadcastRequest, newListener);
+        verify(newListener).onStatusChanged(eq(BroadcastCallback.STATUS_FAILURE));
     }
 
     @Test

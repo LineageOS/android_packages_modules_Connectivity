@@ -27,10 +27,13 @@ import android.os.SystemClock;
 import android.text.format.DateUtils;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +57,6 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     private static final String CAST_SENDER_LOG_SOURCE = "CAST_SENDER_SDK";
     private static final String CAST_PREFS_NAME = "google_cast";
     private static final String PREF_CAST_SENDER_ID = "PREF_CAST_SENDER_ID";
-    private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
     private static final String MULTICAST_TYPE = "multicast";
     private static final String UNICAST_TYPE = "unicast";
 
@@ -102,8 +104,12 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     @Nullable private Timer logMdnsPacketTimer;
     private AtomicInteger packetsCount;
     @Nullable private Timer checkMulticastResponseTimer;
+    private final SharedLog sharedLog;
+    @NonNull private final MdnsFeatureFlags mdnsFeatureFlags;
 
-    public MdnsSocketClient(@NonNull Context context, @NonNull MulticastLock multicastLock) {
+    public MdnsSocketClient(@NonNull Context context, @NonNull MulticastLock multicastLock,
+            SharedLog sharedLog, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
+        this.sharedLog = sharedLog;
         this.context = context;
         this.multicastLock = multicastLock;
         if (useSeparateSocketForUnicast) {
@@ -111,6 +117,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         } else {
             unicastReceiverBuffer = null;
         }
+        this.mdnsFeatureFlags = mdnsFeatureFlags;
     }
 
     @Override
@@ -122,7 +129,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     @Override
     public synchronized void startDiscovery() throws IOException {
         if (multicastSocket != null) {
-            LOGGER.w("Discovery is already in progress.");
+            sharedLog.w("Discovery is already in progress.");
             return;
         }
 
@@ -133,11 +140,11 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         shouldStopSocketLoop = false;
         try {
             // TODO (changed when importing code): consider setting thread stats tag
-            multicastSocket = createMdnsSocket(MdnsConstants.MDNS_PORT);
+            multicastSocket = createMdnsSocket(MdnsConstants.MDNS_PORT, sharedLog);
             multicastSocket.joinGroup();
             if (useSeparateSocketForUnicast) {
                 // For unicast, use port 0 and the system will assign it with any available port.
-                unicastSocket = createMdnsSocket(0);
+                unicastSocket = createMdnsSocket(0, sharedLog);
             }
             multicastLock.acquire();
         } catch (IOException e) {
@@ -161,7 +168,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     @RequiresPermission(permission.CHANGE_WIFI_MULTICAST_STATE)
     @Override
     public void stopDiscovery() {
-        LOGGER.log("Stop discovery.");
+        sharedLog.log("Stop discovery.");
         if (multicastSocket == null && unicastSocket == null) {
             return;
         }
@@ -194,36 +201,20 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         }
     }
 
-    /** Sends a mDNS request packet that asks for multicast response. */
-    public void sendMulticastPacket(@NonNull DatagramPacket packet) {
-        sendMdnsPacket(packet, multicastPacketQueue);
+    @Override
+    public void sendPacketRequestingMulticastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks) {
+        sendMdnsPacket(packet, multicastPacketQueue, onlyUseIpv6OnIpv6OnlyNetworks);
     }
 
-    /** Sends a mDNS request packet that asks for unicast response. */
-    public void sendUnicastPacket(DatagramPacket packet) {
+    @Override
+    public void sendPacketRequestingUnicastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks) {
         if (useSeparateSocketForUnicast) {
-            sendMdnsPacket(packet, unicastPacketQueue);
+            sendMdnsPacket(packet, unicastPacketQueue, onlyUseIpv6OnIpv6OnlyNetworks);
         } else {
-            sendMdnsPacket(packet, multicastPacketQueue);
+            sendMdnsPacket(packet, multicastPacketQueue, onlyUseIpv6OnIpv6OnlyNetworks);
         }
-    }
-
-    @Override
-    public void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
-        if (network != null) {
-            throw new IllegalArgumentException("This socket client does not support sending to "
-                    + "specific networks");
-        }
-        sendMulticastPacket(packet);
-    }
-
-    @Override
-    public void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network) {
-        if (network != null) {
-            throw new IllegalArgumentException("This socket client does not support sending to "
-                    + "specific networks");
-        }
-        sendUnicastPacket(packet);
     }
 
     @Override
@@ -235,14 +226,33 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             throw new IllegalArgumentException("This socket client does not support requesting "
                     + "specific networks");
         }
-        socketCreationCallback.onSocketCreated(null);
+        socketCreationCallback.onSocketCreated(new SocketKey(multicastSocket.getInterfaceIndex()));
     }
 
-    private void sendMdnsPacket(DatagramPacket packet, Queue<DatagramPacket> packetQueueToUse) {
+    @Override
+    public boolean supportsRequestingSpecificNetworks() {
+        return false;
+    }
+
+    private void sendMdnsPacket(DatagramPacket packet, Queue<DatagramPacket> packetQueueToUse,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks) {
         if (shouldStopSocketLoop && !MdnsConfigs.allowAddMdnsPacketAfterDiscoveryStops()) {
-            LOGGER.w("sendMdnsPacket() is called after discovery already stopped");
+            sharedLog.w("sendMdnsPacket() is called after discovery already stopped");
             return;
         }
+
+        final boolean isIpv4 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
+                instanceof Inet4Address;
+        final boolean isIpv6 = ((InetSocketAddress) packet.getSocketAddress()).getAddress()
+                instanceof Inet6Address;
+        final boolean ipv6Only = multicastSocket != null && multicastSocket.isOnIPv6OnlyNetwork();
+        if (isIpv4 && ipv6Only) {
+            return;
+        }
+        if (isIpv6 && !ipv6Only && onlyUseIpv6OnIpv6OnlyNetworks) {
+            return;
+        }
+
         synchronized (packetQueueToUse) {
             while (packetQueueToUse.size() >= MdnsConfigs.mdnsPacketQueueMaxSize()) {
                 packetQueueToUse.remove();
@@ -254,7 +264,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
     private void createAndStartSendThread() {
         if (sendThread != null) {
-            LOGGER.w("A socket thread already exists.");
+            sharedLog.w("A socket thread already exists.");
             return;
         }
         sendThread = new Thread(this::sendThreadMain);
@@ -264,7 +274,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
     private void createAndStartReceiverThreads() {
         if (multicastReceiveThread != null) {
-            LOGGER.w("A multicast receiver thread already exists.");
+            sharedLog.w("A multicast receiver thread already exists.");
             return;
         }
         multicastReceiveThread =
@@ -286,12 +296,12 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     }
 
     private void triggerSendThread() {
-        LOGGER.log("Trigger send thread.");
+        sharedLog.log("Trigger send thread.");
         Thread sendThread = this.sendThread;
         if (sendThread != null) {
             sendThread.interrupt();
         } else {
-            LOGGER.w("Socket thread is null");
+            sharedLog.w("Socket thread is null");
         }
     }
 
@@ -308,9 +318,9 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     }
 
     private void waitForSendThreadToStop() {
-        LOGGER.log("wait For Send Thread To Stop");
+        sharedLog.log("wait For Send Thread To Stop");
         if (sendThread == null) {
-            LOGGER.w("socket thread is already dead.");
+            sharedLog.w("socket thread is already dead.");
             return;
         }
         waitForThread(sendThread);
@@ -325,7 +335,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                 thread.interrupt();
                 thread.join(waitMs);
                 if (thread.isAlive()) {
-                    LOGGER.w("Failed to join thread: " + thread);
+                    sharedLog.w("Failed to join thread: " + thread);
                 }
                 break;
             } catch (InterruptedException e) {
@@ -384,13 +394,13 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                 }
             }
         } finally {
-            LOGGER.log("Send thread stopped.");
+            sharedLog.log("Send thread stopped.");
             try {
                 if (multicastSocket != null) {
                     multicastSocket.leaveGroup();
                 }
             } catch (Exception t) {
-                LOGGER.e("Failed to leave the group.", t);
+                sharedLog.e("Failed to leave the group.", t);
             }
 
             // Close the socket first. This is the only way to interrupt a blocking receive.
@@ -403,7 +413,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                     unicastSocket.close();
                 }
             } catch (RuntimeException t) {
-                LOGGER.e("Failed to close the mdns socket.", t);
+                sharedLog.e("Failed to close the mdns socket.", t);
             }
         }
     }
@@ -433,11 +443,11 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                 }
             } catch (IOException e) {
                 if (!shouldStopSocketLoop) {
-                    LOGGER.e("Failed to receive mDNS packets.", e);
+                    sharedLog.e("Failed to receive mDNS packets.", e);
                 }
             }
         }
-        LOGGER.log("Receive thread stopped.");
+        sharedLog.log("Receive thread stopped.");
     }
 
     private int processResponsePacket(@NonNull DatagramPacket packet, String responseType,
@@ -446,12 +456,14 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
         final MdnsPacket response;
         try {
-            response = MdnsResponseDecoder.parseResponse(packet.getData(), packet.getLength());
+            response = MdnsResponseDecoder.parseResponse(
+                    packet.getData(), packet.getLength(), mdnsFeatureFlags);
         } catch (MdnsPacket.ParseException e) {
-            LOGGER.w(String.format("Error while decoding %s packet (%d): %d",
+            sharedLog.w(String.format("Error while decoding %s packet (%d): %d",
                     responseType, packetNumber, e.code));
             if (callback != null) {
-                callback.onFailedToParseMdnsResponse(packetNumber, e.code, network);
+                callback.onFailedToParseMdnsResponse(packetNumber, e.code,
+                        new SocketKey(network, interfaceIndex));
             }
             return e.code;
         }
@@ -461,15 +473,17 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         }
 
         if (callback != null) {
-            callback.onResponseReceived(response, interfaceIndex, network);
+            callback.onResponseReceived(
+                    response, new SocketKey(network, interfaceIndex));
         }
 
         return MdnsResponseErrorCode.SUCCESS;
     }
 
     @VisibleForTesting
-    MdnsSocket createMdnsSocket(int port) throws IOException {
-        return new MdnsSocket(new MulticastNetworkInterfaceProvider(context), port);
+    MdnsSocket createMdnsSocket(int port, SharedLog sharedLog) throws IOException {
+        return new MdnsSocket(new MulticastNetworkInterfaceProvider(context, sharedLog), port,
+                sharedLog);
     }
 
     private void sendPackets(List<DatagramPacket> packets, MdnsSocket socket) {
@@ -479,7 +493,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                 break;
             }
             try {
-                LOGGER.log("Sending a %s mDNS packet...", requestType);
+                sharedLog.log(String.format("Sending a %s mDNS packet...", requestType));
                 socket.send(packet);
 
                 // Start the timer task to monitor the response.
@@ -508,7 +522,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                                                 }
                                                 if ((!receivedMulticastResponse)
                                                         && receivedUnicastResponse) {
-                                                    LOGGER.e(String.format(
+                                                    sharedLog.e(String.format(
                                                             "Haven't received multicast response"
                                                                     + " in the last %d ms.",
                                                             checkMulticastResponseIntervalMs));
@@ -523,13 +537,9 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                     }
                 }
             } catch (IOException e) {
-                LOGGER.e(String.format("Failed to send a %s mDNS packet.", requestType), e);
+                sharedLog.e(String.format("Failed to send a %s mDNS packet.", requestType), e);
             }
         }
         packets.clear();
-    }
-
-    public boolean isOnIPv6OnlyNetwork() {
-        return multicastSocket != null && multicastSocket.isOnIPv6OnlyNetwork();
     }
 }

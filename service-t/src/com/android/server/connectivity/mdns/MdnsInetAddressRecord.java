@@ -18,7 +18,7 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.Nullable;
 
-import com.android.internal.annotations.VisibleForTesting;
+import androidx.annotation.VisibleForTesting;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -29,7 +29,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** An mDNS "AAAA" or "A" record, which holds an IPv6 or IPv4 address. */
-@VisibleForTesting
+@VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
 public class MdnsInetAddressRecord extends MdnsRecord {
     @Nullable private Inet6Address inet6Address;
     @Nullable private Inet4Address inet4Address;
@@ -58,6 +58,12 @@ public class MdnsInetAddressRecord extends MdnsRecord {
             boolean isQuestion)
             throws IOException {
         super(name, type, reader, isQuestion);
+    }
+
+    public MdnsInetAddressRecord(String[] name, int type, boolean isUnicast) {
+        super(name, type,
+                MdnsConstants.QCLASS_INTERNET | (isUnicast ? MdnsConstants.QCLASS_UNICAST : 0),
+                0L /* receiptTimeMillis */, false /* cacheFlush */, 0L /* ttlMillis */);
     }
 
     public MdnsInetAddressRecord(String[] name, long receiptTimeMillis, boolean cacheFlush,

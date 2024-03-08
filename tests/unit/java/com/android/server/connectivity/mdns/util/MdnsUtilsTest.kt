@@ -17,11 +17,14 @@
 package com.android.server.connectivity.mdns.util
 
 import android.os.Build
+import com.android.server.connectivity.mdns.util.MdnsUtils.equalsDnsLabelIgnoreDnsCase
 import com.android.server.connectivity.mdns.util.MdnsUtils.equalsIgnoreDnsCase
+import com.android.server.connectivity.mdns.util.MdnsUtils.toDnsLabelsLowerCase
 import com.android.server.connectivity.mdns.util.MdnsUtils.toDnsLowerCase
 import com.android.server.connectivity.mdns.util.MdnsUtils.truncateServiceName
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,6 +53,12 @@ class MdnsUtilsTest {
     }
 
     @Test
+    fun testToDnsLabelsLowerCase() {
+        assertArrayEquals(arrayOf("test", "tÉst", "ţést"),
+            toDnsLabelsLowerCase(arrayOf("TeSt", "TÉST", "ţést")))
+    }
+
+    @Test
     fun testEqualsIgnoreDnsCase() {
         assertTrue(equalsIgnoreDnsCase("TEST", "Test"))
         assertTrue(equalsIgnoreDnsCase("TEST", "test"))
@@ -71,5 +80,26 @@ class MdnsUtilsTest {
     fun testTruncateServiceName() {
         assertEquals(truncateServiceName("测试abcde", 7), "测试a")
         assertEquals(truncateServiceName("测试abcde", 100), "测试abcde")
+    }
+
+    @Test
+    fun testEqualsLabelIgnoreDnsCase() {
+        assertTrue(equalsDnsLabelIgnoreDnsCase(arrayOf("TEST", "Test"), arrayOf("test", "test")))
+        assertFalse(equalsDnsLabelIgnoreDnsCase(arrayOf("TEST", "Test"), arrayOf("test")))
+        assertFalse(equalsDnsLabelIgnoreDnsCase(arrayOf("Test"), arrayOf("test", "test")))
+        assertFalse(equalsDnsLabelIgnoreDnsCase(arrayOf("TEST", "Test"), arrayOf("test", "tést")))
+    }
+
+    @Test
+    fun testTypeEqualsOrIsSubtype() {
+        assertTrue(MdnsUtils.typeEqualsOrIsSubtype(arrayOf("_type", "_tcp", "local"),
+            arrayOf("_type", "_TCP", "local")))
+        assertTrue(MdnsUtils.typeEqualsOrIsSubtype(arrayOf("_type", "_tcp", "local"),
+            arrayOf("a", "_SUB", "_type", "_TCP", "local")))
+        assertFalse(MdnsUtils.typeEqualsOrIsSubtype(arrayOf("_sub", "_type", "_tcp", "local"),
+                arrayOf("_type", "_TCP", "local")))
+        assertFalse(MdnsUtils.typeEqualsOrIsSubtype(
+                arrayOf("a", "_other", "_type", "_tcp", "local"),
+                arrayOf("a", "_SUB", "_type", "_TCP", "local")))
     }
 }

@@ -325,7 +325,7 @@ public class EthernetTracker {
     protected void unicastInterfaceStateChange(@NonNull IEthernetServiceListener listener,
             @NonNull String iface) {
         ensureRunningOnEthernetServiceThread();
-        final int state = mFactory.getInterfaceState(iface);
+        final int state = getInterfaceState(iface);
         final int role = getInterfaceRole(iface);
         final IpConfiguration config = getIpConfigurationForCallback(iface, state);
         try {
@@ -431,7 +431,7 @@ public class EthernetTracker {
             for (String iface : getClientModeInterfaces(canUseRestrictedNetworks)) {
                 unicastInterfaceStateChange(listener, iface);
             }
-            if (mTetheringInterfaceMode == INTERFACE_MODE_SERVER) {
+            if (mTetheringInterface != null && mTetheringInterfaceMode == INTERFACE_MODE_SERVER) {
                 unicastInterfaceStateChange(listener, mTetheringInterface);
             }
 

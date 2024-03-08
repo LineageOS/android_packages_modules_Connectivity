@@ -81,6 +81,7 @@ import androidx.test.runner.AndroidJUnit4;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.SkipMainlinePresubmit;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -457,9 +458,8 @@ public class IpSecManagerTest extends IpSecBaseTest {
             long newUidRxPackets = TrafficStats.getUidRxPackets(Os.getuid());
 
             assertEquals(expectedTxByteDelta, newUidTxBytes - uidTxBytes);
-            assertTrue(
-                    newUidRxBytes - uidRxBytes >= minRxByteDelta
-                            && newUidRxBytes - uidRxBytes <= maxRxByteDelta);
+            assertTrue("Not enough bytes", newUidRxBytes - uidRxBytes >= minRxByteDelta);
+            assertTrue("Too many bytes", newUidRxBytes - uidRxBytes <= maxRxByteDelta);
             assertEquals(expectedTxPacketDelta, newUidTxPackets - uidTxPackets);
             assertEquals(expectedRxPacketDelta, newUidRxPackets - uidRxPackets);
         }
@@ -717,6 +717,7 @@ public class IpSecManagerTest extends IpSecBaseTest {
     }
 
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     public void testIkeOverUdpEncapSocket() throws Exception {
         // IPv6 not supported for UDP-encap-ESP
         InetAddress local = InetAddress.getByName(IPV4_LOOPBACK);

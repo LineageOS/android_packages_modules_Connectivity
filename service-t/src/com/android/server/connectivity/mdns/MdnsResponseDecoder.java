@@ -19,31 +19,28 @@ package com.android.server.connectivity.mdns;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
-import android.os.SystemClock;
 import android.util.ArrayMap;
-import android.util.ArraySet;
 import android.util.Pair;
 
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.EOFException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /** A class that decodes mDNS responses from UDP packets. */
 public class MdnsResponseDecoder {
     public static final int SUCCESS = 0;
     private static final String TAG = "MdnsResponseDecoder";
-    private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
     private final boolean allowMultipleSrvRecordsPerHost =
             MdnsConfigs.allowMultipleSrvRecordsPerHost();
     @Nullable private final String[] serviceType;
-    private final Clock clock;
+    private final MdnsUtils.Clock clock;
 
     /** Constructs a new decoder that will extract responses for the given service type. */
-    public MdnsResponseDecoder(@NonNull Clock clock, @Nullable String[] serviceType) {
+    public MdnsResponseDecoder(@NonNull MdnsUtils.Clock clock, @Nullable String[] serviceType) {
         this.clock = clock;
         this.serviceType = serviceType;
     }
@@ -52,7 +49,7 @@ public class MdnsResponseDecoder {
             List<MdnsResponse> responses, String[] pointer) {
         if (responses != null) {
             for (MdnsResponse response : responses) {
-                if (Arrays.equals(response.getServiceName(), pointer)) {
+                if (MdnsUtils.equalsDnsLabelIgnoreDnsCase(response.getServiceName(), pointer)) {
                     return response;
                 }
             }
@@ -68,7 +65,8 @@ public class MdnsResponseDecoder {
                 if (serviceRecord == null) {
                     continue;
                 }
-                if (Arrays.equals(serviceRecord.getServiceHost(), hostName)) {
+                if (MdnsUtils.equalsDnsLabelIgnoreDnsCase(serviceRecord.getServiceHost(),
+                        hostName)) {
                     return response;
                 }
             }
@@ -86,20 +84,20 @@ public class MdnsResponseDecoder {
      * @throws MdnsPacket.ParseException if a response packet could not be parsed.
      */
     @NonNull
-    public static MdnsPacket parseResponse(@NonNull byte[] recvbuf, int length)
-            throws MdnsPacket.ParseException {
-        MdnsPacketReader reader = new MdnsPacketReader(recvbuf, length);
+    public static MdnsPacket parseResponse(@NonNull byte[] recvbuf, int length,
+            @NonNull MdnsFeatureFlags mdnsFeatureFlags) throws MdnsPacket.ParseException {
+        final MdnsPacketReader reader = new MdnsPacketReader(recvbuf, length, mdnsFeatureFlags);
 
         final MdnsPacket mdnsPacket;
         try {
-            reader.readUInt16(); // transaction ID (not used)
+            final int transactionId = reader.readUInt16();
             int flags = reader.readUInt16();
             if ((flags & MdnsConstants.FLAGS_RESPONSE_MASK) != MdnsConstants.FLAGS_RESPONSE) {
                 throw new MdnsPacket.ParseException(
                         MdnsResponseErrorCode.ERROR_NOT_RESPONSE_MESSAGE, "Not a response", null);
             }
 
-            mdnsPacket = MdnsPacket.parseRecordsSection(reader, flags);
+            mdnsPacket = MdnsPacket.parseRecordsSection(reader, flags, transactionId);
             if (mdnsPacket.answers.size() < 1) {
                 throw new MdnsPacket.ParseException(
                         MdnsResponseErrorCode.ERROR_NO_ANSWERS, "Response has no answers",
@@ -127,7 +125,7 @@ public class MdnsResponseDecoder {
      *                     2) A copy of the original responses with some of them have records
      *                     update or only contains receive time updated.
      */
-    public Pair<ArraySet<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
+    public Pair<Set<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
             @NonNull MdnsPacket mdnsPacket,
             @NonNull Collection<MdnsResponse> existingResponses, int interfaceIndex,
             @Nullable Network network) {
@@ -138,7 +136,7 @@ public class MdnsResponseDecoder {
         records.addAll(mdnsPacket.authorityRecords);
         records.addAll(mdnsPacket.additionalRecords);
 
-        final ArraySet<MdnsResponse> modified = new ArraySet<>();
+        final Set<MdnsResponse> modified = MdnsUtils.newSet();
         final ArrayList<MdnsResponse> responses = new ArrayList<>(existingResponses.size());
         final ArrayMap<MdnsResponse, MdnsResponse> augmentedToOriginal = new ArrayMap<>();
         for (MdnsResponse existing : existingResponses) {
@@ -174,11 +172,8 @@ public class MdnsResponseDecoder {
         for (MdnsRecord record : records) {
             if (record instanceof MdnsPointerRecord) {
                 String[] name = record.getName();
-                if ((serviceType == null)
-                        || Arrays.equals(name, serviceType)
-                        || ((name.length == (serviceType.length + 2))
-                        && name[1].equals(MdnsConstants.SUBTYPE_LABEL)
-                        && MdnsRecord.labelsAreSuffix(serviceType, name))) {
+                if ((serviceType == null) || MdnsUtils.typeEqualsOrIsSubtype(
+                        serviceType, name)) {
                     MdnsPointerRecord pointerRecord = (MdnsPointerRecord) record;
                     // Group PTR records that refer to the same service instance name into a single
                     // response.
@@ -323,7 +318,7 @@ public class MdnsResponseDecoder {
             if (serviceRecord == null) {
                 continue;
             }
-            if (Arrays.equals(serviceRecord.getServiceHost(), hostName)) {
+            if (MdnsUtils.equalsDnsLabelIgnoreDnsCase(serviceRecord.getServiceHost(), hostName)) {
                 if (result == null) {
                     result = new ArrayList<>(/* initialCapacity= */ responses.size());
                 }
@@ -331,11 +326,5 @@ public class MdnsResponseDecoder {
             }
         }
         return result == null ? List.of() : result;
-    }
-
-    public static class Clock {
-        public long elapsedRealtime() {
-            return SystemClock.elapsedRealtime();
-        }
     }
 }

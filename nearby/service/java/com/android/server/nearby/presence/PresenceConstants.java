@@ -16,15 +16,18 @@
 
 package com.android.server.nearby.presence;
 
-import static com.android.server.nearby.common.bluetooth.fastpair.BluetoothUuids.to128BitUuid;
+import android.os.ParcelUuid;
 
-import java.util.UUID;
+import com.android.server.nearby.util.ArrayUtils;
 
 /**
  * Constants for Nearby Presence operations.
  */
 public class PresenceConstants {
+    /** The Presence UUID value in byte array format. */
+    public static final byte[] PRESENCE_UUID_BYTES = ArrayUtils.intToByteArray(0xFCF1);
 
     /** Presence advertisement service data uuid. */
-    public static final UUID PRESENCE_UUID = to128BitUuid((short) 0xFCF1);
+    public static final ParcelUuid PRESENCE_UUID =
+            ParcelUuid.fromString("0000fcf1-0000-1000-8000-00805f9b34fb");
 }

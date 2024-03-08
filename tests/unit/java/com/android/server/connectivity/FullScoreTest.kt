@@ -74,7 +74,7 @@ class FullScoreTest {
 
     private val TAG = this::class.simpleName
 
-    private var wtfHandler: Log.TerribleFailureHandler? = null
+    private lateinit var wtfHandler: Log.TerribleFailureHandler
 
     @Before
     fun setUp() {

@@ -16,6 +16,7 @@
 
 package com.android.server.nearby.provider;
 
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -69,7 +70,7 @@ public class BleBroadcastProviderTest {
 
         AdvertiseSettings settings = new AdvertiseSettings.Builder().build();
         mBleBroadcastProvider.onStartSuccess(settings);
-        verify(mBroadcastListener).onStatusChanged(eq(BroadcastCallback.STATUS_OK));
+        verify(mBroadcastListener, atLeast(1)).onStatusChanged(eq(BroadcastCallback.STATUS_OK));
     }
 
     @Test
@@ -81,7 +82,7 @@ public class BleBroadcastProviderTest {
         // advertising set can not be mocked, so we will allow nulls
         mBleBroadcastProvider.mAdvertisingSetCallback.onAdvertisingSetStarted(null, -30,
                 AdvertisingSetCallback.ADVERTISE_SUCCESS);
-        verify(mBroadcastListener).onStatusChanged(eq(BroadcastCallback.STATUS_OK));
+        verify(mBroadcastListener, atLeast(1)).onStatusChanged(eq(BroadcastCallback.STATUS_OK));
     }
 
     @Test

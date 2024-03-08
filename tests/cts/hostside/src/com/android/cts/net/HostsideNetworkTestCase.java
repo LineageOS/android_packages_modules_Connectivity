@@ -16,28 +16,27 @@
 
 package com.android.cts.net;
 
-import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
 import com.android.ddmlib.Log;
-import com.android.ddmlib.testrunner.RemoteAndroidTestRunner;
-import com.android.ddmlib.testrunner.TestResult.TestStatus;
 import com.android.modules.utils.build.testing.DeviceSdkLevel;
-import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.device.DeviceNotAvailableException;
-import com.android.tradefed.result.CollectingTestListener;
-import com.android.tradefed.result.TestDescription;
-import com.android.tradefed.result.TestResult;
-import com.android.tradefed.result.TestRunResult;
-import com.android.tradefed.testtype.DeviceTestCase;
-import com.android.tradefed.testtype.IAbi;
-import com.android.tradefed.testtype.IAbiReceiver;
-import com.android.tradefed.testtype.IBuildReceiver;
+import com.android.tradefed.invoker.TestInformation;
+import com.android.tradefed.targetprep.BuildError;
+import com.android.tradefed.targetprep.TargetSetupError;
+import com.android.tradefed.targetprep.suite.SuiteApkInstaller;
+import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
+import com.android.tradefed.testtype.junit4.AfterClassWithInfo;
+import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
+import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
 import com.android.tradefed.util.RunUtil;
 
-import java.io.FileNotFoundException;
-import java.util.Map;
+import org.junit.runner.RunWith;
 
-abstract class HostsideNetworkTestCase extends DeviceTestCase implements IAbiReceiver,
-        IBuildReceiver {
+@RunWith(DeviceJUnit4ClassRunner.class)
+abstract class HostsideNetworkTestCase extends BaseHostJUnit4Test {
     protected static final boolean DEBUG = false;
     protected static final String TAG = "HostsideNetworkTests";
     protected static final String TEST_PKG = "com.android.cts.net.hostside";
@@ -46,54 +45,60 @@ abstract class HostsideNetworkTestCase extends DeviceTestCase implements IAbiRec
     protected static final String TEST_APP2_PKG = "com.android.cts.net.hostside.app2";
     protected static final String TEST_APP2_APK = "CtsHostsideNetworkTestsApp2.apk";
 
-    private IAbi mAbi;
-    private IBuildInfo mCtsBuild;
+    @BeforeClassWithInfo
+    public static void setUpOnceBase(TestInformation testInfo) throws Exception {
+        DeviceSdkLevel deviceSdkLevel = new DeviceSdkLevel(testInfo.getDevice());
+        String testApk = deviceSdkLevel.isDeviceAtLeastV() ? TEST_APK_NEXT : TEST_APK;
 
-    @Override
-    public void setAbi(IAbi abi) {
-        mAbi = abi;
+        uninstallPackage(testInfo, TEST_PKG, false);
+        installPackage(testInfo, testApk);
     }
 
-    @Override
-    public void setBuild(IBuildInfo buildInfo) {
-        mCtsBuild = buildInfo;
-    }
-
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-
-        assertNotNull(mAbi);
-        assertNotNull(mCtsBuild);
-
-        DeviceSdkLevel deviceSdkLevel = new DeviceSdkLevel(getDevice());
-        String testApk = deviceSdkLevel.isDeviceAtLeastT() ? TEST_APK_NEXT
-                : TEST_APK;
-
-        uninstallPackage(TEST_PKG, false);
-        installPackage(testApk);
-    }
-
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-
-        uninstallPackage(TEST_PKG, true);
-    }
-
-    protected void installPackage(String apk) throws FileNotFoundException,
-            DeviceNotAvailableException {
-        CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(mCtsBuild);
-        assertNull(getDevice().installPackage(buildHelper.getTestFile(apk),
-                false /* reinstall */, true /* grantPermissions */, "-t"));
-    }
-
-    protected void uninstallPackage(String packageName, boolean shouldSucceed)
+    @AfterClassWithInfo
+    public static void tearDownOnceBase(TestInformation testInfo)
             throws DeviceNotAvailableException {
-        final String result = getDevice().uninstallPackage(packageName);
+        uninstallPackage(testInfo, TEST_PKG, true);
+    }
+
+    // Custom static method to install the specified package, this is used to bypass auto-cleanup
+    // per test in BaseHostJUnit4.
+    protected static void installPackage(TestInformation testInfo, String apk)
+            throws DeviceNotAvailableException, TargetSetupError {
+        assertNotNull(testInfo);
+        final int userId = testInfo.getDevice().getCurrentUser();
+        final SuiteApkInstaller installer = new SuiteApkInstaller();
+        // Force the apk clean up
+        installer.setCleanApk(true);
+        installer.addTestFileName(apk);
+        installer.setUserId(userId);
+        installer.setShouldGrantPermission(true);
+        installer.addInstallArg("-t");
+        try {
+            installer.setUp(testInfo);
+        } catch (BuildError e) {
+            throw new TargetSetupError(
+                    e.getMessage(), e, testInfo.getDevice().getDeviceDescriptor(), e.getErrorId());
+        }
+    }
+
+    protected void installPackage(String apk) throws DeviceNotAvailableException, TargetSetupError {
+        installPackage(getTestInformation(), apk);
+    }
+
+    protected static void uninstallPackage(TestInformation testInfo, String packageName,
+            boolean shouldSucceed)
+            throws DeviceNotAvailableException {
+        assertNotNull(testInfo);
+        final String result = testInfo.getDevice().uninstallPackage(packageName);
         if (shouldSucceed) {
             assertNull("uninstallPackage(" + packageName + ") failed: " + result, result);
         }
+    }
+
+    protected void uninstallPackage(String packageName,
+            boolean shouldSucceed)
+            throws DeviceNotAvailableException {
+        uninstallPackage(getTestInformation(), packageName, shouldSucceed);
     }
 
     protected void assertPackageUninstalled(String packageName) throws DeviceNotAvailableException,
@@ -124,50 +129,6 @@ abstract class HostsideNetworkTestCase extends DeviceTestCase implements IAbiRec
             RunUtil.getDefault().sleep(1000);
         }
         fail("Package '" + packageName + "' not uinstalled after " + max_tries + " seconds");
-    }
-
-    protected void runDeviceTests(String packageName, String testClassName)
-            throws DeviceNotAvailableException {
-        runDeviceTests(packageName, testClassName, null);
-    }
-
-    protected void runDeviceTests(String packageName, String testClassName, String methodName)
-            throws DeviceNotAvailableException {
-        RemoteAndroidTestRunner testRunner = new RemoteAndroidTestRunner(packageName,
-                "androidx.test.runner.AndroidJUnitRunner", getDevice().getIDevice());
-
-        if (testClassName != null) {
-            if (methodName != null) {
-                testRunner.setMethodName(testClassName, methodName);
-            } else {
-                testRunner.setClassName(testClassName);
-            }
-        }
-
-        final CollectingTestListener listener = new CollectingTestListener();
-        getDevice().runInstrumentationTests(testRunner, listener);
-
-        final TestRunResult result = listener.getCurrentRunResults();
-        if (result.isRunFailure()) {
-            throw new AssertionError("Failed to successfully run device tests for "
-                    + result.getName() + ": " + result.getRunFailureMessage());
-        }
-
-        if (result.hasFailedTests()) {
-            // build a meaningful error message
-            StringBuilder errorBuilder = new StringBuilder("on-device tests failed:\n");
-            for (Map.Entry<TestDescription, TestResult> resultEntry :
-                    result.getTestResults().entrySet()) {
-                final TestStatus testStatus = resultEntry.getValue().getStatus();
-                if (!TestStatus.PASSED.equals(testStatus)
-                        && !TestStatus.ASSUMPTION_FAILURE.equals(testStatus)) {
-                    errorBuilder.append(resultEntry.getKey().toString());
-                    errorBuilder.append(":\n");
-                    errorBuilder.append(resultEntry.getValue().getStackTrace());
-                }
-            }
-            throw new AssertionError(errorBuilder.toString());
-        }
     }
 
     protected int getUid(String packageName) throws DeviceNotAvailableException {

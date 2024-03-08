@@ -47,12 +47,20 @@ Then, add the jar in IDE as below.
 ## Build and Install
 
 ```sh
-$ source build/envsetup.sh && lunch <TARGET>
-$ m com.google.android.tethering.next deapexer
-$ $ANDROID_BUILD_TOP/out/host/linux-x86/bin/deapexer decompress --input \
-    ${ANDROID_PRODUCT_OUT}/system/apex/com.google.android.tethering.next.capex \
-    --output /tmp/tethering.apex
-$ adb install -r /tmp/tethering.apex
+Build unbundled module using banchan
+
+$ source build/envsetup.sh
+$ banchan com.google.android.tethering mainline_modules_arm64
+$ m apps_only dist
+$ adb install out/dist/com.google.android.tethering.apex
+$ adb reboot
+Ensure that the module you are installing is compatible with the module currently preloaded on the phone (in /system/apex/com.google.android.tethering.apex). Compatible means:
+
+1. Same package name
+2. Same keys used to sign the apex and the payload
+3. Higher version
+
+See go/mainline-local-build#build-install-local-module for more information
 ```
 
 ## Build and Install from tm-mainline-prod branch
@@ -63,7 +71,7 @@ When build and flash the APEX from tm-mainline-prod, you may see the error below
 This is because the device is flashed with AOSP built from master or other branches, which has
 prebuilt APEX with higher version. We can use root access to replace the prebuilt APEX with the APEX
 built from tm-mainline-prod as below.
-1. adb root && adb remount; adb shell mount -orw,remount /system/apex
+1. adb root && adb remount -R
 2. cp tethering.next.apex com.google.android.tethering.apex
 3. adb push  com.google.android.tethering.apex  /system/apex/
 4. adb reboot

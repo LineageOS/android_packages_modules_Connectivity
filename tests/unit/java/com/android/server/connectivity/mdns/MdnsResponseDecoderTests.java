@@ -18,7 +18,7 @@ package com.android.server.connectivity.mdns;
 
 import static android.net.InetAddresses.parseNumericAddress;
 
-import static com.android.server.connectivity.mdns.MdnsResponseDecoder.Clock;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -270,14 +270,9 @@ public class MdnsResponseDecoderTests {
         assertEquals("st=0", textStrings.get(6));
     }
 
-    @Test
-    public void testDecodeIPv6AnswerPacket() throws IOException {
-        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
-        assertNotNull(data6);
-
-        responses = decode(decoder, data6);
-        assertEquals(1, responses.size());
-        MdnsResponse response = responses.valueAt(0);
+    private void verifyResponse(ArraySet<MdnsResponse> responseArraySet) {
+        assertEquals(1, responseArraySet.size());
+        MdnsResponse response = responseArraySet.valueAt(0);
         assertTrue(response.isComplete());
 
         MdnsInetAddressRecord inet6AddressRecord = response.getInet6AddressRecord();
@@ -288,6 +283,22 @@ public class MdnsResponseDecoderTests {
         Inet6Address inet6Addr = inet6AddressRecord.getInet6Address();
         assertNotNull(inet6Addr);
         assertEquals(inet6Addr.getHostAddress(), "2000:3333::da6c:63ff:fe7c:7483");
+    }
+
+    @Test
+    public void testDecodeIPv6AnswerPacket() throws IOException {
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, CAST_SERVICE_TYPE);
+        assertNotNull(data6);
+        verifyResponse(decode(decoder, data6));
+    }
+
+    @Test
+    public void testDecodeCaseInsensitiveMatch() throws IOException {
+        final String[] castServiceTypeUpperCase =
+                new String[] {"_GOOGLECAST", "_TCP", "LOCAL"};
+        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, castServiceTypeUpperCase);
+        assertNotNull(data6);
+        verifyResponse(decode(decoder, data6));
     }
 
     @Test
@@ -328,13 +339,14 @@ public class MdnsResponseDecoderTests {
         packet.setSocketAddress(
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
-        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(data6, data6.length);
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
+                data6, data6.length, MdnsFeatureFlags.newBuilder().build());
         assertNotNull(parsedPacket);
 
         final Network network = mock(Network.class);
-        responses = decoder.augmentResponses(parsedPacket,
+        responses = new ArraySet<>(decoder.augmentResponses(parsedPacket,
                 /* existingResponses= */ Collections.emptyList(),
-                /* interfaceIndex= */ 10, network /* expireOnExit= */).first;
+                /* interfaceIndex= */ 10, network /* expireOnExit= */).first);
 
         assertEquals(responses.size(), 1);
         assertEquals(responses.valueAt(0).getInterfaceIndex(), 10);
@@ -627,11 +639,12 @@ public class MdnsResponseDecoderTests {
 
     private ArraySet<MdnsResponse> decode(MdnsResponseDecoder decoder, byte[] data,
             Collection<MdnsResponse> existingResponses) throws MdnsPacket.ParseException {
-        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(data, data.length);
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
+                data, data.length, MdnsFeatureFlags.newBuilder().build());
         assertNotNull(parsedPacket);
 
-        return decoder.augmentResponses(parsedPacket,
+        return new ArraySet<>(decoder.augmentResponses(parsedPacket,
                 existingResponses,
-                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class)).first;
+                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class)).first);
     }
 }

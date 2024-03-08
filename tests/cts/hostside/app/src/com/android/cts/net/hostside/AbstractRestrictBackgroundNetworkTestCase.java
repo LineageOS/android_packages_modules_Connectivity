@@ -18,9 +18,7 @@ package com.android.cts.net.hostside;
 
 import static android.app.job.JobScheduler.RESULT_SUCCESS;
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
-import static android.os.BatteryManager.BATTERY_PLUGGED_AC;
-import static android.os.BatteryManager.BATTERY_PLUGGED_USB;
-import static android.os.BatteryManager.BATTERY_PLUGGED_WIRELESS;
+import static android.os.BatteryManager.BATTERY_PLUGGED_ANY;
 
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.executeShellCommand;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.forceRunJob;
@@ -31,6 +29,7 @@ import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isAppStandbySu
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isBatterySaverSupported;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.isDozeModeSupported;
 import static com.android.cts.net.hostside.NetworkPolicyTestUtils.restrictBackgroundValueToString;
+import static com.android.cts.net.hostside.NetworkPolicyTestUtils.setRestrictBackgroundInternal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -38,6 +37,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.annotation.NonNull;
 import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.NotificationManager;
@@ -61,6 +61,8 @@ import android.provider.DeviceConfig;
 import android.service.notification.NotificationListenerService;
 import android.util.Log;
 import android.util.Pair;
+
+import androidx.annotation.Nullable;
 
 import com.android.compatibility.common.util.AmUtils;
 import com.android.compatibility.common.util.BatteryUtils;
@@ -120,10 +122,6 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     protected static final String NOTIFICATION_TYPE_ACTION_BUNDLE = "ACTION_BUNDLE";
     protected static final String NOTIFICATION_TYPE_ACTION_REMOTE_INPUT = "ACTION_REMOTE_INPUT";
 
-    // TODO: Update BatteryManager.BATTERY_PLUGGED_ANY as @TestApi
-    public static final int BATTERY_PLUGGED_ANY =
-            BATTERY_PLUGGED_AC | BATTERY_PLUGGED_USB | BATTERY_PLUGGED_WIRELESS;
-
     private static final String NETWORK_STATUS_SEPARATOR = "\\|";
     private static final int SECOND_IN_MS = 1000;
     static final int NETWORK_TIMEOUT_MS = 15 * SECOND_IN_MS;
@@ -142,7 +140,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     private static final int BATTERY_STATE_TIMEOUT_MS = 5000;
     private static final int BATTERY_STATE_CHECK_INTERVAL_MS = 500;
 
-    private static final int ACTIVITY_NETWORK_STATE_TIMEOUT_MS = 6_000;
+    private static final int ACTIVITY_NETWORK_STATE_TIMEOUT_MS = 10_000;
     private static final int JOB_NETWORK_STATE_TIMEOUT_MS = 10_000;
     private static final int LAUNCH_ACTIVITY_TIMEOUT_MS = 10_000;
 
@@ -187,6 +185,12 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         mServiceClient.bind();
         mPowerManager = mContext.getSystemService(PowerManager.class);
         executeShellCommand("cmd netpolicy start-watching " + mUid);
+        // Some of the test cases assume that Data saver mode is initially disabled, which might not
+        // always be the case. Therefore, explicitly disable it before running the tests.
+        // Invoke setRestrictBackgroundInternal() directly instead of going through
+        // setRestrictBackground(), as some devices do not fully support the Data saver mode but
+        // still have certain parts of it enabled by default.
+        setRestrictBackgroundInternal(false);
         setAppIdle(false);
         mLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 
@@ -198,7 +202,8 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     protected void tearDown() throws Exception {
         executeShellCommand("cmd netpolicy stop-watching");
         mServiceClient.unbind();
-        if (mLock.isHeld()) mLock.release();
+        final PowerManager.WakeLock lock = mLock;
+        if (null != lock && lock.isHeld()) lock.release();
     }
 
     protected int getUid(String packageName) throws Exception {
@@ -280,8 +285,30 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     }
 
     protected void assertBackgroundNetworkAccess(boolean expectAllowed) throws Exception {
+        assertBackgroundNetworkAccess(expectAllowed, null);
+    }
+
+    /**
+     * Asserts whether the active network is available or not for the background app. If the network
+     * is unavailable, also checks whether it is blocked by the expected error.
+     *
+     * @param expectAllowed expect background network access to be allowed or not.
+     * @param expectedUnavailableError the expected error when {@code expectAllowed} is false. It's
+     *                                 meaningful only when the {@code expectAllowed} is 'false'.
+     *                                 Throws an IllegalArgumentException when {@code expectAllowed}
+     *                                 is true and this parameter is not null. When the
+     *                                 {@code expectAllowed} is 'false' and this parameter is null,
+     *                                 this function does not compare error type of the networking
+     *                                 access failure.
+     */
+    protected void assertBackgroundNetworkAccess(boolean expectAllowed,
+            @Nullable final String expectedUnavailableError) throws Exception {
         assertBackgroundState();
-        assertNetworkAccess(expectAllowed /* expectAvailable */, false /* needScreenOn */);
+        if (expectAllowed && expectedUnavailableError != null) {
+            throw new IllegalArgumentException("expectedUnavailableError is not null");
+        }
+        assertNetworkAccess(expectAllowed /* expectAvailable */, false /* needScreenOn */,
+                expectedUnavailableError);
     }
 
     protected void assertForegroundNetworkAccess() throws Exception {
@@ -404,12 +431,17 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
      */
     private void assertNetworkAccess(boolean expectAvailable, boolean needScreenOn)
             throws Exception {
+        assertNetworkAccess(expectAvailable, needScreenOn, null);
+    }
+
+    private void assertNetworkAccess(boolean expectAvailable, boolean needScreenOn,
+            @Nullable final String expectedUnavailableError) throws Exception {
         final int maxTries = 5;
         String error = null;
         int timeoutMs = 500;
 
         for (int i = 1; i <= maxTries; i++) {
-            error = checkNetworkAccess(expectAvailable);
+            error = checkNetworkAccess(expectAvailable, expectedUnavailableError);
 
             if (error == null) return;
 
@@ -436,16 +468,55 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     }
 
     /**
+     * Asserts whether the network is blocked by accessing bpf maps if command-line tool supports.
+     */
+    void assertNetworkAccessBlockedByBpf(boolean expectBlocked, int uid, boolean metered) {
+        final String result;
+        try {
+            result = executeShellCommand(
+                    "cmd network_stack is-uid-networking-blocked " + uid + " " + metered);
+        } catch (AssertionError e) {
+            // If NetworkStack is too old to support this command, ignore and continue
+            // this test to verify other parts.
+            if (e.getMessage().contains("No shell command implementation.")) {
+                return;
+            }
+            throw e;
+        }
+
+        // Tethering module is too old.
+        if (result.contains("API is unsupported")) {
+            return;
+        }
+
+        assertEquals(expectBlocked, parseBooleanOrThrow(result.trim()));
+    }
+
+    /**
+     * Similar to {@link Boolean#parseBoolean} but throws when the input
+     * is unexpected instead of returning false.
+     */
+    private static boolean parseBooleanOrThrow(@NonNull String s) {
+        // Don't use Boolean.parseBoolean
+        if ("true".equalsIgnoreCase(s)) return true;
+        if ("false".equalsIgnoreCase(s)) return false;
+        throw new IllegalArgumentException("Unexpected: " + s);
+    }
+
+    /**
      * Checks whether the network is available as expected.
      *
      * @return error message with the mismatch (or empty if assertion passed).
      */
-    private String checkNetworkAccess(boolean expectAvailable) throws Exception {
+    private String checkNetworkAccess(boolean expectAvailable,
+            @Nullable final String expectedUnavailableError) throws Exception {
         final String resultData = mServiceClient.checkNetworkStatus();
-        return checkForAvailabilityInResultData(resultData, expectAvailable);
+        return checkForAvailabilityInResultData(resultData, expectAvailable,
+                expectedUnavailableError);
     }
 
-    private String checkForAvailabilityInResultData(String resultData, boolean expectAvailable) {
+    private String checkForAvailabilityInResultData(String resultData, boolean expectAvailable,
+            @Nullable final String expectedUnavailableError) {
         if (resultData == null) {
             assertNotNull("Network status from app2 is null", resultData);
         }
@@ -477,6 +548,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         if (expectedState != state || expectedDetailedState != detailedState) {
             errors.append(String.format("Connection state mismatch: expected %s/%s, got %s/%s\n",
                     expectedState, expectedDetailedState, state, detailedState));
+        } else if (!expectAvailable && (expectedUnavailableError != null)
+                 && !connectionCheckDetails.contains(expectedUnavailableError)) {
+            errors.append("Connection unavailable reason mismatch: expected "
+                     + expectedUnavailableError + "\n");
         }
 
         if (errors.length() > 0) {
@@ -750,27 +825,24 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         assertDelayedShellCommand("dumpsys deviceidle get deep", enabled ? "IDLE" : "ACTIVE");
     }
 
-    protected void setAppIdle(boolean enabled) throws Exception {
+    protected void setAppIdle(boolean isIdle) throws Exception {
+        setAppIdleNoAssert(isIdle);
+        assertAppIdle(isIdle);
+    }
+
+    protected void setAppIdleNoAssert(boolean isIdle) throws Exception {
         if (!isAppStandbySupported()) {
             return;
         }
-        Log.i(TAG, "Setting app idle to " + enabled);
-        executeSilentShellCommand("am set-inactive " + TEST_APP2_PKG + " " + enabled );
-        assertAppIdle(enabled);
+        Log.i(TAG, "Setting app idle to " + isIdle);
+        final String bucketName = isIdle ? "rare" : "active";
+        executeSilentShellCommand("am set-standby-bucket " + TEST_APP2_PKG + " " + bucketName);
     }
 
-    protected void setAppIdleNoAssert(boolean enabled) throws Exception {
-        if (!isAppStandbySupported()) {
-            return;
-        }
-        Log.i(TAG, "Setting app idle to " + enabled);
-        executeSilentShellCommand("am set-inactive " + TEST_APP2_PKG + " " + enabled );
-    }
-
-    protected void assertAppIdle(boolean enabled) throws Exception {
+    protected void assertAppIdle(boolean isIdle) throws Exception {
         try {
             assertDelayedShellCommand("am get-inactive " + TEST_APP2_PKG,
-                    30 /* maxTries */, 1 /* napTimeSeconds */, "Idle=" + enabled);
+                    30 /* maxTries */, 1 /* napTimeSeconds */, "Idle=" + isIdle);
         } catch (Throwable e) {
             throw e;
         }
@@ -878,7 +950,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                 final String resultData = result.get(0).second;
                 if (resultCode == INetworkStateObserver.RESULT_SUCCESS_NETWORK_STATE_CHECKED) {
                     final String error = checkForAvailabilityInResultData(
-                            resultData, expectAvailable);
+                            resultData, expectAvailable, null /* expectedUnavailableError */);
                     if (error != null) {
                         fail("Network is not available for activity in app2 (" + mUid + "): "
                                 + error);
@@ -913,7 +985,7 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
                 final String resultData = result.get(0).second;
                 if (resultCode == INetworkStateObserver.RESULT_SUCCESS_NETWORK_STATE_CHECKED) {
                     final String error = checkForAvailabilityInResultData(
-                            resultData, expectAvailable);
+                            resultData, expectAvailable, null /* expectedUnavailableError */);
                     if (error != null) {
                         Log.d(TAG, "Network state is unexpected, checking again. " + error);
                         // Right now we could end up in an unexpected state if expedited job

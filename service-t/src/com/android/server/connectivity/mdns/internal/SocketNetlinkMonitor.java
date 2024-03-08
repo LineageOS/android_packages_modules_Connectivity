@@ -20,7 +20,6 @@ import android.annotation.NonNull;
 import android.net.LinkAddress;
 import android.os.Handler;
 import android.system.OsConstants;
-import android.util.Log;
 
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.ip.NetlinkMonitor;
@@ -28,15 +27,17 @@ import com.android.net.module.util.netlink.NetlinkConstants;
 import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
 import com.android.net.module.util.netlink.StructIfaddrMsg;
-import com.android.server.connectivity.mdns.AbstractSocketNetlink;
+import com.android.server.connectivity.mdns.AbstractSocketNetlinkMonitor;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
 
 /**
  * The netlink monitor for MdnsSocketProvider.
  */
-public class SocketNetlinkMonitor extends NetlinkMonitor implements AbstractSocketNetlink {
+public class SocketNetlinkMonitor extends NetlinkMonitor implements AbstractSocketNetlinkMonitor {
 
     public static final String TAG = SocketNetlinkMonitor.class.getSimpleName();
+    @NonNull
+    private final SharedLog mSharedLog;
 
     @NonNull
     private final MdnsSocketProvider.NetLinkMonitorCallBack mCb;
@@ -46,6 +47,7 @@ public class SocketNetlinkMonitor extends NetlinkMonitor implements AbstractSock
         super(handler, log, TAG, OsConstants.NETLINK_ROUTE,
                 NetlinkConstants.RTMGRP_IPV4_IFADDR | NetlinkConstants.RTMGRP_IPV6_IFADDR);
         mCb = cb;
+        mSharedLog = log;
     }
     @Override
     public void processNetlinkMessage(NetlinkMessage nlMsg, long whenMs) {
@@ -61,19 +63,17 @@ public class SocketNetlinkMonitor extends NetlinkMonitor implements AbstractSock
         final StructIfaddrMsg ifaddrMsg = msg.getIfaddrHeader();
         final LinkAddress la = new LinkAddress(msg.getIpAddress(), ifaddrMsg.prefixLen,
                 msg.getFlags(), ifaddrMsg.scope);
-        if (!la.isPreferred()) {
-            // Skip the unusable ip address.
-            return;
-        }
         switch (msg.getHeader().nlmsg_type) {
             case NetlinkConstants.RTM_NEWADDR:
-                mCb.addOrUpdateInterfaceAddress(ifaddrMsg.index, la);
+                if (la.isPreferred()) {
+                    mCb.addOrUpdateInterfaceAddress(ifaddrMsg.index, la);
+                }
                 break;
             case NetlinkConstants.RTM_DELADDR:
                 mCb.deleteInterfaceAddress(ifaddrMsg.index, la);
                 break;
             default:
-                Log.e(TAG, "Unknown rtnetlink address msg type " + msg.getHeader().nlmsg_type);
+                mSharedLog.e("Unknown rtnetlink address msg type " + msg.getHeader().nlmsg_type);
         }
     }
 

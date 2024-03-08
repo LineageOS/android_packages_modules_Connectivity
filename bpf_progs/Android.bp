@@ -45,6 +45,7 @@ cc_library_headers {
         "com.android.tethering",
     ],
     visibility: [
+        "//packages/modules/Connectivity/DnsResolver",
         "//packages/modules/Connectivity/netd",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/service/native/libs/libclat",

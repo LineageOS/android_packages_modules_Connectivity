@@ -1,7 +1,7 @@
 # Bug component: 31808
 
 set noparent
-file:platform/packages/modules/Connectivity:master:/OWNERS_core_networking_xts
+file:platform/packages/modules/Connectivity:main:/OWNERS_core_networking_xts
 
 # TODO: Temp ownership to develop cronet CTS
 colibie@google.com #{LAST_RESORT_SUGGESTION}

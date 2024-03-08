@@ -22,7 +22,7 @@ import android.content.Context;
 import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -41,7 +41,7 @@ import java.util.List;
 public class MulticastNetworkInterfaceProvider {
 
     private static final String TAG = "MdnsNIProvider";
-    private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
+    private final SharedLog sharedLog;
     private static final boolean PREFER_IPV6 = MdnsConfigs.preferIpv6();
 
     private final List<NetworkInterfaceWrapper> multicastNetworkInterfaces = new ArrayList<>();
@@ -51,10 +51,12 @@ public class MulticastNetworkInterfaceProvider {
     private volatile boolean connectivityChanged = true;
 
     @SuppressWarnings("nullness:methodref.receiver.bound")
-    public MulticastNetworkInterfaceProvider(@NonNull Context context) {
+    public MulticastNetworkInterfaceProvider(@NonNull Context context,
+            @NonNull SharedLog sharedLog) {
+        this.sharedLog = sharedLog;
         // IMPORT CHANGED
         this.connectivityMonitor = new ConnectivityMonitorWithConnectivityManager(
-                context, this::onConnectivityChanged);
+                context, this::onConnectivityChanged, sharedLog);
     }
 
     private synchronized void onConnectivityChanged() {
@@ -83,7 +85,7 @@ public class MulticastNetworkInterfaceProvider {
             connectivityChanged = false;
             updateMulticastNetworkInterfaces();
             if (multicastNetworkInterfaces.isEmpty()) {
-                LOGGER.log("No network interface available for mDNS scanning.");
+                sharedLog.log("No network interface available for mDNS scanning.");
             }
         }
         return new ArrayList<>(multicastNetworkInterfaces);
@@ -93,7 +95,7 @@ public class MulticastNetworkInterfaceProvider {
         multicastNetworkInterfaces.clear();
         List<NetworkInterfaceWrapper> networkInterfaceWrappers = getNetworkInterfaces();
         for (NetworkInterfaceWrapper interfaceWrapper : networkInterfaceWrappers) {
-            if (canScanOnInterface(interfaceWrapper)) {
+            if (canScanOnInterface(interfaceWrapper, sharedLog)) {
                 multicastNetworkInterfaces.add(interfaceWrapper);
             }
         }
@@ -133,10 +135,10 @@ public class MulticastNetworkInterfaceProvider {
                 }
             }
         } catch (SocketException e) {
-            LOGGER.e("Failed to get network interfaces.", e);
+            sharedLog.e("Failed to get network interfaces.", e);
         } catch (NullPointerException e) {
             // Android R has a bug that could lead to a NPE. See b/159277702.
-            LOGGER.e("Failed to call getNetworkInterfaces API", e);
+            sharedLog.e("Failed to call getNetworkInterfaces API", e);
         }
 
         return networkInterfaceWrappers;
@@ -148,7 +150,8 @@ public class MulticastNetworkInterfaceProvider {
     }
 
     /*** Check whether given network interface can support mdns */
-    private static boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface) {
+    private static boolean canScanOnInterface(@Nullable NetworkInterfaceWrapper networkInterface,
+            @NonNull SharedLog sharedLog) {
         try {
             if ((networkInterface == null)
                     || networkInterface.isLoopback()
@@ -160,7 +163,7 @@ public class MulticastNetworkInterfaceProvider {
             }
             return hasInet4Address(networkInterface) || hasInet6Address(networkInterface);
         } catch (IOException e) {
-            LOGGER.e(String.format("Failed to check interface %s.",
+            sharedLog.e(String.format("Failed to check interface %s.",
                     networkInterface.getNetworkInterface().getDisplayName()), e);
         }
 

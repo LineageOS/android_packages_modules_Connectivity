@@ -44,12 +44,15 @@ import android.util.Range;
 
 import androidx.test.InstrumentationRegistry;
 
+import com.android.compatibility.common.util.RequiredFeatureRule;
+
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.TestHttpServer;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -75,6 +78,11 @@ public final class PacProxyManagerTest {
     private PacProxyManager mPacProxyManager;
     private ServerSocket mServerSocket;
     private Instrumentation mInstrumentation;
+
+    // Devices without WebView/JavaScript cannot support PAC proxies.
+    @Rule
+    public RequiredFeatureRule mRequiredWebviewFeatureRule =
+        new RequiredFeatureRule(PackageManager.FEATURE_WEBVIEW);
 
     private static final String PAC_FILE = "function FindProxyForURL(url, host)"
             + "{"
@@ -152,9 +160,6 @@ public final class PacProxyManagerTest {
     @AppModeFull(reason = "Instant apps can't bind sockets to localhost for a test proxy server")
     @Test
     public void testSetCurrentProxyScriptUrl() throws Exception {
-        // Devices without WebView/JavaScript cannot support PAC proxies
-        assumeTrue(mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WEBVIEW));
-
         // Register a PacProxyInstalledListener
         final TestPacProxyInstalledListener listener = new TestPacProxyInstalledListener();
         final Executor executor = (Runnable r) -> r.run();

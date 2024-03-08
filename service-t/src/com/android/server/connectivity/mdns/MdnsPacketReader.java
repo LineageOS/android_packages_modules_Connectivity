@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.util.SparseArray;
 
@@ -30,24 +31,31 @@ import java.util.Locale;
 
 /** Simple decoder for mDNS packets. */
 public class MdnsPacketReader {
+    // The total length in bytes should be less than 255 bytes anyway (including labels and label
+    // length) per RFC9267, so limit the number of labels to 128 (each label is 2 bytes with the
+    // length).
+    // https://www.rfc-editor.org/rfc/rfc9267.html#name-label-and-name-length-valid
+    private static final int LABEL_COUNT_LIMIT = 128;
     private final byte[] buf;
     private final int count;
     private final SparseArray<LabelEntry> labelDictionary;
+    private final MdnsFeatureFlags mMdnsFeatureFlags;
     private int pos;
     private int limit;
 
     /** Constructs a reader for the given packet. */
     public MdnsPacketReader(DatagramPacket packet) {
-        this(packet.getData(), packet.getLength());
+        this(packet.getData(), packet.getLength(), MdnsFeatureFlags.newBuilder().build());
     }
 
     /** Constructs a reader for the given packet. */
-    public MdnsPacketReader(byte[] buffer, int length) {
+    public MdnsPacketReader(byte[] buffer, int length, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
         buf = buffer;
         count = length;
         pos = 0;
         limit = -1;
         labelDictionary = new SparseArray<>(16);
+        mMdnsFeatureFlags = mdnsFeatureFlags;
     }
 
     /**
@@ -137,6 +145,7 @@ public class MdnsPacketReader {
     public String[] readLabels() throws IOException {
         List<String> result = new ArrayList<>(5);
         LabelEntry previousEntry = null;
+        int tracingHops = 0;
 
         while (getRemaining() > 0) {
             byte nextByte = peekByte();
@@ -161,6 +170,10 @@ public class MdnsPacketReader {
                 // Follow the chain of labels starting at this pointer, adding all of them onto the
                 // result.
                 while (labelOffset != 0) {
+                    if (mMdnsFeatureFlags.mIsLabelCountLimitEnabled
+                            && tracingHops > LABEL_COUNT_LIMIT) {
+                        throw new IOException("Invalid MDNS response packet: Too many labels.");
+                    }
                     LabelEntry entry = labelDictionary.get(labelOffset);
                     if (entry == null) {
                         throw new IOException(
@@ -169,6 +182,7 @@ public class MdnsPacketReader {
                     }
                     result.add(entry.label);
                     labelOffset = entry.nextOffset;
+                    tracingHops++;
                 }
                 break;
             } else {

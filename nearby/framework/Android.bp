@@ -26,6 +26,7 @@ filegroup {
     ],
     path: "java",
     visibility: [
+        "//packages/modules/Connectivity/framework:__subpackages__",
         "//packages/modules/Connectivity/framework-t:__subpackages__",
     ],
 }
@@ -53,6 +54,6 @@ java_library {
         "modules-utils-preconditions",
     ],
     visibility: [
-    "//packages/modules/Connectivity/nearby/tests:__subpackages__",
-    "//packages/modules/Connectivity/nearby/halfsheet:__subpackages__"],
+        "//packages/modules/Connectivity/nearby/tests:__subpackages__",
+    ],
 }

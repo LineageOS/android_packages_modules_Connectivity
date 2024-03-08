@@ -192,7 +192,12 @@ public class ChreDiscoveryProviderTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 32, codeName = "T")
-    public void testOnNearbyDeviceDiscoveredWithDataElements() {
+    public void testOnNearbyDeviceDiscoveredWithDataElements_TIME() {
+        // The feature only supports user-debug builds.
+        if (!Build.isDebuggable()) {
+            return;
+        }
+
         // Disables the setting of test app support
         boolean isSupportedTestApp = getDeviceConfigBoolean(
                 NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);
@@ -209,6 +214,7 @@ public class ChreDiscoveryProviderTest {
         // First byte is length of service data, padding zeros should be thrown away.
         final byte [] bleServiceData = new byte[] {5, 1, 2, 3, 4, 5, 0, 0, 0, 0};
         final byte [] testData = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        final long timestampNs = 1697765417070000000L;
 
         final List<DataElement> expectedExtendedProperties = new ArrayList<>();
         expectedExtendedProperties.add(new DataElement(DATA_TYPE_CONNECTION_STATUS_KEY,
@@ -262,6 +268,7 @@ public class ChreDiscoveryProviderTest {
                                 .setValue(ByteString.copyFrom(testData))
                                 .setValueLength(testData.length)
                         )
+                        .setTimestampNs(timestampNs)
                         .build();
         Blefilter.BleFilterResults results =
                 Blefilter.BleFilterResults.newBuilder().addResult(result).build();
@@ -285,11 +292,18 @@ public class ChreDiscoveryProviderTest {
             DeviceConfig.setProperty(NAMESPACE, NEARBY_SUPPORT_TEST_APP, "true", false);
             assertThat(new NearbyConfiguration().isTestAppSupported()).isTrue();
         }
+        // Nanoseconds to Milliseconds
+        assertThat((mNearbyDevice.getValue().getPresenceDevice())
+                .getDiscoveryTimestampMillis()).isEqualTo(timestampNs / 1000000);
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 32, codeName = "T")
+    @SdkSuppress(minSdkVersion = 33, codeName = "T")
     public void testOnNearbyDeviceDiscoveredWithTestDataElements() {
+        // The feature only supports user-debug builds.
+        if (!Build.isDebuggable()) {
+            return;
+        }
         // Enables the setting of test app support
         boolean isSupportedTestApp = getDeviceConfigBoolean(
                 NEARBY_SUPPORT_TEST_APP, false /* defaultValue */);

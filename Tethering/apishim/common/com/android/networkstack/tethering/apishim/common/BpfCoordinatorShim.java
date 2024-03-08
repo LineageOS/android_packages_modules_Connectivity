@@ -16,7 +16,6 @@
 
 package com.android.networkstack.tethering.apishim.common;
 
-import android.net.MacAddress;
 import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
@@ -27,7 +26,8 @@ import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsValue;
 import com.android.networkstack.tethering.BpfCoordinator.Dependencies;
-import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
+import com.android.networkstack.tethering.BpfCoordinator.Ipv6DownstreamRule;
+import com.android.networkstack.tethering.BpfCoordinator.Ipv6UpstreamRule;
 
 /**
  * Bpf coordinator class for API shims.
@@ -53,51 +53,51 @@ public abstract class BpfCoordinatorShim {
     public abstract boolean isInitialized();
 
     /**
-     * Adds a tethering offload rule to BPF map, or updates it if it already exists.
+     * Adds a tethering offload upstream rule to BPF map, or updates it if it already exists.
+     *
+     * An existing rule will be updated if the input interface, destination MAC and source prefix
+     * match. Otherwise, a new rule will be created. Note that this can be only called on handler
+     * thread.
+     *
+     * @param rule The rule to add or update.
+     * @return true if operation succeeded or was a no-op, false otherwise.
+     */
+    public abstract boolean addIpv6UpstreamRule(@NonNull Ipv6UpstreamRule rule);
+
+    /**
+     * Deletes a tethering offload upstream rule from the BPF map.
+     *
+     * An existing rule will be deleted if the input interface, destination MAC and source prefix
+     * match. It is not an error if there is no matching rule to delete.
+     *
+     * @param rule The rule to delete.
+     * @return true if operation succeeded or was a no-op, false otherwise.
+     */
+    public abstract boolean removeIpv6UpstreamRule(@NonNull Ipv6UpstreamRule rule);
+
+    /**
+     * Adds a tethering offload downstream rule to BPF map, or updates it if it already exists.
      *
      * Currently, only downstream /128 IPv6 entries are supported. An existing rule will be updated
      * if the input interface and destination prefix match. Otherwise, a new rule will be created.
      * Note that this can be only called on handler thread.
      *
      * @param rule The rule to add or update.
+     * @return true if operation succeeded or was a no-op, false otherwise.
      */
-    public abstract boolean tetherOffloadRuleAdd(@NonNull Ipv6ForwardingRule rule);
+    public abstract boolean addIpv6DownstreamRule(@NonNull Ipv6DownstreamRule rule);
 
     /**
-     * Deletes a tethering offload rule from the BPF map.
+     * Deletes a tethering offload downstream rule from the BPF map.
      *
      * Currently, only downstream /128 IPv6 entries are supported. An existing rule will be deleted
      * if the destination IP address and the source interface match. It is not an error if there is
      * no matching rule to delete.
      *
      * @param rule The rule to delete.
+     * @return true if operation succeeded or was a no-op, false otherwise.
      */
-    public abstract boolean tetherOffloadRuleRemove(@NonNull Ipv6ForwardingRule rule);
-
-    /**
-     * Starts IPv6 forwarding between the specified interfaces.
-
-     * @param downstreamIfindex the downstream interface index
-     * @param upstreamIfindex the upstream interface index
-     * @param inDstMac the destination MAC address to use for XDP
-     * @param outSrcMac the source MAC address to use for packets
-     * @param outDstMac the destination MAC address to use for packets
-     * @return true if operation succeeded or was a no-op, false otherwise
-     */
-    public abstract boolean startUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
-            @NonNull MacAddress inDstMac, @NonNull MacAddress outSrcMac,
-            @NonNull MacAddress outDstMac, int mtu);
-
-    /**
-     * Stops IPv6 forwarding between the specified interfaces.
-
-     * @param downstreamIfindex the downstream interface index
-     * @param upstreamIfindex the upstream interface index
-     * @param inDstMac the destination MAC address to use for XDP
-     * @return true if operation succeeded or was a no-op, false otherwise
-     */
-    public abstract boolean stopUpstreamIpv6Forwarding(int downstreamIfindex,
-            int upstreamIfindex, @NonNull MacAddress inDstMac);
+    public abstract boolean removeIpv6DownstreamRule(@NonNull Ipv6DownstreamRule rule);
 
     /**
      * Return BPF tethering offload statistics.

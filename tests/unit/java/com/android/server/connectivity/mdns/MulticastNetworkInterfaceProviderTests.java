@@ -30,6 +30,7 @@ import android.content.Context;
 
 import androidx.test.InstrumentationRegistry;
 
+import com.android.net.module.util.SharedLog;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -64,6 +65,8 @@ public class MulticastNetworkInterfaceProviderTests {
     @Mock private NetworkInterfaceWrapper nonMulticastInterface;
     @Mock private NetworkInterfaceWrapper multicastInterfaceOne;
     @Mock private NetworkInterfaceWrapper multicastInterfaceTwo;
+
+    @Mock private SharedLog sharedLog;
 
     private final List<NetworkInterfaceWrapper> networkInterfaces = new ArrayList<>();
     private MulticastNetworkInterfaceProvider provider;
@@ -156,7 +159,7 @@ public class MulticastNetworkInterfaceProviderTests {
                 false /* isIpv6 */);
 
         provider =
-                new MulticastNetworkInterfaceProvider(context) {
+                new MulticastNetworkInterfaceProvider(context, sharedLog) {
                     @Override
                     List<NetworkInterfaceWrapper> getNetworkInterfaces() {
                         return networkInterfaces;
