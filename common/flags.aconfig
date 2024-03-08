@@ -6,6 +6,7 @@ container: "system"
 
 flag {
   name: "set_data_saver_via_cm"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Set data saver through ConnectivityManager API"
   bug: "297836825"
@@ -13,6 +14,7 @@ flag {
 
 flag {
   name: "support_is_uid_networking_blocked"
+  is_exported: true
   namespace: "android_core_networking"
   description: "This flag controls whether isUidNetworkingBlocked is supported"
   bug: "297836825"
@@ -20,6 +22,7 @@ flag {
 
 flag {
   name: "basic_background_restrictions_enabled"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Block network access for apps in a low importance background state"
   bug: "304347838"
@@ -27,6 +30,7 @@ flag {
 
 flag {
   name: "ipsec_transform_state"
+  is_exported: true
   namespace: "android_core_networking_ipsec"
   description: "The flag controls the access for getIpSecTransformState and IpSecTransformState"
   bug: "308011229"
@@ -34,6 +38,7 @@ flag {
 
 flag {
   name: "tethering_request_with_soft_ap_config"
+  is_exported: true
   namespace: "android_core_networking"
   description: "The flag controls the access for the parcelable TetheringRequest with getSoftApConfiguration/setSoftApConfiguration API"
   bug: "216524590"
@@ -41,6 +46,7 @@ flag {
 
 flag {
   name: "request_restricted_wifi"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Flag for API to support requesting restricted wifi"
   bug: "315835605"
@@ -48,6 +54,7 @@ flag {
 
 flag {
   name: "net_capability_local_network"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Flag for local network capability API"
   bug: "313000440"
@@ -55,6 +62,7 @@ flag {
 
 flag {
   name: "support_transport_satellite"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Flag for satellite transport API"
   bug: "320514105"
@@ -62,6 +70,7 @@ flag {
 
 flag {
   name: "nsd_subtypes_support_enabled"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Flag for API to support nsd subtypes"
   bug: "265095929"
@@ -69,6 +78,7 @@ flag {
 
 flag {
   name: "register_nsd_offload_engine_api"
+  is_exported: true
   namespace: "android_core_networking"
   description: "Flag for API to register nsd offload engine"
   bug: "301713539"
