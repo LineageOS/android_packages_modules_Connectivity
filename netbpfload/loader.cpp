@@ -31,13 +31,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// This is BpfLoader v0.41
+// This is Network BpfLoader v0.42
 // WARNING: If you ever hit cherrypick conflicts here you're doing it wrong:
 // You are NOT allowed to cherrypick bpfloader related patches out of order.
 // (indeed: cherrypicking is probably a bad idea and you should merge instead)
 // Mainline supports ONLY the published versions of the bpfloader for each Android release.
 #define BPFLOADER_VERSION_MAJOR 0u
-#define BPFLOADER_VERSION_MINOR 41u
+#define BPFLOADER_VERSION_MINOR 42u
 #define BPFLOADER_VERSION ((BPFLOADER_VERSION_MAJOR << 16) | BPFLOADER_VERSION_MINOR)
 
 #include "BpfSyscallWrappers.h"
