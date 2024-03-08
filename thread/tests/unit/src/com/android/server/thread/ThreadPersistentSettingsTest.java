@@ -17,7 +17,9 @@
 package com.android.server.thread;
 
 import static com.android.server.thread.ThreadPersistentSettings.THREAD_ENABLED;
+
 import static com.google.common.truth.Truth.assertThat;
+
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
@@ -30,19 +32,23 @@ import static org.mockito.Mockito.when;
 import android.content.res.Resources;
 import android.os.PersistableBundle;
 import android.util.AtomicFile;
+
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
+
 import com.android.connectivity.resources.R;
 import com.android.server.connectivity.ConnectivityResources;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 /** Unit tests for {@link ThreadPersistentSettings}. */
 @RunWith(AndroidJUnit4.class)
