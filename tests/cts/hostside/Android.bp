@@ -32,6 +32,7 @@ java_test_host {
     // Only compile source java files in this apk.
     srcs: ["src/**/*.java"],
     libs: [
+        "net-tests-utils-host-device-common",
         "cts-tradefed",
         "tradefed",
     ],

@@ -16,7 +16,9 @@
 
 package com.android.server.connectivity.mdns;
 
-import android.util.ArraySet;
+import android.annotation.NonNull;
+
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,7 +31,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 public class ExecutorProvider {
 
     private final Set<ScheduledExecutorService> serviceTypeClientSchedulerExecutors =
-            new ArraySet<>();
+            MdnsUtils.newSet();
 
     /** Returns a new {@link ScheduledExecutorService} instance. */
     public ScheduledExecutorService newServiceTypeClientSchedulerExecutor() {
@@ -42,7 +44,22 @@ public class ExecutorProvider {
     /** Shuts down all the created {@link ScheduledExecutorService} instances. */
     public void shutdownAll() {
         for (ScheduledExecutorService executor : serviceTypeClientSchedulerExecutors) {
+            if (executor.isShutdown()) {
+                continue;
+            }
             executor.shutdownNow();
         }
+        serviceTypeClientSchedulerExecutors.clear();
+    }
+
+    /**
+     * Shutdown one executor service and remove the executor service from the set.
+     * @param executorService the executorService to be shutdown
+     */
+    public void shutdownExecutorService(@NonNull ScheduledExecutorService executorService) {
+        if (!executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
+        serviceTypeClientSchedulerExecutors.remove(executorService);
     }
 }

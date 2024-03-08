@@ -38,6 +38,7 @@ import android.net.IDnsResolver;
 import android.net.InetAddresses;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.ResolverParamsParcel;
 import android.net.Uri;
 import android.net.shared.PrivateDnsConfig;
@@ -251,7 +252,7 @@ public class DnsManager {
     // TODO: Replace the Map with SparseArrays.
     private final Map<Integer, PrivateDnsValidationStatuses> mPrivateDnsValidationMap;
     private final Map<Integer, LinkProperties> mLinkPropertiesMap;
-    private final Map<Integer, int[]> mTransportsMap;
+    private final Map<Integer, NetworkCapabilities> mNetworkCapabilitiesMap;
 
     private int mSampleValidity;
     private int mSuccessThreshold;
@@ -265,7 +266,7 @@ public class DnsManager {
         mPrivateDnsMap = new ConcurrentHashMap<>();
         mPrivateDnsValidationMap = new HashMap<>();
         mLinkPropertiesMap = new HashMap<>();
-        mTransportsMap = new HashMap<>();
+        mNetworkCapabilitiesMap = new HashMap<>();
 
         // TODO: Create and register ContentObservers to track every setting
         // used herein, posting messages to respond to changes.
@@ -278,7 +279,7 @@ public class DnsManager {
     public void removeNetwork(Network network) {
         mPrivateDnsMap.remove(network.getNetId());
         mPrivateDnsValidationMap.remove(network.getNetId());
-        mTransportsMap.remove(network.getNetId());
+        mNetworkCapabilitiesMap.remove(network.getNetId());
         mLinkPropertiesMap.remove(network.getNetId());
     }
 
@@ -301,7 +302,7 @@ public class DnsManager {
         final PrivateDnsConfig privateDnsCfg = mPrivateDnsMap.getOrDefault(netId,
                 PRIVATE_DNS_OFF);
 
-        final boolean useTls = privateDnsCfg.useTls;
+        final boolean useTls = privateDnsCfg.mode != PRIVATE_DNS_MODE_OFF;
         final PrivateDnsValidationStatuses statuses =
                 useTls ? mPrivateDnsValidationMap.get(netId) : null;
         final boolean validated = (null != statuses) && statuses.hasValidatedServer();
@@ -325,13 +326,17 @@ public class DnsManager {
     }
 
     /**
-     * When creating a new network or transport types are changed in a specific network,
-     * transport types are always saved to a hashMap before update dns config.
-     * When destroying network, the specific network will be removed from the hashMap.
-     * The hashMap is always accessed on the same thread.
+     * Update {@link NetworkCapabilities} stored in this instance.
+     *
+     * In order to ensure that the resolver has access to necessary information when other events
+     * occur, capabilities are always saved to a hashMap before updating the DNS configuration
+     * whenever a new network is created, transport types are modified, or metered capabilities are
+     * altered for a network. When a network is destroyed, the corresponding entry is removed from
+     * the hashMap. To prevent concurrency issues, the hashMap should always be accessed from the
+     * same thread.
      */
-    public void updateTransportsForNetwork(int netId, @NonNull int[] transportTypes) {
-        mTransportsMap.put(netId, transportTypes);
+    public void updateCapabilitiesForNetwork(int netId, @NonNull final NetworkCapabilities nc) {
+        mNetworkCapabilitiesMap.put(netId, nc);
         sendDnsConfigurationForNetwork(netId);
     }
 
@@ -351,8 +356,8 @@ public class DnsManager {
      */
     public void sendDnsConfigurationForNetwork(int netId) {
         final LinkProperties lp = mLinkPropertiesMap.get(netId);
-        final int[] transportTypes = mTransportsMap.get(netId);
-        if (lp == null || transportTypes == null) return;
+        final NetworkCapabilities nc = mNetworkCapabilitiesMap.get(netId);
+        if (lp == null || nc == null) return;
         updateParametersSettings();
         final ResolverParamsParcel paramsParcel = new ResolverParamsParcel();
 
@@ -365,7 +370,7 @@ public class DnsManager {
         // networks like IMS.
         final PrivateDnsConfig privateDnsCfg = mPrivateDnsMap.getOrDefault(netId,
                 PRIVATE_DNS_OFF);
-        final boolean useTls = privateDnsCfg.useTls;
+        final boolean useTls = privateDnsCfg.mode != PRIVATE_DNS_MODE_OFF;
         final boolean strictMode = privateDnsCfg.inStrictMode();
 
         paramsParcel.netId = netId;
@@ -383,7 +388,8 @@ public class DnsManager {
                               .collect(Collectors.toList()))
                 : useTls ? paramsParcel.servers  // Opportunistic
                 : new String[0];            // Off
-        paramsParcel.transportTypes = transportTypes;
+        paramsParcel.transportTypes = nc.getTransportTypes();
+        paramsParcel.meteredNetwork = nc.isMetered();
         // Prepare to track the validation status of the DNS servers in the
         // resolver config when private DNS is in opportunistic or strict mode.
         if (useTls) {
@@ -397,12 +403,13 @@ public class DnsManager {
         }
 
         Log.d(TAG, String.format("sendDnsConfigurationForNetwork(%d, %s, %s, %d, %d, %d, %d, "
-                + "%d, %d, %s, %s)", paramsParcel.netId, Arrays.toString(paramsParcel.servers),
-                Arrays.toString(paramsParcel.domains), paramsParcel.sampleValiditySeconds,
-                paramsParcel.successThreshold, paramsParcel.minSamples,
-                paramsParcel.maxSamples, paramsParcel.baseTimeoutMsec,
+                + "%d, %d, %s, %s, %s, %b)", paramsParcel.netId,
+                Arrays.toString(paramsParcel.servers), Arrays.toString(paramsParcel.domains),
+                paramsParcel.sampleValiditySeconds, paramsParcel.successThreshold,
+                paramsParcel.minSamples, paramsParcel.maxSamples, paramsParcel.baseTimeoutMsec,
                 paramsParcel.retryCount, paramsParcel.tlsName,
-                Arrays.toString(paramsParcel.tlsServers)));
+                Arrays.toString(paramsParcel.tlsServers),
+                Arrays.toString(paramsParcel.transportTypes), paramsParcel.meteredNetwork));
 
         try {
             mDnsResolver.setResolverConfiguration(paramsParcel);

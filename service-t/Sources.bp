@@ -20,7 +20,6 @@ filegroup {
     srcs: [
         "jni/com_android_server_net_NetworkStatsFactory.cpp",
     ],
-    path: "jni",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
     ],
@@ -32,7 +31,6 @@ filegroup {
         "jni/com_android_server_net_NetworkStatsFactory.cpp",
         "jni/com_android_server_net_NetworkStatsService.cpp",
     ],
-    path: "jni",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
     ],

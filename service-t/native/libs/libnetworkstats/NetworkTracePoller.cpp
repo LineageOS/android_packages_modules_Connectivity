@@ -25,20 +25,26 @@
 #include <perfetto/tracing/platform.h>
 #include <perfetto/tracing/tracing.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
+#include "netdbpf/BpfNetworkStats.h"
+
 namespace android {
 namespace bpf {
 namespace internal {
+using ::android::base::StringPrintf;
 
-void NetworkTracePoller::SchedulePolling() {
-  // Schedules another run of ourselves to recursively poll periodically.
-  mTaskRunner->PostDelayedTask(
-      [this]() {
-        mMutex.lock();
-        SchedulePolling();
-        ConsumeAllLocked();
-        mMutex.unlock();
-      },
-      mPollMs);
+void NetworkTracePoller::PollAndSchedule(perfetto::base::TaskRunner* runner,
+                                         uint32_t poll_ms) {
+  // Always schedule another run of ourselves to recursively poll periodically.
+  // The task runner is sequential so these can't run on top of each other.
+  runner->PostDelayedTask([=]() { PollAndSchedule(runner, poll_ms); }, poll_ms);
+
+  if (mMutex.try_lock()) {
+    ConsumeAllLocked();
+    mMutex.unlock();
+  }
 }
 
 bool NetworkTracePoller::Start(uint32_t pollMs) {
@@ -81,7 +87,7 @@ bool NetworkTracePoller::Start(uint32_t pollMs) {
   // Start a task runner to run ConsumeAll every mPollMs milliseconds.
   mTaskRunner = perfetto::Platform::GetDefaultPlatform()->CreateTaskRunner({});
   mPollMs = pollMs;
-  SchedulePolling();
+  PollAndSchedule(mTaskRunner.get(), mPollMs);
 
   mSessionCount++;
   return true;
@@ -116,6 +122,28 @@ bool NetworkTracePoller::Stop() {
   return res.ok();
 }
 
+void NetworkTracePoller::TraceIfaces(const std::vector<PacketTrace>& packets) {
+  if (packets.empty()) return;
+
+  std::unordered_set<uint32_t> uniqueIfindex;
+  for (const PacketTrace& pkt : packets) {
+    uniqueIfindex.insert(pkt.ifindex);
+  }
+
+  for (uint32_t ifindex : uniqueIfindex) {
+    char ifname[IF_NAMESIZE] = {};
+    if (if_indextoname(ifindex, ifname) != ifname) continue;
+
+    StatsValue stats = {};
+    if (bpfGetIfIndexStats(ifindex, &stats) != 0) continue;
+
+    std::string rxTrack = StringPrintf("%s [%d] Rx Bytes", ifname, ifindex);
+    std::string txTrack = StringPrintf("%s [%d] Tx Bytes", ifname, ifindex);
+    ATRACE_INT64(rxTrack.c_str(), stats.rxBytes);
+    ATRACE_INT64(txTrack.c_str(), stats.txBytes);
+  }
+}
+
 bool NetworkTracePoller::ConsumeAll() {
   std::scoped_lock<std::mutex> lock(mMutex);
   return ConsumeAllLocked();
@@ -137,6 +165,7 @@ bool NetworkTracePoller::ConsumeAllLocked() {
 
   ATRACE_INT("NetworkTracePackets", packets.size());
 
+  TraceIfaces(packets);
   mCallback(packets);
 
   return true;

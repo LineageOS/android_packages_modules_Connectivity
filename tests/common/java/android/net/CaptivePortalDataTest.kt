@@ -19,21 +19,20 @@ package android.net
 import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.modules.utils.build.SdkLevel
-import com.android.testutils.assertParcelingIsLossless
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.assertParcelingIsLossless
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
 @SmallTest
 @RunWith(DevSdkIgnoreRunner::class)
-@IgnoreUpTo(Build.VERSION_CODES.Q)
 class CaptivePortalDataTest {
     @Rule @JvmField
     val ignoreRule = DevSdkIgnoreRule()

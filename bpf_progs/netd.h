@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cutils/android_filesystem_config.h>
 #include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/in.h>
@@ -55,19 +56,20 @@ typedef struct {
 } StatsValue;
 STRUCT_SIZE(StatsValue, 4 * 8);  // 32
 
+#ifdef __cplusplus
+static inline StatsValue& operator+=(StatsValue& lhs, const StatsValue& rhs) {
+    lhs.rxPackets += rhs.rxPackets;
+    lhs.rxBytes += rhs.rxBytes;
+    lhs.txPackets += rhs.txPackets;
+    lhs.txBytes += rhs.txBytes;
+    return lhs;
+}
+#endif
+
 typedef struct {
     char name[IFNAMSIZ];
 } IfaceValue;
 STRUCT_SIZE(IfaceValue, 16);
-
-typedef struct {
-    uint64_t rxBytes;
-    uint64_t rxPackets;
-    uint64_t txBytes;
-    uint64_t txPackets;
-    uint64_t tcpRxPackets;
-    uint64_t tcpTxPackets;
-} Stats;
 
 typedef struct {
   uint64_t timestampNs;
@@ -80,7 +82,8 @@ typedef struct {
   __be16 sport;
   __be16 dport;
 
-  bool egress;
+  bool egress:1,
+       wakeup:1;
   uint8_t ipProto;
   uint8_t tcpFlags;
   uint8_t ipVersion; // 4=IPv4, 6=IPv6, 0=unknown
@@ -121,7 +124,9 @@ static const int IFACE_INDEX_NAME_MAP_SIZE = 1000;
 static const int IFACE_STATS_MAP_SIZE = 1000;
 static const int CONFIGURATION_MAP_SIZE = 2;
 static const int UID_OWNER_MAP_SIZE = 4000;
+static const int INGRESS_DISCARD_MAP_SIZE = 100;
 static const int PACKET_TRACE_BUF_SIZE = 32 * 1024;
+static const int DATA_SAVER_ENABLED_MAP_SIZE = 1;
 
 #ifdef __cplusplus
 
@@ -165,8 +170,10 @@ ASSERT_STRING_EQUAL(XT_BPF_DENYLIST_PROG_PATH,  BPF_NETD_PATH "prog_netd_skfilte
 #define CONFIGURATION_MAP_PATH BPF_NETD_PATH "map_netd_configuration_map"
 #define UID_OWNER_MAP_PATH BPF_NETD_PATH "map_netd_uid_owner_map"
 #define UID_PERMISSION_MAP_PATH BPF_NETD_PATH "map_netd_uid_permission_map"
+#define INGRESS_DISCARD_MAP_PATH BPF_NETD_PATH "map_netd_ingress_discard_map"
 #define PACKET_TRACE_RINGBUF_PATH BPF_NETD_PATH "map_netd_packet_trace_ringbuf"
 #define PACKET_TRACE_ENABLED_MAP_PATH BPF_NETD_PATH "map_netd_packet_trace_enabled_map"
+#define DATA_SAVER_ENABLED_MAP_PATH BPF_NETD_PATH "map_netd_data_saver_enabled_map"
 
 #endif // __cplusplus
 
@@ -185,8 +192,9 @@ enum UidOwnerMatchType {
     OEM_DENY_1_MATCH = (1 << 9),
     OEM_DENY_2_MATCH = (1 << 10),
     OEM_DENY_3_MATCH = (1 << 11),
+    BACKGROUND_MATCH = (1 << 12)
 };
-// LINT.ThenChange(packages/modules/Connectivity/service/src/com/android/server/BpfNetMaps.java)
+// LINT.ThenChange(../framework/src/android/net/BpfNetMapsConstants.java)
 
 enum BpfPermissionMatch {
     BPF_PERMISSION_INTERNET = 1 << 2,
@@ -213,9 +221,47 @@ typedef struct {
 } UidOwnerValue;
 STRUCT_SIZE(UidOwnerValue, 2 * 4);  // 8
 
+typedef struct {
+    // The destination ip of the incoming packet.  IPv4 uses IPv4-mapped IPv6 address format.
+    struct in6_addr daddr;
+} IngressDiscardKey;
+STRUCT_SIZE(IngressDiscardKey, 16);  // 16
+
+typedef struct {
+    // Allowed interface indexes.  Use same value multiple times if you just want to match 1 value.
+    uint32_t iif[2];
+} IngressDiscardValue;
+STRUCT_SIZE(IngressDiscardValue, 2 * 4);  // 8
+
 // Entry in the configuration map that stores which UID rules are enabled.
 #define UID_RULES_CONFIGURATION_KEY 0
 // Entry in the configuration map that stores which stats map is currently in use.
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 1
+// Entry in the data saver enabled map that stores whether data saver is enabled or not.
+#define DATA_SAVER_ENABLED_KEY 0
 
 #undef STRUCT_SIZE
+
+// DROP_IF_SET is set of rules that DROP if rule is globally enabled, and per-uid bit is set
+#define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
+// DROP_IF_UNSET is set of rules that should DROP if globally enabled, and per-uid bit is NOT set
+#define DROP_IF_UNSET (DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH \
+                        | LOW_POWER_STANDBY_MATCH | BACKGROUND_MATCH)
+
+#define FIREWALL_DROP_IF_SET (OEM_DENY_1_MATCH)
+#define FIREWALL_DROP_IF_UNSET (RESTRICTED_MATCH)
+
+// Warning: funky bit-wise arithmetic: in parallel, for all DROP_IF_SET/UNSET rules
+// check whether the rules are globally enabled, and if so whether the rules are
+// set/unset for the specific uid.  DROP if that is the case for ANY of the rules.
+// We achieve this by masking out only the bits/rules we're interested in checking,
+// and negating (via bit-wise xor) the bits/rules that should drop if unset.
+static inline bool isBlockedByUidRules(BpfConfig enabledRules, uint32_t uidRules) {
+    return enabledRules & (DROP_IF_SET | DROP_IF_UNSET) & (uidRules ^ DROP_IF_UNSET);
+}
+
+static inline bool is_system_uid(uint32_t uid) {
+    // MIN_SYSTEM_UID is AID_ROOT == 0, so uint32_t is *always* >= 0
+    // MAX_SYSTEM_UID is AID_NOBODY == 9999, while AID_APP_START == 10000
+    return (uid < AID_APP_START);
+}

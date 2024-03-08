@@ -31,7 +31,7 @@ class MdnsPacketWriterTest {
     @Test
     fun testNameCompression() {
         val writer = MdnsPacketWriter(ByteArray(1000))
-        writer.writeLabels(arrayOf("my", "first", "name"))
+        writer.writeLabels(arrayOf("my", "FIRST", "name"))
         writer.writeLabels(arrayOf("my", "second", "name"))
         writer.writeLabels(arrayOf("other", "first", "name"))
         writer.writeLabels(arrayOf("my", "second", "name"))
@@ -41,7 +41,7 @@ class MdnsPacketWriterTest {
                 InetSocketAddress(InetAddresses.parseNumericAddress("2001:db8::123"), 123))
 
         // Each label takes length + 1. So "first.name" offset = 3, "name" offset = 9
-        val expected = "my".label() + "first".label() + "name".label() + 0x00.toByte() +
+        val expected = "my".label() + "FIRST".label() + "name".label() + 0x00.toByte() +
                 // "my.second.name" offset = 15
                 "my".label() + "second".label() + byteArrayOf(0xC0.toByte(), 9) +
                 "other".label() + byteArrayOf(0xC0.toByte(), 3) +

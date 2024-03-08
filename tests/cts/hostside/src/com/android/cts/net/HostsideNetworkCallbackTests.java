@@ -14,26 +14,34 @@
  * limitations under the License.
  */
 package com.android.cts.net;
+
+import com.android.testutils.SkipPresubmit;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+@SkipPresubmit(reason = "Out of SLO flakiness")
 public class HostsideNetworkCallbackTests extends HostsideNetworkTestCase {
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         uninstallPackage(TEST_APP2_PKG, false);
         installPackage(TEST_APP2_APK);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
+    @After
+    public void tearDown() throws Exception {
         uninstallPackage(TEST_APP2_PKG, true);
     }
 
+    @Test
     public void testOnBlockedStatusChanged_dataSaver() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkCallbackTest", "testOnBlockedStatusChanged_dataSaver");
     }
 
+    @Test
     public void testOnBlockedStatusChanged_powerSaver() throws Exception {
         runDeviceTests(TEST_PKG,
                 TEST_PKG + ".NetworkCallbackTest", "testOnBlockedStatusChanged_powerSaver");

@@ -20,15 +20,18 @@ import static com.android.server.connectivity.mdns.MdnsSocket.MULTICAST_IPV4_ADD
 import static com.android.server.connectivity.mdns.MdnsSocket.MULTICAST_IPV6_ADDRESS;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
 import android.net.LinkAddress;
 import android.net.util.SocketUtils;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
-import android.util.Log;
+
+import com.android.net.module.util.SharedLog;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -48,17 +51,19 @@ import java.util.List;
  * @see MulticastSocket for javadoc of each public method.
  * @see MulticastSocket for javadoc of each public method.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsInterfaceSocket {
     private static final String TAG = MdnsInterfaceSocket.class.getSimpleName();
     @NonNull private final MulticastSocket mMulticastSocket;
     @NonNull private final NetworkInterface mNetworkInterface;
     @NonNull private final MulticastPacketReader mPacketReader;
     @NonNull private final ParcelFileDescriptor mFileDescriptor;
+    @NonNull private final SharedLog mSharedLog;
     private boolean mJoinedIpv4 = false;
     private boolean mJoinedIpv6 = false;
 
     public MdnsInterfaceSocket(@NonNull NetworkInterface networkInterface, int port,
-            @NonNull Looper looper, @NonNull byte[] packetReadBuffer)
+            @NonNull Looper looper, @NonNull byte[] packetReadBuffer, @NonNull SharedLog sharedLog)
             throws IOException {
         mNetworkInterface = networkInterface;
         mMulticastSocket = new MulticastSocket(port);
@@ -80,6 +85,8 @@ public class MdnsInterfaceSocket {
         mPacketReader = new MulticastPacketReader(networkInterface.getName(), mFileDescriptor,
                 new Handler(looper), packetReadBuffer);
         mPacketReader.start();
+
+        mSharedLog = sharedLog;
     }
 
     /**
@@ -117,7 +124,7 @@ public class MdnsInterfaceSocket {
             return true;
         } catch (IOException e) {
             // The address may have just been removed
-            Log.e(TAG, "Error joining multicast group for " + mNetworkInterface, e);
+            mSharedLog.e("Error joining multicast group for " + mNetworkInterface, e);
             return false;
         }
     }
@@ -148,7 +155,7 @@ public class MdnsInterfaceSocket {
         try {
             mFileDescriptor.close();
         } catch (IOException e) {
-            Log.e(TAG, "Close file descriptor failed.");
+            mSharedLog.e("Close file descriptor failed.");
         }
         mMulticastSocket.close();
     }

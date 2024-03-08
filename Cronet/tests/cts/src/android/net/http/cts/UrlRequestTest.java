@@ -363,6 +363,116 @@ public class UrlRequestTest {
                 .containsAtLeastElementsIn(expectedHeaders);
     }
 
+    @Test
+    public void testUrlRequest_getHttpMethod() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final String method = "POST";
+
+        builder.setHttpMethod(method);
+        UrlRequest request = builder.build();
+        assertThat(request.getHttpMethod()).isEqualTo(method);
+    }
+
+    @Test
+    public void testUrlRequest_getHeaders_asList() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final List<Map.Entry<String, String>> expectedHeaders = Arrays.asList(
+                Map.entry("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="),
+                Map.entry("Max-Forwards", "10"),
+                Map.entry("X-Client-Data", "random custom header content"));
+
+        for (Map.Entry<String, String> header : expectedHeaders) {
+            builder.addHeader(header.getKey(), header.getValue());
+        }
+
+        UrlRequest request = builder.build();
+        assertThat(request.getHeaders().getAsList()).containsAtLeastElementsIn(expectedHeaders);
+    }
+
+    @Test
+    public void testUrlRequest_getHeaders_asMap() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final Map<String, List<String>> expectedHeaders = Map.of(
+                "Authorization", Arrays.asList("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="),
+                "Max-Forwards", Arrays.asList("10"),
+                "X-Client-Data", Arrays.asList("random custom header content"));
+
+        for (Map.Entry<String, List<String>> header : expectedHeaders.entrySet()) {
+            builder.addHeader(header.getKey(), header.getValue().get(0));
+        }
+
+        UrlRequest request = builder.build();
+        assertThat(request.getHeaders().getAsMap()).containsAtLeastEntriesIn(expectedHeaders);
+    }
+
+    @Test
+    public void testUrlRequest_isCacheDisabled() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final boolean isCacheDisabled = true;
+
+        builder.setCacheDisabled(isCacheDisabled);
+        UrlRequest request = builder.build();
+        assertThat(request.isCacheDisabled()).isEqualTo(isCacheDisabled);
+    }
+
+    @Test
+    public void testUrlRequest_isDirectExecutorAllowed() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final boolean isDirectExecutorAllowed = true;
+
+        builder.setDirectExecutorAllowed(isDirectExecutorAllowed);
+        UrlRequest request = builder.build();
+        assertThat(request.isDirectExecutorAllowed()).isEqualTo(isDirectExecutorAllowed);
+    }
+
+    @Test
+    public void testUrlRequest_getPriority() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final int priority = UrlRequest.REQUEST_PRIORITY_LOW;
+
+        builder.setPriority(priority);
+        UrlRequest request = builder.build();
+        assertThat(request.getPriority()).isEqualTo(priority);
+    }
+
+    @Test
+    public void testUrlRequest_hasTrafficStatsTag() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+
+        builder.setTrafficStatsTag(10);
+        UrlRequest request = builder.build();
+        assertThat(request.hasTrafficStatsTag()).isEqualTo(true);
+    }
+
+    @Test
+    public void testUrlRequest_getTrafficStatsTag() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final int trafficStatsTag = 10;
+
+        builder.setTrafficStatsTag(trafficStatsTag);
+        UrlRequest request = builder.build();
+        assertThat(request.getTrafficStatsTag()).isEqualTo(trafficStatsTag);
+    }
+
+    @Test
+    public void testUrlRequest_hasTrafficStatsUid() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+
+        builder.setTrafficStatsUid(10);
+        UrlRequest request = builder.build();
+        assertThat(request.hasTrafficStatsUid()).isEqualTo(true);
+    }
+
+    @Test
+    public void testUrlRequest_getTrafficStatsUid() throws Exception {
+        UrlRequest.Builder builder = createUrlRequestBuilder(mTestServer.getSuccessUrl());
+        final int trafficStatsUid = 10;
+
+        builder.setTrafficStatsUid(trafficStatsUid);
+        UrlRequest request = builder.build();
+        assertThat(request.getTrafficStatsUid()).isEqualTo(trafficStatsUid);
+    }
+
     private static List<Map.Entry<String, String>> extractEchoedHeaders(HeaderBlock headers) {
         return headers.getAsList()
                 .stream()

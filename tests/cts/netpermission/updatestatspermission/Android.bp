@@ -29,5 +29,5 @@ android_test {
         "cts",
         "general-tests",
     ],
-
+    host_required: ["net-tests-utils-host-common"],
 }

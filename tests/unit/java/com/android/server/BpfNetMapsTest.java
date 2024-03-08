@@ -16,6 +16,26 @@
 
 package com.android.server;
 
+import static android.net.BpfNetMapsConstants.ALLOW_CHAINS;
+import static android.net.BpfNetMapsConstants.CURRENT_STATS_MAP_CONFIGURATION_KEY;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_DISABLED;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED;
+import static android.net.BpfNetMapsConstants.DENY_CHAINS;
+import static android.net.BpfNetMapsConstants.DOZABLE_MATCH;
+import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.IIF_MATCH;
+import static android.net.BpfNetMapsConstants.LOCKDOWN_VPN_MATCH;
+import static android.net.BpfNetMapsConstants.LOW_POWER_STANDBY_MATCH;
+import static android.net.BpfNetMapsConstants.NO_MATCH;
+import static android.net.BpfNetMapsConstants.OEM_DENY_1_MATCH;
+import static android.net.BpfNetMapsConstants.OEM_DENY_2_MATCH;
+import static android.net.BpfNetMapsConstants.OEM_DENY_3_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
+import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
+import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
+import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
@@ -33,19 +53,6 @@ import static android.net.INetd.PERMISSION_UPDATE_DEVICE_STATS;
 import static android.system.OsConstants.EINVAL;
 import static android.system.OsConstants.EPERM;
 
-import static com.android.server.BpfNetMaps.DOZABLE_MATCH;
-import static com.android.server.BpfNetMaps.HAPPY_BOX_MATCH;
-import static com.android.server.BpfNetMaps.IIF_MATCH;
-import static com.android.server.BpfNetMaps.LOCKDOWN_VPN_MATCH;
-import static com.android.server.BpfNetMaps.LOW_POWER_STANDBY_MATCH;
-import static com.android.server.BpfNetMaps.NO_MATCH;
-import static com.android.server.BpfNetMaps.OEM_DENY_1_MATCH;
-import static com.android.server.BpfNetMaps.OEM_DENY_2_MATCH;
-import static com.android.server.BpfNetMaps.OEM_DENY_3_MATCH;
-import static com.android.server.BpfNetMaps.PENALTY_BOX_MATCH;
-import static com.android.server.BpfNetMaps.POWERSAVE_MATCH;
-import static com.android.server.BpfNetMaps.RESTRICTED_MATCH;
-import static com.android.server.BpfNetMaps.STANDBY_MATCH;
 import static com.android.server.ConnectivityStatsLog.NETWORK_BPF_MAP_INFO;
 
 import static org.junit.Assert.assertEquals;
@@ -62,7 +69,10 @@ import static org.mockito.Mockito.verify;
 
 import android.app.StatsManager;
 import android.content.Context;
+import android.net.BpfNetMapsUtils;
 import android.net.INetd;
+import android.net.InetAddresses;
+import android.net.UidOwnerValue;
 import android.os.Build;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
@@ -78,6 +88,8 @@ import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
+import com.android.net.module.util.bpf.IngressDiscardKey;
+import com.android.net.module.util.bpf.IngressDiscardValue;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
@@ -93,6 +105,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.FileDescriptor;
 import java.io.StringWriter;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -111,22 +125,20 @@ public final class BpfNetMapsTest {
     private static final int TEST_IF_INDEX = 7;
     private static final int NO_IIF = 0;
     private static final int NULL_IIF = 0;
+    private static final Inet4Address TEST_V4_ADDRESS =
+            (Inet4Address) InetAddresses.parseNumericAddress("192.0.2.1");
+    private static final Inet6Address TEST_V6_ADDRESS =
+            (Inet6Address) InetAddresses.parseNumericAddress("2001:db8::1");
     private static final String CHAINNAME = "fw_dozable";
-    private static final S32 UID_RULES_CONFIGURATION_KEY = new S32(0);
-    private static final S32 CURRENT_STATS_MAP_CONFIGURATION_KEY = new S32(1);
-    private static final List<Integer> FIREWALL_CHAINS = List.of(
-            FIREWALL_CHAIN_DOZABLE,
-            FIREWALL_CHAIN_STANDBY,
-            FIREWALL_CHAIN_POWERSAVE,
-            FIREWALL_CHAIN_RESTRICTED,
-            FIREWALL_CHAIN_LOW_POWER_STANDBY,
-            FIREWALL_CHAIN_OEM_DENY_1,
-            FIREWALL_CHAIN_OEM_DENY_2,
-            FIREWALL_CHAIN_OEM_DENY_3
-    );
 
     private static final long STATS_SELECT_MAP_A = 0;
     private static final long STATS_SELECT_MAP_B = 1;
+
+    private static final List<Integer> FIREWALL_CHAINS = new ArrayList<>();
+    static {
+        FIREWALL_CHAINS.addAll(ALLOW_CHAINS);
+        FIREWALL_CHAINS.addAll(DENY_CHAINS);
+    }
 
     private BpfNetMaps mBpfNetMaps;
 
@@ -139,13 +151,16 @@ public final class BpfNetMapsTest {
     private final IBpfMap<S32, U8> mUidPermissionMap = new TestBpfMap<>(S32.class, U8.class);
     private final IBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap =
             spy(new TestBpfMap<>(CookieTagMapKey.class, CookieTagMapValue.class));
+    private final IBpfMap<S32, U8> mDataSaverEnabledMap = new TestBpfMap<>(S32.class, U8.class);
+    private final IBpfMap<IngressDiscardKey, IngressDiscardValue> mIngressDiscardMap =
+            new TestBpfMap<>(IngressDiscardKey.class, IngressDiscardValue.class);
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         doReturn(TEST_IF_INDEX).when(mDeps).getIfIndex(TEST_IF_NAME);
+        doReturn(TEST_IF_NAME).when(mDeps).getIfName(TEST_IF_INDEX);
         doReturn(0).when(mDeps).synchronizeKernelRCU();
-        BpfNetMaps.setEnableJavaBpfMapForTest(true /* enable */);
         BpfNetMaps.setConfigurationMapForTest(mConfigurationMap);
         mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(0));
         mConfigurationMap.updateEntry(
@@ -153,6 +168,9 @@ public final class BpfNetMapsTest {
         BpfNetMaps.setUidOwnerMapForTest(mUidOwnerMap);
         BpfNetMaps.setUidPermissionMapForTest(mUidPermissionMap);
         BpfNetMaps.setCookieTagMapForTest(mCookieTagMap);
+        BpfNetMaps.setDataSaverEnabledMapForTest(mDataSaverEnabledMap);
+        mDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, new U8(DATA_SAVER_DISABLED));
+        BpfNetMaps.setIngressDiscardMapForTest(mIngressDiscardMap);
         mBpfNetMaps = new BpfNetMaps(mContext, mNetd, mDeps);
     }
 
@@ -170,7 +188,7 @@ public final class BpfNetMapsTest {
     private long getMatch(final List<Integer> chains) {
         long match = 0;
         for (final int chain: chains) {
-            match |= mBpfNetMaps.getMatchByFirewallChain(chain);
+            match |= BpfNetMapsUtils.getMatchByFirewallChain(chain);
         }
         return match;
     }
@@ -239,7 +257,7 @@ public final class BpfNetMapsTest {
     private void doTestSetChildChain(final List<Integer> testChains) throws Exception {
         long expectedMatch = 0;
         for (final int chain: testChains) {
-            expectedMatch |= mBpfNetMaps.getMatchByFirewallChain(chain);
+            expectedMatch |= BpfNetMapsUtils.getMatchByFirewallChain(chain);
         }
 
         assertEquals(0, mConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val);
@@ -609,7 +627,7 @@ public final class BpfNetMapsTest {
         mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(TEST_IF_INDEX, IIF_MATCH));
 
         for (final int chain: testChains) {
-            final int ruleToAddMatch = mBpfNetMaps.isFirewallAllowList(chain)
+            final int ruleToAddMatch = BpfNetMapsUtils.isFirewallAllowList(chain)
                     ? FIREWALL_RULE_ALLOW : FIREWALL_RULE_DENY;
             mBpfNetMaps.setUidRule(chain, TEST_UID, ruleToAddMatch);
         }
@@ -617,7 +635,7 @@ public final class BpfNetMapsTest {
         checkUidOwnerValue(TEST_UID, TEST_IF_INDEX, IIF_MATCH | getMatch(testChains));
 
         for (final int chain: testChains) {
-            final int ruleToRemoveMatch = mBpfNetMaps.isFirewallAllowList(chain)
+            final int ruleToRemoveMatch = BpfNetMapsUtils.isFirewallAllowList(chain)
                     ? FIREWALL_RULE_DENY : FIREWALL_RULE_ALLOW;
             mBpfNetMaps.setUidRule(chain, TEST_UID, ruleToRemoveMatch);
         }
@@ -697,11 +715,11 @@ public final class BpfNetMapsTest {
         for (final int chain: FIREWALL_CHAINS) {
             final String testCase = "EnabledChains: " + enableChains + " CheckedChain: " + chain;
             if (enableChains.contains(chain)) {
-                final int expectedRule = mBpfNetMaps.isFirewallAllowList(chain)
+                final int expectedRule = BpfNetMapsUtils.isFirewallAllowList(chain)
                         ? FIREWALL_RULE_ALLOW : FIREWALL_RULE_DENY;
                 assertEquals(testCase, expectedRule, mBpfNetMaps.getUidRule(chain, TEST_UID));
             } else {
-                final int expectedRule = mBpfNetMaps.isFirewallAllowList(chain)
+                final int expectedRule = BpfNetMapsUtils.isFirewallAllowList(chain)
                         ? FIREWALL_RULE_DENY : FIREWALL_RULE_ALLOW;
                 assertEquals(testCase, expectedRule, mBpfNetMaps.getUidRule(chain, TEST_UID));
             }
@@ -744,7 +762,7 @@ public final class BpfNetMapsTest {
     public void testGetUidRuleNoEntry() throws Exception {
         mUidOwnerMap.clear();
         for (final int chain: FIREWALL_CHAINS) {
-            final int expectedRule = mBpfNetMaps.isFirewallAllowList(chain)
+            final int expectedRule = BpfNetMapsUtils.isFirewallAllowList(chain)
                     ? FIREWALL_RULE_DENY : FIREWALL_RULE_ALLOW;
             assertEquals(expectedRule, mBpfNetMaps.getUidRule(chain, TEST_UID));
         }
@@ -1153,6 +1171,21 @@ public final class BpfNetMapsTest {
         assertDumpContains(getDump(), "cookie=123 tag=0x789 uid=456");
     }
 
+    private void doTestDumpDataSaverConfig(final short value, final boolean expected)
+            throws Exception {
+        mDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, new U8(value));
+        assertDumpContains(getDump(),
+                "sDataSaverEnabledMap: " + expected);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testDumpDataSaverConfig() throws Exception {
+        doTestDumpDataSaverConfig(DATA_SAVER_DISABLED, false);
+        doTestDumpDataSaverConfig(DATA_SAVER_ENABLED, true);
+        doTestDumpDataSaverConfig((short) 2, true);
+    }
+
     @Test
     public void testGetUids() throws ErrnoException {
         final int uid0 = TEST_UIDS[0];
@@ -1180,5 +1213,74 @@ public final class BpfNetMapsTest {
                 () -> mBpfNetMaps.getUidsWithDenyRuleOnDenyListChain(FIREWALL_CHAIN_DOZABLE));
         assertThrows(expected,
                 () -> mBpfNetMaps.getUidsWithAllowRuleOnAllowListChain(FIREWALL_CHAIN_OEM_DENY_1));
+    }
+
+    @Test
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
+    public void testSetDataSaverEnabledBeforeT() {
+        for (boolean enable : new boolean[]{true, false}) {
+            assertThrows(UnsupportedOperationException.class,
+                    () -> mBpfNetMaps.setDataSaverEnabled(enable));
+        }
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetDataSaverEnabled() throws Exception {
+        for (boolean enable : new boolean[]{true, false}) {
+            mBpfNetMaps.setDataSaverEnabled(enable);
+            assertEquals(enable ? DATA_SAVER_ENABLED : DATA_SAVER_DISABLED,
+                    mDataSaverEnabledMap.getValue(DATA_SAVER_ENABLED_KEY).val);
+        }
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetIngressDiscardRule_V4address() throws Exception {
+        mBpfNetMaps.setIngressDiscardRule(TEST_V4_ADDRESS, TEST_IF_NAME);
+        final IngressDiscardValue val = mIngressDiscardMap.getValue(new IngressDiscardKey(
+                TEST_V4_ADDRESS));
+        assertEquals(TEST_IF_INDEX, val.iif1);
+        assertEquals(TEST_IF_INDEX, val.iif2);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testSetIngressDiscardRule_V6address() throws Exception {
+        mBpfNetMaps.setIngressDiscardRule(TEST_V6_ADDRESS, TEST_IF_NAME);
+        final IngressDiscardValue val =
+                mIngressDiscardMap.getValue(new IngressDiscardKey(TEST_V6_ADDRESS));
+        assertEquals(TEST_IF_INDEX, val.iif1);
+        assertEquals(TEST_IF_INDEX, val.iif2);
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testRemoveIngressDiscardRule() throws Exception {
+        mBpfNetMaps.setIngressDiscardRule(TEST_V4_ADDRESS, TEST_IF_NAME);
+        mBpfNetMaps.setIngressDiscardRule(TEST_V6_ADDRESS, TEST_IF_NAME);
+        final IngressDiscardKey v4Key = new IngressDiscardKey(TEST_V4_ADDRESS);
+        final IngressDiscardKey v6Key = new IngressDiscardKey(TEST_V6_ADDRESS);
+        assertTrue(mIngressDiscardMap.containsKey(v4Key));
+        assertTrue(mIngressDiscardMap.containsKey(v6Key));
+
+        mBpfNetMaps.removeIngressDiscardRule(TEST_V4_ADDRESS);
+        assertFalse(mIngressDiscardMap.containsKey(v4Key));
+        assertTrue(mIngressDiscardMap.containsKey(v6Key));
+
+        mBpfNetMaps.removeIngressDiscardRule(TEST_V6_ADDRESS);
+        assertFalse(mIngressDiscardMap.containsKey(v4Key));
+        assertFalse(mIngressDiscardMap.containsKey(v6Key));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testDumpIngressDiscardRule() throws Exception {
+        mBpfNetMaps.setIngressDiscardRule(TEST_V4_ADDRESS, TEST_IF_NAME);
+        mBpfNetMaps.setIngressDiscardRule(TEST_V6_ADDRESS, TEST_IF_NAME);
+        final String dump = getDump();
+        assertDumpContains(dump, TEST_V4_ADDRESS.getHostAddress());
+        assertDumpContains(dump, TEST_V6_ADDRESS.getHostAddress());
+        assertDumpContains(dump, TEST_IF_INDEX + "(" + TEST_IF_NAME + ")");
     }
 }

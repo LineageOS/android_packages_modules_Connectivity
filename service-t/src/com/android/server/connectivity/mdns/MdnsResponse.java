@@ -21,10 +21,10 @@ import android.annotation.Nullable;
 import android.net.Network;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -33,6 +33,7 @@ import java.util.Objects;
 
 /** An mDNS response. */
 public class MdnsResponse {
+    public static final long EXPIRATION_NEVER = Long.MAX_VALUE;
     private final List<MdnsRecord> records;
     private final List<MdnsPointerRecord> pointerRecords;
     private MdnsServiceRecord serviceRecord;
@@ -110,7 +111,7 @@ public class MdnsResponse {
      * pointer record is already present in the response with the same TTL.
      */
     public synchronized boolean addPointerRecord(MdnsPointerRecord pointerRecord) {
-        if (!Arrays.equals(serviceName, pointerRecord.getPointer())) {
+        if (!MdnsUtils.equalsDnsLabelIgnoreDnsCase(serviceName, pointerRecord.getPointer())) {
             throw new IllegalArgumentException(
                     "Pointer records for different service names cannot be added");
         }
@@ -304,13 +305,13 @@ public class MdnsResponse {
         boolean dropAddressRecords = false;
 
         for (MdnsInetAddressRecord inetAddressRecord : getInet4AddressRecords()) {
-            if (!Arrays.equals(
+            if (!MdnsUtils.equalsDnsLabelIgnoreDnsCase(
                     this.serviceRecord.getServiceHost(), inetAddressRecord.getName())) {
                 dropAddressRecords = true;
             }
         }
         for (MdnsInetAddressRecord inetAddressRecord : getInet6AddressRecords()) {
-            if (!Arrays.equals(
+            if (!MdnsUtils.equalsDnsLabelIgnoreDnsCase(
                     this.serviceRecord.getServiceHost(), inetAddressRecord.getName())) {
                 dropAddressRecords = true;
             }
@@ -347,6 +348,21 @@ public class MdnsResponse {
     @NonNull
     public String[] getServiceName() {
         return serviceName;
+    }
+
+    /** Get the min remaining ttl time from received records */
+    public long getMinRemainingTtl(long now) {
+        long minRemainingTtl = EXPIRATION_NEVER;
+        // TODO: Check other records(A, AAAA, TXT) ttl time.
+        if (!hasServiceRecord()) {
+            return EXPIRATION_NEVER;
+        }
+        // Check ttl time.
+        long remainingTtl = serviceRecord.getRemainingTTL(now);
+        if (remainingTtl < minRemainingTtl) {
+            minRemainingTtl = remainingTtl;
+        }
+        return minRemainingTtl;
     }
 
     /**

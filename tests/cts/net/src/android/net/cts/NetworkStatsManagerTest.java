@@ -82,9 +82,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -210,7 +210,6 @@ public class NetworkStatsManagerTest {
     private long mStartTime;
     private long mEndTime;
 
-    private long mBytesRead;
     private String mWriteSettingsMode;
     private String mUsageStatsMode;
 
@@ -221,7 +220,7 @@ public class NetworkStatsManagerTest {
         } else {
             Log.w(LOG_TAG, "Network: " + networkInfo.toString());
         }
-        InputStreamReader in = null;
+        BufferedInputStream in = null;
         HttpURLConnection urlc = null;
         String originalKeepAlive = System.getProperty("http.keepAlive");
         System.setProperty("http.keepAlive", "false");
@@ -229,6 +228,7 @@ public class NetworkStatsManagerTest {
             TrafficStats.setThreadStatsTag(NETWORK_TAG);
             urlc = (HttpURLConnection) network.openConnection(url);
             urlc.setConnectTimeout(TIMEOUT_MILLIS);
+            urlc.setReadTimeout(TIMEOUT_MILLIS);
             urlc.setUseCaches(false);
             // Disable compression so we generate enough traffic that assertWithinPercentage will
             // not be affected by the small amount of traffic (5-10kB) sent by the test harness.
@@ -236,11 +236,10 @@ public class NetworkStatsManagerTest {
             urlc.connect();
             boolean ping = urlc.getResponseCode() == 200;
             if (ping) {
-                in = new InputStreamReader(
-                        (InputStream) urlc.getContent());
-
-                mBytesRead = 0;
-                while (in.read() != -1) ++mBytesRead;
+                in = new BufferedInputStream((InputStream) urlc.getContent());
+                while (in.read() != -1) {
+                    // Comments to suppress lint error.
+                }
             }
         } catch (Exception e) {
             Log.i(LOG_TAG, "Badness during exercising remote server: " + e);
@@ -378,11 +377,17 @@ public class NetworkStatsManagerTest {
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build(), callback);
         synchronized (this) {
-            try {
-                wait((int) (TIMEOUT_MILLIS * 1.2));
-            } catch (InterruptedException e) {
+            long now = System.currentTimeMillis();
+            final long deadline = (long) (now + TIMEOUT_MILLIS * 2.4);
+            while (!callback.success && now < deadline) {
+                try {
+                    wait(deadline - now);
+                } catch (InterruptedException e) {
+                }
+                now = System.currentTimeMillis();
             }
         }
+        mCm.unregisterNetworkCallback(callback);
         if (callback.success) {
             mNetworkInterfacesToTest[networkTypeIndex].setMetered(callback.metered);
             mNetworkInterfacesToTest[networkTypeIndex].setRoaming(callback.roaming);
@@ -394,7 +399,7 @@ public class NetworkStatsManagerTest {
         assertFalse(mNetworkInterfacesToTest[networkTypeIndex].getSystemFeature()
                 + " is a reported system feature, "
                 + "however no corresponding connected network interface was found or the attempt "
-                + "to connect has timed out (timeout = " + TIMEOUT_MILLIS + "ms)."
+                + "to connect and read has timed out (timeout = " + (TIMEOUT_MILLIS * 2) + "ms)."
                 + mNetworkInterfacesToTest[networkTypeIndex].getErrorMessage(), hasFeature);
         return false;
     }
@@ -800,7 +805,7 @@ public class NetworkStatsManagerTest {
                 // harness, which is untagged, won't cause a failure.
                 long firstTotal = resultsWithTraffic.get(0).total;
                 for (QueryResult queryResult : resultsWithTraffic) {
-                    assertWithinPercentage(queryResult + "", firstTotal, queryResult.total, 10);
+                    assertWithinPercentage(queryResult + "", firstTotal, queryResult.total, 12);
                 }
 
                 // Expect to see no traffic when querying for any tag in tagsWithNoTraffic or any

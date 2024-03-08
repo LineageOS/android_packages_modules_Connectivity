@@ -18,36 +18,45 @@ package com.android.cts.net;
 
 import android.platform.test.annotations.FlakyTest;
 
+import com.android.testutils.SkipPresubmit;
+import com.android.tradefed.device.DeviceNotAvailableException;
+import com.android.tradefed.invoker.TestInformation;
+import com.android.tradefed.testtype.junit4.AfterClassWithInfo;
+import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
+
+import org.junit.Test;
+
+@SkipPresubmit(reason = "Out of SLO flakiness")
 public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
     private static final String TEST_CLASS = TEST_PKG + ".ConnOnActivityStartTest";
-    @Override
-    public void setUp() throws Exception {
-        super.setUp();
-
-        uninstallPackage(TEST_APP2_PKG, false);
-        installPackage(TEST_APP2_APK);
+    @BeforeClassWithInfo
+    public static void setUpOnce(TestInformation testInfo) throws Exception {
+        uninstallPackage(testInfo, TEST_APP2_PKG, false);
+        installPackage(testInfo, TEST_APP2_APK);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-
-        uninstallPackage(TEST_APP2_PKG, true);
+    @AfterClassWithInfo
+    public static void tearDownOnce(TestInformation testInfo) throws DeviceNotAvailableException {
+        uninstallPackage(testInfo, TEST_APP2_PKG, true);
     }
 
+    @Test
     public void testStartActivity_batterySaver() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_batterySaver");
     }
 
+    @Test
     public void testStartActivity_dataSaver() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_dataSaver");
     }
 
     @FlakyTest(bugId = 231440256)
+    @Test
     public void testStartActivity_doze() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_doze");
     }
 
+    @Test
     public void testStartActivity_appStandby() throws Exception {
         runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_appStandby");
     }

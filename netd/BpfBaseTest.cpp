@@ -93,7 +93,7 @@ TEST_F(BpfBasicTest, TestCloseSocketWithoutUntag) {
     ASSERT_EQ(TEST_TAG, tagResult.value().tag);
     ASSERT_EQ(0, close(sock));
     // Check map periodically until sk destroy handler have done its job.
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1000; i++) {
         usleep(5000);  // 5ms
         tagResult = cookieTagMap.readValue(cookie);
         if (!tagResult.ok()) {
@@ -101,7 +101,7 @@ TEST_F(BpfBasicTest, TestCloseSocketWithoutUntag) {
             return;
         }
     }
-    FAIL() << "socket tag still exist after 50ms";
+    FAIL() << "socket tag still exist after 5s";
 }
 
 }

@@ -38,5 +38,5 @@ cc_test {
         "bpf_existence_test.cpp",
     ],
     compile_multilib: "first",
-    min_sdk_version: "29",  // Ensure test runs on Q and above.
+    min_sdk_version: "30",  // Ensure test runs on R and above.
 }

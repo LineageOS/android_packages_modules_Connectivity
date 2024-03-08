@@ -18,13 +18,6 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-prebuilt_etc {
-    name: "TetheringOutOfProcessFlag",
-    src: "out-of-process",
-    filename_from_src: true,
-    sub_dir: "flag",
-}
-
 // Defaults to enable/disable java targets which uses development APIs. "enabled" may have a
 // different value depending on the branch.
 java_defaults {
@@ -87,9 +80,11 @@ apex {
         first: {
             jni_libs: [
                 "libservice-connectivity",
+                "libservice-thread-jni",
                 "libandroid_net_connectivity_com_android_net_module_util_jni",
             ],
             native_shared_libs: [
+                "libcom.android.tethering.dns_helper",
                 "libcom.android.tethering.connectivity_native",
                 "libnetd_updatable",
             ],
@@ -103,6 +98,9 @@ apex {
     },
     binaries: [
         "clatd",
+        "ethtool",
+        "netbpfload",
+        "ot-daemon",
     ],
     canned_fs_config: "canned_fs_config",
     bpfs: [
@@ -117,12 +115,10 @@ apex {
     ],
     apps: [
         "ServiceConnectivityResources",
-        "HalfSheetUX",
     ],
     prebuilts: [
+        "ot-daemon.init.34rc",
         "current_sdkinfo",
-        "privapp_allowlist_com.android.tethering",
-        "TetheringOutOfProcessFlag",
     ],
     manifest: "manifest.json",
     key: "com.android.tethering.key",
@@ -214,11 +210,14 @@ bootclasspath_fragment {
         // result in a build failure due to inconsistent flags.
         package_prefixes: [
             "android.nearby.aidl",
+            "android.remoteauth.aidl",
+            "android.remoteauth",
             "android.net.apf",
             "android.net.connectivity",
             "android.net.http.apihelpers",
             "android.net.netstats.provider",
             "android.net.nsd",
+            "android.net.thread",
             "android.net.wear",
         ],
     },

@@ -26,6 +26,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_EIMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_MMS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
@@ -60,9 +61,9 @@ import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 import static android.os.Process.INVALID_UID;
 
-import static com.android.modules.utils.build.SdkLevel.isAtLeastR;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
+import static com.android.modules.utils.build.SdkLevel.isAtLeastV;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.MiscAsserts.assertEmpty;
 import static com.android.testutils.MiscAsserts.assertThrows;
@@ -369,6 +370,9 @@ public class NetworkCapabilitiesTest {
             .addCapability(NET_CAPABILITY_INTERNET)
             .addCapability(NET_CAPABILITY_EIMS)
             .addCapability(NET_CAPABILITY_NOT_METERED);
+        if (isAtLeastV()) {
+            netCap.addCapability(NET_CAPABILITY_LOCAL_NETWORK);
+        }
         if (isAtLeastS()) {
             final ArraySet<Integer> allowedUids = new ArraySet<>();
             allowedUids.add(4);
@@ -377,10 +381,9 @@ public class NetworkCapabilitiesTest {
             netCap.setSubscriptionIds(Set.of(TEST_SUBID1, TEST_SUBID2));
             netCap.setUids(uids);
         }
-        if (isAtLeastR()) {
-            netCap.setOwnerUid(123);
-            netCap.setAdministratorUids(new int[] {5, 11});
-        }
+
+        netCap.setOwnerUid(123);
+        netCap.setAdministratorUids(new int[] {5, 11});
         assertParcelingIsLossless(netCap);
         netCap.setSSID(TEST_SSID);
         testParcelSane(netCap);
@@ -392,10 +395,8 @@ public class NetworkCapabilitiesTest {
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .addCapability(NET_CAPABILITY_EIMS)
                 .addCapability(NET_CAPABILITY_NOT_METERED);
-        if (isAtLeastR()) {
-            netCap.setRequestorPackageName("com.android.test");
-            netCap.setRequestorUid(9304);
-        }
+        netCap.setRequestorPackageName("com.android.test");
+        netCap.setRequestorUid(9304);
         assertParcelingIsLossless(netCap);
         netCap.setSSID(TEST_SSID);
         testParcelSane(netCap);
@@ -815,16 +816,12 @@ public class NetworkCapabilitiesTest {
             assertTrue(nc2.hasForbiddenCapability(NET_CAPABILITY_NOT_ROAMING));
         }
 
-        if (isAtLeastR()) {
-            assertTrue(TEST_SSID.equals(nc2.getSsid()));
-        }
-
+        assertTrue(TEST_SSID.equals(nc2.getSsid()));
         nc1.setSSID(DIFFERENT_TEST_SSID);
         nc2.set(nc1);
         assertEquals(nc1, nc2);
-        if (isAtLeastR()) {
-            assertTrue(DIFFERENT_TEST_SSID.equals(nc2.getSsid()));
-        }
+        assertTrue(DIFFERENT_TEST_SSID.equals(nc2.getSsid()));
+
         if (isAtLeastS()) {
             nc1.setUids(uidRanges(10, 13));
         } else {

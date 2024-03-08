@@ -16,15 +16,18 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.server.connectivity.mdns.MdnsRecordRepository.IPV4_ADDR;
-import static com.android.server.connectivity.mdns.MdnsRecordRepository.IPV6_ADDR;
+import static com.android.server.connectivity.mdns.MdnsConstants.IPV4_SOCKET_ADDR;
+import static com.android.server.connectivity.mdns.MdnsConstants.IPV6_SOCKET_ADDR;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
+
+import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -33,10 +36,10 @@ import java.net.InetSocketAddress;
  * A class used to send several packets at given time intervals.
  * @param <T> The type of the request providing packet repeating parameters.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
-    private static final boolean DBG = MdnsAdvertiser.DBG;
     private static final InetSocketAddress[] ALL_ADDRS = new InetSocketAddress[] {
-            IPV4_ADDR, IPV6_ADDR
+            IPV4_SOCKET_ADDR, IPV6_SOCKET_ADDR
     };
 
     @NonNull
@@ -45,6 +48,9 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
     protected final Handler mHandler;
     @Nullable
     private final PacketRepeaterCallback<T> mCb;
+    @NonNull
+    private final SharedLog mSharedLog;
+    private final boolean mEnableDebugLog;
 
     /**
      * Status callback from {@link MdnsPacketRepeater}.
@@ -56,7 +62,7 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         /**
          * Called when a packet was sent.
          */
-        default void onSent(int index, @NonNull T info) {}
+        default void onSent(int index, @NonNull T info, int sentPacketCount) {}
 
         /**
          * Called when the {@link MdnsPacketRepeater} is done sending packets.
@@ -87,12 +93,6 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         int getNumSends();
     }
 
-    /**
-     * Get the logging tag to use.
-     */
-    @NonNull
-    protected abstract String getTag();
-
     private final class ProbeHandler extends Handler {
         ProbeHandler(@NonNull Looper looper) {
             super(looper);
@@ -111,17 +111,18 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
             }
 
             final MdnsPacket packet = request.getPacket(index);
-            if (DBG) {
-                Log.v(getTag(), "Sending packets for iteration " + index + " out of "
+            if (mEnableDebugLog) {
+                mSharedLog.v("Sending packets for iteration " + index + " out of "
                         + request.getNumSends() + " for ID " + msg.what);
             }
             // Send to both v4 and v6 addresses; the reply sender will take care of ignoring the
             // send when the socket has not joined the relevant group.
+            int sentPacketCount = 0;
             for (InetSocketAddress destination : ALL_ADDRS) {
                 try {
-                    mReplySender.sendNow(packet, destination);
+                    sentPacketCount += mReplySender.sendNow(packet, destination);
                 } catch (IOException e) {
-                    Log.e(getTag(), "Error sending packet to " + destination, e);
+                    mSharedLog.e("Error sending packet to " + destination, e);
                 }
             }
 
@@ -133,26 +134,29 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
                 // likely not to be available since the device is in deep sleep anyway.
                 final long delay = request.getDelayMs(nextIndex);
                 sendMessageDelayed(obtainMessage(msg.what, nextIndex, 0, request), delay);
-                if (DBG) Log.v(getTag(), "Scheduled next packet in " + delay + "ms");
+                if (mEnableDebugLog) mSharedLog.v("Scheduled next packet in " + delay + "ms");
             }
 
             // Call onSent after scheduling the next run, to allow the callback to cancel it
             if (mCb != null) {
-                mCb.onSent(index, request);
+                mCb.onSent(index, request, sentPacketCount);
             }
         }
     }
 
     protected MdnsPacketRepeater(@NonNull Looper looper, @NonNull MdnsReplySender replySender,
-            @Nullable PacketRepeaterCallback<T> cb) {
+            @Nullable PacketRepeaterCallback<T> cb, @NonNull SharedLog sharedLog,
+            boolean enableDebugLog) {
         mHandler = new ProbeHandler(looper);
         mReplySender = replySender;
         mCb = cb;
+        mSharedLog = sharedLog;
+        mEnableDebugLog = enableDebugLog;
     }
 
     protected void startSending(int id, @NonNull T request, long initialDelayMs) {
-        if (DBG) {
-            Log.v(getTag(), "Starting send with id " + id + ", request "
+        if (mEnableDebugLog) {
+            mSharedLog.v("Starting send with id " + id + ", request "
                     + request.getClass().getSimpleName() + ", delay " + initialDelayMs);
         }
         mHandler.sendMessageDelayed(mHandler.obtainMessage(id, 0, 0, request), initialDelayMs);
@@ -170,8 +174,8 @@ public abstract class MdnsPacketRepeater<T extends MdnsPacketRepeater.Request> {
         // all in the handler queue; unless this method is called from a message, but the current
         // message cannot be cancelled.
         if (mHandler.hasMessages(id)) {
-            if (DBG) {
-                Log.v(getTag(), "Stopping send on id " + id);
+            if (mEnableDebugLog) {
+                mSharedLog.v("Stopping send on id " + id);
             }
             mHandler.removeMessages(id);
             return true;

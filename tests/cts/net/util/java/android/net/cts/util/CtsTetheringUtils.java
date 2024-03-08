@@ -393,21 +393,28 @@ public final class CtsTetheringUtils {
         }
 
         public void assumeTetheringSupported() {
+            assumeTrue(isTetheringSupported());
+        }
+
+        private boolean isTetheringSupported() {
             final ArrayTrackRecord<CallbackValue>.ReadHead history =
                     mHistory.newReadHead();
-            assertNotNull("No onSupported callback", history.poll(TIMEOUT_MS, (cv) -> {
-                if (cv.callbackType != CallbackType.ON_SUPPORTED) return false;
+            final CallbackValue result = history.poll(TIMEOUT_MS, (cv) -> {
+                return cv.callbackType == CallbackType.ON_SUPPORTED;
+            });
 
-                assumeTrue(cv.callbackParam2 == 1 /* supported */);
-                return true;
-            }));
+            assertNotNull("No onSupported callback", result);
+            return result.callbackParam2 == 1 /* supported */;
         }
 
         public void assumeWifiTetheringSupported(final Context ctx) throws Exception {
-            assumeTetheringSupported();
+            assumeTrue(isWifiTetheringSupported(ctx));
+        }
 
-            assumeTrue(!getTetheringInterfaceRegexps().getTetherableWifiRegexs().isEmpty());
-            assumeTrue(isPortableHotspotSupported(ctx));
+        public boolean isWifiTetheringSupported(final Context ctx) throws Exception {
+            return isTetheringSupported()
+                    && !getTetheringInterfaceRegexps().getTetherableWifiRegexs().isEmpty()
+                    && isPortableHotspotSupported(ctx);
         }
 
         public TetheringInterfaceRegexps getTetheringInterfaceRegexps() {

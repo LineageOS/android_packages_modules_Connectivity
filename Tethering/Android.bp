@@ -82,7 +82,10 @@ java_defaults {
         "framework-tethering.impl",
     ],
     manifest: "AndroidManifestBase.xml",
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 // build tethering static library, used to compile both variants of the tethering.
@@ -96,6 +99,7 @@ android_library {
     ],
     static_libs: [
         "NetworkStackApiCurrentShims",
+        "net-utils-device-common-struct",
     ],
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
@@ -110,6 +114,7 @@ android_library {
     ],
     static_libs: [
         "NetworkStackApiStableShims",
+        "net-utils-device-common-struct",
     ],
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
@@ -196,11 +201,7 @@ android_app {
     certificate: "networkstack",
     manifest: "AndroidManifest.xml",
     use_embedded_native_libs: true,
-    // The network stack *must* be included to ensure security of the device
-    required: [
-        "NetworkStack",
-        "privapp_allowlist_com.android.tethering",
-    ],
+    privapp_allowlist: ":privapp_allowlist_com.android.tethering",
     apex_available: ["com.android.tethering"],
     lint: { strict_updatability_linting: true },
 }
@@ -216,13 +217,12 @@ android_app {
     certificate: "networkstack",
     manifest: "AndroidManifest.xml",
     use_embedded_native_libs: true,
-    // The network stack *must* be included to ensure security of the device
-    required: [
-        "NetworkStackNext",
-        "privapp_allowlist_com.android.tethering",
-    ],
+    privapp_allowlist: ":privapp_allowlist_com.android.tethering",
     apex_available: ["com.android.tethering"],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+        error_checks: ["NewApi"],
+    },
 }
 
 sdk {
@@ -233,6 +233,7 @@ sdk {
         "com.android.tethering",
     ],
     native_shared_libs: [
+        "libcom.android.tethering.dns_helper",
         "libnetd_updatable",
     ],
 }

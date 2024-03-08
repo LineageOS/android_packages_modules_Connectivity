@@ -313,8 +313,7 @@ public class ClatCoordinatorTest {
          * Stop clatd.
          */
         @Override
-        public void stopClatd(@NonNull String iface, @NonNull String pfx96, @NonNull String v4,
-                @NonNull String v6, int pid) throws IOException {
+        public void stopClatd(int pid) throws IOException {
             if (pid == -1) {
                 fail("unsupported arg: " + pid);
             }
@@ -479,8 +478,7 @@ public class ClatCoordinatorTest {
                 eq((short) PRIO_CLAT), eq((short) ETH_P_IP));
         inOrder.verify(mEgressMap).deleteEntry(eq(EGRESS_KEY));
         inOrder.verify(mIngressMap).deleteEntry(eq(INGRESS_KEY));
-        inOrder.verify(mDeps).stopClatd(eq(BASE_IFACE), eq(NAT64_PREFIX_STRING),
-                eq(XLAT_LOCAL_IPV4ADDR_STRING), eq(XLAT_LOCAL_IPV6ADDR_STRING), eq(CLATD_PID));
+        inOrder.verify(mDeps).stopClatd(eq(CLATD_PID));
         inOrder.verify(mCookieTagMap).deleteEntry(eq(COOKIE_TAG_KEY));
         assertNull(coordinator.getClatdTrackerForTesting());
         inOrder.verifyNoMoreInteractions();
@@ -510,10 +508,10 @@ public class ClatCoordinatorTest {
         // Expected mtu is that the detected mtu minus MTU_DELTA(28).
         assertEquals(1372, ClatCoordinator.adjustMtu(1400));
         assertEquals(1472, ClatCoordinator.adjustMtu(ETHER_MTU));
-        assertEquals(65508, ClatCoordinator.adjustMtu(CLAT_MAX_MTU));
+        assertEquals(1500, ClatCoordinator.adjustMtu(CLAT_MAX_MTU));
 
-        // Expected mtu is that CLAT_MAX_MTU(65536) minus MTU_DELTA(28).
-        assertEquals(65508, ClatCoordinator.adjustMtu(CLAT_MAX_MTU + 1 /* over maximum mtu */));
+        // Expected mtu is that CLAT_MAX_MTU(1528) minus MTU_DELTA(28).
+        assertEquals(1500, ClatCoordinator.adjustMtu(CLAT_MAX_MTU + 1 /* over maximum mtu */));
     }
 
     private void verifyDump(final ClatCoordinator coordinator, boolean clatStarted) {

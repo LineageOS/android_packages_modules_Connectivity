@@ -80,19 +80,19 @@ class BpfNetworkStatsHelperTest : public testing::Test {
     void SetUp() {
         ASSERT_EQ(0, setrlimitForTest());
 
-        mFakeCookieTagMap = BpfMap<uint64_t, UidTagValue>(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeCookieTagMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_TRUE(mFakeCookieTagMap.isValid());
 
-        mFakeAppUidStatsMap = BpfMap<uint32_t, StatsValue>(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeAppUidStatsMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_TRUE(mFakeAppUidStatsMap.isValid());
 
-        mFakeStatsMap = BpfMap<StatsKey, StatsValue>(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeStatsMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_TRUE(mFakeStatsMap.isValid());
 
-        mFakeIfaceIndexNameMap = BpfMap<uint32_t, IfaceValue>(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeIfaceIndexNameMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_TRUE(mFakeIfaceIndexNameMap.isValid());
 
-        mFakeIfaceStatsMap = BpfMap<uint32_t, StatsValue>(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE, 0);
+        mFakeIfaceStatsMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
         ASSERT_TRUE(mFakeIfaceStatsMap.isValid());
     }
 
@@ -116,7 +116,7 @@ class BpfNetworkStatsHelperTest : public testing::Test {
         EXPECT_RESULT_OK(mFakeIfaceIndexNameMap.writeValue(ifaceIndex, iface, BPF_ANY));
     }
 
-    void expectStatsEqual(const StatsValue& target, const Stats& result) {
+    void expectStatsEqual(const StatsValue& target, const StatsValue& result) {
         EXPECT_EQ(target.rxPackets, result.rxPackets);
         EXPECT_EQ(target.rxBytes, result.rxBytes);
         EXPECT_EQ(target.txPackets, result.txPackets);
@@ -194,7 +194,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestUidStatsNoTraffic) {
             .txPackets = 0,
             .txBytes = 0,
     };
-    Stats result1 = {};
+    StatsValue result1 = {};
     ASSERT_EQ(0, bpfGetUidStatsInternal(TEST_UID1, &result1, mFakeAppUidStatsMap));
     expectStatsEqual(value1, result1);
 }
@@ -217,11 +217,11 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetUidStatsTotal) {
     };
     ASSERT_RESULT_OK(mFakeAppUidStatsMap.writeValue(TEST_UID1, value1, BPF_ANY));
     ASSERT_RESULT_OK(mFakeAppUidStatsMap.writeValue(TEST_UID2, value2, BPF_ANY));
-    Stats result1 = {};
+    StatsValue result1 = {};
     ASSERT_EQ(0, bpfGetUidStatsInternal(TEST_UID1, &result1, mFakeAppUidStatsMap));
     expectStatsEqual(value1, result1);
 
-    Stats result2 = {};
+    StatsValue result2 = {};
     ASSERT_EQ(0, bpfGetUidStatsInternal(TEST_UID2, &result2, mFakeAppUidStatsMap));
     expectStatsEqual(value2, result2);
     std::vector<stats_line> lines;
@@ -255,15 +255,15 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetIfaceStatsInternal) {
     ifaceStatsKey = IFACE_INDEX3;
     EXPECT_RESULT_OK(mFakeIfaceStatsMap.writeValue(ifaceStatsKey, value1, BPF_ANY));
 
-    Stats result1 = {};
+    StatsValue result1 = {};
     ASSERT_EQ(0, bpfGetIfaceStatsInternal(IFACE_NAME1, &result1, mFakeIfaceStatsMap,
                                           mFakeIfaceIndexNameMap));
     expectStatsEqual(value1, result1);
-    Stats result2 = {};
+    StatsValue result2 = {};
     ASSERT_EQ(0, bpfGetIfaceStatsInternal(IFACE_NAME2, &result2, mFakeIfaceStatsMap,
                                           mFakeIfaceIndexNameMap));
     expectStatsEqual(value2, result2);
-    Stats totalResult = {};
+    StatsValue totalResult = {};
     ASSERT_EQ(0, bpfGetIfaceStatsInternal(NULL, &totalResult, mFakeIfaceStatsMap,
                                           mFakeIfaceIndexNameMap));
     StatsValue totalValue = {
@@ -273,6 +273,20 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetIfaceStatsInternal) {
             .txBytes = TEST_BYTES1 * 2 + TEST_BYTES0,
     };
     expectStatsEqual(totalValue, totalResult);
+}
+
+TEST_F(BpfNetworkStatsHelperTest, TestGetIfIndexStatsInternal) {
+    StatsValue value = {
+          .rxPackets = TEST_PACKET0,
+          .rxBytes = TEST_BYTES0,
+          .txPackets = TEST_PACKET1,
+          .txBytes = TEST_BYTES1,
+    };
+    EXPECT_RESULT_OK(mFakeIfaceStatsMap.writeValue(IFACE_INDEX1, value, BPF_ANY));
+
+    StatsValue result = {};
+    ASSERT_EQ(0, bpfGetIfIndexStatsInternal(IFACE_INDEX1, &result, mFakeIfaceStatsMap));
+    expectStatsEqual(value, result);
 }
 
 TEST_F(BpfNetworkStatsHelperTest, TestGetStatsDetail) {

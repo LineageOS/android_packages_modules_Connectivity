@@ -18,13 +18,18 @@ package com.android.server.connectivity;
 
 import static android.system.OsConstants.*;
 
+import static com.android.net.module.util.NetworkStackConstants.DNS_OVER_TLS_PORT;
+import static com.android.net.module.util.NetworkStackConstants.ETHER_MTU;
 import static com.android.net.module.util.NetworkStackConstants.ICMP_HEADER_LEN;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_LEN;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_HEADER_LEN;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_MIN_MTU;
+import static com.android.net.module.util.NetworkStackConstants.IPV6_MTU;
+import static com.android.net.module.util.NetworkStackConstants.IP_MTU;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.TargetApi;
 import android.net.InetAddresses;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -33,6 +38,7 @@ import android.net.RouteInfo;
 import android.net.TrafficStats;
 import android.net.shared.PrivateDnsConfig;
 import android.net.util.NetworkConstants;
+import android.os.Build;
 import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -211,13 +217,10 @@ public class NetworkDiagnostics {
             mLinkProperties.addDnsServer(TEST_DNS6);
         }
 
-        final int mtu = mLinkProperties.getMtu();
         for (RouteInfo route : mLinkProperties.getRoutes()) {
             if (route.getType() == RouteInfo.RTN_UNICAST && route.hasGateway()) {
-                InetAddress gateway = route.getGateway();
-                // Use mtu in the route if exists. Otherwise, use the one in the link property.
-                final int routeMtu = route.getMtu();
-                prepareIcmpMeasurements(gateway, (routeMtu > 0) ? routeMtu : mtu);
+                final InetAddress gateway = route.getGateway();
+                prepareIcmpMeasurements(gateway);
                 if (route.isIPv6Default()) {
                     prepareExplicitSourceIcmpMeasurements(gateway);
                 }
@@ -225,7 +228,7 @@ public class NetworkDiagnostics {
         }
 
         for (InetAddress nameserver : mLinkProperties.getDnsServers()) {
-            prepareIcmpMeasurements(nameserver, mtu);
+            prepareIcmpMeasurements(nameserver);
             prepareDnsMeasurement(nameserver);
 
             // Unlike the DnsResolver which doesn't do certificate validation in opportunistic mode,
@@ -282,24 +285,29 @@ public class NetworkDiagnostics {
             // calculation.
             if (addr instanceof Inet6Address) {
                 return IPV6_HEADER_LEN + ICMP_HEADER_LEN;
+            } else {
+                return IPV4_HEADER_MIN_LEN + ICMP_HEADER_LEN;
             }
         } catch (UnknownHostException e) {
-            Log.e(TAG, "Create InetAddress fail(" + target + "): " + e);
+            throw new AssertionError("Create InetAddress fail(" + target + ")", e);
         }
-
-        return IPV4_HEADER_MIN_LEN + ICMP_HEADER_LEN;
     }
 
-    private void prepareIcmpMeasurements(@NonNull InetAddress target, int targetNetworkMtu) {
+    private void prepareIcmpMeasurements(@NonNull InetAddress target) {
+        int mtu = getMtuForTarget(target);
+        // If getMtuForTarget fails, it doesn't matter what mtu is used because connect can't
+        // succeed anyway
+        if (mtu <= 0) mtu = mLinkProperties.getMtu();
+        if (mtu <= 0) mtu = ETHER_MTU;
         // Test with different size payload ICMP.
         // 1. Test with 0 payload.
         addPayloadIcmpMeasurement(target, 0);
         final int header = getHeaderLen(target);
         // 2. Test with full size MTU.
-        addPayloadIcmpMeasurement(target, targetNetworkMtu - header);
+        addPayloadIcmpMeasurement(target, mtu - header);
         // 3. If v6, make another measurement with the full v6 min MTU, unless that's what
         //    was done above.
-        if ((target instanceof Inet6Address) && (targetNetworkMtu != IPV6_MIN_MTU)) {
+        if ((target instanceof Inet6Address) && (mtu != IPV6_MIN_MTU)) {
             addPayloadIcmpMeasurement(target, IPV6_MIN_MTU - header);
         }
     }
@@ -315,6 +323,38 @@ public class NetworkDiagnostics {
             final Measurement measurement = new Measurement();
             measurement.thread = new Thread(new IcmpCheck(target, payloadLen, measurement));
             mIcmpChecks.put(lenTarget, measurement);
+        }
+    }
+
+    /**
+     * Open a socket to the target address and return the mtu from that socket
+     *
+     * If the MTU can't be obtained for some reason (e.g. the target is unreachable) this will
+     * return -1.
+     *
+     * @param target the destination address
+     * @return the mtu to that destination, or -1
+     */
+    // getsockoptInt is S+, but this service code and only installs on S, so it's safe to ignore
+    // the lint warnings by using @TargetApi.
+    @TargetApi(Build.VERSION_CODES.S)
+    private int getMtuForTarget(InetAddress target) {
+        final int family = target instanceof Inet4Address ? AF_INET : AF_INET6;
+        FileDescriptor socket = null;
+        try {
+            socket = Os.socket(family, SOCK_DGRAM, 0);
+            mNetwork.bindSocket(socket);
+            Os.connect(socket, target, 0);
+            if (family == AF_INET) {
+                return Os.getsockoptInt(socket, IPPROTO_IP, IP_MTU);
+            } else {
+                return Os.getsockoptInt(socket, IPPROTO_IPV6, IPV6_MTU);
+            }
+        } catch (ErrnoException | IOException e) {
+            Log.e(TAG, "Can't get MTU for destination " + target, e);
+            return -1;
+        } finally {
+            IoUtils.closeQuietly(socket);
         }
     }
 
@@ -730,7 +770,6 @@ public class NetworkDiagnostics {
     private class DnsTlsCheck extends DnsUdpCheck {
         private static final int TCP_CONNECT_TIMEOUT_MS = 2500;
         private static final int TCP_TIMEOUT_MS = 2000;
-        private static final int DNS_TLS_PORT = 853;
         private static final int DNS_HEADER_SIZE = 12;
 
         private final String mHostname;
@@ -769,7 +808,8 @@ public class NetworkDiagnostics {
             final byte[] dnsPacket = getDnsQueryPacket(sixRandomDigits);
 
             mMeasurement.startTime = now();
-            sslSocket.connect(new InetSocketAddress(mTarget, DNS_TLS_PORT), TCP_CONNECT_TIMEOUT_MS);
+            sslSocket.connect(new InetSocketAddress(mTarget, DNS_OVER_TLS_PORT),
+                    TCP_CONNECT_TIMEOUT_MS);
 
             // Synchronous call waiting for the TLS handshake complete.
             sslSocket.startHandshake();

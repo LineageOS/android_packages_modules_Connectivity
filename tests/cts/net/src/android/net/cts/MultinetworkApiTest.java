@@ -18,20 +18,17 @@ package android.net.cts;
 
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 
-import android.content.Context;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkUtils;
 import android.net.cts.util.CtsNetUtils;
 import android.platform.test.annotations.AppModeFull;
-import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.test.AndroidTestCase;
-
-import java.util.ArrayList;
 
 public class MultinetworkApiTest extends AndroidTestCase {
 
@@ -75,26 +72,8 @@ public class MultinetworkApiTest extends AndroidTestCase {
         super.tearDown();
     }
 
-    private Network[] getTestableNetworks() {
-        final ArrayList<Network> testableNetworks = new ArrayList<Network>();
-        for (Network network : mCM.getAllNetworks()) {
-            final NetworkCapabilities nc = mCM.getNetworkCapabilities(network);
-            if (nc != null
-                    && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
-                    && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                testableNetworks.add(network);
-            }
-        }
-
-        assertTrue(
-                "This test requires that at least one network be connected. " +
-                "Please ensure that the device is connected to a network.",
-                testableNetworks.size() >= 1);
-        return testableNetworks.toArray(new Network[0]);
-    }
-
     public void testGetaddrinfo() throws ErrnoException {
-        for (Network network : getTestableNetworks()) {
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
             int errno = runGetaddrinfoCheck(network.getNetworkHandle());
             if (errno != 0) {
                 throw new ErrnoException(
@@ -109,7 +88,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
         assertNull(mCM.getProcessDefaultNetwork());
         assertEquals(0, NetworkUtils.getBoundNetworkForProcess());
 
-        for (Network network : getTestableNetworks()) {
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
             mCM.setProcessDefaultNetwork(null);
             assertNull(mCM.getProcessDefaultNetwork());
 
@@ -128,7 +107,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
             mCM.setProcessDefaultNetwork(null);
         }
 
-        for (Network network : getTestableNetworks()) {
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
             NetworkUtils.bindProcessToNetwork(0);
             assertNull(mCM.getBoundNetworkForProcess());
 
@@ -148,7 +127,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
 
     @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
     public void testSetsocknetwork() throws ErrnoException {
-        for (Network network : getTestableNetworks()) {
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
             int errno = runSetsocknetwork(network.getNetworkHandle());
             if (errno != 0) {
                 throw new ErrnoException(
@@ -158,7 +137,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
     }
 
     public void testNativeDatagramTransmission() throws ErrnoException {
-        for (Network network : getTestableNetworks()) {
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
             int errno = runDatagramCheck(network.getNetworkHandle());
             if (errno != 0) {
                 throw new ErrnoException(
@@ -181,7 +160,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
 
     public void testNetworkHandle() {
         // Test Network -> NetworkHandle -> Network results in the same Network.
-        for (Network network : getTestableNetworks()) {
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
             long networkHandle = network.getNetworkHandle();
             Network newNetwork = Network.fromNetworkHandle(networkHandle);
             assertEquals(newNetwork, network);
@@ -203,7 +182,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
     }
 
     public void testResNApi() throws Exception {
-        final Network[] testNetworks = getTestableNetworks();
+        final Network[] testNetworks = mCtsNetUtils.getTestableNetworks();
 
         for (Network network : testNetworks) {
             // Throws AssertionError directly in jni function if test fail.
@@ -229,7 +208,7 @@ public class MultinetworkApiTest extends AndroidTestCase {
         // b/144521720
         try {
             mCtsNetUtils.setPrivateDnsStrictMode(GOOGLE_PRIVATE_DNS_SERVER);
-            for (Network network : getTestableNetworks()) {
+            for (Network network : mCtsNetUtils.getTestableNetworks()) {
               // Wait for private DNS setting to propagate.
               mCtsNetUtils.awaitPrivateDnsSetting("NxDomain test wait private DNS setting timeout",
                         network, GOOGLE_PRIVATE_DNS_SERVER, true);

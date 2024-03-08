@@ -426,4 +426,16 @@ public class NetworkUtils {
         return routedIPCount;
     }
 
+    /**
+     * Sets a socket option with byte array
+     *
+     * @param fd The socket file descriptor
+     * @param level The level at which the option is defined
+     * @param option The socket option for which the value is to be set
+     * @param value The option value to be set in byte array
+     * @throws ErrnoException if setsockopt fails
+     */
+    public static native void setsockoptBytes(FileDescriptor fd, int level, int option,
+            byte[] value) throws ErrnoException;
+
 }

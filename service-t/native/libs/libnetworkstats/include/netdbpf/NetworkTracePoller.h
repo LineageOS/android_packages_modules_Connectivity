@@ -53,8 +53,18 @@ class NetworkTracePoller {
   bool ConsumeAll() EXCLUDES(mMutex);
 
  private:
-  void SchedulePolling() REQUIRES(mMutex);
+  // Poll the ring buffer for new data and schedule another run of ourselves
+  // after poll_ms (essentially polling periodically until stopped). This takes
+  // in the runner and poll duration to prevent a hard requirement on the lock
+  // and thus a deadlock while resetting the TaskRunner. The runner pointer is
+  // always valid within tasks run by that runner.
+  void PollAndSchedule(perfetto::base::TaskRunner* runner, uint32_t poll_ms);
   bool ConsumeAllLocked() REQUIRES(mMutex);
+
+  // Record sparse iface stats via atrace. This queries the per-iface stats maps
+  // for any iface present in the vector of packets. This is inexact, but should
+  // have sufficient coverage given these are cumulative counters.
+  void TraceIfaces(const std::vector<PacketTrace>& packets) REQUIRES(mMutex);
 
   std::mutex mMutex;
 

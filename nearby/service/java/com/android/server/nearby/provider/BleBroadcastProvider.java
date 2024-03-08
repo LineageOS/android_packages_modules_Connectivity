@@ -29,7 +29,6 @@ import android.bluetooth.le.AdvertisingSetParameters;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.nearby.BroadcastCallback;
 import android.nearby.BroadcastRequest;
-import android.os.ParcelUuid;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -79,14 +78,14 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                 advertiseStarted = true;
                 AdvertiseData advertiseData =
                         new AdvertiseData.Builder()
-                                .addServiceData(new ParcelUuid(PRESENCE_UUID),
-                                        advertisementPackets).build();
+                                .addServiceData(PRESENCE_UUID, advertisementPackets).build();
                 try {
                     mBroadcastListener = listener;
                     switch (version) {
                         case BroadcastRequest.PRESENCE_VERSION_V0:
                             bluetoothLeAdvertiser.startAdvertising(getAdvertiseSettings(),
                                     advertiseData, this);
+                            Log.v(TAG, "Start to broadcast V0 advertisement.");
                             break;
                         case BroadcastRequest.PRESENCE_VERSION_V1:
                             if (adapter.isLeExtendedAdvertisingSupported()) {
@@ -94,6 +93,7 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                                         getAdvertisingSetParameters(),
                                         advertiseData,
                                         null, null, null, mAdvertisingSetCallback);
+                                Log.v(TAG, "Start to broadcast V1 advertisement.");
                             } else {
                                 Log.w(TAG, "Failed to start advertising set because the chipset"
                                         + " does not supports LE Extended Advertising feature.");
@@ -105,7 +105,8 @@ public class BleBroadcastProvider extends AdvertiseCallback {
                                     + " is wrong.");
                             advertiseStarted = false;
                     }
-                } catch (NullPointerException | IllegalStateException | SecurityException e) {
+                } catch (NullPointerException | IllegalStateException | SecurityException
+                    | IllegalArgumentException e) {
                     Log.w(TAG, "Failed to start advertising.", e);
                     advertiseStarted = false;
                 }

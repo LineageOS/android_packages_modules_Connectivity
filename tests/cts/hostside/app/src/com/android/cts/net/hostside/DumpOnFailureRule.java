@@ -64,7 +64,8 @@ public class DumpOnFailureRule extends OnFailureRule {
                     "dumpsys usagestats appstandby",
                     "dumpsys connectivity trafficcontroller",
                     "dumpsys netd trafficcontroller",
-                    "dumpsys platform_compat"
+                    "dumpsys platform_compat", // TODO (b/279829773): Remove this dump
+                    "dumpsys jobscheduler " + TEST_APP2_PKG, // TODO (b/288220398): Remove this dump
             }) {
                 dumpCommandOutput(out, cmd);
             }

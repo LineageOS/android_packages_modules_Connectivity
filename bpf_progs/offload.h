@@ -135,10 +135,10 @@ STRUCT_SIZE(TetherDownstream64Value, 4 + 14 + 2 + 4 + 4 + 2 + 2 + 8);  // 40
 typedef struct {
     uint32_t iif;              // The input interface index
     uint8_t dstMac[ETH_ALEN];  // destination ethernet mac address (zeroed iff rawip ingress)
-    uint8_t zero[2];           // zero pad for 8 byte alignment
-                               // TODO: extend this to include src ip /64 subnet
+    uint8_t zero[6];           // zero pad for 8 byte alignment
+    uint64_t src64;            // Top 64-bits of the src ip
 } TetherUpstream6Key;
-STRUCT_SIZE(TetherUpstream6Key, 12);
+STRUCT_SIZE(TetherUpstream6Key, 4 + 6 + 6 + 8);  // 24
 
 typedef struct {
     uint32_t iif;              // The input interface index

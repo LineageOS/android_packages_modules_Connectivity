@@ -55,6 +55,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.intThat;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
@@ -99,6 +100,7 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -126,12 +128,14 @@ public class PermissionMonitorTest {
     private static final int MOCK_APPID1 = 10001;
     private static final int MOCK_APPID2 = 10086;
     private static final int MOCK_APPID3 = 10110;
+    private static final int MOCK_APPID4 = 10111;
     private static final int SYSTEM_APPID1 = 1100;
     private static final int SYSTEM_APPID2 = 1108;
     private static final int VPN_APPID = 10002;
     private static final int MOCK_UID11 = MOCK_USER1.getUid(MOCK_APPID1);
     private static final int MOCK_UID12 = MOCK_USER1.getUid(MOCK_APPID2);
     private static final int MOCK_UID13 = MOCK_USER1.getUid(MOCK_APPID3);
+    private static final int MOCK_UID14 = MOCK_USER1.getUid(MOCK_APPID4);
     private static final int SYSTEM_APP_UID11 = MOCK_USER1.getUid(SYSTEM_APPID1);
     private static final int VPN_UID = MOCK_USER1.getUid(VPN_APPID);
     private static final int MOCK_UID21 = MOCK_USER2.getUid(MOCK_APPID1);
@@ -209,6 +213,14 @@ public class PermissionMonitorTest {
 
         doReturn(List.of()).when(mPackageManager).getInstalledPackagesAsUser(anyInt(), anyInt());
         onUserAdded(MOCK_USER1);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            mHandlerThread.join();
+        }
     }
 
     private boolean hasRestrictedNetworkPermission(String partition, int targetSdkVersion,
@@ -962,6 +974,66 @@ public class PermissionMonitorTest {
         mPermissionMonitor.updateVpnLockdownUidRanges(false /* add */, lockdownRange);
         verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(false) /* add */);
         verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID11, false /* add */);
+    }
+
+    @Test
+    public void testLockdownUidFilteringWithLockdownEnableDisableWithMultiAddAndOverlap() {
+        doReturn(List.of(buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+                        CONNECTIVITY_USE_RESTRICTED_NETWORKS),
+                buildPackageInfo(MOCK_PACKAGE1, MOCK_UID13),
+                buildPackageInfo(MOCK_PACKAGE2, MOCK_UID14),
+                buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID)))
+                .when(mPackageManager).getInstalledPackagesAsUser(eq(GET_PERMISSIONS), anyInt());
+        startMonitoring();
+        // MOCK_UID13 is subject to the VPN.
+        final UidRange range1 = new UidRange(MOCK_UID13, MOCK_UID13);
+        final UidRange[] lockdownRange1 = {range1};
+
+        // Add Lockdown uid range at 1st time, expect a rule to be set up
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange1);
+        verify(mBpfNetMaps).updateUidLockdownRule(anyInt(), eq(true) /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID13, true /* add */);
+
+        reset(mBpfNetMaps);
+
+        // MOCK_UID13 and MOCK_UID14 are sequential and subject to the VPN in a separate range.
+        final UidRange range2 = new UidRange(MOCK_UID13, MOCK_UID14);
+        final UidRange[] lockdownRange2 = {range2};
+
+        // Add overlapping multiple-UID range. Rule may be set again, which is functionally
+        // a no-op, so it is fine.
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange2);
+        verify(mBpfNetMaps, atLeast(1)).updateUidLockdownRule(anyInt(), eq(true) /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID14, true /* add */);
+
+        reset(mBpfNetMaps);
+
+        // Remove the multiple-UID range. UID from first rule should not be removed.
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, lockdownRange2);
+        verify(mBpfNetMaps, times(1)).updateUidLockdownRule(anyInt(), eq(false) /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID14, false /* add */);
+
+        reset(mBpfNetMaps);
+
+        // Add the multiple-UID range back again to be able to test removing the first range, too.
+        mPermissionMonitor.updateVpnLockdownUidRanges(true /* add */, lockdownRange2);
+        verify(mBpfNetMaps, atLeast(1)).updateUidLockdownRule(anyInt(), eq(true) /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID14, true /* add */);
+
+        reset(mBpfNetMaps);
+
+        // Remove the single-UID range. The rule for MOCK_UID11 should not change because it is
+        // still covered by the second, multiple-UID range rule.
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, lockdownRange1);
+        verify(mBpfNetMaps, never()).updateUidLockdownRule(anyInt(),  anyBoolean());
+
+        reset(mBpfNetMaps);
+
+        // Remove the multiple-UID range. Expect both UID rules to be torn down.
+        mPermissionMonitor.updateVpnLockdownUidRanges(false /* false */, lockdownRange2);
+        verify(mBpfNetMaps, times(2)).updateUidLockdownRule(anyInt(), eq(false) /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID13, false /* add */);
+        verify(mBpfNetMaps).updateUidLockdownRule(MOCK_UID14, false /* add */);
     }
 
     @Test

@@ -27,7 +27,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 
 public class MyServiceClient {
-    private static final int TIMEOUT_MS = 5000;
+    private static final int TIMEOUT_MS = 20_000;
     private static final String PACKAGE = MyServiceClient.class.getPackage().getName();
     private static final String APP2_PACKAGE = PACKAGE + ".app2";
     private static final String SERVICE_NAME = APP2_PACKAGE + ".MyService";

@@ -134,13 +134,10 @@ public class LinkPropertiesTest {
         assertFalse(lp.isIpv4Provisioned());
         assertFalse(lp.isIpv6Provisioned());
         assertFalse(lp.isPrivateDnsActive());
-
-        if (SdkLevel.isAtLeastR()) {
-            assertNull(lp.getDhcpServerAddress());
-            assertFalse(lp.isWakeOnLanSupported());
-            assertNull(lp.getCaptivePortalApiUrl());
-            assertNull(lp.getCaptivePortalData());
-        }
+        assertNull(lp.getDhcpServerAddress());
+        assertFalse(lp.isWakeOnLanSupported());
+        assertNull(lp.getCaptivePortalApiUrl());
+        assertNull(lp.getCaptivePortalData());
     }
 
     private LinkProperties makeTestObject() {
@@ -162,12 +159,10 @@ public class LinkPropertiesTest {
         lp.setMtu(MTU);
         lp.setTcpBufferSizes(TCP_BUFFER_SIZES);
         lp.setNat64Prefix(new IpPrefix("2001:db8:0:64::/96"));
-        if (SdkLevel.isAtLeastR()) {
-            lp.setDhcpServerAddress(DHCPSERVER);
-            lp.setWakeOnLanSupported(true);
-            lp.setCaptivePortalApiUrl(CAPPORT_API_URL);
-            lp.setCaptivePortalData((CaptivePortalData) getCaptivePortalData());
-        }
+        lp.setDhcpServerAddress(DHCPSERVER);
+        lp.setWakeOnLanSupported(true);
+        lp.setCaptivePortalApiUrl(CAPPORT_API_URL);
+        lp.setCaptivePortalData((CaptivePortalData) getCaptivePortalData());
         return lp;
     }
 
@@ -206,19 +201,17 @@ public class LinkPropertiesTest {
         assertTrue(source.isIdenticalTcpBufferSizes(target));
         assertTrue(target.isIdenticalTcpBufferSizes(source));
 
-        if (SdkLevel.isAtLeastR()) {
-            assertTrue(source.isIdenticalDhcpServerAddress(target));
-            assertTrue(source.isIdenticalDhcpServerAddress(source));
+        assertTrue(source.isIdenticalDhcpServerAddress(target));
+        assertTrue(source.isIdenticalDhcpServerAddress(source));
 
-            assertTrue(source.isIdenticalWakeOnLan(target));
-            assertTrue(target.isIdenticalWakeOnLan(source));
+        assertTrue(source.isIdenticalWakeOnLan(target));
+        assertTrue(target.isIdenticalWakeOnLan(source));
 
-            assertTrue(source.isIdenticalCaptivePortalApiUrl(target));
-            assertTrue(target.isIdenticalCaptivePortalApiUrl(source));
+        assertTrue(source.isIdenticalCaptivePortalApiUrl(target));
+        assertTrue(target.isIdenticalCaptivePortalApiUrl(source));
 
-            assertTrue(source.isIdenticalCaptivePortalData(target));
-            assertTrue(target.isIdenticalCaptivePortalData(source));
-        }
+        assertTrue(source.isIdenticalCaptivePortalData(target));
+        assertTrue(target.isIdenticalCaptivePortalData(source));
 
         // Check result of equals().
         assertTrue(source.equals(target));
@@ -1017,7 +1010,7 @@ public class LinkPropertiesTest {
         assertParcelingIsLossless(source);
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testLinkPropertiesParcelable() throws Exception {
         final LinkProperties source = makeLinkPropertiesForParceling();
 
@@ -1035,7 +1028,7 @@ public class LinkPropertiesTest {
     }
 
     // Parceling of the scope was broken until Q-QPR2
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testLinkLocalDnsServerParceling() throws Exception {
         final String strAddress = "fe80::1%lo";
         final LinkProperties lp = new LinkProperties();
@@ -1158,7 +1151,7 @@ public class LinkPropertiesTest {
         assertFalse(lp.isPrivateDnsActive());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testDhcpServerAddress() {
         final LinkProperties lp = makeTestObject();
         assertEquals(DHCPSERVER, lp.getDhcpServerAddress());
@@ -1167,7 +1160,7 @@ public class LinkPropertiesTest {
         assertNull(lp.getDhcpServerAddress());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testWakeOnLanSupported() {
         final LinkProperties lp = makeTestObject();
         assertTrue(lp.isWakeOnLanSupported());
@@ -1176,7 +1169,7 @@ public class LinkPropertiesTest {
         assertFalse(lp.isWakeOnLanSupported());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testCaptivePortalApiUrl() {
         final LinkProperties lp = makeTestObject();
         assertEquals(CAPPORT_API_URL, lp.getCaptivePortalApiUrl());
@@ -1185,7 +1178,7 @@ public class LinkPropertiesTest {
         assertNull(lp.getCaptivePortalApiUrl());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testCaptivePortalData() {
         final LinkProperties lp = makeTestObject();
         assertEquals(getCaptivePortalData(), lp.getCaptivePortalData());
@@ -1238,7 +1231,7 @@ public class LinkPropertiesTest {
         assertTrue(Ipv6.hasIpv6DnsServer());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testHasIpv4UnreachableDefaultRoute() {
         final LinkProperties lp = makeTestObject();
         assertFalse(lp.hasIpv4UnreachableDefaultRoute());
@@ -1249,7 +1242,7 @@ public class LinkPropertiesTest {
         assertFalse(lp.hasIpv6UnreachableDefaultRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     public void testHasIpv6UnreachableDefaultRoute() {
         final LinkProperties lp = makeTestObject();
         assertFalse(lp.hasIpv6UnreachableDefaultRoute());
@@ -1260,7 +1253,7 @@ public class LinkPropertiesTest {
         assertFalse(lp.hasIpv4UnreachableDefaultRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testHasExcludeRoute() {
@@ -1273,7 +1266,7 @@ public class LinkPropertiesTest {
         assertTrue(lp.hasExcludeRoute());
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testRouteAddWithSameKey() throws Exception {
@@ -1347,14 +1340,14 @@ public class LinkPropertiesTest {
         assertExcludeRoutesVisible();
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @EnableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testExcludedRoutesEnabledByCompatChange() {
         assertExcludeRoutesVisible();
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @CtsNetTestCasesMaxTargetSdk31(reason = "Compat change cannot be overridden when targeting T+")
     @DisableCompatChanges({ConnectivityCompatChanges.EXCLUDED_ROUTES})
     public void testExcludedRoutesDisabledByCompatChange() {

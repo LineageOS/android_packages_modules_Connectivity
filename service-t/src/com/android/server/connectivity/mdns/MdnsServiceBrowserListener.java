@@ -32,8 +32,9 @@ public interface MdnsServiceBrowserListener {
      * service records (PTR, SRV, TXT, A or AAAA) are received .
      *
      * @param serviceInfo The found mDNS service instance.
+     * @param isServiceFromCache Whether the found mDNS service is from cache.
      */
-    void onServiceFound(@NonNull MdnsServiceInfo serviceInfo);
+    void onServiceFound(@NonNull MdnsServiceInfo serviceInfo, boolean isServiceFromCache);
 
     /**
      * Called when an mDNS service instance is updated. This method would be called only if all
@@ -84,8 +85,9 @@ public interface MdnsServiceBrowserListener {
      * record has been received.
      *
      * @param serviceInfo The discovered mDNS service instance.
+     * @param isServiceFromCache Whether the discovered mDNS service is from cache.
      */
-    void onServiceNameDiscovered(@NonNull MdnsServiceInfo serviceInfo);
+    void onServiceNameDiscovered(@NonNull MdnsServiceInfo serviceInfo, boolean isServiceFromCache);
 
     /**
      * Called when a discovered mDNS service instance is no longer valid and removed.

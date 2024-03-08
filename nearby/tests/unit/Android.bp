@@ -29,7 +29,6 @@ android_test {
         "android.test.base",
         "android.test.mock",
         "android.test.runner",
-        "HalfSheetUX",
     ],
     compile_multilib: "both",
 
@@ -43,7 +42,7 @@ android_test {
         "mockito-target-extended-minus-junit4",
         "platform-test-annotations",
         "service-nearby-pre-jarjar",
-        "truth-prebuilt",
+        "truth",
         // "Robolectric_all-target",
     ],
     // these are needed for Extended Mockito

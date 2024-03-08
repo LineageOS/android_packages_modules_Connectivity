@@ -38,7 +38,11 @@ java_genrule {
 // tests need to inherit the NetHttpTests manifest.
 android_library {
     name: "NetHttpTestsLibPreJarJar",
-    static_libs: ["cronet_java_tests"],
+    static_libs: [
+        "cronet_aml_api_java",
+        "cronet_aml_java__testing",
+        "cronet_java_tests",
+    ],
     sdk_version: "module_current",
     min_sdk_version: "30",
 }
@@ -51,7 +55,8 @@ android_test {
      static_libs: ["NetHttpTestsLibPreJarJar"],
      jarjar_rules: ":net-http-test-jarjar-rules",
      jni_libs: [
-        "cronet_aml_components_cronet_android_cronet_tests__testing"
+        "cronet_aml_components_cronet_android_cronet__testing",
+        "cronet_aml_components_cronet_android_cronet_tests__testing",
      ],
      test_suites: [
          "general-tests",

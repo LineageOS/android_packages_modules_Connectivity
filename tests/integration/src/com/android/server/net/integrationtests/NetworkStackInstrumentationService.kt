@@ -70,7 +70,7 @@ class NetworkStackInstrumentationService : Service() {
          * request is seen, the test will fail.
          */
         override fun addHttpResponse(response: HttpResponse) {
-            httpResponses.getValue(response.requestUrl).add(response)
+            httpResponses.getValue(checkNotNull(response.requestUrl)).add(response)
         }
 
         /**

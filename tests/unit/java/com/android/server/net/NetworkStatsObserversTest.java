@@ -59,6 +59,7 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -124,7 +125,7 @@ public class NetworkStatsObserversTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        mObserverHandlerThread = new HandlerThread("HandlerThread");
+        mObserverHandlerThread = new HandlerThread("NetworkStatsObserversTest");
         mObserverHandlerThread.start();
         final Looper observerLooper = mObserverHandlerThread.getLooper();
         mStatsObservers = new NetworkStatsObservers() {
@@ -137,6 +138,14 @@ public class NetworkStatsObserversTest {
         mActiveIfaces = new ArrayMap<>();
         mActiveUidIfaces = new ArrayMap<>();
         mUsageCallback = new TestableUsageCallback(mUsageCallbackBinder);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (mObserverHandlerThread != null) {
+            mObserverHandlerThread.quitSafely();
+            mObserverHandlerThread.join();
+        }
     }
 
     @Test

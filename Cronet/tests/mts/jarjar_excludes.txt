@@ -1,5 +1,10 @@
-# It's prohibited to jarjar androidx packages
+# Exclude some test prefixes, as they can't be found after being jarjared.
+com\.android\.testutils\..+
+# jarjar-gen can't handle some kotlin object expression, exclude packages that include them
 androidx\..+
+kotlin\.test\..+
+kotlin\.reflect\..+
+org\.mockito\..+
 # Do not jarjar the api classes
 android\.net\..+
 # cronet_tests.so is not jarjared and uses base classes. We can remove this when there's a

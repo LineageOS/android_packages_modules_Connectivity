@@ -59,6 +59,7 @@ import androidx.test.runner.AndroidJUnit4;
 import com.android.net.module.util.DnsPacket;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.DnsResolverModuleTest;
 import com.android.testutils.SkipPresubmit;
 
 import org.junit.After;
@@ -317,51 +318,61 @@ public class DnsResolverTest {
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQuery() throws Exception {
         doTestRawQuery(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryInline() throws Exception {
         doTestRawQuery(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryBlob() throws Exception {
         doTestRawQueryBlob(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryBlobInline() throws Exception {
         doTestRawQueryBlob(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryRoot() throws Exception {
         doTestRawQueryRoot(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryRootInline() throws Exception {
         doTestRawQueryRoot(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryNXDomain() throws Exception {
         doTestRawQueryNXDomain(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryNXDomainInline() throws Exception {
         doTestRawQueryNXDomain(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryNXDomainWithPrivateDns() throws Exception {
         doTestRawQueryNXDomainWithPrivateDns(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testRawQueryNXDomainInlineWithPrivateDns() throws Exception {
         doTestRawQueryNXDomainWithPrivateDns(mExecutorInline);
     }
@@ -610,41 +621,49 @@ public class DnsResolverTest {
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testQueryForInetAddress() throws Exception {
         doTestQueryForInetAddress(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testQueryForInetAddressInline() throws Exception {
         doTestQueryForInetAddress(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testQueryForInetAddressIpv4() throws Exception {
         doTestQueryForInetAddressIpv4(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testQueryForInetAddressIpv4Inline() throws Exception {
         doTestQueryForInetAddressIpv4(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testQueryForInetAddressIpv6() throws Exception {
         doTestQueryForInetAddressIpv6(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testQueryForInetAddressIpv6Inline() throws Exception {
         doTestQueryForInetAddressIpv6(mExecutorInline);
     }
 
     @Test
+    @DnsResolverModuleTest
     public void testContinuousQueries() throws Exception {
         doTestContinuousQueries(mExecutor);
     }
 
     @Test
+    @DnsResolverModuleTest
     @SkipPresubmit(reason = "Flaky: b/159762682; add to presubmit after fixing")
     public void testContinuousQueriesInline() throws Exception {
         doTestContinuousQueries(mExecutorInline);
@@ -840,5 +859,10 @@ public class DnsResolverTest {
         } catch (DnsResolver.DnsException e) {
             assertEquals(DnsResolver.ERROR_SYSTEM, e.code);
         }
+    }
+
+    @Test
+    public void testNoRawBinderAccess() {
+        assertNull(mContext.getSystemService("dnsresolver"));
     }
 }

@@ -31,7 +31,7 @@ android_test {
         "androidx.test.uiautomator_uiautomator",
         "junit",
         "kotlin-test",
-        "truth-prebuilt",
+        "truth",
     ],
     test_suites: ["device-tests"],
 }

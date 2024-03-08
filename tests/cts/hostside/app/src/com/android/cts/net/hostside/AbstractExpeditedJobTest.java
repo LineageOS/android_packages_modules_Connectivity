@@ -74,6 +74,7 @@ public class AbstractExpeditedJobTest extends AbstractRestrictBackgroundNetworkT
     @RequiredProperties({APP_STANDBY_MODE})
     public void testNetworkAccess_appIdleState() throws Exception {
         turnBatteryOn();
+        setAppIdle(false);
         assertBackgroundNetworkAccess(true);
         assertExpeditedJobHasNetworkAccess();
 

@@ -24,40 +24,6 @@ filegroup {
     ],
 }
 
-// Common lib for nearby end-to-end testing.
-java_library {
-    name: "nearby-common-lib",
-    srcs: [
-        "java/com/android/server/nearby/common/bloomfilter/*.java",
-        "java/com/android/server/nearby/common/bluetooth/*.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/AesCtrMultipleBlockEncryption.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/AesEcbSingleBlockEncryption.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/BluetoothAddress.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/BluetoothUuids.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/Bytes.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/Constants.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/EllipticCurveDiffieHellmanExchange.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/HmacSha256.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/Ltv.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/MessageStreamHmacEncoder.java",
-        "java/com/android/server/nearby/common/bluetooth/fastpair/NamingEncoder.java",
-        "java/com/android/server/nearby/common/bluetooth/testability/**/*.java",
-        "java/com/android/server/nearby/common/bluetooth/gatt/*.java",
-        "java/com/android/server/nearby/common/bluetooth/util/*.java",
-    ],
-    libs: [
-        "androidx.annotation_annotation",
-        "androidx.core_core",
-        "error_prone_annotations",
-        "framework-bluetooth",
-        "guava",
-    ],
-    sdk_version: "module_current",
-    visibility: [
-        "//packages/modules/Connectivity/nearby/tests/multidevices/clients/test_support/fastpair_provider",
-    ],
-}
-
 // Main lib for nearby services.
 java_library {
     name: "service-nearby-pre-jarjar",
@@ -73,13 +39,11 @@ java_library {
         "framework-configinfrastructure",
         "framework-connectivity-t.impl",
         "framework-statsd",
-        "HalfSheetUX",
     ],
     static_libs: [
         "androidx.core_core",
         "guava",
         "libprotobuf-java-lite",
-        "fast-pair-lite-protos",
         "modules-utils-build",
         "modules-utils-handlerexecutor",
         "modules-utils-preconditions",
@@ -88,7 +52,7 @@ java_library {
     ],
     sdk_version: "system_server_current",
     // This is included in service-connectivity which is 30+
-    // TODO: allow APEXes to have service jars with higher min_sdk than the APEX
+    // TODO (b/293613362): allow APEXes to have service jars with higher min_sdk than the APEX
     // (service-connectivity is only used on 31+) and use 31 here
     min_sdk_version: "30",
 

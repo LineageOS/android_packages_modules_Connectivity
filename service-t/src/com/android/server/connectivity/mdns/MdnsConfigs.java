@@ -50,14 +50,6 @@ public class MdnsConfigs {
         return false;
     }
 
-    public static boolean useSessionIdToScheduleMdnsTask() {
-        return false;
-    }
-
-    public static boolean shouldCancelScanTaskWhenFutureIsNull() {
-        return false;
-    }
-
     public static long sleepTimeForSocketThreadMs() {
         return 20_000L;
     }

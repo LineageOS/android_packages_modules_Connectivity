@@ -27,6 +27,16 @@ import com.android.internal.annotations.VisibleForTesting;
  * Class used to reserve and release net IDs.
  *
  * <p>Instances of this class are thread-safe.
+ *
+ * NetIds are currently 16 bits long and consume 16 bits in the fwmark.
+ * The reason they are large is that applications might get confused if the netId counter
+ * wraps - for example, Network#equals would return true for a current network
+ * and a long-disconnected network.
+ * We could in theory fix this by splitting the identifier in two, e.g., a 24-bit generation
+ * counter and an 8-bit netId. Java Network objects would be constructed from the full 32-bit
+ * number, but only the 8-bit number would be used by netd and the fwmark.
+ * We'd have to fix all code that assumes that it can take a netId or a mark and construct
+ * a Network object from it.
  */
 public class NetIdManager {
     // Sequence number for Networks; keep in sync with system/netd/NetworkController.cpp

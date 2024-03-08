@@ -18,6 +18,7 @@
 
 #include "netdbpf/NetworkTraceHandler.h"
 
+#include <android-base/macros.h>
 #include <arpa/inet.h>
 #include <bpf/BpfUtils.h>
 #include <log/log.h>
@@ -75,9 +76,35 @@ struct BundleDetails {
   uint32_t bytes = 0;
 };
 
-#define AGG_FIELDS(x)                                              \
-  (x).ifindex, (x).uid, (x).tag, (x).sport, (x).dport, (x).egress, \
-      (x).ipProto, (x).tcpFlags
+BundleKey::BundleKey(const PacketTrace& pkt)
+    : ifindex(pkt.ifindex),
+      uid(pkt.uid),
+      tag(pkt.tag),
+      egress(pkt.egress),
+      ipProto(pkt.ipProto),
+      ipVersion(pkt.ipVersion) {
+  switch (ipProto) {
+    case IPPROTO_TCP:
+      tcpFlags = pkt.tcpFlags;
+      FALLTHROUGH_INTENDED;
+    case IPPROTO_DCCP:
+    case IPPROTO_UDP:
+    case IPPROTO_UDPLITE:
+    case IPPROTO_SCTP:
+      localPort = ntohs(pkt.egress ? pkt.sport : pkt.dport);
+      remotePort = ntohs(pkt.egress ? pkt.dport : pkt.sport);
+      break;
+    case IPPROTO_ICMP:
+    case IPPROTO_ICMPV6:
+      icmpType = ntohs(pkt.sport);
+      icmpCode = ntohs(pkt.dport);
+      break;
+  }
+}
+
+#define AGG_FIELDS(x)                                                    \
+  (x).ifindex, (x).uid, (x).tag, (x).egress, (x).ipProto, (x).ipVersion, \
+      (x).tcpFlags, (x).localPort, (x).remotePort, (x).icmpType, (x).icmpCode
 
 std::size_t BundleHash::operator()(const BundleKey& a) const {
   std::size_t seed = 0;
@@ -119,7 +146,14 @@ NetworkTracePoller NetworkTraceHandler::sPoller(
       // the session and delegates writing. The corresponding handler will write
       // with the setting specified in the trace config.
       NetworkTraceHandler::Trace([&](NetworkTraceHandler::TraceContext ctx) {
-        ctx.GetDataSourceLocked()->Write(packets, ctx);
+        perfetto::LockedHandle<NetworkTraceHandler> handle =
+            ctx.GetDataSourceLocked();
+        // The underlying handle can be invalidated between when Trace starts
+        // and GetDataSourceLocked is called, but not while the LockedHandle
+        // exists and holds the lock. Check validity prior to use.
+        if (handle.valid()) {
+          handle->Write(packets, ctx);
+        }
       });
     });
 
@@ -172,7 +206,7 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
       dst->set_timestamp(pkt.timestampNs);
       auto* event = dst->set_network_packet();
       event->set_length(pkt.length);
-      Fill(pkt, event);
+      Fill(BundleKey(pkt), event);
     }
     return;
   }
@@ -180,14 +214,13 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
   uint64_t minTs = std::numeric_limits<uint64_t>::max();
   std::unordered_map<BundleKey, BundleDetails, BundleHash, BundleEq> bundles;
   for (const PacketTrace& pkt : packets) {
-    BundleKey key = pkt;
+    BundleKey key(pkt);
 
     // Dropping fields should remove them from the output and remove them from
-    // the aggregation key. In order to do the latter without changing the hash
-    // function, set the dropped fields to zero.
-    if (mDropTcpFlags) key.tcpFlags = 0;
-    if (mDropLocalPort) (key.egress ? key.sport : key.dport) = 0;
-    if (mDropRemotePort) (key.egress ? key.dport : key.sport) = 0;
+    // the aggregation key. Reset the optionals to indicate omission.
+    if (mDropTcpFlags) key.tcpFlags.reset();
+    if (mDropLocalPort) key.localPort.reset();
+    if (mDropRemotePort) key.remotePort.reset();
 
     minTs = std::min(minTs, pkt.timestampNs);
 
@@ -238,22 +271,18 @@ void NetworkTraceHandler::Write(const std::vector<PacketTrace>& packets,
   }
 }
 
-void NetworkTraceHandler::Fill(const PacketTrace& src,
+void NetworkTraceHandler::Fill(const BundleKey& src,
                                NetworkPacketEvent* event) {
   event->set_direction(src.egress ? TrafficDirection::DIR_EGRESS
                                   : TrafficDirection::DIR_INGRESS);
   event->set_uid(src.uid);
   event->set_tag(src.tag);
 
-  if (!mDropLocalPort) {
-    event->set_local_port(ntohs(src.egress ? src.sport : src.dport));
-  }
-  if (!mDropRemotePort) {
-    event->set_remote_port(ntohs(src.egress ? src.dport : src.sport));
-  }
-  if (!mDropTcpFlags) {
-    event->set_tcp_flags(src.tcpFlags);
-  }
+  if (src.tcpFlags.has_value()) event->set_tcp_flags(*src.tcpFlags);
+  if (src.localPort.has_value()) event->set_local_port(*src.localPort);
+  if (src.remotePort.has_value()) event->set_remote_port(*src.remotePort);
+  if (src.icmpType.has_value()) event->set_icmp_type(*src.icmpType);
+  if (src.icmpCode.has_value()) event->set_icmp_code(*src.icmpCode);
 
   event->set_ip_proto(src.ipProto);
 

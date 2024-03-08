@@ -19,13 +19,20 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+build = ["TrunkStable.bp"]
+
+// This is a placeholder comment to avoid merge conflicts
+// as the above target may not exist
+// depending on the branch
+
+// The library requires the final artifact to contain net-utils-device-common-struct.
 java_library {
     name: "connectivity-net-module-utils-bpf",
     srcs: [
         "src/com/android/net/module/util/bpf/*.java",
     ],
     sdk_version: "module_current",
-    min_sdk_version: "29",
+    min_sdk_version: "30",
     visibility: [
         // Do not add any lib. This library is only shared inside connectivity module
         // and its tests.
@@ -34,8 +41,9 @@ java_library {
     libs: [
         "androidx.annotation_annotation",
         "framework-connectivity.stubs.module_lib",
-    ],
-    static_libs: [
+        // For libraries which are statically linked in framework-connectivity, do not
+        // statically link here because callers of this library might already have a static
+        // version linked.
         "net-utils-device-common-struct",
     ],
     apex_available: [

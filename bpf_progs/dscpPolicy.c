@@ -27,8 +27,8 @@
 #include <stdint.h>
 #include <string.h>
 
-// The resulting .o needs to load on the Android T beta 3 bpfloader
-#define BPFLOADER_MIN_VER BPFLOADER_T_BETA3_VERSION
+// The resulting .o needs to load on the Android T bpfloader
+#define BPFLOADER_MIN_VER BPFLOADER_T_VERSION
 
 #include "bpf_helpers.h"
 #include "dscpPolicy.h"
@@ -222,7 +222,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, bool ipv4
 }
 
 DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM, schedcls_set_dscp_ether,
-                     KVER(5, 15, 0))
+                     KVER_5_15)
 (struct __sk_buff* skb) {
     if (skb->pkt_type != PACKET_HOST) return TC_ACT_PIPE;
 
@@ -238,3 +238,4 @@ DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM, schedcls_s
 
 LICENSE("Apache 2.0");
 CRITICAL("Connectivity");
+DISABLE_BTF_ON_USER_BUILDS();

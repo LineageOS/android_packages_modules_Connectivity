@@ -36,9 +36,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.nearby.common.locator.Locator;
-import com.android.server.nearby.common.locator.LocatorContextWrapper;
-import com.android.server.nearby.fastpair.Constant;
 
 import java.util.Arrays;
 import java.util.List;
@@ -48,8 +45,7 @@ import java.util.concurrent.Executors;
 /** PresenceManager is the class initiated in nearby service to handle presence related work. */
 public class PresenceManager {
 
-    final LocatorContextWrapper mLocatorContextWrapper;
-    final Locator mLocator;
+    final Context mContext;
     private final IntentFilter mIntentFilter;
 
     @VisibleForTesting
@@ -76,7 +72,7 @@ public class PresenceManager {
 
                 @Override
                 public void onError(int errorCode) {
-                    Log.w(Constant.TAG, "[PresenceManager] Scan error is " + errorCode);
+                    Log.w(TAG, "[PresenceManager] Scan error is " + errorCode);
                 }
             };
 
@@ -123,9 +119,8 @@ public class PresenceManager {
                 }
             };
 
-    public PresenceManager(LocatorContextWrapper contextWrapper) {
-        mLocatorContextWrapper = contextWrapper;
-        mLocator = mLocatorContextWrapper.getLocator();
+    public PresenceManager(Context context) {
+        mContext = context;
         mIntentFilter = new IntentFilter();
     }
 
@@ -133,8 +128,7 @@ public class PresenceManager {
     @Nullable
     private NearbyManager getNearbyManager() {
         return (NearbyManager)
-                mLocatorContextWrapper
-                        .getApplicationContext()
+                mContext.getApplicationContext()
                         .getSystemService(Context.NEARBY_SERVICE);
     }
 
@@ -142,8 +136,6 @@ public class PresenceManager {
     public void initiate() {
         mIntentFilter.addAction(Intent.ACTION_SCREEN_ON);
         mIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        mLocatorContextWrapper
-                .getContext()
-                .registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
+        mContext.registerReceiver(mScreenBroadcastReceiver, mIntentFilter);
     }
 }

@@ -19,6 +19,8 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+service_remoteauth_pre_jarjar_lib = "service-remoteauth-pre-jarjar"
+
 // Include build rules from Sources.bp
 build = ["Sources.bp"]
 
@@ -55,6 +57,8 @@ java_library {
         "framework-wifi",
         "service-connectivity-pre-jarjar",
         "service-nearby-pre-jarjar",
+        "service-thread-pre-jarjar",
+        service_remoteauth_pre_jarjar_lib,
         "ServiceConnectivityResources",
         "unsupportedappusage",
     ],
@@ -87,13 +91,23 @@ java_library {
 java_library {
     name: "service-connectivity-mdns-standalone-build-test",
     sdk_version: "core_platform",
+    min_sdk_version: "21",
+    lint: {
+        error_checks: ["NewApi"],
+    },
     srcs: [
-        ":service-mdns-droidstubs",
         "src/com/android/server/connectivity/mdns/**/*.java",
+        ":framework-connectivity-t-mdns-standalone-build-sources",
+        ":service-mdns-droidstubs"
     ],
     exclude_srcs: [
         "src/com/android/server/connectivity/mdns/internal/SocketNetlinkMonitor.java",
-        "src/com/android/server/connectivity/mdns/SocketNetLinkMonitorFactory.java"
+        "src/com/android/server/connectivity/mdns/SocketNetLinkMonitorFactory.java",
+        "src/com/android/server/connectivity/mdns/MdnsAdvertiser.java",
+        "src/com/android/server/connectivity/mdns/MdnsAnnouncer.java",
+        "src/com/android/server/connectivity/mdns/MdnsInterfaceAdvertiser.java",
+        "src/com/android/server/connectivity/mdns/MdnsProber.java",
+        "src/com/android/server/connectivity/mdns/MdnsRecordRepository.java",
     ],
     static_libs: [
         "net-utils-device-common-mdns-standalone-build-test",

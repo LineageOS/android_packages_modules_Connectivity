@@ -17,7 +17,6 @@
 package com.android.networkstack.tethering.apishim.api30;
 
 import android.net.INetd;
-import android.net.MacAddress;
 import android.net.TetherStatsParcel;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
@@ -32,7 +31,8 @@ import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
 import com.android.net.module.util.bpf.TetherStatsValue;
 import com.android.networkstack.tethering.BpfCoordinator.Dependencies;
-import com.android.networkstack.tethering.BpfCoordinator.Ipv6ForwardingRule;
+import com.android.networkstack.tethering.BpfCoordinator.Ipv6DownstreamRule;
+import com.android.networkstack.tethering.BpfCoordinator.Ipv6UpstreamRule;
 
 /**
  * Bpf coordinator class for API shims.
@@ -57,7 +57,17 @@ public class BpfCoordinatorShimImpl
     };
 
     @Override
-    public boolean tetherOffloadRuleAdd(@NonNull final Ipv6ForwardingRule rule) {
+    public boolean addIpv6UpstreamRule(@NonNull final Ipv6UpstreamRule rule) {
+        return true;
+    };
+
+    @Override
+    public boolean removeIpv6UpstreamRule(@NonNull final Ipv6UpstreamRule rule) {
+        return true;
+    }
+
+    @Override
+    public boolean addIpv6DownstreamRule(@NonNull final Ipv6DownstreamRule rule) {
         try {
             mNetd.tetherOffloadRuleAdd(rule.toTetherOffloadRuleParcel());
         } catch (RemoteException | ServiceSpecificException e) {
@@ -69,26 +79,13 @@ public class BpfCoordinatorShimImpl
     };
 
     @Override
-    public boolean tetherOffloadRuleRemove(@NonNull final Ipv6ForwardingRule rule) {
+    public boolean removeIpv6DownstreamRule(@NonNull final Ipv6DownstreamRule rule) {
         try {
             mNetd.tetherOffloadRuleRemove(rule.toTetherOffloadRuleParcel());
         } catch (RemoteException | ServiceSpecificException e) {
             mLog.e("Could not remove IPv6 forwarding rule: ", e);
             return false;
         }
-        return true;
-    }
-
-    @Override
-    public boolean startUpstreamIpv6Forwarding(int downstreamIfindex, int upstreamIfindex,
-            @NonNull MacAddress inDstMac, @NonNull MacAddress outSrcMac,
-            @NonNull MacAddress outDstMac, int mtu) {
-        return true;
-    }
-
-    @Override
-    public boolean stopUpstreamIpv6Forwarding(int downstreamIfindex,
-            int upstreamIfindex, @NonNull MacAddress inDstMac) {
         return true;
     }
 

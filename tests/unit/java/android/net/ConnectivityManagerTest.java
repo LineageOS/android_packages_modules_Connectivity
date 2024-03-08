@@ -51,6 +51,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -78,6 +79,7 @@ import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -90,11 +92,14 @@ import java.lang.ref.WeakReference;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(VERSION_CODES.R)
 public class ConnectivityManagerTest {
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
     private static final int TIMEOUT_MS = 30_000;
     private static final int SHORT_TIMEOUT_MS = 150;
 
     @Mock Context mCtx;
     @Mock IConnectivityManager mService;
+    @Mock NetworkPolicyManager mNpm;
 
     @Before
     public void setUp() {
@@ -509,5 +514,18 @@ public class ConnectivityManagerTest {
 
         assertNull("ConnectivityManager weak reference still not null after " + attempts
                     + " attempts", ref.get());
+    }
+
+    private <T> void mockService(Class<T> clazz, String name, T service) {
+        doReturn(service).when(mCtx).getSystemService(name);
+        doReturn(name).when(mCtx).getSystemServiceName(clazz);
+
+        // If the test suite uses the inline mock maker library, such as for coverage tests,
+        // then the final version of getSystemService must also be mocked, as the real
+        // method will not be called by the test and null object is returned since no mock.
+        // Otherwise, mocking a final method will fail the test.
+        if (mCtx.getSystemService(clazz) == null) {
+            doReturn(service).when(mCtx).getSystemService(clazz);
+        }
     }
 }

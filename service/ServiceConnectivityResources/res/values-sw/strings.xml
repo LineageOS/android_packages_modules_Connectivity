@@ -22,6 +22,9 @@
     <string name="network_available_sign_in" msgid="2622520134876355561">"Ingia katika mtandao"</string>
     <!-- no translation found for network_available_sign_in_detailed (8439369644697866359) -->
     <skip />
+    <string name="mobile_network_available_no_internet" msgid="1000871587359324217">"Hakuna intaneti"</string>
+    <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"Huenda data ya <xliff:g id="NETWORK_CARRIER">%1$s</xliff:g> imeisha. Gusa ili upate chaguo."</string>
+    <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Huenda data yako imeisha. Gusa ili upate chaguo."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> haina uwezo wa kufikia intaneti"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Gusa ili upate chaguo"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Mtandao wa simu hauna uwezo wa kufikia intaneti"</string>

@@ -48,6 +48,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
@@ -59,6 +60,7 @@ private val TEST_BUFFER = ByteArray(1300)
 private val TEST_HOSTNAME = arrayOf("Android_test", "local")
 
 private const val TEST_SERVICE_ID_1 = 42
+private const val TEST_SERVICE_ID_DUPLICATE = 43
 private val TEST_SERVICE_1 = NsdServiceInfo().apply {
     serviceType = "_testservice._tcp"
     serviceName = "MyTestService"
@@ -77,6 +79,7 @@ class MdnsInterfaceAdvertiserTest {
     private val announcer = mock(MdnsAnnouncer::class.java)
     private val prober = mock(MdnsProber::class.java)
     private val sharedlog = SharedLog("MdnsInterfaceAdvertiserTest")
+    private val flags = MdnsFeatureFlags.newBuilder().build()
     @Suppress("UNCHECKED_CAST")
     private val probeCbCaptor = ArgumentCaptor.forClass(PacketRepeaterCallback::class.java)
             as ArgumentCaptor<PacketRepeaterCallback<ProbingInfo>>
@@ -99,18 +102,17 @@ class MdnsInterfaceAdvertiserTest {
             cb,
             deps,
             TEST_HOSTNAME,
-            sharedlog
+            sharedlog,
+            flags
         )
     }
 
     @Before
     fun setUp() {
-        doReturn(repository).`when`(deps).makeRecordRepository(any(),
-            eq(TEST_HOSTNAME)
-        )
-        doReturn(replySender).`when`(deps).makeReplySender(anyString(), any(), any(), any())
-        doReturn(announcer).`when`(deps).makeMdnsAnnouncer(anyString(), any(), any(), any())
-        doReturn(prober).`when`(deps).makeMdnsProber(anyString(), any(), any(), any())
+        doReturn(repository).`when`(deps).makeRecordRepository(any(), eq(TEST_HOSTNAME), any())
+        doReturn(replySender).`when`(deps).makeReplySender(anyString(), any(), any(), any(), any())
+        doReturn(announcer).`when`(deps).makeMdnsAnnouncer(anyString(), any(), any(), any(), any())
+        doReturn(prober).`when`(deps).makeMdnsProber(anyString(), any(), any(), any(), any())
 
         val knownServices = mutableSetOf<Int>()
         doAnswer { inv ->
@@ -132,8 +134,8 @@ class MdnsInterfaceAdvertiserTest {
         advertiser.start()
 
         verify(socket).addPacketHandler(packetHandlerCaptor.capture())
-        verify(deps).makeMdnsProber(any(), any(), any(), probeCbCaptor.capture())
-        verify(deps).makeMdnsAnnouncer(any(), any(), any(), announceCbCaptor.capture())
+        verify(deps).makeMdnsProber(any(), any(), any(), probeCbCaptor.capture(), any())
+        verify(deps).makeMdnsAnnouncer(any(), any(), any(), announceCbCaptor.capture(), any())
     }
 
     @After
@@ -150,7 +152,7 @@ class MdnsInterfaceAdvertiserTest {
                 0L /* initialDelayMs */)
 
         thread.waitForIdle(TIMEOUT_MS)
-        verify(cb).onRegisterServiceSucceeded(advertiser, TEST_SERVICE_ID_1)
+        verify(cb).onServiceProbingSucceeded(advertiser, TEST_SERVICE_ID_1)
 
         // Remove the service: expect exit announcements
         val testExitInfo = mock(ExitAnnouncementInfo::class.java)
@@ -190,8 +192,8 @@ class MdnsInterfaceAdvertiserTest {
     fun testReplyToQuery() {
         addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
-        val mockReply = mock(MdnsRecordRepository.ReplyInfo::class.java)
-        doReturn(mockReply).`when`(repository).getReply(any(), any())
+        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 0, InetSocketAddress(0))
+        doReturn(testReply).`when`(repository).getReply(any(), any())
 
         // Query obtained with:
         // scapy.raw(scapy.DNS(
@@ -216,7 +218,7 @@ class MdnsInterfaceAdvertiserTest {
             assertContentEquals(arrayOf("_testservice", "_tcp", "local"), it.questions[0].name)
         }
 
-        verify(replySender).queueReply(mockReply)
+        verify(replySender).queueReply(testReply)
     }
 
     @Test
@@ -256,7 +258,7 @@ class MdnsInterfaceAdvertiserTest {
         val mockProbingInfo = mock(ProbingInfo::class.java)
         doReturn(mockProbingInfo).`when`(repository).setServiceProbing(TEST_SERVICE_ID_1)
 
-        advertiser.restartProbingForConflict(TEST_SERVICE_ID_1)
+        advertiser.maybeRestartProbingForConflict(TEST_SERVICE_ID_1)
 
         verify(prober).restartForConflict(mockProbingInfo)
     }
@@ -270,6 +272,28 @@ class MdnsInterfaceAdvertiserTest {
         advertiser.renameServiceForConflict(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
         verify(prober).restartForConflict(mockProbingInfo)
+    }
+
+    @Test
+    fun testReplaceExitingService() {
+        doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
+                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+        val subType = "_sub"
+        advertiser.addService(TEST_SERVICE_ID_DUPLICATE, TEST_SERVICE_1, subType)
+        verify(repository).addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+        verify(announcer).stop(TEST_SERVICE_ID_DUPLICATE)
+        verify(prober).startProbing(any())
+    }
+
+    @Test
+    fun testUpdateExistingService() {
+        doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
+                .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
+        val subType = "_sub"
+        advertiser.updateService(TEST_SERVICE_ID_DUPLICATE, subType)
+        verify(repository).updateService(eq(TEST_SERVICE_ID_DUPLICATE), any())
+        verify(announcer, never()).stop(TEST_SERVICE_ID_DUPLICATE)
+        verify(prober, never()).startProbing(any())
     }
 
     private fun addServiceAndFinishProbing(serviceId: Int, serviceInfo: NsdServiceInfo):

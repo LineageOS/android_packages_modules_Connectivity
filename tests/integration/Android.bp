@@ -45,6 +45,7 @@ android_test {
         // order-dependent setup.
         "NetworkStackApiStableLib",
         "androidx.test.ext.junit",
+        "compatibility-device-util-axt",
         "frameworks-net-integration-testutils",
         "kotlin-reflect",
         "mockito-target-extended-minus-junit4",

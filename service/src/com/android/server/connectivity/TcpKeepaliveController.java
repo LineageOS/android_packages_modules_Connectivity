@@ -34,6 +34,7 @@ import static android.system.OsConstants.TIOCOUTQ;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_HEADER_MIN_LEN;
 
 import android.annotation.NonNull;
+import android.annotation.SuppressLint;
 import android.net.ISocketKeepaliveCallback;
 import android.net.InvalidPacketException;
 import android.net.NetworkUtils;
@@ -106,6 +107,8 @@ public class TcpKeepaliveController {
     private static final int TCP_REPAIR_ON = 1;
     // Reference include/uapi/linux/sockios.h
     private static final int SIOCINQ = FIONREAD;
+    // arch specific BSD socket API constant that predates Linux and Android
+    @SuppressLint("NewApi")
     private static final int SIOCOUTQ = TIOCOUTQ;
 
     /**

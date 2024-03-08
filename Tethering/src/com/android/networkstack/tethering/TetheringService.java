@@ -322,7 +322,7 @@ public class TetheringService extends Service {
     public TetheringDependencies makeTetheringDependencies() {
         return new TetheringDependencies() {
             @Override
-            public Looper getTetheringLooper() {
+            public Looper makeTetheringLooper() {
                 final HandlerThread tetherThread = new HandlerThread("android.tethering");
                 tetherThread.start();
                 return tetherThread.getLooper();
@@ -334,7 +334,7 @@ public class TetheringService extends Service {
             }
 
             @Override
-            public IpServer.Dependencies getIpServerDependencies() {
+            public IpServer.Dependencies makeIpServerDependencies() {
                 return new IpServer.Dependencies() {
                     @Override
                     public void makeDhcpServer(String ifName, DhcpServingParamsParcel params,

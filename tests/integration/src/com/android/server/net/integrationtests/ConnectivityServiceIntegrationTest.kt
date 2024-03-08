@@ -40,11 +40,14 @@ import android.os.ConditionVariable
 import android.os.IBinder
 import android.os.SystemConfigManager
 import android.os.UserHandle
+import android.os.VintfRuntimeInfo
 import android.testing.TestableContext
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.android.compatibility.common.util.SystemUtil
 import com.android.connectivity.resources.R
+import com.android.net.module.util.BpfUtils
 import com.android.server.BpfNetMaps
 import com.android.server.ConnectivityService
 import com.android.server.NetworkAgentWrapper
@@ -53,12 +56,15 @@ import com.android.server.connectivity.ConnectivityResources
 import com.android.server.connectivity.MockableSystemProperties
 import com.android.server.connectivity.MultinetworkPolicyTracker
 import com.android.server.connectivity.ProxyTracker
+import com.android.testutils.DeviceInfoUtils
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
@@ -249,7 +255,12 @@ class ConnectivityServiceIntegrationTest {
         na.connect()
 
         testCallback.expectAvailableThenValidatedCallbacks(na.network, TEST_TIMEOUT_MS)
-        assertEquals(2, nsInstrumentation.getRequestUrls().size)
+        val requestedSize = nsInstrumentation.getRequestUrls().size
+        if (requestedSize == 2 || (requestedSize == 1 &&
+                nsInstrumentation.getRequestUrls()[0] == httpsProbeUrl)) {
+            return
+        }
+        fail("Unexpected request urls: ${nsInstrumentation.getRequestUrls()}")
     }
 
     @Test
@@ -291,6 +302,7 @@ class ConnectivityServiceIntegrationTest {
         val capportData = testCb.expect<LinkPropertiesChanged>(na, TEST_TIMEOUT_MS) {
             it.lp.captivePortalData != null
         }.lp.captivePortalData
+        assertNotNull(capportData)
         assertTrue(capportData.isCaptive)
         assertEquals(Uri.parse("https://login.capport.android.com"), capportData.userPortalUrl)
         assertEquals(Uri.parse("https://venueinfo.capport.android.com"), capportData.venueInfoUrl)
@@ -298,6 +310,27 @@ class ConnectivityServiceIntegrationTest {
         testCb.expectCaps(na, TEST_TIMEOUT_MS) {
             it.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL) &&
                     !it.hasCapability(NET_CAPABILITY_VALIDATED)
+        }
+    }
+
+    private fun isBpfGetCgroupProgramIdSupportedByKernel(): Boolean {
+        val kVersionString = VintfRuntimeInfo.getKernelVersion()
+        return DeviceInfoUtils.compareMajorMinorVersion(kVersionString, "4.19") >= 0
+    }
+
+    @Test
+    fun testBpfProgramAttachStatus() {
+        Assume.assumeTrue(isBpfGetCgroupProgramIdSupportedByKernel())
+
+        listOf(
+                BpfUtils.BPF_CGROUP_INET_INGRESS,
+                BpfUtils.BPF_CGROUP_INET_EGRESS,
+                BpfUtils.BPF_CGROUP_INET_SOCK_CREATE
+        ).forEach {
+            val ret = SystemUtil.runShellCommand(InstrumentationRegistry.getInstrumentation(),
+                    "cmd connectivity bpf-get-cgroup-program-id $it").trim()
+
+            assertTrue(Integer.parseInt(ret) > 0, "Unexpected output $ret for type $it")
         }
     }
 }

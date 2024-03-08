@@ -16,19 +16,15 @@
 
 package android.net
 
-import android.os.Build
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
 import com.android.modules.utils.build.SdkLevel.isAtLeastS
 import com.android.modules.utils.build.SdkLevel.isAtLeastT
 import com.android.testutils.ConnectivityModuleTest
-import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.assertParcelingIsLossless
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -36,10 +32,7 @@ import org.junit.runner.RunWith
 @SmallTest
 @ConnectivityModuleTest
 class NetworkAgentConfigTest {
-    @Rule @JvmField
-    val ignoreRule = DevSdkIgnoreRule()
-
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testParcelNetworkAgentConfig() {
         val config = NetworkAgentConfig.Builder().apply {
             setExplicitlySelected(true)
@@ -58,7 +51,7 @@ class NetworkAgentConfigTest {
         assertParcelingIsLossless(config)
     }
 
-    @Test @IgnoreUpTo(Build.VERSION_CODES.Q)
+    @Test
     fun testBuilder() {
         val testExtraInfo = "mylegacyExtraInfo"
         val config = NetworkAgentConfig.Builder().apply {

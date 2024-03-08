@@ -38,9 +38,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 
-import static com.android.compatibility.common.util.SystemUtil.callWithShellPermissionIdentity;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
-import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
 import static com.android.testutils.Cleanup.testAndCleanup;
 
 import static org.junit.Assert.assertEquals;
@@ -82,6 +80,8 @@ import android.util.Pair;
 
 import androidx.test.InstrumentationRegistry;
 
+import com.android.compatibility.common.util.SystemUtil;
+import com.android.compatibility.common.util.ThrowingRunnable;
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.util.ArrayUtils;
 import com.android.modules.utils.build.SdkLevel;
@@ -99,6 +99,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -117,7 +118,7 @@ public class ConnectivityDiagnosticsManagerTest {
     private static final int FAIL_RATE_PERCENTAGE = 100;
     private static final int UNKNOWN_DETECTION_METHOD = 4;
     private static final int FILTERED_UNKNOWN_DETECTION_METHOD = 0;
-    private static final int CARRIER_CONFIG_CHANGED_BROADCAST_TIMEOUT = 5000;
+    private static final int CARRIER_CONFIG_CHANGED_BROADCAST_TIMEOUT = 10000;
     private static final int DELAY_FOR_BROADCAST_IDLE = 30_000;
 
     private static final Executor INLINE_EXECUTOR = x -> x.run();
@@ -143,7 +144,7 @@ public class ConnectivityDiagnosticsManagerTest {
     // runWithShellPermissionIdentity, and callWithShellPermissionIdentity ensures Shell Permission
     // is not interrupted by another operation (which would drop all previously adopted
     // permissions).
-    private Object mShellPermissionsIdentityLock = new Object();
+    private final Object mShellPermissionsIdentityLock = new Object();
 
     private Context mContext;
     private ConnectivityManager mConnectivityManager;
@@ -177,6 +178,20 @@ public class ConnectivityDiagnosticsManagerTest {
         Log.i(TAG, "Waited for broadcast idle for " + (SystemClock.elapsedRealtime() - st) + "ms");
     }
 
+    private void runWithShellPermissionIdentity(ThrowingRunnable runnable,
+            String... permissions) {
+        synchronized (mShellPermissionsIdentityLock) {
+            SystemUtil.runWithShellPermissionIdentity(runnable, permissions);
+        }
+    }
+
+    private <T> T callWithShellPermissionIdentity(Callable<T> callable, String... permissions)
+            throws Exception {
+        synchronized (mShellPermissionsIdentityLock) {
+            return SystemUtil.callWithShellPermissionIdentity(callable, permissions);
+        }
+    }
+
     @Before
     public void setUp() throws Exception {
         mContext = InstrumentationRegistry.getContext();
@@ -199,7 +214,7 @@ public class ConnectivityDiagnosticsManagerTest {
             runWithShellPermissionIdentity(() -> {
                 final TestNetworkManager tnm = mContext.getSystemService(TestNetworkManager.class);
                 tnm.teardownTestNetwork(mTestNetwork);
-            });
+            }, android.Manifest.permission.MANAGE_TEST_NETWORKS);
             mTestNetwork = null;
         }
 
@@ -249,7 +264,7 @@ public class ConnectivityDiagnosticsManagerTest {
             doBroadcastCarrierConfigsAndVerifyOnConnectivityReportAvailable(
                     subId, carrierConfigReceiver, testNetworkCallback);
         }, () -> {
-            runWithShellPermissionIdentity(
+                runWithShellPermissionIdentity(
                     () -> mCarrierConfigManager.overrideConfig(subId, null),
                     android.Manifest.permission.MODIFY_PHONE_STATE);
             mConnectivityManager.unregisterNetworkCallback(testNetworkCallback);
@@ -276,24 +291,20 @@ public class ConnectivityDiagnosticsManagerTest {
                 CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY,
                 new String[] {getCertHashForThisPackage()});
 
-        synchronized (mShellPermissionsIdentityLock) {
-            runWithShellPermissionIdentity(
-                    () -> {
-                        mCarrierConfigManager.overrideConfig(subId, carrierConfigs);
-                        mCarrierConfigManager.notifyConfigChangedForSubId(subId);
-                    },
-                    android.Manifest.permission.MODIFY_PHONE_STATE);
-        }
+        runWithShellPermissionIdentity(
+                () -> {
+                    mCarrierConfigManager.overrideConfig(subId, carrierConfigs);
+                    mCarrierConfigManager.notifyConfigChangedForSubId(subId);
+                },
+                android.Manifest.permission.MODIFY_PHONE_STATE);
 
         // TODO(b/157779832): This should use android.permission.CHANGE_NETWORK_STATE. However, the
         // shell does not have CHANGE_NETWORK_STATE, so use CONNECTIVITY_INTERNAL until the shell
         // permissions are updated.
-        synchronized (mShellPermissionsIdentityLock) {
-            runWithShellPermissionIdentity(
-                    () -> mConnectivityManager.requestNetwork(
-                            CELLULAR_NETWORK_REQUEST, testNetworkCallback),
-                    android.Manifest.permission.CONNECTIVITY_INTERNAL);
-        }
+        runWithShellPermissionIdentity(
+                () -> mConnectivityManager.requestNetwork(
+                        CELLULAR_NETWORK_REQUEST, testNetworkCallback),
+                android.Manifest.permission.CONNECTIVITY_INTERNAL);
 
         final Network network = testNetworkCallback.waitForAvailable();
         assertNotNull(network);
@@ -494,7 +505,7 @@ public class ConnectivityDiagnosticsManagerTest {
                     final TestNetworkInterface tni = tnm.createTunInterface(new LinkAddress[0]);
                     tnm.setupTestNetwork(tni.getInterfaceName(), administratorUids, BINDER);
                     return tni;
-                });
+                }, android.Manifest.permission.MANAGE_TEST_NETWORKS);
     }
 
     private static class TestConnectivityDiagnosticsCallback
@@ -648,11 +659,9 @@ public class ConnectivityDiagnosticsManagerTest {
 
             final PersistableBundle carrierConfigs;
             try {
-                synchronized (mShellPermissionsIdentityLock) {
-                    carrierConfigs = callWithShellPermissionIdentity(
-                            () -> mCarrierConfigManager.getConfigForSubId(subId),
-                            android.Manifest.permission.READ_PHONE_STATE);
-                }
+                carrierConfigs = callWithShellPermissionIdentity(
+                        () -> mCarrierConfigManager.getConfigForSubId(subId),
+                        android.Manifest.permission.READ_PHONE_STATE);
             } catch (Exception exception) {
                 // callWithShellPermissionIdentity() threw an Exception - cache it and allow
                 // waitForCarrierConfigChanged() to throw it

@@ -59,10 +59,10 @@ class BpfHandler {
     bool hasUpdateDeviceStatsPermission(uid_t uid);
 
     BpfMap<uint64_t, UidTagValue> mCookieTagMap;
-    BpfMap<StatsKey, StatsValue> mStatsMapA;
+    BpfMapRO<StatsKey, StatsValue> mStatsMapA;
     BpfMapRO<StatsKey, StatsValue> mStatsMapB;
     BpfMapRO<uint32_t, uint32_t> mConfigurationMap;
-    BpfMap<uint32_t, uint8_t> mUidPermissionMap;
+    BpfMapRO<uint32_t, uint8_t> mUidPermissionMap;
 
     // The limit on the number of stats entries a uid can have in the per uid stats map. BpfHandler
     // will block that specific uid from tagging new sockets after the limit is reached.

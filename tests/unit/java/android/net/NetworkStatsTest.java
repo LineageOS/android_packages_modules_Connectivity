@@ -51,6 +51,7 @@ import com.android.testutils.DevSdkIgnoreRunner;
 
 import com.google.android.collect.Sets;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -63,7 +64,8 @@ import java.util.Iterator;
 @SmallTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class NetworkStatsTest {
-
+    @Rule
+    public final DevSdkIgnoreRule mIgnoreRule = new DevSdkIgnoreRule();
     private static final String TEST_IFACE = "test0";
     private static final String TEST_IFACE2 = "test2";
     private static final int TEST_UID = 1001;
@@ -339,6 +341,7 @@ public class NetworkStatsTest {
         assertEquals(96L, uidRoaming.getTotalBytes());
     }
 
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     public void testGroupedByIfaceEmpty() throws Exception {
         final NetworkStats uidStats = new NetworkStats(TEST_START, 3);
@@ -348,6 +351,7 @@ public class NetworkStatsTest {
         assertEquals(0, grouped.size());
     }
 
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     public void testGroupedByIfaceAll() throws Exception {
         final NetworkStats uidStats = new NetworkStats(TEST_START, 3)
@@ -366,6 +370,7 @@ public class NetworkStatsTest {
                 DEFAULT_NETWORK_ALL, 384L, 24L, 0L, 6L, 0L);
     }
 
+    @DevSdkIgnoreRule.IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     public void testGroupedByIface() throws Exception {
         final NetworkStats uidStats = new NetworkStats(TEST_START, 7)
@@ -1068,35 +1073,40 @@ public class NetworkStatsTest {
     }
 
     @Test
-    public void testClearInterfaces() {
+    public void testWithoutInterfaces() {
         final NetworkStats stats = new NetworkStats(TEST_START, 1);
         final NetworkStats.Entry entry1 = new NetworkStats.Entry(
                 "test1", 10100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
                 DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
-
         final NetworkStats.Entry entry2 = new NetworkStats.Entry(
                 "test2", 10101, SET_DEFAULT, 0xF0DD, METERED_NO, ROAMING_NO,
                 DEFAULT_NETWORK_NO, 51200, 25L, 101010L, 50L, 0L);
+        final NetworkStats.Entry entry3 = new NetworkStats.Entry(
+                "test3", 10101, SET_DEFAULT, 0xF0DD, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 1, 2L, 3L, 4L, 5L);
 
         stats.insertEntry(entry1);
         stats.insertEntry(entry2);
+        stats.insertEntry(entry3);
 
         // Verify that the interfaces have indeed been recorded.
-        assertEquals(2, stats.size());
+        assertEquals(3, stats.size());
         assertValues(stats, 0, "test1", 10100, SET_DEFAULT, TAG_NONE, METERED_NO,
                 ROAMING_NO, DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
         assertValues(stats, 1, "test2", 10101, SET_DEFAULT, 0xF0DD, METERED_NO,
                 ROAMING_NO, DEFAULT_NETWORK_NO, 51200, 25L, 101010L, 50L, 0L);
+        assertValues(stats, 2, "test3", 10101, SET_DEFAULT, 0xF0DD, METERED_NO,
+                ROAMING_NO, DEFAULT_NETWORK_NO, 1, 2L, 3L, 4L, 5L);
 
-        // Clear interfaces.
-        stats.clearInterfaces();
+        // Get stats without interfaces.
+        final NetworkStats ifaceClearedStats = stats.withoutInterfaces();
 
-        // Verify that the interfaces are cleared.
-        assertEquals(2, stats.size());
-        assertValues(stats, 0, null /* iface */, 10100, SET_DEFAULT, TAG_NONE, METERED_NO,
-                ROAMING_NO, DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
-        assertValues(stats, 1, null /* iface */, 10101, SET_DEFAULT, 0xF0DD, METERED_NO,
-                ROAMING_NO, DEFAULT_NETWORK_NO, 51200, 25L, 101010L, 50L, 0L);
+        // Verify that the interfaces do not exist, and key-duplicated items are merged.
+        assertEquals(2, ifaceClearedStats.size());
+        assertValues(ifaceClearedStats, 0, null /* iface */, 10100, SET_DEFAULT, TAG_NONE,
+                METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 1024L, 50L, 100L, 20L, 0L);
+        assertValues(ifaceClearedStats, 1, null /* iface */, 10101, SET_DEFAULT, 0xF0DD,
+                METERED_NO, ROAMING_NO, DEFAULT_NETWORK_NO, 51201, 27L, 101013L, 54L, 5L);
     }
 
     private static void assertContains(NetworkStats stats,  String iface, int uid, int set,

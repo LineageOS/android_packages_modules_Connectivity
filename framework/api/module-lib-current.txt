@@ -14,6 +14,7 @@ package android.net {
     method @NonNull public static android.util.Range<java.lang.Integer> getIpSecNetIdRange();
     method @Nullable @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public android.net.LinkProperties getRedactedLinkPropertiesForPackage(@NonNull android.net.LinkProperties, int, @NonNull String);
     method @Nullable @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public android.net.NetworkCapabilities getRedactedNetworkCapabilitiesForPackage(@NonNull android.net.NetworkCapabilities, int, @NonNull String);
+    method @FlaggedApi("com.android.net.flags.support_is_uid_networking_blocked") @RequiresPermission(android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK) public boolean isUidNetworkingBlocked(int, boolean);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public void registerDefaultNetworkCallbackForUid(int, @NonNull android.net.ConnectivityManager.NetworkCallback, @NonNull android.os.Handler);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS}) public void registerSystemDefaultNetworkCallback(@NonNull android.net.ConnectivityManager.NetworkCallback, @NonNull android.os.Handler);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void removeUidFromMeteredNetworkAllowList(int);
@@ -24,6 +25,7 @@ package android.net {
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setAcceptPartialConnectivity(@NonNull android.net.Network, boolean, boolean);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setAcceptUnvalidated(@NonNull android.net.Network, boolean, boolean);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setAvoidUnvalidated(@NonNull android.net.Network);
+    method @FlaggedApi("com.android.net.flags.set_data_saver_via_cm") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setDataSaverEnabled(boolean);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public void setFirewallChainEnabled(int, boolean);
     method @RequiresPermission(android.Manifest.permission.NETWORK_STACK) public void setGlobalProxy(@Nullable android.net.ProxyInfo);
     method @RequiresPermission(anyOf={android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.NETWORK_SETTINGS}) public void setLegacyLockdownVpnEnabled(boolean);
@@ -43,6 +45,7 @@ package android.net {
     field public static final int BLOCKED_METERED_REASON_DATA_SAVER = 65536; // 0x10000
     field public static final int BLOCKED_METERED_REASON_MASK = -65536; // 0xffff0000
     field public static final int BLOCKED_METERED_REASON_USER_RESTRICTED = 131072; // 0x20000
+    field @FlaggedApi("com.android.net.flags.basic_background_restrictions_enabled") public static final int BLOCKED_REASON_APP_BACKGROUND = 64; // 0x40
     field public static final int BLOCKED_REASON_APP_STANDBY = 4; // 0x4
     field public static final int BLOCKED_REASON_BATTERY_SAVER = 1; // 0x1
     field public static final int BLOCKED_REASON_DOZE = 2; // 0x2
@@ -50,6 +53,7 @@ package android.net {
     field public static final int BLOCKED_REASON_LOW_POWER_STANDBY = 32; // 0x20
     field public static final int BLOCKED_REASON_NONE = 0; // 0x0
     field public static final int BLOCKED_REASON_RESTRICTED_MODE = 8; // 0x8
+    field @FlaggedApi("com.android.net.flags.basic_background_restrictions_enabled") public static final int FIREWALL_CHAIN_BACKGROUND = 6; // 0x6
     field public static final int FIREWALL_CHAIN_DOZABLE = 1; // 0x1
     field public static final int FIREWALL_CHAIN_LOW_POWER_STANDBY = 5; // 0x5
     field public static final int FIREWALL_CHAIN_OEM_DENY_1 = 7; // 0x7
@@ -231,6 +235,7 @@ package android.net {
 
   public final class VpnTransportInfo implements android.os.Parcelable android.net.TransportInfo {
     ctor @Deprecated public VpnTransportInfo(int, @Nullable String);
+    method public long getApplicableRedactions();
     method @Nullable public String getSessionId();
     method @NonNull public android.net.VpnTransportInfo makeCopy(long);
   }

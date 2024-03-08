@@ -155,9 +155,8 @@ public class TetheringConfigurationTest {
         private ArrayMap<String, Boolean> mMockFlags = new ArrayMap<>();
 
         @Override
-        boolean isFeatureEnabled(@NonNull Context context, @NonNull String namespace,
-                @NonNull String name, @NonNull String moduleName, boolean defaultEnabled) {
-            return isMockFlagEnabled(name, defaultEnabled);
+        boolean isFeatureEnabled(@NonNull Context context, @NonNull String name) {
+            return isMockFlagEnabled(name, false /* defaultEnabled */);
         }
 
         @Override
@@ -170,6 +169,12 @@ public class TetheringConfigurationTest {
 
             // Use the same mocking strategy as isFeatureEnabled for testing
             return isMockFlagEnabled(name, defaultValue);
+        }
+
+        @Override
+        boolean isTetherForceUpstreamAutomaticFeatureEnabled() {
+            return isMockFlagEnabled(TetheringConfiguration.TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION,
+                    false /* defaultEnabled */);
         }
 
         private boolean isMockFlagEnabled(@NonNull String name, boolean defaultEnabled) {
@@ -748,5 +753,27 @@ public class TetheringConfigurationTest {
         final TetheringConfiguration p2pCfg =
                 new TetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID, mDeps);
         assertEquals(p2pLeasesSubnetPrefixLength, p2pCfg.getP2pLeasesSubnetPrefixLength());
+    }
+
+    private void setTetherEnableSyncSMFlagEnabled(Boolean enabled) {
+        mDeps.setFeatureEnabled(TetheringConfiguration.TETHER_ENABLE_SYNC_SM, enabled);
+    }
+
+    private void assertEnableSyncSMIs(boolean value) {
+        assertEquals(value, new TetheringConfiguration(
+                mMockContext, mLog, INVALID_SUBSCRIPTION_ID, mDeps).isSyncSM());
+    }
+
+    @Test
+    public void testEnableSyncSMFlag() throws Exception {
+        // Test default disabled
+        setTetherEnableSyncSMFlagEnabled(null);
+        assertEnableSyncSMIs(false);
+
+        setTetherEnableSyncSMFlagEnabled(true);
+        assertEnableSyncSMIs(true);
+
+        setTetherEnableSyncSMFlagEnabled(false);
+        assertEnableSyncSMIs(false);
     }
 }

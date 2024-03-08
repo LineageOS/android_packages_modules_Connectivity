@@ -79,6 +79,7 @@ public class PrivateAddressCoordinator {
     private final TetheringConfiguration mConfig;
     // keyed by downstream type(TetheringManager.TETHERING_*).
     private final ArrayMap<AddressKey, LinkAddress> mCachedAddresses;
+    private final Random mRandom;
 
     public PrivateAddressCoordinator(Context context, TetheringConfiguration config) {
         mDownstreams = new ArraySet<>();
@@ -95,6 +96,7 @@ public class PrivateAddressCoordinator {
 
         mTetheringPrefixes = new ArrayList<>(Arrays.asList(new IpPrefix("192.168.0.0/16"),
             new IpPrefix("172.16.0.0/12"), new IpPrefix("10.0.0.0/8")));
+        mRandom = new Random();
     }
 
     /**
@@ -187,7 +189,10 @@ public class PrivateAddressCoordinator {
             return cachedAddress;
         }
 
-        for (IpPrefix prefixRange : mTetheringPrefixes) {
+        final int prefixIndex = getStartedPrefixIndex();
+        for (int i = 0; i < mTetheringPrefixes.size(); i++) {
+            final IpPrefix prefixRange = mTetheringPrefixes.get(
+                    (prefixIndex + i) % mTetheringPrefixes.size());
             final LinkAddress newAddress = chooseDownstreamAddress(prefixRange);
             if (newAddress != null) {
                 mDownstreams.add(ipServer);
@@ -198,6 +203,28 @@ public class PrivateAddressCoordinator {
 
         // No available address.
         return null;
+    }
+
+    private int getStartedPrefixIndex() {
+        if (!mConfig.isRandomPrefixBaseEnabled()) return 0;
+
+        final int random = getRandomInt() & 0xffffff;
+        // This is to select the starting prefix range (/8, /12, or /16) instead of the actual
+        // LinkAddress. To avoid complex operations in the selection logic and make the selected
+        // rate approximate consistency with that /8 is around 2^4 times of /12 and /12 is around
+        // 2^4 times of /16, we simply define a map between the value and the prefix value like
+        // this:
+        //
+        // Value 0 ~ 0xffff (65536/16777216 = 0.39%) -> 192.168.0.0/16
+        // Value 0x10000 ~ 0xfffff (983040/16777216 = 5.86%) -> 172.16.0.0/12
+        // Value 0x100000 ~ 0xffffff (15728640/16777216 = 93.7%) -> 10.0.0.0/8
+        if (random > 0xfffff) {
+            return 2;
+        } else if (random > 0xffff) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
     private int getPrefixBaseAddress(final IpPrefix prefix) {
@@ -263,12 +290,13 @@ public class PrivateAddressCoordinator {
         // is less than 127.0.0.0 = 0x7f000000 = 2130706432.
         //
         // Additionally, it makes debug output easier to read by making the numbers smaller.
-        final int randomPrefixStart = getRandomInt() & ~prefixRangeMask & prefixMask;
+        final int randomInt = getRandomInt();
+        final int randomPrefixStart = randomInt & ~prefixRangeMask & prefixMask;
 
         // A random offset within the prefix. Used to determine the local address once the prefix
         // is selected. It does not result in an IPv4 address ending in .0, .1, or .255
-        // For a PREFIX_LENGTH of 255, this is a number between 2 and 254.
-        final int subAddress = getSanitizedSubAddr(~prefixMask);
+        // For a PREFIX_LENGTH of 24, this is a number between 2 and 254.
+        final int subAddress = getSanitizedSubAddr(randomInt, ~prefixMask);
 
         // Find a prefix length PREFIX_LENGTH between randomPrefixStart and the end of the block,
         // such that the prefix does not conflict with any upstream.
@@ -310,12 +338,12 @@ public class PrivateAddressCoordinator {
     /** Get random int which could be used to generate random address. */
     @VisibleForTesting
     public int getRandomInt() {
-        return (new Random()).nextInt();
+        return mRandom.nextInt();
     }
 
     /** Get random subAddress and avoid selecting x.x.x.0, x.x.x.1 and x.x.x.255 address. */
-    private int getSanitizedSubAddr(final int subAddrMask) {
-        final int randomSubAddr = getRandomInt() & subAddrMask;
+    private int getSanitizedSubAddr(final int randomInt, final int subAddrMask) {
+        final int randomSubAddr = randomInt & subAddrMask;
         // If prefix length > 30, the selecting speace would be less than 4 which may be hard to
         // avoid 3 consecutive address.
         if (PREFIX_LENGTH > 30) return randomSubAddr;

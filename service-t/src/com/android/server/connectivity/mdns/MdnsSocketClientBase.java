@@ -41,19 +41,15 @@ public interface MdnsSocketClientBase {
 
     /**
      * Send a mDNS request packet via given network that asks for multicast response.
-     *
-     * <p>The socket client may use a null network to identify some or all interfaces, in which case
-     * passing null sends the packet to these.
      */
-    void sendMulticastPacket(@NonNull DatagramPacket packet, @Nullable Network network);
+    void sendPacketRequestingMulticastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks);
 
     /**
      * Send a mDNS request packet via given network that asks for unicast response.
-     *
-     * <p>The socket client may use a null network to identify some or all interfaces, in which case
-     * passing null sends the packet to these.
      */
-    void sendUnicastPacket(@NonNull DatagramPacket packet, @Nullable Network network);
+    void sendPacketRequestingUnicastResponse(@NonNull DatagramPacket packet,
+            boolean onlyUseIpv6OnIpv6OnlyNetworks);
 
     /*** Notify that the given network is requested for mdns discovery / resolution */
     void notifyNetworkRequested(@NonNull MdnsServiceBrowserListener listener,
@@ -67,23 +63,25 @@ public interface MdnsSocketClientBase {
         return null;
     }
 
+    /** Returns whether the socket client support requesting per network */
+    boolean supportsRequestingSpecificNetworks();
+
     /*** Callback for mdns response  */
     interface Callback {
         /*** Receive a mdns response */
-        void onResponseReceived(@NonNull MdnsPacket packet, int interfaceIndex,
-                @Nullable Network network);
+        void onResponseReceived(@NonNull MdnsPacket packet, @NonNull SocketKey socketKey);
 
         /*** Parse a mdns response failed */
         void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode,
-                @Nullable Network network);
+                @NonNull SocketKey socketKey);
     }
 
     /*** Callback for requested socket creation  */
     interface SocketCreationCallback {
         /*** Notify requested socket is created */
-        void onSocketCreated(@Nullable Network network);
+        void onSocketCreated(@NonNull SocketKey socketKey);
 
         /*** Notify requested socket is destroyed */
-        void onAllSocketsDestroyed(@Nullable Network network);
+        void onSocketDestroyed(@NonNull SocketKey socketKey);
     }
 }

@@ -25,13 +25,12 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
 
-import com.android.server.connectivity.mdns.util.MdnsLogger;
+import com.android.net.module.util.SharedLog;
 
 /** Class for monitoring connectivity changes using {@link ConnectivityManager}. */
 public class ConnectivityMonitorWithConnectivityManager implements ConnectivityMonitor {
     private static final String TAG = "ConnMntrWConnMgr";
-    private static final MdnsLogger LOGGER = new MdnsLogger(TAG);
-
+    private final SharedLog sharedLog;
     private final Listener listener;
     private final ConnectivityManager.NetworkCallback networkCallback;
     private final ConnectivityManager connectivityManager;
@@ -42,8 +41,10 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
 
     @SuppressWarnings({"nullness:assignment", "nullness:method.invocation"})
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public ConnectivityMonitorWithConnectivityManager(Context context, Listener listener) {
+    public ConnectivityMonitorWithConnectivityManager(Context context, Listener listener,
+            SharedLog sharedLog) {
         this.listener = listener;
+        this.sharedLog = sharedLog;
 
         connectivityManager =
                 (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -51,20 +52,20 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
                 new ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onAvailable(Network network) {
-                        LOGGER.log("network available.");
+                        sharedLog.log("network available.");
                         lastAvailableNetwork = network;
                         notifyConnectivityChange();
                     }
 
                     @Override
                     public void onLost(Network network) {
-                        LOGGER.log("network lost.");
+                        sharedLog.log("network lost.");
                         notifyConnectivityChange();
                     }
 
                     @Override
                     public void onUnavailable() {
-                        LOGGER.log("network unavailable.");
+                        sharedLog.log("network unavailable.");
                         notifyConnectivityChange();
                     }
                 };
@@ -82,7 +83,7 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void startWatchingConnectivityChanges() {
-        LOGGER.log("Start watching connectivity changes");
+        sharedLog.log("Start watching connectivity changes");
         if (isCallbackRegistered) {
             return;
         }
@@ -98,7 +99,7 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void stopWatchingConnectivityChanges() {
-        LOGGER.log("Stop watching connectivity changes");
+        sharedLog.log("Stop watching connectivity changes");
         if (!isCallbackRegistered) {
             return;
         }

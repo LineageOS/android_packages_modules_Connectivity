@@ -39,6 +39,12 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.TestableNetworkOfferCallback
+import java.util.UUID
+import java.util.concurrent.Executor
+import java.util.concurrent.RejectedExecutionException
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.fail
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -47,12 +53,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoMoreInteractions
-import java.util.UUID
-import java.util.concurrent.Executor
-import java.util.concurrent.RejectedExecutionException
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.fail
 
 private const val DEFAULT_TIMEOUT_MS = 5000L
 private const val DEFAULT_NO_CALLBACK_TIMEOUT_MS = 200L
@@ -62,12 +62,11 @@ private val context: Context get() = InstrumentationRegistry.getContext()
 private val PROVIDER_NAME = "NetworkProviderTest"
 
 @RunWith(DevSdkIgnoreRunner::class)
-@IgnoreUpTo(Build.VERSION_CODES.Q)
 @ConnectivityModuleTest
 class NetworkProviderTest {
     @Rule @JvmField
     val mIgnoreRule = DevSdkIgnoreRule()
-    private val mCm = context.getSystemService(ConnectivityManager::class.java)
+    private val mCm = context.getSystemService(ConnectivityManager::class.java)!!
     private val mHandlerThread = HandlerThread("${javaClass.simpleName} handler thread")
 
     @Before

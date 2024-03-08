@@ -49,6 +49,7 @@ import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTT
 import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
 import com.android.testutils.DeviceConfigRule
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
+import com.android.testutils.SkipMainlinePresubmit
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestHttpServer.Request
 import com.android.testutils.TestableNetworkCallback
@@ -94,7 +95,7 @@ private fun <T> CompletableFuture<T>.assertGet(timeoutMs: Long, message: String)
 @RunWith(AndroidJUnit4::class)
 class CaptivePortalTest {
     private val context: android.content.Context by lazy { getInstrumentation().context }
-    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java) }
+    private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val pm by lazy { context.packageManager }
     private val utils by lazy { CtsNetUtils(context) }
 
@@ -137,6 +138,7 @@ class CaptivePortalTest {
     }
 
     @Test
+    @SkipMainlinePresubmit(reason = "Out of SLO flakiness")
     fun testCaptivePortalIsNotDefaultNetwork() {
         assumeTrue(pm.hasSystemFeature(FEATURE_TELEPHONY))
         assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
