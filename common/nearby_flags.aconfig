@@ -3,6 +3,7 @@ container: "system"
 
 flag {
     name: "powered_off_finding"
+    is_exported: true
     namespace: "nearby"
     description: "Controls whether the Powered Off Finding feature is enabled"
     bug: "307898240"
