@@ -94,57 +94,6 @@ public class MdnsServiceInfo implements Parcelable {
     @NonNull
     private final Instant expirationTime;
 
-    /** Constructs a {@link MdnsServiceInfo} object with default values. */
-    public MdnsServiceInfo(
-            String serviceInstanceName,
-            String[] serviceType,
-            @Nullable List<String> subtypes,
-            String[] hostName,
-            int port,
-            @Nullable String ipv4Address,
-            @Nullable String ipv6Address,
-            @Nullable List<String> textStrings) {
-        this(
-                serviceInstanceName,
-                serviceType,
-                subtypes,
-                hostName,
-                port,
-                List.of(ipv4Address),
-                List.of(ipv6Address),
-                textStrings,
-                /* textEntries= */ null,
-                /* interfaceIndex= */ INTERFACE_INDEX_UNSPECIFIED,
-                /* network= */ null,
-                /* expirationTime= */ Instant.MAX);
-    }
-
-    /** Constructs a {@link MdnsServiceInfo} object with default values. */
-    public MdnsServiceInfo(
-            String serviceInstanceName,
-            String[] serviceType,
-            List<String> subtypes,
-            String[] hostName,
-            int port,
-            @Nullable String ipv4Address,
-            @Nullable String ipv6Address,
-            @Nullable List<String> textStrings,
-            @Nullable List<TextEntry> textEntries) {
-        this(
-                serviceInstanceName,
-                serviceType,
-                subtypes,
-                hostName,
-                port,
-                List.of(ipv4Address),
-                List.of(ipv6Address),
-                textStrings,
-                textEntries,
-                /* interfaceIndex= */ INTERFACE_INDEX_UNSPECIFIED,
-                /* network= */ null,
-                /* expirationTime= */ Instant.MAX);
-    }
-
     /**
      * Constructs a {@link MdnsServiceInfo} object with default values.
      *

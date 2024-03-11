@@ -110,8 +110,9 @@ public final class AdvertisingRequest implements Parcelable {
     }
 
     /**
-     * Returns the time interval that the resource records may be cached on a DNS resolver or
-     * {@code null} if not specified.
+     * Returns the time interval that the resource records may be cached on a DNS resolver.
+     *
+     * The value will be {@code null} if it's not specified with the {@link #Builder}.
      *
      * @hide
      */
@@ -161,7 +162,7 @@ public final class AdvertisingRequest implements Parcelable {
         dest.writeParcelable(mServiceInfo, flags);
         dest.writeInt(mProtocolType);
         dest.writeLong(mAdvertisingConfig);
-        dest.writeLong(mTtl == null ? -1 : mTtl.getSeconds());
+        dest.writeLong(mTtl == null ? -1L : mTtl.getSeconds());
     }
 
 //    @FlaggedApi(NsdManager.Flags.ADVERTISE_REQUEST_API)
@@ -205,7 +206,9 @@ public final class AdvertisingRequest implements Parcelable {
          * When registering a service, {@link NsdManager#FAILURE_BAD_PARAMETERS} will be returned
          * if {@code ttl} is smaller than 30 seconds.
          *
-         * Note: only number of seconds of {@code ttl} is used.
+         * Note: the value after the decimal point (in unit of seconds) will be discarded. For
+         * example, {@code 30} seconds will be used when {@code Duration.ofSeconds(30L, 50_000L)}
+         * is provided.
          *
          * @param ttl the maximum duration that the DNS resource records will be cached
          *

@@ -54,17 +54,17 @@ class AdvertisingRequestTest {
         assertEquals(beforeParcel.advertisingConfig, afterParcel.advertisingConfig)
     }
 
-@Test
-fun testBuilder_setNullTtl_success() {
-    val info = NsdServiceInfo().apply {
-        serviceType = "_ipp._tcp"
-    }
-    val request = AdvertisingRequest.Builder(info, PROTOCOL_DNS_SD)
-            .setTtl(null)
-            .build()
+    @Test
+    fun testBuilder_setNullTtl_success() {
+        val info = NsdServiceInfo().apply {
+            serviceType = "_ipp._tcp"
+        }
+        val request = AdvertisingRequest.Builder(info, PROTOCOL_DNS_SD)
+                .setTtl(null)
+                .build()
 
-    assertNull(request.ttl)
-}
+        assertNull(request.ttl)
+    }
 
     @Test
     fun testBuilder_setPropertiesSuccess() {

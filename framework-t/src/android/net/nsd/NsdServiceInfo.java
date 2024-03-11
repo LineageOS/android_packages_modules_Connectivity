@@ -70,7 +70,8 @@ public final class NsdServiceInfo implements Parcelable {
 
     private int mInterfaceIndex;
 
-    // The timestamp that all resource records associated with this service are considered invalid.
+    // The timestamp that one or more resource records associated with this service are considered
+    // invalid.
     @Nullable
     private Instant mExpirationTime;
 
@@ -497,7 +498,9 @@ public final class NsdServiceInfo implements Parcelable {
     /**
      * Sets the timestamp after when this service is expired.
      *
-     * Note: only number of seconds of {@code expirationTime} is used.
+     * Note: the value after the decimal point (in unit of seconds) will be discarded. For
+     * example, {@code 30} seconds will be used when {@code Duration.ofSeconds(30L, 50_000L)}
+     * is provided.
      *
      * @hide
      */
