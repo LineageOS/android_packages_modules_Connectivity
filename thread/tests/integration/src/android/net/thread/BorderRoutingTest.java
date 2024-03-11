@@ -55,6 +55,7 @@ import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.thread.utils.FullThreadDevice;
 import android.net.thread.utils.InfraNetworkDevice;
+import android.net.thread.utils.OtDaemonController;
 import android.os.Handler;
 import android.os.HandlerThread;
 
@@ -86,6 +87,7 @@ public class BorderRoutingTest {
     private static final String TAG = BorderRoutingTest.class.getSimpleName();
     private final Context mContext = ApplicationProvider.getApplicationContext();
     private ThreadNetworkController mController;
+    private OtDaemonController mOtCtl;
     private HandlerThread mHandlerThread;
     private Handler mHandler;
     private TestNetworkTracker mInfraNetworkTracker;
@@ -123,6 +125,10 @@ public class BorderRoutingTest {
 
         // Run the tests on only devices where the Thread feature is available
         assumeNotNull(mController);
+
+        // TODO: b/323301831 - This is a workaround to avoid unnecessary delay to re-form a network
+        mOtCtl = new OtDaemonController();
+        mOtCtl.factoryReset();
 
         mHandlerThread = new HandlerThread(getClass().getSimpleName());
         mHandlerThread.start();
