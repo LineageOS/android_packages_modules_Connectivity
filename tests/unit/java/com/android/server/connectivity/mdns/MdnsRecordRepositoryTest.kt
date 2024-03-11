@@ -38,6 +38,7 @@ import com.google.common.truth.Truth.assertThat
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.util.Collections
+import java.time.Duration
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -146,7 +147,7 @@ class MdnsRecordRepositoryTest {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
         assertEquals(0, repository.servicesCount)
         assertEquals(-1,
-                repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* ttl */))
+                repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, Duration.ofSeconds(50)))
         assertEquals(1, repository.servicesCount)
 
         val probingInfo = repository.setServiceProbing(TEST_SERVICE_ID_1)
@@ -169,7 +170,7 @@ class MdnsRecordRepositoryTest {
         assertEquals(MdnsServiceRecord(expectedName,
                 0L /* receiptTimeMillis */,
                 false /* cacheFlush */,
-                SHORT_TTL /* ttlMillis */,
+                50_000L /* ttlMillis */,
                 0 /* servicePriority */, 0 /* serviceWeight */,
                 TEST_PORT, TEST_HOSTNAME), packet.authorityRecords[0])
 
