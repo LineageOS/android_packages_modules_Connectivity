@@ -19,12 +19,13 @@ package com.android.server.net;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.NetworkStats;
+import android.util.LruCache;
 
 import com.android.internal.annotations.GuardedBy;
 
 import java.time.Clock;
-import java.util.HashMap;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * A thread-safe cache for storing and retrieving {@link NetworkStats.Entry} objects,
@@ -39,10 +40,12 @@ class TrafficStatsRateLimitCache {
      *
      * @param clock The {@link Clock} to use for determining timestamps.
      * @param expiryDurationMs The expiry duration in milliseconds.
+     * @param maxSize Maximum number of entries.
      */
-    TrafficStatsRateLimitCache(@NonNull Clock clock, long expiryDurationMs) {
+    TrafficStatsRateLimitCache(@NonNull Clock clock, long expiryDurationMs, int maxSize) {
         mClock = clock;
         mExpiryDurationMs = expiryDurationMs;
+        mMap = new LruCache<>(maxSize);
     }
 
     private static class TrafficStatsCacheKey {
@@ -81,7 +84,7 @@ class TrafficStatsRateLimitCache {
     }
 
     @GuardedBy("mMap")
-    private final HashMap<TrafficStatsCacheKey, TrafficStatsCacheValue> mMap = new HashMap<>();
+    private final LruCache<TrafficStatsCacheKey, TrafficStatsCacheValue> mMap;
 
     /**
      * Retrieves a {@link NetworkStats.Entry} from the cache, associated with the given key.
@@ -105,6 +108,36 @@ class TrafficStatsRateLimitCache {
     }
 
     /**
+     * Retrieves a {@link NetworkStats.Entry} from the cache, associated with the given key.
+     * If the entry is not found in the cache or has expired, computes it using the provided
+     * {@code supplier} and stores the result in the cache.
+     *
+     * @param iface The interface name to include in the cache key. {@code IFACE_ALL}
+     *              if not applicable.
+     * @param uid The UID to include in the cache key. {@code UID_ALL} if not applicable.
+     * @param supplier The {@link Supplier} to compute the {@link NetworkStats.Entry} if not found.
+     * @return The cached or computed {@link NetworkStats.Entry}, or null if not found, expired,
+     *         or if the {@code supplier} returns null.
+     */
+    @Nullable
+    NetworkStats.Entry getOrCompute(String iface, int uid,
+            @NonNull Supplier<NetworkStats.Entry> supplier) {
+        synchronized (mMap) {
+            final NetworkStats.Entry cachedValue = get(iface, uid);
+            if (cachedValue != null) {
+                return cachedValue;
+            }
+
+            // Entry not found or expired, compute it
+            final NetworkStats.Entry computedEntry = supplier.get();
+            if (computedEntry != null && !computedEntry.isEmpty()) {
+                put(iface, uid, computedEntry);
+            }
+            return computedEntry;
+        }
+    }
+
+    /**
      * Stores a {@link NetworkStats.Entry} in the cache, associated with the given key.
      *
      * @param iface The interface name to include in the cache key. Null if not applicable.
@@ -124,7 +157,7 @@ class TrafficStatsRateLimitCache {
      */
     void clear() {
         synchronized (mMap) {
-            mMap.clear();
+            mMap.evictAll();
         }
     }
 
