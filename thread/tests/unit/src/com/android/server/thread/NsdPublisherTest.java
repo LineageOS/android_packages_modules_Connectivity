@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -468,7 +469,7 @@ public final class NsdPublisherTest {
     }
 
     @Test
-    public void onOtDaemonDied_unregisterAll() {
+    public void reset_unregisterAll() {
         prepareTest();
 
         DnsTxtAttribute txt1 = makeTxtAttribute("key1", List.of(0x01, 0x02));
@@ -540,12 +541,23 @@ public final class NsdPublisherTest {
                 actualRegistrationListenerCaptor.getAllValues().get(1);
         actualListener3.onServiceRegistered(actualServiceInfoCaptor.getValue());
 
-        mNsdPublisher.onOtDaemonDied();
+        mNsdPublisher.reset();
         mTestLooper.dispatchAll();
 
         verify(mMockNsdManager, times(1)).unregisterService(actualListener1);
         verify(mMockNsdManager, times(1)).unregisterService(actualListener2);
         verify(mMockNsdManager, times(1)).unregisterService(actualListener3);
+    }
+
+    @Test
+    public void onOtDaemonDied_resetIsCalled() {
+        prepareTest();
+        NsdPublisher spyNsdPublisher = spy(mNsdPublisher);
+
+        spyNsdPublisher.onOtDaemonDied();
+        mTestLooper.dispatchAll();
+
+        verify(spyNsdPublisher, times(1)).reset();
     }
 
     private static DnsTxtAttribute makeTxtAttribute(String name, List<Integer> value) {
