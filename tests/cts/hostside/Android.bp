@@ -18,10 +18,6 @@ next_app_data = []
 // downstream branches. The CtsHostsideNetworkTestsAppNext target will not exist in
 // some downstream branches, but it should exist in aosp and some downstream branches.
 
-
-
-
-
 package {
     default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
