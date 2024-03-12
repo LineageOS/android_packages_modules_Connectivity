@@ -25,6 +25,7 @@ android_library {
         "net-utils-device-common-async",
         "net-utils-device-common-bpf",
         "net-utils-device-common-ip",
+        "net-utils-device-common-struct-base",
         "net-utils-device-common-wear",
     ],
     libs: [
