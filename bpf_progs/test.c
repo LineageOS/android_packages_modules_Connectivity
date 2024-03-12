@@ -18,16 +18,16 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 
-#ifdef BTF
+#ifdef MAINLINE
 // BTF is incompatible with bpfloaders < v0.10, hence for S (v0.2) we must
 // ship a different file than for later versions, but we need bpfloader v0.25+
 // for obj@ver.o support
 #define BPFLOADER_MIN_VER BPFLOADER_OBJ_AT_VER_VERSION
-#else /* BTF */
+#else /* MAINLINE */
 // The resulting .o needs to load on the Android S bpfloader
 #define BPFLOADER_MIN_VER BPFLOADER_S_VERSION
 #define BPFLOADER_MAX_VER BPFLOADER_OBJ_AT_VER_VERSION
-#endif /* BTF */
+#endif /* MAINLINE */
 
 // Warning: values other than AID_ROOT don't work for map uid on BpfLoader < v0.21
 #define TETHERING_UID AID_ROOT
