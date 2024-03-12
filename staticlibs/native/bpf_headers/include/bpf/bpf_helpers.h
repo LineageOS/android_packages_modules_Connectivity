@@ -39,6 +39,9 @@
 // Android U / 14 (api level 34) - various new program types added
 #define BPFLOADER_U_VERSION 37u
 
+// Android V / 15 (api level 35) - this bpfloader should eventually go back to T
+#define BPFLOADER_MAINLINE_VERSION 42u
+
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
  * process the resulting .o file.
