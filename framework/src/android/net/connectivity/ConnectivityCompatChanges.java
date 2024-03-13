@@ -84,6 +84,21 @@ public final class ConnectivityCompatChanges {
     @ChangeId
     @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.TIRAMISU)
     public static final long ENABLE_PLATFORM_MDNS_BACKEND = 270306772L;
+
+    /**
+     * Apps targeting Android V or higher receive network callbacks from local networks as default
+     *
+     * Apps targeting lower than {@link android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM} need
+     * to add {@link android.net.NetworkCapabilities#NET_CAPABILITY_LOCAL_NETWORK} to the
+     * {@link android.net.NetworkCapabilities} of the {@link android.net.NetworkRequest} to receive
+     * {@link android.net.ConnectivityManager.NetworkCallback} from local networks.
+     *
+     * @hide
+     */
+    @ChangeId
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public static final long ENABLE_MATCH_LOCAL_NETWORK = 319212206L;
+
     private ConnectivityCompatChanges() {
     }
 }
