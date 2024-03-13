@@ -28,6 +28,7 @@ import android.net.Network
 import android.net.NetworkAgent
 import android.net.NetworkAgentConfig
 import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED
 import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
 import android.net.NetworkProvider
@@ -39,6 +40,9 @@ import android.os.HandlerThread
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertEquals
+import kotlin.test.fail
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyInt
@@ -46,9 +50,6 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.verify
 import org.mockito.stubbing.Answer
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.assertEquals
-import kotlin.test.fail
 
 const val SHORT_TIMEOUT_MS = 200L
 
@@ -140,6 +141,9 @@ class CSAgentWrapper(
         val request = NetworkRequest.Builder().apply {
             clearCapabilities()
             if (nc.transportTypes.isNotEmpty()) addTransportType(nc.transportTypes[0])
+            if (nc.hasCapability(NET_CAPABILITY_LOCAL_NETWORK)) {
+                addCapability(NET_CAPABILITY_LOCAL_NETWORK)
+            }
         }.build()
         val cb = TestableNetworkCallback()
         mgr.registerNetworkCallback(request, cb)
@@ -166,6 +170,9 @@ class CSAgentWrapper(
         val request = NetworkRequest.Builder().apply {
             clearCapabilities()
             if (nc.transportTypes.isNotEmpty()) addTransportType(nc.transportTypes[0])
+            if (nc.hasCapability(NET_CAPABILITY_LOCAL_NETWORK)) {
+                addCapability(NET_CAPABILITY_LOCAL_NETWORK)
+            }
         }.build()
         val cb = TestableNetworkCallback(timeoutMs = SHORT_TIMEOUT_MS)
         mgr.registerNetworkCallback(request, cb)
