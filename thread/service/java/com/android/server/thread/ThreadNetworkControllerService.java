@@ -489,7 +489,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         @Override
         public void onAvailable(@NonNull Network network) {
             checkOnHandlerThread();
-            Log.i(TAG, "Thread network available: " + network);
+            Log.i(TAG, "Thread network is available: " + network);
+        }
+
+        @Override
+        public void onLost(@NonNull Network network) {
+            checkOnHandlerThread();
+            Log.i(TAG, "Thread network is lost: " + network);
+            disableBorderRouting();
         }
 
         @Override
@@ -504,7 +511,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                             + localNetworkInfo
                             + "}");
             if (localNetworkInfo.getUpstreamNetwork() == null) {
-                mUpstreamNetwork = null;
+                disableBorderRouting();
                 return;
             }
             if (!localNetworkInfo.getUpstreamNetwork().equals(mUpstreamNetwork)) {
@@ -936,23 +943,22 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             mBorderRouterConfig.isBorderRoutingEnabled = true;
 
             mOtDaemon.configureBorderRouter(
-                    mBorderRouterConfig,
-                    new IOtStatusReceiver.Stub() {
-                        @Override
-                        public void onSuccess() {
-                            Log.i(TAG, "configure border router successfully");
-                        }
+                    mBorderRouterConfig, new ConfigureBorderRouterStatusReceiver());
+        } catch (RemoteException | IOException e) {
+            Log.w(TAG, "Failed to enable border routing", e);
+        }
+    }
 
-                        @Override
-                        public void onError(int i, String s) {
-                            Log.w(
-                                    TAG,
-                                    String.format(
-                                            "failed to configure border router: %d %s", i, s));
-                        }
-                    });
-        } catch (Exception e) {
-            Log.w(TAG, "enableBorderRouting failed: " + e);
+    private void disableBorderRouting() {
+        mUpstreamNetwork = null;
+        mBorderRouterConfig.infraInterfaceName = null;
+        mBorderRouterConfig.infraInterfaceIcmp6Socket = null;
+        mBorderRouterConfig.isBorderRoutingEnabled = false;
+        try {
+            mOtDaemon.configureBorderRouter(
+                    mBorderRouterConfig, new ConfigureBorderRouterStatusReceiver());
+        } catch (RemoteException e) {
+            Log.w(TAG, "Failed to disable border routing", e);
         }
     }
 
@@ -1070,6 +1076,20 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 gId = 0;
             }
             return gId++;
+        }
+    }
+
+    private static final class ConfigureBorderRouterStatusReceiver extends IOtStatusReceiver.Stub {
+        public ConfigureBorderRouterStatusReceiver() {}
+
+        @Override
+        public void onSuccess() {
+            Log.i(TAG, "Configured border router successfully");
+        }
+
+        @Override
+        public void onError(int i, String s) {
+            Log.w(TAG, String.format("Failed to configure border router: %d %s", i, s));
         }
     }
 
