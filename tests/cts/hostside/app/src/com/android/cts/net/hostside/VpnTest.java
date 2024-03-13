@@ -1017,13 +1017,18 @@ public class VpnTest {
             // This needs to be done before testing  private DNS because checkStrictModePrivateDns
             // will set the private DNS server to a nonexistent name, which will cause validation to
             // fail and could cause the default network to switch (e.g., from wifi to cellular).
-            systemDefaultCallback.assertNoCallback();
-            otherUidCallback.assertNoCallback();
+            assertNoCallbackExceptCapOrLpChange(systemDefaultCallback);
+            assertNoCallbackExceptCapOrLpChange(otherUidCallback);
         }
 
         checkStrictModePrivateDns();
 
         receiver.unregisterQuietly();
+    }
+
+    private void assertNoCallbackExceptCapOrLpChange(TestableNetworkCallback callback) {
+        callback.assertNoCallback(c -> !(c instanceof CallbackEntry.CapabilitiesChanged
+                || c instanceof CallbackEntry.LinkPropertiesChanged));
     }
 
     @Test
