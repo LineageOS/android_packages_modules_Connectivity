@@ -116,6 +116,7 @@ java_library {
     static_libs: [
         "httpclient_api",
         "httpclient_impl",
+        "http_client_logging",
         // Framework-connectivity-pre-jarjar is identical to framework-connectivity
         // implementation, but without the jarjar rules. However, framework-connectivity
         // is not based on framework-connectivity-pre-jarjar, it's rebuilt from source
@@ -144,6 +145,7 @@ java_defaults {
     ],
     impl_only_static_libs: [
         "httpclient_impl",
+        "http_client_logging",
     ],
 }
 
