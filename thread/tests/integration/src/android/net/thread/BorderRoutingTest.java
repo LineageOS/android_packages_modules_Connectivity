@@ -47,8 +47,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import android.content.Context;
 import android.net.InetAddresses;
 import android.net.LinkProperties;
@@ -212,13 +210,6 @@ public class BorderRoutingTest {
          *  (Cuttlefish)
          * </pre>
          */
-
-        // BR forms a network.
-        CompletableFuture<Void> joinFuture = new CompletableFuture<>();
-        runAsShell(
-                PERMISSION_THREAD_NETWORK_PRIVILEGED,
-                () -> mController.join(DEFAULT_DATASET, directExecutor(), joinFuture::complete));
-        joinFuture.get(RESTART_JOIN_TIMEOUT.toMillis(), MILLISECONDS);
 
         // Creates a Full Thread Device (FTD) and lets it join the network.
         FullThreadDevice ftd = mFtds.get(0);
@@ -490,7 +481,7 @@ public class BorderRoutingTest {
         Inet6Address ftdLla = ftd.getLinkLocalAddress();
         assertNotNull(ftdLla);
 
-        ftd.ping(GROUP_ADDR_SCOPE_4, ftdLla, 100 /* size */, 1 /* count */);
+        ftd.ping(GROUP_ADDR_SCOPE_4, ftdLla);
 
         assertNull(
                 pollForPacketOnInfraNetwork(ICMPV6_ECHO_REQUEST_TYPE, ftdLla, GROUP_ADDR_SCOPE_4));
@@ -514,7 +505,7 @@ public class BorderRoutingTest {
         assertFalse(ftdMlas.isEmpty());
 
         for (Inet6Address ftdMla : ftdMlas) {
-            ftd.ping(GROUP_ADDR_SCOPE_4, ftdMla, 100 /* size */, 1 /* count */);
+            ftd.ping(GROUP_ADDR_SCOPE_4, ftdMla);
 
             assertNull(
                     pollForPacketOnInfraNetwork(
