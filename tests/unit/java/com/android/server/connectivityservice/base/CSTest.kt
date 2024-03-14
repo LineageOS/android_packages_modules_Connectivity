@@ -53,6 +53,7 @@ import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
 import android.permission.PermissionManager.PermissionResult
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.testing.TestableContext
 import androidx.test.platform.app.InstrumentationRegistry
@@ -131,8 +132,10 @@ open class CSTest {
 
     init {
         if (!SdkLevel.isAtLeastS()) {
-            throw UnsupportedApiLevelException("CSTest subclasses must be annotated to only " +
-                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)")
+            throw UnsupportedApiLevelException(
+                "CSTest subclasses must be annotated to only " +
+                    "run on S+, e.g. @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.R)"
+            )
         }
     }
 
@@ -183,6 +186,7 @@ open class CSTest {
     val telephonyManager = mock<TelephonyManager>().also {
         doReturn(true).`when`(it).isDataCapable()
     }
+    val subscriptionManager = mock<SubscriptionManager>()
 
     val multicastRoutingCoordinatorService = mock<MulticastRoutingCoordinatorService>()
     val satelliteAccessController = mock<SatelliteAccessController>()
@@ -252,8 +256,12 @@ open class CSTest {
                 AutomaticOnOffKeepaliveTracker(c, h, AOOKTDeps(c))
 
         override fun makeMultinetworkPolicyTracker(c: Context, h: Handler, r: Runnable) =
-                MultinetworkPolicyTracker(c, h, r,
-                        MultinetworkPolicyTrackerTestDependencies(connResources.get()))
+                MultinetworkPolicyTracker(
+                        c,
+                        h,
+                        r,
+                        MultinetworkPolicyTrackerTestDependencies(connResources.get())
+                )
 
         override fun makeNetworkRequestStateStatsMetrics(c: Context) =
                 this@CSTest.networkRequestStateStatsMetrics
@@ -338,8 +346,12 @@ open class CSTest {
         override fun enforceCallingOrSelfPermission(permission: String, message: String?) {
             // If the permission result does not set in the mMockedPermissions, it will be
             // considered as PERMISSION_GRANTED as existing design to prevent breaking other tests.
-            val granted = checkMockedPermission(permission, Process.myPid(), Process.myUid(),
-                PERMISSION_GRANTED)
+            val granted = checkMockedPermission(
+                permission,
+                Process.myPid(),
+                Process.myUid(),
+                PERMISSION_GRANTED
+            )
             if (!granted.equals(PERMISSION_GRANTED)) {
                 throw SecurityException("[Test] permission denied: " + permission)
             }
@@ -350,8 +362,12 @@ open class CSTest {
         override fun checkCallingOrSelfPermission(permission: String) =
             checkMockedPermission(permission, Process.myPid(), Process.myUid(), PERMISSION_GRANTED)
 
-        private fun checkMockedPermission(permission: String, pid: Int, uid: Int, default: Int):
-                Int {
+        private fun checkMockedPermission(
+                permission: String,
+                pid: Int,
+                uid: Int,
+                default: Int
+        ): Int {
             val processSpecificKey = "$permission,$pid,$uid"
             return mMockedPermissions[processSpecificKey]
                     ?: mMockedPermissions[permission] ?: default
@@ -413,6 +429,7 @@ open class CSTest {
             Context.ACTIVITY_SERVICE -> activityManager
             Context.SYSTEM_CONFIG_SERVICE -> systemConfigManager
             Context.TELEPHONY_SERVICE -> telephonyManager
+            Context.TELEPHONY_SUBSCRIPTION_SERVICE -> subscriptionManager
             Context.BATTERY_STATS_SERVICE -> batteryManager
             Context.STATS_MANAGER -> null // Stats manager is final and can't be mocked
             Context.APP_OPS_SERVICE -> appOpsManager
@@ -422,8 +439,7 @@ open class CSTest {
         internal val orderedBroadcastAsUserHistory = ArrayTrackRecord<Intent>().newReadHead()
 
         fun expectNoDataActivityBroadcast(timeoutMs: Int) {
-            assertNull(orderedBroadcastAsUserHistory.poll(
-                    timeoutMs.toLong()) { intent -> true })
+            assertNull(orderedBroadcastAsUserHistory.poll(timeoutMs.toLong()))
         }
 
         override fun sendOrderedBroadcastAsUser(
