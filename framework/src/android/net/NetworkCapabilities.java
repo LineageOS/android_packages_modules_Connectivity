@@ -1775,8 +1775,7 @@ public final class NetworkCapabilities implements Parcelable {
                 // use the same specifier, TelephonyNetworkSpecifier.
                 && mTransportTypes != (1L << TRANSPORT_TEST)
                 && Long.bitCount(mTransportTypes & ~(1L << TRANSPORT_TEST)) != 1
-                && (mTransportTypes & ~(1L << TRANSPORT_TEST))
-                != (1 << TRANSPORT_CELLULAR | 1 << TRANSPORT_SATELLITE)) {
+                && !specifierAcceptableForMultipleTransports(mTransportTypes)) {
             throw new IllegalStateException("Must have a single non-test transport specified to "
                     + "use setNetworkSpecifier");
         }
@@ -1784,6 +1783,12 @@ public final class NetworkCapabilities implements Parcelable {
         mNetworkSpecifier = networkSpecifier;
 
         return this;
+    }
+
+    private boolean specifierAcceptableForMultipleTransports(long transportTypes) {
+        return (transportTypes & ~(1L << TRANSPORT_TEST))
+                // Cellular and satellite use the same NetworkSpecifier.
+                == (1 << TRANSPORT_CELLULAR | 1 << TRANSPORT_SATELLITE);
     }
 
     /**
