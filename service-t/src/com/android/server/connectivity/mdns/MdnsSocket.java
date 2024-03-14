@@ -58,7 +58,6 @@ public class MdnsSocket {
     MdnsSocket(@NonNull MulticastNetworkInterfaceProvider multicastNetworkInterfaceProvider,
             MulticastSocket multicastSocket, SharedLog sharedLog) throws IOException {
         this.multicastNetworkInterfaceProvider = multicastNetworkInterfaceProvider;
-        this.multicastNetworkInterfaceProvider.startWatchingConnectivityChanges();
         this.multicastSocket = multicastSocket;
         this.sharedLog = sharedLog;
         // RFC Spec: https://tools.ietf.org/html/rfc6762
@@ -120,7 +119,6 @@ public class MdnsSocket {
     public void close() {
         // This is a race with the use of the file descriptor (b/27403984).
         multicastSocket.close();
-        multicastNetworkInterfaceProvider.stopWatchingConnectivityChanges();
     }
 
     /**
