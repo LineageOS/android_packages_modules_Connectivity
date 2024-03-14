@@ -20,6 +20,7 @@ import android.Manifest.permission.NETWORK_STACK
 import android.content.Intent
 import android.content.pm.PackageManager.PERMISSION_DENIED
 import android.content.pm.PackageManager.PERMISSION_GRANTED
+import android.net.CaptivePortal
 import android.net.ConnectivityManager.ACTION_CAPTIVE_PORTAL_SIGN_IN
 import android.net.ConnectivityManager.EXTRA_CAPTIVE_PORTAL
 import android.net.IpPrefix
@@ -33,23 +34,23 @@ import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
-import android.net.NetworkStack
-import android.net.CaptivePortal
 import android.net.NetworkRequest
 import android.net.NetworkScore
 import android.net.NetworkScore.KEEP_CONNECTED_FOR_TEST
+import android.net.NetworkStack
 import android.net.RouteInfo
 import android.os.Build
 import android.os.Bundle
 import androidx.test.filters.SmallTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.assertThrows
 import com.android.testutils.TestableNetworkCallback
+import kotlin.test.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
-import kotlin.test.assertEquals
 
 // This allows keeping all the networks connected without having to file individual requests
 // for them.
@@ -95,16 +96,22 @@ class CSCaptivePortalAppTest : CSTest() {
         captivePortalCallback.expectAvailableCallbacksUnvalidated(wifiAgent)
         val signInIntent = startCaptivePortalApp(wifiAgent)
         // Remove the granted permissions
-        context.setPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
-                PERMISSION_DENIED)
+        context.setPermission(
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+                PERMISSION_DENIED
+        )
         context.setPermission(NETWORK_STACK, PERMISSION_DENIED)
         val captivePortal: CaptivePortal? = signInIntent.getParcelableExtra(EXTRA_CAPTIVE_PORTAL)
-        assertThrows(SecurityException::class.java, { captivePortal?.reevaluateNetwork() })
+        captivePortal?.reevaluateNetwork()
+        verify(wifiAgent.networkMonitor, never()).forceReevaluation(anyInt())
     }
 
     private fun createWifiAgent(): CSAgentWrapper {
-        return Agent(score = keepScore(), lp = lp(WIFI_IFACE),
-                nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
+        return Agent(
+            score = keepScore(),
+            lp = lp(WIFI_IFACE),
+                nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET)
+        )
     }
 
     private fun startCaptivePortalApp(networkAgent: CSAgentWrapper): Intent {
