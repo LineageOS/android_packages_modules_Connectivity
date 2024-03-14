@@ -84,6 +84,31 @@ class TestGenJarjar(unittest.TestCase):
             'rule test.utils.TestUtilClass$TestInnerClassTest jarjar.prefix.@0\n',
             'rule test.utils.TestUtilClass$TestInnerClassTest$* jarjar.prefix.@0\n'], lines)
 
+    def test_gen_rules_repeated_testclass_excluded(self):
+        args = gen_jarjar.parse_arguments([
+            "jarjar-rules-generator-testjavalib.jar",
+            "--prefix", "jarjar.prefix",
+            "--output", "test-output-rules.txt",
+            "--apistubs", "framework-connectivity.stubs.module_lib.jar",
+            "--unsupportedapi", ":testdata/test-unsupportedappusage.txt",
+            "--excludes", "testdata/test-jarjar-excludes-testclass.txt",
+        ])
+        gen_jarjar.make_jarjar_rules(args)
+
+        with open(args.output) as out:
+            lines = out.readlines()
+
+        self.maxDiff = None
+        self.assertListEqual([
+            'rule android.net.IpSecTransform jarjar.prefix.@0\n',
+            'rule test.unsupportedappusage.OtherUnsupportedUsageClass jarjar.prefix.@0\n',
+            'rule test.unsupportedappusage.OtherUnsupportedUsageClassTest jarjar.prefix.@0\n',
+            'rule test.unsupportedappusage.OtherUnsupportedUsageClassTest$* jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass$TestInnerClass jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass$TestInnerClassTest jarjar.prefix.@0\n',
+            'rule test.utils.TestUtilClass$TestInnerClassTest$* jarjar.prefix.@0\n'], lines)
+
 
 if __name__ == '__main__':
     # Need verbosity=2 for the test results parser to find results
