@@ -530,6 +530,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                         // requirement.
                         .clearCapabilities()
                         .addTransportType(NetworkCapabilities.TRANSPORT_THREAD)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)
                         .build(),
                 new ThreadNetworkCallback(),
                 mHandler);
