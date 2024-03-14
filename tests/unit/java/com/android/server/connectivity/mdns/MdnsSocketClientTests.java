@@ -26,14 +26,17 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.Manifest.permission;
 import android.annotation.RequiresPermission;
 import android.content.Context;
+import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.text.format.DateUtils;
@@ -48,6 +51,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -71,6 +75,7 @@ public class MdnsSocketClientTests {
 
     @Mock private Context mContext;
     @Mock private WifiManager mockWifiManager;
+    @Mock private ConnectivityManager mockConnectivityManager;
     @Mock private MdnsSocket mockMulticastSocket;
     @Mock private MdnsSocket mockUnicastSocket;
     @Mock private MulticastLock mockMulticastLock;
@@ -83,6 +88,9 @@ public class MdnsSocketClientTests {
     @Before
     public void setup() throws RuntimeException, IOException {
         MockitoAnnotations.initMocks(this);
+
+        doReturn(mockConnectivityManager).when(mContext).getSystemService(
+                Context.CONNECTIVITY_SERVICE);
 
         when(mockWifiManager.createMulticastLock(ArgumentMatchers.anyString()))
                 .thenReturn(mockMulticastLock);
@@ -320,19 +328,25 @@ public class MdnsSocketClientTests {
 
     @Test
     public void testStartStop() throws IOException {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 1; i <= 5; i++) {
             mdnsClient.startDiscovery();
 
             Thread multicastReceiverThread = mdnsClient.multicastReceiveThread;
             Thread socketThread = mdnsClient.sendThread;
+            final ArgumentCaptor<ConnectivityManager.NetworkCallback> cbCaptor =
+                    ArgumentCaptor.forClass(ConnectivityManager.NetworkCallback.class);
 
             assertTrue(multicastReceiverThread.isAlive());
             assertTrue(socketThread.isAlive());
+            verify(mockConnectivityManager, times(i))
+                    .registerNetworkCallback(any(), cbCaptor.capture());
 
             mdnsClient.stopDiscovery();
 
             assertFalse(multicastReceiverThread.isAlive());
             assertFalse(socketThread.isAlive());
+            verify(mockConnectivityManager, times(i))
+                    .unregisterNetworkCallback(cbCaptor.getValue());
         }
     }
 
