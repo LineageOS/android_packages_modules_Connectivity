@@ -2199,15 +2199,10 @@ class NsdManagerTest {
     }
 
     private fun hasServiceTypeClientsForNetwork(clients: List<String>, network: Network): Boolean {
-        for (client in clients) {
-            val netid = client.substring(
-                    client.indexOf("network=") + "network=".length,
-                    client.indexOf("interfaceIndex=") - 1)
-            if (netid == network.toString()) {
-                return true
-            }
+        return clients.any { client -> client.substring(
+                client.indexOf("network=") + "network=".length,
+                client.indexOf("interfaceIndex=") - 1) == network.getNetId().toString()
         }
-        return false
     }
 
     /**
