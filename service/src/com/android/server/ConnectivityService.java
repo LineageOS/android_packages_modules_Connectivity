@@ -2766,6 +2766,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     private boolean canSeeAllowedUids(final int pid, final int uid, final int netOwnerUid) {
         return Process.SYSTEM_UID == uid
+                || netOwnerUid == uid
                 || hasAnyPermissionOf(mContext, pid, uid,
                         android.Manifest.permission.NETWORK_FACTORY);
     }
@@ -2793,7 +2794,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
         if (!canSeeAllowedUids(callerPid, callerUid, newNc.getOwnerUid())) {
             newNc.setAllowedUids(new ArraySet<>());
-            newNc.setSubscriptionIds(Collections.emptySet());
         }
         redactUnderlyingNetworksForCapabilities(newNc, callerPid, callerUid);
 
@@ -6021,7 +6021,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
             if (nm == null) return;
 
             if (request == CaptivePortal.APP_REQUEST_REEVALUATION_REQUIRED) {
-                enforceNetworkStackPermission(mContext);
+                // This enforceNetworkStackPermission() should be adopted to check
+                // the required permission but this may be break OEM captive portal
+                // apps. Simply ignore the request if the caller does not have
+                // permission.
+                if (!hasNetworkStackPermission()) {
+                    Log.e(TAG, "Calling appRequest() without proper permission. Skip");
+                    return;
+                }
+
                 nm.forceReevaluation(mDeps.getCallingUid());
             }
         }
@@ -7584,15 +7592,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     "Insufficient permissions to request a specific signal strength");
         }
         mAppOpsManager.checkPackage(callerUid, callerPackageName);
-
-        if (nc.getSubscriptionIds().isEmpty()) {
-            return;
-        }
-        if (mRequestRestrictedWifiEnabled
-                && canRequestRestrictedNetworkDueToCarrierPrivileges(nc, callerUid)) {
-            return;
-        }
-        enforceNetworkFactoryPermission();
     }
 
     private int[] getSignalStrengthThresholds(@NonNull final NetworkAgentInfo nai) {
@@ -9176,7 +9175,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         //   3. The app doesn't have Carrier Privileges
         //   4. The app doesn't have permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS
         for (final NetworkRequest nr : mNetworkRequests.keySet()) {
-            if ((nr.isRequest() || nr.isListen())
+            if (nr.isRequest()
                     && !nr.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)
                     && nr.getRequestorUid() == uid
                     && getSubscriptionIdFromNetworkCaps(nr.networkCapabilities) == subId

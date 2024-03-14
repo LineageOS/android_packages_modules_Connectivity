@@ -83,6 +83,8 @@ python_test_host {
     ],
     data: [
         "testdata/test-jarjar-excludes.txt",
+        // txt with Test classes to test they aren't included when added to jarjar excludes
+        "testdata/test-jarjar-excludes-testclass.txt",
         // two unsupportedappusage lists with different classes to test using multiple lists
         "testdata/test-unsupportedappusage.txt",
         "testdata/test-other-unsupportedappusage.txt",
