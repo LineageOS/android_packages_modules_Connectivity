@@ -257,12 +257,6 @@ int main(int argc, char** argv, char * const envp[]) {
 
     logTetheringApexVersion();
 
-    if (has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
-        // Tethering apex shipped initrc file causes us to reach here
-        // but we're not ready to correctly handle anything before U QPR2
-        // in which the 'bpfloader' vs 'netbpfload' split happened
-    }
-
     if (!isAtLeastT) {
         ALOGE("Impossible - not reachable on Android <T.");
         return 1;
@@ -319,14 +313,16 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (isAtLeastU) {
+    if (false && isAtLeastV) {
         // Linux 5.16-rc1 changed the default to 2 (disabled but changeable),
         // but we need 0 (enabled)
         // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on
         // pre-5.13, on 5.13+ it depends on CONFIG_BPF_UNPRIV_DEFAULT_OFF)
         if (writeProcSysFile("/proc/sys/kernel/unprivileged_bpf_disabled", "0\n") &&
             android::bpf::isAtLeastKernelVersion(5, 13, 0)) return 1;
+    }
 
+    if (isAtLeastU) {
         // Enable the eBPF JIT -- but do note that on 64-bit kernels it is likely
         // already force enabled by the kernel config option BPF_JIT_ALWAYS_ON.
         // (Note: this (open) will fail with ENOENT 'No such file or directory' if
@@ -384,10 +380,15 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
-    ALOGI("done, transferring control to platform bpfloader.");
+    if (false && isAtLeastV) {
+        ALOGI("done, transferring control to platform bpfloader.");
 
-    const char * args[] = { platformBpfLoader, NULL, };
-    execve(args[0], (char**)args, envp);
-    ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
-    return 1;
+        const char * args[] = { platformBpfLoader, NULL, };
+        execve(args[0], (char**)args, envp);
+        ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
+        return 1;
+    }
+
+    ALOGI("mainline done!");
+    return 0;
 }
