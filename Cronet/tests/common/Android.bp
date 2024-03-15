@@ -43,6 +43,7 @@ android_test {
     jni_libs: [
         "cronet_aml_components_cronet_android_cronet_tests__testing",
         "cronet_aml_third_party_netty_tcnative_netty_tcnative_so__testing",
+        "libnativecoverage",
     ],
     data: [":cronet_javatests_resources"],
 }
