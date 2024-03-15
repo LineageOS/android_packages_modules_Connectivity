@@ -30,13 +30,14 @@ import com.android.server.NetworkStackService.NetworkMonitorConnector
 import com.android.server.NetworkStackService.NetworkStackConnector
 import com.android.server.connectivity.NetworkMonitor
 import com.android.server.net.integrationtests.NetworkStackInstrumentationService.InstrumentationConnector
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
 import java.io.ByteArrayInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.ExecutorService
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.spy
 
 private const val TEST_NETID = 42
 
@@ -60,6 +61,10 @@ class TestNetworkStackService : Service() {
     private class NetworkMonitorDeps(private val privateDnsBypassNetwork: Network) :
             NetworkMonitor.Dependencies() {
         override fun getPrivateDnsBypassNetwork(network: Network?) = privateDnsBypassNetwork
+        override fun onThreadCreated(thread: Thread) =
+            InstrumentationConnector.onNetworkMonitorThreadCreated(thread)
+        override fun onExecutorServiceCreated(ecs: ExecutorService) =
+            InstrumentationConnector.onNetworkMonitorExecutorServiceCreated(ecs)
     }
 
     /**
