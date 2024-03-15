@@ -703,14 +703,13 @@ public class MdnsServiceTypeClientTests {
         final MdnsSearchOptions searchOptions2 = MdnsSearchOptions.newBuilder()
                 .addSubtype("subtype2").build();
         startSendAndReceive(mockListenerOne, searchOptions1);
-        currentThreadExecutor.getAndClearSubmittedRunnable().run();
+        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
 
         InOrder inOrder = inOrder(mockListenerOne, mockSocketClient, mockDeps);
 
         // Verify the query asks for subtype1
         final ArgumentCaptor<DatagramPacket> subtype1QueryCaptor =
                 ArgumentCaptor.forClass(DatagramPacket.class);
-        currentThreadExecutor.getAndClearLastScheduledRunnable().run();
         // Send twice for IPv4 and IPv6
         inOrder.verify(mockSocketClient, times(2)).sendPacketRequestingUnicastResponse(
                 subtype1QueryCaptor.capture(),
