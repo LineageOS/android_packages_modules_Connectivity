@@ -899,6 +899,20 @@ class EthernetManagerTest {
     }
 
     @Test
+    fun testEnableDisableInterface_callbacks() {
+        val iface = createInterface()
+        val listener = EthernetStateListener()
+        addInterfaceStateListener(listener)
+        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
+
+        disableInterface(iface).expectResult(iface.name)
+        listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
+
+        enableInterface(iface).expectResult(iface.name)
+        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
+    }
+
+    @Test
     fun testUpdateConfiguration_forBothIpConfigAndCapabilities() {
         val iface = createInterface()
         val cb = requestNetwork(ETH_REQUEST.copyWithEthernetSpecifier(iface.name))
