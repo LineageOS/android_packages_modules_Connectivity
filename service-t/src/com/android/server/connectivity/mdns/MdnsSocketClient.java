@@ -106,6 +106,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     @Nullable private Timer checkMulticastResponseTimer;
     private final SharedLog sharedLog;
     @NonNull private final MdnsFeatureFlags mdnsFeatureFlags;
+    private final MulticastNetworkInterfaceProvider interfaceProvider;
 
     public MdnsSocketClient(@NonNull Context context, @NonNull MulticastLock multicastLock,
             SharedLog sharedLog, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
@@ -118,6 +119,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             unicastReceiverBuffer = null;
         }
         this.mdnsFeatureFlags = mdnsFeatureFlags;
+        this.interfaceProvider = new MulticastNetworkInterfaceProvider(context, sharedLog);
     }
 
     @Override
@@ -138,6 +140,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         cannotReceiveMulticastResponse.set(false);
 
         shouldStopSocketLoop = false;
+        interfaceProvider.startWatchingConnectivityChanges();
         try {
             // TODO (changed when importing code): consider setting thread stats tag
             multicastSocket = createMdnsSocket(MdnsConstants.MDNS_PORT, sharedLog);
@@ -183,6 +186,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         }
 
         multicastLock.release();
+        interfaceProvider.stopWatchingConnectivityChanges();
 
         shouldStopSocketLoop = true;
         waitForSendThreadToStop();
@@ -482,8 +486,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
     @VisibleForTesting
     MdnsSocket createMdnsSocket(int port, SharedLog sharedLog) throws IOException {
-        return new MdnsSocket(new MulticastNetworkInterfaceProvider(context, sharedLog), port,
-                sharedLog);
+        return new MdnsSocket(interfaceProvider, port, sharedLog);
     }
 
     private void sendPackets(List<DatagramPacket> packets, MdnsSocket socket) {
