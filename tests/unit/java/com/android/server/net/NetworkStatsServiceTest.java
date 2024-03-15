@@ -125,7 +125,6 @@ import android.os.DropBoxManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.SimpleClock;
@@ -298,7 +297,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private String mCompareStatsResult = null;
     private @Mock Resources mResources;
     private Boolean mIsDebuggable;
-    private HandlerThread mObserverHandlerThread;
     final TestDependencies mDeps = new TestDependencies();
 
     private class MockContext extends BroadcastInterceptingContext {
@@ -392,21 +390,8 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 
         mHandlerThread = new HandlerThread("NetworkStatsServiceTest-HandlerThread");
-        // Create a separate thread for observers to run on. This thread cannot be the same
-        // as the handler thread, because the observer callback is fired on this thread, and
-        // it should not be blocked by client code. Additionally, creating the observers
-        // object requires a looper, which can only be obtained after a thread has been started.
-        mObserverHandlerThread = new HandlerThread("NetworkStatsServiceTest-ObserversThread");
-        mObserverHandlerThread.start();
-        final Looper observerLooper = mObserverHandlerThread.getLooper();
-        final NetworkStatsObservers statsObservers = new NetworkStatsObservers() {
-            @Override
-            protected Looper getHandlerLooperLocked() {
-                return observerLooper;
-            }
-        };
         mService = new NetworkStatsService(mServiceContext, mNetd, mAlarmManager, wakeLock,
-                mClock, mSettings, mStatsFactory, statsObservers, mDeps);
+                mClock, mSettings, mStatsFactory, mDeps);
 
         mElapsedRealtime = 0L;
 
@@ -606,10 +591,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         if (mHandlerThread != null) {
             mHandlerThread.quitSafely();
             mHandlerThread.join();
-        }
-        if (mObserverHandlerThread != null) {
-            mObserverHandlerThread.quitSafely();
-            mObserverHandlerThread.join();
         }
     }
 
