@@ -35,16 +35,6 @@
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
         <!-- b/298380508 -->
         <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testSetLibraryLoaderIsEnforcedByDefaultEmbeddedProvider" />
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testSetLibraryLoaderIsIgnoredInNativeCronetEngineBuilderImpl" />
-        <!-- b/316571753 -->
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testBaseFeatureFlagsOverridesEnabled" />
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAppliedIfAppIdMatches" />
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAreLoaded" />
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testSetLibraryLoaderIsEnforcedByDefaultEmbeddedProvider" />
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAppliedIfAtMinVersion" />
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAppliedIfAboveMinVersion" />
-        <!-- b/316567693 -->
-        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestTest#testSSLCertificateError" />
         <!-- b/316559294 -->
         <option name="exclude-filter" value="org.chromium.net.NQETest#testQuicDisabled" />
         <!-- b/316559294 -->
@@ -55,6 +45,7 @@
         <option name="exclude-filter" value="org.chromium.net.impl.CronetLoggerTest#testEngineCreation" />
         <option name="hidden-api-checks" value="false"/>
         <option name="isolated-storage" value="false"/>
+        <option name="orchestrator" value="true"/>
     </test>
 
     <!-- Only run NetHttpTests in MTS if the Tethering Mainline module is installed. -->
