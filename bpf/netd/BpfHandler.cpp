@@ -81,29 +81,9 @@ static Status initPrograms(const char* cg2_path) {
     // This code was mainlined in T, so this should be trivially satisfied.
     if (!isAtLeastT) return Status("S- platform is unsupported");
 
-    // S requires eBPF support which was only added in 4.9, so this should be satisfied.
-    if (!isAtLeastKernelVersion(4, 9, 0)) {
-        return Status("kernel version < 4.9.0 is unsupported");
-    }
-
-    // U bumps the kernel requirement up to 4.14
-    if (isAtLeastU && !isAtLeastKernelVersion(4, 14, 0)) {
-        return Status("U+ platform with kernel version < 4.14.0 is unsupported");
-    }
-
     // U mandates this mount point (though it should also be the case on T)
     if (isAtLeastU && !!strcmp(cg2_path, "/sys/fs/cgroup")) {
         return Status("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
-    }
-
-    // V bumps the kernel requirement up to 4.19
-    if (isAtLeastV && !isAtLeastKernelVersion(4, 19, 0)) {
-        return Status("V+ platform with kernel version < 4.19.0 is unsupported");
-    }
-
-    // 25Q2 bumps the kernel requirement up to 5.4
-    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4, 0)) {
-        return Status("25Q2+ platform with kernel version < 5.4.0 is unsupported");
     }
 
     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
