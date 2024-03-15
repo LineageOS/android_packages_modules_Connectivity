@@ -45,10 +45,6 @@
 #include "bpf/bpf_map_def.h"
 #include "loader.h"
 
-#if BPFLOADER_VERSION < COMPILE_FOR_BPFLOADER_VERSION
-#error "BPFLOADER_VERSION is less than COMPILE_FOR_BPFLOADER_VERSION"
-#endif
-
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
