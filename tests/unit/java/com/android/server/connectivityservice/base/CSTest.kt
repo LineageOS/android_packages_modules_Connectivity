@@ -17,6 +17,7 @@
 package com.android.server
 
 import android.app.AlarmManager
+import android.app.AppOpsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -75,8 +76,8 @@ import com.android.testutils.waitForIdle
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.function.Consumer
 import java.util.function.BiConsumer
+import java.util.function.Consumer
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
@@ -102,6 +103,8 @@ internal const val VERSION_T = 3
 internal const val VERSION_U = 4
 internal const val VERSION_V = 5
 internal const val VERSION_MAX = VERSION_V
+
+internal const val CALLING_UID_UNMOCKED = Process.INVALID_UID
 
 private fun NetworkCapabilities.getLegacyType() =
         when (transportTypes.getOrElse(0) { TRANSPORT_WIFI }) {
@@ -176,6 +179,7 @@ open class CSTest {
     val systemConfigManager = makeMockSystemConfigManager()
     val batteryStats = mock<IBatteryStats>()
     val batteryManager = BatteryStatsManager(batteryStats)
+    val appOpsManager = mock<AppOpsManager>()
     val telephonyManager = mock<TelephonyManager>().also {
         doReturn(true).`when`(it).isDataCapable()
     }
@@ -298,6 +302,19 @@ open class CSTest {
         override fun isAtLeastT() = if (isSdkUnmocked) super.isAtLeastT() else sdkLevel >= VERSION_T
         override fun isAtLeastU() = if (isSdkUnmocked) super.isAtLeastU() else sdkLevel >= VERSION_U
         override fun isAtLeastV() = if (isSdkUnmocked) super.isAtLeastV() else sdkLevel >= VERSION_V
+
+        private var callingUid = CALLING_UID_UNMOCKED
+
+        fun unmockCallingUid() {
+            setCallingUid(CALLING_UID_UNMOCKED)
+        }
+
+        fun setCallingUid(callingUid: Int) {
+            visibleOnHandlerThread(csHandler) { this.callingUid = callingUid }
+        }
+
+        override fun getCallingUid() =
+                if (callingUid == CALLING_UID_UNMOCKED) super.getCallingUid() else callingUid
     }
 
     inner class CSContext(base: Context) : BroadcastInterceptingContext(base) {
@@ -398,6 +415,7 @@ open class CSTest {
             Context.TELEPHONY_SERVICE -> telephonyManager
             Context.BATTERY_STATS_SERVICE -> batteryManager
             Context.STATS_MANAGER -> null // Stats manager is final and can't be mocked
+            Context.APP_OPS_SERVICE -> appOpsManager
             else -> super.getSystemService(serviceName)
         }
 
