@@ -100,9 +100,9 @@ apex {
         "dscpPolicy.o",
         "netd.o",
         "offload.o",
-        "offload@btf.o",
+        "offload@mainline.o",
         "test.o",
-        "test@btf.o",
+        "test@mainline.o",
     ],
     apps: [
         "ServiceConnectivityResources",
