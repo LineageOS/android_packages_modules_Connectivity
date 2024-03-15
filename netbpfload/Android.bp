@@ -19,27 +19,15 @@ package {
 }
 
 install_symlink {
-    name: "platform_ethtool_symlink",
+    name: "mainline_tethering_platform_components",
+
     symlink_target: "/apex/com.android.tethering/bin/ethtool",
     // installed_location is relative to /system because that's the default partition for soong
     // modules, unless we add something like `system_ext_specific: true` like in hwservicemanager.
     installed_location: "bin/ethtool",
-}
 
-install_symlink {
-    name: "platform_netbpfload_symlink",
-    symlink_target: "/apex/com.android.tethering/bin/netbpfload",
-    installed_location: "bin/netbpfload",
     init_rc: ["netbpfload.rc"],
-}
-
-phony {
-    name: "mainline_tethering_platform_components",
-    required: [
-        "bpfloader",
-        "platform_ethtool_symlink",
-        "platform_netbpfload_symlink",
-    ],
+    required: ["bpfloader"],
 }
 
 cc_binary {
