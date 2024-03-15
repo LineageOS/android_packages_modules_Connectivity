@@ -204,8 +204,12 @@ public final class NsdPublisher extends INsdPublisher.Stub {
         }
     }
 
-    /** On ot-daemon died, unregister all registrations. */
-    public void onOtDaemonDied() {
+    @Override
+    public void reset() {
+        mHandler.post(this::resetInternal);
+    }
+
+    private void resetInternal() {
         checkOnHandlerThread();
         for (int i = 0; i < mRegistrationListeners.size(); ++i) {
             try {
@@ -222,6 +226,12 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             }
         }
         mRegistrationListeners.clear();
+        mRegistrationJobs.clear();
+    }
+
+    /** On ot-daemon died, reset. */
+    public void onOtDaemonDied() {
+        reset();
     }
 
     // TODO: b/323300118 - Remove this mechanism when the race condition in NsdManager is fixed.
