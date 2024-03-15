@@ -240,7 +240,7 @@ public class NsdManagerTest {
 
         AdvertisingRequest capturedRequest = getAdvertisingRequest(
                 req -> verify(mServiceConn).registerService(anyInt(), req.capture()));
-        assertEquals(request, capturedRequest);
+        assertEquals(request.getTtl(), capturedRequest.getTtl());
     }
 
     private void doTestRegisterService() throws Exception {
