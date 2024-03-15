@@ -83,8 +83,10 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -146,6 +148,8 @@ public abstract class EthernetTetheringTestBase {
     private static final TetheringManager sTm = sContext.getSystemService(TetheringManager.class);
     private static final PackageManager sPackageManager = sContext.getPackageManager();
     private static final CtsNetUtils sCtsNetUtils = new CtsNetUtils(sContext);
+    private static final List<String> sCallbackErrors =
+            Collections.synchronizedList(new ArrayList<>());
 
     // Late initialization in setUp()
     private boolean mRunTests;
@@ -201,6 +205,7 @@ public abstract class EthernetTetheringTestBase {
         assumeTrue(mRunTests);
 
         mTetheredInterfaceRequester = new TetheredInterfaceRequester();
+        sCallbackErrors.clear();
     }
 
     private boolean isEthernetTetheringSupported() throws Exception {
@@ -279,6 +284,10 @@ public abstract class EthernetTetheringTestBase {
         } finally {
             mHandlerThread.quitSafely();
             mHandlerThread.join();
+        }
+
+        if (sCallbackErrors.size() > 0) {
+            fail("Some callbacks had errors: " + sCallbackErrors);
         }
     }
 
@@ -391,7 +400,7 @@ public abstract class EthernetTetheringTestBase {
         }
         @Override
         public void onTetheredInterfacesChanged(List<String> interfaces) {
-            fail("Should only call callback that takes a Set<TetheringInterface>");
+            addCallbackError("Should only call callback that takes a Set<TetheringInterface>");
         }
 
         @Override
@@ -412,7 +421,7 @@ public abstract class EthernetTetheringTestBase {
 
         @Override
         public void onLocalOnlyInterfacesChanged(List<String> interfaces) {
-            fail("Should only call callback that takes a Set<TetheringInterface>");
+            addCallbackError("Should only call callback that takes a Set<TetheringInterface>");
         }
 
         @Override
@@ -481,7 +490,7 @@ public abstract class EthernetTetheringTestBase {
             // Ignore stale callbacks registered by previous test cases.
             if (mUnregistered) return;
 
-            fail("TetheringEventCallback got error:" + error + " on iface " + ifName);
+            addCallbackError("TetheringEventCallback got error:" + error + " on iface " + ifName);
         }
 
         @Override
@@ -536,6 +545,11 @@ public abstract class EthernetTetheringTestBase {
         }
     }
 
+    private static void addCallbackError(String error) {
+        Log.e(TAG, error);
+        sCallbackErrors.add(error);
+    }
+
     protected static MyTetheringEventCallback enableEthernetTethering(String iface,
             TetheringRequest request, Network expectedUpstream) throws Exception {
         // Enable ethernet tethering with null expectedUpstream means the test accept any upstream
@@ -562,7 +576,7 @@ public abstract class EthernetTetheringTestBase {
 
             @Override
             public void onTetheringFailed(int resultCode) {
-                fail("Unexpectedly got onTetheringFailed");
+                addCallbackError("Unexpectedly got onTetheringFailed");
             }
         };
         Log.d(TAG, "Starting Ethernet tethering");
