@@ -171,4 +171,16 @@ public class HostsideVpnTests extends HostsideNetworkTestCase {
     public void testSetVpnDefaultForUids() throws Exception {
         runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest", "testSetVpnDefaultForUids");
     }
+
+    @Test
+    public void testDropPacketToVpnAddress_WithoutDuplicatedAddress() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest",
+                "testDropPacketToVpnAddress_WithoutDuplicatedAddress");
+    }
+
+    @Test
+    public void testDropPacketToVpnAddress_WithDuplicatedAddress() throws Exception {
+        runDeviceTests(TEST_PKG, TEST_PKG + ".VpnTest",
+                "testDropPacketToVpnAddress_WithDuplicatedAddress");
+    }
 }
