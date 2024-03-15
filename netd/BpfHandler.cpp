@@ -75,16 +75,6 @@ static Status initPrograms(const char* cg2_path) {
     // This code was mainlined in T, so this should be trivially satisfied.
     if (!modules::sdklevel::IsAtLeastT()) return Status("S- platform is unsupported");
 
-    // S requires eBPF support which was only added in 4.9, so this should be satisfied.
-    if (!bpf::isAtLeastKernelVersion(4, 9, 0)) {
-        return Status("kernel version < 4.9.0 is unsupported");
-    }
-
-    // U bumps the kernel requirement up to 4.14
-    if (modules::sdklevel::IsAtLeastU() && !bpf::isAtLeastKernelVersion(4, 14, 0)) {
-        return Status("U+ platform with kernel version < 4.14.0 is unsupported");
-    }
-
     if (modules::sdklevel::IsAtLeastV()) {
         // V bumps the kernel requirement up to 4.19
         // see also: //system/netd/tests/kernel_test.cpp TestKernel419
