@@ -261,9 +261,10 @@ int main(int argc, char** argv, char * const envp[]) {
         // Tethering apex shipped initrc file causes us to reach here
         // but we're not ready to correctly handle anything before U QPR2
         // in which the 'bpfloader' vs 'netbpfload' split happened
-        const char * args[] = { platformBpfLoader, NULL, };
-        execve(args[0], (char**)args, envp);
-        ALOGE("exec '%s' fail: %d[%s]", platformBpfLoader, errno, strerror(errno));
+    }
+
+    if (!isAtLeastT) {
+        ALOGE("Impossible - not reachable on Android <T.");
         return 1;
     }
 
