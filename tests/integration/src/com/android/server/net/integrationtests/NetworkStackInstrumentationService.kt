@@ -18,10 +18,14 @@ package com.android.server.net.integrationtests
 
 import android.app.Service
 import android.content.Intent
+import androidx.annotation.GuardedBy
+import com.android.testutils.quitExecutorServices
+import com.android.testutils.quitThreads
 import java.net.URL
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ExecutorService
 import kotlin.collections.ArrayList
 import kotlin.test.fail
 
@@ -37,7 +41,12 @@ class NetworkStackInstrumentationService : Service() {
                 .run {
                     withDefault { key -> getOrPut(key) { ConcurrentLinkedQueue() } }
                 }
-        private val httpRequestUrls = Collections.synchronizedList(ArrayList<String>())
+        private val httpRequestUrls = Collections.synchronizedList(mutableListOf<String>())
+
+        @GuardedBy("networkMonitorThreads")
+        private val networkMonitorThreads = mutableListOf<Thread>()
+        @GuardedBy("networkMonitorExecutorServices")
+        private val networkMonitorExecutorServices = mutableListOf<ExecutorService>()
 
         /**
          * Called when an HTTP request is being processed by NetworkMonitor. Returns the response
@@ -52,10 +61,47 @@ class NetworkStackInstrumentationService : Service() {
         }
 
         /**
+         * Called when NetworkMonitor creates a new Thread.
+         */
+        fun onNetworkMonitorThreadCreated(thread: Thread) {
+            synchronized(networkMonitorThreads) {
+                networkMonitorThreads.add(thread)
+            }
+        }
+
+        /**
+         * Called when NetworkMonitor creates a new ExecutorService.
+         */
+        fun onNetworkMonitorExecutorServiceCreated(executorService: ExecutorService) {
+            synchronized(networkMonitorExecutorServices) {
+                networkMonitorExecutorServices.add(executorService)
+            }
+        }
+
+        /**
          * Clear all state of this connector. This is intended for use between two tests, so all
          * state should be reset as if the connector was just created.
          */
         override fun clearAllState() {
+            quitThreads(
+                maxRetryCount = 3,
+                interrupt = true) {
+                synchronized(networkMonitorThreads) {
+                    networkMonitorThreads.toList().also { networkMonitorThreads.clear() }
+                }
+            }
+            quitExecutorServices(
+                maxRetryCount = 3,
+                // NetworkMonitor is expected to have interrupted its executors when probing
+                // finishes, otherwise it's a thread pool leak that should be caught, so they should
+                // not need to be interrupted (the test only needs to wait for them to finish).
+                interrupt = false) {
+                synchronized(networkMonitorExecutorServices) {
+                    networkMonitorExecutorServices.toList().also {
+                        networkMonitorExecutorServices.clear()
+                    }
+                }
+            }
             httpResponses.clear()
             httpRequestUrls.clear()
         }

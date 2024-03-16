@@ -382,10 +382,9 @@ public class EthernetTracker {
         });
     }
 
-    @VisibleForTesting(visibility = PACKAGE)
-    protected void setInterfaceEnabled(@NonNull final String iface, boolean enabled,
-            @Nullable final EthernetCallback cb) {
-        mHandler.post(() -> updateInterfaceState(iface, enabled, cb));
+    /** Configure the administrative state of ethernet interface by toggling IFF_UP. */
+    public void setInterfaceEnabled(String iface, boolean enabled, EthernetCallback cb) {
+        mHandler.post(() -> setInterfaceAdministrativeState(iface, enabled, cb));
     }
 
     IpConfiguration getIpConfiguration(String iface) {
@@ -643,25 +642,40 @@ public class EthernetTracker {
         }
     }
 
-    private void updateInterfaceState(String iface, boolean up) {
-        updateInterfaceState(iface, up, new EthernetCallback(null /* cb */));
-    }
-
-    // TODO(b/225315248): enable/disableInterface() should not affect link state.
-    private void updateInterfaceState(String iface, boolean up, EthernetCallback cb) {
-        final int mode = getInterfaceMode(iface);
-        if (mode == INTERFACE_MODE_SERVER || !mFactory.hasInterface(iface)) {
-            // The interface is in server mode or is not tracked.
-            cb.onError("Failed to set link state " + (up ? "up" : "down") + " for " + iface);
+    private void setInterfaceAdministrativeState(String iface, boolean up, EthernetCallback cb) {
+        if (getInterfaceState(iface) == EthernetManager.STATE_ABSENT) {
+            cb.onError("Failed to enable/disable absent interface: " + iface);
+            return;
+        }
+        if (getInterfaceRole(iface) == EthernetManager.ROLE_SERVER) {
+            // TODO: support setEthernetState for server mode interfaces.
+            cb.onError("Failed to enable/disable interface in server mode: " + iface);
             return;
         }
 
+        if (up) {
+            // WARNING! setInterfaceUp() clears the IPv4 address and readds it. Calling
+            // enableInterface() on an active interface can lead to a provisioning failure which
+            // will cause IpClient to be restarted.
+            // TODO: use netlink directly rather than calling into netd.
+            NetdUtils.setInterfaceUp(mNetd, iface);
+        } else {
+            NetdUtils.setInterfaceDown(mNetd, iface);
+        }
+        cb.onResult(iface);
+    }
+
+    private void updateInterfaceState(String iface, boolean up) {
+        final int mode = getInterfaceMode(iface);
+        if (mode == INTERFACE_MODE_SERVER) {
+            // TODO: support tracking link state for interfaces in server mode.
+            return;
+        }
+
+        // If updateInterfaceLinkState returns false, the interface is already in the correct state.
         if (mFactory.updateInterfaceLinkState(iface, up)) {
             broadcastInterfaceStateChange(iface);
         }
-        // If updateInterfaceLinkState returns false, the interface is already in the correct state.
-        // Always return success.
-        cb.onResult(iface);
     }
 
     private void maybeUpdateServerModeInterfaceState(String iface, boolean available) {
