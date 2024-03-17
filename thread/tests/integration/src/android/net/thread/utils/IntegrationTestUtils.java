@@ -20,7 +20,6 @@ import static android.system.OsConstants.IPPROTO_ICMPV6;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_PIO;
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_ADVERTISEMENT;
-import static com.android.testutils.DeviceInfoUtils.isKernelVersionAtLeast;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
@@ -32,8 +31,6 @@ import android.net.nsd.NsdServiceInfo;
 import android.net.thread.ThreadNetworkController;
 import android.os.Handler;
 import android.os.SystemClock;
-import android.os.SystemProperties;
-import android.os.VintfRuntimeInfo;
 
 import androidx.annotation.NonNull;
 
@@ -65,8 +62,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /** Static utility methods relating to Thread integration tests. */
 public final class IntegrationTestUtils {
@@ -79,34 +74,7 @@ public final class IntegrationTestUtils {
     public static final Duration CALLBACK_TIMEOUT = Duration.ofSeconds(1);
     public static final Duration SERVICE_DISCOVERY_TIMEOUT = Duration.ofSeconds(20);
 
-    private static final String KERNEL_VERSION_MULTICAST_ROUTING_SUPPORTED = "5.15.0";
-    private static final int KERNEL_ANDROID_VERSION_MULTICAST_ROUTING_SUPPORTED = 14;
-
     private IntegrationTestUtils() {}
-
-    /** Returns whether the device supports simulated Thread radio. */
-    public static boolean isSimulatedThreadRadioSupported() {
-        // The integration test uses SIMULATION Thread radio so that it only supports CuttleFish.
-        return SystemProperties.get("ro.product.model").startsWith("Cuttlefish");
-    }
-
-    public static boolean isMulticastRoutingSupported() {
-        return isKernelVersionAtLeast(KERNEL_VERSION_MULTICAST_ROUTING_SUPPORTED)
-                && isKernelAndroidVersionAtLeast(
-                        KERNEL_ANDROID_VERSION_MULTICAST_ROUTING_SUPPORTED);
-    }
-
-    private static boolean isKernelAndroidVersionAtLeast(int n) {
-        final String osRelease = VintfRuntimeInfo.getOsRelease();
-        final Pattern pattern = Pattern.compile("android(\\d+)");
-        Matcher matcher = pattern.matcher(osRelease);
-
-        if (matcher.find()) {
-            int version = Integer.parseInt(matcher.group(1));
-            return (version >= n);
-        }
-        return false;
-    }
 
     /**
      * Waits for the given {@link Supplier} to be true until given timeout.

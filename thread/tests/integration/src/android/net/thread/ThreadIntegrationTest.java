@@ -33,14 +33,14 @@ import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
-import static org.junit.Assume.assumeNotNull;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.thread.ThreadNetworkController.StateCallback;
 import android.net.thread.utils.OtDaemonController;
+import android.net.thread.utils.ThreadFeatureCheckerRule;
+import android.net.thread.utils.ThreadFeatureCheckerRule.RequiresThreadFeature;
 import android.os.SystemClock;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -49,6 +49,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -58,12 +59,9 @@ import java.util.concurrent.CompletableFuture;
 
 /** Tests for E2E Android Thread integration with ot-daemon, ConnectivityService, etc.. */
 @LargeTest
+@RequiresThreadFeature
 @RunWith(AndroidJUnit4.class)
 public class ThreadIntegrationTest {
-    private final Context mContext = ApplicationProvider.getApplicationContext();
-    private ThreadNetworkController mController;
-    private OtDaemonController mOtCtl;
-
     // A valid Thread Active Operational Dataset generated from OpenThread CLI "dataset init new".
     private static final byte[] DEFAULT_DATASET_TLVS =
             base16().decode(
@@ -75,16 +73,18 @@ public class ThreadIntegrationTest {
     private static final ActiveOperationalDataset DEFAULT_DATASET =
             ActiveOperationalDataset.fromThreadTlvs(DEFAULT_DATASET_TLVS);
 
+    @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
+
+    private final Context mContext = ApplicationProvider.getApplicationContext();
+    private ThreadNetworkController mController;
+    private OtDaemonController mOtCtl;
+
     @Before
     public void setUp() throws Exception {
-        final ThreadNetworkManager manager = mContext.getSystemService(ThreadNetworkManager.class);
-        if (manager != null) {
-            mController = manager.getAllThreadNetworkControllers().get(0);
-        }
-
-        // Run the tests on only devices where the Thread feature is available
-        assumeNotNull(mController);
-
+        mController =
+                mContext.getSystemService(ThreadNetworkManager.class)
+                        .getAllThreadNetworkControllers()
+                        .get(0);
         mOtCtl = new OtDaemonController();
         leaveAndWait(mController);
 
@@ -94,10 +94,6 @@ public class ThreadIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
-        if (mController == null) {
-            return;
-        }
-
         setTestUpStreamNetworkAndWait(mController, null);
         leaveAndWait(mController);
     }
