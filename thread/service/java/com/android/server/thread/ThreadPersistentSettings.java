@@ -210,7 +210,7 @@ public class ThreadPersistentSettings {
                 mSettings.putAll(bundleRead);
             }
         } catch (FileNotFoundException e) {
-            Log.e(TAG, "No store file to read", e);
+            Log.w(TAG, "No store file to read", e);
         } catch (IOException e) {
             Log.e(TAG, "Read from store file failed", e);
         }
