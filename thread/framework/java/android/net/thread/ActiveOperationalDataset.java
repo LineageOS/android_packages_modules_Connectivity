@@ -74,42 +74,61 @@ import java.util.Arrays;
 public final class ActiveOperationalDataset implements Parcelable {
     /** The maximum length of the Active Operational Dataset TLV array in bytes. */
     public static final int LENGTH_MAX_DATASET_TLVS = 254;
+
     /** The length of Extended PAN ID in bytes. */
     public static final int LENGTH_EXTENDED_PAN_ID = 8;
+
     /** The minimum length of Network Name as UTF-8 bytes. */
     public static final int LENGTH_MIN_NETWORK_NAME_BYTES = 1;
+
     /** The maximum length of Network Name as UTF-8 bytes. */
     public static final int LENGTH_MAX_NETWORK_NAME_BYTES = 16;
+
     /** The length of Network Key in bytes. */
     public static final int LENGTH_NETWORK_KEY = 16;
+
     /** The length of Mesh-Local Prefix in bits. */
     public static final int LENGTH_MESH_LOCAL_PREFIX_BITS = 64;
+
     /** The length of PSKc in bytes. */
     public static final int LENGTH_PSKC = 16;
+
     /** The 2.4 GHz channel page. */
     public static final int CHANNEL_PAGE_24_GHZ = 0;
+
     /** The minimum 2.4GHz channel. */
     public static final int CHANNEL_MIN_24_GHZ = 11;
+
     /** The maximum 2.4GHz channel. */
     public static final int CHANNEL_MAX_24_GHZ = 26;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_CHANNEL = 0;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_PAN_ID = 1;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_EXTENDED_PAN_ID = 2;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_NETWORK_NAME = 3;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_PSKC = 4;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_NETWORK_KEY = 5;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_MESH_LOCAL_PREFIX = 7;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_SECURITY_POLICY = 12;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_ACTIVE_TIMESTAMP = 14;
+
     /** @hide */
     @VisibleForTesting public static final int TYPE_CHANNEL_MASK = 53;
 
@@ -975,8 +994,10 @@ public final class ActiveOperationalDataset implements Parcelable {
     public static final class SecurityPolicy {
         /** The default Rotation Time in hours. */
         public static final int DEFAULT_ROTATION_TIME_HOURS = 672;
+
         /** The minimum length of Security Policy flags in bytes. */
         public static final int LENGTH_MIN_SECURITY_POLICY_FLAGS = 1;
+
         /** The length of Rotation Time TLV value in bytes. */
         private static final int LENGTH_SECURITY_POLICY_ROTATION_TIME = 2;
 
