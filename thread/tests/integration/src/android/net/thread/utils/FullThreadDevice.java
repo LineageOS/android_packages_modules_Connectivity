@@ -52,6 +52,13 @@ import java.util.regex.Pattern;
  * available commands.
  */
 public final class FullThreadDevice {
+    private static final int HOP_LIMIT = 64;
+    private static final int PING_INTERVAL = 1;
+    private static final int PING_SIZE = 100;
+    // There may not be a response for the ping command, using a short timeout to keep the tests
+    // short.
+    private static final float PING_TIMEOUT_SECONDS = 0.1f;
+
     private final Process mProcess;
     private final BufferedReader mReader;
     private final BufferedWriter mWriter;
@@ -339,7 +346,36 @@ public final class FullThreadDevice {
         executeCommand("ipmaddr add " + address.getHostAddress());
     }
 
-    public void ping(Inet6Address address, Inet6Address source, int size, int count) {
+    public void ping(Inet6Address address, Inet6Address source) {
+        ping(
+                address,
+                source,
+                PING_SIZE,
+                1 /* count */,
+                PING_INTERVAL,
+                HOP_LIMIT,
+                PING_TIMEOUT_SECONDS);
+    }
+
+    public void ping(Inet6Address address) {
+        ping(
+                address,
+                null,
+                PING_SIZE,
+                1 /* count */,
+                PING_INTERVAL,
+                HOP_LIMIT,
+                PING_TIMEOUT_SECONDS);
+    }
+
+    private void ping(
+            Inet6Address address,
+            Inet6Address source,
+            int size,
+            int count,
+            int interval,
+            int hopLimit,
+            float timeout) {
         String cmd =
                 "ping"
                         + ((source == null) ? "" : (" -I " + source.getHostAddress()))
@@ -348,12 +384,14 @@ public final class FullThreadDevice {
                         + " "
                         + size
                         + " "
-                        + count;
+                        + count
+                        + " "
+                        + interval
+                        + " "
+                        + hopLimit
+                        + " "
+                        + timeout;
         executeCommand(cmd);
-    }
-
-    public void ping(Inet6Address address) {
-        ping(address, null, 100 /* size */, 1 /* count */);
     }
 
     @FormatMethod
