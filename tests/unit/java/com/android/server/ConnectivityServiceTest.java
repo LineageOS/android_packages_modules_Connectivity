@@ -367,7 +367,6 @@ import android.os.SystemConfigManager;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
-import android.security.Credentials;
 import android.system.Os;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -388,7 +387,6 @@ import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IBatteryStats;
 import com.android.internal.net.VpnConfig;
-import com.android.internal.net.VpnProfile;
 import com.android.internal.util.WakeupMessage;
 import com.android.internal.util.test.BroadcastInterceptingContext;
 import com.android.internal.util.test.FakeSettingsProvider;
@@ -423,7 +421,6 @@ import com.android.server.connectivity.QosCallbackTracker;
 import com.android.server.connectivity.SatelliteAccessController;
 import com.android.server.connectivity.TcpKeepaliveController;
 import com.android.server.connectivity.UidRangeUtils;
-import com.android.server.connectivity.VpnProfileStore;
 import com.android.server.net.NetworkPinner;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -463,7 +460,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -630,7 +626,6 @@ public class ConnectivityServiceTest {
     @Mock TelephonyManager mTelephonyManager;
     @Mock EthernetManager mEthernetManager;
     @Mock NetworkPolicyManager mNetworkPolicyManager;
-    @Mock VpnProfileStore mVpnProfileStore;
     @Mock SystemConfigManager mSystemConfigManager;
     @Mock DevicePolicyManager mDevicePolicyManager;
     @Mock Resources mResources;
@@ -1666,23 +1661,11 @@ public class ConnectivityServiceTest {
             waitForIdle();
         }
 
-        public void startLegacyVpnPrivileged(VpnProfile profile) {
-            switch (profile.type) {
-                case VpnProfile.TYPE_IKEV2_IPSEC_RSA:
-                case VpnProfile.TYPE_IKEV2_IPSEC_USER_PASS:
-                case VpnProfile.TYPE_IKEV2_IPSEC_PSK:
-                case VpnProfile.TYPE_IKEV2_FROM_IKE_TUN_CONN_PARAMS:
-                    startPlatformVpn();
-                    break;
-                case VpnProfile.TYPE_L2TP_IPSEC_PSK:
-                case VpnProfile.TYPE_L2TP_IPSEC_RSA:
-                case VpnProfile.TYPE_IPSEC_XAUTH_PSK:
-                case VpnProfile.TYPE_IPSEC_XAUTH_RSA:
-                case VpnProfile.TYPE_IPSEC_HYBRID_RSA:
-                    startLegacyVpn();
-                    break;
-                default:
-                    fail("Unknown VPN profile type");
+        public void startLegacyVpnPrivileged(boolean isIkev2Vpn) {
+            if (isIkev2Vpn) {
+                startPlatformVpn();
+            } else {
+                startLegacyVpn();
             }
         }
 
@@ -10210,24 +10193,6 @@ public class ConnectivityServiceTest {
         doAsUid(Process.SYSTEM_UID, () -> mCm.unregisterNetworkCallback(perUidCb));
     }
 
-    private VpnProfile setupLockdownVpn(int profileType) {
-        final String profileName = "testVpnProfile";
-        final byte[] profileTag = profileName.getBytes(StandardCharsets.UTF_8);
-        doReturn(profileTag).when(mVpnProfileStore).get(Credentials.LOCKDOWN_VPN);
-
-        final VpnProfile profile = new VpnProfile(profileName);
-        profile.name = "My VPN";
-        profile.server = "192.0.2.1";
-        profile.dnsServers = "8.8.8.8";
-        profile.ipsecIdentifier = "My ipsecIdentifier";
-        profile.ipsecSecret = "My PSK";
-        profile.type = profileType;
-        final byte[] encodedProfile = profile.encode();
-        doReturn(encodedProfile).when(mVpnProfileStore).get(Credentials.VPN + profileName);
-
-        return profile;
-    }
-
     private void establishLegacyLockdownVpn(Network underlying) throws Exception {
         // The legacy lockdown VPN only supports userId 0, and must have an underlying network.
         assertNotNull(underlying);
@@ -10239,7 +10204,7 @@ public class ConnectivityServiceTest {
         mMockVpn.connect(true);
     }
 
-    private void doTestLockdownVpn(VpnProfile profile, boolean expectSetVpnDefaultForUids)
+    private void doTestLockdownVpn(boolean isIkev2Vpn)
             throws Exception {
         mServiceContext.setPermission(
                 Manifest.permission.CONTROL_VPN, PERMISSION_GRANTED);
@@ -10277,8 +10242,8 @@ public class ConnectivityServiceTest {
         b.expectBroadcast();
         // Simulate LockdownVpnTracker attempting to start the VPN since it received the
         // systemDefault callback.
-        mMockVpn.startLegacyVpnPrivileged(profile);
-        if (expectSetVpnDefaultForUids) {
+        mMockVpn.startLegacyVpnPrivileged(isIkev2Vpn);
+        if (isIkev2Vpn) {
             // setVpnDefaultForUids() releases the original network request and creates a VPN
             // request so LOST callback is received.
             defaultCallback.expect(LOST, mCellAgent);
@@ -10302,7 +10267,7 @@ public class ConnectivityServiceTest {
         final NetworkCapabilities vpnNc = mCm.getNetworkCapabilities(mMockVpn.getNetwork());
         b2.expectBroadcast();
         b3.expectBroadcast();
-        if (expectSetVpnDefaultForUids) {
+        if (isIkev2Vpn) {
             // Due to the VPN default request, getActiveNetworkInfo() gets the VPN network as the
             // network satisfier which has TYPE_VPN.
             assertActiveNetworkInfo(TYPE_VPN, DetailedState.CONNECTED);
@@ -10348,14 +10313,15 @@ public class ConnectivityServiceTest {
         // callback with different network.
         final ExpectedBroadcast b6 = expectConnectivityAction(TYPE_VPN, DetailedState.DISCONNECTED);
         mMockVpn.stopVpnRunnerPrivileged();
-        mMockVpn.startLegacyVpnPrivileged(profile);
+
+        mMockVpn.startLegacyVpnPrivileged(isIkev2Vpn);
         // VPN network is disconnected (to restart)
         callback.expect(LOST, mMockVpn);
         defaultCallback.expect(LOST, mMockVpn);
         // The network preference is cleared when VPN is disconnected so it receives callbacks for
         // the system-wide default.
         defaultCallback.expectAvailableCallbacksUnvalidatedAndBlocked(mWiFiAgent);
-        if (expectSetVpnDefaultForUids) {
+        if (isIkev2Vpn) {
             // setVpnDefaultForUids() releases the original network request and creates a VPN
             // request so LOST callback is received.
             defaultCallback.expect(LOST, mWiFiAgent);
@@ -10364,7 +10330,7 @@ public class ConnectivityServiceTest {
         b6.expectBroadcast();
 
         // While the VPN is reconnecting on the new network, everything is blocked.
-        if (expectSetVpnDefaultForUids) {
+        if (isIkev2Vpn) {
             // Due to the VPN default request, getActiveNetworkInfo() gets the mNoServiceNetwork
             // as the network satisfier.
             assertNull(mCm.getActiveNetworkInfo());
@@ -10385,7 +10351,7 @@ public class ConnectivityServiceTest {
         systemDefaultCallback.assertNoCallback();
         b7.expectBroadcast();
         b8.expectBroadcast();
-        if (expectSetVpnDefaultForUids) {
+        if (isIkev2Vpn) {
             // Due to the VPN default request, getActiveNetworkInfo() gets the VPN network as the
             // network satisfier which has TYPE_VPN.
             assertActiveNetworkInfo(TYPE_VPN, DetailedState.CONNECTED);
@@ -10411,7 +10377,7 @@ public class ConnectivityServiceTest {
         defaultCallback.assertNoCallback();
         systemDefaultCallback.assertNoCallback();
 
-        if (expectSetVpnDefaultForUids) {
+        if (isIkev2Vpn) {
             // Due to the VPN default request, getActiveNetworkInfo() gets the VPN network as the
             // network satisfier which has TYPE_VPN.
             assertActiveNetworkInfo(TYPE_VPN, DetailedState.CONNECTED);
@@ -10452,14 +10418,12 @@ public class ConnectivityServiceTest {
 
     @Test
     public void testLockdownVpn_LegacyVpnRunner() throws Exception {
-        final VpnProfile profile = setupLockdownVpn(VpnProfile.TYPE_IPSEC_XAUTH_PSK);
-        doTestLockdownVpn(profile, false /* expectSetVpnDefaultForUids */);
+        doTestLockdownVpn(false /* isIkev2Vpn */);
     }
 
     @Test
     public void testLockdownVpn_Ikev2VpnRunner() throws Exception {
-        final VpnProfile profile = setupLockdownVpn(VpnProfile.TYPE_IKEV2_IPSEC_PSK);
-        doTestLockdownVpn(profile, true /* expectSetVpnDefaultForUids */);
+        doTestLockdownVpn(true /* isIkev2Vpn */);
     }
 
     @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
