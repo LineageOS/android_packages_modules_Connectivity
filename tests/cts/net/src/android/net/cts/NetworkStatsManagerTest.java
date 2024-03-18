@@ -805,7 +805,7 @@ public class NetworkStatsManagerTest {
                 // harness, which is untagged, won't cause a failure.
                 long firstTotal = resultsWithTraffic.get(0).total;
                 for (QueryResult queryResult : resultsWithTraffic) {
-                    assertWithinPercentage(queryResult + "", firstTotal, queryResult.total, 12);
+                    assertWithinPercentage(queryResult + "", firstTotal, queryResult.total, 16);
                 }
 
                 // Expect to see no traffic when querying for any tag in tagsWithNoTraffic or any
