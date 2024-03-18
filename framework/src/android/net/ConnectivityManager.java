@@ -6284,7 +6284,8 @@ public class ConnectivityManager {
     @RequiresPermission(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK)
     public boolean isUidNetworkingBlocked(int uid, boolean isNetworkMetered) {
         if (!SdkLevel.isAtLeastU()) {
-            Log.wtf(TAG, "isUidNetworkingBlocked is not supported on pre-U devices");
+            throw new IllegalStateException(
+                    "isUidNetworkingBlocked is not supported on pre-U devices");
         }
         final BpfNetMapsReader reader = BpfNetMapsReader.getInstance();
         // Note that before V, the data saver status in bpf is written by ConnectivityService
