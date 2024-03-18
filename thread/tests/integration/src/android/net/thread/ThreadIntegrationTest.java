@@ -16,31 +16,22 @@
 
 package android.net.thread;
 
-import static android.Manifest.permission.NETWORK_SETTINGS;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_DETACHED;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_LEADER;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_STOPPED;
-import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
 import static android.net.thread.utils.IntegrationTestUtils.CALLBACK_TIMEOUT;
-import static android.net.thread.utils.IntegrationTestUtils.LEAVE_TIMEOUT;
 import static android.net.thread.utils.IntegrationTestUtils.RESTART_JOIN_TIMEOUT;
-import static android.net.thread.utils.IntegrationTestUtils.waitForStateAnyOf;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
-import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import android.annotation.Nullable;
 import android.content.Context;
-import android.net.thread.ThreadNetworkController.StateCallback;
 import android.net.thread.utils.OtDaemonController;
 import android.net.thread.utils.ThreadFeatureCheckerRule;
 import android.net.thread.utils.ThreadFeatureCheckerRule.RequiresThreadFeature;
+import android.net.thread.utils.ThreadNetworkControllerWrapper;
 import android.os.SystemClock;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -55,7 +46,6 @@ import org.junit.runner.RunWith;
 
 import java.net.Inet6Address;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /** Tests for E2E Android Thread integration with ot-daemon, ConnectivityService, etc.. */
 @LargeTest
@@ -76,17 +66,14 @@ public class ThreadIntegrationTest {
     @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
 
     private final Context mContext = ApplicationProvider.getApplicationContext();
-    private ThreadNetworkController mController;
+    private final ThreadNetworkControllerWrapper mController =
+            ThreadNetworkControllerWrapper.newInstance(mContext);
     private OtDaemonController mOtCtl;
 
     @Before
     public void setUp() throws Exception {
-        mController =
-                mContext.getSystemService(ThreadNetworkManager.class)
-                        .getAllThreadNetworkControllers()
-                        .get(0);
         mOtCtl = new OtDaemonController();
-        leaveAndWait(mController);
+        mController.leaveAndWait();
 
         // TODO: b/323301831 - This is a workaround to avoid unnecessary delay to re-form a network
         mOtCtl.factoryReset();
@@ -94,43 +81,43 @@ public class ThreadIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
-        setTestUpStreamNetworkAndWait(mController, null);
-        leaveAndWait(mController);
+        mController.setTestNetworkAsUpstreamAndWait(null);
+        mController.leaveAndWait();
     }
 
     @Test
     public void otDaemonRestart_notJoinedAndStopped_deviceRoleIsStopped() throws Exception {
-        leaveAndWait(mController);
+        mController.leaveAndWait();
 
         runShellCommand("stop ot-daemon");
         // TODO(b/323331973): the sleep is needed to workaround the race conditions
         SystemClock.sleep(200);
 
-        waitForStateAnyOf(mController, List.of(DEVICE_ROLE_STOPPED), CALLBACK_TIMEOUT);
+        mController.waitForRole(DEVICE_ROLE_STOPPED, CALLBACK_TIMEOUT);
     }
 
     @Test
     public void otDaemonRestart_JoinedNetworkAndStopped_autoRejoined() throws Exception {
-        joinAndWait(mController, DEFAULT_DATASET);
+        mController.joinAndWait(DEFAULT_DATASET);
 
         runShellCommand("stop ot-daemon");
 
-        waitForStateAnyOf(mController, List.of(DEVICE_ROLE_DETACHED), CALLBACK_TIMEOUT);
-        waitForStateAnyOf(mController, List.of(DEVICE_ROLE_LEADER), RESTART_JOIN_TIMEOUT);
+        mController.waitForRole(DEVICE_ROLE_DETACHED, CALLBACK_TIMEOUT);
+        mController.waitForRole(DEVICE_ROLE_LEADER, RESTART_JOIN_TIMEOUT);
     }
 
     @Test
     public void otDaemonFactoryReset_deviceRoleIsStopped() throws Exception {
-        joinAndWait(mController, DEFAULT_DATASET);
+        mController.joinAndWait(DEFAULT_DATASET);
 
         mOtCtl.factoryReset();
 
-        assertThat(getDeviceRole(mController)).isEqualTo(DEVICE_ROLE_STOPPED);
+        assertThat(mController.getDeviceRole()).isEqualTo(DEVICE_ROLE_STOPPED);
     }
 
     @Test
     public void otDaemonFactoryReset_addressesRemoved() throws Exception {
-        joinAndWait(mController, DEFAULT_DATASET);
+        mController.joinAndWait(DEFAULT_DATASET);
 
         mOtCtl.factoryReset();
         String ifconfig = runShellCommand("ifconfig thread-wpan");
@@ -140,7 +127,7 @@ public class ThreadIntegrationTest {
 
     @Test
     public void tunInterface_joinedNetwork_otAddressesAddedToTunInterface() throws Exception {
-        joinAndWait(mController, DEFAULT_DATASET);
+        mController.joinAndWait(DEFAULT_DATASET);
 
         String ifconfig = runShellCommand("ifconfig thread-wpan");
         List<Inet6Address> otAddresses = mOtCtl.getAddresses();
@@ -152,46 +139,4 @@ public class ThreadIntegrationTest {
 
     // TODO (b/323300829): add more tests for integration with linux platform and
     // ConnectivityService
-
-    private static int getDeviceRole(ThreadNetworkController controller) throws Exception {
-        CompletableFuture<Integer> future = new CompletableFuture<>();
-        StateCallback callback = future::complete;
-        controller.registerStateCallback(directExecutor(), callback);
-        try {
-            return future.get(CALLBACK_TIMEOUT.toMillis(), MILLISECONDS);
-        } finally {
-            controller.unregisterStateCallback(callback);
-        }
-    }
-
-    private static void joinAndWait(
-            ThreadNetworkController controller, ActiveOperationalDataset activeDataset)
-            throws Exception {
-        runAsShell(
-                PERMISSION_THREAD_NETWORK_PRIVILEGED,
-                () -> controller.join(activeDataset, directExecutor(), result -> {}));
-        waitForStateAnyOf(controller, List.of(DEVICE_ROLE_LEADER), RESTART_JOIN_TIMEOUT);
-    }
-
-    private static void leaveAndWait(ThreadNetworkController controller) throws Exception {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsShell(
-                PERMISSION_THREAD_NETWORK_PRIVILEGED,
-                () -> controller.leave(directExecutor(), future::complete));
-        future.get(LEAVE_TIMEOUT.toMillis(), MILLISECONDS);
-    }
-
-    private static void setTestUpStreamNetworkAndWait(
-            ThreadNetworkController controller, @Nullable String networkInterfaceName)
-            throws Exception {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsShell(
-                PERMISSION_THREAD_NETWORK_PRIVILEGED,
-                NETWORK_SETTINGS,
-                () -> {
-                    controller.setTestNetworkAsUpstream(
-                            networkInterfaceName, directExecutor(), future::complete);
-                });
-        future.get(CALLBACK_TIMEOUT.toMillis(), MILLISECONDS);
-    }
 }
