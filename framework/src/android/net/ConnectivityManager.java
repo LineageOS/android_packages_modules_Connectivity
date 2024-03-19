@@ -6293,7 +6293,7 @@ public class ConnectivityManager {
         // the status is not synchronized.
         // On V+, the data saver status is set by platform code when enabling/disabling
         // data saver, which is synchronized.
-        return reader.isUidNetworkingBlocked(uid, isNetworkMetered, reader.getDataSaverEnabled());
+        return reader.isUidNetworkingBlocked(uid, isNetworkMetered);
     }
 
     /** @hide */
