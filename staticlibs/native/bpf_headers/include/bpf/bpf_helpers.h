@@ -45,8 +45,18 @@
 //  same time as itself and the rest of the platform)
 #define BPFLOADER_V_VERSION 41u
 
-// Android Mainline - this bpfloader should eventually go back to T
+// Android Mainline - this bpfloader should eventually go back to T (or even S)
+// Note: this value (and the following +1u's) are hardcoded in NetBpfLoad.cpp
 #define BPFLOADER_MAINLINE_VERSION 42u
+
+// Android Mainline BpfLoader when running on Android T
+#define BPFLOADER_MAINLINE_T_VERSION (BPFLOADER_MAINLINE_VERSION + 1u)
+
+// Android Mainline BpfLoader when running on Android U
+#define BPFLOADER_MAINLINE_U_VERSION (BPFLOADER_MAINLINE_T_VERSION + 1u)
+
+// Android Mainline BpfLoader when running on Android V
+#define BPFLOADER_MAINLINE_V_VERSION (BPFLOADER_MAINLINE_U_VERSION + 1u)
 
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
