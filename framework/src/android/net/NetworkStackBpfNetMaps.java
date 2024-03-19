@@ -234,17 +234,17 @@ public class NetworkStackBpfNetMaps {
     /**
      * Return whether the network is blocked by firewall chains for the given uid.
      *
+     * Note that {@link #getDataSaverEnabled()} has a latency before V.
+     *
      * @param uid The target uid.
      * @param isNetworkMetered Whether the target network is metered.
-     * @param isDataSaverEnabled Whether the data saver is enabled.
      *
      * @return True if the network is blocked. Otherwise, false.
      * @throws ServiceSpecificException if the read fails.
      *
      * @hide
      */
-    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered,
-            boolean isDataSaverEnabled) {
+    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered) {
         throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
 
         final long uidRuleConfig;
@@ -267,11 +267,17 @@ public class NetworkStackBpfNetMaps {
         if (!isNetworkMetered) return false;
         if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
         if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
-        return isDataSaverEnabled;
+        return getDataSaverEnabled();
     }
 
     /**
      * Get Data Saver enabled or disabled
+     *
+     * Note that before V, the data saver status in bpf is written by ConnectivityService
+     * when receiving {@link ConnectivityManager#ACTION_RESTRICT_BACKGROUND_CHANGED}. Thus,
+     * the status is not synchronized.
+     * On V+, the data saver status is set by platform code when enabling/disabling
+     * data saver, which is synchronized.
      *
      * @return whether Data Saver is enabled or disabled.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
