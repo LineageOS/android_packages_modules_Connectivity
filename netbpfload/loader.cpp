@@ -1087,7 +1087,7 @@ static int loadCodeSections(const char* elfPath, vector<codeSection>& cs, const 
     return 0;
 }
 
-int loadProg(const char* elfPath, bool* isCritical, const unsigned int bpfloader_ver,
+int loadProg(const char* const elfPath, bool* const isCritical, const unsigned int bpfloader_ver,
              const Location& location) {
     vector<char> license;
     vector<char> critical;
