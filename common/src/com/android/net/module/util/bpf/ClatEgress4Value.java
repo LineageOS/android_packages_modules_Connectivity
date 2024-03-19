@@ -36,11 +36,24 @@ public class ClatEgress4Value extends Struct {
     @Field(order = 3, type = Type.U8, padding = 3)
     public final short oifIsEthernet; // Whether the output interface requires ethernet header
 
+    @Field(order = 4, type = Type.U63)
+    public final long packets; // Count of translated gso (large) packets
+
+    @Field(order = 5, type = Type.U63)
+    public final long bytes; // Sum of post-translation skb->len
+
     public ClatEgress4Value(final int oif, final Inet6Address local6, final Inet6Address pfx96,
-            final short oifIsEthernet) {
+            final short oifIsEthernet, final long packets, final long bytes) {
         this.oif = oif;
         this.local6 = local6;
         this.pfx96 = pfx96;
         this.oifIsEthernet = oifIsEthernet;
+        this.packets = packets;
+        this.bytes = bytes;
+    }
+
+    public ClatEgress4Value(final int oif, final Inet6Address local6, final Inet6Address pfx96,
+            final short oifIsEthernet) {
+        this(oif, local6, pfx96, oifIsEthernet, 0, 0);
     }
 }

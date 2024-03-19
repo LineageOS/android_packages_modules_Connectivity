@@ -526,13 +526,13 @@ public class ClatCoordinatorTest {
                     + "v4: /192.0.0.46, v6: /2001:db8:0:b11::464, pfx96: /64:ff9b::, "
                     + "pid: 10483, cookie: 27149", dumpStrings[0].trim());
             assertEquals("Forwarding rules:", dumpStrings[1].trim());
-            assertEquals("BPF ingress map: iif nat64Prefix v6Addr -> v4Addr oif",
+            assertEquals("BPF ingress map: iif nat64Prefix v6Addr -> v4Addr oif (packets bytes)",
                     dumpStrings[2].trim());
-            assertEquals("1000 /64:ff9b::/96 /2001:db8:0:b11::464 -> /192.0.0.46 1001",
+            assertEquals("1000 /64:ff9b::/96 /2001:db8:0:b11::464 -> /192.0.0.46 1001 (0 0)",
                     dumpStrings[3].trim());
-            assertEquals("BPF egress map: iif v4Addr -> v6Addr nat64Prefix oif",
+            assertEquals("BPF egress map: iif v4Addr -> v6Addr nat64Prefix oif (packets bytes)",
                     dumpStrings[4].trim());
-            assertEquals("1001 /192.0.0.46 -> /2001:db8:0:b11::464 /64:ff9b::/96 1000 ether",
+            assertEquals("1001 /192.0.0.46 -> /2001:db8:0:b11::464 /64:ff9b::/96 1000 ether (0 0)",
                     dumpStrings[5].trim());
         } else {
             assertEquals(1, dumpStrings.length);
