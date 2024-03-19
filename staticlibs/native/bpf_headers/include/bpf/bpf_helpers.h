@@ -37,13 +37,13 @@
 #define BPFLOADER_IGNORED_ON_VERSION 33u
 
 // Android U / 14 (api level 34) - various new program types added
-#define BPFLOADER_U_VERSION 37u
+#define BPFLOADER_U_VERSION 38u
 
 // Android V / 15 (api level 35) - platform only
 // (note: the platform bpfloader in V isn't really versioned at all,
 //  as there is no need as it can only load objects compiled at the
 //  same time as itself and the rest of the platform)
-#define BPFLOADER_V_VERSION 41u
+#define BPFLOADER_PLATFORM_VERSION 41u
 
 // Android Mainline - this bpfloader should eventually go back to T (or even S)
 // Note: this value (and the following +1u's) are hardcoded in NetBpfLoad.cpp
@@ -67,7 +67,7 @@
  * In which case it's just best to use the default.
  */
 #ifndef BPFLOADER_MIN_VER
-#define BPFLOADER_MIN_VER BPFLOADER_V_VERSION
+#define BPFLOADER_MIN_VER BPFLOADER_PLATFORM_VERSION
 #endif
 
 #ifndef BPFLOADER_MAX_VER
