@@ -72,17 +72,6 @@ filegroup {
     ],
 }
 
-// Subset of services-core used to by ConnectivityService tests to test VPN realistically.
-// This is stripped by jarjar (see rules below) from other unrelated classes, so tests do not
-// include most classes from services-core, which are unrelated and cause wrong code coverage
-// calculations.
-java_library {
-    name: "services.core-vpn",
-    static_libs: ["services.core"],
-    jarjar_rules: "vpn-jarjar-rules.txt",
-    visibility: ["//visibility:private"],
-}
-
 java_defaults {
     name: "FrameworksNetTestsDefaults",
     min_sdk_version: "30",
@@ -109,7 +98,6 @@ java_defaults {
         "platform-test-annotations",
         "service-connectivity-pre-jarjar",
         "service-connectivity-tiramisu-pre-jarjar",
-        "services.core-vpn",
         "testables",
         "cts-net-utils",
     ],
