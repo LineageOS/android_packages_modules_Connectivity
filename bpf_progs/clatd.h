@@ -39,8 +39,10 @@ STRUCT_SIZE(ClatIngress6Key, 4 + 2 * 16);  // 36
 typedef struct {
     uint32_t oif;           // The output interface to redirect to (0 means don't redirect)
     struct in_addr local4;  // The destination IPv4 address
+    uint64_t packets;       // Count of translated gso (large) packets
+    uint64_t bytes;         // Sum of post-translation skb->len
 } ClatIngress6Value;
-STRUCT_SIZE(ClatIngress6Value, 4 + 4);  // 8
+STRUCT_SIZE(ClatIngress6Value, 4 + 4 + 8 + 8);  // 24
 
 typedef struct {
     uint32_t iif;           // The input interface index
@@ -54,7 +56,9 @@ typedef struct {
     struct in6_addr pfx96;   // The destination /96 nat64 prefix, bottom 32 bits must be 0
     bool oifIsEthernet;      // Whether the output interface requires ethernet header
     uint8_t pad[3];
+    uint64_t packets;       // Count of translated gso (large) packets
+    uint64_t bytes;         // Sum of post-translation skb->len
 } ClatEgress4Value;
-STRUCT_SIZE(ClatEgress4Value, 4 + 2 * 16 + 1 + 3);  // 40
+STRUCT_SIZE(ClatEgress4Value, 4 + 2 * 16 + 1 + 3 + 8 + 8);  // 56
 
 #undef STRUCT_SIZE

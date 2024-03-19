@@ -46,12 +46,14 @@ import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
 
 /**
- * A helper class to *read* java BpfMaps.
+ * A helper class to *read* java BpfMaps for network stack.
+ * BpfMap operations that are not used from network stack should be in
+ * {@link com.android.server.BpfNetMaps}
  * @hide
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)  // BPF maps were only mainlined in T
-public class BpfNetMapsReader {
-    private static final String TAG = BpfNetMapsReader.class.getSimpleName();
+public class NetworkStackBpfNetMaps {
+    private static final String TAG = NetworkStackBpfNetMaps.class.getSimpleName();
 
     // Locally store the handle of bpf maps. The FileDescriptors are statically cached inside the
     // BpfMap implementation.
@@ -86,15 +88,15 @@ public class BpfNetMapsReader {
     }
 
     private static class SingletonHolder {
-        static final BpfNetMapsReader sInstance = new BpfNetMapsReader();
+        static final NetworkStackBpfNetMaps sInstance = new NetworkStackBpfNetMaps();
     }
 
     @NonNull
-    public static BpfNetMapsReader getInstance() {
+    public static NetworkStackBpfNetMaps getInstance() {
         return SingletonHolder.sInstance;
     }
 
-    private BpfNetMapsReader() {
+    private NetworkStackBpfNetMaps() {
         this(new Dependencies());
     }
 
@@ -102,10 +104,11 @@ public class BpfNetMapsReader {
     // concurrent access, the test needs to use a non-static approach for dependency injection and
     // mocking virtual bpf maps.
     @VisibleForTesting
-    public BpfNetMapsReader(@NonNull Dependencies deps) {
+    public NetworkStackBpfNetMaps(@NonNull Dependencies deps) {
         if (!SdkLevel.isAtLeastT()) {
             throw new UnsupportedOperationException(
-                    BpfNetMapsReader.class.getSimpleName() + " is not supported below Android T");
+                    NetworkStackBpfNetMaps.class.getSimpleName()
+                            + " is not supported below Android T");
         }
         mDeps = deps;
         mConfigurationMap = mDeps.getConfigurationMap();
@@ -231,17 +234,17 @@ public class BpfNetMapsReader {
     /**
      * Return whether the network is blocked by firewall chains for the given uid.
      *
+     * Note that {@link #getDataSaverEnabled()} has a latency before V.
+     *
      * @param uid The target uid.
      * @param isNetworkMetered Whether the target network is metered.
-     * @param isDataSaverEnabled Whether the data saver is enabled.
      *
      * @return True if the network is blocked. Otherwise, false.
      * @throws ServiceSpecificException if the read fails.
      *
      * @hide
      */
-    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered,
-            boolean isDataSaverEnabled) {
+    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered) {
         throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
 
         final long uidRuleConfig;
@@ -264,11 +267,17 @@ public class BpfNetMapsReader {
         if (!isNetworkMetered) return false;
         if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
         if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
-        return isDataSaverEnabled;
+        return getDataSaverEnabled();
     }
 
     /**
      * Get Data Saver enabled or disabled
+     *
+     * Note that before V, the data saver status in bpf is written by ConnectivityService
+     * when receiving {@link ConnectivityManager#ACTION_RESTRICT_BACKGROUND_CHANGED}. Thus,
+     * the status is not synchronized.
+     * On V+, the data saver status is set by platform code when enabling/disabling
+     * data saver, which is synchronized.
      *
      * @return whether Data Saver is enabled or disabled.
      * @throws ServiceSpecificException in case of failure, with an error code indicating the
