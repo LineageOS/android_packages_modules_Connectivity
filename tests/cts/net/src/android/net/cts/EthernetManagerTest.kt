@@ -348,7 +348,9 @@ class EthernetManagerTest {
         }
     }
 
-    private fun isEthernetSupported() = em != null
+    private fun isEthernetSupported() : Boolean {
+        return context.getSystemService(EthernetManager::class.java) != null
+    }
 
     @Before
     fun setUp() {
