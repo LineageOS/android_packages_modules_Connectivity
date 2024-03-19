@@ -97,7 +97,7 @@ const android::bpf::Location locations[] = {
         },
 };
 
-int loadAllElfObjects(const android::bpf::Location& location) {
+int loadAllElfObjects(const unsigned int bpfloader_ver, const android::bpf::Location& location) {
     int retVal = 0;
     DIR* dir;
     struct dirent* ent;
@@ -111,7 +111,7 @@ int loadAllElfObjects(const android::bpf::Location& location) {
             progPath += s;
 
             bool critical;
-            int ret = android::bpf::loadProg(progPath.c_str(), &critical, location);
+            int ret = android::bpf::loadProg(progPath.c_str(), &critical, bpfloader_ver, location);
             if (ret) {
                 if (critical) retVal = ret;
                 ALOGE("Failed to load object: %s, ret: %s", progPath.c_str(), std::strerror(-ret));
@@ -355,9 +355,12 @@ int main(int argc, char** argv, char * const envp[]) {
     // Thus we need to manually create the /sys/fs/bpf/loader subdirectory.
     if (createSysFsBpfSubDir("loader")) return 1;
 
+    // This is Network BpfLoader v0.42
+    const unsigned int bpfloader_ver = 42u;
+
     // Load all ELF objects, create programs and maps, and pin them
     for (const auto& location : locations) {
-        if (loadAllElfObjects(location) != 0) {
+        if (loadAllElfObjects(bpfloader_ver, location) != 0) {
             ALOGE("=== CRITICAL FAILURE LOADING BPF PROGRAMS FROM %s ===", location.dir);
             ALOGE("If this triggers reliably, you're probably missing kernel options or patches.");
             ALOGE("If this triggers randomly, you might be hitting some memory allocation "
