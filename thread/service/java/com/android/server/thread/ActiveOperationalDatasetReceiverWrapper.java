@@ -16,10 +16,12 @@
 
 package com.android.server.thread;
 
+import static android.net.thread.ThreadNetworkException.ERROR_INTERNAL_ERROR;
 import static android.net.thread.ThreadNetworkException.ERROR_UNAVAILABLE;
 
 import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.IActiveOperationalDatasetReceiver;
+import android.net.thread.ThreadNetworkException;
 import android.os.RemoteException;
 
 import com.android.internal.annotations.GuardedBy;
@@ -70,6 +72,17 @@ final class ActiveOperationalDatasetReceiverWrapper {
             mReceiver.onSuccess(dataset);
         } catch (RemoteException e) {
             // The client is dead, do nothing
+        }
+    }
+
+    public void onError(Throwable e) {
+        if (e instanceof ThreadNetworkException) {
+            ThreadNetworkException threadException = (ThreadNetworkException) e;
+            onError(threadException.getErrorCode(), threadException.getMessage());
+        } else if (e instanceof RemoteException) {
+            onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        } else {
+            throw new AssertionError(e);
         }
     }
 

@@ -46,6 +46,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
     private static final Duration SET_ENABLED_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration FORCE_STOP_TIMEOUT = Duration.ofSeconds(1);
 
     // These don't require root access.
     private static final List<String> NON_PRIVILEGED_COMMANDS =
@@ -108,6 +109,8 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
                 return setThreadEnabled(true);
             case "disable":
                 return setThreadEnabled(false);
+            case "force-stop-ot-daemon":
+                return forceStopOtDaemon();
             case "force-country-code":
                 boolean enabled;
                 try {
@@ -143,34 +146,58 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
     }
 
     private int setThreadEnabled(boolean enabled) {
-        final PrintWriter perr = getErrorWriter();
-
         CompletableFuture<Void> setEnabledFuture = new CompletableFuture<>();
-        mControllerService.setEnabled(
-                enabled,
-                new IOperationReceiver.Stub() {
-                    @Override
-                    public void onSuccess() {
-                        setEnabledFuture.complete(null);
-                    }
+        mControllerService.setEnabled(enabled, newOperationReceiver(setEnabledFuture));
+        return waitForFuture(setEnabledFuture, FORCE_STOP_TIMEOUT, getErrorWriter());
+    }
 
-                    @Override
-                    public void onError(int errorCode, String errorMessage) {
-                        setEnabledFuture.completeExceptionally(
-                                new ThreadNetworkException(errorCode, errorMessage));
-                    }
-                });
-
+    private int forceStopOtDaemon() {
+        final PrintWriter errorWriter = getErrorWriter();
+        boolean enabled;
         try {
-            setEnabledFuture.get(SET_ENABLED_TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+            enabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
+        } catch (IllegalArgumentException e) {
+            errorWriter.println("Invalid argument: " + e.getMessage());
+            return -1;
+        }
+
+        CompletableFuture<Void> forceStopFuture = new CompletableFuture<>();
+        mControllerService.forceStopOtDaemonForTest(enabled, newOperationReceiver(forceStopFuture));
+        return waitForFuture(forceStopFuture, FORCE_STOP_TIMEOUT, getErrorWriter());
+    }
+
+    private static IOperationReceiver newOperationReceiver(CompletableFuture<Void> future) {
+        return new IOperationReceiver.Stub() {
+            @Override
+            public void onSuccess() {
+                future.complete(null);
+            }
+
+            @Override
+            public void onError(int errorCode, String errorMessage) {
+                future.completeExceptionally(new ThreadNetworkException(errorCode, errorMessage));
+            }
+        };
+    }
+
+    /**
+     * Waits for the future to complete within given timeout.
+     *
+     * <p>Returns 0 if {@code future} completed successfully, or -1 if {@code future} failed to
+     * complete. When failed, error messages are printed to {@code errorWriter}.
+     */
+    private int waitForFuture(
+            CompletableFuture<Void> future, Duration timeout, PrintWriter errorWriter) {
+        try {
+            future.get(timeout.toSeconds(), TimeUnit.SECONDS);
             return 0;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            perr.println("Failed: " + e.getMessage());
+            errorWriter.println("Failed: " + e.getMessage());
         } catch (ExecutionException e) {
-            perr.println("Failed: " + e.getCause().getMessage());
+            errorWriter.println("Failed: " + e.getCause().getMessage());
         } catch (TimeoutException e) {
-            perr.println("Failed: command timeout for " + SET_ENABLED_TIMEOUT);
+            errorWriter.println("Failed: command timeout for " + timeout);
         }
 
         return -1;
@@ -210,6 +237,8 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
     private void onHelpPrivileged(PrintWriter pw) {
         pw.println("  force-country-code enabled <two-letter code> | disabled ");
         pw.println("    Sets country code to <two-letter code> or left for normal value");
+        pw.println("  force-stop-ot-daemon enabled | disabled ");
+        pw.println("    force stop ot-daemon service");
     }
 
     @Override
