@@ -50,7 +50,7 @@ private const val NO_IIF = 0
 // pre-T devices does not support Bpf.
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(VERSION_CODES.S_V2)
-class BpfNetMapsReaderTest {
+class NetworkStackBpfNetMapsTest {
     @Rule
     @JvmField
     val ignoreRule = DevSdkIgnoreRule()
@@ -58,14 +58,15 @@ class BpfNetMapsReaderTest {
     private val testConfigurationMap: IBpfMap<S32, U32> = TestBpfMap()
     private val testUidOwnerMap: IBpfMap<S32, UidOwnerValue> = TestBpfMap()
     private val testDataSaverEnabledMap: IBpfMap<S32, U8> = TestBpfMap()
-    private val bpfNetMapsReader = BpfNetMapsReader(
-        TestDependencies(testConfigurationMap, testUidOwnerMap, testDataSaverEnabledMap))
+    private val bpfNetMapsReader = NetworkStackBpfNetMaps(
+        TestDependencies(testConfigurationMap, testUidOwnerMap, testDataSaverEnabledMap)
+    )
 
     class TestDependencies(
         private val configMap: IBpfMap<S32, U32>,
         private val uidOwnerMap: IBpfMap<S32, UidOwnerValue>,
         private val dataSaverEnabledMap: IBpfMap<S32, U8>
-    ) : BpfNetMapsReader.Dependencies() {
+    ) : NetworkStackBpfNetMaps.Dependencies() {
         override fun getConfigurationMap() = configMap
         override fun getUidOwnerMap() = uidOwnerMap
         override fun getDataSaverEnabledMap() = dataSaverEnabledMap
@@ -99,11 +100,16 @@ class BpfNetMapsReaderTest {
             Modifier.isStatic(it.modifiers) && it.name.startsWith("FIREWALL_CHAIN_")
         }
         // Verify the size matches, this also verifies no common item in allow and deny chains.
-        assertEquals(BpfNetMapsConstants.ALLOW_CHAINS.size +
-                BpfNetMapsConstants.DENY_CHAINS.size, declaredChains.size)
+        assertEquals(
+            BpfNetMapsConstants.ALLOW_CHAINS.size +
+                BpfNetMapsConstants.DENY_CHAINS.size,
+            declaredChains.size
+        )
         declaredChains.forEach {
-            assertTrue(BpfNetMapsConstants.ALLOW_CHAINS.contains(it.get(null)) ||
-                    BpfNetMapsConstants.DENY_CHAINS.contains(it.get(null)))
+            assertTrue(
+                BpfNetMapsConstants.ALLOW_CHAINS.contains(it.get(null)) ||
+                    BpfNetMapsConstants.DENY_CHAINS.contains(it.get(null))
+            )
         }
     }
 
