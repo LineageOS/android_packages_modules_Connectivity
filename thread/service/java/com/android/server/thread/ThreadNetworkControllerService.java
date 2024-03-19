@@ -68,6 +68,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.InetAddresses;
 import android.net.LinkAddress;
@@ -106,8 +107,10 @@ import android.os.UserManager;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.ServiceManagerWrapper;
+import com.android.server.connectivity.ConnectivityResources;
 import com.android.server.thread.openthread.BackboneRouterState;
 import com.android.server.thread.openthread.BorderRouterConfigurationParcel;
 import com.android.server.thread.openthread.IChannelMasksReceiver;
@@ -115,12 +118,16 @@ import com.android.server.thread.openthread.IOtDaemon;
 import com.android.server.thread.openthread.IOtDaemonCallback;
 import com.android.server.thread.openthread.IOtStatusReceiver;
 import com.android.server.thread.openthread.Ipv6AddressInfo;
+import com.android.server.thread.openthread.MeshcopTxtAttributes;
 import com.android.server.thread.openthread.OtDaemonState;
+
+import libcore.util.HexEncoding;
 
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.HashMap;
@@ -129,6 +136,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * Implementation of the {@link ThreadNetworkController} API.
@@ -142,6 +150,16 @@ import java.util.function.Supplier;
 @TargetApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 final class ThreadNetworkControllerService extends IThreadNetworkController.Stub {
     private static final String TAG = "ThreadNetworkService";
+
+    // The model name length in utf-8 bytes
+    private static final int MAX_MODEL_NAME_UTF8_BYTES = 24;
+
+    // The max vendor name length in utf-8 bytes
+    private static final int MAX_VENDOR_NAME_UTF8_BYTES = 24;
+
+    // This regex pattern allows "XXXXXX", "XX:XX:XX" and "XX-XX-XX" OUI formats.
+    // Note that this regex allows "XX:XX-XX" as well but we don't need to be a strict checker
+    private static final String OUI_REGEX = "^([0-9A-Fa-f]{2}[:-]?){2}([0-9A-Fa-f]{2})$";
 
     // Below member fields can be accessed from both the binder and handler threads
 
@@ -159,6 +177,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private final InfraInterfaceController mInfraIfController;
     private final NsdPublisher mNsdPublisher;
     private final OtDaemonCallbackProxy mOtDaemonCallbackProxy = new OtDaemonCallbackProxy();
+    private final ConnectivityResources mResources;
 
     @Nullable private IOtDaemon mOtDaemon;
     @Nullable private NetworkAgent mNetworkAgent;
@@ -188,7 +207,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             InfraInterfaceController infraIfController,
             ThreadPersistentSettings persistentSettings,
             NsdPublisher nsdPublisher,
-            UserManager userManager) {
+            UserManager userManager,
+            ConnectivityResources resources) {
         mContext = context;
         mHandler = handler;
         mNetworkProvider = networkProvider;
@@ -202,6 +222,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mPersistentSettings = persistentSettings;
         mNsdPublisher = nsdPublisher;
         mUserManager = userManager;
+        mResources = resources;
     }
 
     public static ThreadNetworkControllerService newInstance(
@@ -222,7 +243,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 new InfraInterfaceController(),
                 persistentSettings,
                 NsdPublisher.newInstance(context, handler),
-                context.getSystemService(UserManager.class));
+                context.getSystemService(UserManager.class),
+                new ConnectivityResources(context));
     }
 
     private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
@@ -298,11 +320,53 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         if (otDaemon == null) {
             throw new RemoteException("Internal error: failed to start OT daemon");
         }
-        otDaemon.initialize(mTunIfController.getTunFd(), isEnabled(), mNsdPublisher);
+
+        otDaemon.initialize(
+                mTunIfController.getTunFd(),
+                isEnabled(),
+                mNsdPublisher,
+                getMeshcopTxtAttributes(mResources.get()));
         otDaemon.registerStateCallback(mOtDaemonCallbackProxy, -1);
         otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         mOtDaemon = otDaemon;
         return mOtDaemon;
+    }
+
+    @VisibleForTesting
+    static MeshcopTxtAttributes getMeshcopTxtAttributes(Resources resources) {
+        final String modelName = resources.getString(R.string.config_thread_model_name);
+        final String vendorName = resources.getString(R.string.config_thread_vendor_name);
+        final String vendorOui = resources.getString(R.string.config_thread_vendor_oui);
+
+        if (!modelName.isEmpty()) {
+            if (modelName.getBytes(StandardCharsets.UTF_8).length > MAX_MODEL_NAME_UTF8_BYTES) {
+                throw new IllegalStateException(
+                        "Model name is longer than "
+                                + MAX_MODEL_NAME_UTF8_BYTES
+                                + "utf-8 bytes: "
+                                + modelName);
+            }
+        }
+
+        if (!vendorName.isEmpty()) {
+            if (vendorName.getBytes(StandardCharsets.UTF_8).length > MAX_VENDOR_NAME_UTF8_BYTES) {
+                throw new IllegalStateException(
+                        "Vendor name is longer than "
+                                + MAX_VENDOR_NAME_UTF8_BYTES
+                                + " utf-8 bytes: "
+                                + vendorName);
+            }
+        }
+
+        if (!vendorOui.isEmpty() && !Pattern.compile(OUI_REGEX).matcher(vendorOui).matches()) {
+            throw new IllegalStateException("Vendor OUI is invalid: " + vendorOui);
+        }
+
+        MeshcopTxtAttributes meshcopTxts = new MeshcopTxtAttributes();
+        meshcopTxts.modelName = modelName;
+        meshcopTxts.vendorName = vendorName;
+        meshcopTxts.vendorOui = HexEncoding.decode(vendorOui.replace("-", "").replace(":", ""));
+        return meshcopTxts;
     }
 
     private void onOtDaemonDied() {
