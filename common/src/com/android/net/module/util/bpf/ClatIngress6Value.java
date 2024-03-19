@@ -30,8 +30,21 @@ public class ClatIngress6Value extends Struct {
     @Field(order = 1, type = Type.Ipv4Address)
     public final Inet4Address local4; // The destination IPv4 address
 
-    public ClatIngress6Value(final int oif, final Inet4Address local4) {
+    @Field(order = 2, type = Type.U63)
+    public final long packets; // Count of translated gso (large) packets
+
+    @Field(order = 3, type = Type.U63)
+    public final long bytes; // Sum of post-translation skb->len
+
+    public ClatIngress6Value(final int oif, final Inet4Address local4, final long packets,
+            final long bytes) {
         this.oif = oif;
         this.local4 = local4;
+        this.packets = packets;
+        this.bytes = bytes;
+    }
+
+    public ClatIngress6Value(final int oif, final Inet4Address local4) {
+        this(oif, local4, 0, 0);
     }
 }
