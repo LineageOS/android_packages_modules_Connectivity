@@ -165,8 +165,35 @@ BpfHandler::BpfHandler()
 BpfHandler::BpfHandler(uint32_t perUidLimit, uint32_t totalLimit)
     : mPerUidStatsEntriesLimit(perUidLimit), mTotalUidStatsEntriesLimit(totalLimit) {}
 
+// copied with minor changes from waitForProgsLoaded()
+// p/m/C's staticlibs/native/bpf_headers/include/bpf/WaitForProgsLoaded.h
+static inline void waitForNetProgsLoaded() {
+    // infinite loop until success with 5/10/20/40/60/60/60... delay
+    for (int delay = 5;; delay *= 2) {
+        if (delay > 60) delay = 60;
+        if (base::WaitForProperty("init.svc.bpfloader", "stopped", std::chrono::seconds(delay))
+            && !access("/sys/fs/bpf/netd_shared", F_OK))
+            return;
+        ALOGW("Waited %ds for init.svc.bpfloader=stopped, still waiting...", delay);
+    }
+}
+
 Status BpfHandler::init(const char* cg2_path) {
     // Make sure BPF programs are loaded before doing anything
+    ALOGI("Waiting for BPF programs");
+
+    if (true || !modules::sdklevel::IsAtLeastV()) {
+        waitForNetProgsLoaded();
+        ALOGI("Networking BPF programs are loaded");
+
+        if (!base::SetProperty("ctl.start", "mdnsd_loadbpf")) {
+            ALOGE("Failed to set property ctl.start=mdnsd_loadbpf, see dmesg for reason.");
+            abort();
+        }
+
+        ALOGI("Waiting for remaining BPF programs");
+    }
+
     android::bpf::waitForProgsLoaded();
     ALOGI("BPF programs are loaded");
 
