@@ -37,6 +37,7 @@ android_app {
     required: [
         "privapp-permissions-com.android.threadnetwork.demoapp",
     ],
+    system_ext_specific: true,
     certificate: "platform",
     privileged: true,
     platform_apis: true,
@@ -47,4 +48,5 @@ prebuilt_etc {
     src: "privapp-permissions-com.android.threadnetwork.demoapp.xml",
     sub_dir: "permissions",
     filename_from_src: true,
+    system_ext_specific: true,
 }
