@@ -16,9 +16,11 @@
 
 package com.android.server.thread;
 
+import static android.net.thread.ThreadNetworkException.ERROR_INTERNAL_ERROR;
 import static android.net.thread.ThreadNetworkException.ERROR_UNAVAILABLE;
 
 import android.net.thread.IOperationReceiver;
+import android.net.thread.ThreadNetworkException;
 import android.os.RemoteException;
 
 import com.android.internal.annotations.GuardedBy;
@@ -29,6 +31,7 @@ import java.util.Set;
 /** A {@link IOperationReceiver} wrapper which makes it easier to invoke the callbacks. */
 final class OperationReceiverWrapper {
     private final IOperationReceiver mReceiver;
+    private final boolean mExpectOtDaemonDied;
 
     private static final Object sPendingReceiversLock = new Object();
 
@@ -36,7 +39,19 @@ final class OperationReceiverWrapper {
     private static final Set<OperationReceiverWrapper> sPendingReceivers = new HashSet<>();
 
     public OperationReceiverWrapper(IOperationReceiver receiver) {
-        this.mReceiver = receiver;
+        this(receiver, false /* expectOtDaemonDied */);
+    }
+
+    /**
+     * Creates a new {@link OperationReceiverWrapper}.
+     *
+     * <p>If {@code expectOtDaemonDied} is {@code true}, it's expected that ot-daemon becomes dead
+     * before {@code receiver} is completed with {@code onSuccess} and {@code onError} and {@code
+     * receiver#onSuccess} will be invoked in this case.
+     */
+    public OperationReceiverWrapper(IOperationReceiver receiver, boolean expectOtDaemonDied) {
+        mReceiver = receiver;
+        mExpectOtDaemonDied = expectOtDaemonDied;
 
         synchronized (sPendingReceiversLock) {
             sPendingReceivers.add(this);
@@ -47,7 +62,11 @@ final class OperationReceiverWrapper {
         synchronized (sPendingReceiversLock) {
             for (OperationReceiverWrapper receiver : sPendingReceivers) {
                 try {
-                    receiver.mReceiver.onError(ERROR_UNAVAILABLE, "Thread daemon died");
+                    if (receiver.mExpectOtDaemonDied) {
+                        receiver.mReceiver.onSuccess();
+                    } else {
+                        receiver.mReceiver.onError(ERROR_UNAVAILABLE, "Thread daemon died");
+                    }
                 } catch (RemoteException e) {
                     // The client is dead, do nothing
                 }
@@ -65,6 +84,17 @@ final class OperationReceiverWrapper {
             mReceiver.onSuccess();
         } catch (RemoteException e) {
             // The client is dead, do nothing
+        }
+    }
+
+    public void onError(Throwable e) {
+        if (e instanceof ThreadNetworkException) {
+            ThreadNetworkException threadException = (ThreadNetworkException) e;
+            onError(threadException.getErrorCode(), threadException.getMessage());
+        } else if (e instanceof RemoteException) {
+            onError(ERROR_INTERNAL_ERROR, "Thread stack error");
+        } else {
+            throw new AssertionError(e);
         }
     }
 

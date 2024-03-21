@@ -16,10 +16,15 @@
 
 package com.android.server.thread;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.contains;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,15 +55,14 @@ public class ThreadNetworkShellCommandTest {
     @Mock PrintWriter mErrorWriter;
     @Mock PrintWriter mOutputWriter;
 
-    ThreadNetworkShellCommand mThreadNetworkShellCommand;
+    ThreadNetworkShellCommand mShellCommand;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        mThreadNetworkShellCommand =
-                new ThreadNetworkShellCommand(mControllerService, mCountryCode);
-        mThreadNetworkShellCommand.setPrintWriters(mOutputWriter, mErrorWriter);
+        mShellCommand = new ThreadNetworkShellCommand(mControllerService, mCountryCode);
+        mShellCommand.setPrintWriters(mOutputWriter, mErrorWriter);
     }
 
     @After
@@ -71,7 +75,7 @@ public class ThreadNetworkShellCommandTest {
         BinderUtil.setUid(Process.SHELL_UID);
         when(mCountryCode.getCountryCode()).thenReturn("US");
 
-        mThreadNetworkShellCommand.exec(
+        mShellCommand.exec(
                 new Binder(),
                 new FileDescriptor(),
                 new FileDescriptor(),
@@ -85,7 +89,7 @@ public class ThreadNetworkShellCommandTest {
     public void forceSetCountryCodeEnabled_executeInUnrootedShell_notAllowed() {
         BinderUtil.setUid(Process.SHELL_UID);
 
-        mThreadNetworkShellCommand.exec(
+        mShellCommand.exec(
                 new Binder(),
                 new FileDescriptor(),
                 new FileDescriptor(),
@@ -100,7 +104,7 @@ public class ThreadNetworkShellCommandTest {
     public void forceSetCountryCodeEnabled_executeInRootedShell_allowed() {
         BinderUtil.setUid(Process.ROOT_UID);
 
-        mThreadNetworkShellCommand.exec(
+        mShellCommand.exec(
                 new Binder(),
                 new FileDescriptor(),
                 new FileDescriptor(),
@@ -114,7 +118,7 @@ public class ThreadNetworkShellCommandTest {
     public void forceSetCountryCodeDisabled_executeInUnrootedShell_notAllowed() {
         BinderUtil.setUid(Process.SHELL_UID);
 
-        mThreadNetworkShellCommand.exec(
+        mShellCommand.exec(
                 new Binder(),
                 new FileDescriptor(),
                 new FileDescriptor(),
@@ -129,7 +133,7 @@ public class ThreadNetworkShellCommandTest {
     public void forceSetCountryCodeDisabled_executeInRootedShell_allowed() {
         BinderUtil.setUid(Process.ROOT_UID);
 
-        mThreadNetworkShellCommand.exec(
+        mShellCommand.exec(
                 new Binder(),
                 new FileDescriptor(),
                 new FileDescriptor(),
@@ -137,5 +141,56 @@ public class ThreadNetworkShellCommandTest {
                 new String[] {"force-country-code", "disabled"});
 
         verify(mCountryCode).clearOverrideCountryCode();
+    }
+
+    @Test
+    public void forceStopOtDaemon_executeInUnrootedShell_failedAndServiceApiNotCalled() {
+        BinderUtil.setUid(Process.SHELL_UID);
+
+        mShellCommand.exec(
+                new Binder(),
+                new FileDescriptor(),
+                new FileDescriptor(),
+                new FileDescriptor(),
+                new String[] {"force-stop-ot-daemon", "enabled"});
+
+        verify(mControllerService, never()).forceStopOtDaemonForTest(anyBoolean(), any());
+        verify(mErrorWriter, atLeastOnce()).println(contains("force-stop-ot-daemon"));
+        verify(mOutputWriter, never()).println();
+    }
+
+    @Test
+    public void forceStopOtDaemon_serviceThrows_failed() {
+        BinderUtil.setUid(Process.ROOT_UID);
+        doThrow(new SecurityException(""))
+                .when(mControllerService)
+                .forceStopOtDaemonForTest(eq(true), any());
+
+        mShellCommand.exec(
+                new Binder(),
+                new FileDescriptor(),
+                new FileDescriptor(),
+                new FileDescriptor(),
+                new String[] {"force-stop-ot-daemon", "enabled"});
+
+        verify(mControllerService, times(1)).forceStopOtDaemonForTest(eq(true), any());
+        verify(mOutputWriter, never()).println();
+    }
+
+    @Test
+    public void forceStopOtDaemon_serviceApiTimeout_failedWithTimeoutError() {
+        BinderUtil.setUid(Process.ROOT_UID);
+        doNothing().when(mControllerService).forceStopOtDaemonForTest(eq(true), any());
+
+        mShellCommand.exec(
+                new Binder(),
+                new FileDescriptor(),
+                new FileDescriptor(),
+                new FileDescriptor(),
+                new String[] {"force-stop-ot-daemon", "enabled"});
+
+        verify(mControllerService, times(1)).forceStopOtDaemonForTest(eq(true), any());
+        verify(mErrorWriter, atLeastOnce()).println(contains("timeout"));
+        verify(mOutputWriter, never()).println();
     }
 }
