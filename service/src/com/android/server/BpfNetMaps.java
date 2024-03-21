@@ -49,8 +49,8 @@ import static com.android.server.ConnectivityStatsLog.NETWORK_BPF_MAP_INFO;
 
 import android.app.StatsManager;
 import android.content.Context;
+import android.net.BpfNetMapsUtils;
 import android.net.INetd;
-import android.net.NetworkStackBpfNetMaps;
 import android.net.UidOwnerValue;
 import android.os.Build;
 import android.os.RemoteException;
@@ -539,7 +539,7 @@ public class BpfNetMaps {
     @Deprecated
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public boolean isChainEnabled(final int childChain) {
-        return NetworkStackBpfNetMaps.isChainEnabled(sConfigurationMap, childChain);
+        return BpfNetMapsUtils.isChainEnabled(sConfigurationMap, childChain);
     }
 
     private Set<Integer> asSet(final int[] uids) {
@@ -634,7 +634,7 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public int getUidRule(final int childChain, final int uid) {
-        return NetworkStackBpfNetMaps.getUidRule(sUidOwnerMap, childChain, uid);
+        return BpfNetMapsUtils.getUidRule(sUidOwnerMap, childChain, uid);
     }
 
     private Set<Integer> getUidsMatchEnabled(final int childChain) throws ErrnoException {
