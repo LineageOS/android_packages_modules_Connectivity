@@ -243,18 +243,19 @@ class ConnectivityServiceIntegrationTest {
             super.makeHandlerThread(tag).also { handlerThreads.add(it) }
 
         override fun makeCarrierPrivilegeAuthenticator(
-            context: Context,
-            tm: TelephonyManager,
-            requestRestrictedWifiEnabled: Boolean,
-            listener: BiConsumer<Int, Int>
+                context: Context,
+                tm: TelephonyManager,
+                requestRestrictedWifiEnabled: Boolean,
+                listener: BiConsumer<Int, Int>,
+                handler: Handler
         ): CarrierPrivilegeAuthenticator {
             return CarrierPrivilegeAuthenticator(context,
-                object : CarrierPrivilegeAuthenticator.Dependencies() {
-                    override fun makeHandlerThread(): HandlerThread =
-                        super.makeHandlerThread().also { handlerThreads.add(it) }
-                },
-                tm, TelephonyManagerShimImpl.newInstance(tm),
-                requestRestrictedWifiEnabled, listener)
+                    object : CarrierPrivilegeAuthenticator.Dependencies() {
+                        override fun makeHandlerThread(): HandlerThread =
+                                super.makeHandlerThread().also { handlerThreads.add(it) }
+                    },
+                    tm, TelephonyManagerShimImpl.newInstance(tm),
+                    requestRestrictedWifiEnabled, listener, handler)
         }
 
         override fun makeSatelliteAccessController(
