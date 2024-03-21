@@ -312,13 +312,13 @@ public final class ThreadNetworkControllerServiceTest {
     }
 
     @Test
-    public void userRestriction_initWithUserRestricted_threadIsDisabled() {
+    public void userRestriction_initWithUserRestricted_otDaemonNotStarted() {
         when(mMockUserManager.hasUserRestriction(eq(DISALLOW_THREAD_NETWORK))).thenReturn(true);
 
         mService.initialize();
         mTestLooper.dispatchAll();
 
-        assertThat(mFakeOtDaemon.getEnabledState()).isEqualTo(STATE_DISABLED);
+        assertThat(mFakeOtDaemon.isInitialized()).isFalse();
     }
 
     @Test
