@@ -182,6 +182,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private final NsdPublisher mNsdPublisher;
     private final OtDaemonCallbackProxy mOtDaemonCallbackProxy = new OtDaemonCallbackProxy();
     private final ConnectivityResources mResources;
+    private final Supplier<String> mCountryCodeSupplier;
 
     // This should not be directly used for calling IOtDaemon APIs because ot-daemon may die and
     // {@code mOtDaemon} will be set to {@code null}. Instead, use {@code getOtDaemon()}
@@ -215,7 +216,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             ThreadPersistentSettings persistentSettings,
             NsdPublisher nsdPublisher,
             UserManager userManager,
-            ConnectivityResources resources) {
+            ConnectivityResources resources,
+            Supplier<String> countryCodeSupplier) {
         mContext = context;
         mHandler = handler;
         mNetworkProvider = networkProvider;
@@ -230,10 +232,13 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mNsdPublisher = nsdPublisher;
         mUserManager = userManager;
         mResources = resources;
+        mCountryCodeSupplier = countryCodeSupplier;
     }
 
     public static ThreadNetworkControllerService newInstance(
-            Context context, ThreadPersistentSettings persistentSettings) {
+            Context context,
+            ThreadPersistentSettings persistentSettings,
+            Supplier<String> countryCodeSupplier) {
         HandlerThread handlerThread = new HandlerThread("ThreadHandlerThread");
         handlerThread.start();
         Handler handler = new Handler(handlerThread.getLooper());
@@ -251,7 +256,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 persistentSettings,
                 NsdPublisher.newInstance(context, handler),
                 context.getSystemService(UserManager.class),
-                new ConnectivityResources(context));
+                new ConnectivityResources(context),
+                countryCodeSupplier);
     }
 
     private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
@@ -347,7 +353,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 isEnabled(),
                 mNsdPublisher,
                 getMeshcopTxtAttributes(mResources.get()),
-                mOtDaemonCallbackProxy);
+                mOtDaemonCallbackProxy,
+                mCountryCodeSupplier.get());
         otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         mOtDaemon = otDaemon;
         return mOtDaemon;

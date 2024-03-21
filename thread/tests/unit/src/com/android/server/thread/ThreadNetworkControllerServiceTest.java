@@ -25,6 +25,7 @@ import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 import static android.net.thread.ThreadNetworkManager.DISALLOW_THREAD_NETWORK;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
 
+import static com.android.server.thread.ThreadNetworkCountryCode.DEFAULT_COUNTRY_CODE;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_INVALID_STATE;
 
 import static com.google.common.io.BaseEncoding.base16;
@@ -182,7 +183,8 @@ public final class ThreadNetworkControllerServiceTest {
                         mMockPersistentSettings,
                         mMockNsdPublisher,
                         mMockUserManager,
-                        mConnectivityResources);
+                        mConnectivityResources,
+                        () -> DEFAULT_COUNTRY_CODE);
         mService.setTestNetworkAgent(mMockNetworkAgent);
     }
 

@@ -16,6 +16,7 @@
 
 package com.android.server.thread;
 
+import static com.android.server.thread.ThreadPersistentSettings.THREAD_COUNTRY_CODE;
 import static com.android.server.thread.ThreadPersistentSettings.THREAD_ENABLED;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -54,6 +55,8 @@ import java.io.FileOutputStream;
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class ThreadPersistentSettingsTest {
+    private static final String TEST_COUNTRY_CODE = "CN";
+
     @Mock private AtomicFile mAtomicFile;
     @Mock Resources mResources;
     @Mock ConnectivityResources mConnectivityResources;
@@ -126,6 +129,28 @@ public class ThreadPersistentSettingsTest {
         mThreadPersistentSettings.put(THREAD_ENABLED.key, false);
 
         assertThat(mThreadPersistentSettings.get(THREAD_ENABLED)).isFalse();
+        // Confirm that file writes have been triggered.
+        verify(mAtomicFile).startWrite();
+        verify(mAtomicFile).finishWrite(any());
+    }
+
+    @Test
+    public void put_ThreadCountryCodeString_returnsString() throws Exception {
+        mThreadPersistentSettings.put(THREAD_COUNTRY_CODE.key, TEST_COUNTRY_CODE);
+
+        assertThat(mThreadPersistentSettings.get(THREAD_COUNTRY_CODE)).isEqualTo(TEST_COUNTRY_CODE);
+
+        // Confirm that file writes have been triggered.
+        verify(mAtomicFile).startWrite();
+        verify(mAtomicFile).finishWrite(any());
+    }
+
+    @Test
+    public void put_ThreadCountryCodeNull_returnsNull() throws Exception {
+        mThreadPersistentSettings.put(THREAD_COUNTRY_CODE.key, null);
+
+        assertThat(mThreadPersistentSettings.get(THREAD_COUNTRY_CODE)).isNull();
+
         // Confirm that file writes have been triggered.
         verify(mAtomicFile).startWrite();
         verify(mAtomicFile).finishWrite(any());
