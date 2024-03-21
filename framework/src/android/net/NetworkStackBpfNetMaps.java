@@ -17,11 +17,7 @@
 package android.net;
 
 import static android.net.BpfNetMapsConstants.CONFIGURATION_MAP_PATH;
-import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED;
-import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY;
 import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_MAP_PATH;
-import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
-import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.UID_OWNER_MAP_PATH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.BpfNetMapsUtils.getMatchByFirewallChain;
@@ -66,26 +62,6 @@ public class NetworkStackBpfNetMaps {
     private final IBpfMap<S32, UidOwnerValue> mUidOwnerMap;
     private final IBpfMap<S32, U8> mDataSaverEnabledMap;
     private final Dependencies mDeps;
-
-    // Bitmaps for calculating whether a given uid is blocked by firewall chains.
-    private static final long sMaskDropIfSet;
-    private static final long sMaskDropIfUnset;
-
-    static {
-        long maskDropIfSet = 0L;
-        long maskDropIfUnset = 0L;
-
-        for (int chain : BpfNetMapsConstants.ALLOW_CHAINS) {
-            final long match = getMatchByFirewallChain(chain);
-            maskDropIfUnset |= match;
-        }
-        for (int chain : BpfNetMapsConstants.DENY_CHAINS) {
-            final long match = getMatchByFirewallChain(chain);
-            maskDropIfSet |= match;
-        }
-        sMaskDropIfSet = maskDropIfSet;
-        sMaskDropIfUnset = maskDropIfUnset;
-    }
 
     private static class SingletonHolder {
         static final NetworkStackBpfNetMaps sInstance = new NetworkStackBpfNetMaps();
@@ -245,29 +221,8 @@ public class NetworkStackBpfNetMaps {
      * @hide
      */
     public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered) {
-        throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
-
-        final long uidRuleConfig;
-        final long uidMatch;
-        try {
-            uidRuleConfig = mConfigurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val;
-            final UidOwnerValue value = mUidOwnerMap.getValue(new S32(uid));
-            uidMatch = (value != null) ? value.rule : 0L;
-        } catch (ErrnoException e) {
-            throw new ServiceSpecificException(e.errno,
-                    "Unable to get firewall chain status: " + Os.strerror(e.errno));
-        }
-
-        final boolean blockedByAllowChains = 0 != (uidRuleConfig & ~uidMatch & sMaskDropIfUnset);
-        final boolean blockedByDenyChains = 0 != (uidRuleConfig & uidMatch & sMaskDropIfSet);
-        if (blockedByAllowChains || blockedByDenyChains) {
-            return true;
-        }
-
-        if (!isNetworkMetered) return false;
-        if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
-        if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
-        return getDataSaverEnabled();
+        return BpfNetMapsUtils.isUidNetworkingBlocked(uid, isNetworkMetered,
+                mConfigurationMap, mUidOwnerMap, mDataSaverEnabledMap);
     }
 
     /**
@@ -284,13 +239,6 @@ public class NetworkStackBpfNetMaps {
      *                                  cause of the failure.
      */
     public boolean getDataSaverEnabled() {
-        throwIfPreT("getDataSaverEnabled is not available on pre-T devices");
-
-        try {
-            return mDataSaverEnabledMap.getValue(DATA_SAVER_ENABLED_KEY).val == DATA_SAVER_ENABLED;
-        } catch (ErrnoException e) {
-            throw new ServiceSpecificException(e.errno, "Unable to get data saver: "
-                    + Os.strerror(e.errno));
-        }
+        return BpfNetMapsUtils.getDataSaverEnabled(mDataSaverEnabledMap);
     }
 }
