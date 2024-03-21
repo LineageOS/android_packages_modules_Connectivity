@@ -45,8 +45,8 @@ import java.io.PrintWriter;
 @SmallTest
 public class ThreadNetworkShellCommandTest {
     private static final String TAG = "ThreadNetworkShellCommandTTest";
-    @Mock ThreadNetworkService mThreadNetworkService;
-    @Mock ThreadNetworkCountryCode mThreadNetworkCountryCode;
+    @Mock ThreadNetworkControllerService mControllerService;
+    @Mock ThreadNetworkCountryCode mCountryCode;
     @Mock PrintWriter mErrorWriter;
     @Mock PrintWriter mOutputWriter;
 
@@ -56,7 +56,8 @@ public class ThreadNetworkShellCommandTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        mThreadNetworkShellCommand = new ThreadNetworkShellCommand(mThreadNetworkCountryCode);
+        mThreadNetworkShellCommand =
+                new ThreadNetworkShellCommand(mControllerService, mCountryCode);
         mThreadNetworkShellCommand.setPrintWriters(mOutputWriter, mErrorWriter);
     }
 
@@ -68,7 +69,7 @@ public class ThreadNetworkShellCommandTest {
     @Test
     public void getCountryCode_executeInUnrootedShell_allowed() {
         BinderUtil.setUid(Process.SHELL_UID);
-        when(mThreadNetworkCountryCode.getCountryCode()).thenReturn("US");
+        when(mCountryCode.getCountryCode()).thenReturn("US");
 
         mThreadNetworkShellCommand.exec(
                 new Binder(),
@@ -91,7 +92,7 @@ public class ThreadNetworkShellCommandTest {
                 new FileDescriptor(),
                 new String[] {"force-country-code", "enabled", "US"});
 
-        verify(mThreadNetworkCountryCode, never()).setOverrideCountryCode(eq("US"));
+        verify(mCountryCode, never()).setOverrideCountryCode(eq("US"));
         verify(mErrorWriter).println(contains("force-country-code"));
     }
 
@@ -106,7 +107,7 @@ public class ThreadNetworkShellCommandTest {
                 new FileDescriptor(),
                 new String[] {"force-country-code", "enabled", "US"});
 
-        verify(mThreadNetworkCountryCode).setOverrideCountryCode(eq("US"));
+        verify(mCountryCode).setOverrideCountryCode(eq("US"));
     }
 
     @Test
@@ -120,7 +121,7 @@ public class ThreadNetworkShellCommandTest {
                 new FileDescriptor(),
                 new String[] {"force-country-code", "disabled"});
 
-        verify(mThreadNetworkCountryCode, never()).setOverrideCountryCode(any());
+        verify(mCountryCode, never()).setOverrideCountryCode(any());
         verify(mErrorWriter).println(contains("force-country-code"));
     }
 
@@ -135,6 +136,6 @@ public class ThreadNetworkShellCommandTest {
                 new FileDescriptor(),
                 new String[] {"force-country-code", "disabled"});
 
-        verify(mThreadNetworkCountryCode).clearOverrideCountryCode();
+        verify(mCountryCode).clearOverrideCountryCode();
     }
 }
