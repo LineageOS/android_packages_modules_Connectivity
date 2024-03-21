@@ -18,17 +18,22 @@ package android.net;
 
 import static android.net.BpfNetMapsConstants.ALLOW_CHAINS;
 import static android.net.BpfNetMapsConstants.BACKGROUND_MATCH;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED;
+import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY;
 import static android.net.BpfNetMapsConstants.DENY_CHAINS;
 import static android.net.BpfNetMapsConstants.DOZABLE_MATCH;
+import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.LOW_POWER_STANDBY_MATCH;
 import static android.net.BpfNetMapsConstants.MATCH_LIST;
 import static android.net.BpfNetMapsConstants.NO_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_1_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_2_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_3_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
 import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
 import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
+import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
@@ -38,12 +43,21 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.system.OsConstants.EINVAL;
 
 import android.os.ServiceSpecificException;
+import android.system.ErrnoException;
+import android.system.Os;
 import android.util.Pair;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.IBpfMap;
+import com.android.net.module.util.Struct;
+import com.android.net.module.util.Struct.S32;
+import com.android.net.module.util.Struct.U32;
+import com.android.net.module.util.Struct.U8;
 
 import java.util.StringJoiner;
 
@@ -56,6 +70,26 @@ import java.util.StringJoiner;
 // Because modules could have different copies of this class if this is statically linked,
 // which would be problematic if the definitions in these modules are not synchronized.
 public class BpfNetMapsUtils {
+    // Bitmaps for calculating whether a given uid is blocked by firewall chains.
+    private static final long sMaskDropIfSet;
+    private static final long sMaskDropIfUnset;
+
+    static {
+        long maskDropIfSet = 0L;
+        long maskDropIfUnset = 0L;
+
+        for (int chain : BpfNetMapsConstants.ALLOW_CHAINS) {
+            final long match = getMatchByFirewallChain(chain);
+            maskDropIfUnset |= match;
+        }
+        for (int chain : BpfNetMapsConstants.DENY_CHAINS) {
+            final long match = getMatchByFirewallChain(chain);
+            maskDropIfSet |= match;
+        }
+        sMaskDropIfSet = maskDropIfSet;
+        sMaskDropIfUnset = maskDropIfUnset;
+    }
+
     // Prevent this class from being accidental instantiated.
     private BpfNetMapsUtils() {}
 
@@ -131,6 +165,124 @@ public class BpfNetMapsUtils {
     public static void throwIfPreT(final String msg) {
         if (!SdkLevel.isAtLeastT()) {
             throw new UnsupportedOperationException(msg);
+        }
+    }
+
+    /**
+     * Get the specified firewall chain's status.
+     *
+     * @param configurationMap target configurationMap
+     * @param chain target chain
+     * @return {@code true} if chain is enabled, {@code false} if chain is not enabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     */
+    public static boolean isChainEnabled(
+            final IBpfMap<S32, U32> configurationMap, final int chain) {
+        throwIfPreT("isChainEnabled is not available on pre-T devices");
+
+        final long match = getMatchByFirewallChain(chain);
+        try {
+            final U32 config = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
+            return (config.val & match) != 0;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to get firewall chain status: " + Os.strerror(e.errno));
+        }
+    }
+
+    /**
+     * Get firewall rule of specified firewall chain on specified uid.
+     *
+     * @param uidOwnerMap target uidOwnerMap.
+     * @param chain target chain.
+     * @param uid target uid.
+     * @return either FIREWALL_RULE_ALLOW or FIREWALL_RULE_DENY
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws ServiceSpecificException      in case of failure, with an error code indicating the
+     *                                       cause of the failure.
+     */
+    public static int getUidRule(final IBpfMap<S32, UidOwnerValue> uidOwnerMap,
+            final int chain, final int uid) {
+        throwIfPreT("getUidRule is not available on pre-T devices");
+
+        final long match = getMatchByFirewallChain(chain);
+        final boolean isAllowList = isFirewallAllowList(chain);
+        try {
+            final UidOwnerValue uidMatch = uidOwnerMap.getValue(new S32(uid));
+            final boolean isMatchEnabled = uidMatch != null && (uidMatch.rule & match) != 0;
+            return isMatchEnabled == isAllowList ? FIREWALL_RULE_ALLOW : FIREWALL_RULE_DENY;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to get uid rule status: " + Os.strerror(e.errno));
+        }
+    }
+
+    /**
+     * Return whether the network is blocked by firewall chains for the given uid.
+     *
+     * Note that {@link #getDataSaverEnabled(IBpfMap)} has a latency before V.
+     *
+     * @param uid The target uid.
+     * @param isNetworkMetered Whether the target network is metered.
+     *
+     * @return True if the network is blocked. Otherwise, false.
+     * @throws ServiceSpecificException if the read fails.
+     *
+     * @hide
+     */
+    public static boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered,
+            IBpfMap<S32, U32> configurationMap,
+            IBpfMap<S32, UidOwnerValue> uidOwnerMap,
+            IBpfMap<S32, U8> dataSaverEnabledMap
+    ) {
+        throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
+
+        final long uidRuleConfig;
+        final long uidMatch;
+        try {
+            uidRuleConfig = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val;
+            final UidOwnerValue value = uidOwnerMap.getValue(new Struct.S32(uid));
+            uidMatch = (value != null) ? value.rule : 0L;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to get firewall chain status: " + Os.strerror(e.errno));
+        }
+
+        final boolean blockedByAllowChains = 0 != (uidRuleConfig & ~uidMatch & sMaskDropIfUnset);
+        final boolean blockedByDenyChains = 0 != (uidRuleConfig & uidMatch & sMaskDropIfSet);
+        if (blockedByAllowChains || blockedByDenyChains) {
+            return true;
+        }
+
+        if (!isNetworkMetered) return false;
+        if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
+        if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
+        return getDataSaverEnabled(dataSaverEnabledMap);
+    }
+
+    /**
+     * Get Data Saver enabled or disabled
+     *
+     * Note that before V, the data saver status in bpf is written by ConnectivityService
+     * when receiving {@link ConnectivityManager#ACTION_RESTRICT_BACKGROUND_CHANGED}. Thus,
+     * the status is not synchronized.
+     * On V+, the data saver status is set by platform code when enabling/disabling
+     * data saver, which is synchronized.
+     *
+     * @return whether Data Saver is enabled or disabled.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     */
+    public static boolean getDataSaverEnabled(IBpfMap<S32, U8> dataSaverEnabledMap) {
+        throwIfPreT("getDataSaverEnabled is not available on pre-T devices");
+
+        try {
+            return dataSaverEnabledMap.getValue(DATA_SAVER_ENABLED_KEY).val == DATA_SAVER_ENABLED;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno, "Unable to get data saver: "
+                    + Os.strerror(e.errno));
         }
     }
 }

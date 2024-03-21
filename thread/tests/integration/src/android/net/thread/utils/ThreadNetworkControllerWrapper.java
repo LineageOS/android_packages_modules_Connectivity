@@ -46,6 +46,7 @@ public final class ThreadNetworkControllerWrapper {
     public static final Duration JOIN_TIMEOUT = Duration.ofSeconds(10);
     public static final Duration LEAVE_TIMEOUT = Duration.ofSeconds(2);
     private static final Duration CALLBACK_TIMEOUT = Duration.ofSeconds(1);
+    private static final Duration SET_ENABLED_TIMEOUT = Duration.ofSeconds(2);
 
     private final ThreadNetworkController mController;
 
@@ -113,6 +114,18 @@ public final class ThreadNetworkControllerWrapper {
         } finally {
             runAsShell(ACCESS_NETWORK_STATE, () -> mController.unregisterStateCallback(callback));
         }
+    }
+
+    /** An synchronous variant of {@link ThreadNetworkController#setEnabled}. */
+    public void setEnabledAndWait(boolean enabled)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsShell(
+                PERMISSION_THREAD_NETWORK_PRIVILEGED,
+                () ->
+                        mController.setEnabled(
+                                enabled, directExecutor(), newOutcomeReceiver(future)));
+        future.get(SET_ENABLED_TIMEOUT.toSeconds(), SECONDS);
     }
 
     /** Joins the given network and wait for this device to become attached. */

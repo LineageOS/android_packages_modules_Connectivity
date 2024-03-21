@@ -21,6 +21,7 @@ import static android.net.thread.ThreadNetworkController.STATE_DISABLED;
 import static android.net.thread.ThreadNetworkController.STATE_ENABLED;
 import static android.net.thread.ThreadNetworkException.ERROR_FAILED_PRECONDITION;
 import static android.net.thread.ThreadNetworkException.ERROR_INTERNAL_ERROR;
+import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 import static android.net.thread.ThreadNetworkManager.DISALLOW_THREAD_NETWORK;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
 
@@ -37,6 +38,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -312,13 +314,13 @@ public final class ThreadNetworkControllerServiceTest {
     }
 
     @Test
-    public void userRestriction_initWithUserRestricted_threadIsDisabled() {
+    public void userRestriction_initWithUserRestricted_otDaemonNotStarted() {
         when(mMockUserManager.hasUserRestriction(eq(DISALLOW_THREAD_NETWORK))).thenReturn(true);
 
         mService.initialize();
         mTestLooper.dispatchAll();
 
-        assertThat(mFakeOtDaemon.getEnabledState()).isEqualTo(STATE_DISABLED);
+        assertThat(mFakeOtDaemon.isInitialized()).isFalse();
     }
 
     @Test
@@ -439,5 +441,52 @@ public final class ThreadNetworkControllerServiceTest {
 
         verify(mockReceiver, never()).onSuccess(any(ActiveOperationalDataset.class));
         verify(mockReceiver, times(1)).onError(eq(ERROR_INTERNAL_ERROR), anyString());
+    }
+
+    @Test
+    public void forceStopOtDaemonForTest_noPermission_throwsSecurityException() {
+        doThrow(new SecurityException(""))
+                .when(mContext)
+                .enforceCallingOrSelfPermission(eq(PERMISSION_THREAD_NETWORK_PRIVILEGED), any());
+
+        assertThrows(
+                SecurityException.class,
+                () -> mService.forceStopOtDaemonForTest(true, new IOperationReceiver.Default()));
+    }
+
+    @Test
+    public void forceStopOtDaemonForTest_enabled_otDaemonDiesAndJoinFails() throws Exception {
+        mService.initialize();
+        IOperationReceiver mockReceiver = mock(IOperationReceiver.class);
+        IOperationReceiver mockJoinReceiver = mock(IOperationReceiver.class);
+
+        mService.forceStopOtDaemonForTest(true, mockReceiver);
+        mTestLooper.dispatchAll();
+        mService.join(DEFAULT_ACTIVE_DATASET, mockJoinReceiver);
+        mTestLooper.dispatchAll();
+
+        verify(mockReceiver, times(1)).onSuccess();
+        assertThat(mFakeOtDaemon.isInitialized()).isFalse();
+        verify(mockJoinReceiver, times(1)).onError(eq(ERROR_THREAD_DISABLED), anyString());
+    }
+
+    @Test
+    public void forceStopOtDaemonForTest_disable_otDaemonRestartsAndJoinSccess() throws Exception {
+        mService.initialize();
+        IOperationReceiver mockReceiver = mock(IOperationReceiver.class);
+        IOperationReceiver mockJoinReceiver = mock(IOperationReceiver.class);
+
+        mService.forceStopOtDaemonForTest(true, mock(IOperationReceiver.class));
+        mTestLooper.dispatchAll();
+        mService.forceStopOtDaemonForTest(false, mockReceiver);
+        mTestLooper.dispatchAll();
+        mService.join(DEFAULT_ACTIVE_DATASET, mockJoinReceiver);
+        mTestLooper.dispatchAll();
+        mTestLooper.moveTimeForward(FakeOtDaemon.JOIN_DELAY.toMillis() + 100);
+        mTestLooper.dispatchAll();
+
+        verify(mockReceiver, times(1)).onSuccess();
+        assertThat(mFakeOtDaemon.isInitialized()).isTrue();
+        verify(mockJoinReceiver, times(1)).onSuccess();
     }
 }

@@ -35,9 +35,12 @@ import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,7 +58,6 @@ import java.util.concurrent.ScheduledExecutorService;
 public class MdnsServiceTypeClient {
 
     private static final String TAG = MdnsServiceTypeClient.class.getSimpleName();
-    private static final int DEFAULT_MTU = 1500;
     @VisibleForTesting
     static final int EVENT_START_QUERYTASK = 1;
     static final int EVENT_QUERY_RESULT = 2;
@@ -220,6 +222,16 @@ public class MdnsServiceTypeClient {
          */
         public void sendMessage(@NonNull Handler handler, @NonNull Message message) {
             handler.sendMessage(message);
+        }
+
+        /**
+         * Generate a DatagramPacket from given MdnsPacket and InetSocketAddress.
+         */
+        public DatagramPacket getDatagramPacketFromMdnsPacket(@NonNull byte[] packetCreationBuffer,
+                @NonNull MdnsPacket packet, @NonNull InetSocketAddress address) throws IOException {
+            final byte[] queryBuffer =
+                    MdnsUtils.createRawDnsPacket(packetCreationBuffer, packet);
+            return new DatagramPacket(queryBuffer, 0, queryBuffer.length, address);
         }
     }
 
@@ -617,11 +629,6 @@ public class MdnsServiceTypeClient {
         return searchOptions != null && searchOptions.removeExpiredService();
     }
 
-    @VisibleForTesting
-    MdnsPacketWriter createMdnsPacketWriter() {
-        return new MdnsPacketWriter(DEFAULT_MTU);
-    }
-
     private List<MdnsResponse> makeResponsesForResolve(@NonNull SocketKey socketKey) {
         final List<MdnsResponse> resolveResponses = new ArrayList<>();
         for (int i = 0; i < listeners.size(); i++) {
@@ -711,7 +718,6 @@ public class MdnsServiceTypeClient {
                 result =
                         new EnqueueMdnsQueryCallable(
                                 socketClient,
-                                createMdnsPacketWriter(),
                                 serviceType,
                                 subtypes,
                                 taskArgs.config.expectUnicastResponse,
@@ -721,7 +727,8 @@ public class MdnsServiceTypeClient {
                                 sendDiscoveryQueries,
                                 servicesToResolve,
                                 clock,
-                                sharedLog)
+                                sharedLog,
+                                dependencies)
                                 .call();
             } catch (RuntimeException e) {
                 sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
