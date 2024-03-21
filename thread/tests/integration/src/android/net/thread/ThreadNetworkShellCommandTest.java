@@ -18,10 +18,13 @@ package android.net.thread;
 
 import static android.net.thread.ThreadNetworkController.STATE_DISABLED;
 import static android.net.thread.ThreadNetworkController.STATE_ENABLED;
+import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 
-import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
+import static com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow;
 
 import static com.google.common.truth.Truth.assertThat;
+
+import static org.junit.Assert.assertThrows;
 
 import android.content.Context;
 import android.net.thread.utils.ThreadFeatureCheckerRule;
@@ -32,9 +35,13 @@ import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.LargeTest;
 import androidx.test.runner.AndroidJUnit4;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.concurrent.ExecutionException;
 
 /** Integration tests for {@link ThreadNetworkShellCommand}. */
 @LargeTest
@@ -46,6 +53,21 @@ public class ThreadNetworkShellCommandTest {
     private final Context mContext = ApplicationProvider.getApplicationContext();
     private final ThreadNetworkControllerWrapper mController =
             ThreadNetworkControllerWrapper.newInstance(mContext);
+
+    @Before
+    public void setUp() {
+        ensureThreadEnabled();
+    }
+
+    @After
+    public void tearDown() {
+        ensureThreadEnabled();
+    }
+
+    private static void ensureThreadEnabled() {
+        runThreadCommand("force-stop-ot-daemon disabled");
+        runThreadCommand("enable");
+    }
 
     @Test
     public void enable_threadStateIsEnabled() throws Exception {
@@ -62,6 +84,38 @@ public class ThreadNetworkShellCommandTest {
     }
 
     @Test
+    public void forceStopOtDaemon_forceStopEnabled_otDaemonServiceDisappear() {
+        runThreadCommand("force-stop-ot-daemon enabled");
+
+        assertThat(runShellCommandOrThrow("service list")).doesNotContain("ot_daemon");
+    }
+
+    @Test
+    public void forceStopOtDaemon_forceStopEnabled_canNotEnableThread() throws Exception {
+        runThreadCommand("force-stop-ot-daemon enabled");
+
+        ExecutionException thrown =
+                assertThrows(ExecutionException.class, () -> mController.setEnabledAndWait(true));
+        ThreadNetworkException cause = (ThreadNetworkException) thrown.getCause();
+        assertThat(cause.getErrorCode()).isEqualTo(ERROR_THREAD_DISABLED);
+    }
+
+    @Test
+    public void forceStopOtDaemon_forceStopDisabled_otDaemonServiceAppears() throws Exception {
+        runThreadCommand("force-stop-ot-daemon disabled");
+
+        assertThat(runShellCommandOrThrow("service list")).contains("ot_daemon");
+    }
+
+    @Test
+    public void forceStopOtDaemon_forceStopDisabled_canEnableThread() throws Exception {
+        runThreadCommand("force-stop-ot-daemon disabled");
+
+        mController.setEnabledAndWait(true);
+        assertThat(mController.getEnabledState()).isEqualTo(STATE_ENABLED);
+    }
+
+    @Test
     public void forceCountryCode_setCN_getCountryCodeReturnsCN() {
         runThreadCommand("force-country-code enabled CN");
 
@@ -70,6 +124,6 @@ public class ThreadNetworkShellCommandTest {
     }
 
     private static String runThreadCommand(String cmd) {
-        return runShellCommand("cmd thread_network " + cmd);
+        return runShellCommandOrThrow("cmd thread_network " + cmd);
     }
 }
