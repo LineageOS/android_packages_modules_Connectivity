@@ -91,42 +91,62 @@ public class CarrierPrivilegeAuthenticator {
             @NonNull final TelephonyManager t,
             @NonNull final TelephonyManagerShim telephonyManagerShim,
             final boolean requestRestrictedWifiEnabled,
-            @NonNull BiConsumer<Integer, Integer> listener) {
+            @NonNull BiConsumer<Integer, Integer> listener,
+            @NonNull final Handler connectivityServiceHandler) {
         mContext = c;
         mTelephonyManager = t;
         mTelephonyManagerShim = telephonyManagerShim;
-        final HandlerThread thread = deps.makeHandlerThread();
-        thread.start();
-        mHandler = new Handler(thread.getLooper());
         mUseCallbacksForServiceChanged = deps.isFeatureEnabled(
                 c, CARRIER_SERVICE_CHANGED_USE_CALLBACK);
         mRequestRestrictedWifiEnabled = requestRestrictedWifiEnabled;
         mListener = listener;
+        if (mRequestRestrictedWifiEnabled) {
+            mHandler = connectivityServiceHandler;
+        } else {
+            final HandlerThread thread = deps.makeHandlerThread();
+            thread.start();
+            mHandler = new Handler(thread.getLooper());
+            synchronized (mLock) {
+                registerSimConfigChangedReceiver();
+                simConfigChanged();
+            }
+        }
+    }
+
+    private void registerSimConfigChangedReceiver() {
         final IntentFilter filter = new IntentFilter();
         filter.addAction(TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED);
-        synchronized (mLock) {
-            // Never unregistered because the system server never stops
-            c.registerReceiver(new BroadcastReceiver() {
-                @Override
-                public void onReceive(final Context context, final Intent intent) {
-                    switch (intent.getAction()) {
-                        case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
-                            simConfigChanged();
-                            break;
-                        default:
-                            Log.d(TAG, "Unknown intent received, action: " + intent.getAction());
-                    }
+        // Never unregistered because the system server never stops
+        mContext.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(final Context context, final Intent intent) {
+                switch (intent.getAction()) {
+                    case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
+                        simConfigChanged();
+                        break;
+                    default:
+                        Log.d(TAG, "Unknown intent received, action: " + intent.getAction());
                 }
-            }, filter, null, mHandler);
-            simConfigChanged();
+            }
+        }, filter, null, mHandler);
+    }
+
+    /**
+     * Start CarrierPrivilegeAuthenticator
+     */
+    public void start() {
+        if (mRequestRestrictedWifiEnabled) {
+            registerSimConfigChangedReceiver();
+            mHandler.post(this::simConfigChanged);
         }
     }
 
     public CarrierPrivilegeAuthenticator(@NonNull final Context c,
             @NonNull final TelephonyManager t, final boolean requestRestrictedWifiEnabled,
-            @NonNull BiConsumer<Integer, Integer> listener) {
+            @NonNull BiConsumer<Integer, Integer> listener,
+            @NonNull final Handler connectivityServiceHandler) {
         this(c, new Dependencies(), t, TelephonyManagerShimImpl.newInstance(t),
-                requestRestrictedWifiEnabled, listener);
+                requestRestrictedWifiEnabled, listener, connectivityServiceHandler);
     }
 
     public static class Dependencies {
@@ -146,6 +166,10 @@ public class CarrierPrivilegeAuthenticator {
     }
 
     private void simConfigChanged() {
+        //  If mRequestRestrictedWifiEnabled is false, constructor calls simConfigChanged
+        if (mRequestRestrictedWifiEnabled) {
+            ensureRunningOnHandlerThread();
+        }
         synchronized (mLock) {
             unregisterCarrierPrivilegesListeners();
             mModemCount = mTelephonyManager.getActiveModemCount();
@@ -188,6 +212,7 @@ public class CarrierPrivilegeAuthenticator {
         public void onCarrierPrivilegesChanged(
                 @NonNull List<String> privilegedPackageNames,
                 @NonNull int[] privilegedUids) {
+            ensureRunningOnHandlerThread();
             if (mUseCallbacksForServiceChanged) return;
             // Re-trigger the synchronous check (which is also very cheap due
             // to caching in CarrierPrivilegesTracker). This allows consistency
@@ -198,6 +223,7 @@ public class CarrierPrivilegeAuthenticator {
         @Override
         public void onCarrierServiceChanged(@Nullable final String carrierServicePackageName,
                 final int carrierServiceUid) {
+            ensureRunningOnHandlerThread();
             if (!mUseCallbacksForServiceChanged) {
                 // Re-trigger the synchronous check (which is also very cheap due
                 // to caching in CarrierPrivilegesTracker). This allows consistency
@@ -436,6 +462,13 @@ public class CarrierPrivilegeAuthenticator {
         } catch (UnsupportedApiLevelException unsupportedApiLevelException) {
             // Should not happen since CarrierPrivilegeAuthenticator is only used on T+
             Log.e(TAG, "removeCarrierPrivilegesListener API is not available");
+        }
+    }
+
+    private void ensureRunningOnHandlerThread() {
+        if (mHandler.getLooper().getThread() != Thread.currentThread()) {
+            throw new IllegalStateException(
+                    "Not running on handler thread: " + Thread.currentThread().getName());
         }
     }
 
