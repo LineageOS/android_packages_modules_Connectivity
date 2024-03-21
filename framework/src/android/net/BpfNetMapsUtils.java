@@ -43,6 +43,8 @@ import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_POWERSAVE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.system.OsConstants.EINVAL;
 
 import android.os.ServiceSpecificException;
@@ -166,6 +168,56 @@ public class BpfNetMapsUtils {
         }
     }
 
+    /**
+     * Get the specified firewall chain's status.
+     *
+     * @param configurationMap target configurationMap
+     * @param chain target chain
+     * @return {@code true} if chain is enabled, {@code false} if chain is not enabled.
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *                                  cause of the failure.
+     */
+    public static boolean isChainEnabled(
+            final IBpfMap<S32, U32> configurationMap, final int chain) {
+        throwIfPreT("isChainEnabled is not available on pre-T devices");
+
+        final long match = getMatchByFirewallChain(chain);
+        try {
+            final U32 config = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY);
+            return (config.val & match) != 0;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to get firewall chain status: " + Os.strerror(e.errno));
+        }
+    }
+
+    /**
+     * Get firewall rule of specified firewall chain on specified uid.
+     *
+     * @param uidOwnerMap target uidOwnerMap.
+     * @param chain target chain.
+     * @param uid target uid.
+     * @return either FIREWALL_RULE_ALLOW or FIREWALL_RULE_DENY
+     * @throws UnsupportedOperationException if called on pre-T devices.
+     * @throws ServiceSpecificException      in case of failure, with an error code indicating the
+     *                                       cause of the failure.
+     */
+    public static int getUidRule(final IBpfMap<S32, UidOwnerValue> uidOwnerMap,
+            final int chain, final int uid) {
+        throwIfPreT("getUidRule is not available on pre-T devices");
+
+        final long match = getMatchByFirewallChain(chain);
+        final boolean isAllowList = isFirewallAllowList(chain);
+        try {
+            final UidOwnerValue uidMatch = uidOwnerMap.getValue(new S32(uid));
+            final boolean isMatchEnabled = uidMatch != null && (uidMatch.rule & match) != 0;
+            return isMatchEnabled == isAllowList ? FIREWALL_RULE_ALLOW : FIREWALL_RULE_DENY;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to get uid rule status: " + Os.strerror(e.errno));
+        }
+    }
 
     /**
      * Return whether the network is blocked by firewall chains for the given uid.
