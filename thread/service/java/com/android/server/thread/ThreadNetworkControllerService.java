@@ -346,8 +346,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 mTunIfController.getTunFd(),
                 isEnabled(),
                 mNsdPublisher,
-                getMeshcopTxtAttributes(mResources.get()));
-        otDaemon.registerStateCallback(mOtDaemonCallbackProxy, -1);
+                getMeshcopTxtAttributes(mResources.get()),
+                mOtDaemonCallbackProxy);
         otDaemon.asBinder().linkToDeath(() -> mHandler.post(this::onOtDaemonDied), 0);
         mOtDaemon = otDaemon;
         return mOtDaemon;
@@ -1358,8 +1358,11 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 return;
             }
 
+            final int deviceRole = mState.deviceRole;
+            mState = null;
+
             // If this device is already STOPPED or DETACHED, do nothing
-            if (!ThreadNetworkController.isAttached(mState.deviceRole)) {
+            if (!ThreadNetworkController.isAttached(deviceRole)) {
                 return;
             }
 

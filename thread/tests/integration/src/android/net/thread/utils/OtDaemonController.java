@@ -62,6 +62,12 @@ public final class OtDaemonController {
                 .toList();
     }
 
+    /** Returns {@code true} if the Thread interface is up. */
+    public boolean isInterfaceUp() {
+        String output = executeCommand("ifconfig");
+        return output.contains("up");
+    }
+
     public String executeCommand(String cmd) {
         return SystemUtil.runShellCommand(OT_CTL + " " + cmd);
     }

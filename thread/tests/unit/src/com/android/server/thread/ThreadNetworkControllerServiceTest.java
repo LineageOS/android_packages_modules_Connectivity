@@ -78,7 +78,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.concurrent.CompletableFuture;
@@ -488,5 +490,24 @@ public final class ThreadNetworkControllerServiceTest {
         verify(mockReceiver, times(1)).onSuccess();
         assertThat(mFakeOtDaemon.isInitialized()).isTrue();
         verify(mockJoinReceiver, times(1)).onSuccess();
+    }
+
+    @Test
+    public void onOtDaemonDied_joinedNetwork_interfaceStateBackToUp() throws Exception {
+        mService.initialize();
+        final IOperationReceiver mockReceiver = mock(IOperationReceiver.class);
+        mService.join(DEFAULT_ACTIVE_DATASET, mockReceiver);
+        mTestLooper.dispatchAll();
+        mTestLooper.moveTimeForward(FakeOtDaemon.JOIN_DELAY.toMillis() + 100);
+        mTestLooper.dispatchAll();
+
+        Mockito.reset(mMockInfraIfController);
+        mFakeOtDaemon.terminate();
+        mTestLooper.dispatchAll();
+
+        verify(mMockTunIfController, times(1)).onOtDaemonDied();
+        InOrder inOrder = Mockito.inOrder(mMockTunIfController);
+        inOrder.verify(mMockTunIfController, times(1)).setInterfaceUp(false);
+        inOrder.verify(mMockTunIfController, times(1)).setInterfaceUp(true);
     }
 }
