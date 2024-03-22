@@ -138,8 +138,17 @@ public class ThreadNetworkException extends Exception {
      */
     public static final int ERROR_THREAD_DISABLED = 12;
 
+    /**
+     * The operation failed because it is not supported by the platform. For example, some platforms
+     * may not support setting the target power of each channel. The caller should not retry and may
+     * return an error to the user.
+     *
+     * @hide
+     */
+    public static final int ERROR_UNSUPPORTED_OPERATION = 13;
+
     private static final int ERROR_MIN = ERROR_INTERNAL_ERROR;
-    private static final int ERROR_MAX = ERROR_THREAD_DISABLED;
+    private static final int ERROR_MAX = ERROR_UNSUPPORTED_OPERATION;
 
     private final int mErrorCode;
 
