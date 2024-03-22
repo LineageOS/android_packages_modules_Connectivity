@@ -19,6 +19,7 @@ package android.net.thread;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_CHILD;
 import static android.net.thread.ThreadNetworkException.ERROR_UNAVAILABLE;
 import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_CHANNEL;
+import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_OPERATION;
 import static android.os.Process.SYSTEM_UID;
 
 import static com.google.common.io.BaseEncoding.base16;
@@ -33,6 +34,7 @@ import android.net.thread.ThreadNetworkController.StateCallback;
 import android.os.Binder;
 import android.os.OutcomeReceiver;
 import android.os.Process;
+import android.util.SparseIntArray;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
@@ -77,6 +79,13 @@ public final class ThreadNetworkControllerTest {
     private static final ActiveOperationalDataset DEFAULT_DATASET =
             ActiveOperationalDataset.fromThreadTlvs(DEFAULT_DATASET_TLVS);
 
+    private static final SparseIntArray DEFAULT_CHANNEL_POWERS =
+            new SparseIntArray() {
+                {
+                    put(20, 32767);
+                }
+            };
+
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
@@ -108,6 +117,10 @@ public final class ThreadNetworkControllerTest {
 
     private static IOperationReceiver getSetTestNetworkAsUpstreamReceiver(
             InvocationOnMock invocation) {
+        return (IOperationReceiver) invocation.getArguments()[1];
+    }
+
+    private static IOperationReceiver getSetChannelMaxPowersReceiver(InvocationOnMock invocation) {
         return (IOperationReceiver) invocation.getArguments()[1];
     }
 
@@ -343,6 +356,51 @@ public final class ThreadNetworkControllerTest {
                 .when(mMockService)
                 .leave(any(IOperationReceiver.class));
         mController.leave(
+                Runnable::run,
+                new OutcomeReceiver<>() {
+                    @Override
+                    public void onResult(Void unused) {}
+
+                    @Override
+                    public void onError(ThreadNetworkException e) {
+                        errorCallbackUid.set(Binder.getCallingUid());
+                    }
+                });
+
+        assertThat(successCallbackUid.get()).isNotEqualTo(SYSTEM_UID);
+        assertThat(successCallbackUid.get()).isEqualTo(Process.myUid());
+        assertThat(errorCallbackUid.get()).isNotEqualTo(SYSTEM_UID);
+        assertThat(errorCallbackUid.get()).isEqualTo(Process.myUid());
+    }
+
+    @Test
+    public void setChannelMaxPowers_callbackIsInvokedWithCallingAppIdentity() throws Exception {
+        setBinderUid(SYSTEM_UID);
+
+        AtomicInteger successCallbackUid = new AtomicInteger(0);
+        AtomicInteger errorCallbackUid = new AtomicInteger(0);
+
+        doAnswer(
+                        invoke -> {
+                            getSetChannelMaxPowersReceiver(invoke).onSuccess();
+                            return null;
+                        })
+                .when(mMockService)
+                .setChannelMaxPowers(any(ChannelMaxPower[].class), any(IOperationReceiver.class));
+        mController.setChannelMaxPowers(
+                DEFAULT_CHANNEL_POWERS,
+                Runnable::run,
+                v -> successCallbackUid.set(Binder.getCallingUid()));
+        doAnswer(
+                        invoke -> {
+                            getSetChannelMaxPowersReceiver(invoke)
+                                    .onError(ERROR_UNSUPPORTED_OPERATION, "");
+                            return null;
+                        })
+                .when(mMockService)
+                .setChannelMaxPowers(any(ChannelMaxPower[].class), any(IOperationReceiver.class));
+        mController.setChannelMaxPowers(
+                DEFAULT_CHANNEL_POWERS,
                 Runnable::run,
                 new OutcomeReceiver<>() {
                     @Override
