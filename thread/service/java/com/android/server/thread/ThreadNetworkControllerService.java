@@ -180,6 +180,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private final OtDaemonCallbackProxy mOtDaemonCallbackProxy = new OtDaemonCallbackProxy();
     private final ConnectivityResources mResources;
 
+    // This should not be directly used for calling IOtDaemon APIs because ot-daemon may die and
+    // {@code mOtDaemon} will be set to {@code null}. Instead, use {@code getOtDaemon()}
     @Nullable private IOtDaemon mOtDaemon;
     @Nullable private NetworkAgent mNetworkAgent;
     @Nullable private NetworkAgent mTestNetworkAgent;
@@ -1081,9 +1083,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                     mInfraIfController.createIcmp6Socket(infraIfName);
             mBorderRouterConfig.isBorderRoutingEnabled = true;
 
-            mOtDaemon.configureBorderRouter(
-                    mBorderRouterConfig, new ConfigureBorderRouterStatusReceiver());
-        } catch (RemoteException | IOException e) {
+            getOtDaemon()
+                    .configureBorderRouter(
+                            mBorderRouterConfig, new ConfigureBorderRouterStatusReceiver());
+        } catch (RemoteException | IOException | ThreadNetworkException e) {
             Log.w(TAG, "Failed to enable border routing", e);
         }
     }
@@ -1094,9 +1097,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mBorderRouterConfig.infraInterfaceIcmp6Socket = null;
         mBorderRouterConfig.isBorderRoutingEnabled = false;
         try {
-            mOtDaemon.configureBorderRouter(
-                    mBorderRouterConfig, new ConfigureBorderRouterStatusReceiver());
-        } catch (RemoteException e) {
+            getOtDaemon()
+                    .configureBorderRouter(
+                            mBorderRouterConfig, new ConfigureBorderRouterStatusReceiver());
+        } catch (RemoteException | ThreadNetworkException e) {
             Log.w(TAG, "Failed to disable border routing", e);
         }
     }
