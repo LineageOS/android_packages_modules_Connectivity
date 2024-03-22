@@ -17,6 +17,7 @@
 package com.android.net.module.util;
 
 import static android.content.pm.PackageManager.MATCH_SYSTEM_ONLY;
+import static android.provider.DeviceConfig.NAMESPACE_CAPTIVEPORTALLOGIN;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 
@@ -201,6 +202,29 @@ public final class DeviceConfigUtils {
             @NonNull String name) {
         return isFeatureEnabled(NAMESPACE_TETHERING, name, false /* defaultEnabled */,
                 () -> getTetheringModuleVersion(context));
+    }
+
+    /**
+     * Check whether or not one specific experimental feature for a particular namespace from
+     * {@link DeviceConfig} is enabled by comparing module package version
+     * with current version of property. If this property version is valid, the corresponding
+     * experimental feature would be enabled, otherwise disabled.
+     *
+     * This is useful to ensure that if a module install is rolled back, flags are not left fully
+     * rolled out on a version where they have not been well tested.
+     *
+     * If the feature is disabled by default and enabled by flag push, this method should be used.
+     * If the feature is enabled by default and disabled by flag push (kill switch),
+     * {@link #isCaptivePortalLoginFeatureNotChickenedOut(Context, String)} should be used.
+     *
+     * @param context The global context information about an app environment.
+     * @param name The name of the property to look up.
+     * @return true if this feature is enabled, or false if disabled.
+     */
+    public static boolean isCaptivePortalLoginFeatureEnabled(@NonNull Context context,
+            @NonNull String name) {
+        return isFeatureEnabled(NAMESPACE_CAPTIVEPORTALLOGIN, name, false /* defaultEnabled */,
+                () -> getPackageVersion(context));
     }
 
     private static boolean isFeatureEnabled(@NonNull String namespace,
