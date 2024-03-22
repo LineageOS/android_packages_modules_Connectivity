@@ -21,6 +21,7 @@ import static android.net.nsd.NsdManager.PROTOCOL_DNS_SD;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.net.InetAddresses;
+import android.net.nsd.DiscoveryRequest;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
@@ -31,15 +32,20 @@ import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.thread.openthread.DnsTxtAttribute;
+import com.android.server.thread.openthread.INsdDiscoverServiceCallback;
 import com.android.server.thread.openthread.INsdPublisher;
+import com.android.server.thread.openthread.INsdResolveServiceCallback;
 import com.android.server.thread.openthread.INsdStatusReceiver;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -66,6 +72,8 @@ public final class NsdPublisher extends INsdPublisher.Stub {
     private final Handler mHandler;
     private final Executor mExecutor;
     private final SparseArray<RegistrationListener> mRegistrationListeners = new SparseArray<>(0);
+    private final SparseArray<DiscoveryListener> mDiscoveryListeners = new SparseArray<>(0);
+    private final SparseArray<ServiceInfoListener> mServiceInfoListeners = new SparseArray<>(0);
     private final Deque<Runnable> mRegistrationJobs = new ArrayDeque<>();
 
     @VisibleForTesting
@@ -195,6 +203,110 @@ public final class NsdPublisher extends INsdPublisher.Stub {
                         + registrationListener.mServiceInfo);
         registrationListener.addUnregistrationReceiver(receiver);
         mNsdManager.unregisterService(registrationListener);
+    }
+
+    @Override
+    public void discoverService(String type, INsdDiscoverServiceCallback callback, int listenerId) {
+        mHandler.post(() -> discoverServiceInternal(type, callback, listenerId));
+    }
+
+    private void discoverServiceInternal(
+            String type, INsdDiscoverServiceCallback callback, int listenerId) {
+        checkOnHandlerThread();
+        Log.i(
+                TAG,
+                "Discovering services."
+                        + " Listener ID: "
+                        + listenerId
+                        + ", service type: "
+                        + type);
+
+        DiscoveryListener listener = new DiscoveryListener(listenerId, type, callback);
+        mDiscoveryListeners.append(listenerId, listener);
+        DiscoveryRequest discoveryRequest =
+                new DiscoveryRequest.Builder(type).setNetwork(null).build();
+        mNsdManager.discoverServices(discoveryRequest, mExecutor, listener);
+    }
+
+    @Override
+    public void stopServiceDiscovery(int listenerId) {
+        mHandler.post(() -> stopServiceDiscoveryInternal(listenerId));
+    }
+
+    private void stopServiceDiscoveryInternal(int listenerId) {
+        checkOnHandlerThread();
+
+        DiscoveryListener listener = mDiscoveryListeners.get(listenerId);
+        if (listener == null) {
+            Log.w(
+                    TAG,
+                    "Failed to stop service discovery. Listener ID "
+                            + listenerId
+                            + ". The listener is null.");
+            return;
+        }
+
+        Log.i(TAG, "Stopping service discovery. Listener: " + listener);
+        mNsdManager.stopServiceDiscovery(listener);
+    }
+
+    @Override
+    public void resolveService(
+            String name, String type, INsdResolveServiceCallback callback, int listenerId) {
+        mHandler.post(() -> resolveServiceInternal(name, type, callback, listenerId));
+    }
+
+    private void resolveServiceInternal(
+            String name, String type, INsdResolveServiceCallback callback, int listenerId) {
+        checkOnHandlerThread();
+
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName(name);
+        serviceInfo.setServiceType(type);
+        serviceInfo.setNetwork(null);
+        Log.i(
+                TAG,
+                "Resolving service."
+                        + " Listener ID: "
+                        + listenerId
+                        + ", service name: "
+                        + name
+                        + ", service type: "
+                        + type);
+
+        ServiceInfoListener listener = new ServiceInfoListener(serviceInfo, listenerId, callback);
+        mServiceInfoListeners.append(listenerId, listener);
+        mNsdManager.registerServiceInfoCallback(serviceInfo, mExecutor, listener);
+    }
+
+    @Override
+    public void stopServiceResolution(int listenerId) {
+        mHandler.post(() -> stopServiceResolutionInternal(listenerId));
+    }
+
+    private void stopServiceResolutionInternal(int listenerId) {
+        checkOnHandlerThread();
+
+        ServiceInfoListener listener = mServiceInfoListeners.get(listenerId);
+        if (listener == null) {
+            Log.w(
+                    TAG,
+                    "Failed to stop service resolution. Listener ID: "
+                            + listenerId
+                            + ". The listener is null.");
+            return;
+        }
+
+        Log.i(TAG, "Stopping service resolution. Listener: " + listener);
+
+        try {
+            mNsdManager.unregisterServiceInfoCallback(listener);
+        } catch (IllegalArgumentException e) {
+            Log.w(
+                    TAG,
+                    "Failed to stop the service resolution because it's already stopped. Listener: "
+                            + listener);
+        }
     }
 
     private void checkOnHandlerThread() {
@@ -366,6 +478,168 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             }
             mRegistrationListeners.remove(mListenerId);
             popAndRunNext();
+        }
+    }
+
+    private final class DiscoveryListener implements NsdManager.DiscoveryListener {
+        private final int mListenerId;
+        private final String mType;
+        private final INsdDiscoverServiceCallback mDiscoverServiceCallback;
+
+        DiscoveryListener(
+                int listenerId,
+                @NonNull String type,
+                @NonNull INsdDiscoverServiceCallback discoverServiceCallback) {
+            mListenerId = listenerId;
+            mType = type;
+            mDiscoverServiceCallback = discoverServiceCallback;
+        }
+
+        @Override
+        public void onStartDiscoveryFailed(String serviceType, int errorCode) {
+            Log.e(
+                    TAG,
+                    "Failed to start service discovery."
+                            + " Error code: "
+                            + errorCode
+                            + ", listener: "
+                            + this);
+            mDiscoveryListeners.remove(mListenerId);
+        }
+
+        @Override
+        public void onStopDiscoveryFailed(String serviceType, int errorCode) {
+            Log.e(
+                    TAG,
+                    "Failed to stop service discovery."
+                            + " Error code: "
+                            + errorCode
+                            + ", listener: "
+                            + this);
+            mDiscoveryListeners.remove(mListenerId);
+        }
+
+        @Override
+        public void onDiscoveryStarted(String serviceType) {
+            Log.i(TAG, "Started service discovery. Listener: " + this);
+        }
+
+        @Override
+        public void onDiscoveryStopped(String serviceType) {
+            Log.i(TAG, "Stopped service discovery. Listener: " + this);
+            mDiscoveryListeners.remove(mListenerId);
+        }
+
+        @Override
+        public void onServiceFound(NsdServiceInfo serviceInfo) {
+            Log.i(TAG, "Found service: " + serviceInfo);
+            try {
+                mDiscoverServiceCallback.onServiceDiscovered(
+                        serviceInfo.getServiceName(), mType, true);
+            } catch (RemoteException e) {
+                // do nothing if the client is dead
+            }
+        }
+
+        @Override
+        public void onServiceLost(NsdServiceInfo serviceInfo) {
+            Log.i(TAG, "Lost service: " + serviceInfo);
+            try {
+                mDiscoverServiceCallback.onServiceDiscovered(
+                        serviceInfo.getServiceName(), mType, false);
+            } catch (RemoteException e) {
+                // do nothing if the client is dead
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "ID: " + mListenerId + ", type: " + mType;
+        }
+    }
+
+    private final class ServiceInfoListener implements NsdManager.ServiceInfoCallback {
+        private final String mName;
+        private final String mType;
+        private final INsdResolveServiceCallback mResolveServiceCallback;
+        private final int mListenerId;
+
+        ServiceInfoListener(
+                @NonNull NsdServiceInfo serviceInfo,
+                int listenerId,
+                @NonNull INsdResolveServiceCallback resolveServiceCallback) {
+            mName = serviceInfo.getServiceName();
+            mType = serviceInfo.getServiceType();
+            mListenerId = listenerId;
+            mResolveServiceCallback = resolveServiceCallback;
+        }
+
+        @Override
+        public void onServiceInfoCallbackRegistrationFailed(int errorCode) {
+            Log.e(
+                    TAG,
+                    "Failed to register service info callback."
+                            + " Listener ID: "
+                            + mListenerId
+                            + ", error: "
+                            + errorCode
+                            + ", service name: "
+                            + mName
+                            + ", service type: "
+                            + mType);
+        }
+
+        @Override
+        public void onServiceUpdated(@NonNull NsdServiceInfo serviceInfo) {
+            Log.i(
+                    TAG,
+                    "Service is resolved. "
+                            + " Listener ID: "
+                            + mListenerId
+                            + ", serviceInfo: "
+                            + serviceInfo);
+            List<String> addresses = new ArrayList<>();
+            for (InetAddress address : serviceInfo.getHostAddresses()) {
+                if (address instanceof Inet6Address) {
+                    addresses.add(address.getHostAddress());
+                }
+            }
+            List<DnsTxtAttribute> txtList = new ArrayList<>();
+            for (Map.Entry<String, byte[]> entry : serviceInfo.getAttributes().entrySet()) {
+                DnsTxtAttribute attribute = new DnsTxtAttribute();
+                attribute.name = entry.getKey();
+                attribute.value = Arrays.copyOf(entry.getValue(), entry.getValue().length);
+                txtList.add(attribute);
+            }
+            // TODO: b/329018320 - Use the serviceInfo.getExpirationTime to derive TTL.
+            int ttlSeconds = 10;
+            try {
+                mResolveServiceCallback.onServiceResolved(
+                        serviceInfo.getHostname(),
+                        serviceInfo.getServiceName(),
+                        serviceInfo.getServiceType(),
+                        serviceInfo.getPort(),
+                        addresses,
+                        txtList,
+                        ttlSeconds);
+
+            } catch (RemoteException e) {
+                // do nothing if the client is dead
+            }
+        }
+
+        @Override
+        public void onServiceLost() {}
+
+        @Override
+        public void onServiceInfoCallbackUnregistered() {
+            Log.i(TAG, "The service info callback is unregistered. Listener: " + this);
+            mServiceInfoListeners.remove(mListenerId);
+        }
+
+        @Override
+        public String toString() {
+            return "ID: " + mListenerId + ", service name: " + mName + ", service type: " + mType;
         }
     }
 }
