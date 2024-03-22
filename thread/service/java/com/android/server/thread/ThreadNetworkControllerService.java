@@ -40,6 +40,7 @@ import static android.net.thread.ThreadNetworkException.ERROR_RESPONSE_BAD_FORMA
 import static android.net.thread.ThreadNetworkException.ERROR_THREAD_DISABLED;
 import static android.net.thread.ThreadNetworkException.ERROR_TIMEOUT;
 import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_CHANNEL;
+import static android.net.thread.ThreadNetworkException.ERROR_UNSUPPORTED_OPERATION;
 import static android.net.thread.ThreadNetworkManager.DISALLOW_THREAD_NETWORK;
 import static android.net.thread.ThreadNetworkManager.PERMISSION_THREAD_NETWORK_PRIVILEGED;
 
@@ -47,6 +48,7 @@ import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_BUSY;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_FAILED_PRECONDITION;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_INVALID_STATE;
+import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_NOT_IMPLEMENTED;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_NO_BUFS;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_PARSE;
 import static com.android.server.thread.openthread.IOtDaemon.ErrorCode.OT_ERROR_REASSEMBLY_TIMEOUT;
@@ -86,6 +88,7 @@ import android.net.NetworkScore;
 import android.net.TestNetworkSpecifier;
 import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.ActiveOperationalDataset.SecurityPolicy;
+import android.net.thread.ChannelMaxPower;
 import android.net.thread.IActiveOperationalDatasetReceiver;
 import android.net.thread.IOperationReceiver;
 import android.net.thread.IOperationalDatasetCallback;
@@ -917,6 +920,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 return ERROR_ABORTED;
             case OT_ERROR_BUSY:
                 return ERROR_BUSY;
+            case OT_ERROR_NOT_IMPLEMENTED:
+                return ERROR_UNSUPPORTED_OPERATION;
             case OT_ERROR_NO_BUFS:
                 return ERROR_RESOURCE_EXHAUSTED;
             case OT_ERROR_PARSE:
@@ -1066,6 +1071,30 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             receiver.onSuccess();
         } catch (RemoteException ignored) {
             // do nothing if the client is dead
+        }
+    }
+
+    @RequiresPermission(PERMISSION_THREAD_NETWORK_PRIVILEGED)
+    public void setChannelMaxPowers(
+            @NonNull ChannelMaxPower[] channelMaxPowers, @NonNull IOperationReceiver receiver) {
+        enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
+
+        mHandler.post(
+                () ->
+                        setChannelMaxPowersInternal(
+                                channelMaxPowers, new OperationReceiverWrapper(receiver)));
+    }
+
+    private void setChannelMaxPowersInternal(
+            @NonNull ChannelMaxPower[] channelMaxPowers,
+            @NonNull OperationReceiverWrapper receiver) {
+        checkOnHandlerThread();
+
+        try {
+            getOtDaemon().setChannelMaxPowers(channelMaxPowers, newOtStatusReceiver(receiver));
+        } catch (RemoteException | ThreadNetworkException e) {
+            Log.e(TAG, "otDaemon.setChannelMaxPowers failed", e);
+            receiver.onError(ERROR_INTERNAL_ERROR, "Thread stack error");
         }
     }
 
