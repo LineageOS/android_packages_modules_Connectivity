@@ -1851,6 +1851,8 @@ public class NsdService extends INsdManager.Stub {
                         mContext, MdnsFeatureFlags.NSD_UNICAST_REPLY_ENABLED))
                 .setIsAggressiveQueryModeEnabled(mDeps.isFeatureEnabled(
                         mContext, MdnsFeatureFlags.NSD_AGGRESSIVE_QUERY_MODE))
+                .setIsQueryWithKnownAnswerEnabled(mDeps.isFeatureEnabled(
+                        mContext, MdnsFeatureFlags.NSD_QUERY_WITH_KNOWN_ANSWER))
                 .setOverrideProvider(flag -> mDeps.isFeatureEnabled(
                         mContext, FORCE_ENABLE_FLAG_FOR_TEST_PREFIX + flag))
                 .build();
