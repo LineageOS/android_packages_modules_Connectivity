@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -30,24 +31,30 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import android.net.InetAddresses;
+import android.net.nsd.DiscoveryRequest;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Handler;
 import android.os.test.TestLooper;
 
 import com.android.server.thread.openthread.DnsTxtAttribute;
+import com.android.server.thread.openthread.INsdDiscoverServiceCallback;
+import com.android.server.thread.openthread.INsdResolveServiceCallback;
 import com.android.server.thread.openthread.INsdStatusReceiver;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -57,6 +64,8 @@ public final class NsdPublisherTest {
 
     @Mock private INsdStatusReceiver mRegistrationReceiver;
     @Mock private INsdStatusReceiver mUnregistrationReceiver;
+    @Mock private INsdDiscoverServiceCallback mDiscoverServiceCallback;
+    @Mock private INsdResolveServiceCallback mResolveServiceCallback;
 
     private TestLooper mTestLooper;
     private NsdPublisher mNsdPublisher;
@@ -469,6 +478,165 @@ public final class NsdPublisherTest {
     }
 
     @Test
+    public void discoverService_serviceDiscovered() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.discoverService("_test._tcp", mDiscoverServiceCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+        ArgumentCaptor<NsdManager.DiscoveryListener> discoveryListenerArgumentCaptor =
+                ArgumentCaptor.forClass(NsdManager.DiscoveryListener.class);
+        verify(mMockNsdManager, times(1))
+                .discoverServices(
+                        eq(new DiscoveryRequest.Builder(PROTOCOL_DNS_SD, "_test._tcp").build()),
+                        any(Executor.class),
+                        discoveryListenerArgumentCaptor.capture());
+        NsdManager.DiscoveryListener actualDiscoveryListener =
+                discoveryListenerArgumentCaptor.getValue();
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName("test");
+        serviceInfo.setServiceType(null);
+        actualDiscoveryListener.onServiceFound(serviceInfo);
+        mTestLooper.dispatchAll();
+
+        verify(mDiscoverServiceCallback, times(1))
+                .onServiceDiscovered("test", "_test._tcp", true /* isFound */);
+    }
+
+    @Test
+    public void discoverService_serviceLost() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.discoverService("_test._tcp", mDiscoverServiceCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+        ArgumentCaptor<NsdManager.DiscoveryListener> discoveryListenerArgumentCaptor =
+                ArgumentCaptor.forClass(NsdManager.DiscoveryListener.class);
+        verify(mMockNsdManager, times(1))
+                .discoverServices(
+                        eq(new DiscoveryRequest.Builder(PROTOCOL_DNS_SD, "_test._tcp").build()),
+                        any(Executor.class),
+                        discoveryListenerArgumentCaptor.capture());
+        NsdManager.DiscoveryListener actualDiscoveryListener =
+                discoveryListenerArgumentCaptor.getValue();
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName("test");
+        serviceInfo.setServiceType(null);
+        actualDiscoveryListener.onServiceLost(serviceInfo);
+        mTestLooper.dispatchAll();
+
+        verify(mDiscoverServiceCallback, times(1))
+                .onServiceDiscovered("test", "_test._tcp", false /* isFound */);
+    }
+
+    @Test
+    public void stopServiceDiscovery() {
+        prepareTest();
+
+        mNsdPublisher.discoverService("_test._tcp", mDiscoverServiceCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+        ArgumentCaptor<NsdManager.DiscoveryListener> discoveryListenerArgumentCaptor =
+                ArgumentCaptor.forClass(NsdManager.DiscoveryListener.class);
+        verify(mMockNsdManager, times(1))
+                .discoverServices(
+                        eq(new DiscoveryRequest.Builder(PROTOCOL_DNS_SD, "_test._tcp").build()),
+                        any(Executor.class),
+                        discoveryListenerArgumentCaptor.capture());
+        NsdManager.DiscoveryListener actualDiscoveryListener =
+                discoveryListenerArgumentCaptor.getValue();
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName("test");
+        serviceInfo.setServiceType(null);
+        actualDiscoveryListener.onServiceFound(serviceInfo);
+        mNsdPublisher.stopServiceDiscovery(10 /* listenerId */);
+        mTestLooper.dispatchAll();
+
+        verify(mMockNsdManager, times(1)).stopServiceDiscovery(actualDiscoveryListener);
+    }
+
+    @Test
+    public void resolveService_serviceResolved() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.resolveService(
+                "test", "_test._tcp", mResolveServiceCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+        ArgumentCaptor<NsdServiceInfo> serviceInfoArgumentCaptor =
+                ArgumentCaptor.forClass(NsdServiceInfo.class);
+        ArgumentCaptor<NsdManager.ServiceInfoCallback> serviceInfoCallbackArgumentCaptor =
+                ArgumentCaptor.forClass(NsdManager.ServiceInfoCallback.class);
+        verify(mMockNsdManager, times(1))
+                .registerServiceInfoCallback(
+                        serviceInfoArgumentCaptor.capture(),
+                        any(Executor.class),
+                        serviceInfoCallbackArgumentCaptor.capture());
+        assertThat(serviceInfoArgumentCaptor.getValue().getServiceName()).isEqualTo("test");
+        assertThat(serviceInfoArgumentCaptor.getValue().getServiceType()).isEqualTo("_test._tcp");
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName("test");
+        serviceInfo.setServiceType("_test._tcp");
+        serviceInfo.setPort(12345);
+        serviceInfo.setHostname("test-host");
+        serviceInfo.setHostAddresses(
+                List.of(
+                        InetAddress.parseNumericAddress("2001::1"),
+                        InetAddress.parseNumericAddress("2001::2")));
+        serviceInfo.setAttribute("key1", new byte[] {(byte) 0x01, (byte) 0x02});
+        serviceInfo.setAttribute("key2", new byte[] {(byte) 0x03});
+        serviceInfoCallbackArgumentCaptor.getValue().onServiceUpdated(serviceInfo);
+        mTestLooper.dispatchAll();
+
+        verify(mResolveServiceCallback, times(1))
+                .onServiceResolved(
+                        eq("test-host"),
+                        eq("test"),
+                        eq("_test._tcp"),
+                        eq(12345),
+                        eq(List.of("2001::1", "2001::2")),
+                        argThat(
+                                new TxtMatcher(
+                                        List.of(
+                                                makeTxtAttribute("key1", List.of(0x01, 0x02)),
+                                                makeTxtAttribute("key2", List.of(0x03))))),
+                        anyInt());
+    }
+
+    @Test
+    public void stopServiceResolution() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.resolveService(
+                "test", "_test._tcp", mResolveServiceCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+        ArgumentCaptor<NsdServiceInfo> serviceInfoArgumentCaptor =
+                ArgumentCaptor.forClass(NsdServiceInfo.class);
+        ArgumentCaptor<NsdManager.ServiceInfoCallback> serviceInfoCallbackArgumentCaptor =
+                ArgumentCaptor.forClass(NsdManager.ServiceInfoCallback.class);
+        verify(mMockNsdManager, times(1))
+                .registerServiceInfoCallback(
+                        serviceInfoArgumentCaptor.capture(),
+                        any(Executor.class),
+                        serviceInfoCallbackArgumentCaptor.capture());
+        assertThat(serviceInfoArgumentCaptor.getValue().getServiceName()).isEqualTo("test");
+        assertThat(serviceInfoArgumentCaptor.getValue().getServiceType()).isEqualTo("_test._tcp");
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName("test");
+        serviceInfo.setServiceType("_test._tcp");
+        serviceInfo.setPort(12345);
+        serviceInfo.setHostname("test-host");
+        serviceInfo.setHostAddresses(
+                List.of(
+                        InetAddress.parseNumericAddress("2001::1"),
+                        InetAddress.parseNumericAddress("2001::2")));
+        serviceInfo.setAttribute("key1", new byte[] {(byte) 0x01, (byte) 0x02});
+        serviceInfo.setAttribute("key2", new byte[] {(byte) 0x03});
+        serviceInfoCallbackArgumentCaptor.getValue().onServiceUpdated(serviceInfo);
+        mNsdPublisher.stopServiceResolution(10 /* listenerId */);
+        mTestLooper.dispatchAll();
+
+        verify(mMockNsdManager, times(1))
+                .unregisterServiceInfoCallback(serviceInfoCallbackArgumentCaptor.getValue());
+    }
+
+    @Test
     public void reset_unregisterAll() {
         prepareTest();
 
@@ -580,6 +748,30 @@ public final class NsdPublisherTest {
             addresses.add(InetAddresses.parseNumericAddress(addressString));
         }
         return addresses;
+    }
+
+    private static class TxtMatcher implements ArgumentMatcher<List<DnsTxtAttribute>> {
+        private final List<DnsTxtAttribute> mAttributes;
+
+        TxtMatcher(List<DnsTxtAttribute> attributes) {
+            mAttributes = attributes;
+        }
+
+        @Override
+        public boolean matches(List<DnsTxtAttribute> argument) {
+            if (argument.size() != mAttributes.size()) {
+                return false;
+            }
+            for (int i = 0; i < argument.size(); ++i) {
+                if (!Objects.equals(argument.get(i).name, mAttributes.get(i).name)) {
+                    return false;
+                }
+                if (!Arrays.equals(argument.get(i).value, mAttributes.get(i).value)) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     // @Before and @Test run in different threads. NsdPublisher requires the jobs are run on the
