@@ -16,10 +16,14 @@
 
 package android.net.cts;
 
+import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
+import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -34,16 +38,20 @@ import android.net.cts.util.CtsNetUtils;
 import android.platform.test.annotations.AppModeFull;
 import android.system.ErrnoException;
 import android.system.OsConstants;
+import android.util.ArraySet;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.testutils.DeviceConfigRule;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 public class MultinetworkApiTest {
@@ -74,9 +82,8 @@ public class MultinetworkApiTest {
     private ContentResolver mCR;
     private ConnectivityManager mCM;
     private CtsNetUtils mCtsNetUtils;
-    private String mOldMode;
-    private String mOldDnsSpecifier;
     private Context mContext;
+    private Network mRequestedCellNetwork;
 
     @Before
     public void setUp() throws Exception {
@@ -86,9 +93,16 @@ public class MultinetworkApiTest {
         mCtsNetUtils = new CtsNetUtils(mContext);
     }
 
+    @After
+    public void tearDown() {
+        if (mCtsNetUtils.cellConnectAttempted()) {
+            mCtsNetUtils.disconnectFromCell();
+        }
+    }
+
     @Test
-    public void testGetaddrinfo() throws ErrnoException {
-        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+    public void testGetaddrinfo() throws Exception {
+        for (Network network : getTestableNetworks()) {
             int errno = runGetaddrinfoCheck(network.getNetworkHandle());
             if (errno != 0) {
                 throw new ErrnoException(
@@ -99,12 +113,12 @@ public class MultinetworkApiTest {
 
     @Test
     @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
-    public void testSetprocnetwork() throws ErrnoException {
+    public void testSetprocnetwork() throws Exception {
         // Hopefully no prior test in this process space has set a default network.
         assertNull(mCM.getProcessDefaultNetwork());
         assertEquals(0, NetworkUtils.getBoundNetworkForProcess());
 
-        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+        for (Network network : getTestableNetworks()) {
             mCM.setProcessDefaultNetwork(null);
             assertNull(mCM.getProcessDefaultNetwork());
 
@@ -123,7 +137,7 @@ public class MultinetworkApiTest {
             mCM.setProcessDefaultNetwork(null);
         }
 
-        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+        for (Network network : getTestableNetworks()) {
             NetworkUtils.bindProcessToNetwork(0);
             assertNull(mCM.getBoundNetworkForProcess());
 
@@ -143,8 +157,8 @@ public class MultinetworkApiTest {
 
     @Test
     @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
-    public void testSetsocknetwork() throws ErrnoException {
-        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+    public void testSetsocknetwork() throws Exception {
+        for (Network network : getTestableNetworks()) {
             int errno = runSetsocknetwork(network.getNetworkHandle());
             if (errno != 0) {
                 throw new ErrnoException(
@@ -154,8 +168,8 @@ public class MultinetworkApiTest {
     }
 
     @Test
-    public void testNativeDatagramTransmission() throws ErrnoException {
-        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+    public void testNativeDatagramTransmission() throws Exception {
+        for (Network network : getTestableNetworks()) {
             int errno = runDatagramCheck(network.getNetworkHandle());
             if (errno != 0) {
                 throw new ErrnoException(
@@ -165,7 +179,7 @@ public class MultinetworkApiTest {
     }
 
     @Test
-    public void testNoSuchNetwork() {
+    public void testNoSuchNetwork() throws Exception {
         final Network eNoNet = new Network(54321);
         assertNull(mCM.getNetworkInfo(eNoNet));
 
@@ -178,9 +192,9 @@ public class MultinetworkApiTest {
     }
 
     @Test
-    public void testNetworkHandle() {
+    public void testNetworkHandle() throws Exception {
         // Test Network -> NetworkHandle -> Network results in the same Network.
-        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+        for (Network network : getTestableNetworks()) {
             long networkHandle = network.getNetworkHandle();
             Network newNetwork = Network.fromNetworkHandle(networkHandle);
             assertEquals(newNetwork, network);
@@ -203,9 +217,7 @@ public class MultinetworkApiTest {
 
     @Test
     public void testResNApi() throws Exception {
-        final Network[] testNetworks = mCtsNetUtils.getTestableNetworks();
-
-        for (Network network : testNetworks) {
+        for (Network network : getTestableNetworks()) {
             // Throws AssertionError directly in jni function if test fail.
             runResNqueryCheck(network.getNetworkHandle());
             runResNsendCheck(network.getNetworkHandle());
@@ -241,7 +253,7 @@ public class MultinetworkApiTest {
         // b/144521720
         try {
             mCtsNetUtils.setPrivateDnsStrictMode(GOOGLE_PRIVATE_DNS_SERVER);
-            for (Network network : mCtsNetUtils.getTestableNetworks()) {
+            for (Network network : getTestableNetworks()) {
               // Wait for private DNS setting to propagate.
               mCtsNetUtils.awaitPrivateDnsSetting("NxDomain test wait private DNS setting timeout",
                         network, GOOGLE_PRIVATE_DNS_SERVER, true);
@@ -250,5 +262,45 @@ public class MultinetworkApiTest {
         } finally {
             mCtsNetUtils.restorePrivateDnsSetting();
         }
+    }
+
+    /**
+     * Get all testable Networks with internet capability.
+     */
+    private Set<Network> getTestableNetworks() throws InterruptedException {
+        // Obtain cell and Wi-Fi through CtsNetUtils (which uses NetworkCallbacks), as they may have
+        // just been reconnected by the test using NetworkCallbacks, so synchronous calls may not
+        // yet return them (synchronous calls and callbacks should not be mixed for a given
+        // Network).
+        final Set<Network> testableNetworks = new ArraySet<>();
+        if (mContext.getPackageManager().hasSystemFeature(FEATURE_TELEPHONY)) {
+            if (!mCtsNetUtils.cellConnectAttempted()) {
+                mRequestedCellNetwork = mCtsNetUtils.connectToCell();
+            }
+            assertNotNull("Cell network requested but not obtained", mRequestedCellNetwork);
+            testableNetworks.add(mRequestedCellNetwork);
+        }
+
+        if (mContext.getPackageManager().hasSystemFeature(FEATURE_WIFI)) {
+            testableNetworks.add(mCtsNetUtils.ensureWifiConnected());
+        }
+
+        // Obtain other networks through the synchronous API, if any.
+        for (Network network : mCtsNetUtils.getTestableNetworks()) {
+            final NetworkCapabilities nc = mCM.getNetworkCapabilities(network);
+            if (nc != null
+                    && !nc.hasTransport(TRANSPORT_WIFI)
+                    && !nc.hasTransport(TRANSPORT_CELLULAR)) {
+                testableNetworks.add(network);
+            }
+        }
+
+        // In practice this should not happen as getTestableNetworks throws if there is no network
+        // at all.
+        assertFalse("This device does not support WiFi nor cell data, and does not have any other "
+                        + "network connected. This test requires at least one internet-providing "
+                        + "network.",
+                testableNetworks.isEmpty());
+        return testableNetworks;
     }
 }
