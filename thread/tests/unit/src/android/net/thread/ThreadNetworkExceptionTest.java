@@ -32,6 +32,6 @@ public final class ThreadNetworkExceptionTest {
     public void constructor_tooLargeErrorCode_throwsIllegalArgumentException() throws Exception {
         // TODO (b/323791003): move this test case to cts/ThreadNetworkExceptionTest when mainline
         // CTS is ready.
-        assertThrows(IllegalArgumentException.class, () -> new ThreadNetworkException(13, "13"));
+        assertThrows(IllegalArgumentException.class, () -> new ThreadNetworkException(14, "14"));
     }
 }

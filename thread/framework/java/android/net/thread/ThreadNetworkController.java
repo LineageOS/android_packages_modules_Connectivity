@@ -25,10 +25,12 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
+import android.annotation.Size;
 import android.annotation.SystemApi;
 import android.os.Binder;
 import android.os.OutcomeReceiver;
 import android.os.RemoteException;
+import android.util.SparseIntArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -97,6 +99,12 @@ public final class ThreadNetworkController {
 
     /** Thread standard version 1.3. */
     public static final int THREAD_VERSION_1_3 = 4;
+
+    /** Minimum value of max power in unit of 0.01dBm. @hide */
+    private static final int POWER_LIMITATION_MIN = -32768;
+
+    /** Maximum value of max power in unit of 0.01dBm. @hide */
+    private static final int POWER_LIMITATION_MAX = 32767;
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -594,6 +602,98 @@ public final class ThreadNetworkController {
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
+    }
+
+    /**
+     * Sets max power of each channel.
+     *
+     * <p>If not set, the default max power is set by the Thread HAL service or the Thread radio
+     * chip firmware.
+     *
+     * <p>On success, the Pending Dataset is successfully registered and persisted on the Leader and
+     * {@link OutcomeReceiver#onResult} of {@code receiver} will be called; When failed, {@link
+     * OutcomeReceiver#onError} will be called with a specific error:
+     *
+     * <ul>
+     *   <li>{@link ThreadNetworkException#ERROR_UNSUPPORTED_OPERATION} the operation is no
+     *       supported by the platform.
+     * </ul>
+     *
+     * @param channelMaxPowers SparseIntArray (key: channel, value: max power) consists of channel
+     *     and corresponding max power. Valid channel values should be between {@link
+     *     ActiveOperationalDataset#CHANNEL_MIN_24_GHZ} and {@link
+     *     ActiveOperationalDataset#CHANNEL_MAX_24_GHZ}. The unit of the max power is 0.01dBm. Max
+     *     power values should be between INT16_MIN (-32768) and INT16_MAX (32767). If the max power
+     *     is set to INT16_MAX, the corresponding channel is not supported.
+     * @param executor the executor to execute {@code receiver}.
+     * @param receiver the receiver to receive the result of this operation.
+     * @throws IllegalArgumentException if the size of {@code channelMaxPowers} is smaller than 1,
+     *     or invalid channel or max power is configured.
+     * @hide
+     */
+    @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED")
+    public final void setChannelMaxPowers(
+            @NonNull @Size(min = 1) SparseIntArray channelMaxPowers,
+            @NonNull @CallbackExecutor Executor executor,
+            @NonNull OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        requireNonNull(channelMaxPowers, "channelMaxPowers cannot be null");
+        requireNonNull(executor, "executor cannot be null");
+        requireNonNull(receiver, "receiver cannot be null");
+
+        if (channelMaxPowers.size() < 1) {
+            throw new IllegalArgumentException("channelMaxPowers cannot be empty");
+        }
+
+        for (int i = 0; i < channelMaxPowers.size(); i++) {
+            int channel = channelMaxPowers.keyAt(i);
+            int maxPower = channelMaxPowers.get(channel);
+
+            if ((channel < ActiveOperationalDataset.CHANNEL_MIN_24_GHZ)
+                    || (channel > ActiveOperationalDataset.CHANNEL_MAX_24_GHZ)) {
+                throw new IllegalArgumentException(
+                        "Channel "
+                                + channel
+                                + " exceeds allowed range ["
+                                + ActiveOperationalDataset.CHANNEL_MIN_24_GHZ
+                                + ", "
+                                + ActiveOperationalDataset.CHANNEL_MAX_24_GHZ
+                                + "]");
+            }
+
+            if ((maxPower < POWER_LIMITATION_MIN) || (maxPower > POWER_LIMITATION_MAX)) {
+                throw new IllegalArgumentException(
+                        "Channel power ({channel: "
+                                + channel
+                                + ", maxPower: "
+                                + maxPower
+                                + "}) exceeds allowed range ["
+                                + POWER_LIMITATION_MIN
+                                + ", "
+                                + POWER_LIMITATION_MAX
+                                + "]");
+            }
+        }
+
+        try {
+            mControllerService.setChannelMaxPowers(
+                    toChannelMaxPowerArray(channelMaxPowers),
+                    new OperationReceiverProxy(executor, receiver));
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    private static ChannelMaxPower[] toChannelMaxPowerArray(
+            @NonNull SparseIntArray channelMaxPowers) {
+        final ChannelMaxPower[] powerArray = new ChannelMaxPower[channelMaxPowers.size()];
+
+        for (int i = 0; i < channelMaxPowers.size(); i++) {
+            powerArray[i] = new ChannelMaxPower();
+            powerArray[i].channel = channelMaxPowers.keyAt(i);
+            powerArray[i].maxPower = channelMaxPowers.get(powerArray[i].channel);
+        }
+
+        return powerArray;
     }
 
     private static <T> void propagateError(

@@ -97,13 +97,16 @@ public class ThreadIntegrationTest {
     }
 
     @Test
-    public void otDaemonRestart_JoinedNetworkAndStopped_autoRejoined() throws Exception {
+    public void otDaemonRestart_JoinedNetworkAndStopped_autoRejoinedAndTunIfStateConsistent()
+            throws Exception {
         mController.joinAndWait(DEFAULT_DATASET);
 
         runShellCommand("stop ot-daemon");
 
         mController.waitForRole(DEVICE_ROLE_DETACHED, CALLBACK_TIMEOUT);
         mController.waitForRole(DEVICE_ROLE_LEADER, RESTART_JOIN_TIMEOUT);
+        assertThat(mOtCtl.isInterfaceUp()).isTrue();
+        assertThat(runShellCommand("ifconfig thread-wpan")).contains("UP POINTOPOINT RUNNING");
     }
 
     @Test
@@ -120,8 +123,8 @@ public class ThreadIntegrationTest {
         mController.joinAndWait(DEFAULT_DATASET);
 
         mOtCtl.factoryReset();
-        String ifconfig = runShellCommand("ifconfig thread-wpan");
 
+        String ifconfig = runShellCommand("ifconfig thread-wpan");
         assertThat(ifconfig).doesNotContain("inet6 addr");
     }
 
