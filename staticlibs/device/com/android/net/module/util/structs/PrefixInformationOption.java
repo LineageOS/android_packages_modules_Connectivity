@@ -21,6 +21,7 @@ import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION
 import android.net.IpPrefix;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
@@ -71,7 +72,8 @@ public class PrefixInformationOption extends Struct {
     @Field(order = 7, type = Type.ByteArray, arraysize = 16)
     public final byte[] prefix;
 
-    PrefixInformationOption(final byte type, final byte length, final byte prefixLen,
+    @VisibleForTesting
+    public PrefixInformationOption(final byte type, final byte length, final byte prefixLen,
             final byte flags, final long validLifetime, final long preferredLifetime,
             final int reserved, @NonNull final byte[] prefix) {
         this.type = type;
