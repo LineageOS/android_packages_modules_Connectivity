@@ -460,7 +460,7 @@ public class EthernetTracker {
             if (!include) {
                 removeTestData();
             }
-            mHandler.post(() -> trackAvailableInterfaces());
+            trackAvailableInterfaces();
         });
     }
 
