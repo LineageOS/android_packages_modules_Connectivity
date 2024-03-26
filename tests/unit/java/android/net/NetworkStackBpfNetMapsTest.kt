@@ -26,6 +26,7 @@ import android.net.BpfNetMapsConstants.STANDBY_MATCH
 import android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY
 import android.net.BpfNetMapsUtils.getMatchByFirewallChain
 import android.os.Build.VERSION_CODES
+import android.os.Process.FIRST_APPLICATION_UID
 import com.android.net.module.util.IBpfMap
 import com.android.net.module.util.Struct.S32
 import com.android.net.module.util.Struct.U32
@@ -42,7 +43,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val TEST_UID1 = 1234
+private const val TEST_UID1 = 11234
 private const val TEST_UID2 = TEST_UID1 + 1
 private const val TEST_UID3 = TEST_UID2 + 1
 private const val NO_IIF = 0
@@ -228,6 +229,24 @@ class NetworkStackBpfNetMapsTest {
         assertFalse(isUidNetworkingBlocked(TEST_UID1))
         assertFalse(isUidNetworkingBlocked(TEST_UID2))
         assertFalse(isUidNetworkingBlocked(TEST_UID3))
+    }
+
+    @Test
+    fun testIsUidNetworkingBlocked_SystemUid() {
+        mockDataSaverEnabled(enabled = false)
+        testConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, U32(0))
+        mockChainEnabled(ConnectivityManager.FIREWALL_CHAIN_DOZABLE, true)
+
+        for (uid in FIRST_APPLICATION_UID - 5..FIRST_APPLICATION_UID + 5) {
+            // system uid is not blocked regardless of firewall chains
+            val expectBlocked = uid >= FIRST_APPLICATION_UID
+            testUidOwnerMap.updateEntry(S32(uid), UidOwnerValue(NO_IIF, PENALTY_BOX_MATCH))
+            assertEquals(
+                expectBlocked,
+                    isUidNetworkingBlocked(uid, metered = true),
+                    "isUidNetworkingBlocked returns unexpected value for uid = " + uid
+            )
+        }
     }
 
     @Test
