@@ -47,6 +47,7 @@ import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.system.OsConstants.EINVAL;
 
+import android.os.Process;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -238,6 +239,12 @@ public class BpfNetMapsUtils {
             IBpfMap<S32, U8> dataSaverEnabledMap
     ) {
         throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
+
+        // System uid is not blocked by firewall chains, see bpf_progs/netd.c
+        // TODO: use UserHandle.isCore() once it is accessible
+        if (uid < Process.FIRST_APPLICATION_UID) {
+            return false;
+        }
 
         final long uidRuleConfig;
         final long uidMatch;
