@@ -61,7 +61,7 @@ public class ThreadPersistentSettings {
 
     /******** Thread persistent setting keys ***************/
     /** Stores the Thread feature toggle state, true for enabled and false for disabled. */
-    public static final Key<Boolean> THREAD_ENABLED = new Key<>("Thread_enabled", true);
+    public static final Key<Boolean> THREAD_ENABLED = new Key<>("thread_enabled", true);
 
     /******** Thread persistent setting keys ***************/
 
