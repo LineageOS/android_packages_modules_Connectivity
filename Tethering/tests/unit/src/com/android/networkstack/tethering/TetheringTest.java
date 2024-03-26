@@ -3622,6 +3622,43 @@ public class TetheringTest {
                 InetAddresses.parseNumericAddress(ifaceConfig.ipv4Addr), ifaceConfig.prefixLength);
         assertFalse(sapPrefix.equals(lohsPrefix));
     }
+
+    @Test
+    public void testWifiTetheringWhenP2pActive() throws Exception {
+        initTetheringOnTestThread();
+        // Enable wifi P2P.
+        sendWifiP2pConnectionChanged(true, true, TEST_P2P_IFNAME);
+        verifyInterfaceServingModeStarted(TEST_P2P_IFNAME);
+        verifyTetheringBroadcast(TEST_P2P_IFNAME, EXTRA_AVAILABLE_TETHER);
+        verifyTetheringBroadcast(TEST_P2P_IFNAME, EXTRA_ACTIVE_LOCAL_ONLY);
+        verify(mUpstreamNetworkMonitor).startObserveAllNetworks();
+        // Verify never enable upstream if only P2P active.
+        verify(mUpstreamNetworkMonitor, never()).setTryCell(true);
+        assertEquals(TETHER_ERROR_NO_ERROR, mTethering.getLastErrorForTest(TEST_P2P_IFNAME));
+
+        when(mWifiManager.startTetheredHotspot(any())).thenReturn(true);
+        // Emulate pressing the WiFi tethering button.
+        mTethering.startTethering(createTetheringRequestParcel(TETHERING_WIFI), TEST_CALLER_PKG,
+                null);
+        mLooper.dispatchAll();
+        verify(mWifiManager).startTetheredHotspot(null);
+        verifyNoMoreInteractions(mWifiManager);
+
+        mTethering.interfaceStatusChanged(TEST_WLAN_IFNAME, true);
+        sendWifiApStateChanged(WIFI_AP_STATE_ENABLED, TEST_WLAN_IFNAME, IFACE_IP_MODE_TETHERED);
+
+        verifyTetheringBroadcast(TEST_WLAN_IFNAME, EXTRA_AVAILABLE_TETHER);
+        verify(mWifiManager).updateInterfaceIpState(
+                TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
+
+        verify(mWifiManager).updateInterfaceIpState(TEST_WLAN_IFNAME, IFACE_IP_MODE_TETHERED);
+        verifyNoMoreInteractions(mWifiManager);
+
+        verifyTetheringBroadcast(TEST_WLAN_IFNAME, EXTRA_ACTIVE_TETHER);
+        // FIXME: wifi tethering doesn't have upstream when P2P is enabled.
+        verify(mUpstreamNetworkMonitor, never()).setTryCell(true);
+    }
+
     // TODO: Test that a request for hotspot mode doesn't interfere with an
     // already operating tethering mode interface.
 }
