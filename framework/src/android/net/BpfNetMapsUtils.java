@@ -53,11 +53,14 @@ import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.system.OsConstants.EINVAL;
 
+import android.os.Build;
 import android.os.Process;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Pair;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.IBpfMap;
@@ -76,6 +79,8 @@ import java.util.StringJoiner;
 // Note that this class should be put into bootclasspath instead of static libraries.
 // Because modules could have different copies of this class if this is statically linked,
 // which would be problematic if the definitions in these modules are not synchronized.
+// Note that NetworkStack can not use this before U due to b/326143935
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class BpfNetMapsUtils {
     // Bitmaps for calculating whether a given uid is blocked by firewall chains.
     private static final long sMaskDropIfSet;

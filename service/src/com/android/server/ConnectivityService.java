@@ -13555,6 +13555,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return rule;
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private void closeSocketsForFirewallChainLocked(final int chain)
             throws ErrnoException, SocketException, InterruptedIOException {
         if (BpfNetMapsUtils.isFirewallAllowList(chain)) {
