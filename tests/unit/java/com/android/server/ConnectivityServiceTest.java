@@ -17434,11 +17434,12 @@ public class ConnectivityServiceTest {
         }
 
         mWiFiAgent.disconnect();
-        waitForIdle();
 
         if (expectUnavailable) {
+            testFactory.expectRequestRemove();
             testFactory.assertRequestCountEquals(0);
         } else {
+            testFactory.expectRequestAdd();
             testFactory.assertRequestCountEquals(1);
         }
 
