@@ -61,6 +61,7 @@ import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
 import static android.os.Trace.TRACE_TAG_NETWORK;
+import static android.provider.DeviceConfig.NAMESPACE_TETHERING;
 import static android.system.OsConstants.ENOENT;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 import static android.text.format.DateUtils.DAY_IN_MILLIS;
@@ -69,6 +70,7 @@ import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 import static android.text.format.DateUtils.SECOND_IN_MILLIS;
 
 import static com.android.internal.annotations.VisibleForTesting.Visibility.PRIVATE;
+import static com.android.net.module.util.DeviceConfigUtils.getDeviceConfigPropertyInt;
 import static com.android.net.module.util.NetworkCapabilitiesUtils.getDisplayTransport;
 import static com.android.net.module.util.NetworkStatsUtils.LIMIT_GLOBAL_ALERT;
 import static com.android.server.net.NetworkStatsEventLogger.POLL_REASON_PERIODIC;
@@ -304,8 +306,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     static final String NETSTATS_FASTDATAINPUT_SUCCESSES_COUNTER_NAME = "fastdatainput.successes";
     static final String NETSTATS_FASTDATAINPUT_FALLBACKS_COUNTER_NAME = "fastdatainput.fallbacks";
 
-    static final long TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS = 1_000L;
-    static final int TRAFFIC_STATS_CACHE_MAX_ENTRIES = 400;
+    static final String TRAFFIC_STATS_CACHE_EXPIRY_DURATION_NAME =
+            "trafficstats_cache_expiry_duration_ms";
+    static final String TRAFFIC_STATS_CACHE_MAX_ENTRIES_NAME = "trafficstats_cache_max_entries";
+    static final int DEFAULT_TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS = 1000;
+    static final int DEFAULT_TRAFFIC_STATS_CACHE_MAX_ENTRIES = 400;
 
     private final Context mContext;
     private final NetworkStatsFactory mStatsFactory;
@@ -658,13 +663,15 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             mEventLogger = null;
         }
 
+        final long cacheExpiryDurationMs = mDeps.getTrafficStatsRateLimitCacheExpiryDuration();
+        final int cacheMaxEntries = mDeps.getTrafficStatsRateLimitCacheMaxEntries();
         mSupportTrafficStatsRateLimitCache = mDeps.supportTrafficStatsRateLimitCache(mContext);
         mTrafficStatsTotalCache = new TrafficStatsRateLimitCache(mClock,
-                TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS, TRAFFIC_STATS_CACHE_MAX_ENTRIES);
+                cacheExpiryDurationMs, cacheMaxEntries);
         mTrafficStatsIfaceCache = new TrafficStatsRateLimitCache(mClock,
-                TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS, TRAFFIC_STATS_CACHE_MAX_ENTRIES);
+                cacheExpiryDurationMs, cacheMaxEntries);
         mTrafficStatsUidCache = new TrafficStatsRateLimitCache(mClock,
-                TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS, TRAFFIC_STATS_CACHE_MAX_ENTRIES);
+                cacheExpiryDurationMs, cacheMaxEntries);
 
         // TODO: Remove bpfNetMaps creation and always start SkDestroyListener
         // Following code is for the experiment to verify the SkDestroyListener refactoring. Based
@@ -719,7 +726,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
          * Get the count of import legacy target attempts.
          */
         public int getImportLegacyTargetAttempts() {
-            return DeviceConfigUtils.getDeviceConfigPropertyInt(
+            return getDeviceConfigPropertyInt(
                     DeviceConfig.NAMESPACE_TETHERING,
                     NETSTATS_IMPORT_LEGACY_TARGET_ATTEMPTS,
                     DEFAULT_NETSTATS_IMPORT_LEGACY_TARGET_ATTEMPTS);
@@ -729,7 +736,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
          * Get the count of using FastDataInput target attempts.
          */
         public int getUseFastDataInputTargetAttempts() {
-            return DeviceConfigUtils.getDeviceConfigPropertyInt(
+            return getDeviceConfigPropertyInt(
                     DeviceConfig.NAMESPACE_TETHERING,
                     NETSTATS_FASTDATAINPUT_TARGET_ATTEMPTS, 0);
         }
@@ -921,6 +928,30 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         public boolean supportTrafficStatsRateLimitCache(@NonNull Context ctx) {
             return SdkLevel.isAtLeastV() && DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
                     ctx, TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG);
+        }
+
+        /**
+         * Get TrafficStats rate-limit cache expiry.
+         *
+         * This method should only be called once in the constructor,
+         * to ensure that the code does not need to deal with flag values changing at runtime.
+         */
+        public int getTrafficStatsRateLimitCacheExpiryDuration() {
+            return getDeviceConfigPropertyInt(
+                    NAMESPACE_TETHERING, TRAFFIC_STATS_CACHE_EXPIRY_DURATION_NAME,
+                    DEFAULT_TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS);
+        }
+
+        /**
+         * Get TrafficStats rate-limit cache max entries.
+         *
+         * This method should only be called once in the constructor,
+         * to ensure that the code does not need to deal with flag values changing at runtime.
+         */
+        public int getTrafficStatsRateLimitCacheMaxEntries() {
+            return getDeviceConfigPropertyInt(
+                    NAMESPACE_TETHERING, TRAFFIC_STATS_CACHE_MAX_ENTRIES_NAME,
+                    DEFAULT_TRAFFIC_STATS_CACHE_MAX_ENTRIES);
         }
 
         /**
@@ -2907,6 +2938,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             } catch (IOException e) {
                 pw.println("(failed to dump FastDataInput counters)");
             }
+            pw.print("trafficstats.cache.supported", mSupportTrafficStatsRateLimitCache);
+            pw.println();
+            pw.print(TRAFFIC_STATS_CACHE_EXPIRY_DURATION_NAME,
+                    mDeps.getTrafficStatsRateLimitCacheExpiryDuration());
+            pw.println();
+            pw.print(TRAFFIC_STATS_CACHE_MAX_ENTRIES_NAME,
+                    mDeps.getTrafficStatsRateLimitCacheMaxEntries());
+            pw.println();
 
             pw.decreaseIndent();
 
