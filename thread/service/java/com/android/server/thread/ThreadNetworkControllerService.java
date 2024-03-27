@@ -405,7 +405,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     public void initialize() {
         mHandler.post(
                 () -> {
-                    Log.d(TAG, "Initializing Thread system service...");
+                    Log.d(
+                            TAG,
+                            "Initializing Thread system service: Thread is "
+                                    + (isEnabled() ? "enabled" : "disabled"));
                     try {
                         mTunIfController.createTunInterface();
                     } catch (IOException e) {
@@ -489,6 +492,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                     "Cannot enable Thread: forbidden by user restriction");
             return;
         }
+
+        Log.i(TAG, "Set Thread enabled: " + isEnabled + ", persist: " + persist);
 
         if (persist) {
             // The persistent setting keeps the desired enabled state, thus it's set regardless
