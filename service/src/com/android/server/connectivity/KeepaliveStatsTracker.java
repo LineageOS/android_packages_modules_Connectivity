@@ -29,6 +29,7 @@ import android.net.NetworkSpecifier;
 import android.net.TelephonyNetworkSpecifier;
 import android.net.TransportInfo;
 import android.net.wifi.WifiInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.telephony.SubscriptionInfo;
@@ -38,6 +39,8 @@ import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.metrics.DailykeepaliveInfoReported;
@@ -279,6 +282,7 @@ public class KeepaliveStatsTracker {
          *
          * @param dailyKeepaliveInfoReported the proto to write to statsD.
          */
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public void writeStats(DailykeepaliveInfoReported dailyKeepaliveInfoReported) {
             ConnectivityStatsLog.write(
                     ConnectivityStatsLog.DAILY_KEEPALIVE_INFO_REPORTED,
