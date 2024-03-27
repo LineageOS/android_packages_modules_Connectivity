@@ -30,6 +30,7 @@ import android.net.VpnManager.TYPE_VPN_SERVICE
 import android.net.VpnTransportInfo
 import android.os.Build
 import androidx.test.filters.SmallTest
+import com.android.server.connectivity.ConnectivityFlags
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
@@ -56,7 +57,9 @@ private fun vpnNc() = NetworkCapabilities.Builder()
                         TYPE_VPN_SERVICE,
                         "MySession12345",
                         false /* bypassable */,
-                        false /* longLivedTcpConnectionsExpensive */))
+                        false /* longLivedTcpConnectionsExpensive */
+                )
+        )
         .build()
 
 private fun wifiNc() = NetworkCapabilities.Builder()
@@ -285,5 +288,20 @@ class CSIngressDiscardRuleTests : CSTest() {
         vpnAgent.unregisterAfterReplacement(LONG_TIMEOUT_MS)
         waitForIdle()
         verify(bpfNetMaps).removeIngressDiscardRule(IPV6_ADDRESS)
+    }
+
+    @Test @FeatureFlags([Flag(ConnectivityFlags.INGRESS_TO_VPN_ADDRESS_FILTERING, false)])
+    fun testVpnIngressDiscardRule_FeatureDisabled() {
+        val nr = nr(TRANSPORT_VPN)
+        val cb = TestableNetworkCallback()
+        cm.registerNetworkCallback(nr, cb)
+        val nc = vpnNc()
+        val lp = lp(VPN_IFNAME, IPV6_LINK_ADDRESS, LOCAL_IPV6_LINK_ADDRRESS)
+        val agent = Agent(nc = nc, lp = lp)
+        agent.connect()
+        cb.expectAvailableCallbacks(agent.network, validated = false)
+
+        // IngressDiscardRule should not be added since feature is disabled
+        verify(bpfNetMaps, never()).setIngressDiscardRule(any(), any())
     }
 }
