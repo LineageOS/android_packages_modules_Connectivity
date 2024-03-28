@@ -20,6 +20,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
+import android.platform.test.annotations.AppModeFull
 import android.system.OsConstants
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.PropertyUtil.isVendorApiLevelNewerThan
@@ -39,6 +40,7 @@ import org.junit.runner.RunWith
 
 private const val TIMEOUT_MS = 2000L
 
+@AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
 @NetworkStackModuleTest
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
