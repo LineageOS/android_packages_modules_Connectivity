@@ -33,6 +33,7 @@ import com.android.testutils.TestableNetworkCallback
 import com.google.common.truth.Truth.assertThat
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -49,23 +50,32 @@ class ApfIntegrationTest {
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val pm by lazy { context.packageManager }
     private lateinit var wifiIfaceName: String
+    private lateinit var networkCallback: TestableNetworkCallback
+
     @Before
     fun setUp() {
         assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
         assumeTrue(isVendorApiLevelNewerThan(Build.VERSION_CODES.TIRAMISU))
-        val cb = TestableNetworkCallback()
+        networkCallback = TestableNetworkCallback()
         cm.requestNetwork(
                 NetworkRequest.Builder()
                         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         .build(),
-                cb
+                networkCallback
         )
-        cb.eventuallyExpect<LinkPropertiesChanged>(TIMEOUT_MS) {
+        networkCallback.eventuallyExpect<LinkPropertiesChanged>(TIMEOUT_MS) {
             wifiIfaceName = assertNotNull(it.lp.interfaceName)
             true
         }
         assertNotNull(wifiIfaceName)
+    }
+
+    @After
+    fun tearDown() {
+        if (::networkCallback.isInitialized) {
+            cm.unregisterNetworkCallback(networkCallback)
+        }
     }
 
     @Test
