@@ -126,11 +126,12 @@ public class BorderRoutingTest {
         mFtds = new ArrayList<>();
 
         setUpInfraNetwork();
+        mController.setEnabledAndWait(true);
         mController.joinAndWait(DEFAULT_DATASET);
 
         // Creates a infra network device.
         mInfraNetworkReader = newPacketReader(mInfraNetworkTracker.getTestIface(), mHandler);
-        startInfraDevice();
+        startInfraDeviceAndWaitForOnLinkAddr();
 
         // Create Ftds
         for (int i = 0; i < NUM_FTD; ++i) {
@@ -185,13 +186,43 @@ public class BorderRoutingTest {
          * </pre>
          */
 
-        startInfraDevice();
+        startInfraDeviceAndWaitForOnLinkAddr();
         FullThreadDevice ftd = mFtds.get(0);
         startFtdChild(ftd);
 
         mInfraDevice.sendEchoRequest(ftd.getOmrAddress());
 
         assertNotNull(pollForPacketOnInfraNetwork(ICMPV6_ECHO_REPLY_TYPE, ftd.getOmrAddress()));
+    }
+
+    @Test
+    public void unicastRouting_afterInfraNetworkSwitchInfraDevicePingThreadDeviceOmr_replyReceived()
+            throws Exception {
+        /*
+         * <pre>
+         * Topology:
+         *                 infra network                       Thread
+         * infra device -------------------- Border Router -------------- Full Thread device
+         *                                   (Cuttlefish)
+         * </pre>
+         */
+
+        FullThreadDevice ftd = mFtds.get(0);
+        startFtdChild(ftd);
+        Inet6Address ftdOmr = ftd.getOmrAddress();
+        // Create a new infra network and let Thread prefer it
+        TestNetworkTracker oldInfraNetworkTracker = mInfraNetworkTracker;
+        try {
+            setUpInfraNetwork();
+            mInfraNetworkReader = newPacketReader(mInfraNetworkTracker.getTestIface(), mHandler);
+            startInfraDeviceAndWaitForOnLinkAddr();
+
+            mInfraDevice.sendEchoRequest(ftd.getOmrAddress());
+
+            assertNotNull(pollForPacketOnInfraNetwork(ICMPV6_ECHO_REPLY_TYPE, ftdOmr));
+        } finally {
+            runAsShell(MANAGE_TEST_NETWORKS, () -> oldInfraNetworkTracker.teardown());
+        }
     }
 
     @Test
@@ -528,7 +559,7 @@ public class BorderRoutingTest {
         tearDownInfraNetwork();
         setUpInfraNetwork();
         mInfraNetworkReader = newPacketReader(mInfraNetworkTracker.getTestIface(), mHandler);
-        startInfraDevice();
+        startInfraDeviceAndWaitForOnLinkAddr();
 
         mInfraDevice.sendEchoRequest(GROUP_ADDR_SCOPE_5);
 
@@ -555,7 +586,7 @@ public class BorderRoutingTest {
         tearDownInfraNetwork();
         setUpInfraNetwork();
         mInfraNetworkReader = newPacketReader(mInfraNetworkTracker.getTestIface(), mHandler);
-        startInfraDevice();
+        startInfraDeviceAndWaitForOnLinkAddr();
 
         ftd.ping(GROUP_ADDR_SCOPE_4);
 
@@ -587,7 +618,7 @@ public class BorderRoutingTest {
         assertNotNull(ftdOmr);
     }
 
-    private void startInfraDevice() throws Exception {
+    private void startInfraDeviceAndWaitForOnLinkAddr() throws Exception {
         mInfraDevice =
                 new InfraNetworkDevice(MacAddress.fromString("1:2:3:4:5:6"), mInfraNetworkReader);
         mInfraDevice.runSlaac(Duration.ofSeconds(60));
