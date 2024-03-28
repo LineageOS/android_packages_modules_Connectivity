@@ -39,10 +39,8 @@ import com.android.server.thread.openthread.INsdStatusReceiver;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,14 +54,6 @@ import java.util.concurrent.Executor;
  *
  * <p>All the data members of this class MUST be accessed in the {@code mHandler}'s Thread except
  * {@code mHandler} itself.
- *
- * <p>TODO: b/323300118 - Remove the following mechanism when the race condition in NsdManager is
- * fixed.
- *
- * <p>There's always only one running registration job at any timepoint. All other pending jobs are
- * queued in {@code mRegistrationJobs}. When a registration job is complete (i.e. the according
- * method in {@link NsdManager.RegistrationListener} is called), it will start the next registration
- * job in the queue.
  */
 public final class NsdPublisher extends INsdPublisher.Stub {
     // TODO: b/321883491 - specify network for mDNS operations
@@ -74,7 +64,6 @@ public final class NsdPublisher extends INsdPublisher.Stub {
     private final SparseArray<RegistrationListener> mRegistrationListeners = new SparseArray<>(0);
     private final SparseArray<DiscoveryListener> mDiscoveryListeners = new SparseArray<>(0);
     private final SparseArray<ServiceInfoListener> mServiceInfoListeners = new SparseArray<>(0);
-    private final Deque<Runnable> mRegistrationJobs = new ArrayDeque<>();
 
     @VisibleForTesting
     public NsdPublisher(NsdManager nsdManager, Handler handler) {
@@ -97,13 +86,9 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             List<DnsTxtAttribute> txt,
             INsdStatusReceiver receiver,
             int listenerId) {
-        postRegistrationJob(
-                () -> {
-                    NsdServiceInfo serviceInfo =
-                            buildServiceInfoForService(
-                                    hostname, name, type, subTypeList, port, txt);
-                    registerInternal(serviceInfo, receiver, listenerId, "service");
-                });
+        NsdServiceInfo serviceInfo =
+                buildServiceInfoForService(hostname, name, type, subTypeList, port, txt);
+        mHandler.post(() -> registerInternal(serviceInfo, receiver, listenerId, "service"));
     }
 
     private static NsdServiceInfo buildServiceInfoForService(
@@ -132,11 +117,8 @@ public final class NsdPublisher extends INsdPublisher.Stub {
     @Override
     public void registerHost(
             String name, List<String> addresses, INsdStatusReceiver receiver, int listenerId) {
-        postRegistrationJob(
-                () -> {
-                    NsdServiceInfo serviceInfo = buildServiceInfoForHost(name, addresses);
-                    registerInternal(serviceInfo, receiver, listenerId, "host");
-                });
+        NsdServiceInfo serviceInfo = buildServiceInfoForHost(name, addresses);
+        mHandler.post(() -> registerInternal(serviceInfo, receiver, listenerId, "host"));
     }
 
     private static NsdServiceInfo buildServiceInfoForHost(
@@ -178,7 +160,7 @@ public final class NsdPublisher extends INsdPublisher.Stub {
     }
 
     public void unregister(INsdStatusReceiver receiver, int listenerId) {
-        postRegistrationJob(() -> unregisterInternal(receiver, listenerId));
+        mHandler.post(() -> unregisterInternal(receiver, listenerId));
     }
 
     public void unregisterInternal(INsdStatusReceiver receiver, int listenerId) {
@@ -338,45 +320,11 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             }
         }
         mRegistrationListeners.clear();
-        mRegistrationJobs.clear();
     }
 
     /** On ot-daemon died, reset. */
     public void onOtDaemonDied() {
         reset();
-    }
-
-    // TODO: b/323300118 - Remove this mechanism when the race condition in NsdManager is fixed.
-    /** Fetch the first job from the queue and run it. See the class doc for more details. */
-    private void peekAndRun() {
-        if (mRegistrationJobs.isEmpty()) {
-            return;
-        }
-        Runnable job = mRegistrationJobs.getFirst();
-        job.run();
-    }
-
-    // TODO: b/323300118 - Remove this mechanism when the race condition in NsdManager is fixed.
-    /**
-     * Pop the first job from the queue and run the next job. See the class doc for more details.
-     */
-    private void popAndRunNext() {
-        if (mRegistrationJobs.isEmpty()) {
-            Log.i(TAG, "No registration jobs when trying to pop and run next.");
-            return;
-        }
-        mRegistrationJobs.removeFirst();
-        peekAndRun();
-    }
-
-    private void postRegistrationJob(Runnable registrationJob) {
-        mHandler.post(
-                () -> {
-                    mRegistrationJobs.addLast(registrationJob);
-                    if (mRegistrationJobs.size() == 1) {
-                        peekAndRun();
-                    }
-                });
     }
 
     private final class RegistrationListener implements NsdManager.RegistrationListener {
@@ -416,7 +364,6 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             } catch (RemoteException ignored) {
                 // do nothing if the client is dead
             }
-            popAndRunNext();
         }
 
         @Override
@@ -438,7 +385,6 @@ public final class NsdPublisher extends INsdPublisher.Stub {
                     // do nothing if the client is dead
                 }
             }
-            popAndRunNext();
         }
 
         @Override
@@ -456,7 +402,6 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             } catch (RemoteException ignored) {
                 // do nothing if the client is dead
             }
-            popAndRunNext();
         }
 
         @Override
@@ -477,7 +422,6 @@ public final class NsdPublisher extends INsdPublisher.Stub {
                 }
             }
             mRegistrationListeners.remove(mListenerId);
-            popAndRunNext();
         }
     }
 
