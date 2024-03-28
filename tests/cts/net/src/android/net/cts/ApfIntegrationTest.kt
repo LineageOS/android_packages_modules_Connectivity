@@ -49,7 +49,7 @@ class ApfIntegrationTest {
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val pm by lazy { context.packageManager }
-    private lateinit var wifiIfaceName: String
+    private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
 
     @Before
@@ -65,7 +65,7 @@ class ApfIntegrationTest {
                 networkCallback
         )
         networkCallback.eventuallyExpect<LinkPropertiesChanged>(TIMEOUT_MS) {
-            wifiIfaceName = assertNotNull(it.lp.interfaceName)
+            ifname = assertNotNull(it.lp.interfaceName)
             true
         }
     }
@@ -79,9 +79,8 @@ class ApfIntegrationTest {
 
     @Test
     fun testGetApfCapabilities() {
-        val capabilities = SystemUtil
-                .runShellCommand("cmd network_stack apf $wifiIfaceName capabilities").trim()
-        val (version, maxLen, packetFormat) = capabilities.split(",").map { it.toInt() }
+        val caps = SystemUtil.runShellCommand("cmd network_stack apf $ifname capabilities").trim()
+        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
         assertEquals(4, version)
         assertThat(maxLen).isAtLeast(1024)
         if (isVendorApiLevelNewerThan(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)) {
