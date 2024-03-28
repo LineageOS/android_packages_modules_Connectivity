@@ -79,11 +79,15 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
 import java.util.function.Consumer
+import kotlin.annotation.AnnotationRetention.RUNTIME
+import kotlin.annotation.AnnotationTarget.FUNCTION
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
+import org.junit.rules.TestName
 import org.mockito.AdditionalAnswers.delegatesTo
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
@@ -126,6 +130,9 @@ private fun NetworkCapabilities.getLegacyType() =
 // TODO (b/272685721) : make ConnectivityServiceTest smaller and faster by moving the setup
 // parts into this class and moving the individual tests to multiple separate classes.
 open class CSTest {
+    @get:Rule
+    val testNameRule = TestName()
+
     companion object {
         val CSTestExecutor = Executors.newSingleThreadExecutor()
     }
@@ -155,8 +162,7 @@ open class CSTest {
         it[ConnectivityService.ALLOW_SATALLITE_NETWORK_FALLBACK] = true
         it[ConnectivityFlags.INGRESS_TO_VPN_ADDRESS_FILTERING] = true
     }
-    fun enableFeature(f: String) = enabledFeatures.set(f, true)
-    fun disableFeature(f: String) = enabledFeatures.set(f, false)
+    fun setFeatureEnabled(flag: String, enabled: Boolean) = enabledFeatures.set(flag, enabled)
 
     // When adding new members, consider if it's not better to build the object in CSTestHelpers
     // to keep this file clean of implementation details. Generally, CSTestHelpers should only
@@ -201,8 +207,32 @@ open class CSTest {
     lateinit var cm: ConnectivityManager
     lateinit var csHandler: Handler
 
+    // Tests can use this annotation to set flag values before constructing ConnectivityService
+    // e.g. @FeatureFlags([Flag(flagName1, true/false), Flag(flagName2, true/false)])
+    @Retention(RUNTIME)
+    @Target(FUNCTION)
+    annotation class FeatureFlags(val flags: Array<Flag>)
+
+    @Retention(RUNTIME)
+    @Target(FUNCTION)
+    annotation class Flag(val name: String, val enabled: Boolean)
+
     @Before
     fun setUp() {
+        // Set feature flags before constructing ConnectivityService
+        val testMethodName = testNameRule.methodName
+        try {
+            val testMethod = this::class.java.getMethod(testMethodName)
+            val featureFlags = testMethod.getAnnotation(FeatureFlags::class.java)
+            if (featureFlags != null) {
+                for (flag in featureFlags.flags) {
+                    setFeatureEnabled(flag.name, flag.enabled)
+                }
+            }
+        } catch (ignored: NoSuchMethodException) {
+            // This is expected for parameterized tests
+        }
+
         alarmHandlerThread = HandlerThread("TestAlarmManager").also { it.start() }
         alarmManager = makeMockAlarmManager(alarmHandlerThread)
         service = makeConnectivityService(context, netd, deps).also { it.systemReadyInternal() }
