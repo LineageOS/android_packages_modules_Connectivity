@@ -27,6 +27,7 @@ java_library {
         "net-tests-utils",
         "net-utils-device-common",
         "net-utils-device-common-bpf",
+        "net-utils-device-common-struct-base",
     ],
     srcs: [
         "src/**/*.java",
