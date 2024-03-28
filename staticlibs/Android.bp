@@ -124,6 +124,8 @@ filegroup {
     ],
 }
 
+// The net-utils-device-common-bpf library requires the callers to contain
+// net-utils-device-common-struct-base.
 java_library {
     name: "net-utils-device-common-bpf",
     srcs: [
@@ -133,9 +135,7 @@ java_library {
         "device/com/android/net/module/util/BpfUtils.java",
         "device/com/android/net/module/util/IBpfMap.java",
         "device/com/android/net/module/util/JniUtil.java",
-        "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/TcUtils.java",
-        "framework/com/android/net/module/util/HexDump.java",
     ],
     sdk_version: "module_current",
     min_sdk_version: "30",
@@ -146,6 +146,7 @@ java_library {
     libs: [
         "androidx.annotation_annotation",
         "framework-connectivity.stubs.module_lib",
+        "net-utils-device-common-struct-base",
     ],
     apex_available: [
         "com.android.tethering",
@@ -158,12 +159,9 @@ java_library {
 }
 
 java_library {
-    name: "net-utils-device-common-struct",
+    name: "net-utils-device-common-struct-base",
     srcs: [
-        "device/com/android/net/module/util/Ipv6Utils.java",
-        "device/com/android/net/module/util/PacketBuilder.java",
         "device/com/android/net/module/util/Struct.java",
-        "device/com/android/net/module/util/structs/*.java",
     ],
     sdk_version: "module_current",
     min_sdk_version: "30",
@@ -176,6 +174,7 @@ java_library {
     ],
     libs: [
         "androidx.annotation_annotation",
+        "framework-annotations-lib", // Required by InetAddressUtils.java
         "framework-connectivity.stubs.module_lib",
     ],
     apex_available: [
@@ -188,26 +187,30 @@ java_library {
     },
 }
 
-// The net-utils-multicast-forwarding-structs library requires the callers to
-// contain net-utils-device-common-bpf.
+// The net-utils-device-common-struct library requires the callers to contain
+// net-utils-device-common-struct-base.
 java_library {
-    name: "net-utils-multicast-forwarding-structs",
+    name: "net-utils-device-common-struct",
     srcs: [
-        "device/com/android/net/module/util/structs/StructMf6cctl.java",
-        "device/com/android/net/module/util/structs/StructMif6ctl.java",
-        "device/com/android/net/module/util/structs/StructMrt6Msg.java",
+        "device/com/android/net/module/util/Ipv6Utils.java",
+        "device/com/android/net/module/util/PacketBuilder.java",
+        "device/com/android/net/module/util/structs/*.java",
     ],
     sdk_version: "module_current",
     min_sdk_version: "30",
     visibility: [
         "//packages/modules/Connectivity:__subpackages__",
+        "//packages/modules/NetworkStack:__subpackages__",
     ],
     libs: [
-        // Only Struct.java is needed from "net-utils-device-common-bpf"
-        "net-utils-device-common-bpf",
+        "androidx.annotation_annotation",
+        "framework-annotations-lib", // Required by IpUtils.java
+        "framework-connectivity.stubs.module_lib",
+        "net-utils-device-common-struct-base",
     ],
     apex_available: [
         "com.android.tethering",
+        "//apex_available:platform",
     ],
     lint: {
         strict_updatability_linting: true,
@@ -216,7 +219,7 @@ java_library {
 }
 
 // The net-utils-device-common-netlink library requires the callers to contain
-// net-utils-device-common-struct.
+// net-utils-device-common-struct and net-utils-device-common-struct-base.
 java_library {
     name: "net-utils-device-common-netlink",
     srcs: [
@@ -235,6 +238,7 @@ java_library {
         // statically link here because callers of this library might already have a static
         // version linked.
         "net-utils-device-common-struct",
+        "net-utils-device-common-struct-base",
     ],
     apex_available: [
         "com.android.tethering",
@@ -247,7 +251,7 @@ java_library {
 }
 
 // The net-utils-device-common-ip library requires the callers to contain
-// net-utils-device-common-struct.
+// net-utils-device-common-struct and net-utils-device-common-struct-base.
 java_library {
     // TODO : this target should probably be folded into net-utils-device-common
     name: "net-utils-device-common-ip",
