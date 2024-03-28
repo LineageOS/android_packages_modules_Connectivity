@@ -96,6 +96,7 @@ java_defaults {
     ],
     impl_only_static_libs: [
         "net-utils-device-common-bpf",
+        "net-utils-device-common-struct-base",
     ],
     libs: [
         "androidx.annotation_annotation",
@@ -124,6 +125,7 @@ java_library {
         // Even if the library is included in "impl_only_static_libs" of defaults. This is still
         // needed because java_library which doesn't understand "impl_only_static_libs".
         "net-utils-device-common-bpf",
+        "net-utils-device-common-struct-base",
     ],
     libs: [
         // This cannot be in the defaults clause above because if it were, it would be used

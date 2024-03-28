@@ -26,7 +26,7 @@ build = ["FlaggedApi.bp"]
 // as the above target may not exist
 // depending on the branch
 
-// The library requires the final artifact to contain net-utils-device-common-struct.
+// The library requires the final artifact to contain net-utils-device-common-struct-base.
 java_library {
     name: "connectivity-net-module-utils-bpf",
     srcs: [
@@ -45,7 +45,7 @@ java_library {
         // For libraries which are statically linked in framework-connectivity, do not
         // statically link here because callers of this library might already have a static
         // version linked.
-        "net-utils-device-common-struct",
+        "net-utils-device-common-struct-base",
     ],
     apex_available: [
         "com.android.tethering",

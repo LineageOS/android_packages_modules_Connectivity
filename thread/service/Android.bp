@@ -45,6 +45,9 @@ java_library {
         "modules-utils-shell-command-handler",
         "net-utils-device-common",
         "net-utils-device-common-netlink",
+        // The required dependency net-utils-device-common-struct-base is in the classpath via
+        // framework-connectivity
+        "net-utils-device-common-struct",
         "ot-daemon-aidl-java",
     ],
     apex_available: ["com.android.tethering"],
