@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns.util;
 
+import static com.android.server.connectivity.mdns.MdnsConstants.FLAG_TRUNCATED;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
@@ -23,6 +25,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.ArraySet;
+import android.util.Pair;
 
 import com.android.server.connectivity.mdns.MdnsConstants;
 import com.android.server.connectivity.mdns.MdnsPacket;
@@ -30,13 +33,18 @@ import com.android.server.connectivity.mdns.MdnsPacketWriter;
 import com.android.server.connectivity.mdns.MdnsRecord;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -223,6 +231,100 @@ public class MdnsUtils {
 
         final int len = writer.getWritePosition();
         return Arrays.copyOfRange(packetCreationBuffer, 0, len);
+    }
+
+    /**
+     * Writes the possible query content of an MdnsPacket into the data buffer.
+     *
+     * <p>This method is specifically for query packets. It writes the question and answer sections
+     *    into the data buffer only.
+     *
+     * @param packetCreationBuffer The data buffer for the query content.
+     * @param packet The MdnsPacket to be written into the data buffer.
+     * @return A Pair containing:
+     *         1. The remaining MdnsPacket data that could not fit in the buffer.
+     *         2. The length of the data written to the buffer.
+     */
+    @Nullable
+    private static Pair<MdnsPacket, Integer> writePossibleMdnsPacket(
+            @NonNull byte[] packetCreationBuffer, @NonNull MdnsPacket packet) throws IOException {
+        MdnsPacket remainingPacket;
+        final MdnsPacketWriter writer = new MdnsPacketWriter(packetCreationBuffer);
+        writer.writeUInt16(packet.transactionId); // Transaction ID
+
+        final int flagsPos = writer.getWritePosition();
+        writer.writeUInt16(0); // Flags, written later
+        writer.writeUInt16(0); // questions count, written later
+        writer.writeUInt16(0); // answers count, written later
+        writer.writeUInt16(0); // authority entries count, empty session for query
+        writer.writeUInt16(0); // additional records count, empty session for query
+
+        int writtenQuestions = 0;
+        int writtenAnswers = 0;
+        int lastValidPos = writer.getWritePosition();
+        try {
+            for (MdnsRecord record : packet.questions) {
+                // Questions do not have TTL or data
+                record.writeHeaderFields(writer);
+                writtenQuestions++;
+                lastValidPos = writer.getWritePosition();
+            }
+            for (MdnsRecord record : packet.answers) {
+                record.write(writer, 0L);
+                writtenAnswers++;
+                lastValidPos = writer.getWritePosition();
+            }
+            remainingPacket = null;
+        } catch (IOException e) {
+            // Went over the packet limit; truncate
+            if (writtenQuestions == 0 && writtenAnswers == 0) {
+                // No space to write even one record: just throw (as subclass of IOException)
+                throw e;
+            }
+
+            // Set the last valid position as the final position (not as a rewind)
+            writer.rewind(lastValidPos);
+            writer.clearRewind();
+
+            remainingPacket = new MdnsPacket(packet.flags,
+                    packet.questions.subList(
+                            writtenQuestions, packet.questions.size()),
+                    packet.answers.subList(
+                            writtenAnswers, packet.answers.size()),
+                    Collections.emptyList(), /* authorityRecords */
+                    Collections.emptyList() /* additionalRecords */);
+        }
+
+        final int len = writer.getWritePosition();
+        writer.rewind(flagsPos);
+        writer.writeUInt16(packet.flags | (remainingPacket == null ? 0 : FLAG_TRUNCATED));
+        writer.writeUInt16(writtenQuestions);
+        writer.writeUInt16(writtenAnswers);
+        writer.unrewind();
+
+        return Pair.create(remainingPacket, len);
+    }
+
+    /**
+     * Create Datagram packets from given MdnsPacket and InetSocketAddress.
+     *
+     * <p> If the MdnsPacket is too large for a single DatagramPacket, it will be split into
+     *     multiple DatagramPackets.
+     */
+    public static List<DatagramPacket> createQueryDatagramPackets(
+            @NonNull byte[] packetCreationBuffer, @NonNull MdnsPacket packet,
+            @NonNull InetSocketAddress destination) throws IOException {
+        final List<DatagramPacket> datagramPackets = new ArrayList<>();
+        MdnsPacket remainingPacket = packet;
+        while (remainingPacket != null) {
+            final Pair<MdnsPacket, Integer> result =
+                    writePossibleMdnsPacket(packetCreationBuffer, remainingPacket);
+            remainingPacket = result.first;
+            final int len = result.second;
+            final byte[] outBuffer = Arrays.copyOfRange(packetCreationBuffer, 0, len);
+            datagramPackets.add(new DatagramPacket(outBuffer, 0, outBuffer.length, destination));
+        }
+        return datagramPackets;
     }
 
     /**
