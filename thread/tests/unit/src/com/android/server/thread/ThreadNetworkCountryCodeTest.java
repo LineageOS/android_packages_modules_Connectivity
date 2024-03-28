@@ -19,6 +19,7 @@ package com.android.server.thread;
 import static android.net.thread.ThreadNetworkException.ERROR_INTERNAL_ERROR;
 
 import static com.android.server.thread.ThreadNetworkCountryCode.DEFAULT_COUNTRY_CODE;
+import static com.android.server.thread.ThreadPersistentSettings.THREAD_COUNTRY_CODE;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -104,6 +105,7 @@ public class ThreadNetworkCountryCodeTest {
     @Mock List<SubscriptionInfo> mSubscriptionInfoList;
     @Mock SubscriptionInfo mSubscriptionInfo0;
     @Mock SubscriptionInfo mSubscriptionInfo1;
+    @Mock ThreadPersistentSettings mPersistentSettings;
 
     private ThreadNetworkCountryCode mThreadNetworkCountryCode;
     private boolean mErrorSetCountryCode;
@@ -164,7 +166,8 @@ public class ThreadNetworkCountryCodeTest {
                 mContext,
                 mTelephonyManager,
                 mSubscriptionManager,
-                oemCountryCode);
+                oemCountryCode,
+                mPersistentSettings);
     }
 
     private static Address newAddress(String countryCode) {
@@ -447,6 +450,14 @@ public class ThreadNetworkCountryCodeTest {
         verify(mThreadNetworkControllerService)
                 .setCountryCode(eq(TEST_COUNTRY_CODE_CN), mOperationReceiverCaptor.capture());
         assertThat(mThreadNetworkCountryCode.getCountryCode()).isEqualTo(DEFAULT_COUNTRY_CODE);
+    }
+
+    @Test
+    public void settingsCountryCode_settingsCountryCodeIsActive_settingsCountryCodeIsUsed() {
+        when(mPersistentSettings.get(THREAD_COUNTRY_CODE)).thenReturn(TEST_COUNTRY_CODE_CN);
+        mThreadNetworkCountryCode.initialize();
+
+        assertThat(mThreadNetworkCountryCode.getCountryCode()).isEqualTo(TEST_COUNTRY_CODE_CN);
     }
 
     @Test
