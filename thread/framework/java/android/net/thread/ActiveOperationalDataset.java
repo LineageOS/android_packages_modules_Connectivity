@@ -18,7 +18,7 @@ package android.net.thread;
 
 import static com.android.internal.util.Preconditions.checkArgument;
 import static com.android.internal.util.Preconditions.checkState;
-import static com.android.net.module.util.HexDump.dumpHexString;
+import static com.android.net.module.util.HexDump.toHexString;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -610,7 +610,7 @@ public final class ActiveOperationalDataset implements Parcelable {
         sb.append("{networkName=")
                 .append(getNetworkName())
                 .append(", extendedPanId=")
-                .append(dumpHexString(getExtendedPanId()))
+                .append(toHexString(getExtendedPanId()))
                 .append(", panId=")
                 .append(getPanId())
                 .append(", channel=")
@@ -1109,7 +1109,7 @@ public final class ActiveOperationalDataset implements Parcelable {
             sb.append("{rotation=")
                     .append(mRotationTimeHours)
                     .append(", flags=")
-                    .append(dumpHexString(mFlags))
+                    .append(toHexString(mFlags))
                     .append("}");
             return sb.toString();
         }
