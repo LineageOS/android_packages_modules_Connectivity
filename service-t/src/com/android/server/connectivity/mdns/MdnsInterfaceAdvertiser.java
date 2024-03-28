@@ -36,6 +36,7 @@ import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,6 +135,15 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
 
             mAnnouncer.startSending(info.getServiceId(), announcementInfo,
                     0L /* initialDelayMs */);
+
+            // Re-announce the services which have the same custom hostname.
+            final String hostname = mRecordRepository.getHostnameForServiceId(info.getServiceId());
+            if (hostname != null) {
+                final List<MdnsAnnouncer.AnnouncementInfo> announcementInfos =
+                        new ArrayList<>(mRecordRepository.restartAnnouncingForHostname(hostname));
+                announcementInfos.removeIf((i) -> i.getServiceId() == info.getServiceId());
+                reannounceServices(announcementInfos);
+            }
         }
     }
 
@@ -308,17 +318,10 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         if (hostname != null) {
             final List<MdnsProber.ProbingInfo> probingInfos =
                     mRecordRepository.restartProbingForHostname(hostname);
-            for (MdnsProber.ProbingInfo probingInfo : probingInfos) {
-                mProber.stop(probingInfo.getServiceId());
-                mProber.startProbing(probingInfo);
-            }
+            reprobeServices(probingInfos);
             final List<MdnsAnnouncer.AnnouncementInfo> announcementInfos =
                     mRecordRepository.restartAnnouncingForHostname(hostname);
-            for (MdnsAnnouncer.AnnouncementInfo announcementInfo : announcementInfos) {
-                mAnnouncer.stop(announcementInfo.getServiceId());
-                mAnnouncer.startSending(
-                        announcementInfo.getServiceId(), announcementInfo, 0 /* initialDelayMs */);
-            }
+            reannounceServices(announcementInfos);
         }
     }
 
@@ -462,6 +465,21 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         } catch (IOException | IllegalArgumentException e) {
             mSharedLog.wtf("Cannot create rawOffloadPacket: ", e);
             return new byte[0];
+        }
+    }
+
+    private void reprobeServices(List<MdnsProber.ProbingInfo> probingInfos) {
+        for (MdnsProber.ProbingInfo probingInfo : probingInfos) {
+            mProber.stop(probingInfo.getServiceId());
+            mProber.startProbing(probingInfo);
+        }
+    }
+
+    private void reannounceServices(List<MdnsAnnouncer.AnnouncementInfo> announcementInfos) {
+        for (MdnsAnnouncer.AnnouncementInfo announcementInfo : announcementInfos) {
+            mAnnouncer.stop(announcementInfo.getServiceId());
+            mAnnouncer.startSending(
+                    announcementInfo.getServiceId(), announcementInfo, 0 /* initialDelayMs */);
         }
     }
 }
