@@ -19,19 +19,19 @@ import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.apf.ApfCapabilities
 import android.os.Build
 import android.platform.test.annotations.AppModeFull
 import android.system.OsConstants
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.PropertyUtil.isVendorApiLevelNewerThan
-import com.android.compatibility.common.util.SystemUtil
+import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.NetworkStackModuleTest
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
 import com.google.common.truth.Truth.assertThat
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -77,15 +77,20 @@ class ApfIntegrationTest {
         }
     }
 
+    fun getApfCapabilities(): ApfCapabilities {
+        val caps = runShellCommandOrThrow("cmd network_stack apf $ifname capabilities").trim()
+        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
+        return ApfCapabilities(version, maxLen, packetFormat)
+    }
+
     @Test
     fun testGetApfCapabilities() {
-        val caps = SystemUtil.runShellCommand("cmd network_stack apf $ifname capabilities").trim()
-        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
-        assertEquals(4, version)
-        assertThat(maxLen).isAtLeast(1024)
+        val caps = getApfCapabilities()
+        assertThat(caps.apfVersionSupported).isEqualTo(4)
+        assertThat(caps.maximumApfProgramSize).isAtLeast(1024)
         if (isVendorApiLevelNewerThan(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)) {
-            assertThat(maxLen).isAtLeast(2000)
+            assertThat(caps.maximumApfProgramSize).isAtLeast(2000)
         }
-        assertEquals(OsConstants.ARPHRD_ETHER, packetFormat)
+        assertThat(caps.apfPacketFormat).isEqualTo(OsConstants.ARPHRD_ETHER)
     }
 }
