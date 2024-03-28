@@ -74,6 +74,12 @@ public final class OtDaemonController {
         return (Inet6Address) InetAddresses.parseNumericAddress(addressStr);
     }
 
+    /** Returns the country code on ot-daemon. */
+    public String getCountryCode() {
+        String countryCodeStr = executeCommand("region").split("\n")[0].trim();
+        return countryCodeStr;
+    }
+
     public String executeCommand(String cmd) {
         return SystemUtil.runShellCommand(OT_CTL + " " + cmd);
     }

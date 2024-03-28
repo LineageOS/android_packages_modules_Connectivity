@@ -16,6 +16,8 @@
 
 package com.android.server.thread;
 
+import static com.android.server.thread.ThreadPersistentSettings.THREAD_COUNTRY_CODE;
+
 import android.annotation.Nullable;
 import android.annotation.StringDef;
 import android.annotation.TargetApi;
@@ -83,6 +85,7 @@ public class ThreadNetworkCountryCode {
                 COUNTRY_CODE_SOURCE_TELEPHONY,
                 COUNTRY_CODE_SOURCE_TELEPHONY_LAST,
                 COUNTRY_CODE_SOURCE_WIFI,
+                COUNTRY_CODE_SOURCE_SETTINGS,
             })
     private @interface CountryCodeSource {}
 
@@ -93,6 +96,7 @@ public class ThreadNetworkCountryCode {
     private static final String COUNTRY_CODE_SOURCE_TELEPHONY = "Telephony";
     private static final String COUNTRY_CODE_SOURCE_TELEPHONY_LAST = "TelephonyLast";
     private static final String COUNTRY_CODE_SOURCE_WIFI = "Wifi";
+    private static final String COUNTRY_CODE_SOURCE_SETTINGS = "Settings";
 
     private static final CountryCodeInfo DEFAULT_COUNTRY_CODE_INFO =
             new CountryCodeInfo(DEFAULT_COUNTRY_CODE, COUNTRY_CODE_SOURCE_DEFAULT);
@@ -107,6 +111,7 @@ public class ThreadNetworkCountryCode {
     private final SubscriptionManager mSubscriptionManager;
     private final Map<Integer, TelephonyCountryCodeSlotInfo> mTelephonyCountryCodeSlotInfoMap =
             new ArrayMap();
+    private final ThreadPersistentSettings mPersistentSettings;
 
     @Nullable private CountryCodeInfo mCurrentCountryCodeInfo;
     @Nullable private CountryCodeInfo mLocationCountryCodeInfo;
@@ -215,7 +220,8 @@ public class ThreadNetworkCountryCode {
             Context context,
             TelephonyManager telephonyManager,
             SubscriptionManager subscriptionManager,
-            @Nullable String oemCountryCode) {
+            @Nullable String oemCountryCode,
+            ThreadPersistentSettings persistentSettings) {
         mLocationManager = locationManager;
         mThreadNetworkControllerService = threadNetworkControllerService;
         mGeocoder = geocoder;
@@ -224,14 +230,19 @@ public class ThreadNetworkCountryCode {
         mContext = context;
         mTelephonyManager = telephonyManager;
         mSubscriptionManager = subscriptionManager;
+        mPersistentSettings = persistentSettings;
 
         if (oemCountryCode != null) {
             mOemCountryCodeInfo = new CountryCodeInfo(oemCountryCode, COUNTRY_CODE_SOURCE_OEM);
         }
+
+        mCurrentCountryCodeInfo = pickCountryCode();
     }
 
     public static ThreadNetworkCountryCode newInstance(
-            Context context, ThreadNetworkControllerService controllerService) {
+            Context context,
+            ThreadNetworkControllerService controllerService,
+            ThreadPersistentSettings persistentSettings) {
         return new ThreadNetworkCountryCode(
                 context.getSystemService(LocationManager.class),
                 controllerService,
@@ -241,7 +252,8 @@ public class ThreadNetworkCountryCode {
                 context,
                 context.getSystemService(TelephonyManager.class),
                 context.getSystemService(SubscriptionManager.class),
-                ThreadNetworkProperties.country_code().orElse(null));
+                ThreadNetworkProperties.country_code().orElse(null),
+                persistentSettings);
     }
 
     /** Sets up this country code module to listen to location country code changes. */
@@ -485,6 +497,11 @@ public class ThreadNetworkCountryCode {
             return mLocationCountryCodeInfo;
         }
 
+        String settingsCountryCode = mPersistentSettings.get(THREAD_COUNTRY_CODE);
+        if (settingsCountryCode != null) {
+            return new CountryCodeInfo(settingsCountryCode, COUNTRY_CODE_SOURCE_SETTINGS);
+        }
+
         if (mOemCountryCodeInfo != null) {
             return mOemCountryCodeInfo;
         }
@@ -498,6 +515,8 @@ public class ThreadNetworkCountryCode {
             public void onSuccess() {
                 synchronized ("ThreadNetworkCountryCode.this") {
                     mCurrentCountryCodeInfo = countryCodeInfo;
+                    mPersistentSettings.put(
+                            THREAD_COUNTRY_CODE.key, countryCodeInfo.getCountryCode());
                 }
             }
 
@@ -536,10 +555,9 @@ public class ThreadNetworkCountryCode {
                 newOperationReceiver(countryCodeInfo));
     }
 
-    /** Returns the current country code or {@code null} if no country code is set. */
-    @Nullable
+    /** Returns the current country code. */
     public synchronized String getCountryCode() {
-        return (mCurrentCountryCodeInfo != null) ? mCurrentCountryCodeInfo.getCountryCode() : null;
+        return mCurrentCountryCodeInfo.getCountryCode();
     }
 
     /**
