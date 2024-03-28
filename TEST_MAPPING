@@ -246,6 +246,9 @@
         },
         {
           "exclude-annotation": "com.android.testutils.DnsResolverModuleTest"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.NetworkStackModuleTest"
         }
       ]
     },
