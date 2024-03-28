@@ -199,7 +199,9 @@ java_library {
         "PlatformProperties",
         "service-connectivity-protos",
         "service-connectivity-stats-protos",
-        "net-utils-multicast-forwarding-structs",
+        // The required dependency net-utils-device-common-struct-base is in the classpath via
+        // framework-connectivity
+        "net-utils-device-common-struct",
     ],
     apex_available: [
         "com.android.tethering",

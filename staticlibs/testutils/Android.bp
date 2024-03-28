@@ -40,6 +40,7 @@ java_library {
         "net-utils-device-common-async",
         "net-utils-device-common-netlink",
         "net-utils-device-common-struct",
+        "net-utils-device-common-struct-base",
         "net-utils-device-common-wear",
         "modules-utils-build_system",
     ],
