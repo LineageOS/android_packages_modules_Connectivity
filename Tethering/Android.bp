@@ -74,6 +74,8 @@ java_defaults {
         "net-utils-device-common-bpf",
         "net-utils-device-common-ip",
         "net-utils-device-common-netlink",
+        "net-utils-device-common-struct",
+        "net-utils-device-common-struct-base",
         "netd-client",
         "tetheringstatsprotos",
     ],
@@ -98,7 +100,6 @@ android_library {
     ],
     static_libs: [
         "NetworkStackApiCurrentShims",
-        "net-utils-device-common-struct",
     ],
     apex_available: ["com.android.tethering"],
     lint: {
@@ -115,7 +116,6 @@ android_library {
     ],
     static_libs: [
         "NetworkStackApiStableShims",
-        "net-utils-device-common-struct",
     ],
     apex_available: ["com.android.tethering"],
     lint: {
