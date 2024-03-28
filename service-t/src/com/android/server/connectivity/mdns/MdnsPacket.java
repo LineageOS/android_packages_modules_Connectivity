@@ -42,7 +42,7 @@ public class MdnsPacket {
     @NonNull
     public final List<MdnsRecord> additionalRecords;
 
-    MdnsPacket(int flags,
+    public MdnsPacket(int flags,
             @NonNull List<MdnsRecord> questions,
             @NonNull List<MdnsRecord> answers,
             @NonNull List<MdnsRecord> authorityRecords,
