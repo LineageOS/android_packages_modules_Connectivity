@@ -75,7 +75,6 @@ import java.util.concurrent.TimeoutException;
 @RequiresThreadFeature
 @RequiresSimulationThreadDevice
 @LargeTest
-@Ignore("TODO: b/328527773 - enable the test when it's stable")
 public class ServiceDiscoveryTest {
     private static final String TAG = ServiceDiscoveryTest.class.getSimpleName();
     private static final int NUM_FTD = 3;
@@ -103,11 +102,13 @@ public class ServiceDiscoveryTest {
     private HandlerThread mHandlerThread;
     private NsdManager mNsdManager;
     private TapTestNetworkTracker mTestNetworkTracker;
-    private List<FullThreadDevice> mFtds;
-    private List<RegistrationListener> mRegistrationListeners = new ArrayList<>();
+    private final List<FullThreadDevice> mFtds = new ArrayList<>();
+    private final List<RegistrationListener> mRegistrationListeners = new ArrayList<>();
 
     @Before
     public void setUp() throws Exception {
+        mOtCtl.factoryReset();
+        mController.setEnabledAndWait(true);
         mController.joinAndWait(DEFAULT_DATASET);
         mNsdManager = mContext.getSystemService(NsdManager.class);
 
@@ -120,7 +121,6 @@ public class ServiceDiscoveryTest {
 
         // Create the FTDs in setUp() so that the FTDs can be safely released in tearDown().
         // Don't create new FTDs in test cases.
-        mFtds = new ArrayList<>();
         for (int i = 0; i < NUM_FTD; ++i) {
             FullThreadDevice ftd = new FullThreadDevice(10 + i /* node ID */);
             ftd.autoStartSrpClient();
@@ -321,6 +321,7 @@ public class ServiceDiscoveryTest {
     }
 
     @Test
+    @Ignore("TODO: b/332452386 - Enable this test case when it handles the multi-client case well")
     public void discoveryProxy_multipleClientsBrowseAndResolveServiceOverMdns() throws Exception {
         /*
          * <pre>
