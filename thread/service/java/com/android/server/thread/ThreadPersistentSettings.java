@@ -63,6 +63,9 @@ public class ThreadPersistentSettings {
     /** Stores the Thread feature toggle state, true for enabled and false for disabled. */
     public static final Key<Boolean> THREAD_ENABLED = new Key<>("thread_enabled", true);
 
+    /** Stores the Thread country code, null if no country code is stored. */
+    public static final Key<String> THREAD_COUNTRY_CODE = new Key<>("thread_country_code", null);
+
     /******** Thread persistent setting keys ***************/
 
     @GuardedBy("mLock")
@@ -123,7 +126,9 @@ public class ThreadPersistentSettings {
     private <T> T getObject(String key, T defaultValue) {
         Object value;
         synchronized (mLock) {
-            if (defaultValue instanceof Boolean) {
+            if (defaultValue == null) {
+                value = mSettings.getString(key, null);
+            } else if (defaultValue instanceof Boolean) {
                 value = mSettings.getBoolean(key, (Boolean) defaultValue);
             } else if (defaultValue instanceof Integer) {
                 value = mSettings.getInt(key, (Integer) defaultValue);
