@@ -68,7 +68,6 @@ class ApfIntegrationTest {
             wifiIfaceName = assertNotNull(it.lp.interfaceName)
             true
         }
-        assertNotNull(wifiIfaceName)
     }
 
     @After
