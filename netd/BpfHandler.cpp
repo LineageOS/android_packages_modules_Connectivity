@@ -179,22 +179,24 @@ static inline void waitForNetProgsLoaded() {
 }
 
 Status BpfHandler::init(const char* cg2_path) {
-    // Make sure BPF programs are loaded before doing anything
-    ALOGI("Waiting for BPF programs");
+    if (base::GetProperty("bpf.progs_loaded", "") != "1") {
+        // Make sure BPF programs are loaded before doing anything
+        ALOGI("Waiting for BPF programs");
 
-    if (true || !modules::sdklevel::IsAtLeastV()) {
-        waitForNetProgsLoaded();
-        ALOGI("Networking BPF programs are loaded");
+        if (true || !modules::sdklevel::IsAtLeastV()) {
+            waitForNetProgsLoaded();
+            ALOGI("Networking BPF programs are loaded");
 
-        if (!base::SetProperty("ctl.start", "mdnsd_loadbpf")) {
-            ALOGE("Failed to set property ctl.start=mdnsd_loadbpf, see dmesg for reason.");
-            abort();
+            if (!base::SetProperty("ctl.start", "mdnsd_loadbpf")) {
+                ALOGE("Failed to set property ctl.start=mdnsd_loadbpf, see dmesg for reason.");
+                abort();
+            }
+
+            ALOGI("Waiting for remaining BPF programs");
         }
 
-        ALOGI("Waiting for remaining BPF programs");
+        android::bpf::waitForProgsLoaded();
     }
-
-    android::bpf::waitForProgsLoaded();
     ALOGI("BPF programs are loaded");
 
     RETURN_IF_NOT_OK(initPrograms(cg2_path));
