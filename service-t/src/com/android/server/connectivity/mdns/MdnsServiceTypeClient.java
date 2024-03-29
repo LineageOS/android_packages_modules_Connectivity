@@ -30,7 +30,8 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Pair;
 
-import com.android.internal.annotations.VisibleForTesting;
+import androidx.annotation.VisibleForTesting;
+
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
@@ -195,7 +196,7 @@ public class MdnsServiceTypeClient {
     /**
      * Dependencies of MdnsServiceTypeClient, for injection in tests.
      */
-    @VisibleForTesting
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
     public static class Dependencies {
         /**
          * @see Handler#sendMessageDelayed(Message, long)

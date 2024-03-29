@@ -23,7 +23,8 @@ import android.annotation.Nullable;
 import android.os.SystemClock;
 import android.text.TextUtils;
 
-import com.android.internal.annotations.VisibleForTesting;
+import androidx.annotation.VisibleForTesting;
+
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
@@ -231,7 +232,7 @@ public abstract class MdnsRecord {
      * @param writer The writer to use.
      * @param now    The current system time. This is used when writing the updated TTL.
      */
-    @VisibleForTesting
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
     public final void write(MdnsPacketWriter writer, long now) throws IOException {
         writeHeaderFields(writer);
 
