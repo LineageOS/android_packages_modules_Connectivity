@@ -29,7 +29,7 @@
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Für Optionen tippen"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Mobiles Netzwerk hat keinen Internetzugriff"</string>
     <string name="other_networks_no_internet" msgid="5693932964749676542">"Netzwerk hat keinen Internetzugriff"</string>
-    <string name="private_dns_broken_detailed" msgid="2677123850463207823">"Auf den privaten DNS-Server kann nicht zugegriffen werden"</string>
+    <string name="private_dns_broken_detailed" msgid="2677123850463207823">"Auf den Server des privaten DNS kann nicht zugegriffen werden"</string>
     <string name="network_partial_connectivity" msgid="5549503845834993258">"Schlechte Verbindung mit <xliff:g id="NETWORK_SSID">%1$s</xliff:g>"</string>
     <string name="network_partial_connectivity_detailed" msgid="4732435946300249845">"Tippen, um die Verbindung trotzdem herzustellen"</string>
     <string name="network_switch_metered" msgid="5016937523571166319">"Zu <xliff:g id="NETWORK_TYPE">%1$s</xliff:g> gewechselt"</string>
