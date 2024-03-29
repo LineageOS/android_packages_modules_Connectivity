@@ -25,6 +25,8 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import android.net.InetAddresses;
+import android.net.LinkAddress;
 import android.net.TestNetworkInterface;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
@@ -291,6 +293,20 @@ public final class IntegrationTestUtils {
         return false;
     }
 
+    public static List<LinkAddress> getIpv6LinkAddresses(String interfaceName) throws IOException {
+        List<LinkAddress> addresses = new ArrayList<>();
+        final String cmd = " ip -6 addr show dev " + interfaceName;
+        final String output = runShellCommandOrThrow(cmd);
+
+        for (final String line : output.split("\\n")) {
+            if (line.contains("inet6")) {
+                addresses.add(parseAddressLine(line));
+            }
+        }
+
+        return addresses;
+    }
+
     /** Return the first discovered service of {@code serviceType}. */
     public static NsdServiceInfo discoverService(NsdManager nsdManager, String serviceType)
             throws Exception {
@@ -391,5 +407,30 @@ public final class IntegrationTestUtils {
 
         @Override
         public void onServiceInfoCallbackUnregistered() {}
+    }
+
+    /**
+     * Parses a line of output from "ip -6 addr show" into a {@link LinkAddress}.
+     *
+     * <p>Example line: "inet6 2001:db8:1:1::1/64 scope global deprecated"
+     */
+    private static LinkAddress parseAddressLine(String line) {
+        String[] parts = line.trim().split("\\s+");
+        String addressString = parts[1];
+        String[] pieces = addressString.split("/", 2);
+        int prefixLength = Integer.parseInt(pieces[1]);
+        final InetAddress address = InetAddresses.parseNumericAddress(pieces[0]);
+        long deprecationTimeMillis =
+                line.contains("deprecated")
+                        ? SystemClock.elapsedRealtime()
+                        : LinkAddress.LIFETIME_PERMANENT;
+
+        return new LinkAddress(
+                address,
+                prefixLength,
+                0 /* flags */,
+                0 /* scope */,
+                deprecationTimeMillis,
+                LinkAddress.LIFETIME_PERMANENT /* expirationTime */);
     }
 }
