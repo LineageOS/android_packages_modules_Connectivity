@@ -23,6 +23,7 @@ import android.os.Looper;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.util.List;
 
 /**
  * Base class for multicast socket client.
@@ -40,15 +41,15 @@ public interface MdnsSocketClientBase {
     void setCallback(@Nullable Callback callback);
 
     /**
-     * Send a mDNS request packet via given network that asks for multicast response.
+     * Send mDNS request packets via given network that asks for multicast response.
      */
-    void sendPacketRequestingMulticastResponse(@NonNull DatagramPacket packet,
+    void sendPacketRequestingMulticastResponse(@NonNull List<DatagramPacket> packets,
             boolean onlyUseIpv6OnIpv6OnlyNetworks);
 
     /**
-     * Send a mDNS request packet via given network that asks for unicast response.
+     * Send mDNS request packets via given network that asks for unicast response.
      */
-    void sendPacketRequestingUnicastResponse(@NonNull DatagramPacket packet,
+    void sendPacketRequestingUnicastResponse(@NonNull List<DatagramPacket> packets,
             boolean onlyUseIpv6OnIpv6OnlyNetworks);
 
     /*** Notify that the given network is requested for mdns discovery / resolution */
