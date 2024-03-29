@@ -56,6 +56,7 @@ import static android.net.NetworkTemplate.OEM_MANAGED_YES;
 import static android.net.TrafficStats.MB_IN_BYTES;
 import static android.net.TrafficStats.UID_REMOVED;
 import static android.net.TrafficStats.UID_TETHERING;
+import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_TRAFFICSTATS_RATE_LIMIT_CACHE;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
@@ -306,6 +307,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private HandlerThread mObserverHandlerThread;
     final TestDependencies mDeps = new TestDependencies();
     final HashMap<String, Boolean> mFeatureFlags = new HashMap<>();
+    final HashMap<Long, Boolean> mCompatChanges = new HashMap<>();
 
     // This will set feature flags from @FeatureFlag annotations
     // into the map before setUp() runs.
@@ -594,7 +596,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         }
 
         @Override
-        public boolean supportTrafficStatsRateLimitCache(Context ctx) {
+        public boolean alwaysUseTrafficStatsRateLimitCache(Context ctx) {
             return mFeatureFlags.getOrDefault(TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG, false);
         }
 
@@ -608,6 +610,14 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             return DEFAULT_TRAFFIC_STATS_CACHE_MAX_ENTRIES;
         }
 
+        @Override
+        public boolean isChangeEnabled(long changeId, int uid) {
+            return mCompatChanges.getOrDefault(changeId, true);
+        }
+
+        public void setChangeEnabled(long changeId, boolean enabled) {
+            mCompatChanges.put(changeId, enabled);
+        }
         @Nullable
         @Override
         public NetworkStats.Entry nativeGetTotalStat() {
@@ -2413,17 +2423,33 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
     @FeatureFlag(name = TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG, enabled = false)
     @Test
-    public void testTrafficStatsRateLimitCache_disabled() throws Exception {
-        doTestTrafficStatsRateLimitCache(false /* cacheEnabled */);
+    public void testTrafficStatsRateLimitCache_disabledWithCompatChangeEnabled() throws Exception {
+        mDeps.setChangeEnabled(ENABLE_TRAFFICSTATS_RATE_LIMIT_CACHE, true);
+        doTestTrafficStatsRateLimitCache(true /* expectCached */);
     }
 
     @FeatureFlag(name = TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG)
     @Test
-    public void testTrafficStatsRateLimitCache_enabled() throws Exception {
-        doTestTrafficStatsRateLimitCache(true /* cacheEnabled */);
+    public void testTrafficStatsRateLimitCache_enabledWithCompatChangeEnabled() throws Exception {
+        mDeps.setChangeEnabled(ENABLE_TRAFFICSTATS_RATE_LIMIT_CACHE, true);
+        doTestTrafficStatsRateLimitCache(true /* expectCached */);
     }
 
-    private void doTestTrafficStatsRateLimitCache(boolean cacheEnabled) throws Exception {
+    @FeatureFlag(name = TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG, enabled = false)
+    @Test
+    public void testTrafficStatsRateLimitCache_disabledWithCompatChangeDisabled() throws Exception {
+        mDeps.setChangeEnabled(ENABLE_TRAFFICSTATS_RATE_LIMIT_CACHE, false);
+        doTestTrafficStatsRateLimitCache(false /* expectCached */);
+    }
+
+    @FeatureFlag(name = TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG)
+    @Test
+    public void testTrafficStatsRateLimitCache_enabledWithCompatChangeDisabled() throws Exception {
+        mDeps.setChangeEnabled(ENABLE_TRAFFICSTATS_RATE_LIMIT_CACHE, false);
+        doTestTrafficStatsRateLimitCache(true /* expectCached */);
+    }
+
+    private void doTestTrafficStatsRateLimitCache(boolean expectCached) throws Exception {
         mockDefaultSettings();
         // Calling uid is not injected into the service, use the real uid to pass the caller check.
         final int myUid = Process.myUid();
@@ -2433,7 +2459,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // Verify the values are cached.
         incrementCurrentTime(DEFAULT_TRAFFIC_STATS_CACHE_EXPIRY_DURATION_MS / 2);
         mockTrafficStatsValues(65L, 8L, 1055L, 9L);
-        if (cacheEnabled) {
+        if (expectCached) {
             assertTrafficStatsValues(TEST_IFACE, myUid, 64L, 3L, 1024L, 8L);
         } else {
             assertTrafficStatsValues(TEST_IFACE, myUid, 65L, 8L, 1055L, 9L);
