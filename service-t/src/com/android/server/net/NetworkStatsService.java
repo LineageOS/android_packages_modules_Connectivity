@@ -1783,6 +1783,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             if (transport == TRANSPORT_WIFI) {
                 ifaceSet = mAllWifiIfacesSinceBoot;
             } else if (transport == TRANSPORT_CELLULAR) {
+                // Since satellite networks appear under type mobile, this includes both cellular
+                // and satellite active interfaces
                 ifaceSet = mAllMobileIfacesSinceBoot;
             } else {
                 throw new IllegalArgumentException("Invalid transport " + transport);
@@ -2193,7 +2195,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         for (NetworkStateSnapshot snapshot : snapshots) {
             final int displayTransport =
                     getDisplayTransport(snapshot.getNetworkCapabilities().getTransportTypes());
-            final boolean isMobile = (NetworkCapabilities.TRANSPORT_CELLULAR == displayTransport);
+            // Consider satellite transport to support satellite stats appear as type_mobile
+            final boolean isMobile = NetworkCapabilities.TRANSPORT_CELLULAR == displayTransport
+                    || NetworkCapabilities.TRANSPORT_SATELLITE == displayTransport;
             final boolean isWifi = (NetworkCapabilities.TRANSPORT_WIFI == displayTransport);
             final boolean isDefault = CollectionUtils.contains(
                     mDefaultNetworks, snapshot.getNetwork());
@@ -2326,12 +2330,14 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     }
 
     /**
-     * For networks with {@code TRANSPORT_CELLULAR}, get ratType that was obtained through
-     * {@link PhoneStateListener}. Otherwise, return 0 given that other networks with different
-     * transport types do not actually fill this value.
+     * For networks with {@code TRANSPORT_CELLULAR} Or {@code TRANSPORT_SATELLITE}, get ratType
+     * that was obtained through {@link PhoneStateListener}. Otherwise, return 0 given that other
+     * networks with different transport types do not actually fill this value.
      */
     private int getRatTypeForStateSnapshot(@NonNull NetworkStateSnapshot state) {
-        if (!state.getNetworkCapabilities().hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+        if (!state.getNetworkCapabilities().hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                && !state.getNetworkCapabilities()
+                .hasTransport(NetworkCapabilities.TRANSPORT_SATELLITE)) {
             return 0;
         }
 

@@ -39,6 +39,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_XCAP;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
+import static android.net.NetworkCapabilities.TRANSPORT_SATELLITE;
 import static android.net.NetworkCapabilities.TRANSPORT_USB;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
@@ -75,8 +76,8 @@ public final class NetworkCapabilitiesUtils {
         TRANSPORT_BLUETOOTH,
         TRANSPORT_WIFI,
         TRANSPORT_ETHERNET,
-        TRANSPORT_USB
-
+        TRANSPORT_USB,
+        TRANSPORT_SATELLITE
         // Notably, TRANSPORT_TEST is not in this list as any network that has TRANSPORT_TEST and
         // one of the above transports should be counted as that transport, to keep tests as
         // realistic as possible.
