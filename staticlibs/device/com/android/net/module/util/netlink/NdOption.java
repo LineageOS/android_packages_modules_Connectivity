@@ -67,6 +67,9 @@ public class NdOption {
             case StructNdOptRdnss.TYPE:
                 return StructNdOptRdnss.parse(buf);
 
+            case StructNdOptPio.TYPE:
+                return StructNdOptPio.parse(buf);
+
             default:
                 int newPosition = Math.min(buf.limit(), buf.position() + length * 8);
                 buf.position(newPosition);

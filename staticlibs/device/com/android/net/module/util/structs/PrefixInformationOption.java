@@ -24,9 +24,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
 import com.android.net.module.util.Struct;
+import com.android.net.module.util.Struct.Computed;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -72,6 +76,9 @@ public class PrefixInformationOption extends Struct {
     @Field(order = 7, type = Type.ByteArray, arraysize = 16)
     public final byte[] prefix;
 
+    @Computed
+    private final IpPrefix mIpPrefix;
+
     @VisibleForTesting
     public PrefixInformationOption(final byte type, final byte length, final byte prefixLen,
             final byte flags, final long validLifetime, final long preferredLifetime,
@@ -84,6 +91,23 @@ public class PrefixInformationOption extends Struct {
         this.preferredLifetime = preferredLifetime;
         this.reserved = reserved;
         this.prefix = prefix;
+
+        try {
+            final Inet6Address addr = (Inet6Address) InetAddress.getByAddress(prefix);
+            mIpPrefix = new IpPrefix(addr, prefixLen);
+        } catch (UnknownHostException | ClassCastException e) {
+            // UnknownHostException should never happen unless prefix is null.
+            // ClassCastException can occur when prefix is an IPv6 mapped IPv4 address.
+            // Both scenarios should throw an exception in the context of Struct#parse().
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    /**
+     * Return the prefix {@link IpPrefix} included in the PIO.
+     */
+    public IpPrefix getIpPrefix() {
+        return mIpPrefix;
     }
 
     /**

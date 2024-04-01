@@ -864,11 +864,12 @@ public class ThreadNetworkControllerTest {
     @Test
     public void meshcopService_threadDisabled_notDiscovered() throws Exception {
         setUpTestNetwork();
-
         CompletableFuture<NsdServiceInfo> serviceLostFuture = new CompletableFuture<>();
         NsdManager.DiscoveryListener listener =
                 discoverForServiceLost(MESHCOP_SERVICE_TYPE, serviceLostFuture);
+
         setEnabledAndWait(mController, false);
+
         try {
             serviceLostFuture.get(SERVICE_LOST_TIMEOUT_MILLIS, MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
@@ -877,7 +878,6 @@ public class ThreadNetworkControllerTest {
         } finally {
             mNsdManager.stopServiceDiscovery(listener);
         }
-
         assertThrows(
                 TimeoutException.class,
                 () -> discoverService(MESHCOP_SERVICE_TYPE, SERVICE_LOST_TIMEOUT_MILLIS));
@@ -1112,7 +1112,12 @@ public class ThreadNetworkControllerTest {
                         serviceInfoFuture.complete(serviceInfo);
                     }
                 };
-        mNsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener);
+        mNsdManager.discoverServices(
+                serviceType,
+                NsdManager.PROTOCOL_DNS_SD,
+                mTestNetworkTracker.getNetwork(),
+                mExecutor,
+                listener);
         try {
             serviceInfoFuture.get(timeoutMilliseconds, MILLISECONDS);
         } finally {
@@ -1131,7 +1136,12 @@ public class ThreadNetworkControllerTest {
                         serviceInfoFuture.complete(serviceInfo);
                     }
                 };
-        mNsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener);
+        mNsdManager.discoverServices(
+                serviceType,
+                NsdManager.PROTOCOL_DNS_SD,
+                mTestNetworkTracker.getNetwork(),
+                mExecutor,
+                listener);
         return listener;
     }
 

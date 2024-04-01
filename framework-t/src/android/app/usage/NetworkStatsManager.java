@@ -752,8 +752,8 @@ public class NetworkStatsManager {
     /**
      * Query realtime mobile network usage statistics.
      *
-     * Return a snapshot of current UID network statistics, as it applies
-     * to the mobile radios of the device. The snapshot will include any
+     * Return a snapshot of current UID network statistics for both cellular and satellite (which
+     * also uses same mobile radio as cellular) when called. The snapshot will include any
      * tethering traffic, video calling data usage and count of
      * network operations set by {@link TrafficStats#incrementOperationCount}
      * made over a mobile radio.
