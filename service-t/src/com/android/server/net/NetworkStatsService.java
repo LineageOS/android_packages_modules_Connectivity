@@ -593,7 +593,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 INetd.Stub.asInterface((IBinder) context.getSystemService(Context.NETD_SERVICE)),
                 alarmManager, wakeLock, getDefaultClock(),
                 new DefaultNetworkStatsSettings(), new NetworkStatsFactory(context),
-                new Dependencies());
+                new NetworkStatsObservers(), new Dependencies());
 
         return service;
     }
@@ -603,7 +603,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     @VisibleForTesting
     NetworkStatsService(Context context, INetd netd, AlarmManager alarmManager,
             PowerManager.WakeLock wakeLock, Clock clock, NetworkStatsSettings settings,
-            NetworkStatsFactory factory, @NonNull Dependencies deps) {
+            NetworkStatsFactory factory, NetworkStatsObservers statsObservers,
+            @NonNull Dependencies deps) {
         mContext = Objects.requireNonNull(context, "missing Context");
         mNetd = Objects.requireNonNull(netd, "missing Netd");
         mAlarmManager = Objects.requireNonNull(alarmManager, "missing AlarmManager");
@@ -611,6 +612,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         mSettings = Objects.requireNonNull(settings, "missing NetworkStatsSettings");
         mWakeLock = Objects.requireNonNull(wakeLock, "missing WakeLock");
         mStatsFactory = Objects.requireNonNull(factory, "missing factory");
+        mStatsObservers = Objects.requireNonNull(statsObservers, "missing NetworkStatsObservers");
         mDeps = Objects.requireNonNull(deps, "missing Dependencies");
         mStatsDir = mDeps.getOrCreateStatsDir();
         if (!mStatsDir.exists()) {
@@ -620,7 +622,6 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
         final HandlerThread handlerThread = mDeps.makeHandlerThread();
         handlerThread.start();
         mHandler = new NetworkStatsHandler(handlerThread.getLooper());
-        mStatsObservers = new NetworkStatsObservers(handlerThread.getLooper());
         mNetworkStatsSubscriptionsMonitor = deps.makeSubscriptionsMonitor(mContext,
                 (command) -> mHandler.post(command) , this);
         mContentResolver = mContext.getContentResolver();
