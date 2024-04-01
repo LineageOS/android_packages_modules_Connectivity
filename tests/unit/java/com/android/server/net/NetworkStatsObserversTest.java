@@ -47,6 +47,7 @@ import android.net.NetworkStatsAccess;
 import android.net.NetworkTemplate;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Process;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
@@ -126,7 +127,13 @@ public class NetworkStatsObserversTest {
 
         mObserverHandlerThread = new HandlerThread("NetworkStatsObserversTest");
         mObserverHandlerThread.start();
-        mStatsObservers = new NetworkStatsObservers(mObserverHandlerThread.getLooper());
+        final Looper observerLooper = mObserverHandlerThread.getLooper();
+        mStatsObservers = new NetworkStatsObservers() {
+            @Override
+            protected Looper getHandlerLooperLocked() {
+                return observerLooper;
+            }
+        };
 
         mActiveIfaces = new ArrayMap<>();
         mActiveUidIfaces = new ArrayMap<>();

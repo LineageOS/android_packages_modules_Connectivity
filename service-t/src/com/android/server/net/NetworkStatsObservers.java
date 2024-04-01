@@ -32,6 +32,7 @@ import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
 import android.net.netstats.IUsageCallback;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
@@ -45,7 +46,6 @@ import android.util.SparseArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.PerUidCounter;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -78,11 +78,8 @@ class NetworkStatsObservers {
     // Sequence number of DataUsageRequests
     private final AtomicInteger mNextDataUsageRequestId = new AtomicInteger();
 
-    private final Handler mHandler;
-
-    NetworkStatsObservers(@NonNull Looper looper) {
-        mHandler = new Handler(Objects.requireNonNull(looper), mHandlerCallback);
-    }
+    // Lazily instantiated when an observer is registered.
+    private volatile Handler mHandler;
 
     /**
      * Creates a wrapper that contains the caller context and a normalized request.
@@ -103,7 +100,7 @@ class NetworkStatsObservers {
         if (LOG) Log.d(TAG, "Registering observer for " + requestInfo);
         mDataUsageRequestsPerUid.incrementCountOrThrow(callingUid);
 
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_REGISTER, requestInfo));
+        getHandler().sendMessage(mHandler.obtainMessage(MSG_REGISTER, requestInfo));
         return request;
     }
 
@@ -113,7 +110,7 @@ class NetworkStatsObservers {
      * <p>It will unregister the observer asynchronously, so it is safe to call from any thread.
      */
     public void unregister(DataUsageRequest request, int callingUid) {
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_UNREGISTER, callingUid, 0 /* ignore */,
+        getHandler().sendMessage(mHandler.obtainMessage(MSG_UNREGISTER, callingUid, 0 /* ignore */,
                 request));
     }
 
@@ -128,10 +125,34 @@ class NetworkStatsObservers {
                 long currentTime) {
         StatsContext statsContext = new StatsContext(xtSnapshot, uidSnapshot, activeIfaces,
                 activeUidIfaces, currentTime);
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_UPDATE_STATS, statsContext));
+        getHandler().sendMessage(mHandler.obtainMessage(MSG_UPDATE_STATS, statsContext));
     }
 
-    private final Handler.Callback mHandlerCallback = new Handler.Callback() {
+    private Handler getHandler() {
+        if (mHandler == null) {
+            synchronized (this) {
+                if (mHandler == null) {
+                    if (LOGV) Log.v(TAG, "Creating handler");
+                    mHandler = new Handler(getHandlerLooperLocked(), mHandlerCallback);
+                }
+            }
+        }
+        return mHandler;
+    }
+
+    @VisibleForTesting
+    protected Looper getHandlerLooperLocked() {
+        // TODO: Currently, callbacks are dispatched on this thread if the caller register
+        //  callback without supplying a Handler. To ensure that the service handler thread
+        //  is not blocked by client code, the observers must create their own thread. Once
+        //  all callbacks are dispatched outside of the handler thread, the service handler
+        //  thread can be used here.
+        HandlerThread handlerThread = new HandlerThread(TAG);
+        handlerThread.start();
+        return handlerThread.getLooper();
+    }
+
+    private Handler.Callback mHandlerCallback = new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
             switch (msg.what) {
