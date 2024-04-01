@@ -20,7 +20,10 @@ import android.Manifest;
 import android.annotation.NonNull;
 import android.app.role.OnRoleHoldersChangedListener;
 import android.app.role.RoleManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Handler;
@@ -49,7 +52,6 @@ public class SatelliteAccessController {
     private final Context mContext;
     private final Dependencies mDeps;
     private final DefaultMessageRoleListener mDefaultMessageRoleListener;
-    private final UserManager mUserManager;
     private final Consumer<Set<Integer>> mCallback;
     private final Handler mConnectivityServiceHandler;
 
@@ -114,7 +116,6 @@ public class SatelliteAccessController {
             @NonNull final Handler connectivityServiceInternalHandler) {
         mContext = c;
         mDeps = deps;
-        mUserManager = mContext.getSystemService(UserManager.class);
         mDefaultMessageRoleListener = new DefaultMessageRoleListener();
         mCallback = callback;
         mConnectivityServiceHandler = connectivityServiceInternalHandler;
@@ -165,9 +166,6 @@ public class SatelliteAccessController {
     }
 
     // on Role sms change triggered by OnRoleHoldersChangedListener()
-    // TODO(b/326373613): using UserLifecycleListener, callback to be received when user removed for
-    // user delete scenario. This to be used to update uid list and ML Layer request can also be
-    // updated.
     private void onRoleSmsChanged(@NonNull UserHandle userHandle) {
         int userId = userHandle.getIdentifier();
         if (userId == Process.INVALID_UID) {
@@ -184,9 +182,8 @@ public class SatelliteAccessController {
                 mAllUsersSatelliteNetworkFallbackUidCache.get(userId, new ArraySet<>());
 
         Log.i(TAG, "currentUser : role_sms_packages: " + userId + " : " + packageNames);
-        final Set<Integer> newUidsForUser = !packageNames.isEmpty()
-                ? updateSatelliteNetworkFallbackUidListCache(packageNames, userHandle)
-                : new ArraySet<>();
+        final Set<Integer> newUidsForUser =
+                updateSatelliteNetworkFallbackUidListCache(packageNames, userHandle);
         Log.i(TAG, "satellite_fallback_uid: " + newUidsForUser);
 
         // on Role change, update the multilayer request at ConnectivityService with updated
@@ -197,6 +194,11 @@ public class SatelliteAccessController {
 
         mAllUsersSatelliteNetworkFallbackUidCache.put(userId, newUidsForUser);
 
+        // Update all users fallback cache for user, send cs fallback to update ML request
+        reportSatelliteNetworkFallbackUids();
+    }
+
+    private void reportSatelliteNetworkFallbackUids() {
         // Merge all uids of multiple users available
         Set<Integer> mergedSatelliteNetworkFallbackUidCache = new ArraySet<>();
         for (int i = 0; i < mAllUsersSatelliteNetworkFallbackUidCache.size(); i++) {
@@ -210,27 +212,48 @@ public class SatelliteAccessController {
         mCallback.accept(mergedSatelliteNetworkFallbackUidCache);
     }
 
-    private List<String> getRoleSmsChangedPackageName(UserHandle userHandle) {
-        try {
-            return mDeps.getRoleHoldersAsUser(RoleManager.ROLE_SMS, userHandle);
-        } catch (RuntimeException e) {
-            Log.wtf(TAG, "Could not get package name at role sms change update due to: " + e);
-            return null;
-        }
-    }
-
-    /** Register OnRoleHoldersChangedListener */
     public void start() {
         mConnectivityServiceHandler.post(this::updateAllUserRoleSmsUids);
+
+        // register sms OnRoleHoldersChangedListener
         mDefaultMessageRoleListener.register();
+
+        // Monitor for User removal intent, to update satellite fallback uids.
+        IntentFilter userRemovedFilter = new IntentFilter(Intent.ACTION_USER_REMOVED);
+        mContext.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                final String action = intent.getAction();
+                if (Intent.ACTION_USER_REMOVED.equals(action)) {
+                    final UserHandle userHandle = intent.getParcelableExtra(Intent.EXTRA_USER);
+                    if (userHandle == null) return;
+                    updateSatelliteFallbackUidListOnUserRemoval(userHandle.getIdentifier());
+                } else {
+                    Log.wtf(TAG, "received unexpected intent: " + action);
+                }
+            }
+        }, userRemovedFilter, null, mConnectivityServiceHandler);
+
     }
 
     private void updateAllUserRoleSmsUids() {
-        List<UserHandle> existingUsers = mUserManager.getUserHandles(true /* excludeDying */);
+        UserManager userManager = mContext.getSystemService(UserManager.class);
+        // get existing user handles of available users
+        List<UserHandle> existingUsers = userManager.getUserHandles(true /*excludeDying*/);
+
         // Iterate through the user handles and obtain their uids with role sms and satellite
         // communication permission
+        Log.i(TAG, "existing users: " + existingUsers);
         for (UserHandle userHandle : existingUsers) {
             onRoleSmsChanged(userHandle);
+        }
+    }
+
+    private void updateSatelliteFallbackUidListOnUserRemoval(int userIdRemoved) {
+        Log.i(TAG, "user id removed:" + userIdRemoved);
+        if (mAllUsersSatelliteNetworkFallbackUidCache.contains(userIdRemoved)) {
+            mAllUsersSatelliteNetworkFallbackUidCache.remove(userIdRemoved);
+            reportSatelliteNetworkFallbackUids();
         }
     }
 }
