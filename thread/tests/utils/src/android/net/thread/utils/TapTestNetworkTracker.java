@@ -62,6 +62,7 @@ public final class TapTestNetworkTracker {
     private final Looper mLooper;
     private TestNetworkInterface mInterface;
     private TestableNetworkAgent mAgent;
+    private Network mNetwork;
     private final TestableNetworkCallback mNetworkCallback;
     private final ConnectivityManager mConnectivityManager;
 
@@ -91,6 +92,11 @@ public final class TapTestNetworkTracker {
         return mInterface.getInterfaceName();
     }
 
+    /** Returns the {@link android.net.Network} of the test network. */
+    public Network getNetwork() {
+        return mNetwork;
+    }
+
     private void setUpTestNetwork() throws Exception {
         mInterface = mContext.getSystemService(TestNetworkManager.class).createTapInterface();
 
@@ -105,13 +111,13 @@ public final class TapTestNetworkTracker {
                         newNetworkCapabilities(),
                         lp,
                         new NetworkAgentConfig.Builder().build());
-        final Network network = mAgent.register();
+        mNetwork = mAgent.register();
         mAgent.markConnected();
 
         PollingCheck.check(
                 "No usable address on interface",
                 TIMEOUT.toMillis(),
-                () -> hasUsableAddress(network, getInterfaceName()));
+                () -> hasUsableAddress(mNetwork, getInterfaceName()));
 
         lp.setLinkAddresses(makeLinkAddresses());
         mAgent.sendLinkProperties(lp);
