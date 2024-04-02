@@ -699,6 +699,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 new NetworkCapabilities.Builder()
                         .addTransportType(NetworkCapabilities.TRANSPORT_THREAD)
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
                         .build();
         final NetworkScore score =
