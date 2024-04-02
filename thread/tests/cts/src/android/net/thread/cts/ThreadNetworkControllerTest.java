@@ -17,6 +17,12 @@
 package android.net.thread.cts;
 
 import static android.Manifest.permission.ACCESS_NETWORK_STATE;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_CHILD;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_LEADER;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_ROUTER;
@@ -805,6 +811,20 @@ public class ThreadNetworkControllerTest {
 
         assertThat(isAttached(mController)).isTrue();
         assertThat(networkFuture.get(NETWORK_CALLBACK_TIMEOUT_MILLIS, MILLISECONDS)).isNotNull();
+        NetworkCapabilities caps =
+                runAsShell(
+                        ACCESS_NETWORK_STATE, () -> cm.getNetworkCapabilities(networkFuture.get()));
+        assertThat(caps).isNotNull();
+        assertThat(caps.hasTransport(NetworkCapabilities.TRANSPORT_THREAD)).isTrue();
+        assertThat(caps.getCapabilities())
+                .asList()
+                .containsAtLeast(
+                        NET_CAPABILITY_LOCAL_NETWORK,
+                        NET_CAPABILITY_NOT_METERED,
+                        NET_CAPABILITY_NOT_RESTRICTED,
+                        NET_CAPABILITY_NOT_VCN_MANAGED,
+                        NET_CAPABILITY_NOT_VPN,
+                        NET_CAPABILITY_TRUSTED);
     }
 
     private void grantPermissions(String... permissions) {
