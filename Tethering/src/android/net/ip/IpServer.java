@@ -137,8 +137,8 @@ public class IpServer extends StateMachineShim {
     private static final MacAddress NULL_MAC_ADDRESS = MacAddress.fromString("00:00:00:00:00:00");
 
     private static final String TAG = "IpServer";
-    private static final boolean DBG = false;
-    private static final boolean VDBG = false;
+    private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
     private static final Class[] sMessageClasses = {
             IpServer.class
     };
