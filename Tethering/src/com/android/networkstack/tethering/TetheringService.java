@@ -30,6 +30,7 @@ import static android.net.dhcp.IDhcpServer.STATUS_UNKNOWN_ERROR;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.IIntResultListener;
@@ -377,7 +378,11 @@ public class TetheringService extends Service {
 
             @Override
             public BluetoothAdapter getBluetoothAdapter() {
-                return BluetoothAdapter.getDefaultAdapter();
+                final BluetoothManager btManager = getSystemService(BluetoothManager.class);
+                if (btManager == null) {
+                    return null;
+                }
+                return btManager.getAdapter();
             }
         };
     }
