@@ -16,6 +16,8 @@
 
 package android.net.nsd;
 
+import static com.android.net.module.util.HexDump.toHexString;
+
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -39,6 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 
 /**
  * A class representing service information for network service discovery
@@ -541,9 +544,48 @@ public final class NsdServiceInfo implements Parcelable {
                 .append(", network: ").append(mNetwork)
                 .append(", expirationTime: ").append(mExpirationTime);
 
-        byte[] txtRecord = getTxtRecord();
-        sb.append(", txtRecord: ").append(new String(txtRecord, StandardCharsets.UTF_8));
+        final StringJoiner txtJoiner =
+                new StringJoiner(", " /* delimiter */, "{" /* prefix */, "}" /* suffix */);
+
+        sb.append(", txtRecord: ");
+        for (int i = 0; i < mTxtRecord.size(); i++) {
+            txtJoiner.add(mTxtRecord.keyAt(i) + "=" + getPrintableTxtValue(mTxtRecord.valueAt(i)));
+        }
+        sb.append(txtJoiner.toString());
         return sb.toString();
+    }
+
+    /**
+     * Returns printable string for {@code txtValue}.
+     *
+     * If {@code txtValue} contains non-printable ASCII characters, a HEX string with prefix "0x"
+     * will be returned. Otherwise, the ASCII string of {@code txtValue} is returned.
+     *
+     */
+    private static String getPrintableTxtValue(@Nullable byte[] txtValue) {
+        if (txtValue == null) {
+            return "(null)";
+        }
+
+        if (containsNonPrintableChars(txtValue)) {
+            return "0x" + toHexString(txtValue);
+        }
+
+        return new String(txtValue, StandardCharsets.US_ASCII);
+    }
+
+    /**
+     * Returns {@code true} if {@code txtValue} contains non-printable ASCII characters.
+     *
+     * The printable characters are in range of [32, 126].
+     */
+    private static boolean containsNonPrintableChars(byte[] txtValue) {
+        for (int i = 0; i < txtValue.length; i++) {
+            if (txtValue[i] < 32 || txtValue[i] > 126) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Implement the Parcelable interface */
