@@ -69,9 +69,10 @@ base::Result<bool> DnsBpfHelper::isUidNetworkingBlocked(uid_t uid, bool metered)
   // state, making it a trustworthy source. Since this library primarily serves DNS resolvers,
   // relying solely on V+ data prevents erroneous blocking of DNS queries.
   if (android::modules::sdklevel::IsAtLeastV() && metered) {
-    // The background data setting (PENALTY_BOX_MATCH) and unrestricted data usage setting
-    // (HAPPY_BOX_MATCH) for individual apps override the system wide Data Saver setting.
-    if (uidRules & PENALTY_BOX_MATCH) return true;
+    // The background data setting (PENALTY_BOX_USER_MATCH, PENALTY_BOX_ADMIN_MATCH) and
+    // unrestricted data usage setting (HAPPY_BOX_MATCH) for individual apps override the system
+    // wide Data Saver setting.
+    if (uidRules & (PENALTY_BOX_USER_MATCH | PENALTY_BOX_ADMIN_MATCH)) return true;
     if (uidRules & HAPPY_BOX_MATCH) return false;
 
     auto dataSaverSetting = mDataSaverEnabledMap.readValue(DATA_SAVER_ENABLED_KEY);

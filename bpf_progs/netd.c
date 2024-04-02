@@ -644,7 +644,8 @@ DEFINE_XTBPF_PROG("skfilter/denylist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_den
 (struct __sk_buff* skb) {
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     UidOwnerValue* denylistMatch = bpf_uid_owner_map_lookup_elem(&sock_uid);
-    if (denylistMatch) return denylistMatch->rule & PENALTY_BOX_MATCH ? BPF_MATCH : BPF_NOMATCH;
+    uint32_t penalty_box = PENALTY_BOX_USER_MATCH | PENALTY_BOX_ADMIN_MATCH;
+    if (denylistMatch) return denylistMatch->rule & penalty_box ? BPF_MATCH : BPF_NOMATCH;
     return BPF_NOMATCH;
 }
 
