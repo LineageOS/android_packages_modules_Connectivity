@@ -18,6 +18,8 @@ package com.android.server.connectivity.mdns;
 
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
@@ -65,8 +67,9 @@ public class MdnsDiscoveryManagerTests {
     private static final String SERVICE_TYPE_2 = "_test._tcp.local";
     private static final Network NETWORK_1 = Mockito.mock(Network.class);
     private static final Network NETWORK_2 = Mockito.mock(Network.class);
+    private static final int INTERFACE_INDEX_NULL_NETWORK = 123;
     private static final SocketKey SOCKET_KEY_NULL_NETWORK =
-            new SocketKey(null /* network */, 999 /* interfaceIndex */);
+            new SocketKey(null /* network */, INTERFACE_INDEX_NULL_NETWORK);
     private static final SocketKey SOCKET_KEY_NETWORK_1 =
             new SocketKey(NETWORK_1, 998 /* interfaceIndex */);
     private static final SocketKey SOCKET_KEY_NETWORK_2 =
@@ -97,6 +100,8 @@ public class MdnsDiscoveryManagerTests {
     private HandlerThread thread;
     private Handler handler;
 
+    private int createdServiceTypeClientCount;
+
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
@@ -106,11 +111,13 @@ public class MdnsDiscoveryManagerTests {
         handler = new Handler(thread.getLooper());
         doReturn(thread.getLooper()).when(socketClient).getLooper();
         doReturn(true).when(socketClient).supportsRequestingSpecificNetworks();
+        createdServiceTypeClientCount = 0;
         discoveryManager = new MdnsDiscoveryManager(executorProvider, socketClient,
                 sharedLog, MdnsFeatureFlags.newBuilder().build()) {
                     @Override
                     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
                             @NonNull SocketKey socketKey) {
+                        createdServiceTypeClientCount++;
                         final Pair<String, SocketKey> perSocketServiceType =
                                 Pair.create(serviceType, socketKey);
                         if (perSocketServiceType.equals(PER_SOCKET_SERVICE_TYPE_1_NULL_NETWORK)) {
@@ -128,6 +135,7 @@ public class MdnsDiscoveryManagerTests {
                                 PER_SOCKET_SERVICE_TYPE_2_NETWORK_2)) {
                             return mockServiceTypeClientType2Network2;
                         }
+                        fail("Unexpected perSocketServiceType: " + perSocketServiceType);
                         return null;
                     }
                 };
@@ -324,7 +332,6 @@ public class MdnsDiscoveryManagerTests {
 
         // Receive a response, it should be processed on the client.
         final MdnsPacket response = createMdnsPacket(SERVICE_TYPE_1);
-        final int ifIndex = 1;
         runOnHandler(() -> discoveryManager.onResponseReceived(response, SOCKET_KEY_NULL_NETWORK));
         verify(mockServiceTypeClientType1NullNetwork).processResponse(
                 response, SOCKET_KEY_NULL_NETWORK);
@@ -348,6 +355,39 @@ public class MdnsDiscoveryManagerTests {
         // onSocketDestroyed(). So the socket clients that send onSocketDestroyed() do not
         // need to call stopDiscovery().
         verify(socketClient, never()).stopDiscovery();
+    }
+
+    @Test
+    public void testInterfaceIndexRequested_OnlyUsesSelectedInterface() throws IOException {
+        final MdnsSearchOptions searchOptions =
+                MdnsSearchOptions.newBuilder()
+                        .setNetwork(null /* network */)
+                        .setInterfaceIndex(INTERFACE_INDEX_NULL_NETWORK)
+                        .build();
+
+        final SocketCreationCallback callback = expectSocketCreationCallback(
+                SERVICE_TYPE_1, mockListenerOne, searchOptions);
+        final SocketKey unusedIfaceKey = new SocketKey(null, INTERFACE_INDEX_NULL_NETWORK + 1);
+        final SocketKey matchingIfaceWithNetworkKey =
+                new SocketKey(Mockito.mock(Network.class), INTERFACE_INDEX_NULL_NETWORK);
+        runOnHandler(() -> {
+            callback.onSocketCreated(unusedIfaceKey);
+            callback.onSocketCreated(matchingIfaceWithNetworkKey);
+            callback.onSocketCreated(SOCKET_KEY_NULL_NETWORK);
+            callback.onSocketCreated(SOCKET_KEY_NETWORK_1);
+        });
+        // Only the client for INTERFACE_INDEX_NULL_NETWORK is created
+        verify(mockServiceTypeClientType1NullNetwork).startSendAndReceive(
+                mockListenerOne, searchOptions);
+        assertEquals(1, createdServiceTypeClientCount);
+
+        runOnHandler(() -> {
+            callback.onSocketDestroyed(SOCKET_KEY_NETWORK_1);
+            callback.onSocketDestroyed(SOCKET_KEY_NULL_NETWORK);
+            callback.onSocketDestroyed(matchingIfaceWithNetworkKey);
+            callback.onSocketDestroyed(unusedIfaceKey);
+        });
+        verify(mockServiceTypeClientType1NullNetwork).notifySocketDestroyed();
     }
 
     private MdnsPacket createMdnsPacket(String serviceType) {
