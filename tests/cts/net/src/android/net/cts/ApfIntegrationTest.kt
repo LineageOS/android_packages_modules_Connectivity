@@ -101,7 +101,9 @@ class ApfIntegrationTest {
         if (::networkCallback.isInitialized) {
             cm.unregisterNetworkCallback(networkCallback)
         }
-        runShellCommandOrThrow("cmd network_stack apf $ifname resume")
+        if (::ifname.isInitialized) {
+            runShellCommandOrThrow("cmd network_stack apf $ifname resume")
+        }
     }
 
     fun getApfCapabilities(): ApfCapabilities {
