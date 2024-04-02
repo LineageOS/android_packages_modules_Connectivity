@@ -36,9 +36,9 @@ import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChange
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.TruthJUnit.assume
 import kotlin.test.assertNotNull
 import org.junit.After
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
@@ -79,8 +79,8 @@ class ApfIntegrationTest {
 
     @Before
     fun setUp() {
-        assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
-        assumeTrue(isVendorApiLevelNewerThan(Build.VERSION_CODES.TIRAMISU))
+        assume().that(pm.hasSystemFeature(FEATURE_WIFI)).isTrue()
+        assume().that(isVendorApiLevelNewerThan(Build.VERSION_CODES.TIRAMISU)).isTrue()
         networkCallback = TestableNetworkCallback()
         cm.requestNetwork(
                 NetworkRequest.Builder()
