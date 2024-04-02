@@ -250,6 +250,17 @@ public class EthernetNetworkFactory {
         return mTrackingInterfaces.containsKey(ifaceName);
     }
 
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    @Nullable
+    protected String getHwAddress(@NonNull final String ifaceName) {
+        if (!hasInterface(ifaceName)) {
+            return null;
+        }
+
+        NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
+        return iface.mHwAddress;
+    }
+
     @VisibleForTesting
     static class NetworkInterfaceState {
         final String name;
