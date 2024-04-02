@@ -554,4 +554,22 @@ public class EthernetNetworkFactoryTest {
         mNetworkOfferCallback.onNetworkNeeded(createDefaultRequest());
         verify(mIpClient, never()).startProvisioning(any());
     }
+
+    @Test
+    public void testGetMacAddressProvisionedInterface() throws Exception {
+        initEthernetNetworkFactory();
+        createAndVerifyProvisionedInterface(TEST_IFACE);
+
+        final String result = mNetFactory.getHwAddress(TEST_IFACE);
+        assertEquals(HW_ADDR, result);
+    }
+
+    @Test
+    public void testGetMacAddressForNonExistingInterface() {
+        initEthernetNetworkFactory();
+
+        final String result = mNetFactory.getHwAddress(TEST_IFACE);
+        // No interface exists due to not calling createAndVerifyProvisionedInterface(...).
+        assertNull(result);
+    }
 }

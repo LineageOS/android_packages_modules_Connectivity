@@ -3653,10 +3653,9 @@ public class TetheringTest {
 
         verify(mWifiManager).updateInterfaceIpState(TEST_WLAN_IFNAME, IFACE_IP_MODE_TETHERED);
         verifyNoMoreInteractions(mWifiManager);
-
         verifyTetheringBroadcast(TEST_WLAN_IFNAME, EXTRA_ACTIVE_TETHER);
-        // FIXME: wifi tethering doesn't have upstream when P2P is enabled.
-        verify(mUpstreamNetworkMonitor, never()).setTryCell(true);
+
+        verify(mUpstreamNetworkMonitor).setTryCell(true);
     }
 
     // TODO: Test that a request for hotspot mode doesn't interfere with an
