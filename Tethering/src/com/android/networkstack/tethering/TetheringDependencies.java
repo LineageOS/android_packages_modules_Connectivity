@@ -156,6 +156,7 @@ public abstract class TetheringDependencies {
     /**
      * Get a reference to BluetoothAdapter to be used by tethering.
      */
+    @Nullable
     public abstract BluetoothAdapter getBluetoothAdapter();
 
     /**
