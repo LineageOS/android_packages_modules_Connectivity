@@ -95,9 +95,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
 import android.annotation.NonNull;
 import android.app.AlarmManager;
 import android.content.Context;
@@ -165,6 +162,8 @@ import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.HandlerUtils;
 import com.android.testutils.TestBpfMap;
 import com.android.testutils.TestableNetworkStatsProviderBinder;
+import com.android.testutils.com.android.testutils.SetFeatureFlagsRule;
+import com.android.testutils.com.android.testutils.SetFeatureFlagsRule.FeatureFlag;
 
 import libcore.testing.io.TestIoUtils;
 
@@ -173,7 +172,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -183,9 +181,6 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -214,8 +209,6 @@ import java.util.function.Function;
 // NetworkStatsService is not updatable before T, so tests do not need to be backwards compatible
 @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
 public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
-    @Rule
-    public final TestName mTestNameRule = new TestName();
 
     private static final String TAG = "NetworkStatsServiceTest";
 
@@ -312,6 +305,15 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     final TestDependencies mDeps = new TestDependencies();
     final HashMap<String, Boolean> mFeatureFlags = new HashMap<>();
 
+    // This will set feature flags from @FeatureFlag annotations
+    // into the map before setUp() runs.
+    @Rule
+    public final SetFeatureFlagsRule mSetFeatureFlagsRule =
+            new SetFeatureFlagsRule((name, enabled) -> {
+                mFeatureFlags.put(name, enabled);
+                return null;
+            });
+
     private class MockContext extends BroadcastInterceptingContext {
         private final Context mBaseContext;
 
@@ -369,33 +371,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         return parcel;
     }
 
-    // Tests can use this annotation to set feature flags before constructing
-    // NetworkStatsService, e.g. @FeatureFlag(FeatureName, true/false)).
-    // TODO: Refactor into a Rule, and put in a common place.
-    @Retention(RUNTIME)
-    @Target(METHOD)
-    public @interface FeatureFlag {
-        String name();
-
-        boolean enabled() default true;
-    }
-
-    private void initFeatureFlagsFromAnnotations() {
-        // Setup default and overrides feature flags before creating the service.
-        mFeatureFlags.put(TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG, true);
-
-        final String testMethodName = mTestNameRule.getMethodName();
-        try {
-            final Method method = this.getClass().getMethod(testMethodName);
-            final FeatureFlag[] flags = method.getAnnotationsByType(FeatureFlag.class);
-            for (final FeatureFlag flag : flags) {
-                mFeatureFlags.put(flag.name(), flag.enabled());
-            }
-        } catch (NoSuchMethodException ignored) {
-            // This is expected for parameterized tests
-        }
-    }
-
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -418,9 +393,6 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
                 Context.POWER_SERVICE);
         PowerManager.WakeLock wakeLock =
                 powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-
-        // This has to be invoked before initialize the service instance.
-        initFeatureFlagsFromAnnotations();
 
         mHandlerThread = new HandlerThread("NetworkStatsServiceTest-HandlerThread");
         // Create a separate thread for observers to run on. This thread cannot be the same
@@ -2433,7 +2405,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         doTestTrafficStatsRateLimitCache(false /* cacheEnabled */);
     }
 
-    @FeatureFlag(name = TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG, enabled = true)
+    @FeatureFlag(name = TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG)
     @Test
     public void testTrafficStatsRateLimitCache_enabled() throws Exception {
         doTestTrafficStatsRateLimitCache(true /* cacheEnabled */);
