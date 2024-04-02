@@ -19,11 +19,12 @@ package com.android.cts.net.hostside;
 import android.app.job.JobInfo;
 
 import com.android.cts.net.hostside.INetworkCallback;
+import com.android.cts.net.hostside.NetworkCheckResult;
 
 interface IMyService {
     void registerBroadcastReceiver();
     int getCounters(String receiverName, String action);
-    String checkNetworkStatus();
+    NetworkCheckResult checkNetworkStatus(String customUrl);
     String getRestrictBackgroundStatus();
     void sendNotification(int notificationId, String notificationType);
     void registerNetworkCallback(in NetworkRequest request, in INetworkCallback cb);

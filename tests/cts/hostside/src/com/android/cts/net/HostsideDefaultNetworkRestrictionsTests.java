@@ -46,12 +46,12 @@ public class HostsideDefaultNetworkRestrictionsTests extends HostsideNetworkTest
     }
 
     private void runMeteredTest(String methodName) throws DeviceNotAvailableException {
-        runDeviceTestsWithArgs(TEST_PKG, METERED_TEST_CLASS, methodName,
+        runDeviceTestsWithCustomOptions(TEST_PKG, METERED_TEST_CLASS, methodName,
                 Map.of(ARG_WAIVE_BIND_PRIORITY, "true"));
     }
 
     private void runNonMeteredTest(String methodName) throws DeviceNotAvailableException {
-        runDeviceTestsWithArgs(TEST_PKG, NON_METERED_TEST_CLASS, methodName,
+        runDeviceTestsWithCustomOptions(TEST_PKG, NON_METERED_TEST_CLASS, methodName,
                 Map.of(ARG_WAIVE_BIND_PRIORITY, "true"));
     }
 
