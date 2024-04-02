@@ -241,9 +241,6 @@ public class Tethering {
     private final TetherMainSM mTetherMainSM;
     private final OffloadController mOffloadController;
     private final UpstreamNetworkMonitor mUpstreamNetworkMonitor;
-    // TODO: Figure out how to merge this and other downstream-tracking objects
-    // into a single coherent structure.
-    private final HashSet<IpServer> mForwardedDownstreams;
     private final VersionedBroadcastListener mCarrierConfigChange;
     private final TetheringDependencies mDeps;
     private final EntitlementManager mEntitlementMgr;
@@ -271,8 +268,6 @@ public class Tethering {
 
     private boolean mRndisEnabled;       // track the RNDIS function enabled state
     private boolean mNcmEnabled;         // track the NCM function enabled state
-    // True iff. WiFi tethering should be started when soft AP is ready.
-    private boolean mWifiTetherRequested;
     private Network mTetherUpstream;
     private TetherStatesParcel mTetherStatesParcel;
     private boolean mDataSaverEnabled = false;
@@ -329,7 +324,6 @@ public class Tethering {
                 (what, obj) -> {
                     mTetherMainSM.sendMessage(TetherMainSM.EVENT_UPSTREAM_CALLBACK, what, 0, obj);
                 });
-        mForwardedDownstreams = new HashSet<>();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_CARRIER_CONFIG_CHANGED);
@@ -763,7 +757,6 @@ public class Tethering {
             }
             if ((enable && mgr.startTetheredHotspot(null /* use existing softap config */))
                     || (!enable && mgr.stopSoftAp())) {
-                mWifiTetherRequested = enable;
                 return TETHER_ERROR_NO_ERROR;
             }
         } finally {
@@ -1470,10 +1463,6 @@ public class Tethering {
     }
 
     private void disableWifiIpServing(String ifname, int apState) {
-        // Regardless of whether we requested this transition, the AP has gone
-        // down.  Don't try to tether again unless we're requested to do so.
-        mWifiTetherRequested = false;
-
         mLog.log("Canceling WiFi tethering request - interface=" + ifname + " state=" + apState);
 
         disableWifiIpServingCommon(TETHERING_WIFI, ifname);
@@ -1505,8 +1494,7 @@ public class Tethering {
     private void enableWifiIpServing(String ifname, int wifiIpMode) {
         mLog.log("request WiFi tethering - interface=" + ifname + " state=" + wifiIpMode);
 
-        // Map wifiIpMode values to IpServer.Callback serving states, inferring
-        // from mWifiTetherRequested as a final "best guess".
+        // Map wifiIpMode values to IpServer.Callback serving states.
         final int ipServingMode;
         switch (wifiIpMode) {
             case IFACE_IP_MODE_TETHERED:
@@ -1653,11 +1641,6 @@ public class Tethering {
         mLog.log(state.getName() + " got " + sMagicDecoderRing.get(what, Integer.toString(what)));
     }
 
-    private boolean upstreamWanted() {
-        if (!mForwardedDownstreams.isEmpty()) return true;
-        return mWifiTetherRequested;
-    }
-
     // Needed because the canonical source of upstream truth is just the
     // upstream interface set, |mCurrentUpstreamIfaceSet|.
     private boolean pertainsToCurrentUpstream(UpstreamNetworkState ns) {
@@ -1715,12 +1698,16 @@ public class Tethering {
         private final ArrayList<IpServer> mNotifyList;
         private final IPv6TetheringCoordinator mIPv6TetheringCoordinator;
         private final OffloadWrapper mOffload;
+        // TODO: Figure out how to merge this and other downstream-tracking objects
+        // into a single coherent structure.
+        private final HashSet<IpServer> mForwardedDownstreams;
 
         private static final int UPSTREAM_SETTLE_TIME_MS     = 10000;
 
         TetherMainSM(String name, Looper looper, TetheringDependencies deps) {
             super(name, looper);
 
+            mForwardedDownstreams = new HashSet<>();
             mInitialState = new InitialState();
             mTetherModeAliveState = new TetherModeAliveState();
             mSetIpForwardingEnabledErrorState = new SetIpForwardingEnabledErrorState();
@@ -2054,6 +2041,10 @@ public class Tethering {
                     mLog.e("Unknown arg1 value: " + arg1);
                     break;
             }
+        }
+
+        private boolean upstreamWanted() {
+            return !mForwardedDownstreams.isEmpty();
         }
 
         class TetherModeAliveState extends State {
@@ -2651,7 +2642,7 @@ public class Tethering {
             }
             pw.println(" - lastError = " + tetherState.lastError);
         }
-        pw.println("Upstream wanted: " + upstreamWanted());
+        pw.println("Upstream wanted: " + mTetherMainSM.upstreamWanted());
         pw.println("Current upstream interface(s): " + mCurrentUpstreamIfaceSet);
         pw.decreaseIndent();
 
