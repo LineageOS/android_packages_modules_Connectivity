@@ -76,6 +76,13 @@ class ApfIntegrationTest {
     private val pm by lazy { context.packageManager }
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
+    private lateinit var caps: ApfCapabilities
+
+    fun getApfCapabilities(): ApfCapabilities {
+        val caps = runShellCommandOrThrow("cmd network_stack apf $ifname capabilities").trim()
+        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
+        return ApfCapabilities(version, maxLen, packetFormat)
+    }
 
     @Before
     fun setUp() {
@@ -94,6 +101,7 @@ class ApfIntegrationTest {
             true
         }
         runShellCommandOrThrow("cmd network_stack apf $ifname pause")
+        caps = getApfCapabilities()
     }
 
     @After
@@ -106,15 +114,8 @@ class ApfIntegrationTest {
         }
     }
 
-    fun getApfCapabilities(): ApfCapabilities {
-        val caps = runShellCommandOrThrow("cmd network_stack apf $ifname capabilities").trim()
-        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
-        return ApfCapabilities(version, maxLen, packetFormat)
-    }
-
     @Test
     fun testGetApfCapabilities() {
-        val caps = getApfCapabilities()
         assertThat(caps.apfVersionSupported).isEqualTo(4)
         assertThat(caps.maximumApfProgramSize).isAtLeast(1024)
         if (isVendorApiLevelNewerThan(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)) {
