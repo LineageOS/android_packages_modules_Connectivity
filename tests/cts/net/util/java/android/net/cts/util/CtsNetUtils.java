@@ -408,38 +408,8 @@ public final class CtsNetUtils {
         return network;
     }
 
-    public Network connectToCell() throws InterruptedException {
-        if (cellConnectAttempted()) {
-            mCm.unregisterNetworkCallback(mCellNetworkCallback);
-        }
-        NetworkRequest cellRequest = new NetworkRequest.Builder()
-                .addTransportType(TRANSPORT_CELLULAR)
-                .addCapability(NET_CAPABILITY_INTERNET)
-                .build();
-        mCellNetworkCallback = new TestNetworkCallback();
-        mCm.requestNetwork(cellRequest, mCellNetworkCallback);
-        final Network cellNetwork = mCellNetworkCallback.waitForAvailable();
-        assertNotNull("Cell network not available. " +
-                "Please ensure the device has working mobile data.", cellNetwork);
-        return cellNetwork;
-    }
-
-    public void disconnectFromCell() {
-        if (!cellConnectAttempted()) {
-            throw new IllegalStateException("Cell connection not attempted");
-        }
-        mCm.unregisterNetworkCallback(mCellNetworkCallback);
-        mCellNetworkCallback = null;
-    }
-
     public boolean cellConnectAttempted() {
         return mCellNetworkCallback != null;
-    }
-
-    public void tearDown() {
-        if (cellConnectAttempted()) {
-            disconnectFromCell();
-        }
     }
 
     private NetworkRequest makeWifiNetworkRequest() {
