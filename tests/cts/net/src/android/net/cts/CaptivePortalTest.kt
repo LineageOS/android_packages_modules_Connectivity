@@ -47,6 +47,7 @@ import androidx.test.runner.AndroidJUnit4
 import com.android.modules.utils.build.SdkLevel.isAtLeastR
 import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTPS_URL
 import com.android.net.module.util.NetworkStackConstants.TEST_CAPTIVE_PORTAL_HTTP_URL
+import com.android.testutils.AutoReleaseNetworkCallbackRule
 import com.android.testutils.DeviceConfigRule
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.SkipMainlinePresubmit
@@ -101,8 +102,11 @@ class CaptivePortalTest {
 
     private val server = TestHttpServer("localhost")
 
-    @get:Rule
+    @get:Rule(order = 1)
     val deviceConfigRule = DeviceConfigRule(retryCountBeforeSIfConfigChanged = 5)
+
+    @get:Rule(order = 2)
+    val networkCallbackRule = AutoReleaseNetworkCallbackRule()
 
     companion object {
         @JvmStatic @BeforeClass
@@ -144,15 +148,15 @@ class CaptivePortalTest {
         assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
         assumeFalse(pm.hasSystemFeature(FEATURE_WATCH))
         utils.ensureWifiConnected()
-        val cellNetwork = utils.connectToCell()
+        val cellNetwork = networkCallbackRule.requestCell()
 
         // Verify cell network is validated
         val cellReq = NetworkRequest.Builder()
                 .addTransportType(TRANSPORT_CELLULAR)
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .build()
-        val cellCb = TestableNetworkCallback(timeoutMs = TEST_TIMEOUT_MS)
-        cm.registerNetworkCallback(cellReq, cellCb)
+        val cellCb = networkCallbackRule.registerNetworkCallback(cellReq,
+            TestableNetworkCallback(timeoutMs = TEST_TIMEOUT_MS))
         val cb = cellCb.poll { it.network == cellNetwork &&
                 it is CapabilitiesChanged && it.caps.hasCapability(NET_CAPABILITY_VALIDATED)
         }
@@ -213,8 +217,6 @@ class CaptivePortalTest {
         } finally {
             cm.unregisterNetworkCallback(wifiCb)
             server.stop()
-            // disconnectFromCell should be called after connectToCell
-            utils.disconnectFromCell()
         }
     }
 

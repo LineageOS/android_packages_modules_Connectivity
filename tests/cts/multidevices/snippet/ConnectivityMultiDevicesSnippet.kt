@@ -35,6 +35,7 @@ import android.net.wifi.WifiNetworkSpecifier
 import android.net.wifi.WifiSsid
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.testutils.ConnectUtil
+import com.android.testutils.NetworkCallbackHelper
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.TestableNetworkCallback
@@ -48,8 +49,13 @@ class ConnectivityMultiDevicesSnippet : Snippet {
     private val cm = context.getSystemService(ConnectivityManager::class.java)!!
     private val pm = context.packageManager
     private val ctsNetUtils = CtsNetUtils(context)
+    private val cbHelper = NetworkCallbackHelper()
     private val ctsTetheringUtils = CtsTetheringUtils(context)
     private var oldSoftApConfig: SoftApConfiguration? = null
+
+    override fun shutdown() {
+        cbHelper.unregisterAll()
+    }
 
     @Rpc(description = "Check whether the device has wifi feature.")
     fun hasWifiFeature() = pm.hasSystemFeature(FEATURE_WIFI)
@@ -65,13 +71,13 @@ class ConnectivityMultiDevicesSnippet : Snippet {
     @Rpc(description = "Request cellular connection and ensure it is the default network.")
     fun requestCellularAndEnsureDefault() {
         ctsNetUtils.disableWifi()
-        val network = ctsNetUtils.connectToCell()
+        val network = cbHelper.requestCell()
         ctsNetUtils.expectNetworkIsSystemDefault(network)
     }
 
     @Rpc(description = "Unrequest cellular connection.")
     fun unrequestCellular() {
-        ctsNetUtils.disconnectFromCell()
+        cbHelper.unrequestCell()
     }
 
     @Rpc(description = "Ensure any wifi is connected and is the default network.")

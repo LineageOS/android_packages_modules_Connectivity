@@ -36,9 +36,9 @@ import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChange
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.TruthJUnit.assume
 import kotlin.test.assertNotNull
 import org.junit.After
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
@@ -76,11 +76,18 @@ class ApfIntegrationTest {
     private val pm by lazy { context.packageManager }
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
+    private lateinit var caps: ApfCapabilities
+
+    fun getApfCapabilities(): ApfCapabilities {
+        val caps = runShellCommandOrThrow("cmd network_stack apf $ifname capabilities").trim()
+        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
+        return ApfCapabilities(version, maxLen, packetFormat)
+    }
 
     @Before
     fun setUp() {
-        assumeTrue(pm.hasSystemFeature(FEATURE_WIFI))
-        assumeTrue(isVendorApiLevelNewerThan(Build.VERSION_CODES.TIRAMISU))
+        assume().that(pm.hasSystemFeature(FEATURE_WIFI)).isTrue()
+        assume().that(isVendorApiLevelNewerThan(Build.VERSION_CODES.TIRAMISU)).isTrue()
         networkCallback = TestableNetworkCallback()
         cm.requestNetwork(
                 NetworkRequest.Builder()
@@ -94,6 +101,7 @@ class ApfIntegrationTest {
             true
         }
         runShellCommandOrThrow("cmd network_stack apf $ifname pause")
+        caps = getApfCapabilities()
     }
 
     @After
@@ -106,15 +114,8 @@ class ApfIntegrationTest {
         }
     }
 
-    fun getApfCapabilities(): ApfCapabilities {
-        val caps = runShellCommandOrThrow("cmd network_stack apf $ifname capabilities").trim()
-        val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
-        return ApfCapabilities(version, maxLen, packetFormat)
-    }
-
     @Test
     fun testGetApfCapabilities() {
-        val caps = getApfCapabilities()
         assertThat(caps.apfVersionSupported).isEqualTo(4)
         assertThat(caps.maximumApfProgramSize).isAtLeast(1024)
         if (isVendorApiLevelNewerThan(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)) {

@@ -241,11 +241,30 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             }
         }
         // Request the network for discovery.
+        // This requests sockets on all networks even if the searchOptions have a given interface
+        // index (with getNetwork==null, for local interfaces), and only uses matching interfaces
+        // in that case. While this is a simple solution to only use matching sockets, a better
+        // practice would be to only request the correct socket for discovery.
+        // TODO: avoid requesting extra sockets after migrating P2P and tethering networks to local
+        // NetworkAgents.
         socketClient.notifyNetworkRequested(listener, searchOptions.getNetwork(),
                 new MdnsSocketClientBase.SocketCreationCallback() {
                     @Override
                     public void onSocketCreated(@NonNull SocketKey socketKey) {
                         discoveryExecutor.ensureRunningOnHandlerThread();
+                        final int searchInterfaceIndex = searchOptions.getInterfaceIndex();
+                        if (searchOptions.getNetwork() == null
+                                && searchInterfaceIndex > 0
+                                // The interface index in options should only match interfaces that
+                                // do not have any Network; a matching Network should be provided
+                                // otherwise.
+                                && (socketKey.getNetwork() != null
+                                    || socketKey.getInterfaceIndex() != searchInterfaceIndex)) {
+                            sharedLog.i("Skipping " + socketKey + " as ifIndex "
+                                    + searchInterfaceIndex + " was requested.");
+                            return;
+                        }
+
                         // All listeners of the same service types shares the same
                         // MdnsServiceTypeClient.
                         MdnsServiceTypeClient serviceTypeClient =
