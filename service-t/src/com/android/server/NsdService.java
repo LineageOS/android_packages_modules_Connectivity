@@ -1105,8 +1105,11 @@ public class NsdService extends INsdManager.Stub {
                             maybeStartMonitoringSockets();
                             final MdnsListener listener = new ResolutionListener(clientRequestId,
                                     transactionId, resolveServiceType);
+                            final int ifaceIdx = info.getNetwork() != null
+                                    ? 0 : info.getInterfaceIndex();
                             final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                     .setNetwork(info.getNetwork())
+                                    .setInterfaceIndex(ifaceIdx)
                                     .setQueryMode(mMdnsFeatureFlags.isAggressiveQueryModeEnabled()
                                             ? AGGRESSIVE_QUERY_MODE
                                             : PASSIVE_QUERY_MODE)
@@ -1205,8 +1208,11 @@ public class NsdService extends INsdManager.Stub {
                         maybeStartMonitoringSockets();
                         final MdnsListener listener = new ServiceInfoListener(clientRequestId,
                                 transactionId, resolveServiceType);
+                        final int ifIndex = info.getNetwork() != null
+                                ? 0 : info.getInterfaceIndex();
                         final MdnsSearchOptions options = MdnsSearchOptions.newBuilder()
                                 .setNetwork(info.getNetwork())
+                                .setInterfaceIndex(ifIndex)
                                 .setQueryMode(mMdnsFeatureFlags.isAggressiveQueryModeEnabled()
                                         ? AGGRESSIVE_QUERY_MODE
                                         : PASSIVE_QUERY_MODE)
