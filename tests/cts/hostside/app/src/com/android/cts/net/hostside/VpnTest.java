@@ -23,8 +23,8 @@ import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
 import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.net.ConnectivityManager.TYPE_VPN;
-import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
+import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.os.Process.INVALID_UID;
 import static android.system.OsConstants.AF_INET;
 import static android.system.OsConstants.AF_INET6;
@@ -123,6 +123,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.PacketBuilder;
+import com.android.testutils.AutoReleaseNetworkCallbackRule;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.RecorderCallback;
@@ -233,8 +234,12 @@ public class VpnTest {
     // The registered callbacks.
     private List<NetworkCallback> mRegisteredCallbacks = new ArrayList<>();
 
-    @Rule
+    @Rule(order = 1)
     public final DevSdkIgnoreRule mDevSdkIgnoreRule = new DevSdkIgnoreRule();
+
+    @Rule(order = 2)
+    public final AutoReleaseNetworkCallbackRule
+            mNetworkCallbackRule = new AutoReleaseNetworkCallbackRule();
 
     private boolean supportedHardware() {
         final PackageManager pm = getInstrumentation().getContext().getPackageManager();
@@ -273,7 +278,6 @@ public class VpnTest {
     public void tearDown() throws Exception {
         restorePrivateDnsSetting();
         mRemoteSocketFactoryClient.unbind();
-        mCtsNetUtils.tearDown();
         Log.i(TAG, "Stopping VPN");
         stopVpn();
         unregisterRegisteredCallbacks();
@@ -890,9 +894,7 @@ public class VpnTest {
         testAndCleanup(() -> {
             // Ensure both of wifi and mobile data are connected.
             final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
-            assertTrue("Wifi is not connected", (wifiNetwork != null));
-            final Network cellNetwork = mCtsNetUtils.connectToCell();
-            assertTrue("Mobile data is not connected", (cellNetwork != null));
+            final Network cellNetwork = mNetworkCallbackRule.requestCell();
             // Store current default network.
             final Network defaultNetwork = mCM.getActiveNetwork();
             // Start VPN and set empty array as its underlying networks.

@@ -48,6 +48,7 @@ import androidx.test.filters.RequiresDevice;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.testutils.AutoReleaseNetworkCallbackRule;
 import com.android.testutils.DevSdkIgnoreRule;
 
 import org.junit.Before;
@@ -67,7 +68,10 @@ import java.util.function.Supplier;
 @RunWith(AndroidJUnit4.class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.R) // BatteryStatsManager did not exist on Q
 public class BatteryStatsManagerTest{
-    @Rule
+    @Rule(order = 1)
+    public final AutoReleaseNetworkCallbackRule
+            networkCallbackRule = new AutoReleaseNetworkCallbackRule();
+    @Rule(order = 2)
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
     private static final String TAG = BatteryStatsManagerTest.class.getSimpleName();
     private static final String TEST_URL = "https://connectivitycheck.gstatic.com/generate_204";
@@ -145,7 +149,7 @@ public class BatteryStatsManagerTest{
             return;
         }
 
-        final Network cellNetwork = mCtsNetUtils.connectToCell();
+        final Network cellNetwork = networkCallbackRule.requestCell();
         final URL url = new URL(TEST_URL);
 
         // Get cellular battery stats
