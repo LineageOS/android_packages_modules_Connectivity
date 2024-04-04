@@ -22,6 +22,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.apf.ApfCapabilities
 import android.os.Build
+import android.os.PowerManager
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
@@ -41,6 +42,7 @@ import com.android.testutils.runAsShell
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.google.common.truth.TruthJUnit.assume
+import java.lang.Thread
 import kotlin.random.Random
 import kotlin.test.assertNotNull
 import org.junit.After
@@ -49,8 +51,10 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 
+private const val TAG = "ApfIntegrationTest"
 private const val TIMEOUT_MS = 2000L
 private const val APF_NEW_RA_FILTER_VERSION = "apf_new_ra_filter_version"
+private const val POLLING_INTERVAL_MS: Int = 100
 
 @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
@@ -78,6 +82,8 @@ class ApfIntegrationTest {
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val pm by lazy { context.packageManager }
+    private val powerManager by lazy { context.getSystemService(PowerManager::class.java)!! }
+    private val wakeLock by lazy { powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG) }
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
     private lateinit var caps: ApfCapabilities
@@ -91,9 +97,37 @@ class ApfIntegrationTest {
         return ApfCapabilities(version, maxLen, packetFormat)
     }
 
+    fun pollingCheck(condition: () -> Boolean, timeout_ms: Int): Boolean {
+        var polling_time = 0
+        do {
+            Thread.sleep(POLLING_INTERVAL_MS.toLong())
+            polling_time += POLLING_INTERVAL_MS
+            if (condition()) return true
+        } while (polling_time < timeout_ms)
+        return false
+    }
+
+    fun turnScreenOff() {
+        if (!wakeLock.isHeld()) wakeLock.acquire()
+        runShellCommandOrThrow("input keyevent KEYCODE_SLEEP")
+        val result = pollingCheck({ !powerManager.isInteractive() }, timeout_ms = 2000)
+        assertThat(result).isTrue()
+    }
+
+    fun turnScreenOn() {
+        if (wakeLock.isHeld()) wakeLock.release()
+        runShellCommandOrThrow("input keyevent KEYCODE_WAKEUP")
+        val result = pollingCheck({ powerManager.isInteractive() }, timeout_ms = 2000)
+        assertThat(result).isTrue()
+    }
+
     @Before
     fun setUp() {
         assume().that(pm.hasSystemFeature(FEATURE_WIFI)).isTrue()
+        // APF must run when the screen is off and the device is not interactive.
+        // TODO: consider running some of the tests with screen on (capabilities, read / write).
+        turnScreenOff()
+
         networkCallback = TestableNetworkCallback()
         cm.requestNetwork(
                 NetworkRequest.Builder()
@@ -121,6 +155,7 @@ class ApfIntegrationTest {
         if (::networkCallback.isInitialized) {
             cm.unregisterNetworkCallback(networkCallback)
         }
+        turnScreenOn()
     }
 
     @Test
