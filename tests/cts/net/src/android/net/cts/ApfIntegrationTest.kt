@@ -27,8 +27,7 @@ import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import android.system.OsConstants
 import androidx.test.platform.app.InstrumentationRegistry
-import com.android.compatibility.common.util.PropertyUtil.isVendorApiLevelNewerThan
-import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
+import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.NetworkStackModuleTest
@@ -79,7 +78,10 @@ class ApfIntegrationTest {
     private lateinit var caps: ApfCapabilities
 
     fun getApfCapabilities(): ApfCapabilities {
-        val caps = runShellCommandOrThrow("cmd network_stack apf $ifname capabilities").trim()
+        val caps = runShellCommand("cmd network_stack apf $ifname capabilities").trim()
+        if (caps.isEmpty()) {
+            return ApfCapabilities(0, 0, 0)
+        }
         val (version, maxLen, packetFormat) = caps.split(",").map { it.toInt() }
         return ApfCapabilities(version, maxLen, packetFormat)
     }
@@ -100,7 +102,10 @@ class ApfIntegrationTest {
             ifname = assertNotNull(it.lp.interfaceName)
             true
         }
-        runShellCommandOrThrow("cmd network_stack apf $ifname pause")
+        // It's possible the device does not support APF, in which case this command will not be
+        // successful. Ignore the error as testApfCapabilities() already asserts APF support on the
+        // respective VSR releases and all other tests are based on the capabilities indicated.
+        runShellCommand("cmd network_stack apf $ifname pause")
         caps = getApfCapabilities()
     }
 
@@ -110,7 +115,7 @@ class ApfIntegrationTest {
             cm.unregisterNetworkCallback(networkCallback)
         }
         if (::ifname.isInitialized) {
-            runShellCommandOrThrow("cmd network_stack apf $ifname resume")
+            runShellCommand("cmd network_stack apf $ifname resume")
         }
     }
 
