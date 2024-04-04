@@ -115,11 +115,11 @@ class ApfIntegrationTest {
 
     @After
     fun tearDown() {
-        if (::networkCallback.isInitialized) {
-            cm.unregisterNetworkCallback(networkCallback)
-        }
         if (::ifname.isInitialized) {
             runShellCommand("cmd network_stack apf $ifname resume")
+        }
+        if (::networkCallback.isInitialized) {
+            cm.unregisterNetworkCallback(networkCallback)
         }
     }
 
