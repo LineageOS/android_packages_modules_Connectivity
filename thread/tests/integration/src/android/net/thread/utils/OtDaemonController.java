@@ -16,13 +16,16 @@
 
 package android.net.thread.utils;
 
+import android.annotation.Nullable;
 import android.net.InetAddresses;
+import android.net.IpPrefix;
 import android.os.SystemClock;
 
 import com.android.compatibility.common.util.SystemUtil;
 
 import java.net.Inet6Address;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -53,10 +56,7 @@ public final class OtDaemonController {
 
     /** Returns the list of IPv6 addresses on ot-daemon. */
     public List<Inet6Address> getAddresses() {
-        String output = executeCommand("ipaddr");
-        return Arrays.asList(output.split("\n")).stream()
-                .map(String::trim)
-                .filter(str -> !str.equals("Done"))
+        return executeCommandAndParse("ipaddr").stream()
                 .map(addr -> InetAddresses.parseNumericAddress(addr))
                 .map(inetAddr -> (Inet6Address) inetAddr)
                 .toList();
@@ -70,17 +70,54 @@ public final class OtDaemonController {
 
     /** Returns the ML-EID of the device. */
     public Inet6Address getMlEid() {
-        String addressStr = executeCommand("ipaddr mleid").split("\n")[0].trim();
+        String addressStr = executeCommandAndParse("ipaddr mleid").get(0);
         return (Inet6Address) InetAddresses.parseNumericAddress(addressStr);
     }
 
     /** Returns the country code on ot-daemon. */
     public String getCountryCode() {
-        String countryCodeStr = executeCommand("region").split("\n")[0].trim();
-        return countryCodeStr;
+        return executeCommandAndParse("region").get(0);
+    }
+
+    /**
+     * Returns the list of IPv6 Mesh-Local addresses on ot-daemon.
+     *
+     * <p>The return List can be empty if no Mesh-Local prefix exists.
+     */
+    public List<Inet6Address> getMeshLocalAddresses() {
+        IpPrefix meshLocalPrefix = getMeshLocalPrefix();
+        if (meshLocalPrefix == null) {
+            return Collections.emptyList();
+        }
+        return getAddresses().stream().filter(addr -> meshLocalPrefix.contains(addr)).toList();
+    }
+
+    /**
+     * Returns the Mesh-Local prefix or {@code null} if none exists (e.g. the Active Dataset is not
+     * set).
+     */
+    @Nullable
+    public IpPrefix getMeshLocalPrefix() {
+        List<IpPrefix> prefixes =
+                executeCommandAndParse("prefix meshlocal").stream()
+                        .map(prefix -> new IpPrefix(prefix))
+                        .toList();
+        return prefixes.isEmpty() ? null : prefixes.get(0);
     }
 
     public String executeCommand(String cmd) {
         return SystemUtil.runShellCommand(OT_CTL + " " + cmd);
+    }
+
+    /**
+     * Executes a ot-ctl command and parse the output to a list of strings.
+     *
+     * <p>The trailing "Done" in the command output will be dropped.
+     */
+    public List<String> executeCommandAndParse(String cmd) {
+        return Arrays.asList(executeCommand(cmd).split("\n")).stream()
+                .map(String::trim)
+                .filter(str -> !str.equals("Done"))
+                .toList();
     }
 }
