@@ -20,8 +20,6 @@ import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
 import static com.google.common.io.BaseEncoding.base16;
 
-import static org.junit.Assert.fail;
-
 import android.net.InetAddresses;
 import android.net.IpPrefix;
 import android.net.nsd.NsdServiceInfo;
@@ -216,6 +214,11 @@ public final class FullThreadDevice {
         matcher.matches();
 
         return matcher.group(4);
+    }
+
+    /** Sends a UDP message to given IPv6 address and port. */
+    public void udpSend(String message, Inet6Address serverAddr, int serverPort) {
+        executeCommand("udp send %s %d %s", serverAddr.getHostAddress(), serverPort, message);
     }
 
     /** Enables the SRP client and run in autostart mode. */
@@ -474,7 +477,7 @@ public final class FullThreadDevice {
                 break;
             }
             if (line.startsWith("Error")) {
-                fail("ot-cli-ftd reported an error: " + line);
+                throw new IOException("ot-cli-ftd reported an error: " + line);
             }
             if (!line.startsWith("> ")) {
                 result.add(line);
