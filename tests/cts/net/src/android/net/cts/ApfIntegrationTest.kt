@@ -21,6 +21,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.apf.ApfCapabilities
+import android.os.Build
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
@@ -28,13 +29,19 @@ import android.system.OsConstants
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
+import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
+import com.android.internal.util.HexDump
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.NetworkStackModuleTest
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
+import com.android.testutils.SkipPresubmit
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import com.google.common.truth.TruthJUnit.assume
+import kotlin.random.Random
 import kotlin.test.assertNotNull
 import org.junit.After
 import org.junit.Before
@@ -142,6 +149,46 @@ class ApfIntegrationTest {
         //   the getApfPacketFilterCapabilities HAL method.
         if (getVsrApiLevel() >= 202404) {
             assertThat(caps.maximumApfProgramSize).isAtLeast(2000)
+        }
+    }
+
+    // APF is backwards compatible, i.e. a v6 interpreter supports both v2 and v4 functionality.
+    fun assumeApfVersionSupportAtLeast(version: Int) {
+        assume().that(caps.apfVersionSupported).isAtLeast(version)
+    }
+
+    fun installProgram(bytes: ByteArray) {
+        val prog = HexDump.toHexString(bytes, 0 /* offset */, bytes.size, false /* upperCase */)
+        val result = runShellCommandOrThrow("cmd network_stack apf $ifname install $prog").trim()
+        // runShellCommandOrThrow only throws on S+.
+        assertThat(result).isEqualTo("success")
+    }
+
+    fun readProgram(): ByteArray {
+        val progHexString = runShellCommandOrThrow("cmd network_stack apf $ifname read").trim()
+        // runShellCommandOrThrow only throws on S+.
+        assertThat(progHexString).isNotEmpty()
+        return HexDump.hexStringToByteArray(progHexString)
+    }
+
+    @SkipPresubmit(reason = "This test takes longer than 1 minute, do not run it on presubmit.")
+    // APF integration is mostly broken before V, only run the full read / write test on V+.
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    fun testReadWriteProgram() {
+        assumeApfVersionSupportAtLeast(4)
+
+        // Only test down to 2 bytes. The first byte always stays PASS.
+        val program = ByteArray(caps.maximumApfProgramSize)
+        for (i in caps.maximumApfProgramSize downTo 2) {
+            // Randomize bytes in range [1, i). And install first [0, i) bytes of program.
+            // Note that only the very first instruction (PASS) is valid APF bytecode.
+            Random.nextBytes(program, 1 /* fromIndex */, i /* toIndex */)
+            installProgram(program.sliceArray(0..<i))
+
+            // Compare entire memory region.
+            val readResult = readProgram()
+            assertWithMessage("read/write $i byte prog failed").that(readResult).isEqualTo(program)
         }
     }
 }
