@@ -863,6 +863,18 @@ public class BpfNetMaps {
         }
     }
 
+    /**
+     * Get blocked reasons for specified uid
+     *
+     * @param uid Target Uid
+     * @return Reasons of network access blocking for an UID
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public int getUidNetworkingBlockedReasons(final int uid) {
+        return BpfNetMapsUtils.getUidNetworkingBlockedReasons(uid,
+                sConfigurationMap, sUidOwnerMap, sDataSaverEnabledMap);
+    }
+
     /** Register callback for statsd to pull atom. */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void setPullAtomCallback(final Context context) {

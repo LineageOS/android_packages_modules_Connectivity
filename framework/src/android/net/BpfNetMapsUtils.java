@@ -37,6 +37,18 @@ import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
 import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
 import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_ADMIN_DISABLED;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_DATA_SAVER;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_MASK;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_USER_RESTRICTED;
+import static android.net.ConnectivityManager.BLOCKED_REASON_APP_BACKGROUND;
+import static android.net.ConnectivityManager.BLOCKED_REASON_APP_STANDBY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_BATTERY_SAVER;
+import static android.net.ConnectivityManager.BLOCKED_REASON_DOZE;
+import static android.net.ConnectivityManager.BLOCKED_REASON_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
+import static android.net.ConnectivityManager.BLOCKED_REASON_OEM_DENY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_RESTRICTED_MODE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
@@ -238,6 +250,67 @@ public class BpfNetMapsUtils {
     }
 
     /**
+     * Get blocked reasons for specified uid
+     *
+     * @param uid Target Uid
+     * @return Reasons of network access blocking for an UID
+     */
+    public static int getUidNetworkingBlockedReasons(final int uid,
+            IBpfMap<S32, U32> configurationMap,
+            IBpfMap<S32, UidOwnerValue> uidOwnerMap,
+            IBpfMap<S32, U8> dataSaverEnabledMap
+    ) {
+        final long uidRuleConfig;
+        final long uidMatch;
+        try {
+            uidRuleConfig = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val;
+            final UidOwnerValue value = uidOwnerMap.getValue(new Struct.S32(uid));
+            uidMatch = (value != null) ? value.rule : 0L;
+        } catch (ErrnoException e) {
+            throw new ServiceSpecificException(e.errno,
+                    "Unable to get firewall chain status: " + Os.strerror(e.errno));
+        }
+        final long blockingMatches = (uidRuleConfig & ~uidMatch & sMaskDropIfUnset)
+                | (uidRuleConfig & uidMatch & sMaskDropIfSet);
+
+        int blockedReasons = BLOCKED_REASON_NONE;
+        if ((blockingMatches & POWERSAVE_MATCH) != 0) {
+            blockedReasons |= BLOCKED_REASON_BATTERY_SAVER;
+        }
+        if ((blockingMatches & DOZABLE_MATCH) != 0) {
+            blockedReasons |= BLOCKED_REASON_DOZE;
+        }
+        if ((blockingMatches & STANDBY_MATCH) != 0) {
+            blockedReasons |= BLOCKED_REASON_APP_STANDBY;
+        }
+        if ((blockingMatches & RESTRICTED_MATCH) != 0) {
+            blockedReasons |= BLOCKED_REASON_RESTRICTED_MODE;
+        }
+        if ((blockingMatches & LOW_POWER_STANDBY_MATCH) != 0) {
+            blockedReasons |= BLOCKED_REASON_LOW_POWER_STANDBY;
+        }
+        if ((blockingMatches & BACKGROUND_MATCH) != 0) {
+            blockedReasons |= BLOCKED_REASON_APP_BACKGROUND;
+        }
+        if ((blockingMatches & (OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)) != 0) {
+            blockedReasons |= BLOCKED_REASON_OEM_DENY;
+        }
+
+        // Metered chains are not enabled by configuration map currently.
+        if ((uidMatch & PENALTY_BOX_USER_MATCH) != 0) {
+            blockedReasons |= BLOCKED_METERED_REASON_USER_RESTRICTED;
+        }
+        if ((uidMatch & PENALTY_BOX_ADMIN_MATCH) != 0) {
+            blockedReasons |= BLOCKED_METERED_REASON_ADMIN_DISABLED;
+        }
+        if ((uidMatch & HAPPY_BOX_MATCH) == 0 && getDataSaverEnabled(dataSaverEnabledMap)) {
+            blockedReasons |= BLOCKED_METERED_REASON_DATA_SAVER;
+        }
+
+        return blockedReasons;
+    }
+
+    /**
      * Return whether the network is blocked by firewall chains for the given uid.
      *
      * Note that {@link #getDataSaverEnabled(IBpfMap)} has a latency before V.
@@ -263,27 +336,16 @@ public class BpfNetMapsUtils {
             return false;
         }
 
-        final long uidRuleConfig;
-        final long uidMatch;
-        try {
-            uidRuleConfig = configurationMap.getValue(UID_RULES_CONFIGURATION_KEY).val;
-            final UidOwnerValue value = uidOwnerMap.getValue(new Struct.S32(uid));
-            uidMatch = (value != null) ? value.rule : 0L;
-        } catch (ErrnoException e) {
-            throw new ServiceSpecificException(e.errno,
-                    "Unable to get firewall chain status: " + Os.strerror(e.errno));
+        final int blockedReasons = getUidNetworkingBlockedReasons(
+                uid,
+                configurationMap,
+                uidOwnerMap,
+                dataSaverEnabledMap);
+        if (isNetworkMetered) {
+            return blockedReasons != BLOCKED_REASON_NONE;
+        } else {
+            return (blockedReasons & ~BLOCKED_METERED_REASON_MASK) != BLOCKED_REASON_NONE;
         }
-
-        final boolean blockedByAllowChains = 0 != (uidRuleConfig & ~uidMatch & sMaskDropIfUnset);
-        final boolean blockedByDenyChains = 0 != (uidRuleConfig & uidMatch & sMaskDropIfSet);
-        if (blockedByAllowChains || blockedByDenyChains) {
-            return true;
-        }
-
-        if (!isNetworkMetered) return false;
-        if ((uidMatch & (PENALTY_BOX_USER_MATCH | PENALTY_BOX_ADMIN_MATCH)) != 0) return true;
-        if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
-        return getDataSaverEnabled(dataSaverEnabledMap);
     }
 
     /**

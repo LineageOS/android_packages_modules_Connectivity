@@ -17,6 +17,7 @@
 package com.android.server;
 
 import static android.net.BpfNetMapsConstants.ALLOW_CHAINS;
+import static android.net.BpfNetMapsConstants.BACKGROUND_MATCH;
 import static android.net.BpfNetMapsConstants.CURRENT_STATS_MAP_CONFIGURATION_KEY;
 import static android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY;
 import static android.net.BpfNetMapsConstants.DATA_SAVER_DISABLED;
@@ -37,6 +38,14 @@ import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
 import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
 import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_ADMIN_DISABLED;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_DATA_SAVER;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_USER_RESTRICTED;
+import static android.net.ConnectivityManager.BLOCKED_REASON_APP_STANDBY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_BATTERY_SAVER;
+import static android.net.ConnectivityManager.BLOCKED_REASON_DOZE;
+import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
+import static android.net.ConnectivityManager.BLOCKED_REASON_OEM_DENY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_ALLOW;
@@ -1149,5 +1158,79 @@ public final class BpfNetMapsTest {
         assertDumpContains(dump, TEST_V4_ADDRESS.getHostAddress());
         assertDumpContains(dump, TEST_V6_ADDRESS.getHostAddress());
         assertDumpContains(dump, TEST_IF_INDEX + "(" + TEST_IF_NAME + ")");
+    }
+
+    private void doTestGetUidNetworkingBlockedReasons(
+            final long configurationMatches,
+            final long uidRules,
+            final short dataSaverStatus,
+            final int expectedBlockedReasons
+    ) throws Exception {
+        mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(configurationMatches));
+        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(NULL_IIF, uidRules));
+        mDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, new U8(dataSaverStatus));
+
+        assertEquals(expectedBlockedReasons, mBpfNetMaps.getUidNetworkingBlockedReasons(TEST_UID));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testGetUidNetworkingBlockedReasons() throws Exception {
+        doTestGetUidNetworkingBlockedReasons(
+                NO_MATCH,
+                NO_MATCH,
+                DATA_SAVER_DISABLED,
+                BLOCKED_REASON_NONE
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                DOZABLE_MATCH,
+                NO_MATCH,
+                DATA_SAVER_DISABLED,
+                BLOCKED_REASON_DOZE
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                DOZABLE_MATCH | POWERSAVE_MATCH | STANDBY_MATCH,
+                DOZABLE_MATCH | STANDBY_MATCH,
+                DATA_SAVER_DISABLED,
+                BLOCKED_REASON_BATTERY_SAVER | BLOCKED_REASON_APP_STANDBY
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH,
+                OEM_DENY_1_MATCH | OEM_DENY_3_MATCH,
+                DATA_SAVER_DISABLED,
+                BLOCKED_REASON_OEM_DENY
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                DOZABLE_MATCH,
+                DOZABLE_MATCH | BACKGROUND_MATCH | STANDBY_MATCH,
+                DATA_SAVER_DISABLED,
+                BLOCKED_REASON_NONE
+        );
+
+        // Note that HAPPY_BOX and PENALTY_BOX are not disabled by configuration map
+        doTestGetUidNetworkingBlockedReasons(
+                NO_MATCH,
+                PENALTY_BOX_USER_MATCH,
+                DATA_SAVER_DISABLED,
+                BLOCKED_METERED_REASON_USER_RESTRICTED
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                NO_MATCH,
+                PENALTY_BOX_ADMIN_MATCH,
+                DATA_SAVER_ENABLED,
+                BLOCKED_METERED_REASON_ADMIN_DISABLED | BLOCKED_METERED_REASON_DATA_SAVER
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                NO_MATCH,
+                PENALTY_BOX_USER_MATCH | PENALTY_BOX_ADMIN_MATCH | HAPPY_BOX_MATCH,
+                DATA_SAVER_ENABLED,
+                BLOCKED_METERED_REASON_USER_RESTRICTED | BLOCKED_METERED_REASON_ADMIN_DISABLED
+        );
+        doTestGetUidNetworkingBlockedReasons(
+                STANDBY_MATCH,
+                STANDBY_MATCH | PENALTY_BOX_USER_MATCH | HAPPY_BOX_MATCH,
+                DATA_SAVER_ENABLED,
+                BLOCKED_REASON_APP_STANDBY | BLOCKED_METERED_REASON_USER_RESTRICTED
+        );
     }
 }
