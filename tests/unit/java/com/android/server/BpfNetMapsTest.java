@@ -1233,4 +1233,64 @@ public final class BpfNetMapsTest {
                 BLOCKED_REASON_APP_STANDBY | BLOCKED_METERED_REASON_USER_RESTRICTED
         );
     }
+
+    private void doTestIsUidRestrictedOnMeteredNetworks(
+            final long enabledMatches,
+            final long uidRules,
+            final short dataSaver,
+            final boolean expectedRestricted
+    ) throws Exception {
+        mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(enabledMatches));
+        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(NULL_IIF, uidRules));
+        mDataSaverEnabledMap.updateEntry(DATA_SAVER_ENABLED_KEY, new U8(dataSaver));
+
+        assertEquals(expectedRestricted, mBpfNetMaps.isUidRestrictedOnMeteredNetworks(TEST_UID));
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testIsUidRestrictedOnMeteredNetworks() throws Exception {
+        doTestIsUidRestrictedOnMeteredNetworks(
+                NO_MATCH,
+                NO_MATCH,
+                DATA_SAVER_DISABLED,
+                false /* expectRestricted */
+        );
+        doTestIsUidRestrictedOnMeteredNetworks(
+                DOZABLE_MATCH | POWERSAVE_MATCH | STANDBY_MATCH,
+                DOZABLE_MATCH | STANDBY_MATCH ,
+                DATA_SAVER_DISABLED,
+                false /* expectRestricted */
+        );
+        doTestIsUidRestrictedOnMeteredNetworks(
+                NO_MATCH,
+                PENALTY_BOX_USER_MATCH,
+                DATA_SAVER_DISABLED,
+                true /* expectRestricted */
+        );
+        doTestIsUidRestrictedOnMeteredNetworks(
+                NO_MATCH,
+                PENALTY_BOX_ADMIN_MATCH,
+                DATA_SAVER_DISABLED,
+                true /* expectRestricted */
+        );
+        doTestIsUidRestrictedOnMeteredNetworks(
+                NO_MATCH,
+                PENALTY_BOX_USER_MATCH | PENALTY_BOX_ADMIN_MATCH | HAPPY_BOX_MATCH,
+                DATA_SAVER_DISABLED,
+                true /* expectRestricted */
+        );
+        doTestIsUidRestrictedOnMeteredNetworks(
+                NO_MATCH,
+                NO_MATCH,
+                DATA_SAVER_ENABLED,
+                true /* expectRestricted */
+        );
+        doTestIsUidRestrictedOnMeteredNetworks(
+                NO_MATCH,
+                HAPPY_BOX_MATCH,
+                DATA_SAVER_ENABLED,
+                false /* expectRestricted */
+        );
+    }
 }
