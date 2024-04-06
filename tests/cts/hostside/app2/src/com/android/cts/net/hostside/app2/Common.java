@@ -15,10 +15,16 @@
  */
 package com.android.cts.net.hostside.app2;
 
+import static com.android.cts.net.hostside.INetworkStateObserver.RESULT_ERROR_OTHER;
+import static com.android.cts.net.hostside.INetworkStateObserver.RESULT_ERROR_UNEXPECTED_CAPABILITIES;
+import static com.android.cts.net.hostside.INetworkStateObserver.RESULT_ERROR_UNEXPECTED_PROC_STATE;
+
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Process;
@@ -26,6 +32,12 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import com.android.cts.net.hostside.INetworkStateObserver;
+import com.android.cts.net.hostside.NetworkCheckResult;
+
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 public final class Common {
 
@@ -48,6 +60,9 @@ public final class Common {
     static final String ACTION_SNOOZE_WARNING =
             "com.android.server.net.action.SNOOZE_WARNING";
 
+    private static final String DEFAULT_TEST_URL =
+            "https://connectivitycheck.android.com/generate_204";
+
     static final String NOTIFICATION_TYPE_CONTENT = "CONTENT";
     static final String NOTIFICATION_TYPE_DELETE = "DELETE";
     static final String NOTIFICATION_TYPE_FULL_SCREEN = "FULL_SCREEN";
@@ -59,10 +74,12 @@ public final class Common {
     static final String TEST_PKG = "com.android.cts.net.hostside";
     static final String KEY_NETWORK_STATE_OBSERVER = TEST_PKG + ".observer";
     static final String KEY_SKIP_VALIDATION_CHECKS = TEST_PKG + ".skip_validation_checks";
+    static final String KEY_CUSTOM_URL =  TEST_PKG + ".custom_url";
 
     static final int TYPE_COMPONENT_ACTIVTY = 0;
     static final int TYPE_COMPONENT_FOREGROUND_SERVICE = 1;
     static final int TYPE_COMPONENT_EXPEDITED_JOB = 2;
+    private static final int NETWORK_TIMEOUT_MS = (int) TimeUnit.SECONDS.toMillis(10);
 
     static int getUid(Context context) {
         final String packageName = context.getPackageName();
@@ -73,6 +90,15 @@ public final class Common {
         }
     }
 
+    private static NetworkCheckResult createNetworkCheckResult(boolean connected, String details,
+            NetworkInfo networkInfo) {
+        final NetworkCheckResult checkResult = new NetworkCheckResult();
+        checkResult.connected = connected;
+        checkResult.details = details;
+        checkResult.networkInfo = networkInfo;
+        return checkResult;
+    }
+
     private static boolean validateComponentState(Context context, int componentType,
             INetworkStateObserver observer) throws RemoteException {
         final ActivityManager activityManager = context.getSystemService(ActivityManager.class);
@@ -80,9 +106,9 @@ public final class Common {
             case TYPE_COMPONENT_ACTIVTY: {
                 final int procState = activityManager.getUidProcessState(Process.myUid());
                 if (procState != ActivityManager.PROCESS_STATE_TOP) {
-                    observer.onNetworkStateChecked(
-                            INetworkStateObserver.RESULT_ERROR_UNEXPECTED_PROC_STATE,
-                            "Unexpected procstate: " + procState);
+                    observer.onNetworkStateChecked(RESULT_ERROR_UNEXPECTED_PROC_STATE,
+                            createNetworkCheckResult(false, "Unexpected procstate: " + procState,
+                                    null));
                     return false;
                 }
                 return true;
@@ -90,9 +116,9 @@ public final class Common {
             case TYPE_COMPONENT_FOREGROUND_SERVICE: {
                 final int procState = activityManager.getUidProcessState(Process.myUid());
                 if (procState != ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE) {
-                    observer.onNetworkStateChecked(
-                            INetworkStateObserver.RESULT_ERROR_UNEXPECTED_PROC_STATE,
-                            "Unexpected procstate: " + procState);
+                    observer.onNetworkStateChecked(RESULT_ERROR_UNEXPECTED_PROC_STATE,
+                            createNetworkCheckResult(false, "Unexpected procstate: " + procState,
+                                    null));
                     return false;
                 }
                 return true;
@@ -101,16 +127,17 @@ public final class Common {
                 final int capabilities = activityManager.getUidProcessCapabilities(Process.myUid());
                 if ((capabilities
                         & ActivityManager.PROCESS_CAPABILITY_POWER_RESTRICTED_NETWORK) == 0) {
-                    observer.onNetworkStateChecked(
-                            INetworkStateObserver.RESULT_ERROR_UNEXPECTED_CAPABILITIES,
-                            "Unexpected capabilities: " + capabilities);
+                    observer.onNetworkStateChecked(RESULT_ERROR_UNEXPECTED_CAPABILITIES,
+                            createNetworkCheckResult(false,
+                                    "Unexpected capabilities: " + capabilities, null));
                     return false;
                 }
                 return true;
             }
             default: {
-                observer.onNetworkStateChecked(INetworkStateObserver.RESULT_ERROR_OTHER,
-                        "Unknown component type: " + componentType);
+                observer.onNetworkStateChecked(RESULT_ERROR_OTHER,
+                        createNetworkCheckResult(false, "Unknown component type: " + componentType,
+                                null));
                 return false;
             }
         }
@@ -131,6 +158,7 @@ public final class Common {
         final INetworkStateObserver observer = INetworkStateObserver.Stub.asInterface(
                 extras.getBinder(KEY_NETWORK_STATE_OBSERVER));
         if (observer != null) {
+            final String customUrl = extras.getString(KEY_CUSTOM_URL);
             try {
                 final boolean skipValidation = extras.getBoolean(KEY_SKIP_VALIDATION_CHECKS);
                 if (!skipValidation && !validateComponentState(context, componentType, observer)) {
@@ -143,11 +171,64 @@ public final class Common {
                 try {
                     observer.onNetworkStateChecked(
                             INetworkStateObserver.RESULT_SUCCESS_NETWORK_STATE_CHECKED,
-                            MyBroadcastReceiver.checkNetworkStatus(context));
+                            checkNetworkStatus(context, customUrl));
                 } catch (RemoteException e) {
                     Log.e(TAG, "Error occurred while notifying the observer: " + e);
                 }
             });
         }
+    }
+
+    /**
+     * Checks whether the network is available by attempting a connection to the given address
+     * and returns a {@link NetworkCheckResult} object containing all the relevant details for
+     * debugging. Uses a default address if the given address is {@code null}.
+     *
+     * <p>
+     * The returned object has the following fields:
+     *
+     * <ul>
+     * <li>{@code connected}: whether or not the connection was successful.
+     * <li>{@code networkInfo}: the {@link NetworkInfo} describing the current active network as
+     * visible to this app.
+     * <li>{@code details}: A human readable string giving useful information about the success or
+     * failure.
+     * </ul>
+     */
+    static NetworkCheckResult checkNetworkStatus(Context context, String customUrl) {
+        final String address = (customUrl == null) ? DEFAULT_TEST_URL : customUrl;
+
+        // The current Android DNS resolver returns an UnknownHostException whenever network access
+        // is blocked. This can get cached in the current process-local InetAddress cache. Clearing
+        // the cache before attempting a connection ensures we never report a failure due to a
+        // negative cache entry.
+        InetAddress.clearDnsCache();
+
+        final ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
+
+        final NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        Log.d(TAG, "Running checkNetworkStatus() on thread "
+                + Thread.currentThread().getName() + " for UID " + getUid(context)
+                + "\n\tactiveNetworkInfo: " + networkInfo + "\n\tURL: " + address);
+        boolean checkStatus = false;
+        String checkDetails = "N/A";
+        try {
+            final URL url = new URL(address);
+            final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setReadTimeout(NETWORK_TIMEOUT_MS);
+            conn.setConnectTimeout(NETWORK_TIMEOUT_MS / 2);
+            conn.setRequestMethod("GET");
+            conn.connect();
+            final int response = conn.getResponseCode();
+            checkStatus = true;
+            checkDetails = "HTTP response for " + address + ": " + response;
+        } catch (Exception e) {
+            checkStatus = false;
+            checkDetails = "Exception getting " + address + ": " + e;
+        }
+        final NetworkCheckResult result = createNetworkCheckResult(checkStatus, checkDetails,
+                networkInfo);
+        Log.d(TAG, "Offering: " + result);
+        return result;
     }
 }

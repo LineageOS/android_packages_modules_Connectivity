@@ -21,9 +21,7 @@ java_test_helper_library {
     name: "CtsHostsideNetworkTestsAidl",
     sdk_version: "current",
     srcs: [
-        "com/android/cts/net/hostside/IMyService.aidl",
-        "com/android/cts/net/hostside/INetworkCallback.aidl",
-        "com/android/cts/net/hostside/INetworkStateObserver.aidl",
-        "com/android/cts/net/hostside/IRemoteSocketFactory.aidl",
+        "com/android/cts/net/hostside/*.aidl",
+        "com/android/cts/net/hostside/*.java",
     ],
 }

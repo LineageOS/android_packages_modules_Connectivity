@@ -98,9 +98,10 @@ public class MyServiceClient {
         return mService.getCounters(receiverName, action);
     }
 
-    public String checkNetworkStatus() throws RemoteException {
+    /** Retrieves the network state as observed from the bound test app */
+    public NetworkCheckResult checkNetworkStatus(String address) throws RemoteException {
         ensureServiceConnection();
-        return mService.checkNetworkStatus();
+        return mService.checkNetworkStatus(address);
     }
 
     public String getRestrictBackgroundStatus() throws RemoteException {
