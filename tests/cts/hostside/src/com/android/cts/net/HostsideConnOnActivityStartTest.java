@@ -47,29 +47,29 @@ public class HostsideConnOnActivityStartTest extends HostsideNetworkTestCase {
 
     @Test
     public void testStartActivity_batterySaver() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_batterySaver");
+        runDeviceTestsWithCustomOptions(TEST_PKG, TEST_CLASS, "testStartActivity_batterySaver");
     }
 
     @Test
     public void testStartActivity_dataSaver() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_dataSaver");
+        runDeviceTestsWithCustomOptions(TEST_PKG, TEST_CLASS, "testStartActivity_dataSaver");
     }
 
     @FlakyTest(bugId = 231440256)
     @Test
     public void testStartActivity_doze() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_doze");
+        runDeviceTestsWithCustomOptions(TEST_PKG, TEST_CLASS, "testStartActivity_doze");
     }
 
     @Test
     public void testStartActivity_appStandby() throws Exception {
-        runDeviceTests(TEST_PKG, TEST_CLASS, "testStartActivity_appStandby");
+        runDeviceTestsWithCustomOptions(TEST_PKG, TEST_CLASS, "testStartActivity_appStandby");
     }
 
     // TODO(b/321848487): Annotate with @RequiresFlagsEnabled to mirror the device-side test.
     @Test
     public void testStartActivity_default() throws Exception {
-        runDeviceTestsWithArgs(TEST_PKG, TEST_CLASS, "testStartActivity_default",
+        runDeviceTestsWithCustomOptions(TEST_PKG, TEST_CLASS, "testStartActivity_default",
                 Map.of(ARG_WAIVE_BIND_PRIORITY, "true"));
     }
 }
