@@ -21,7 +21,6 @@ import static com.android.cts.net.hostside.app2.Common.ACTION_RECEIVER_READY;
 import static com.android.cts.net.hostside.app2.Common.ACTION_SNOOZE_WARNING;
 import static com.android.cts.net.hostside.app2.Common.DYNAMIC_RECEIVER;
 import static com.android.cts.net.hostside.app2.Common.TAG;
-import static com.android.networkstack.apishim.ConstantsShim.RECEIVER_EXPORTED;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -41,6 +40,7 @@ import android.util.Log;
 
 import com.android.cts.net.hostside.IMyService;
 import com.android.cts.net.hostside.INetworkCallback;
+import com.android.cts.net.hostside.NetworkCheckResult;
 import com.android.modules.utils.build.SdkLevel;
 
 /**
@@ -56,9 +56,7 @@ public class MyService extends Service {
 
     // TODO: move MyBroadcast static functions here - they were kept there to make git diff easier.
 
-    private IMyService.Stub mBinder =
-        new IMyService.Stub() {
-
+    private IMyService.Stub mBinder = new IMyService.Stub() {
         @Override
         public void registerBroadcastReceiver() {
             if (mReceiver != null) {
@@ -83,8 +81,8 @@ public class MyService extends Service {
         }
 
         @Override
-        public String checkNetworkStatus() {
-            return MyBroadcastReceiver.checkNetworkStatus(getApplicationContext());
+        public NetworkCheckResult checkNetworkStatus(String customUrl) {
+            return Common.checkNetworkStatus(getApplicationContext(), customUrl);
         }
 
         @Override
@@ -94,7 +92,7 @@ public class MyService extends Service {
 
         @Override
         public void sendNotification(int notificationId, String notificationType) {
-            MyBroadcastReceiver .sendNotification(getApplicationContext(), NOTIFICATION_CHANNEL_ID,
+            MyBroadcastReceiver.sendNotification(getApplicationContext(), NOTIFICATION_CHANNEL_ID,
                     notificationId, notificationType);
         }
 
@@ -170,7 +168,7 @@ public class MyService extends Service {
                     .getSystemService(JobScheduler.class);
             return jobScheduler.schedule(jobInfo);
         }
-      };
+    };
 
     @Override
     public IBinder onBind(Intent intent) {
