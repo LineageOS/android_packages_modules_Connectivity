@@ -30,7 +30,6 @@ import static com.android.cts.net.hostside.app2.Common.NOTIFICATION_TYPE_CONTENT
 import static com.android.cts.net.hostside.app2.Common.NOTIFICATION_TYPE_DELETE;
 import static com.android.cts.net.hostside.app2.Common.NOTIFICATION_TYPE_FULL_SCREEN;
 import static com.android.cts.net.hostside.app2.Common.TAG;
-import static com.android.cts.net.hostside.app2.Common.getUid;
 
 import android.app.Notification;
 import android.app.Notification.Action;
@@ -42,14 +41,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
-
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.URL;
 
 /**
  * Receiver used to:
@@ -59,8 +53,6 @@ import java.net.URL;
  * </ol>
  */
 public class MyBroadcastReceiver extends BroadcastReceiver {
-
-    private static final int NETWORK_TIMEOUT_MS = 5 * 1000;
 
     private final String mName;
 
@@ -124,82 +116,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
         final int apiStatus = cm.getRestrictBackgroundStatus();
         Log.d(TAG, "getRestrictBackgroundStatus: returning " + apiStatus);
         return String.valueOf(apiStatus);
-    }
-
-    private static final String NETWORK_STATUS_TEMPLATE = "%s|%s|%s|%s|%s";
-    /**
-     * Checks whether the network is available and return a string which can then be send as a
-     * result data for the ordered broadcast.
-     *
-     * <p>
-     * The string has the following format:
-     *
-     * <p><pre><code>
-     * NetinfoState|NetinfoDetailedState|RealConnectionCheck|RealConnectionCheckDetails|Netinfo
-     * </code></pre>
-     *
-     * <p>Where:
-     *
-     * <ul>
-     * <li>{@code NetinfoState}: enum value of {@link NetworkInfo.State}.
-     * <li>{@code NetinfoDetailedState}: enum value of {@link NetworkInfo.DetailedState}.
-     * <li>{@code RealConnectionCheck}: boolean value of a real connection check (i.e., an attempt
-     *     to access an external website.
-     * <li>{@code RealConnectionCheckDetails}: if HTTP output core or exception string of the real
-     *     connection attempt
-     * <li>{@code Netinfo}: string representation of the {@link NetworkInfo}.
-     * </ul>
-     *
-     * For example, if the connection was established fine, the result would be something like:
-     * <p><pre><code>
-     * CONNECTED|CONNECTED|true|200|[type: WIFI[], state: CONNECTED/CONNECTED, reason: ...]
-     * </code></pre>
-     *
-     */
-    // TODO: now that it uses Binder, it counl return a Bundle with the data parts instead...
-    static String checkNetworkStatus(Context context) {
-        final ConnectivityManager cm =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        // TODO: connect to a hostside server instead
-        final String address = "http://example.com";
-        final NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        Log.d(TAG, "Running checkNetworkStatus() on thread "
-                + Thread.currentThread().getName() + " for UID " + getUid(context)
-                + "\n\tactiveNetworkInfo: " + networkInfo + "\n\tURL: " + address);
-        boolean checkStatus = false;
-        String checkDetails = "N/A";
-        try {
-            final URL url = new URL(address);
-            final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setReadTimeout(NETWORK_TIMEOUT_MS);
-            conn.setConnectTimeout(NETWORK_TIMEOUT_MS / 2);
-            conn.setRequestMethod("GET");
-            conn.setDoInput(true);
-            conn.connect();
-            final int response = conn.getResponseCode();
-            checkStatus = true;
-            checkDetails = "HTTP response for " + address + ": " + response;
-        } catch (Exception e) {
-            checkStatus = false;
-            checkDetails = "Exception getting " + address + ": " + e;
-        }
-        // If the app tries to make a network connection in the foreground immediately after
-        // trying to do the same when it's network access was blocked, it could receive a
-        // UnknownHostException due to the cached DNS entry. So, clear the dns cache after
-        // every network access for now until we have a fix on the platform side.
-        InetAddress.clearDnsCache();
-        Log.d(TAG, checkDetails);
-        final String state, detailedState;
-        if (networkInfo != null) {
-            state = networkInfo.getState().name();
-            detailedState = networkInfo.getDetailedState().name();
-        } else {
-            state = detailedState = "null";
-        }
-        final String status = String.format(NETWORK_STATUS_TEMPLATE, state, detailedState,
-                Boolean.valueOf(checkStatus), checkDetails, networkInfo);
-        Log.d(TAG, "Offering " + status);
-        return status;
     }
 
     /**

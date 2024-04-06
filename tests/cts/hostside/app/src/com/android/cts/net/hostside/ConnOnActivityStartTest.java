@@ -69,6 +69,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @RequiredProperties({BATTERY_SAVER_MODE})
     public void testStartActivity_batterySaver() throws Exception {
         setBatterySaverMode(true);
+        assertNetworkAccess(false, null);
         assertLaunchedActivityHasNetworkAccess("testStartActivity_batterySaver", null);
     }
 
@@ -76,6 +77,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @RequiredProperties({DATA_SAVER_MODE, METERED_NETWORK})
     public void testStartActivity_dataSaver() throws Exception {
         setRestrictBackground(true);
+        assertNetworkAccess(false, null);
         assertLaunchedActivityHasNetworkAccess("testStartActivity_dataSaver", null);
     }
 
@@ -83,6 +85,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @RequiredProperties({DOZE_MODE})
     public void testStartActivity_doze() throws Exception {
         setDozeMode(true);
+        assertNetworkAccess(false, null);
         // TODO (235284115): We need to turn on Doze every time before starting
         // the activity.
         assertLaunchedActivityHasNetworkAccess("testStartActivity_doze", null);
@@ -93,6 +96,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     public void testStartActivity_appStandby() throws Exception {
         turnBatteryOn();
         setAppIdle(true);
+        assertNetworkAccess(false, null);
         // TODO (235284115): We need to put the app into app standby mode every
         // time before starting the activity.
         assertLaunchedActivityHasNetworkAccess("testStartActivity_appStandby", null);
@@ -104,6 +108,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
         assertLaunchedActivityHasNetworkAccess("testStartActivity_default", () -> {
             assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
             SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            assertNetworkAccess(false, null);
         });
     }
 

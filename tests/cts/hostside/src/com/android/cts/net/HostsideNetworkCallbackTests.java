@@ -41,20 +41,20 @@ public class HostsideNetworkCallbackTests extends HostsideNetworkTestCase {
 
     @Test
     public void testOnBlockedStatusChanged_dataSaver() throws Exception {
-        runDeviceTests(TEST_PKG,
+        runDeviceTestsWithCustomOptions(TEST_PKG,
                 TEST_PKG + ".NetworkCallbackTest", "testOnBlockedStatusChanged_dataSaver");
     }
 
     @Test
     public void testOnBlockedStatusChanged_powerSaver() throws Exception {
-        runDeviceTests(TEST_PKG,
+        runDeviceTestsWithCustomOptions(TEST_PKG,
                 TEST_PKG + ".NetworkCallbackTest", "testOnBlockedStatusChanged_powerSaver");
     }
 
     // TODO(b/321848487): Annotate with @RequiresFlagsEnabled to mirror the device-side test.
     @Test
     public void testOnBlockedStatusChanged_default() throws Exception {
-        runDeviceTestsWithArgs(TEST_PKG, TEST_PKG + ".NetworkCallbackTest",
+        runDeviceTestsWithCustomOptions(TEST_PKG, TEST_PKG + ".NetworkCallbackTest",
                 "testOnBlockedStatusChanged_default", Map.of(ARG_WAIVE_BIND_PRIORITY, "true"));
     }
 }

@@ -18,4 +18,5 @@ package com.android.cts.net.arguments;
 
 public interface InstrumentationArguments {
     String ARG_WAIVE_BIND_PRIORITY = "waive_bind_priority";
+    String ARG_CONNECTION_CHECK_CUSTOM_URL = "connection_check_custom_url";
 }
