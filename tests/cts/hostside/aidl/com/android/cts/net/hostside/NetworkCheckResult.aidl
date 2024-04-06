@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,9 @@ package com.android.cts.net.hostside;
 
 import android.net.NetworkInfo;
 
-import com.android.cts.net.hostside.NetworkCheckResult;
-
-interface INetworkStateObserver {
-    void onNetworkStateChecked(int resultCode, in NetworkCheckResult networkCheckResult);
-
-    const int RESULT_SUCCESS_NETWORK_STATE_CHECKED = 0;
-    const int RESULT_ERROR_UNEXPECTED_PROC_STATE = 1;
-    const int RESULT_ERROR_UNEXPECTED_CAPABILITIES = 2;
-    const int RESULT_ERROR_OTHER = 3;
+@JavaDerive(toString=true)
+parcelable NetworkCheckResult {
+   boolean connected;
+   String details;
+   NetworkInfo networkInfo;
 }
