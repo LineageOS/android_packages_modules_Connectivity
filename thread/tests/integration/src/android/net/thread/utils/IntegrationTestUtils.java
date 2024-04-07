@@ -85,7 +85,7 @@ public final class IntegrationTestUtils {
      */
     public static void waitFor(Supplier<Boolean> condition, Duration timeout)
             throws TimeoutException {
-        final long intervalMills = 1000;
+        final long intervalMills = 500;
         final long timeoutMills = timeout.toMillis();
 
         for (long i = 0; i < timeoutMills; i += intervalMills) {
