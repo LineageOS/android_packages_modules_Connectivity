@@ -252,8 +252,10 @@ public class NduseroptMessageTest {
     public void testToString() {
         NduseroptMessage msg = parseNduseroptMessage(toBuffer(MSG_PREF64));
         assertNotNull(msg);
-        assertEquals("Nduseroptmsg(10, 16, 1431655765, 134, 0, fe80:2:3:4:5:6:7:8%1431655765)",
-                msg.toString());
+        final String expected = "Nduseroptmsg(family:10, opts_len:16, ifindex:1431655765, "
+                + "icmp_type:134, icmp_code:0, srcaddr: fe80:2:3:4:5:6:7:8%1431655765, "
+                + "NdOptPref64(2001:db8:3:4:5:6::/96, 10064))";
+        assertEquals(expected, msg.toString());
     }
 
     // Convenience method to parse a NduseroptMessage that's not part of a netlink message.
