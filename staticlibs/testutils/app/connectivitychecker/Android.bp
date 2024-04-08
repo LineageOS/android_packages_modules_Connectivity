@@ -30,7 +30,6 @@ android_test_helper_app {
         "modules-utils-build_system",
         "net-tests-utils",
     ],
-    host_required: ["net-tests-utils-host-common"],
     lint: {
         strict_updatability_linting: true,
     },
