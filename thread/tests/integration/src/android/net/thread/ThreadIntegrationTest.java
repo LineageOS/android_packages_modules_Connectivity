@@ -21,6 +21,7 @@ import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_LEADER;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_STOPPED;
 import static android.net.thread.utils.IntegrationTestUtils.CALLBACK_TIMEOUT;
 import static android.net.thread.utils.IntegrationTestUtils.RESTART_JOIN_TIMEOUT;
+import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow;
@@ -64,6 +65,9 @@ import java.util.concurrent.Executors;
 public class ThreadIntegrationTest {
     // The byte[] buffer size for UDP tests
     private static final int UDP_BUFFER_SIZE = 1024;
+
+    // The maximum time for OT addresses to be propagated to the TUN interface "thread-wpan"
+    private static final Duration TUN_ADDR_UPDATE_TIMEOUT = Duration.ofSeconds(1);
 
     // A valid Thread Active Operational Dataset generated from OpenThread CLI "dataset init new".
     private static final byte[] DEFAULT_DATASET_TLVS =
@@ -149,16 +153,22 @@ public class ThreadIntegrationTest {
         assertThat(ifconfig).doesNotContain("inet6 addr");
     }
 
+    // TODO (b/323300829): add test for removing an OT address
     @Test
     public void tunInterface_joinedNetwork_otAddressesAddedToTunInterface() throws Exception {
         mController.joinAndWait(DEFAULT_DATASET);
 
-        String ifconfig = runShellCommand("ifconfig thread-wpan");
         List<Inet6Address> otAddresses = mOtCtl.getAddresses();
         assertThat(otAddresses).isNotEmpty();
-        for (Inet6Address otAddress : otAddresses) {
-            assertThat(ifconfig).contains(otAddress.getHostAddress());
-        }
+        // TODO: it's cleaner to have a retry() method to retry failed asserts in given delay so
+        // that we can write assertThat() in the Predicate
+        waitFor(
+                () -> {
+                    String ifconfig = runShellCommand("ifconfig thread-wpan");
+                    return otAddresses.stream()
+                            .allMatch(addr -> ifconfig.contains(addr.getHostAddress()));
+                },
+                TUN_ADDR_UPDATE_TIMEOUT);
     }
 
     @Test

@@ -156,8 +156,9 @@ public class NduseroptMessage extends NetlinkMessage {
 
     @Override
     public String toString() {
-        return String.format("Nduseroptmsg(%d, %d, %d, %d, %d, %s)",
+        return String.format("Nduseroptmsg(family:%d, opts_len:%d, ifindex:%d, icmp_type:%d, "
+                + "icmp_code:%d, srcaddr: %s, %s)",
                 family, opts_len, ifindex, Byte.toUnsignedInt(icmp_type),
-                Byte.toUnsignedInt(icmp_code), srcaddr.getHostAddress());
+                Byte.toUnsignedInt(icmp_code), srcaddr.getHostAddress(), option);
     }
 }
