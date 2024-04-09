@@ -36,6 +36,7 @@ import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
 import com.android.internal.util.HexDump
+import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.NetworkStackModuleTest
@@ -52,6 +53,7 @@ import kotlin.test.assertNotNull
 import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -83,6 +85,9 @@ class ApfIntegrationTest {
             }
         }
     }
+
+    @get:Rule
+    val ignoreRule = DevSdkIgnoreRule()
 
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
