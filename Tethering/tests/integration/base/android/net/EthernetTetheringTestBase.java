@@ -74,7 +74,6 @@ import com.android.testutils.TestNetworkTracker;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 
 import java.io.FileDescriptor;
 import java.net.Inet4Address;
@@ -144,7 +143,7 @@ public abstract class EthernetTetheringTestBase {
 
     private static final Context sContext =
             InstrumentationRegistry.getInstrumentation().getContext();
-    private static final EthernetManager sEm = sContext.getSystemService(EthernetManager.class);
+    protected static final EthernetManager sEm = sContext.getSystemService(EthernetManager.class);
     private static final TetheringManager sTm = sContext.getSystemService(TetheringManager.class);
     private static final PackageManager sPackageManager = sContext.getPackageManager();
     private static final CtsNetUtils sCtsNetUtils = new CtsNetUtils(sContext);
@@ -166,34 +165,6 @@ public abstract class EthernetTetheringTestBase {
 
     public Context getContext() {
         return sContext;
-    }
-
-    @BeforeClass
-    public static void setUpOnce() throws Exception {
-        // The first test case may experience tethering restart with IP conflict handling.
-        // Tethering would cache the last upstreams so that the next enabled tethering avoids
-        // picking up the address that is in conflict with the upstreams. To protect subsequent
-        // tests, turn tethering on and off before running them.
-        MyTetheringEventCallback callback = null;
-        TestNetworkInterface testIface = null;
-        assumeTrue(sEm != null);
-        try {
-            // If the physical ethernet interface is available, do nothing.
-            if (isInterfaceForTetheringAvailable()) return;
-
-            testIface = createTestInterface();
-            setIncludeTestInterfaces(true);
-
-            callback = enableEthernetTethering(testIface.getInterfaceName(), null);
-            callback.awaitUpstreamChanged(true /* throwTimeoutException */);
-        } catch (TimeoutException e) {
-            Log.d(TAG, "WARNNING " + e);
-        } finally {
-            maybeCloseTestInterface(testIface);
-            maybeUnregisterTetheringEventCallback(callback);
-
-            setIncludeTestInterfaces(false);
-        }
     }
 
     @Before
