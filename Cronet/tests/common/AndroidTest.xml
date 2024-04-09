@@ -43,8 +43,6 @@
         <option name="exclude-filter" value="org.chromium.net.NetworkChangesTest" />
         <!-- b/316550794 -->
         <option name="exclude-filter" value="org.chromium.net.impl.CronetLoggerTest#testEngineCreation" />
-        <!-- b/327182569 -->
-        <option name="exclude-filter" value="org.chromium.net.urlconnection.CronetURLStreamHandlerFactoryTest#testSetUrlStreamFactoryUsesCronetForNative" />
         <option name="hidden-api-checks" value="false"/>
         <option name="isolated-storage" value="false"/>
         <option name="orchestrator" value="true"/>
