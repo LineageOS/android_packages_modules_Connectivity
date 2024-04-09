@@ -59,6 +59,7 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.NetworkStackModuleTest;
 import com.android.testutils.TapPacketReader;
 
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -149,6 +150,35 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
             (byte) 0x00, (byte) 0x04,                           /* Data length: 4 */
             (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04  /* Address: 1.2.3.4 */
     };
+
+    /** Enable/disable tethering once before running the tests. */
+    @BeforeClass
+    public static void setUpOnce() throws Exception {
+        // The first test case may experience tethering restart with IP conflict handling.
+        // Tethering would cache the last upstreams so that the next enabled tethering avoids
+        // picking up the address that is in conflict with the upstreams. To protect subsequent
+        // tests, turn tethering on and off before running them.
+        MyTetheringEventCallback callback = null;
+        TestNetworkInterface testIface = null;
+        assumeTrue(sEm != null);
+        try {
+            // If the physical ethernet interface is available, do nothing.
+            if (isInterfaceForTetheringAvailable()) return;
+
+            testIface = createTestInterface();
+            setIncludeTestInterfaces(true);
+
+            callback = enableEthernetTethering(testIface.getInterfaceName(), null);
+            callback.awaitUpstreamChanged(true /* throwTimeoutException */);
+        } catch (TimeoutException e) {
+            Log.d(TAG, "WARNNING " + e);
+        } finally {
+            maybeCloseTestInterface(testIface);
+            maybeUnregisterTetheringEventCallback(callback);
+
+            setIncludeTestInterfaces(false);
+        }
+    }
 
     @Test
     public void testVirtualEthernetAlreadyExists() throws Exception {
