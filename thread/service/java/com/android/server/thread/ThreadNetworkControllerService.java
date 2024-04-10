@@ -165,6 +165,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     // Note that this regex allows "XX:XX-XX" as well but we don't need to be a strict checker
     private static final String OUI_REGEX = "^([0-9A-Fa-f]{2}[:-]?){2}([0-9A-Fa-f]{2})$";
 
+    // The channel mask that indicates all channels from channel 11 to channel 24
+    private static final int CHANNEL_MASK_11_TO_24 = 0x1FFF800;
+
     // Below member fields can be accessed from both the binder and handler threads
 
     private final Context mContext;
@@ -826,6 +829,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     private static int selectChannel(
             int supportedChannelMask, int preferredChannelMask, Random random) {
+        // Due to radio hardware performance reasons, many Thread radio chips need to reduce their
+        // transmit power on edge channels to pass regulatory RF certification. Thread edge channel
+        // 25 and 26 are not preferred here.
+        //
+        // If users want to use channel 25 or 26, they can change the channel via the method
+        // ActiveOperationalDataset.Builder(activeOperationalDataset).setChannel(channel).build().
+        preferredChannelMask = preferredChannelMask & CHANNEL_MASK_11_TO_24;
+
         // If the preferred channel mask is not empty, select a random channel from it, otherwise
         // choose one from the supported channel mask.
         preferredChannelMask = preferredChannelMask & supportedChannelMask;
