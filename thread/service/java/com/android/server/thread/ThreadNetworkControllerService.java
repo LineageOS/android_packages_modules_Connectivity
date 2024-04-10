@@ -73,7 +73,6 @@ import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.InetAddresses;
-import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalNetworkConfig;
 import android.net.LocalNetworkInfo;
@@ -106,7 +105,6 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.os.SystemClock;
 import android.os.UserManager;
 import android.util.Log;
 import android.util.SparseArray;
@@ -129,8 +127,6 @@ import libcore.util.HexEncoding;
 
 import java.io.IOException;
 import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -258,38 +254,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 context.getSystemService(UserManager.class),
                 new ConnectivityResources(context),
                 countryCodeSupplier);
-    }
-
-    private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
-        try {
-            return (Inet6Address) Inet6Address.getByAddress(addressBytes);
-        } catch (UnknownHostException e) {
-            // This is unlikely to happen unless the Thread daemon is critically broken
-            return null;
-        }
-    }
-
-    private static InetAddress addressInfoToInetAddress(Ipv6AddressInfo addressInfo) {
-        return bytesToInet6Address(addressInfo.address);
-    }
-
-    private static LinkAddress newLinkAddress(Ipv6AddressInfo addressInfo) {
-        long deprecationTimeMillis =
-                addressInfo.isPreferred
-                        ? LinkAddress.LIFETIME_PERMANENT
-                        : SystemClock.elapsedRealtime();
-
-        InetAddress address = addressInfoToInetAddress(addressInfo);
-
-        // flags and scope will be adjusted automatically depending on the address and
-        // its lifetimes.
-        return new LinkAddress(
-                address,
-                addressInfo.prefixLength,
-                0 /* flags */,
-                0 /* scope */,
-                deprecationTimeMillis,
-                LinkAddress.LIFETIME_PERMANENT /* expirationTime */);
     }
 
     private NetworkRequest newUpstreamNetworkRequest() {
@@ -1172,20 +1136,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         }
     }
 
-    private void handleAddressChanged(Ipv6AddressInfo addressInfo, boolean isAdded) {
+    private void handleAddressChanged(List<Ipv6AddressInfo> addressInfoList) {
         checkOnHandlerThread();
-        InetAddress address = addressInfoToInetAddress(addressInfo);
-        if (address.isMulticastAddress()) {
-            Log.i(TAG, "Ignoring multicast address " + address.getHostAddress());
-            return;
-        }
 
-        LinkAddress linkAddress = newLinkAddress(addressInfo);
-        if (isAdded) {
-            mTunIfController.addAddress(linkAddress);
-        } else {
-            mTunIfController.removeAddress(linkAddress);
-        }
+        mTunIfController.updateAddresses(addressInfoList);
 
         // The OT daemon can send link property updates before the networkAgent is
         // registered
@@ -1534,8 +1488,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         }
 
         @Override
-        public void onAddressChanged(Ipv6AddressInfo addressInfo, boolean isAdded) {
-            mHandler.post(() -> handleAddressChanged(addressInfo, isAdded));
+        public void onAddressChanged(List<Ipv6AddressInfo> addressInfoList) {
+            mHandler.post(() -> handleAddressChanged(addressInfoList));
         }
 
         @Override

@@ -21,6 +21,7 @@ import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_LEADER;
 import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_STOPPED;
 import static android.net.thread.utils.IntegrationTestUtils.CALLBACK_TIMEOUT;
 import static android.net.thread.utils.IntegrationTestUtils.RESTART_JOIN_TIMEOUT;
+import static android.net.thread.utils.IntegrationTestUtils.getIpv6LinkAddresses;
 import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
@@ -30,6 +31,8 @@ import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
 
 import android.content.Context;
+import android.net.IpPrefix;
+import android.net.LinkAddress;
 import android.net.thread.utils.FullThreadDevice;
 import android.net.thread.utils.OtDaemonController;
 import android.net.thread.utils.ThreadFeatureCheckerRule;
@@ -199,6 +202,26 @@ public class ThreadIntegrationTest {
         String udpReply = mFtd.udpReceive();
 
         assertThat(udpReply).isEqualTo("Hello,Thread");
+    }
+
+    @Test
+    public void joinNetworkWithBrDisabled_meshLocalAddressesArePreferred() throws Exception {
+        // When BR feature is disabled, there is no OMR address, so the mesh-local addresses are
+        // expected to be preferred.
+        mOtCtl.executeCommand("br disable");
+        mController.joinAndWait(DEFAULT_DATASET);
+
+        IpPrefix meshLocalPrefix = DEFAULT_DATASET.getMeshLocalPrefix();
+        List<LinkAddress> linkAddresses = getIpv6LinkAddresses("thread-wpan");
+        for (LinkAddress address : linkAddresses) {
+            if (meshLocalPrefix.contains(address.getAddress())) {
+                assertThat(address.getDeprecationTime())
+                        .isGreaterThan(SystemClock.elapsedRealtime());
+                assertThat(address.isPreferred()).isTrue();
+            }
+        }
+
+        mOtCtl.executeCommand("br enable");
     }
 
     // TODO (b/323300829): add more tests for integration with linux platform and

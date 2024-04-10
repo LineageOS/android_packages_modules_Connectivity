@@ -29,12 +29,19 @@ import android.system.Os;
 import android.system.OsConstants;
 import android.util.Log;
 
+import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
+import com.android.server.thread.openthread.Ipv6AddressInfo;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Controller for virtual/tunnel network interfaces. */
 public class TunInterfaceController {
@@ -178,6 +185,38 @@ public class TunInterfaceController {
         }
     }
 
+    public void updateAddresses(List<Ipv6AddressInfo> addressInfoList) {
+        final List<LinkAddress> newLinkAddresses = new ArrayList<>();
+        boolean hasActiveOmrAddress = false;
+
+        for (Ipv6AddressInfo addressInfo : addressInfoList) {
+            if (addressInfo.isActiveOmr) {
+                hasActiveOmrAddress = true;
+                break;
+            }
+        }
+
+        for (Ipv6AddressInfo addressInfo : addressInfoList) {
+            InetAddress address = addressInfoToInetAddress(addressInfo);
+            if (address.isMulticastAddress()) {
+                // TODO: Logging here will create repeated logs for a single multicast address, and
+                // it currently is not mandatory for debugging. Add log for ignored multicast
+                // address when necessary.
+                continue;
+            }
+            newLinkAddresses.add(newLinkAddress(addressInfo, hasActiveOmrAddress));
+        }
+
+        final CompareResult<LinkAddress> addressDiff =
+                new CompareResult<>(mLinkProperties.getAllLinkAddresses(), newLinkAddresses);
+        for (LinkAddress linkAddress : addressDiff.removed) {
+            removeAddress(linkAddress);
+        }
+        for (LinkAddress linkAddress : addressDiff.added) {
+            addAddress(linkAddress);
+        }
+    }
+
     private RouteInfo getRouteForAddress(LinkAddress linkAddress) {
         return new RouteInfo(
                 new IpPrefix(linkAddress.getAddress(), linkAddress.getPrefixLength()),
@@ -194,5 +233,45 @@ public class TunInterfaceController {
         } catch (IOException e) {
             Log.e(TAG, "Failed to set Thread TUN interface down");
         }
+    }
+
+    private static InetAddress addressInfoToInetAddress(Ipv6AddressInfo addressInfo) {
+        return bytesToInet6Address(addressInfo.address);
+    }
+
+    private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
+        try {
+            return (Inet6Address) Inet6Address.getByAddress(addressBytes);
+        } catch (UnknownHostException e) {
+            // This is unlikely to happen unless the Thread daemon is critically broken
+            return null;
+        }
+    }
+
+    private static LinkAddress newLinkAddress(
+            Ipv6AddressInfo addressInfo, boolean hasActiveOmrAddress) {
+        // Mesh-local addresses and OMR address have the same scope, to distinguish them we set
+        // mesh-local addresses as deprecated when there is an active OMR address.
+        // For OMR address and link-local address we only use the value isPreferred set by
+        // ot-daemon.
+        boolean isPreferred = addressInfo.isPreferred;
+        if (addressInfo.isMeshLocal && hasActiveOmrAddress) {
+            isPreferred = false;
+        }
+
+        final long deprecationTimeMillis =
+                isPreferred ? LinkAddress.LIFETIME_PERMANENT : SystemClock.elapsedRealtime();
+
+        final InetAddress address = addressInfoToInetAddress(addressInfo);
+
+        // flags and scope will be adjusted automatically depending on the address and
+        // its lifetimes.
+        return new LinkAddress(
+                address,
+                addressInfo.prefixLength,
+                0 /* flags */,
+                0 /* scope */,
+                deprecationTimeMillis,
+                LinkAddress.LIFETIME_PERMANENT /* expirationTime */);
     }
 }
