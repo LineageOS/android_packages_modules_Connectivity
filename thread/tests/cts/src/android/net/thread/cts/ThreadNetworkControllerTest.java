@@ -79,6 +79,7 @@ import com.android.testutils.FunctionalUtils.ThrowingRunnable;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -846,6 +847,7 @@ public class ThreadNetworkControllerTest {
     }
 
     @Test
+    @Ignore("b/333649897: Enable this when it's not flaky at all")
     public void meshcopService_joinedNetwork_discoveredHasNetwork() throws Exception {
         setUpTestNetwork();
 
