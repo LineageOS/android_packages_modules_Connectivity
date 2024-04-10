@@ -115,7 +115,11 @@ public final class ThreadNetworkControllerServiceTest {
     private static final String DEFAULT_NETWORK_NAME = "thread-wpan0";
     private static final int OT_ERROR_NONE = 0;
     private static final int DEFAULT_SUPPORTED_CHANNEL_MASK = 0x07FFF800; // from channel 11 to 26
-    private static final int DEFAULT_PREFERRED_CHANNEL_MASK = 0x00000800; // channel 11
+
+    // The DEFAULT_PREFERRED_CHANNEL_MASK is the ot-daemon preferred channel mask. Channel 25 and
+    // 26 are not preferred by dataset. The ThreadNetworkControllerService will only select channel
+    // 11 when it creates randomized dataset.
+    private static final int DEFAULT_PREFERRED_CHANNEL_MASK = 0x06000800; // channel 11, 25 and 26
     private static final int DEFAULT_SELECTED_CHANNEL = 11;
     private static final byte[] DEFAULT_SUPPORTED_CHANNEL_MASK_ARRAY = base16().decode("001FFFE0");
 
