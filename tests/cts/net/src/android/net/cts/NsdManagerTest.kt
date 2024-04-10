@@ -130,6 +130,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertNotEquals
 
 private const val TAG = "NsdManagerTest"
 private const val TIMEOUT_MS = 2000L
@@ -2037,7 +2038,7 @@ class NsdManagerTest {
     }
 
     @Test
-    fun testAdvertisingAndDiscovery_multipleRegistrationsForSameCustomHost_unionOfAddressesFound() {
+    fun testAdvertisingAndDiscovery_multipleRegistrationsForSameCustomHost_hostRenamed() {
         val hostAddresses1 = listOf(
                 parseNumericAddress("192.0.2.23"),
                 parseNumericAddress("2001:db8::1"),
@@ -2045,9 +2046,6 @@ class NsdManagerTest {
         val hostAddresses2 = listOf(
                 parseNumericAddress("192.0.2.24"),
                 parseNumericAddress("2001:db8::3"))
-        val hostAddresses3 = listOf(
-                parseNumericAddress("2001:db8::3"),
-                parseNumericAddress("2001:db8::5"))
         val si1 = NsdServiceInfo().also {
             it.network = testNetwork1.network
             it.hostname = customHostname
@@ -2061,18 +2059,9 @@ class NsdManagerTest {
             it.hostname = customHostname
             it.hostAddresses = hostAddresses2
         }
-        val si3 = NsdServiceInfo().also {
-            it.network = testNetwork1.network
-            it.serviceName = serviceName3
-            it.serviceType = serviceType
-            it.port = TEST_PORT + 1
-            it.hostname = customHostname
-            it.hostAddresses = hostAddresses3
-        }
 
         val registrationRecord1 = NsdRegistrationRecord()
         val registrationRecord2 = NsdRegistrationRecord()
-        val registrationRecord3 = NsdRegistrationRecord()
 
         val discoveryRecord = NsdDiscoveryRecord()
         tryTest {
@@ -2082,27 +2071,13 @@ class NsdManagerTest {
             nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD,
                     testNetwork1.network, Executor { it.run() }, discoveryRecord)
 
-            val discoveredInfo1 = discoveryRecord.waitForServiceDiscovered(
+            val discoveredInfo = discoveryRecord.waitForServiceDiscovered(
                     serviceName, serviceType, testNetwork1.network)
-            val resolvedInfo1 = resolveService(discoveredInfo1)
+            val resolvedInfo = resolveService(discoveredInfo)
 
-            assertEquals(TEST_PORT, resolvedInfo1.port)
-            assertEquals(si1.hostname, resolvedInfo1.hostname)
-            assertAddressEquals(
-                    hostAddresses1 + hostAddresses2,
-                    resolvedInfo1.hostAddresses)
-
-            registerService(registrationRecord3, si3)
-
-            val discoveredInfo2 = discoveryRecord.waitForServiceDiscovered(
-                    serviceName3, serviceType, testNetwork1.network)
-            val resolvedInfo2 = resolveService(discoveredInfo2)
-
-            assertEquals(TEST_PORT + 1, resolvedInfo2.port)
-            assertEquals(si2.hostname, resolvedInfo2.hostname)
-            assertAddressEquals(
-                    hostAddresses1 + hostAddresses2 + hostAddresses3,
-                    resolvedInfo2.hostAddresses)
+            assertEquals(TEST_PORT, resolvedInfo.port)
+            assertNotEquals(si1.hostname, resolvedInfo.hostname)
+            assertAddressEquals(hostAddresses2, resolvedInfo.hostAddresses)
         } cleanupStep {
             nsdManager.stopServiceDiscovery(discoveryRecord)
 
@@ -2110,7 +2085,6 @@ class NsdManagerTest {
         } cleanup {
             nsdManager.unregisterService(registrationRecord1)
             nsdManager.unregisterService(registrationRecord2)
-            nsdManager.unregisterService(registrationRecord3)
         }
     }
 
