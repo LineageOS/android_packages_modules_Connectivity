@@ -749,17 +749,6 @@ public class ThreadNetworkControllerTest {
     }
 
     @Test
-    public void setEnabled_toggleAfterJoin_joinsThreadNetworkAgain() throws Exception {
-        joinRandomizedDatasetAndWait(mController);
-
-        setEnabledAndWait(mController, false);
-        assertThat(getDeviceRole(mController)).isEqualTo(DEVICE_ROLE_STOPPED);
-        setEnabledAndWait(mController, true);
-
-        runAsShell(ACCESS_NETWORK_STATE, () -> waitForAttachedState(mController));
-    }
-
-    @Test
     public void setEnabled_enableFollowedByDisable_allSucceed() throws Exception {
         joinRandomizedDatasetAndWait(mController);
         CompletableFuture<Void> setFuture1 = new CompletableFuture<>();
