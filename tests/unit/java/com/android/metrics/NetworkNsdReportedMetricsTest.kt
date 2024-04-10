@@ -231,8 +231,10 @@ class NetworkNsdReportedMetricsTest {
         val clientId = 99
         val transactionId = 100
         val durationMs = 10L
+        val sentQueryCount = 10
         val metrics = NetworkNsdReportedMetrics(clientId, deps)
-        metrics.reportServiceResolutionStop(true /* isLegacy */, transactionId, durationMs)
+        metrics.reportServiceResolutionStop(
+                true /* isLegacy */, transactionId, durationMs, sentQueryCount)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
         verify(deps).statsWrite(eventCaptor.capture())
@@ -243,6 +245,7 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_RESOLVE, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_RESOLUTION_STOP, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
+            assertEquals(sentQueryCount, it.sentQueryCount)
         }
     }
 
