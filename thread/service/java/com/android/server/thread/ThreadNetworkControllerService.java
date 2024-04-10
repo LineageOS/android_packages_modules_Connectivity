@@ -73,7 +73,6 @@ import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.InetAddresses;
-import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.LocalNetworkConfig;
 import android.net.LocalNetworkInfo;
@@ -106,7 +105,6 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.os.SystemClock;
 import android.os.UserManager;
 import android.util.Log;
 import android.util.SparseArray;
@@ -129,8 +127,6 @@ import libcore.util.HexEncoding;
 
 import java.io.IOException;
 import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -164,6 +160,9 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     // This regex pattern allows "XXXXXX", "XX:XX:XX" and "XX-XX-XX" OUI formats.
     // Note that this regex allows "XX:XX-XX" as well but we don't need to be a strict checker
     private static final String OUI_REGEX = "^([0-9A-Fa-f]{2}[:-]?){2}([0-9A-Fa-f]{2})$";
+
+    // The channel mask that indicates all channels from channel 11 to channel 24
+    private static final int CHANNEL_MASK_11_TO_24 = 0x1FFF800;
 
     // Below member fields can be accessed from both the binder and handler threads
 
@@ -258,38 +257,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 context.getSystemService(UserManager.class),
                 new ConnectivityResources(context),
                 countryCodeSupplier);
-    }
-
-    private static Inet6Address bytesToInet6Address(byte[] addressBytes) {
-        try {
-            return (Inet6Address) Inet6Address.getByAddress(addressBytes);
-        } catch (UnknownHostException e) {
-            // This is unlikely to happen unless the Thread daemon is critically broken
-            return null;
-        }
-    }
-
-    private static InetAddress addressInfoToInetAddress(Ipv6AddressInfo addressInfo) {
-        return bytesToInet6Address(addressInfo.address);
-    }
-
-    private static LinkAddress newLinkAddress(Ipv6AddressInfo addressInfo) {
-        long deprecationTimeMillis =
-                addressInfo.isPreferred
-                        ? LinkAddress.LIFETIME_PERMANENT
-                        : SystemClock.elapsedRealtime();
-
-        InetAddress address = addressInfoToInetAddress(addressInfo);
-
-        // flags and scope will be adjusted automatically depending on the address and
-        // its lifetimes.
-        return new LinkAddress(
-                address,
-                addressInfo.prefixLength,
-                0 /* flags */,
-                0 /* scope */,
-                deprecationTimeMillis,
-                LinkAddress.LIFETIME_PERMANENT /* expirationTime */);
     }
 
     private NetworkRequest newUpstreamNetworkRequest() {
@@ -826,6 +793,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     private static int selectChannel(
             int supportedChannelMask, int preferredChannelMask, Random random) {
+        // Due to radio hardware performance reasons, many Thread radio chips need to reduce their
+        // transmit power on edge channels to pass regulatory RF certification. Thread edge channel
+        // 25 and 26 are not preferred here.
+        //
+        // If users want to use channel 25 or 26, they can change the channel via the method
+        // ActiveOperationalDataset.Builder(activeOperationalDataset).setChannel(channel).build().
+        preferredChannelMask = preferredChannelMask & CHANNEL_MASK_11_TO_24;
+
         // If the preferred channel mask is not empty, select a random channel from it, otherwise
         // choose one from the supported channel mask.
         preferredChannelMask = preferredChannelMask & supportedChannelMask;
@@ -1172,20 +1147,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         }
     }
 
-    private void handleAddressChanged(Ipv6AddressInfo addressInfo, boolean isAdded) {
+    private void handleAddressChanged(List<Ipv6AddressInfo> addressInfoList) {
         checkOnHandlerThread();
-        InetAddress address = addressInfoToInetAddress(addressInfo);
-        if (address.isMulticastAddress()) {
-            Log.i(TAG, "Ignoring multicast address " + address.getHostAddress());
-            return;
-        }
 
-        LinkAddress linkAddress = newLinkAddress(addressInfo);
-        if (isAdded) {
-            mTunIfController.addAddress(linkAddress);
-        } else {
-            mTunIfController.removeAddress(linkAddress);
-        }
+        mTunIfController.updateAddresses(addressInfoList);
 
         // The OT daemon can send link property updates before the networkAgent is
         // registered
@@ -1534,8 +1499,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         }
 
         @Override
-        public void onAddressChanged(Ipv6AddressInfo addressInfo, boolean isAdded) {
-            mHandler.post(() -> handleAddressChanged(addressInfo, isAdded));
+        public void onAddressChanged(List<Ipv6AddressInfo> addressInfoList) {
+            mHandler.post(() -> handleAddressChanged(addressInfoList));
         }
 
         @Override

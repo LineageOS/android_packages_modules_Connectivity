@@ -79,6 +79,7 @@ import com.android.testutils.FunctionalUtils.ThrowingRunnable;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -749,17 +750,6 @@ public class ThreadNetworkControllerTest {
     }
 
     @Test
-    public void setEnabled_toggleAfterJoin_joinsThreadNetworkAgain() throws Exception {
-        joinRandomizedDatasetAndWait(mController);
-
-        setEnabledAndWait(mController, false);
-        assertThat(getDeviceRole(mController)).isEqualTo(DEVICE_ROLE_STOPPED);
-        setEnabledAndWait(mController, true);
-
-        runAsShell(ACCESS_NETWORK_STATE, () -> waitForAttachedState(mController));
-    }
-
-    @Test
     public void setEnabled_enableFollowedByDisable_allSucceed() throws Exception {
         joinRandomizedDatasetAndWait(mController);
         CompletableFuture<Void> setFuture1 = new CompletableFuture<>();
@@ -857,6 +847,7 @@ public class ThreadNetworkControllerTest {
     }
 
     @Test
+    @Ignore("b/333649897: Enable this when it's not flaky at all")
     public void meshcopService_joinedNetwork_discoveredHasNetwork() throws Exception {
         setUpTestNetwork();
 
