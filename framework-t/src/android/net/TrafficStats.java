@@ -19,6 +19,7 @@ package android.net;
 import static android.annotation.SystemApi.Client.MODULE_LIBRARIES;
 
 import android.annotation.NonNull;
+import android.annotation.RequiresPermission;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.TestApi;
@@ -690,6 +691,27 @@ public class TrafficStats {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static long getMobileTcpTxPackets() {
         return UNSUPPORTED;
+    }
+
+    /** Clear TrafficStats rate-limit caches.
+     *
+     * This is mainly for {@link com.android.server.net.NetworkStatsService} to
+     * clear rate-limit cache to avoid caching for TrafficStats API results.
+     * Tests might get stale values after generating network traffic, which
+     * generally need to wait for cache expiry to get updated values.
+     *
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
+            android.Manifest.permission.NETWORK_STACK,
+            android.Manifest.permission.NETWORK_SETTINGS})
+    public static void clearRateLimitCaches() {
+        try {
+            getStatsService().clearTrafficStatsRateLimitCaches();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 
     /**
