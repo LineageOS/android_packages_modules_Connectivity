@@ -2851,7 +2851,8 @@ public class NsdService extends INsdManager.Stub {
                                 request.getSentQueryCount());
                     } else if (listener instanceof ResolutionListener) {
                         mMetrics.reportServiceResolutionStop(false /* isLegacy */, transactionId,
-                                request.calculateRequestDurationMs(mClock.elapsedRealtime()));
+                                request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                                request.getSentQueryCount());
                     } else if (listener instanceof ServiceInfoListener) {
                         mMetrics.reportServiceInfoCallbackUnregistered(transactionId,
                                 request.calculateRequestDurationMs(mClock.elapsedRealtime()),
@@ -2892,7 +2893,8 @@ public class NsdService extends INsdManager.Stub {
                     case NsdManager.RESOLVE_SERVICE:
                         stopResolveService(transactionId);
                         mMetrics.reportServiceResolutionStop(true /* isLegacy */, transactionId,
-                                request.calculateRequestDurationMs(mClock.elapsedRealtime()));
+                                request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                                NO_SENT_QUERY_COUNT);
                         break;
                     case NsdManager.REGISTER_SERVICE:
                         unregisterService(transactionId);
@@ -3108,7 +3110,8 @@ public class NsdService extends INsdManager.Stub {
             mMetrics.reportServiceResolutionStop(
                     isLegacyClientRequest(request),
                     request.mTransactionId,
-                    request.calculateRequestDurationMs(mClock.elapsedRealtime()));
+                    request.calculateRequestDurationMs(mClock.elapsedRealtime()),
+                    request.getSentQueryCount());
             try {
                 mCb.onStopResolutionSucceeded(listenerKey);
             } catch (RemoteException e) {

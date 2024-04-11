@@ -904,7 +904,7 @@ public class NsdServiceTest {
                 request.getServiceName().equals(ns.getServiceName())
                         && request.getServiceType().equals(ns.getServiceType())));
         verify(mMetrics).reportServiceResolutionStop(
-                true /* isLegacy */, resolveId, 10L /* durationMs */);
+                true /* isLegacy */, resolveId, 10L /* durationMs */, 0 /* sentQueryCount */);
     }
 
     @Test
@@ -978,7 +978,7 @@ public class NsdServiceTest {
                 request.getServiceName().equals(ns.getServiceName())
                         && request.getServiceType().equals(ns.getServiceType())));
         verify(mMetrics).reportServiceResolutionStop(
-                true /* isLegacy */, getAddrId, 10L /* durationMs */);
+                true /* isLegacy */, getAddrId, 10L /* durationMs */,  0 /* sentQueryCount */);
     }
 
     private void verifyUpdatedServiceInfo(NsdServiceInfo info, String serviceName,
@@ -1679,20 +1679,23 @@ public class NsdServiceTest {
         // Subtypes are not used for resolution, only for discovery
         assertEquals(Collections.emptyList(), optionsCaptor.getValue().getSubtypes());
 
+        final MdnsListener listener = listenerCaptor.getValue();
+        // Callbacks for query sent.
+        listener.onDiscoveryQuerySent(Collections.emptyList(), 1 /* transactionId */);
+
         doReturn(TEST_TIME_MS + 10L).when(mClock).elapsedRealtime();
         client.stopServiceResolution(resolveListener);
         waitForIdle();
 
         // Verify the listener has been unregistered.
-        final MdnsListener listener = listenerCaptor.getValue();
         verify(mDiscoveryManager, timeout(TIMEOUT_MS))
                 .unregisterListener(eq(constructedServiceType), eq(listener));
         verify(resolveListener, timeout(TIMEOUT_MS)).onResolutionStopped(argThat(ns ->
                 request.getServiceName().equals(ns.getServiceName())
                         && request.getServiceType().equals(ns.getServiceType())));
         verify(mSocketProvider, timeout(CLEANUP_DELAY_MS + TIMEOUT_MS)).requestStopWhenInactive();
-        verify(mMetrics).reportServiceResolutionStop(
-                false /* isLegacy */, listener.mTransactionId, 10L /* durationMs */);
+        verify(mMetrics).reportServiceResolutionStop(false /* isLegacy */, listener.mTransactionId,
+                10L /* durationMs */, 1 /* sentQueryCount */);
     }
 
     @Test

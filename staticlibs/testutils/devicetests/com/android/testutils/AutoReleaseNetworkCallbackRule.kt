@@ -21,6 +21,7 @@ import android.net.ConnectivityManager.NetworkCallback
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Handler
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.testutils.RecorderCallback.CallbackEntry
 import java.util.Collections
@@ -97,6 +98,15 @@ open class NetworkCallbackHelper {
         cellRequestCb = null
     }
 
+    private fun addCallback(
+        cb: TestableNetworkCallback,
+        registrar: (TestableNetworkCallback) -> Unit
+    ): TestableNetworkCallback {
+        registrar(cb)
+        cbToCleanup.add(cb)
+        return cb
+    }
+
     /**
      * File a request for a Network.
      *
@@ -109,12 +119,25 @@ open class NetworkCallbackHelper {
     @JvmOverloads
     fun requestNetwork(
         request: NetworkRequest,
-        cb: TestableNetworkCallback = TestableNetworkCallback()
-    ): TestableNetworkCallback {
-        cm.requestNetwork(request, cb)
-        cbToCleanup.add(cb)
-        return cb
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        handler: Handler? = null
+    ) = addCallback(cb) {
+        if (handler == null) {
+            cm.requestNetwork(request, it)
+        } else {
+            cm.requestNetwork(request, it, handler)
+        }
     }
+
+    /**
+     * Overload of [requestNetwork] that allows specifying a timeout.
+     */
+    @JvmOverloads
+    fun requestNetwork(
+        request: NetworkRequest,
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        timeoutMs: Int,
+    ) = addCallback(cb) { cm.requestNetwork(request, it, timeoutMs) }
 
     /**
      * File a callback for a NetworkRequest.
@@ -129,11 +152,61 @@ open class NetworkCallbackHelper {
     fun registerNetworkCallback(
         request: NetworkRequest,
         cb: TestableNetworkCallback = TestableNetworkCallback()
-    ): TestableNetworkCallback {
-        cm.registerNetworkCallback(request, cb)
-        cbToCleanup.add(cb)
-        return cb
+    ) = addCallback(cb) { cm.registerNetworkCallback(request, it) }
+
+    /**
+     * @see ConnectivityManager.registerDefaultNetworkCallback
+     */
+    @JvmOverloads
+    fun registerDefaultNetworkCallback(
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        handler: Handler? = null
+    ) = addCallback(cb) {
+        if (handler == null) {
+            cm.registerDefaultNetworkCallback(it)
+        } else {
+            cm.registerDefaultNetworkCallback(it, handler)
+        }
     }
+
+    /**
+     * @see ConnectivityManager.registerSystemDefaultNetworkCallback
+     */
+    @JvmOverloads
+    fun registerSystemDefaultNetworkCallback(
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        handler: Handler
+    ) = addCallback(cb) { cm.registerSystemDefaultNetworkCallback(it, handler) }
+
+    /**
+     * @see ConnectivityManager.registerDefaultNetworkCallbackForUid
+     */
+    @JvmOverloads
+    fun registerDefaultNetworkCallbackForUid(
+        uid: Int,
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        handler: Handler
+    ) = addCallback(cb) { cm.registerDefaultNetworkCallbackForUid(uid, it, handler) }
+
+    /**
+     * @see ConnectivityManager.registerBestMatchingNetworkCallback
+     */
+    @JvmOverloads
+    fun registerBestMatchingNetworkCallback(
+        request: NetworkRequest,
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        handler: Handler
+    ) = addCallback(cb) { cm.registerBestMatchingNetworkCallback(request, it, handler) }
+
+    /**
+     * @see ConnectivityManager.requestBackgroundNetwork
+     */
+    @JvmOverloads
+    fun requestBackgroundNetwork(
+        request: NetworkRequest,
+        cb: TestableNetworkCallback = TestableNetworkCallback(),
+        handler: Handler
+    ) = addCallback(cb) { cm.requestBackgroundNetwork(request, it, handler) }
 
     /**
      * Unregister a callback filed using registration methods in this class.
