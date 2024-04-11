@@ -101,4 +101,7 @@ interface INetworkStatsService {
      * Note that invocation of any interface will be sent to all providers.
      */
      void setStatsProviderWarningAndLimitAsync(String iface, long warning, long limit);
+
+     /** Clear TrafficStats rate-limit caches. */
+     void clearTrafficStatsRateLimitCaches();
 }
