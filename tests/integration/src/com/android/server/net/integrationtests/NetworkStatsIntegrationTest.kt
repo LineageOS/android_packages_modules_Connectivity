@@ -38,6 +38,7 @@ import android.net.TrafficStats
 import android.os.Build
 import android.os.Process
 import androidx.test.platform.app.InstrumentationRegistry
+import com.android.modules.utils.build.SdkLevel
 import com.android.server.net.integrationtests.NetworkStatsIntegrationTest.Direction.DOWNLOAD
 import com.android.server.net.integrationtests.NetworkStatsIntegrationTest.Direction.UPLOAD
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
@@ -214,6 +215,11 @@ class NetworkStatsIntegrationTest {
         // In practice, for one way 10k download payload, the download usage is about
         // 11222~12880 bytes, with 14~17 packets. And the upload usage is about 1279~1626 bytes
         // with 14~17 packets, which is majorly contributed by TCP ACK packets.
+        // Clear TrafficStats cache is needed to avoid rate-limit caching for
+        // TrafficStats API results on V+ devices.
+        if (SdkLevel.isAtLeastV()) {
+            TrafficStats.clearRateLimitCaches()
+        }
         val snapshotAfterDownload = StatsSnapshot(context, internalInterfaceName)
         val (expectedDownloadLower, expectedDownloadUpper) = getExpectedStatsBounds(
             TEST_DOWNLOAD_SIZE,
@@ -236,6 +242,9 @@ class NetworkStatsIntegrationTest {
         )
 
         // Verify upload data usage accounting.
+        if (SdkLevel.isAtLeastV()) {
+            TrafficStats.clearRateLimitCaches()
+        }
         val snapshotAfterUpload = StatsSnapshot(context, internalInterfaceName)
         val (expectedUploadLower, expectedUploadUpper) = getExpectedStatsBounds(
             TEST_UPLOAD_SIZE,
