@@ -86,6 +86,7 @@ class ConnectUtil(private val context: Context) {
         val callback = TestableNetworkCallback(timeoutMs = WIFI_CONNECT_TIMEOUT_MS)
         cm.registerNetworkCallback(NetworkRequest.Builder()
                 .addTransportType(TRANSPORT_WIFI)
+                .addCapability(NET_CAPABILITY_INTERNET)
                 .build(), callback)
 
         return tryTest {
