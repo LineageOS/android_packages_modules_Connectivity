@@ -918,25 +918,6 @@ public class BpfNetMaps {
         }
     }
 
-    /**
-     * Return whether the network is blocked by firewall chains for the given uid.
-     *
-     * Note that {@link #getDataSaverEnabled()} has a latency before V.
-     *
-     * @param uid The target uid.
-     * @param isNetworkMetered Whether the target network is metered.
-     *
-     * @return True if the network is blocked. Otherwise, false.
-     * @throws ServiceSpecificException if the read fails.
-     *
-     * @hide
-     */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered) {
-        return BpfNetMapsUtils.isUidNetworkingBlocked(uid, isNetworkMetered,
-                sConfigurationMap, sUidOwnerMap, sDataSaverEnabledMap);
-    }
-
     /** Register callback for statsd to pull atom. */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void setPullAtomCallback(final Context context) {
