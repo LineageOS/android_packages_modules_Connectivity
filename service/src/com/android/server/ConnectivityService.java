@@ -2235,11 +2235,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final long ident = Binder.clearCallingIdentity();
         try {
             final boolean metered = nc == null ? true : nc.isMetered();
-            if (mDeps.isAtLeastV()) {
-                return mBpfNetMaps.isUidNetworkingBlocked(uid, metered);
-            } else {
-                return mPolicyManager.isUidNetworkingBlocked(uid, metered);
-            }
+            return mPolicyManager.isUidNetworkingBlocked(uid, metered);
         } finally {
             Binder.restoreCallingIdentity(ident);
         }
