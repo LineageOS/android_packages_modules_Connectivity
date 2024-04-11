@@ -265,6 +265,7 @@ public class ServiceDiscoveryTest {
     }
 
     @Test
+    @Ignore("TODO: b/333806992 - Enable when it's not flaky at all")
     public void advertisingProxy_srpClientUnregistersService_serviceIsNotDiscoverableByMdns()
             throws Exception {
         /*
