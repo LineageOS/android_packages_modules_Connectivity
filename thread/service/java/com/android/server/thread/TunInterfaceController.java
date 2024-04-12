@@ -16,6 +16,8 @@
 
 package com.android.server.thread;
 
+import static android.system.OsConstants.EADDRINUSE;
+
 import android.annotation.Nullable;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
@@ -39,6 +41,10 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,12 +64,16 @@ public class TunInterfaceController {
     private ParcelFileDescriptor mParcelTunFd;
     private FileDescriptor mNetlinkSocket;
     private static int sNetlinkSeqNo = 0;
+    private final MulticastSocket mMulticastSocket; // For join group and leave group
+    private NetworkInterface mNetworkInterface;
+    private List<InetAddress> mMulticastAddresses = new ArrayList<>();
 
     /** Creates a new {@link TunInterfaceController} instance for given interface. */
     public TunInterfaceController(String interfaceName) {
         mIfName = interfaceName;
         mLinkProperties.setInterfaceName(mIfName);
         mLinkProperties.setMtu(MTU);
+        mMulticastSocket = createMulticastSocket();
     }
 
     /** Returns link properties of the Thread TUN interface. */
@@ -83,6 +93,11 @@ public class TunInterfaceController {
         } catch (ErrnoException e) {
             throw new IOException("Failed to create netlink socket", e);
         }
+        try {
+            mNetworkInterface = NetworkInterface.getByName(mIfName);
+        } catch (SocketException e) {
+            throw new IOException("Failed to get NetworkInterface", e);
+        }
     }
 
     public void destroyTunInterface() {
@@ -94,6 +109,7 @@ public class TunInterfaceController {
         }
         mParcelTunFd = null;
         mNetlinkSocket = null;
+        mNetworkInterface = null;
     }
 
     /** Returns the FD of the tunnel interface. */
@@ -187,6 +203,7 @@ public class TunInterfaceController {
 
     public void updateAddresses(List<Ipv6AddressInfo> addressInfoList) {
         final List<LinkAddress> newLinkAddresses = new ArrayList<>();
+        final List<InetAddress> newMulticastAddresses = new ArrayList<>();
         boolean hasActiveOmrAddress = false;
 
         for (Ipv6AddressInfo addressInfo : addressInfoList) {
@@ -199,12 +216,10 @@ public class TunInterfaceController {
         for (Ipv6AddressInfo addressInfo : addressInfoList) {
             InetAddress address = addressInfoToInetAddress(addressInfo);
             if (address.isMulticastAddress()) {
-                // TODO: Logging here will create repeated logs for a single multicast address, and
-                // it currently is not mandatory for debugging. Add log for ignored multicast
-                // address when necessary.
-                continue;
+                newMulticastAddresses.add(address);
+            } else {
+                newLinkAddresses.add(newLinkAddress(addressInfo, hasActiveOmrAddress));
             }
-            newLinkAddresses.add(newLinkAddress(addressInfo, hasActiveOmrAddress));
         }
 
         final CompareResult<LinkAddress> addressDiff =
@@ -215,6 +230,17 @@ public class TunInterfaceController {
         for (LinkAddress linkAddress : addressDiff.added) {
             addAddress(linkAddress);
         }
+
+        final CompareResult<InetAddress> multicastAddressDiff =
+                new CompareResult<>(mMulticastAddresses, newMulticastAddresses);
+        for (InetAddress address : multicastAddressDiff.removed) {
+            leaveGroup(address);
+        }
+        for (InetAddress address : multicastAddressDiff.added) {
+            joinGroup(address);
+        }
+        mMulticastAddresses.clear();
+        mMulticastAddresses.addAll(newMulticastAddresses);
     }
 
     private RouteInfo getRouteForAddress(LinkAddress linkAddress) {
@@ -273,5 +299,38 @@ public class TunInterfaceController {
                 0 /* scope */,
                 deprecationTimeMillis,
                 LinkAddress.LIFETIME_PERMANENT /* expirationTime */);
+    }
+
+    private MulticastSocket createMulticastSocket() {
+        try {
+            return new MulticastSocket();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to create multicast socket ", e);
+        }
+    }
+
+    private void joinGroup(InetAddress address) {
+        InetSocketAddress socketAddress = new InetSocketAddress(address, 0);
+        try {
+            mMulticastSocket.joinGroup(socketAddress, mNetworkInterface);
+        } catch (IOException e) {
+            if (e.getCause() instanceof ErrnoException) {
+                ErrnoException ee = (ErrnoException) e.getCause();
+                if (ee.errno == EADDRINUSE) {
+                    Log.w(TAG, "Already joined group" + address.getHostAddress(), e);
+                    return;
+                }
+            }
+            Log.e(TAG, "failed to join group " + address.getHostAddress(), e);
+        }
+    }
+
+    private void leaveGroup(InetAddress address) {
+        InetSocketAddress socketAddress = new InetSocketAddress(address, 0);
+        try {
+            mMulticastSocket.leaveGroup(socketAddress, mNetworkInterface);
+        } catch (IOException e) {
+            Log.e(TAG, "failed to leave group " + address.getHostAddress(), e);
+        }
     }
 }
