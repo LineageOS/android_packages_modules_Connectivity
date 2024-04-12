@@ -26,16 +26,24 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.apf.ApfCapabilities
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.PowerManager
 import android.platform.test.annotations.AppModeFull
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
+import android.system.Os
 import android.system.OsConstants
+import android.system.OsConstants.AF_INET
+import android.system.OsConstants.IPPROTO_ICMP
+import android.system.OsConstants.SOCK_DGRAM
+import android.system.OsConstants.SOCK_NONBLOCK
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
 import com.android.internal.util.HexDump
+import com.android.net.module.util.PacketReader
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
@@ -44,9 +52,11 @@ import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChange
 import com.android.testutils.SkipPresubmit
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
+import com.android.testutils.waitForIdle
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.google.common.truth.TruthJUnit.assume
+import java.io.FileDescriptor
 import java.lang.Thread
 import kotlin.random.Random
 import kotlin.test.assertNotNull
@@ -61,6 +71,7 @@ private const val TAG = "ApfIntegrationTest"
 private const val TIMEOUT_MS = 2000L
 private const val APF_NEW_RA_FILTER_VERSION = "apf_new_ra_filter_version"
 private const val POLLING_INTERVAL_MS: Int = 100
+private const val RCV_BUFFER_SIZE = 1480
 
 @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
@@ -86,6 +97,32 @@ class ApfIntegrationTest {
         }
     }
 
+    class IcmpPacketReader(handler: Handler) : PacketReader(handler, RCV_BUFFER_SIZE) {
+        private var sockFd: FileDescriptor? = null
+
+        override fun createFd(): FileDescriptor {
+            // sockFd is closed by calling super.stop()
+            sockFd = Os.socket(AF_INET, SOCK_DGRAM or SOCK_NONBLOCK, IPPROTO_ICMP)
+            return sockFd!!
+        }
+
+        override fun handlePacket(recvbuf: ByteArray, length: Int) {
+            // TODO: implement
+        }
+
+        override fun start(): Boolean {
+            // Ignore the fact start() could return false or throw an exception. There is also no
+            // need to wait for start to be processed -- just post it on the handler and return.
+            handler.post({ super.start() })
+            return true
+        }
+
+        override fun stop() {
+            handler.post({ super.stop() })
+            handler.waitForIdle(TIMEOUT_MS)
+        }
+    }
+
     @get:Rule
     val ignoreRule = DevSdkIgnoreRule()
 
@@ -97,6 +134,9 @@ class ApfIntegrationTest {
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
     private lateinit var caps: ApfCapabilities
+    private val handlerThread = HandlerThread("$TAG handler thread").apply { start() }
+    private val handler = Handler(handlerThread.looper)
+    private val packetReader = IcmpPacketReader(handler)
 
     fun getApfCapabilities(): ApfCapabilities {
         val caps = runShellCommand("cmd network_stack apf $ifname capabilities").trim()
@@ -155,10 +195,16 @@ class ApfIntegrationTest {
         // respective VSR releases and all other tests are based on the capabilities indicated.
         runShellCommand("cmd network_stack apf $ifname pause")
         caps = getApfCapabilities()
+
+        packetReader.start()
     }
 
     @After
     fun tearDown() {
+        packetReader.stop()
+        handlerThread.quitSafely()
+        handlerThread.join()
+
         if (::ifname.isInitialized) {
             runShellCommand("cmd network_stack apf $ifname resume")
         }
