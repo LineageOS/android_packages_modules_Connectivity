@@ -176,7 +176,7 @@ public class ThreadIntegrationTest {
 
     // TODO (b/323300829): add test for removing an OT address
     @Test
-    public void tunInterface_joinedNetwork_otAddressesAddedToTunInterface() throws Exception {
+    public void tunInterface_joinedNetwork_otAndTunAddressesMatch() throws Exception {
         mController.joinAndWait(DEFAULT_DATASET);
 
         List<Inet6Address> otAddresses = mOtCtl.getAddresses();
@@ -185,9 +185,12 @@ public class ThreadIntegrationTest {
         // that we can write assertThat() in the Predicate
         waitFor(
                 () -> {
-                    String ifconfig = runShellCommand("ifconfig thread-wpan");
-                    return otAddresses.stream()
-                            .allMatch(addr -> ifconfig.contains(addr.getHostAddress()));
+                    List<Inet6Address> tunAddresses =
+                            getIpv6LinkAddresses("thread-wpan").stream()
+                                    .map(linkAddr -> (Inet6Address) linkAddr.getAddress())
+                                    .toList();
+                    return otAddresses.containsAll(tunAddresses)
+                            && tunAddresses.containsAll(otAddresses);
                 },
                 TUN_ADDR_UPDATE_TIMEOUT);
     }
