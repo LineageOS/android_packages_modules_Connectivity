@@ -402,15 +402,18 @@ class MulticastRoutingCoordinatorServiceTest {
                 mService.getVirtualInterfaceIndex(mIfName1), oifsUpdate)
         val mf6cctlDel = createStructMf6cctl(mSourceAddress, mGroupAddressScope5,
                 mService.getVirtualInterfaceIndex(mIfName1), mEmptyOifs)
+        val ifName1Copy = String(mIfName1.toCharArray())
+        val ifName2Copy = String(mIfName2.toCharArray())
+        val ifName3Copy = String(mIfName3.toCharArray())
 
         verify(mDeps).setsockoptMrt6AddMfc(eq(mFd), eq(mf6cctlAdd))
 
-        applyMulticastForwardNone(mIfName1, mIfName2)
+        applyMulticastForwardNone(ifName1Copy, ifName2Copy)
         mLooper.dispatchAll()
 
         verify(mDeps).setsockoptMrt6AddMfc(eq(mFd), eq(mf6cctlUpdate))
 
-        applyMulticastForwardNone(mIfName1, mIfName3)
+        applyMulticastForwardNone(ifName1Copy, ifName3Copy)
         mLooper.dispatchAll()
 
         verify(mDeps, timeout(TIMEOUT_MS).times(1)).setsockoptMrt6DelMfc(eq(mFd), eq(mf6cctlDel))
