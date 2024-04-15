@@ -75,3 +75,10 @@ prebuilt_etc {
     filename: "netbpfload.33rc",
     installable: false,
 }
+
+prebuilt_etc {
+    name: "netbpfload.35rc",
+    src: "netbpfload.35rc",
+    filename: "netbpfload.35rc",
+    installable: false,
+}
