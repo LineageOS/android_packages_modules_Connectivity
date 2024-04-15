@@ -113,6 +113,7 @@ apex {
     prebuilts: [
         "current_sdkinfo",
         "netbpfload.mainline.rc",
+        "netbpfload.35rc",
         "ot-daemon.init.34rc",
     ],
     manifest: "manifest.json",
