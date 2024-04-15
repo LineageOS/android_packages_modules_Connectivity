@@ -99,6 +99,8 @@ java_test_host {
         "mcts-networking",
         "mts-tethering",
         "mcts-tethering",
+        "mcts-wifi",
+        "mcts-dnsresolver",
     ],
     data: [":ConnectivityTestPreparer"],
 }
