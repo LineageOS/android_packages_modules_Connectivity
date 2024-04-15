@@ -313,7 +313,7 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (false && isAtLeastV) {
+    if (isAtLeastV) {
         // Linux 5.16-rc1 changed the default to 2 (disabled but changeable),
         // but we need 0 (enabled)
         // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on
@@ -380,7 +380,7 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (false && isAtLeastV) {
+    if (isAtLeastV) {
         ALOGI("done, transferring control to platform bpfloader.");
 
         const char * args[] = { platformBpfLoader, NULL, };

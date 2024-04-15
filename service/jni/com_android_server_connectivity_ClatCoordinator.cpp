@@ -114,7 +114,8 @@ static void verifyClatPerms() {
 
     V("/sys/fs/bpf", S_IFDIR|S_ISVTX|0777, ROOT, ROOT, "fs_bpf", DIR);
 
-    if (false && modules::sdklevel::IsAtLeastV()) {
+    // TODO: use modules::sdklevel::IsAtLeastV() once api finalized
+    if (android_get_device_api_level() >= __ANDROID_API_V__) {
         V("/sys/fs/bpf/net_shared", S_IFDIR|01777, ROOT, ROOT, "fs_bpf_net_shared", DIR);
     } else {
         V("/sys/fs/bpf/net_shared", S_IFDIR|01777, SYSTEM, SYSTEM, "fs_bpf_net_shared", DIR);
