@@ -210,6 +210,7 @@ public class NetlinkConstants {
             case RTM_NEWRULE: return "RTM_NEWRULE";
             case RTM_DELRULE: return "RTM_DELRULE";
             case RTM_GETRULE: return "RTM_GETRULE";
+            case RTM_NEWPREFIX: return "RTM_NEWPREFIX";
             case RTM_NEWNDUSEROPT: return "RTM_NEWNDUSEROPT";
             default: return "unknown RTM type: " + String.valueOf(nlmType);
         }
