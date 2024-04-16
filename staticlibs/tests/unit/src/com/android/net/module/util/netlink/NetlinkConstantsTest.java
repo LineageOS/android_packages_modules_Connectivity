@@ -46,6 +46,7 @@ import static com.android.net.module.util.netlink.NetlinkConstants.RTM_GETRULE;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWADDR;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWLINK;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWNDUSEROPT;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWPREFIX;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWNEIGH;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWROUTE;
 import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWRULE;
@@ -89,6 +90,7 @@ public class NetlinkConstantsTest {
         assertEquals("RTM_NEWRULE", stringForNlMsgType(RTM_NEWRULE, NETLINK_ROUTE));
         assertEquals("RTM_DELRULE", stringForNlMsgType(RTM_DELRULE, NETLINK_ROUTE));
         assertEquals("RTM_GETRULE", stringForNlMsgType(RTM_GETRULE, NETLINK_ROUTE));
+        assertEquals("RTM_NEWPREFIX", stringForNlMsgType(RTM_NEWPREFIX, NETLINK_ROUTE));
         assertEquals("RTM_NEWNDUSEROPT", stringForNlMsgType(RTM_NEWNDUSEROPT, NETLINK_ROUTE));
 
         assertEquals("SOCK_DIAG_BY_FAMILY",
