@@ -41,6 +41,7 @@ import static com.android.networkstack.apishim.api33.ConstantsShim.REGISTER_NSD_
 import static com.android.server.NsdService.DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF;
 import static com.android.server.NsdService.MdnsListener;
 import static com.android.server.NsdService.NO_TRANSACTION;
+import static com.android.server.NsdService.checkHostname;
 import static com.android.server.NsdService.parseTypeAndSubtype;
 import static com.android.testutils.ContextUtils.mockService;
 
@@ -53,6 +54,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -1723,6 +1725,36 @@ public class NsdServiceTest {
                 parseTypeAndSubtype(serviceType8));
         assertEquals(new Pair<>("_997._tcp", List.of("_test4")),
                 parseTypeAndSubtype(serviceType9));
+    }
+
+    @Test
+    public void TestCheckHostname() {
+        // Valid cases
+        assertTrue(checkHostname(null));
+        assertTrue(checkHostname("a"));
+        assertTrue(checkHostname("1"));
+        assertTrue(checkHostname("a-1234-bbbb-cccc000"));
+        assertTrue(checkHostname("A-1234-BBbb-CCCC000"));
+        assertTrue(checkHostname("1234-bbbb-cccc000"));
+        assertTrue(checkHostname("0123456789abcdef"
+                                + "0123456789abcdef"
+                                + "0123456789abcdef"
+                                + "0123456789abcde" // 63 characters
+                        ));
+
+        // Invalid cases
+        assertFalse(checkHostname("?"));
+        assertFalse(checkHostname("/"));
+        assertFalse(checkHostname("a-"));
+        assertFalse(checkHostname("B-"));
+        assertFalse(checkHostname("-A"));
+        assertFalse(checkHostname("-b"));
+        assertFalse(checkHostname("-1-"));
+        assertFalse(checkHostname("0123456789abcdef"
+                                + "0123456789abcdef"
+                                + "0123456789abcdef"
+                                + "0123456789abcdef" // 64 characters
+                        ));
     }
 
     @Test
