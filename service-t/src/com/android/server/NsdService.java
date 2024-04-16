@@ -1825,12 +1825,20 @@ public class NsdService extends INsdManager.Stub {
      * <p>For now NsdService only allows single-label hostnames conforming to RFC 1035. In other
      * words, the hostname should be at most 63 characters long and it only contains letters, digits
      * and hyphens.
+     *
+     * <p>Additionally, this allows hostname starting with a digit to support Matter devices. Per
+     * Matter spec 4.3.1.1:
+     *
+     * <p>The target host name SHALL be constructed using one of the available link-layer addresses,
+     * such as a 48-bit device MAC address (for Ethernet and Wi‑Fi) or a 64-bit MAC Extended Address
+     * (for Thread) expressed as a fixed-length twelve-character (or sixteen-character) hexadecimal
+     * string, encoded as ASCII (UTF-8) text using capital letters, e.g., B75AFB458ECD.<domain>.
      */
     public static boolean checkHostname(@Nullable String hostname) {
         if (hostname == null) {
             return true;
         }
-        String HOSTNAME_REGEX = "^[a-zA-Z]([a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?$";
+        String HOSTNAME_REGEX = "^[a-zA-Z0-9]([a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?$";
         return Pattern.compile(HOSTNAME_REGEX).matcher(hostname).matches();
     }
 
