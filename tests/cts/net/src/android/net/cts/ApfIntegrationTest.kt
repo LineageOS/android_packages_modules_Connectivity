@@ -22,6 +22,7 @@ package android.net.cts
 import android.Manifest.permission.WRITE_DEVICE_CONFIG
 import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.apf.ApfCapabilities
@@ -48,6 +49,7 @@ import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.NetworkStackModuleTest
+import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.SkipPresubmit
 import com.android.testutils.TestableNetworkCallback
@@ -97,13 +99,19 @@ class ApfIntegrationTest {
         }
     }
 
-    class IcmpPacketReader(handler: Handler) : PacketReader(handler, RCV_BUFFER_SIZE) {
+    class IcmpPacketReader(
+            handler: Handler,
+            private val network: Network
+    ) : PacketReader(handler, RCV_BUFFER_SIZE) {
         private var sockFd: FileDescriptor? = null
 
         override fun createFd(): FileDescriptor {
             // sockFd is closed by calling super.stop()
-            sockFd = Os.socket(AF_INET, SOCK_DGRAM or SOCK_NONBLOCK, IPPROTO_ICMP)
-            return sockFd!!
+            val sock = Os.socket(AF_INET, SOCK_DGRAM or SOCK_NONBLOCK, IPPROTO_ICMP)
+            // APF runs only on WiFi, so make sure the socket is bound to the right network.
+            network.bindSocket(sock)
+            sockFd = sock
+            return sock
         }
 
         override fun handlePacket(recvbuf: ByteArray, length: Int) {
@@ -131,12 +139,13 @@ class ApfIntegrationTest {
     private val pm by lazy { context.packageManager }
     private val powerManager by lazy { context.getSystemService(PowerManager::class.java)!! }
     private val wakeLock by lazy { powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG) }
+    private lateinit var network: Network
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
     private lateinit var caps: ApfCapabilities
     private val handlerThread = HandlerThread("$TAG handler thread").apply { start() }
     private val handler = Handler(handlerThread.looper)
-    private val packetReader = IcmpPacketReader(handler)
+    private lateinit var packetReader: IcmpPacketReader
 
     fun getApfCapabilities(): ApfCapabilities {
         val caps = runShellCommand("cmd network_stack apf $ifname capabilities").trim()
@@ -186,6 +195,7 @@ class ApfIntegrationTest {
                         .build(),
                 networkCallback
         )
+        network = networkCallback.expect<Available>().network
         networkCallback.eventuallyExpect<LinkPropertiesChanged>(TIMEOUT_MS) {
             ifname = assertNotNull(it.lp.interfaceName)
             true
@@ -196,12 +206,15 @@ class ApfIntegrationTest {
         runShellCommand("cmd network_stack apf $ifname pause")
         caps = getApfCapabilities()
 
+        packetReader = IcmpPacketReader(handler, network)
         packetReader.start()
     }
 
     @After
     fun tearDown() {
-        packetReader.stop()
+        if (::packetReader.isInitialized) {
+            packetReader.stop()
+        }
         handlerThread.quitSafely()
         handlerThread.join()
 
