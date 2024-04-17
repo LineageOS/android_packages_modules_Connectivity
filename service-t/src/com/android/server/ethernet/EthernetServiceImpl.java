@@ -108,7 +108,11 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
             PermissionUtils.enforceRestrictedNetworkPermission(mContext, TAG);
         }
 
-        return new IpConfiguration(mTracker.getIpConfiguration(iface));
+        // This causes thread-unsafe access on mIpConfigurations which might
+        // race with calls to EthernetManager#updateConfiguration().
+        // EthernetManager#getConfiguration() has been marked as
+        // @UnsupportedAppUsage since Android R.
+        return mTracker.getIpConfiguration(iface);
     }
 
     /**
