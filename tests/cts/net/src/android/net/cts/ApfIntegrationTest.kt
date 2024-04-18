@@ -60,7 +60,11 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.google.common.truth.TruthJUnit.assume
 import java.io.FileDescriptor
 import java.lang.Thread
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import org.junit.After
 import org.junit.Before
@@ -104,6 +108,7 @@ class ApfIntegrationTest {
             private val network: Network
     ) : PacketReader(handler, RCV_BUFFER_SIZE) {
         private var sockFd: FileDescriptor? = null
+        private val futureReply = CompletableFuture<ByteArray>()
 
         override fun createFd(): FileDescriptor {
             // sockFd is closed by calling super.stop()
@@ -115,7 +120,22 @@ class ApfIntegrationTest {
         }
 
         override fun handlePacket(recvbuf: ByteArray, length: Int) {
-            // TODO: implement
+            // Only copy the ping data and complete the future.
+            futureReply.complete(recvbuf.sliceArray(8..<length))
+        }
+
+        fun expectPingReply(): ByteArray {
+            return futureReply.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        }
+
+        fun expectPingDropped() {
+            assertFailsWith(IllegalStateException::class) {
+                try {
+                    futureReply.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                } catch (e: ExecutionException) {
+                    throw e.cause!!
+                }
+            }
         }
 
         override fun start(): Boolean {
