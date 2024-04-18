@@ -905,13 +905,17 @@ class EthernetManagerTest {
         val iface = createInterface()
         val listener = EthernetStateListener()
         addInterfaceStateListener(listener)
+        // Uses eventuallyExpect to account for interfaces that could already exist on device
+        listener.eventuallyExpect(iface, STATE_LINK_UP, ROLE_CLIENT)
+
+        disableInterface(iface).expectResult(iface.name)
+        listener.eventuallyExpect(iface, STATE_LINK_DOWN, ROLE_CLIENT)
+
+        enableInterface(iface).expectResult(iface.name)
         listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
 
         disableInterface(iface).expectResult(iface.name)
         listener.expectCallback(iface, STATE_LINK_DOWN, ROLE_CLIENT)
-
-        enableInterface(iface).expectResult(iface.name)
-        listener.expectCallback(iface, STATE_LINK_UP, ROLE_CLIENT)
     }
 
     @Test
