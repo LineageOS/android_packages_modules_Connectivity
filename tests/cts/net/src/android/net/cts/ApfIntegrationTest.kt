@@ -60,6 +60,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import com.google.common.truth.TruthJUnit.assume
 import java.io.FileDescriptor
 import java.lang.Thread
+import java.net.InetSocketAddress
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -84,6 +85,8 @@ private const val RCV_BUFFER_SIZE = 1480
 @NetworkStackModuleTest
 class ApfIntegrationTest {
     companion object {
+        private val PING_DESTINATION = InetSocketAddress("8.8.8.8", 0)
+
         @BeforeClass
         @JvmStatic
         @Suppress("ktlint:standard:no-multi-spaces")
@@ -122,6 +125,24 @@ class ApfIntegrationTest {
         override fun handlePacket(recvbuf: ByteArray, length: Int) {
             // Only copy the ping data and complete the future.
             futureReply.complete(recvbuf.sliceArray(8..<length))
+        }
+
+        fun sendPing(data: ByteArray) {
+            require(data.size == 56)
+
+            // rfc792: Echo (type 0x08) or Echo Reply (type 0x00) Message:
+            //  0                   1                   2                   3
+            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |     Type      |     Code      |          Checksum             |
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |           Identifier          |        Sequence Number        |
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |     Data ...
+            // +-+-+-+-+-
+            val icmpHeader = byteArrayOf(0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+            val packet = icmpHeader + data
+            Os.sendto(sockFd!!, packet, 0, packet.size, 0, PING_DESTINATION)
         }
 
         fun expectPingReply(): ByteArray {
