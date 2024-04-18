@@ -265,6 +265,14 @@ public class MultinetworkApiTest {
      * Get all testable Networks with internet capability.
      */
     private Set<Network> getTestableNetworks() throws InterruptedException {
+        // Calling requestNetwork() to request a cell or Wi-Fi network via CtsNetUtils or
+        // NetworkCallbackRule requires the CHANGE_NETWORK_STATE permission. This permission cannot
+        // be granted to instant apps. Therefore, return currently available testable networks
+        // directly in instant mode.
+        if (mContext.getApplicationInfo().isInstantApp()) {
+            return new ArraySet<>(mCtsNetUtils.getTestableNetworks());
+        }
+
         // Obtain cell and Wi-Fi through CtsNetUtils (which uses NetworkCallbacks), as they may have
         // just been reconnected by the test using NetworkCallbacks, so synchronous calls may not
         // yet return them (synchronous calls and callbacks should not be mixed for a given
