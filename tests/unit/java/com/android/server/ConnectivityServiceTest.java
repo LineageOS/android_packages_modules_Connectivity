@@ -799,8 +799,10 @@ public class ConnectivityServiceTest {
             // This relies on all contexts for a given user returning the same UM mock
             final DevicePolicyManager dpmMock = createContextAsUser(userHandle, 0 /* flags */)
                     .getSystemService(DevicePolicyManager.class);
-            doReturn(value).when(dpmMock).getDeviceOwner();
-            doReturn(value).when(mDevicePolicyManager).getDeviceOwner();
+            ComponentName componentName = value == null
+                    ? null : new ComponentName(value, "deviceOwnerClass");
+            doReturn(componentName).when(dpmMock).getDeviceOwnerComponentOnAnyUser();
+            doReturn(componentName).when(mDevicePolicyManager).getDeviceOwnerComponentOnAnyUser();
         }
 
         @Override
