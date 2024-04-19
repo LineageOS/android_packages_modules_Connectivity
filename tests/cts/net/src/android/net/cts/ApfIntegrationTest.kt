@@ -336,4 +336,14 @@ class ApfIntegrationTest {
             assertWithMessage("read/write $i byte prog failed").that(readResult).isEqualTo(program)
         }
     }
+
+    // TODO: this is a placeholder test to test the IcmpPacketReader functionality and will soon be
+    // replaced by a real test.
+    @Test
+    fun testPing() {
+        val data = ByteArray(56)
+        Random.nextBytes(data)
+        packetReader.sendPing(data)
+        assertThat(packetReader.expectPingReply()).isEqualTo(data)
+    }
 }
