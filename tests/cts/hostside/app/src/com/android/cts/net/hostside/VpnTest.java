@@ -257,7 +257,6 @@ public class VpnTest {
 
     @Before
     public void setUp() throws Exception {
-        assumeTrue(supportedHardware());
         mNetwork = null;
         mTestContext = getInstrumentation().getContext();
         mTargetContext = getInstrumentation().getTargetContext();
@@ -272,6 +271,7 @@ public class VpnTest {
         mDevice.waitForIdle();
         mCtsNetUtils = new CtsNetUtils(mTestContext);
         mPackageManager = mTestContext.getPackageManager();
+        assumeTrue(supportedHardware());
     }
 
     @After
