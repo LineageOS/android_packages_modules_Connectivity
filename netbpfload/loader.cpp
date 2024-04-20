@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "NetBpfLoader"
+#define LOG_TAG "NetBpfLoad"
 
 #include <errno.h>
 #include <fcntl.h>
