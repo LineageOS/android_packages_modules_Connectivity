@@ -160,9 +160,9 @@ class ApfIntegrationTest {
         }
 
         override fun start(): Boolean {
-            // Ignore the fact start() could return false or throw an exception. There is also no
-            // need to wait for start to be processed -- just post it on the handler and return.
+            // Ignore the fact start() could return false or throw an exception.
             handler.post({ super.start() })
+            handler.waitForIdle(TIMEOUT_MS)
             return true
         }
 
