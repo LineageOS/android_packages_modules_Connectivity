@@ -124,6 +124,7 @@ import com.android.net.module.util.ArrayTrackRecord;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.PacketBuilder;
 import com.android.testutils.AutoReleaseNetworkCallbackRule;
+import com.android.testutils.ConnectUtil;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.RecorderCallback;
@@ -221,6 +222,7 @@ public class VpnTest {
     private WifiManager mWifiManager;
     private RemoteSocketFactoryClient mRemoteSocketFactoryClient;
     private CtsNetUtils mCtsNetUtils;
+    private ConnectUtil mConnectUtil;
     private PackageManager mPackageManager;
     private Context mTestContext;
     private Context mTargetContext;
@@ -271,6 +273,7 @@ public class VpnTest {
         mRemoteSocketFactoryClient.bind();
         mDevice.waitForIdle();
         mCtsNetUtils = new CtsNetUtils(mTestContext);
+        mConnectUtil = new ConnectUtil(mTestContext);
         mPackageManager = mTestContext.getPackageManager();
     }
 
@@ -893,7 +896,7 @@ public class VpnTest {
         final boolean isWifiEnabled = mWifiManager.isWifiEnabled();
         testAndCleanup(() -> {
             // Ensure both of wifi and mobile data are connected.
-            final Network wifiNetwork = mCtsNetUtils.ensureWifiConnected();
+            final Network wifiNetwork = mConnectUtil.ensureWifiValidated();
             final Network cellNetwork = mNetworkCallbackRule.requestCell();
             // Store current default network.
             final Network defaultNetwork = mCM.getActiveNetwork();
