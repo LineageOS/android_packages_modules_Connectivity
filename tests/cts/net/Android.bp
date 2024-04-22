@@ -46,6 +46,7 @@ java_defaults {
     ],
     jarjar_rules: "jarjar-rules-shared.txt",
     static_libs: [
+        "ApfGeneratorLib",
         "bouncycastle-unbundled",
         "FrameworksNetCommonTests",
         "core-tests-support",
