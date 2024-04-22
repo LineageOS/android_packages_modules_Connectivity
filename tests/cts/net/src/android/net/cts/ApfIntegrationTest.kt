@@ -70,6 +70,7 @@ import kotlin.random.Random
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Rule
@@ -92,10 +93,44 @@ class ApfIntegrationTest {
     companion object {
         private val PING_DESTINATION = InetSocketAddress("2001:4860:4860::8888", 0)
 
+        private val context = InstrumentationRegistry.getInstrumentation().context
+        private val powerManager = context.getSystemService(PowerManager::class.java)!!
+        private val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG)
+
+        fun pollingCheck(condition: () -> Boolean, timeout_ms: Int): Boolean {
+            var polling_time = 0
+            do {
+                Thread.sleep(POLLING_INTERVAL_MS.toLong())
+                polling_time += POLLING_INTERVAL_MS
+                if (condition()) return true
+            } while (polling_time < timeout_ms)
+            return false
+        }
+
+        fun turnScreenOff() {
+            if (!wakeLock.isHeld()) wakeLock.acquire()
+            runShellCommandOrThrow("input keyevent KEYCODE_SLEEP")
+            val result = pollingCheck({ !powerManager.isInteractive() }, timeout_ms = 2000)
+            assertThat(result).isTrue()
+        }
+
+        fun turnScreenOn() {
+            if (wakeLock.isHeld()) wakeLock.release()
+            runShellCommandOrThrow("input keyevent KEYCODE_WAKEUP")
+            val result = pollingCheck({ powerManager.isInteractive() }, timeout_ms = 2000)
+            assertThat(result).isTrue()
+        }
+
         @BeforeClass
         @JvmStatic
         @Suppress("ktlint:standard:no-multi-spaces")
         fun setupOnce() {
+            // TODO: assertions thrown in @BeforeClass / @AfterClass are not well supported in the
+            // test infrastructure. Consider saving excepion and throwing it in setUp().
+            // APF must run when the screen is off and the device is not interactive.
+            turnScreenOff()
+            // Wait for APF to become active.
+            Thread.sleep(1000)
             // TODO: check that there is no active wifi network. Otherwise, ApfFilter has already been
             // created.
             // APF adb cmds are only implemented in ApfFilter.java. Enable experiment to prevent
@@ -108,6 +143,12 @@ class ApfIntegrationTest {
                         false // makeDefault
                 )
             }
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun tearDownOnce() {
+            turnScreenOn()
         }
     }
 
@@ -182,11 +223,8 @@ class ApfIntegrationTest {
     @get:Rule
     val ignoreRule = DevSdkIgnoreRule()
 
-    private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
     private val pm by lazy { context.packageManager }
-    private val powerManager by lazy { context.getSystemService(PowerManager::class.java)!! }
-    private val wakeLock by lazy { powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG) }
     private lateinit var network: Network
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
@@ -204,36 +242,9 @@ class ApfIntegrationTest {
         return ApfCapabilities(version, maxLen, packetFormat)
     }
 
-    fun pollingCheck(condition: () -> Boolean, timeout_ms: Int): Boolean {
-        var polling_time = 0
-        do {
-            Thread.sleep(POLLING_INTERVAL_MS.toLong())
-            polling_time += POLLING_INTERVAL_MS
-            if (condition()) return true
-        } while (polling_time < timeout_ms)
-        return false
-    }
-
-    fun turnScreenOff() {
-        if (!wakeLock.isHeld()) wakeLock.acquire()
-        runShellCommandOrThrow("input keyevent KEYCODE_SLEEP")
-        val result = pollingCheck({ !powerManager.isInteractive() }, timeout_ms = 2000)
-        assertThat(result).isTrue()
-    }
-
-    fun turnScreenOn() {
-        if (wakeLock.isHeld()) wakeLock.release()
-        runShellCommandOrThrow("input keyevent KEYCODE_WAKEUP")
-        val result = pollingCheck({ powerManager.isInteractive() }, timeout_ms = 2000)
-        assertThat(result).isTrue()
-    }
-
     @Before
     fun setUp() {
         assume().that(pm.hasSystemFeature(FEATURE_WIFI)).isTrue()
-        // APF must run when the screen is off and the device is not interactive.
-        // TODO: consider running some of the tests with screen on (capabilities, read / write).
-        turnScreenOff()
 
         networkCallback = TestableNetworkCallback()
         cm.requestNetwork(
@@ -272,7 +283,6 @@ class ApfIntegrationTest {
         if (::networkCallback.isInitialized) {
             cm.unregisterNetworkCallback(networkCallback)
         }
-        turnScreenOn()
     }
 
     @Test
