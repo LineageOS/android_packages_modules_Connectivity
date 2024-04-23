@@ -97,6 +97,8 @@ public class MdnsRecordRepository {
     @NonNull
     private final Looper mLooper;
     @NonNull
+    private final Dependencies mDeps;
+    @NonNull
     private final String[] mDeviceHostname;
     @NonNull
     private final MdnsFeatureFlags mMdnsFeatureFlags;
@@ -111,6 +113,7 @@ public class MdnsRecordRepository {
             @NonNull String[] deviceHostname, @NonNull MdnsFeatureFlags mdnsFeatureFlags) {
         mDeviceHostname = deviceHostname;
         mLooper = looper;
+        mDeps = deps;
         mMdnsFeatureFlags = mdnsFeatureFlags;
     }
 
@@ -126,6 +129,10 @@ public class MdnsRecordRepository {
         @NonNull
         public Enumeration<InetAddress> getInterfaceInetAddresses(@NonNull NetworkInterface iface) {
             return iface.getInetAddresses();
+        }
+
+        public long elapsedRealTime() {
+            return SystemClock.elapsedRealtime();
         }
     }
 
@@ -585,7 +592,7 @@ public class MdnsRecordRepository {
      */
     @Nullable
     public MdnsReplyInfo getReply(MdnsPacket packet, InetSocketAddress src) {
-        final long now = SystemClock.elapsedRealtime();
+        final long now = mDeps.elapsedRealTime();
         final boolean isQuestionOnIpv4 = src.getAddress() instanceof Inet4Address;
 
         // TODO: b/322142420 - Set<RecordInfo<?>> may contain duplicate records wrapped in different
@@ -1326,7 +1333,7 @@ public class MdnsRecordRepository {
         final ServiceRegistration registration = mServices.get(serviceId);
         if (registration == null) return;
 
-        final long now = SystemClock.elapsedRealtime();
+        final long now = mDeps.elapsedRealTime();
         for (RecordInfo<?> record : registration.allRecords) {
             record.lastSentTimeMs = now;
             record.lastAdvertisedOnIpv4TimeMs = now;
