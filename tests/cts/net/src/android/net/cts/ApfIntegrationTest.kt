@@ -40,6 +40,7 @@ import android.system.OsConstants.IPPROTO_ICMP
 import android.system.OsConstants.SOCK_DGRAM
 import android.system.OsConstants.SOCK_NONBLOCK
 import android.util.Log
+import androidx.test.filters.RequiresDevice
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
@@ -83,6 +84,7 @@ private const val RCV_BUFFER_SIZE = 1480
 
 @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
+@RequiresDevice
 @NetworkStackModuleTest
 // ByteArray.toHexString is experimental API
 @kotlin.ExperimentalStdlibApi
