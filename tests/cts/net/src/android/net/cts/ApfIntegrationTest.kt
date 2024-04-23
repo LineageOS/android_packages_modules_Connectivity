@@ -39,6 +39,7 @@ import android.system.OsConstants.AF_INET
 import android.system.OsConstants.IPPROTO_ICMP
 import android.system.OsConstants.SOCK_DGRAM
 import android.system.OsConstants.SOCK_NONBLOCK
+import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
@@ -83,6 +84,8 @@ private const val RCV_BUFFER_SIZE = 1480
 @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
 @NetworkStackModuleTest
+// ByteArray.toHexString is experimental API
+@kotlin.ExperimentalStdlibApi
 class ApfIntegrationTest {
     companion object {
         private val PING_DESTINATION = InetSocketAddress("8.8.8.8", 0)
@@ -124,6 +127,8 @@ class ApfIntegrationTest {
 
         override fun handlePacket(recvbuf: ByteArray, length: Int) {
             // Only copy the ping data and complete the future.
+            val result = recvbuf.sliceArray(8..<length)
+            Log.i(TAG, "Received ping reply: ${result.toHexString()}")
             futureReply.complete(recvbuf.sliceArray(8..<length))
         }
 
@@ -142,6 +147,7 @@ class ApfIntegrationTest {
             // +-+-+-+-+-
             val icmpHeader = byteArrayOf(0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
             val packet = icmpHeader + data
+            Log.i(TAG, "Sent ping: ${packet.toHexString()}")
             Os.sendto(sockFd!!, packet, 0, packet.size, 0, PING_DESTINATION)
         }
 
@@ -303,7 +309,7 @@ class ApfIntegrationTest {
     }
 
     fun installProgram(bytes: ByteArray) {
-        val prog = HexDump.toHexString(bytes, 0 /* offset */, bytes.size, false /* upperCase */)
+        val prog = bytes.toHexString()
         val result = runShellCommandOrThrow("cmd network_stack apf $ifname install $prog").trim()
         // runShellCommandOrThrow only throws on S+.
         assertThat(result).isEqualTo("success")
