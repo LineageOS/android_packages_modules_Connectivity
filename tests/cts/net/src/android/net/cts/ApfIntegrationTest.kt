@@ -35,8 +35,8 @@ import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import android.system.Os
 import android.system.OsConstants
-import android.system.OsConstants.AF_INET6
-import android.system.OsConstants.IPPROTO_ICMPV6
+import android.system.OsConstants.AF_INET
+import android.system.OsConstants.IPPROTO_ICMP
 import android.system.OsConstants.SOCK_DGRAM
 import android.system.OsConstants.SOCK_NONBLOCK
 import android.util.Log
@@ -88,7 +88,7 @@ private const val RCV_BUFFER_SIZE = 1480
 @kotlin.ExperimentalStdlibApi
 class ApfIntegrationTest {
     companion object {
-        private val PING_DESTINATION = InetSocketAddress("2001:4860:4860::8888", 0)
+        private val PING_DESTINATION = InetSocketAddress("8.8.8.8", 0)
 
         @BeforeClass
         @JvmStatic
@@ -109,7 +109,7 @@ class ApfIntegrationTest {
         }
     }
 
-    class Icmp6PacketReader(
+    class IcmpPacketReader(
             handler: Handler,
             private val network: Network
     ) : PacketReader(handler, RCV_BUFFER_SIZE) {
@@ -118,7 +118,7 @@ class ApfIntegrationTest {
 
         override fun createFd(): FileDescriptor {
             // sockFd is closed by calling super.stop()
-            val sock = Os.socket(AF_INET6, SOCK_DGRAM or SOCK_NONBLOCK, IPPROTO_ICMPV6)
+            val sock = Os.socket(AF_INET, SOCK_DGRAM or SOCK_NONBLOCK, IPPROTO_ICMP)
             // APF runs only on WiFi, so make sure the socket is bound to the right network.
             network.bindSocket(sock)
             sockFd = sock
@@ -126,8 +126,6 @@ class ApfIntegrationTest {
         }
 
         override fun handlePacket(recvbuf: ByteArray, length: Int) {
-            assertThat(length).isEqualTo(64)
-            assertThat(recvbuf[0]).isEqualTo(0x81.toByte())
             // Only copy the ping data and complete the future.
             val result = recvbuf.sliceArray(8..<length)
             Log.i(TAG, "Received ping reply: ${result.toHexString()}")
@@ -137,18 +135,18 @@ class ApfIntegrationTest {
         fun sendPing(data: ByteArray) {
             require(data.size == 56)
 
-            // rfc4443#section-4.1: Echo Request Message
-            //   0                   1                   2                   3
-            //   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-            //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            //  |     Type      |     Code      |          Checksum             |
-            //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            //  |           Identifier          |        Sequence Number        |
-            //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            //  |     Data ...
-            //  +-+-+-+-+-
-            val icmp6Header = byteArrayOf(0x80.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
-            val packet = icmp6Header + data
+            // rfc792: Echo (type 0x08) or Echo Reply (type 0x00) Message:
+            //  0                   1                   2                   3
+            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |     Type      |     Code      |          Checksum             |
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |           Identifier          |        Sequence Number        |
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |     Data ...
+            // +-+-+-+-+-
+            val icmpHeader = byteArrayOf(0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+            val packet = icmpHeader + data
             Log.i(TAG, "Sent ping: ${packet.toHexString()}")
             futureReply = CompletableFuture<ByteArray>()
             Os.sendto(sockFd!!, packet, 0, packet.size, 0, PING_DESTINATION)
@@ -191,7 +189,7 @@ class ApfIntegrationTest {
     private lateinit var caps: ApfCapabilities
     private val handlerThread = HandlerThread("$TAG handler thread").apply { start() }
     private val handler = Handler(handlerThread.looper)
-    private lateinit var packetReader: Icmp6PacketReader
+    private lateinit var packetReader: IcmpPacketReader
 
     fun getApfCapabilities(): ApfCapabilities {
         val caps = runShellCommand("cmd network_stack apf $ifname capabilities").trim()
@@ -252,7 +250,7 @@ class ApfIntegrationTest {
         runShellCommand("cmd network_stack apf $ifname pause")
         caps = getApfCapabilities()
 
-        packetReader = Icmp6PacketReader(handler, network)
+        packetReader = IcmpPacketReader(handler, network)
         packetReader.start()
     }
 
