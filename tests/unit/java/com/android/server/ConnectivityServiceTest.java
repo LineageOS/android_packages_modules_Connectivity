@@ -457,6 +457,7 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -19188,6 +19189,25 @@ public class ConnectivityServiceTest {
         verifyClatdStop(null /* inOrder */, MOBILE_IFNAME);
     }
 
-    // Note : adding tests is ConnectivityServiceTest is deprecated, as it is too big for
+    private static final int EXPECTED_TEST_METHOD_COUNT = 332;
+
+    @Test
+    public void testTestMethodCount() {
+        final Class<?> testClass = this.getClass();
+
+        int actualTestMethodCount = 0;
+        for (final Method method : testClass.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(Test.class)) {
+                actualTestMethodCount++;
+            }
+        }
+
+        assertEquals("Adding tests in ConnectivityServiceTest is deprecated, "
+                + "as it is too big for maintenance. Please consider adding new tests "
+                + "in subclasses of CSTest instead.",
+                EXPECTED_TEST_METHOD_COUNT, actualTestMethodCount);
+    }
+
+    // Note : adding tests in ConnectivityServiceTest is deprecated, as it is too big for
     // maintenance. Please consider adding new tests in subclasses of CSTest instead.
 }
