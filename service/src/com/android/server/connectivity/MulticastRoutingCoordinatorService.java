@@ -27,6 +27,8 @@ import static android.system.OsConstants.SOCK_CLOEXEC;
 import static android.system.OsConstants.SOCK_NONBLOCK;
 import static android.system.OsConstants.SOCK_RAW;
 
+import static com.android.net.module.util.CollectionUtils.getIndexForValue;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.MulticastRoutingConfig;
@@ -150,7 +152,7 @@ public class MulticastRoutingCoordinatorService {
     }
 
     private Integer getInterfaceIndex(String ifName) {
-        int mapIndex = mInterfaces.indexOfValue(ifName);
+        int mapIndex = getIndexForValue(mInterfaces, ifName);
         if (mapIndex < 0) return null;
         return mInterfaces.keyAt(mapIndex);
     }
@@ -246,7 +248,7 @@ public class MulticastRoutingCoordinatorService {
         if (virtualIndex == null) return;
 
         updateMfcs();
-        mInterfaces.removeAt(mInterfaces.indexOfValue(ifName));
+        mInterfaces.removeAt(getIndexForValue(mInterfaces, ifName));
         mVirtualInterfaces.remove(virtualIndex);
         try {
             mDependencies.setsockoptMrt6DelMif(mMulticastRoutingFd, virtualIndex);
@@ -270,7 +272,7 @@ public class MulticastRoutingCoordinatorService {
 
     @VisibleForTesting
     public Integer getVirtualInterfaceIndex(String ifName) {
-        int mapIndex = mVirtualInterfaces.indexOfValue(ifName);
+        int mapIndex = getIndexForValue(mVirtualInterfaces, ifName);
         if (mapIndex < 0) return null;
         return mVirtualInterfaces.keyAt(mapIndex);
     }
@@ -291,7 +293,7 @@ public class MulticastRoutingCoordinatorService {
 
     private void maybeAddAndTrackInterface(String ifName) {
         checkOnHandlerThread();
-        if (mVirtualInterfaces.indexOfValue(ifName) >= 0) return;
+        if (getIndexForValue(mVirtualInterfaces, ifName) >= 0) return;
 
         int nextVirtualIndex = getNextAvailableVirtualIndex();
         int ifIndex = mDependencies.getInterfaceIndex(ifName);
