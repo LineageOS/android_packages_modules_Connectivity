@@ -31,6 +31,7 @@ import static com.android.server.thread.openthread.IOtDaemon.TUN_IF_NAME;
 
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.content.Context;
 import android.net.InetAddresses;
@@ -235,6 +236,21 @@ public class ThreadIntegrationTest {
         mController.joinAndWait(DEFAULT_DATASET);
 
         assertTunInterfaceMemberOfGroup(GROUP_ADDR_ALL_ROUTERS);
+    }
+
+    @Test
+    public void edPingsMeshLocalAddresses_oneReplyPerRequest() throws Exception {
+        mController.joinAndWait(DEFAULT_DATASET);
+        startFtdChild(mFtd, DEFAULT_DATASET);
+        List<Inet6Address> meshLocalAddresses = mOtCtl.getMeshLocalAddresses();
+
+        for (Inet6Address address : meshLocalAddresses) {
+            assertWithMessage(
+                            "There may be duplicated replies of ping request to "
+                                    + address.getHostAddress())
+                    .that(mFtd.ping(address, 2))
+                    .isEqualTo(2);
+        }
     }
 
     // TODO (b/323300829): add more tests for integration with linux platform and
