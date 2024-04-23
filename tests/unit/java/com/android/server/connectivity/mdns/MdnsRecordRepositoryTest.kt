@@ -24,7 +24,6 @@ import android.os.HandlerThread
 import com.android.server.connectivity.mdns.MdnsAnnouncer.AnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsInterfaceAdvertiser.CONFLICT_HOST
 import com.android.server.connectivity.mdns.MdnsInterfaceAdvertiser.CONFLICT_SERVICE
-import com.android.server.connectivity.mdns.MdnsProber.ProbingInfo
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_A
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_AAAA
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_PTR
@@ -52,10 +51,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.verify
 
 private const val TEST_SERVICE_ID_1 = 42
 private const val TEST_SERVICE_ID_2 = 43
@@ -132,10 +127,23 @@ class MdnsRecordRepositoryTest {
     private val deps = object : Dependencies() {
         override fun getInterfaceInetAddresses(iface: NetworkInterface) =
                 Collections.enumeration(TEST_ADDRESSES.map { it.address })
+
+        override fun elapsedRealTime() = now
+
+        fun elapse(duration: Long) {
+            now += duration
+        }
+
+        fun resetElapsedRealTime() {
+            now = 100
+        }
+
+        var now: Long = 100
     }
 
     @Before
     fun setUp() {
+        deps.resetElapsedRealTime();
         thread.start()
     }
 
@@ -1022,13 +1030,14 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
-    fun testGetReply_twoIpv4Queries_theSecondReplyIsThrottled() {
+    fun testGetReply_twoIpv4QueriesInOneSecond_theSecondReplyIsThrottled() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
         repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1, setOf(TEST_SUBTYPE))
         val query = makeQuery(TYPE_PTR to arrayOf("_testservice", "_tcp", "local"))
 
         val srcIpv4 = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
         val firstReplyIpv4 = repository.getReply(query, srcIpv4)
+        deps.elapse(500L)
         val secondReply = repository.getReply(query, srcIpv4)
 
         assertNotNull(firstReplyIpv4)
@@ -1039,19 +1048,62 @@ class MdnsRecordRepositoryTest {
 
 
     @Test
-    fun testGetReply_twoIpv6Queries_theSecondReplyIsThrottled() {
+    fun testGetReply_twoIpv6QueriesInOneSecond_theSecondReplyIsThrottled() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
         repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1, setOf(TEST_SUBTYPE))
         val query = makeQuery(TYPE_PTR to arrayOf("_testservice", "_tcp", "local"))
 
         val srcIpv6 = InetSocketAddress(parseNumericAddress("2001:db8::123"), 5353)
         val firstReplyIpv6 = repository.getReply(query, srcIpv6)
+        deps.elapse(500L)
         val secondReply = repository.getReply(query, srcIpv6)
 
         assertNotNull(firstReplyIpv6)
         assertEquals(MdnsConstants.getMdnsIPv6Address(), firstReplyIpv6.destination.address)
         assertEquals(MdnsConstants.MDNS_PORT, firstReplyIpv6.destination.port)
         assertNull(secondReply)
+    }
+
+    @Test
+    fun testGetReply_twoIpv4QueriesInMoreThanOneSecond_repliesAreNotThrottled() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1, setOf(TEST_SUBTYPE))
+        val query = makeQuery(TYPE_PTR to arrayOf("_testservice", "_tcp", "local"))
+
+        val srcIpv4 = InetSocketAddress(parseNumericAddress("192.0.2.123"), 5353)
+        val firstReplyIpv4 = repository.getReply(query, srcIpv4)
+        // The longest possible interval that may make the reply throttled is
+        // 1000 (MIN_MULTICAST_REPLY_INTERVAL_MS) + 120 (delay for shared name) = 1120
+        deps.elapse(1121L)
+        val secondReplyIpv4 = repository.getReply(query, srcIpv4)
+
+        assertNotNull(firstReplyIpv4)
+        assertEquals(MdnsConstants.getMdnsIPv4Address(), firstReplyIpv4.destination.address)
+        assertEquals(MdnsConstants.MDNS_PORT, firstReplyIpv4.destination.port)
+        assertNotNull(secondReplyIpv4)
+        assertEquals(MdnsConstants.getMdnsIPv4Address(), secondReplyIpv4.destination.address)
+        assertEquals(MdnsConstants.MDNS_PORT, secondReplyIpv4.destination.port)
+    }
+
+    @Test
+    fun testGetReply_twoIpv6QueriesInMoreThanOneSecond_repliesAreNotThrottled() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+        repository.initWithService(TEST_SERVICE_ID_1, TEST_SERVICE_1, setOf(TEST_SUBTYPE))
+        val query = makeQuery(TYPE_PTR to arrayOf("_testservice", "_tcp", "local"))
+
+        val srcIpv6 = InetSocketAddress(parseNumericAddress("2001:db8::123"), 5353)
+        val firstReplyIpv6 = repository.getReply(query, srcIpv6)
+        // The longest possible interval that may make the reply throttled is
+        // 1000 (MIN_MULTICAST_REPLY_INTERVAL_MS) + 120 (delay for shared name) = 1120
+        deps.elapse(1121L)
+        val secondReplyIpv6 = repository.getReply(query, srcIpv6)
+
+        assertNotNull(firstReplyIpv6)
+        assertEquals(MdnsConstants.getMdnsIPv6Address(), firstReplyIpv6.destination.address)
+        assertEquals(MdnsConstants.MDNS_PORT, firstReplyIpv6.destination.port)
+        assertNotNull(secondReplyIpv6)
+        assertEquals(MdnsConstants.getMdnsIPv6Address(), secondReplyIpv6.destination.address)
+        assertEquals(MdnsConstants.MDNS_PORT, secondReplyIpv6.destination.port)
     }
 
     @Test
