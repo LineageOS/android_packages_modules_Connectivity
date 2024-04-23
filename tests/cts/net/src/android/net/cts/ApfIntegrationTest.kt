@@ -169,8 +169,10 @@ class ApfIntegrationTest {
         }
 
         override fun handlePacket(recvbuf: ByteArray, length: Int) {
-            assertThat(length).isEqualTo(64)
-            assertThat(recvbuf[0]).isEqualTo(0x81.toByte())
+            // If zero-length or Type is not echo reply: ignore.
+            if (length == 0 || recvbuf[0] != 0x81.toByte()) {
+                return
+            }
             // Only copy the ping data and complete the future.
             val result = recvbuf.sliceArray(8..<length)
             Log.i(TAG, "Received ping reply: ${result.toHexString()}")
