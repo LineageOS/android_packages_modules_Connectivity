@@ -458,8 +458,7 @@ class ApfIntegrationTest {
         packetReader.expectPingReply()
 
         val readResult = readProgram()
-        val buffer = ByteBuffer.wrap(readResult)
-        buffer.position(counterRegion)
+        val buffer = ByteBuffer.wrap(readResult, counterRegion, 20 /* length */)
         expect.withMessage("PROGRAM_SIZE").that(buffer.getInt()).isEqualTo(program.size)
         expect.withMessage("RAM_LEN").that(buffer.getInt()).isEqualTo(caps.maximumApfProgramSize)
         expect.withMessage("IPV4_HEADER_SIZE").that(buffer.getInt()).isEqualTo(0)
