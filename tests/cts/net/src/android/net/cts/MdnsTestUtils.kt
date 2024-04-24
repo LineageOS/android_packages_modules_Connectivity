@@ -287,6 +287,12 @@ fun TapPacketReader.pollForQuery(
 ): TestDnsPacket? = pollForMdnsPacket(timeoutMs) { it.isQueryFor(recordName, *requiredTypes) }
 
 fun TapPacketReader.pollForReply(
+    recordName: String,
+    type: Int,
+    timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS
+): TestDnsPacket? = pollForMdnsPacket(timeoutMs) { it.isReplyFor(recordName, type) }
+
+fun TapPacketReader.pollForReply(
     serviceName: String,
     serviceType: String,
     timeoutMs: Long = MDNS_REGISTRATION_TIMEOUT_MS

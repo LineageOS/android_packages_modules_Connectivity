@@ -25,11 +25,14 @@ import static android.net.BpfNetMapsConstants.DOZABLE_MATCH;
 import static android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.LOW_POWER_STANDBY_MATCH;
 import static android.net.BpfNetMapsConstants.MATCH_LIST;
+import static android.net.BpfNetMapsConstants.METERED_ALLOW_CHAINS;
+import static android.net.BpfNetMapsConstants.METERED_DENY_CHAINS;
 import static android.net.BpfNetMapsConstants.NO_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_1_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_2_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_3_MATCH;
-import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_ADMIN_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_USER_MATCH;
 import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
 import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
 import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
@@ -37,6 +40,9 @@ import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_ADMIN;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_USER;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
@@ -47,11 +53,14 @@ import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.system.OsConstants.EINVAL;
 
+import android.os.Build;
 import android.os.Process;
 import android.os.ServiceSpecificException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Pair;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.IBpfMap;
@@ -70,6 +79,8 @@ import java.util.StringJoiner;
 // Note that this class should be put into bootclasspath instead of static libraries.
 // Because modules could have different copies of this class if this is statically linked,
 // which would be problematic if the definitions in these modules are not synchronized.
+// Note that NetworkStack can not use this before U due to b/326143935
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class BpfNetMapsUtils {
     // Bitmaps for calculating whether a given uid is blocked by firewall chains.
     private static final long sMaskDropIfSet;
@@ -117,6 +128,12 @@ public class BpfNetMapsUtils {
                 return OEM_DENY_2_MATCH;
             case FIREWALL_CHAIN_OEM_DENY_3:
                 return OEM_DENY_3_MATCH;
+            case FIREWALL_CHAIN_METERED_ALLOW:
+                return HAPPY_BOX_MATCH;
+            case FIREWALL_CHAIN_METERED_DENY_USER:
+                return PENALTY_BOX_USER_MATCH;
+            case FIREWALL_CHAIN_METERED_DENY_ADMIN:
+                return PENALTY_BOX_ADMIN_MATCH;
             default:
                 throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
         }
@@ -129,9 +146,9 @@ public class BpfNetMapsUtils {
      * DENYLIST means the firewall allows all by default, uids must be explicitly denied
      */
     public static boolean isFirewallAllowList(final int chain) {
-        if (ALLOW_CHAINS.contains(chain)) {
+        if (ALLOW_CHAINS.contains(chain) || METERED_ALLOW_CHAINS.contains(chain)) {
             return true;
-        } else if (DENY_CHAINS.contains(chain)) {
+        } else if (DENY_CHAINS.contains(chain) || METERED_DENY_CHAINS.contains(chain)) {
             return false;
         }
         throw new ServiceSpecificException(EINVAL, "Invalid firewall chain: " + chain);
@@ -264,7 +281,7 @@ public class BpfNetMapsUtils {
         }
 
         if (!isNetworkMetered) return false;
-        if ((uidMatch & PENALTY_BOX_MATCH) != 0) return true;
+        if ((uidMatch & (PENALTY_BOX_USER_MATCH | PENALTY_BOX_ADMIN_MATCH)) != 0) return true;
         if ((uidMatch & HAPPY_BOX_MATCH) != 0) return false;
         return getDataSaverEnabled(dataSaverEnabledMap);
     }

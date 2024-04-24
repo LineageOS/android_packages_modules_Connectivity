@@ -389,6 +389,7 @@ public final class NsdManager {
     }
 
     private static final int FIRST_LISTENER_KEY = 1;
+    private static final int DNSSEC_PROTOCOL = 3;
 
     private final INsdServiceConnector mService;
     private final Context mContext;
@@ -1754,45 +1755,132 @@ public final class NsdManager {
         }
     }
 
+    private enum ServiceValidationType {
+        NO_SERVICE,
+        HAS_SERVICE, // A service with a positive port
+        HAS_SERVICE_ZERO_PORT, // A service with a zero port
+    }
+
+    private enum HostValidationType {
+        DEFAULT_HOST, // No host is specified so the default host will be used
+        CUSTOM_HOST, // A custom host with addresses is specified
+        CUSTOM_HOST_NO_ADDRESS, // A custom host without address is specified
+    }
+
+    private enum PublicKeyValidationType {
+        NO_KEY,
+        HAS_KEY,
+    }
+
+    /**
+     * Check if the service is valid for registration and classify it as one of {@link
+     * ServiceValidationType}.
+     */
+    private static ServiceValidationType validateService(NsdServiceInfo serviceInfo) {
+        final boolean hasServiceName = !TextUtils.isEmpty(serviceInfo.getServiceName());
+        final boolean hasServiceType = !TextUtils.isEmpty(serviceInfo.getServiceType());
+        if (!hasServiceName && !hasServiceType && serviceInfo.getPort() == 0) {
+            return ServiceValidationType.NO_SERVICE;
+        }
+        if (hasServiceName && hasServiceType) {
+            if (serviceInfo.getPort() < 0) {
+                throw new IllegalArgumentException("Invalid port");
+            }
+            if (serviceInfo.getPort() == 0) {
+                return ServiceValidationType.HAS_SERVICE_ZERO_PORT;
+            }
+            return ServiceValidationType.HAS_SERVICE;
+        }
+        throw new IllegalArgumentException("The service name or the service type is missing");
+    }
+
+    /**
+     * Check if the host is valid for registration and classify it as one of {@link
+     * HostValidationType}.
+     */
+    private static HostValidationType validateHost(NsdServiceInfo serviceInfo) {
+        final boolean hasHostname = !TextUtils.isEmpty(serviceInfo.getHostname());
+        final boolean hasHostAddresses = !CollectionUtils.isEmpty(serviceInfo.getHostAddresses());
+        if (!hasHostname) {
+            // Keep compatible with the legacy behavior: It's allowed to set host
+            // addresses for a service registration although the host addresses
+            // won't be registered. To register the addresses for a host, the
+            // hostname must be specified.
+            return HostValidationType.DEFAULT_HOST;
+        }
+        if (!hasHostAddresses) {
+            return HostValidationType.CUSTOM_HOST_NO_ADDRESS;
+        }
+        return HostValidationType.CUSTOM_HOST;
+    }
+
+    /**
+     * Check if the public key is valid for registration and classify it as one of {@link
+     * PublicKeyValidationType}.
+     *
+     * <p>For simplicity, it only checks if the protocol is DNSSEC and the RDATA is not fewer than 4
+     * bytes. See RFC 3445 Section 3.
+     */
+    private static PublicKeyValidationType validatePublicKey(NsdServiceInfo serviceInfo) {
+        byte[] publicKey = serviceInfo.getPublicKey();
+        if (publicKey == null) {
+            return PublicKeyValidationType.NO_KEY;
+        }
+        if (publicKey.length < 4) {
+            throw new IllegalArgumentException("The public key should be at least 4 bytes long");
+        }
+        int protocol = publicKey[2];
+        if (protocol == DNSSEC_PROTOCOL) {
+            return PublicKeyValidationType.HAS_KEY;
+        }
+        throw new IllegalArgumentException(
+                "The public key's protocol ("
+                        + protocol
+                        + ") is invalid. It should be DNSSEC_PROTOCOL (3)");
+    }
+
     /**
      * Check if the {@link NsdServiceInfo} is valid for registration.
      *
-     * The following can be registered:
-     * - A service with an optional host.
-     * - A hostname with addresses.
+     * <p>Firstly, check if service, host and public key are all valid respectively. Then check if
+     * the combination of service, host and public key is valid.
      *
-     * Note that:
-     * - When registering a service, the service name, service type and port must be specified. If
-     *   hostname is specified, the host addresses can optionally be specified.
-     * - When registering a host without a service, the addresses must be specified.
+     * <p>If the {@code serviceInfo} is invalid, throw an {@link IllegalArgumentException}
+     * describing the reason.
+     *
+     * <p>There are the invalid combinations of service, host and public key:
+     *
+     * <ul>
+     *   <li>Neither service nor host is specified.
+     *   <li>No public key is specified and the service has a zero port.
+     *   <li>The registration only contains the hostname but addresses are missing.
+     * </ul>
+     *
+     * <p>Keys are used to reserve hostnames or service names while the service/host is temporarily
+     * inactive, so registrations with a key and just a hostname or a service name are acceptable.
      *
      * @hide
      */
     public static void checkServiceInfoForRegistration(NsdServiceInfo serviceInfo) {
         Objects.requireNonNull(serviceInfo, "NsdServiceInfo cannot be null");
-        boolean hasServiceName = !TextUtils.isEmpty(serviceInfo.getServiceName());
-        boolean hasServiceType = !TextUtils.isEmpty(serviceInfo.getServiceType());
-        boolean hasHostname = !TextUtils.isEmpty(serviceInfo.getHostname());
-        boolean hasHostAddresses = !CollectionUtils.isEmpty(serviceInfo.getHostAddresses());
 
-        if (serviceInfo.getPort() < 0) {
-            throw new IllegalArgumentException("Invalid port");
+        final ServiceValidationType serviceValidation = validateService(serviceInfo);
+        final HostValidationType hostValidation = validateHost(serviceInfo);
+        final PublicKeyValidationType publicKeyValidation = validatePublicKey(serviceInfo);
+
+        if (serviceValidation == ServiceValidationType.NO_SERVICE
+                && hostValidation == HostValidationType.DEFAULT_HOST) {
+            throw new IllegalArgumentException("Nothing to register");
         }
-
-        if (hasServiceType || hasServiceName || (serviceInfo.getPort() > 0)) {
-            if (!(hasServiceType && hasServiceName && (serviceInfo.getPort() > 0))) {
-                throw new IllegalArgumentException(
-                        "The service type, service name or port is missing");
+        if (publicKeyValidation == PublicKeyValidationType.NO_KEY) {
+            if (serviceValidation == ServiceValidationType.HAS_SERVICE_ZERO_PORT) {
+                throw new IllegalArgumentException("The port is missing");
             }
-        }
-
-        if (!hasServiceType && !hasHostname) {
-            throw new IllegalArgumentException("No service or host specified in NsdServiceInfo");
-        }
-
-        if (!hasServiceType && hasHostname && !hasHostAddresses) {
-            // TODO: b/317946010 - This may be allowed when it supports registering KEY RR.
-            throw new IllegalArgumentException("No host addresses specified in NsdServiceInfo");
+            if (serviceValidation == ServiceValidationType.NO_SERVICE
+                    && hostValidation == HostValidationType.CUSTOM_HOST_NO_ADDRESS) {
+                throw new IllegalArgumentException(
+                        "The host addresses must be specified unless there is a service");
+            }
         }
     }
 }
