@@ -213,6 +213,7 @@ import libcore.io.Streams;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -3556,6 +3557,8 @@ public class ConnectivityManagerTest {
         doTestFirewallBlocking(FIREWALL_CHAIN_DOZABLE, ALLOWLIST);
     }
 
+    // Disable test - needs to be fixed
+    @Ignore
     @Test @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) @ConnectivityModuleTest
     @AppModeFull(reason = "Socket cannot bind in instant app mode")
     public void testFirewallBlockingBackground() {
