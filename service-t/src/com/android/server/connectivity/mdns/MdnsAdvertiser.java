@@ -448,10 +448,11 @@ public class MdnsAdvertiser {
         /**
          * Get the ID of a conflicting registration due to host, or -1 if none.
          *
-         * <p>It's valid that multiple registrations from the same user are using the same hostname.
-         *
          * <p>If there's already another registration with the same hostname requested by another
-         * user, this is considered a conflict.
+         * user, this is a conflict.
+         *
+         * <p>If there're two registrations both containing address records using the same hostname,
+         * this is a conflict.
          */
         int getConflictingRegistrationDueToHost(@NonNull NsdServiceInfo info, int clientUid) {
             if (TextUtils.isEmpty(info.getHostname())) {
@@ -460,10 +461,17 @@ public class MdnsAdvertiser {
             for (int i = 0; i < mPendingRegistrations.size(); i++) {
                 final Registration otherRegistration = mPendingRegistrations.valueAt(i);
                 final NsdServiceInfo otherInfo = otherRegistration.getServiceInfo();
+                final int otherServiceId = mPendingRegistrations.keyAt(i);
                 if (clientUid != otherRegistration.mClientUid
                         && MdnsUtils.equalsIgnoreDnsCase(
                                 info.getHostname(), otherInfo.getHostname())) {
-                    return mPendingRegistrations.keyAt(i);
+                    return otherServiceId;
+                }
+                if (!info.getHostAddresses().isEmpty()
+                        && !otherInfo.getHostAddresses().isEmpty()
+                        && MdnsUtils.equalsIgnoreDnsCase(
+                                info.getHostname(), otherInfo.getHostname())) {
+                    return otherServiceId;
                 }
             }
             return -1;

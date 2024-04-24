@@ -21,11 +21,13 @@ import android.net.LinkAddress
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.HandlerThread
+import com.android.net.module.util.HexDump.hexStringToByteArray
 import com.android.server.connectivity.mdns.MdnsAnnouncer.AnnouncementInfo
 import com.android.server.connectivity.mdns.MdnsInterfaceAdvertiser.CONFLICT_HOST
 import com.android.server.connectivity.mdns.MdnsInterfaceAdvertiser.CONFLICT_SERVICE
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_A
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_AAAA
+import com.android.server.connectivity.mdns.MdnsRecord.TYPE_KEY
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_PTR
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_SRV
 import com.android.server.connectivity.mdns.MdnsRecord.TYPE_TXT
@@ -119,6 +121,20 @@ private val TEST_SERVICE_CUSTOM_HOST_NO_ADDRESSES = NsdServiceInfo().apply {
     serviceName = "TestService"
     port = TEST_PORT
 }
+
+private val TEST_PUBLIC_KEY = hexStringToByteArray(
+        "0201030dc141d0637960b98cbc12cfca"
+                + "221d2879dac26ee5b460e9007c992e19"
+                + "02d897c391b03764d448f7d0c772fdb0"
+                + "3b1d9d6d52ff8886769e8e2362513565"
+                + "270962d3")
+
+private val TEST_PUBLIC_KEY_2 = hexStringToByteArray(
+        "0201030dc141d0637960b98cbc12cfca"
+                + "221d2879dac26ee5b460e9007c992e19"
+                + "02d897c391b03764d448f7d0c772fdb0"
+                + "3b1d9d6d52ff8886769e8e2362513565"
+                + "270962d4")
 
 @RunWith(DevSdkIgnoreRunner::class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
@@ -581,6 +597,7 @@ class MdnsRecordRepositoryTest {
             TYPE_PTR -> return MdnsPointerRecord(name, false /* isUnicast */)
             TYPE_SRV -> return MdnsServiceRecord(name, false /* isUnicast */)
             TYPE_TXT -> return MdnsTextRecord(name, false /* isUnicast */)
+            TYPE_KEY -> return MdnsKeyRecord(name, false /* isUnicast */)
             TYPE_A, TYPE_AAAA -> return MdnsInetAddressRecord(name, type, false /* isUnicast */)
             else -> fail("Unexpected question type: $type")
         }
@@ -908,6 +925,159 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
+    fun testGetReply_keyQuestionForServiceName_returnsKeyRecord() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService1"
+            port = TEST_PORT
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_2, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService2"
+            port = 0 // No SRV RR
+            publicKey = TEST_PUBLIC_KEY
+        })
+        val src = InetSocketAddress(parseNumericAddress("fe80::123"), 5353)
+        val serviceName1 = arrayOf("MyTestService1", "_testservice", "_tcp", "local")
+        val serviceName2 = arrayOf("MyTestService2", "_testservice", "_tcp", "local")
+
+        val query1 = makeQuery(TYPE_KEY to serviceName1)
+        val reply1 = repository.getReply(query1, src)
+
+        assertNotNull(reply1)
+        assertEquals(listOf(MdnsKeyRecord(serviceName1,
+                0, false, LONG_TTL, TEST_PUBLIC_KEY)),
+                reply1.answers)
+        assertEquals(listOf(),
+                reply1.additionalAnswers)
+
+        val query2 = makeQuery(TYPE_KEY to serviceName2)
+        val reply2 = repository.getReply(query2, src)
+
+        assertNotNull(reply2)
+        assertEquals(listOf(MdnsKeyRecord(serviceName2,
+                0, false, LONG_TTL, TEST_PUBLIC_KEY)),
+                reply2.answers)
+        assertEquals(listOf(MdnsNsecRecord(serviceName2,
+                0L, true, SHORT_TTL,
+                serviceName2 /* nextDomain */,
+                intArrayOf(TYPE_KEY))),
+                reply2.additionalAnswers)
+    }
+
+    @Test
+    fun testGetReply_keyQuestionForHostname_returnsKeyRecord() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            hostname = "MyHost1"
+            hostAddresses = listOf(
+                    parseNumericAddress("2001:db8::1"),
+                    parseNumericAddress("2001:db8::2"))
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_2, NsdServiceInfo().apply {
+            hostname = "MyHost2"
+            hostAddresses = listOf() // No address records
+            publicKey = TEST_PUBLIC_KEY
+        })
+        val src = InetSocketAddress(parseNumericAddress("fe80::123"), 5353)
+        val hostname1 = arrayOf("MyHost1", "local")
+        val hostname2 = arrayOf("MyHost2", "local")
+
+        val query1 = makeQuery(TYPE_KEY to hostname1)
+        val reply1 = repository.getReply(query1, src)
+
+        assertNotNull(reply1)
+        assertEquals(listOf(MdnsKeyRecord(hostname1,
+                0, false, LONG_TTL, TEST_PUBLIC_KEY)),
+                reply1.answers)
+        assertEquals(listOf(),
+                reply1.additionalAnswers)
+
+        val query2 = makeQuery(TYPE_KEY to hostname2)
+        val reply2 = repository.getReply(query2, src)
+
+        assertNotNull(reply2)
+        assertEquals(listOf(MdnsKeyRecord(hostname2,
+                0, false, LONG_TTL, TEST_PUBLIC_KEY)),
+                reply2.answers)
+        assertEquals(listOf(MdnsNsecRecord(hostname2, 0L, true, SHORT_TTL,
+                hostname2 /* nextDomain */,
+                intArrayOf(TYPE_KEY))),
+                reply2.additionalAnswers)
+    }
+
+    @Test
+    fun testGetReply_keyRecordForHostRemoved_noAnswertoKeyQuestion() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            hostname = "MyHost1"
+            hostAddresses = listOf(
+                    parseNumericAddress("2001:db8::1"),
+                    parseNumericAddress("2001:db8::2"))
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_2, NsdServiceInfo().apply {
+            hostname = "MyHost2"
+            hostAddresses = listOf() // No address records
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.removeService(TEST_SERVICE_ID_1)
+        repository.removeService(TEST_SERVICE_ID_2)
+        val src = InetSocketAddress(parseNumericAddress("fe80::123"), 5353)
+        val hostname1 = arrayOf("MyHost1", "local")
+        val hostname2 = arrayOf("MyHost2", "local")
+
+        val query1 = makeQuery(TYPE_KEY to hostname1)
+        val reply1 = repository.getReply(query1, src)
+
+        assertNull(reply1)
+
+        val query2 = makeQuery(TYPE_KEY to hostname2)
+        val reply2 = repository.getReply(query2, src)
+
+        assertNull(reply2)
+    }
+
+    @Test
+    fun testGetReply_keyRecordForServiceRemoved_noAnswertoKeyQuestion() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService1"
+            port = TEST_PORT
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_2, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService2"
+            port = 0 // No SRV RR
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.removeService(TEST_SERVICE_ID_1)
+        repository.removeService(TEST_SERVICE_ID_2)
+        val src = InetSocketAddress(parseNumericAddress("fe80::123"), 5353)
+        val serviceName1 = arrayOf("MyTestService1", "_testservice", "_tcp", "local")
+        val serviceName2 = arrayOf("MyTestService2", "_testservice", "_tcp", "local")
+
+        val query1 = makeQuery(TYPE_KEY to serviceName1)
+        val reply1 = repository.getReply(query1, src)
+
+        assertNull(reply1)
+
+        val query2 = makeQuery(TYPE_KEY to serviceName2)
+        val reply2 = repository.getReply(query2, src)
+
+        assertNull(reply2)
+    }
+
+    @Test
     fun testGetReply_customHostRemoved_noAnswerToAAAAQuestion() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
         repository.initWithService(
@@ -1221,8 +1391,8 @@ class MdnsRecordRepositoryTest {
     @Test
     fun testGetConflictingServices_customHostsReplyHasFewerAddressesThanUs_noConflict() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
-        repository.addService(TEST_CUSTOM_HOST_ID_1, TEST_CUSTOM_HOST_1, null /* ttl */)
-        repository.addService(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2, null /* ttl */)
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_1, TEST_CUSTOM_HOST_1)
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2)
 
         val packet = MdnsPacket(
                 0, /* flags */
@@ -1240,10 +1410,30 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
-    fun testGetConflictingServices_customHostsReplyHasIdenticalHosts_noConflict() {
+    fun testGetConflictingServices_customHostsReplyHasSameNameRecord_conflictDuringProbing() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
         repository.addService(TEST_CUSTOM_HOST_ID_1, TEST_CUSTOM_HOST_1, null /* ttl */)
-        repository.addService(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2, null /* ttl */)
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2)
+
+        val packet = MdnsPacket(
+            0, /* flags */
+            emptyList(), /* questions */
+            listOf(MdnsKeyRecord(arrayOf("TestHost", "local"),
+                    0L /* receiptTimeMillis */, true /* cacheFlush */,
+                    0L /* ttlMillis */, TEST_PUBLIC_KEY),
+            ) /* answers */,
+            emptyList() /* authorityRecords */,
+            emptyList() /* additionalRecords */)
+
+        assertEquals(mapOf(TEST_CUSTOM_HOST_ID_1 to CONFLICT_HOST),
+            repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_customHostsReplyHasIdenticalHosts_noConflict() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_1, TEST_CUSTOM_HOST_1)
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2)
 
         val packet = MdnsPacket(
                 0, /* flags */
@@ -1267,8 +1457,8 @@ class MdnsRecordRepositoryTest {
     @Test
     fun testGetConflictingServices_customHostsCaseInsensitiveReplyHasIdenticalHosts_noConflict() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
-        repository.addService(TEST_CUSTOM_HOST_ID_1, TEST_CUSTOM_HOST_1, null /* ttl */)
-        repository.addService(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2, null /* ttl */)
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_1, TEST_CUSTOM_HOST_1)
+        repository.addServiceAndFinishProbing(TEST_CUSTOM_HOST_ID_2, TEST_CUSTOM_HOST_2)
 
         val packet = MdnsPacket(
                 0, /* flags */
@@ -1285,6 +1475,152 @@ class MdnsRecordRepositoryTest {
                 emptyList() /* additionalRecords */)
 
         assertEquals(emptyMap(),
+                repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_identicalKeyRecordsForService_noConflict() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addService(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService"
+            port = TEST_PORT
+            publicKey = TEST_PUBLIC_KEY
+        }, null /* ttl */)
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                        MdnsKeyRecord(
+                                arrayOf("MyTestService", "_testservice", "_tcp", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis,
+                                TEST_PUBLIC_KEY)
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        assertEquals(emptyMap(),
+                repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_differentKeyRecordsForService_conflict() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addService(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService"
+            port = TEST_PORT
+            publicKey = TEST_PUBLIC_KEY
+        }, null /* null */)
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                        MdnsKeyRecord(
+                                arrayOf("MyTestService", "_testservice", "_tcp", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis,
+                                TEST_PUBLIC_KEY_2)
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        assertEquals(mapOf(TEST_SERVICE_ID_1 to CONFLICT_SERVICE),
+                repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_identicalKeyRecordsForHost_noConflict() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            hostname = "MyHost"
+            hostAddresses = listOf(
+                parseNumericAddress("2001:db8::1"),
+                parseNumericAddress("2001:db8::2")
+            )
+            publicKey = TEST_PUBLIC_KEY
+        })
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                        MdnsKeyRecord(
+                                arrayOf("MyHost", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis,
+                                TEST_PUBLIC_KEY)
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        assertEquals(emptyMap(),
+                repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_keyForCustomHostReplySameRecordName_conflictDuringProbing() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addService(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            hostname = "MyHost"
+            publicKey = TEST_PUBLIC_KEY
+        }, null /* ttl */)
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+            0 /* flags */,
+            emptyList() /* questions */,
+            listOf(MdnsInetAddressRecord(arrayOf("MyHost", "local"),
+                    0L /* receiptTimeMillis */,
+                    true /* cacheFlush */,
+                    otherTtlMillis,
+                    parseNumericAddress("192.168.2.111"))
+            ) /* answers */,
+            emptyList() /* authorityRecords */,
+            emptyList() /* additionalRecords */
+        )
+
+        assertEquals(mapOf(TEST_SERVICE_ID_1 to CONFLICT_HOST),
+            repository.getConflictingServices(packet))
+    }
+
+    @Test
+    fun testGetConflictingServices_differentKeyRecordsForHost_conflict() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addService(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            hostname = "MyHost"
+            hostAddresses = listOf(
+                    parseNumericAddress("2001:db8::1"),
+                    parseNumericAddress("2001:db8::2"))
+            publicKey = TEST_PUBLIC_KEY
+        }, null /* ttl */)
+
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+                0 /* flags */,
+                emptyList() /* questions */,
+                listOf(
+                        MdnsKeyRecord(
+                                arrayOf("MyHost", "local"),
+                                0L /* receiptTimeMillis */, true /* cacheFlush */,
+                                otherTtlMillis,
+                                TEST_PUBLIC_KEY_2)
+                ) /* answers */,
+                emptyList() /* authorityRecords */,
+                emptyList() /* additionalRecords */)
+
+        assertEquals(mapOf(TEST_SERVICE_ID_1 to CONFLICT_HOST),
                 repository.getConflictingServices(packet))
     }
 
