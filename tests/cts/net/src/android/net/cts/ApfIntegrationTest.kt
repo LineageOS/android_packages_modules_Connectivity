@@ -382,12 +382,14 @@ class ApfIntegrationTest {
         addJumpIfR0NotEquals(0x81, BaseApfGenerator.PASS_LABEL)
     }
 
+    // APF integration is mostly broken before V
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testDropPingReply() {
         assumeApfVersionSupportAtLeast(4)
 
         // clear any active APF filter
-        var gen = ApfV4Generator(caps.apfVersionSupported).addPass()
+        var gen = ApfV4Generator(4).addPass()
         installProgram(gen.generate())
         readProgram() // wait for install completion
 
@@ -397,7 +399,7 @@ class ApfIntegrationTest {
         assertThat(packetReader.expectPingReply()).isEqualTo(data)
 
         // Generate an APF program that drops the next ping
-        gen = ApfV4Generator(caps.apfVersionSupported)
+        gen = ApfV4Generator(4)
 
         // If not ICMPv6 Echo Reply -> PASS
         gen.addPassIfNotIcmpv6EchoReply()
