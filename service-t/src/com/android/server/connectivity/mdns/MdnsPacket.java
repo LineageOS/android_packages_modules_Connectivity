@@ -196,6 +196,15 @@ public class MdnsPacket {
                 }
             }
 
+            case MdnsRecord.TYPE_KEY: {
+                try {
+                    return new MdnsKeyRecord(name, reader, isQuestion);
+                } catch (IOException e) {
+                    throw new ParseException(MdnsResponseErrorCode.ERROR_READING_KEY_RDATA,
+                            "Failed to read KEY record from mDNS response.", e);
+                }
+            }
+
             case MdnsRecord.TYPE_NSEC: {
                 try {
                     return new MdnsNsecRecord(name, reader, isQuestion);

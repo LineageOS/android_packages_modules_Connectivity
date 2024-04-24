@@ -37,4 +37,5 @@ public class MdnsResponseErrorCode {
     public static final int ERROR_END_OF_FILE = 12;
     public static final int ERROR_READING_NSEC_RDATA = 13;
     public static final int ERROR_READING_ANY_RDATA = 14;
+    public static final int ERROR_READING_KEY_RDATA = 15;
 }

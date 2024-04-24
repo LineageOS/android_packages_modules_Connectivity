@@ -16,6 +16,11 @@
 
 package android.net.nsd;
 
+import static android.net.InetAddresses.parseNumericAddress;
+import static android.net.nsd.NsdManager.checkServiceInfoForRegistration;
+
+import static com.android.net.module.util.HexDump.hexStringToByteArray;
+
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
 import static libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
 
@@ -54,6 +59,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.List;
 import java.time.Duration;
 
@@ -395,6 +401,7 @@ public class NsdManagerTest {
         NsdManager.RegistrationListener listener4 = mock(NsdManager.RegistrationListener.class);
         NsdManager.RegistrationListener listener5 = mock(NsdManager.RegistrationListener.class);
         NsdManager.RegistrationListener listener6 = mock(NsdManager.RegistrationListener.class);
+        NsdManager.RegistrationListener listener7 = mock(NsdManager.RegistrationListener.class);
 
         NsdServiceInfo invalidService = new NsdServiceInfo(null, null);
         NsdServiceInfo validService = new NsdServiceInfo("a_name", "_a_type._tcp");
@@ -439,6 +446,19 @@ public class NsdManagerTest {
         validServiceWithCustomHostNoAddresses.setPort(2222);
         validServiceWithCustomHostNoAddresses.setHostname("a_host");
 
+        NsdServiceInfo validServiceWithPublicKey = new NsdServiceInfo("a_name", "_a_type._tcp");
+        validServiceWithPublicKey.setPublicKey(
+                hexStringToByteArray(
+                        "0201030dc141d0637960b98cbc12cfca"
+                                + "221d2879dac26ee5b460e9007c992e19"
+                                + "02d897c391b03764d448f7d0c772fdb0"
+                                + "3b1d9d6d52ff8886769e8e2362513565"
+                                + "270962d3"));
+
+        NsdServiceInfo invalidServiceWithTooShortPublicKey =
+                new NsdServiceInfo("a_name", "_a_type._tcp");
+        invalidServiceWithTooShortPublicKey.setPublicKey(hexStringToByteArray("0201"));
+
         // Service registration
         //  - invalid arguments
         mustFail(() -> { manager.unregisterService(null); });
@@ -449,6 +469,8 @@ public class NsdManagerTest {
         mustFail(() -> { manager.registerService(validService, PROTOCOL, null); });
         mustFail(() -> {
             manager.registerService(invalidMissingHostnameWithAddresses, PROTOCOL, listener1); });
+        mustFail(() -> {
+            manager.registerService(invalidServiceWithTooShortPublicKey, PROTOCOL, listener1); });
         manager.registerService(validService, PROTOCOL, listener1);
         //  - update without subtype is not allowed
         mustFail(() -> { manager.registerService(validServiceDuplicate, PROTOCOL, listener1); });
@@ -479,6 +501,9 @@ public class NsdManagerTest {
         //  - registering a service with a custom host with no addresses is valid
         manager.registerService(validServiceWithCustomHostNoAddresses, PROTOCOL, listener6);
         manager.unregisterService(listener6);
+        //  - registering a service with a public key is valid
+        manager.registerService(validServiceWithPublicKey, PROTOCOL, listener7);
+        manager.unregisterService(listener7);
 
         // Discover service
         //  - invalid arguments
@@ -504,6 +529,229 @@ public class NsdManagerTest {
         manager.resolveService(validService, listener3);
         //  - listener already registered:w
         mustFail(() -> { manager.resolveService(validService, listener3); });
+    }
+
+    private static final class NsdServiceInfoBuilder {
+        private static final String SERVICE_NAME = "TestService";
+        private static final String SERVICE_TYPE = "_testservice._tcp";
+        private static final int SERVICE_PORT = 12345;
+        private static final String HOSTNAME = "TestHost";
+        private static final List<InetAddress> HOST_ADDRESSES =
+                List.of(parseNumericAddress("192.168.2.23"), parseNumericAddress("2001:db8::3"));
+        private static final byte[] PUBLIC_KEY =
+                hexStringToByteArray(
+                        "0201030dc141d0637960b98cbc12cfca"
+                                + "221d2879dac26ee5b460e9007c992e19"
+                                + "02d897c391b03764d448f7d0c772fdb0"
+                                + "3b1d9d6d52ff8886769e8e2362513565"
+                                + "270962d3");
+
+        private final NsdServiceInfo mNsdServiceInfo = new NsdServiceInfo();
+
+        NsdServiceInfo build() {
+            return mNsdServiceInfo;
+        }
+
+        NsdServiceInfoBuilder setNoService() {
+            mNsdServiceInfo.setServiceName(null);
+            mNsdServiceInfo.setServiceType(null);
+            mNsdServiceInfo.setPort(0);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setService() {
+            mNsdServiceInfo.setServiceName(SERVICE_NAME);
+            mNsdServiceInfo.setServiceType(SERVICE_TYPE);
+            mNsdServiceInfo.setPort(SERVICE_PORT);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setZeroPortService() {
+            mNsdServiceInfo.setServiceName(SERVICE_NAME);
+            mNsdServiceInfo.setServiceType(SERVICE_TYPE);
+            mNsdServiceInfo.setPort(0);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setInvalidService() {
+            mNsdServiceInfo.setServiceName(SERVICE_NAME);
+            mNsdServiceInfo.setServiceType(null);
+            mNsdServiceInfo.setPort(SERVICE_PORT);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setDefaultHost() {
+            mNsdServiceInfo.setHostname(null);
+            mNsdServiceInfo.setHostAddresses(Collections.emptyList());
+            return this;
+        }
+
+        NsdServiceInfoBuilder setCustomHost() {
+            mNsdServiceInfo.setHostname(HOSTNAME);
+            mNsdServiceInfo.setHostAddresses(HOST_ADDRESSES);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setCustomHostNoAddress() {
+            mNsdServiceInfo.setHostname(HOSTNAME);
+            mNsdServiceInfo.setHostAddresses(Collections.emptyList());
+            return this;
+        }
+
+        NsdServiceInfoBuilder setHostAddressesNoHostname() {
+            mNsdServiceInfo.setHostname(null);
+            mNsdServiceInfo.setHostAddresses(HOST_ADDRESSES);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setNoPublicKey() {
+            mNsdServiceInfo.setPublicKey(null);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setPublicKey() {
+            mNsdServiceInfo.setPublicKey(PUBLIC_KEY);
+            return this;
+        }
+
+        NsdServiceInfoBuilder setInvalidPublicKey() {
+            mNsdServiceInfo.setPublicKey(new byte[3]);
+            return this;
+        }
+    }
+
+    @Test
+    public void testCheckServiceInfoForRegistration() {
+        // The service is invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setInvalidService()
+                        .setCustomHost()
+                        .setPublicKey().build()));
+        // Keep compatible with the legacy behavior: It's allowed to set host
+        // addresses for a service registration although the host addresses
+        // won't be registered. To register the addresses for a host, the
+        // hostname must be specified.
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setHostAddressesNoHostname()
+                        .setPublicKey().build());
+        // The public key is invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setCustomHost()
+                        .setInvalidPublicKey().build()));
+        // Invalid combinations
+        // 1. (service, custom host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setCustomHost()
+                        .setPublicKey().build());
+        // 2. (service, custom host, no key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setCustomHost()
+                        .setNoPublicKey().build());
+        // 3. (service, no-address custom host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setCustomHostNoAddress()
+                        .setPublicKey().build());
+        // 4. (service, no-address custom host, no key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setCustomHostNoAddress()
+                        .setNoPublicKey().build());
+        // 5. (service, default host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setDefaultHost()
+                        .setPublicKey().build());
+        // 6. (service, default host, no key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setService()
+                        .setDefaultHost()
+                        .setNoPublicKey().build());
+        // 7. (0-port service, custom host, valid key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setZeroPortService()
+                        .setCustomHost()
+                        .setPublicKey().build());
+        // 8. (0-port service, custom host, no key): invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setZeroPortService()
+                        .setCustomHost()
+                        .setNoPublicKey().build()));
+        // 9. (0-port service, no-address custom host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setZeroPortService()
+                        .setCustomHostNoAddress()
+                        .setPublicKey().build());
+        // 10. (0-port service, no-address custom host, no key): invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setZeroPortService()
+                        .setCustomHostNoAddress()
+                        .setNoPublicKey().build()));
+        // 11. (0-port service, default host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setZeroPortService()
+                        .setDefaultHost()
+                        .setPublicKey().build());
+        // 12. (0-port service, default host, no key): invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setZeroPortService()
+                        .setDefaultHost()
+                        .setNoPublicKey().build()));
+        // 13. (no service, custom host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setNoService()
+                        .setCustomHost()
+                        .setPublicKey().build());
+        // 14. (no service, custom host, no key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setNoService()
+                        .setCustomHost()
+                        .setNoPublicKey().build());
+        // 15. (no service, no-address custom host, key): valid
+        checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setNoService()
+                        .setCustomHostNoAddress()
+                        .setPublicKey().build());
+        // 16. (no service, no-address custom host, no key): invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setNoService()
+                        .setCustomHostNoAddress()
+                        .setNoPublicKey().build()));
+        // 17. (no service, default host, key): invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setNoService()
+                        .setDefaultHost()
+                        .setPublicKey().build()));
+        // 18. (no service, default host, no key): invalid
+        mustFail(() -> checkServiceInfoForRegistration(
+                new NsdServiceInfoBuilder()
+                        .setNoService()
+                        .setDefaultHost()
+                        .setNoPublicKey().build()));
     }
 
     public void mustFail(Runnable fn) {
