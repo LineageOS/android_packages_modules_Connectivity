@@ -16,6 +16,7 @@
 
 package android.net.nsd;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -51,6 +52,23 @@ public class NsdServiceInfoTest {
 
     private static final InetAddress IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1");
     private static final InetAddress IPV6_ADDRESS = InetAddresses.parseNumericAddress("2001:db8::");
+    private static final byte[] PUBLIC_KEY_RDATA = new byte[] {
+            (byte) 0x02, (byte)0x01,  // flag
+            (byte) 0x03, // protocol
+            (byte) 0x0d, // algorithm
+            // 64-byte public key below
+            (byte) 0xC1, (byte) 0x41, (byte) 0xD0, (byte) 0x63, (byte) 0x79, (byte) 0x60,
+            (byte) 0xB9, (byte) 0x8C, (byte) 0xBC, (byte) 0x12, (byte) 0xCF, (byte) 0xCA,
+            (byte) 0x22, (byte) 0x1D, (byte) 0x28, (byte) 0x79, (byte) 0xDA, (byte) 0xC2,
+            (byte) 0x6E, (byte) 0xE5, (byte) 0xB4, (byte) 0x60, (byte) 0xE9, (byte) 0x00,
+            (byte) 0x7C, (byte) 0x99, (byte) 0x2E, (byte) 0x19, (byte) 0x02, (byte) 0xD8,
+            (byte) 0x97, (byte) 0xC3, (byte) 0x91, (byte) 0xB0, (byte) 0x37, (byte) 0x64,
+            (byte) 0xD4, (byte) 0x48, (byte) 0xF7, (byte) 0xD0, (byte) 0xC7, (byte) 0x72,
+            (byte) 0xFD, (byte) 0xB0, (byte) 0x3B, (byte) 0x1D, (byte) 0x9D, (byte) 0x6D,
+            (byte) 0x52, (byte) 0xFF, (byte) 0x88, (byte) 0x86, (byte) 0x76, (byte) 0x9E,
+            (byte) 0x8E, (byte) 0x23, (byte) 0x62, (byte) 0x51, (byte) 0x35, (byte) 0x65,
+            (byte) 0x27, (byte) 0x09, (byte) 0x62, (byte) 0xD3
+    };
 
     @Test
     public void testLimits() throws Exception {
@@ -120,6 +138,7 @@ public class NsdServiceInfoTest {
         fullInfo.setPort(4242);
         fullInfo.setHostAddresses(List.of(IPV4_ADDRESS));
         fullInfo.setHostname("home");
+        fullInfo.setPublicKey(PUBLIC_KEY_RDATA);
         fullInfo.setNetwork(new Network(123));
         fullInfo.setInterfaceIndex(456);
         checkParcelable(fullInfo);
@@ -136,6 +155,7 @@ public class NsdServiceInfoTest {
         attributedInfo.setPort(4242);
         attributedInfo.setHostAddresses(List.of(IPV6_ADDRESS, IPV4_ADDRESS));
         attributedInfo.setHostname("home");
+        attributedInfo.setPublicKey(PUBLIC_KEY_RDATA);
         attributedInfo.setAttribute("color", "pink");
         attributedInfo.setAttribute("sound", (new String("にゃあ")).getBytes("UTF-8"));
         attributedInfo.setAttribute("adorable", (String) null);
@@ -172,6 +192,7 @@ public class NsdServiceInfoTest {
         assertEquals(original.getServiceType(), result.getServiceType());
         assertEquals(original.getHost(), result.getHost());
         assertEquals(original.getHostname(), result.getHostname());
+        assertArrayEquals(original.getPublicKey(), result.getPublicKey());
         assertTrue(original.getPort() == result.getPort());
         assertEquals(original.getNetwork(), result.getNetwork());
         assertEquals(original.getInterfaceIndex(), result.getInterfaceIndex());

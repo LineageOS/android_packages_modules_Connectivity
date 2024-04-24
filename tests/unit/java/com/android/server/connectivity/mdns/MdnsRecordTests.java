@@ -16,11 +16,13 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsConstants.QCLASS_INTERNET;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -423,5 +425,93 @@ public class MdnsRecordTests {
         assertEquals(new TextEntry("b", "1234567890"), entries.get(1));
         assertEquals(new TextEntry("xyz", HexDump.hexStringToByteArray("FFEFDFCF")),
                 entries.get(2));
+    }
+
+    @Test
+    public void testKeyRecord() throws IOException {
+        final byte[] dataIn =
+                HexDump.hexStringToByteArray(
+                        "09746573742d686f7374056c6f63616c"
+                                + "00001980010000000a00440201030dc1"
+                                + "41d0637960b98cbc12cfca221d2879da"
+                                + "c26ee5b460e9007c992e1902d897c391"
+                                + "b03764d448f7d0c772fdb03b1d9d6d52"
+                                + "ff8886769e8e2362513565270962d3");
+        final byte[] rData =
+                HexDump.hexStringToByteArray(
+                        "0201030dc141d0637960b98cbc12cfca"
+                                + "221d2879dac26ee5b460e9007c992e19"
+                                + "02d897c391b03764d448f7d0c772fdb0"
+                                + "3b1d9d6d52ff8886769e8e2362513565"
+                                + "270962d3");
+        assertNotNull(dataIn);
+        String dataInText = HexDump.dumpHexString(dataIn, 0, dataIn.length);
+
+        // Decode
+        DatagramPacket packet = new DatagramPacket(dataIn, dataIn.length);
+        MdnsPacketReader reader = new MdnsPacketReader(packet);
+
+        String[] name = reader.readLabels();
+        assertNotNull(name);
+        assertEquals(2, name.length);
+        String fqdn = MdnsRecord.labelsToString(name);
+        assertEquals("test-host.local", fqdn);
+
+        int type = reader.readUInt16();
+        assertEquals(MdnsRecord.TYPE_KEY, type);
+
+        MdnsKeyRecord keyRecord;
+
+        // MdnsKeyRecord(String[] name, MdnsPacketReader reader)
+        reader = new MdnsPacketReader(packet);
+        reader.readLabels(); // Skip labels
+        reader.readUInt16(); // Skip type
+        keyRecord = new MdnsKeyRecord(name, reader);
+        assertEquals(MdnsRecord.TYPE_KEY, keyRecord.getType());
+        assertTrue(keyRecord.getTtl() > 0); // Not a question so the TTL is greater than 0
+        assertTrue(keyRecord.getCacheFlush());
+        assertArrayEquals(new String[] {"test-host", "local"}, keyRecord.getName());
+        assertArrayEquals(rData, keyRecord.getRData());
+        assertNotEquals(rData, keyRecord.getRData()); // Uses a copy of the original RDATA
+        assertEquals(dataInText, toHex(keyRecord));
+
+        // MdnsKeyRecord(String[] name, MdnsPacketReader reader, boolean isQuestion)
+        reader = new MdnsPacketReader(packet);
+        reader.readLabels(); // Skip labels
+        reader.readUInt16(); // Skip type
+        keyRecord = new MdnsKeyRecord(name, reader, false /* isQuestion */);
+        assertEquals(MdnsRecord.TYPE_KEY, keyRecord.getType());
+        assertTrue(keyRecord.getTtl() > 0); // Not a question, so the TTL is greater than 0
+        assertTrue(keyRecord.getCacheFlush());
+        assertArrayEquals(new String[] {"test-host", "local"}, keyRecord.getName());
+        assertArrayEquals(rData, keyRecord.getRData());
+        assertNotEquals(rData, keyRecord.getRData()); // Uses a copy of the original RDATA
+
+        // MdnsKeyRecord(String[] name, boolean isUnicast)
+        keyRecord = new MdnsKeyRecord(name, false /* isUnicast */);
+        assertEquals(MdnsRecord.TYPE_KEY, keyRecord.getType());
+        assertEquals(0, keyRecord.getTtl());
+        assertEquals(QCLASS_INTERNET, keyRecord.getRecordClass());
+        assertFalse(keyRecord.getCacheFlush());
+        assertArrayEquals(new String[] {"test-host", "local"}, keyRecord.getName());
+        assertArrayEquals(null, keyRecord.getRData());
+
+        // MdnsKeyRecord(String[] name, long receiptTimeMillis, boolean cacheFlush, long ttlMillis,
+        // byte[] rData)
+        keyRecord =
+                new MdnsKeyRecord(
+                        name,
+                        10 /* receiptTimeMillis */,
+                        true /* cacheFlush */,
+                        20_000 /* ttlMillis */,
+                        rData);
+        assertEquals(MdnsRecord.TYPE_KEY, keyRecord.getType());
+        assertEquals(10, keyRecord.getReceiptTime());
+        assertTrue(keyRecord.getCacheFlush());
+        assertEquals(20_000, keyRecord.getTtl());
+        assertEquals(QCLASS_INTERNET, keyRecord.getRecordClass());
+        assertArrayEquals(new String[] {"test-host", "local"}, keyRecord.getName());
+        assertArrayEquals(rData, keyRecord.getRData());
+        assertNotEquals(rData, keyRecord.getRData()); // Uses a copy of the original RDATA
     }
 }
