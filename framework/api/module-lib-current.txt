@@ -56,6 +56,9 @@ package android.net {
     field @FlaggedApi("com.android.net.flags.basic_background_restrictions_enabled") public static final int FIREWALL_CHAIN_BACKGROUND = 6; // 0x6
     field public static final int FIREWALL_CHAIN_DOZABLE = 1; // 0x1
     field public static final int FIREWALL_CHAIN_LOW_POWER_STANDBY = 5; // 0x5
+    field @FlaggedApi("com.android.net.flags.metered_network_firewall_chains") public static final int FIREWALL_CHAIN_METERED_ALLOW = 10; // 0xa
+    field @FlaggedApi("com.android.net.flags.metered_network_firewall_chains") public static final int FIREWALL_CHAIN_METERED_DENY_ADMIN = 12; // 0xc
+    field @FlaggedApi("com.android.net.flags.metered_network_firewall_chains") public static final int FIREWALL_CHAIN_METERED_DENY_USER = 11; // 0xb
     field public static final int FIREWALL_CHAIN_OEM_DENY_1 = 7; // 0x7
     field public static final int FIREWALL_CHAIN_OEM_DENY_2 = 8; // 0x8
     field public static final int FIREWALL_CHAIN_OEM_DENY_3 = 9; // 0x9

@@ -31,13 +31,17 @@ import static android.net.BpfNetMapsConstants.NO_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_1_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_2_MATCH;
 import static android.net.BpfNetMapsConstants.OEM_DENY_3_MATCH;
-import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_ADMIN_MATCH;
+import static android.net.BpfNetMapsConstants.PENALTY_BOX_USER_MATCH;
 import static android.net.BpfNetMapsConstants.POWERSAVE_MATCH;
 import static android.net.BpfNetMapsConstants.RESTRICTED_MATCH;
 import static android.net.BpfNetMapsConstants.STANDBY_MATCH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_ADMIN;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_USER;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
@@ -334,146 +338,6 @@ public final class BpfNetMapsTest {
         }
     }
 
-    private void doTestRemoveNaughtyApp(final int iif, final long match) throws Exception {
-        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
-
-        mBpfNetMaps.removeNaughtyApp(TEST_UID);
-
-        checkUidOwnerValue(TEST_UID, iif, match & ~PENALTY_BOX_MATCH);
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testRemoveNaughtyApp() throws Exception {
-        doTestRemoveNaughtyApp(NO_IIF, PENALTY_BOX_MATCH);
-
-        // PENALTY_BOX_MATCH with other matches
-        doTestRemoveNaughtyApp(NO_IIF, PENALTY_BOX_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH);
-
-        // PENALTY_BOX_MATCH with IIF_MATCH
-        doTestRemoveNaughtyApp(TEST_IF_INDEX, PENALTY_BOX_MATCH | IIF_MATCH);
-
-        // PENALTY_BOX_MATCH is not enabled
-        doTestRemoveNaughtyApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testRemoveNaughtyAppMissingUid() {
-        // UidOwnerMap does not have entry for TEST_UID
-        assertThrows(ServiceSpecificException.class,
-                () -> mBpfNetMaps.removeNaughtyApp(TEST_UID));
-    }
-
-    @Test
-    @IgnoreAfter(Build.VERSION_CODES.S_V2)
-    public void testRemoveNaughtyAppBeforeT() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> mBpfNetMaps.removeNaughtyApp(TEST_UID));
-    }
-
-    private void doTestAddNaughtyApp(final int iif, final long match) throws Exception {
-        if (match != NO_MATCH) {
-            mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
-        }
-
-        mBpfNetMaps.addNaughtyApp(TEST_UID);
-
-        checkUidOwnerValue(TEST_UID, iif, match | PENALTY_BOX_MATCH);
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testAddNaughtyApp() throws Exception {
-        doTestAddNaughtyApp(NO_IIF, NO_MATCH);
-
-        // Other matches are enabled
-        doTestAddNaughtyApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
-
-        // IIF_MATCH is enabled
-        doTestAddNaughtyApp(TEST_IF_INDEX, IIF_MATCH);
-
-        // PENALTY_BOX_MATCH is already enabled
-        doTestAddNaughtyApp(NO_IIF, PENALTY_BOX_MATCH | DOZABLE_MATCH);
-    }
-
-    @Test
-    @IgnoreAfter(Build.VERSION_CODES.S_V2)
-    public void testAddNaughtyAppBeforeT() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> mBpfNetMaps.addNaughtyApp(TEST_UID));
-    }
-
-    private void doTestRemoveNiceApp(final int iif, final long match) throws Exception {
-        mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
-
-        mBpfNetMaps.removeNiceApp(TEST_UID);
-
-        checkUidOwnerValue(TEST_UID, iif, match & ~HAPPY_BOX_MATCH);
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testRemoveNiceApp() throws Exception {
-        doTestRemoveNiceApp(NO_IIF, HAPPY_BOX_MATCH);
-
-        // HAPPY_BOX_MATCH with other matches
-        doTestRemoveNiceApp(NO_IIF, HAPPY_BOX_MATCH | DOZABLE_MATCH | POWERSAVE_MATCH);
-
-        // HAPPY_BOX_MATCH with IIF_MATCH
-        doTestRemoveNiceApp(TEST_IF_INDEX, HAPPY_BOX_MATCH | IIF_MATCH);
-
-        // HAPPY_BOX_MATCH is not enabled
-        doTestRemoveNiceApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testRemoveNiceAppMissingUid() {
-        // UidOwnerMap does not have entry for TEST_UID
-        assertThrows(ServiceSpecificException.class,
-                () -> mBpfNetMaps.removeNiceApp(TEST_UID));
-    }
-
-    @Test
-    @IgnoreAfter(Build.VERSION_CODES.S_V2)
-    public void testRemoveNiceAppBeforeT() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> mBpfNetMaps.removeNiceApp(TEST_UID));
-    }
-
-    private void doTestAddNiceApp(final int iif, final long match) throws Exception {
-        if (match != NO_MATCH) {
-            mUidOwnerMap.updateEntry(new S32(TEST_UID), new UidOwnerValue(iif, match));
-        }
-
-        mBpfNetMaps.addNiceApp(TEST_UID);
-
-        checkUidOwnerValue(TEST_UID, iif, match | HAPPY_BOX_MATCH);
-    }
-
-    @Test
-    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
-    public void testAddNiceApp() throws Exception {
-        doTestAddNiceApp(NO_IIF, NO_MATCH);
-
-        // Other matches are enabled
-        doTestAddNiceApp(NO_IIF, DOZABLE_MATCH | POWERSAVE_MATCH | RESTRICTED_MATCH);
-
-        // IIF_MATCH is enabled
-        doTestAddNiceApp(TEST_IF_INDEX, IIF_MATCH);
-
-        // HAPPY_BOX_MATCH is already enabled
-        doTestAddNiceApp(NO_IIF, HAPPY_BOX_MATCH | DOZABLE_MATCH);
-    }
-
-    @Test
-    @IgnoreAfter(Build.VERSION_CODES.S_V2)
-    public void testAddNiceAppBeforeT() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> mBpfNetMaps.addNiceApp(TEST_UID));
-    }
-
     private void doTestUpdateUidLockdownRule(final int iif, final long match, final boolean add)
             throws Exception {
         if (match != NO_MATCH) {
@@ -658,6 +522,9 @@ public final class BpfNetMapsTest {
         doTestSetUidRule(FIREWALL_CHAIN_OEM_DENY_1);
         doTestSetUidRule(FIREWALL_CHAIN_OEM_DENY_2);
         doTestSetUidRule(FIREWALL_CHAIN_OEM_DENY_3);
+        doTestSetUidRule(FIREWALL_CHAIN_METERED_ALLOW);
+        doTestSetUidRule(FIREWALL_CHAIN_METERED_DENY_USER);
+        doTestSetUidRule(FIREWALL_CHAIN_METERED_DENY_ADMIN);
     }
 
     @Test
@@ -1079,7 +946,7 @@ public final class BpfNetMapsTest {
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testDumpUidOwnerMap() throws Exception {
         doTestDumpUidOwnerMap(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH");
-        doTestDumpUidOwnerMap(PENALTY_BOX_MATCH, "PENALTY_BOX_MATCH");
+        doTestDumpUidOwnerMap(PENALTY_BOX_USER_MATCH, "PENALTY_BOX_USER_MATCH");
         doTestDumpUidOwnerMap(DOZABLE_MATCH, "DOZABLE_MATCH");
         doTestDumpUidOwnerMap(STANDBY_MATCH, "STANDBY_MATCH");
         doTestDumpUidOwnerMap(POWERSAVE_MATCH, "POWERSAVE_MATCH");
@@ -1089,6 +956,7 @@ public final class BpfNetMapsTest {
         doTestDumpUidOwnerMap(OEM_DENY_1_MATCH, "OEM_DENY_1_MATCH");
         doTestDumpUidOwnerMap(OEM_DENY_2_MATCH, "OEM_DENY_2_MATCH");
         doTestDumpUidOwnerMap(OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH");
+        doTestDumpUidOwnerMap(PENALTY_BOX_ADMIN_MATCH, "PENALTY_BOX_ADMIN_MATCH");
 
         doTestDumpUidOwnerMap(HAPPY_BOX_MATCH | POWERSAVE_MATCH,
                 "HAPPY_BOX_MATCH POWERSAVE_MATCH");
@@ -1137,7 +1005,6 @@ public final class BpfNetMapsTest {
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testDumpUidOwnerMapConfig() throws Exception {
         doTestDumpOwnerMatchConfig(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH");
-        doTestDumpOwnerMatchConfig(PENALTY_BOX_MATCH, "PENALTY_BOX_MATCH");
         doTestDumpOwnerMatchConfig(DOZABLE_MATCH, "DOZABLE_MATCH");
         doTestDumpOwnerMatchConfig(STANDBY_MATCH, "STANDBY_MATCH");
         doTestDumpOwnerMatchConfig(POWERSAVE_MATCH, "POWERSAVE_MATCH");
