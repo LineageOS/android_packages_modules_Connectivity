@@ -26,6 +26,12 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.apf.ApfCapabilities
+import android.net.apf.ApfConstant.ETH_ETHERTYPE_OFFSET
+import android.net.apf.ApfConstant.ICMP6_TYPE_OFFSET
+import android.net.apf.ApfConstant.IPV6_NEXT_HEADER_OFFSET
+import android.net.apf.ApfV4Generator
+import android.net.apf.BaseApfGenerator
+import android.net.apf.BaseApfGenerator.Register.R0
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -36,6 +42,7 @@ import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import android.system.Os
 import android.system.OsConstants
 import android.system.OsConstants.AF_INET6
+import android.system.OsConstants.ETH_P_IPV6
 import android.system.OsConstants.IPPROTO_ICMPV6
 import android.system.OsConstants.SOCK_DGRAM
 import android.system.OsConstants.SOCK_NONBLOCK
@@ -82,6 +89,7 @@ private const val TIMEOUT_MS = 2000L
 private const val APF_NEW_RA_FILTER_VERSION = "apf_new_ra_filter_version"
 private const val POLLING_INTERVAL_MS: Int = 100
 private const val RCV_BUFFER_SIZE = 1480
+private const val PING_HEADER_LENGTH = 8
 
 @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
@@ -356,13 +364,47 @@ class ApfIntegrationTest {
         }
     }
 
-    // TODO: this is a placeholder test to test the IcmpPacketReader functionality and will soon be
-    // replaced by a real test.
     @Test
-    fun testPing() {
-        val data = ByteArray(56)
-        Random.nextBytes(data)
+    fun testDropPingReply() {
+        assumeApfVersionSupportAtLeast(4)
+
+        // clear any active APF filter
+        var gen = ApfV4Generator(caps.apfVersionSupported).addPass()
+        installProgram(gen.generate())
+        readProgram() // wait for install completion
+
+        // Assert that initial ping does not get filtered.
+        val data = ByteArray(56).also { Random.nextBytes(it) }
         packetReader.sendPing(data)
         assertThat(packetReader.expectPingReply()).isEqualTo(data)
+
+        // Generate an APF program that drops the next ping
+        gen = ApfV4Generator(caps.apfVersionSupported)
+
+        // If not IPv6 -> PASS
+        gen.addLoad16(R0, ETH_ETHERTYPE_OFFSET)
+        gen.addJumpIfR0NotEquals(ETH_P_IPV6.toLong(), BaseApfGenerator.PASS_LABEL)
+
+        // If not ICMPv6 -> PASS
+        gen.addLoad8(R0, IPV6_NEXT_HEADER_OFFSET)
+        gen.addJumpIfR0NotEquals(IPPROTO_ICMPV6.toLong(), BaseApfGenerator.PASS_LABEL)
+
+        // If not echo reply -> PASS
+        gen.addLoad8(R0, ICMP6_TYPE_OFFSET)
+        gen.addJumpIfR0NotEquals(0x81, BaseApfGenerator.PASS_LABEL)
+
+        // if not data matches -> PASS
+        gen.addLoadImmediate(R0, ICMP6_TYPE_OFFSET + PING_HEADER_LENGTH)
+        gen.addJumpIfBytesAtR0NotEqual(data, BaseApfGenerator.PASS_LABEL)
+
+        // else DROP
+        gen.addJump(BaseApfGenerator.DROP_LABEL)
+
+        val program = gen.generate()
+        installProgram(program)
+        readProgram() // wait for install completion
+
+        packetReader.sendPing(data)
+        packetReader.expectPingDropped()
     }
 }
