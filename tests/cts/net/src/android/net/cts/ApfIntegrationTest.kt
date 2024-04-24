@@ -419,14 +419,15 @@ class ApfIntegrationTest {
         packetReader.expectPingDropped()
     }
 
+    fun clearApfMemory() = installProgram(ByteArray(caps.maximumApfProgramSize))
+
     // APF integration is mostly broken before V
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testPrefilledMemorySlotsV4() {
         // Test v4 memory slots on both v4 and v6 interpreters.
         assumeApfVersionSupportAtLeast(4)
-        // Clear the entire memory before starting this test
-        installProgram(ByteArray(caps.maximumApfProgramSize))
+        clearApfMemory()
         val gen = ApfV4Generator(4)
 
         // If not ICMPv6 Echo Reply -> PASS
