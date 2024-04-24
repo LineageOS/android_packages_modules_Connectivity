@@ -181,7 +181,7 @@ ASSERT_STRING_EQUAL(XT_BPF_DENYLIST_PROG_PATH,  BPF_NETD_PATH "prog_netd_skfilte
 enum UidOwnerMatchType : uint32_t {
     NO_MATCH = 0,
     HAPPY_BOX_MATCH = (1 << 0),
-    PENALTY_BOX_MATCH = (1 << 1),
+    PENALTY_BOX_USER_MATCH = (1 << 1),
     DOZABLE_MATCH = (1 << 2),
     STANDBY_MATCH = (1 << 3),
     POWERSAVE_MATCH = (1 << 4),
@@ -192,7 +192,8 @@ enum UidOwnerMatchType : uint32_t {
     OEM_DENY_1_MATCH = (1 << 9),
     OEM_DENY_2_MATCH = (1 << 10),
     OEM_DENY_3_MATCH = (1 << 11),
-    BACKGROUND_MATCH = (1 << 12)
+    BACKGROUND_MATCH = (1 << 12),
+    PENALTY_BOX_ADMIN_MATCH = (1 << 13),
 };
 // LINT.ThenChange(../framework/src/android/net/BpfNetMapsConstants.java)
 
