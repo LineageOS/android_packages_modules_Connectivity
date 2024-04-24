@@ -37,6 +37,7 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,9 @@ public final class NsdServiceInfo implements Parcelable {
     private String mHostname;
 
     private int mPort;
+
+    @Nullable
+    private byte[] mPublicKey;
 
     @Nullable
     private Network mNetwork;
@@ -217,6 +221,40 @@ public final class NsdServiceInfo implements Parcelable {
 //    @FlaggedApi(NsdManager.Flags.NSD_CUSTOM_HOSTNAME_ENABLED)
     public void setHostname(@Nullable String hostname) {
         mHostname = hostname;
+    }
+
+    /**
+     * Set the public key RDATA to be advertised in a KEY RR (RFC 2535).
+     *
+     * <p>This is the public key of the key pair used for signing a DNS message (e.g. SRP). Clients
+     * typically don't need this information, but the KEY RR is usually published to claim the use
+     * of the DNS name so that another mDNS advertiser can't take over the ownership during a
+     * temporary power down of the original host device.
+     *
+     * <p>When the public key is set to non-null, exactly one KEY RR will be advertised for each of
+     * the service and host name if they are not null.
+     *
+     * @hide // For Thread only
+     */
+    public void setPublicKey(@Nullable byte[] publicKey) {
+        if (publicKey == null) {
+            mPublicKey = null;
+            return;
+        }
+        mPublicKey = Arrays.copyOf(publicKey, publicKey.length);
+    }
+
+    /**
+     * Get the public key RDATA in the KEY RR (RFC 2535) or {@code null} if no KEY RR exists.
+     *
+     * @hide // For Thread only
+     */
+    @Nullable
+    public byte[] getPublicKey() {
+        if (mPublicKey == null) {
+            return null;
+        }
+        return Arrays.copyOf(mPublicKey, mPublicKey.length);
     }
 
     /**
@@ -622,6 +660,7 @@ public final class NsdServiceInfo implements Parcelable {
         }
         dest.writeString(mHostname);
         dest.writeLong(mExpirationTime != null ? mExpirationTime.getEpochSecond() : -1);
+        dest.writeByteArray(mPublicKey);
     }
 
     /** Implement the Parcelable interface */
@@ -654,6 +693,7 @@ public final class NsdServiceInfo implements Parcelable {
                 info.mHostname = in.readString();
                 final long seconds = in.readLong();
                 info.setExpirationTime(seconds < 0 ? null : Instant.ofEpochSecond(seconds));
+                info.mPublicKey = in.createByteArray();
                 return info;
             }
 
