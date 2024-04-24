@@ -21,7 +21,8 @@ import android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED
 import android.net.BpfNetMapsConstants.DATA_SAVER_ENABLED_KEY
 import android.net.BpfNetMapsConstants.DOZABLE_MATCH
 import android.net.BpfNetMapsConstants.HAPPY_BOX_MATCH
-import android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH
+import android.net.BpfNetMapsConstants.PENALTY_BOX_ADMIN_MATCH
+import android.net.BpfNetMapsConstants.PENALTY_BOX_USER_MATCH
 import android.net.BpfNetMapsConstants.STANDBY_MATCH
 import android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY
 import android.net.BpfNetMapsUtils.getMatchByFirewallChain
@@ -48,9 +49,9 @@ private const val TEST_UID2 = TEST_UID1 + 1
 private const val TEST_UID3 = TEST_UID2 + 1
 private const val NO_IIF = 0
 
-// pre-T devices does not support Bpf.
+// NetworkStack can not use this before U due to b/326143935
 @RunWith(DevSdkIgnoreRunner::class)
-@IgnoreUpTo(VERSION_CODES.S_V2)
+@IgnoreUpTo(VERSION_CODES.TIRAMISU)
 class NetworkStackBpfNetMapsTest {
     @Rule
     @JvmField
@@ -102,14 +103,18 @@ class NetworkStackBpfNetMapsTest {
         }
         // Verify the size matches, this also verifies no common item in allow and deny chains.
         assertEquals(
-            BpfNetMapsConstants.ALLOW_CHAINS.size +
-                BpfNetMapsConstants.DENY_CHAINS.size,
+                BpfNetMapsConstants.ALLOW_CHAINS.size +
+                        BpfNetMapsConstants.DENY_CHAINS.size +
+                        BpfNetMapsConstants.METERED_ALLOW_CHAINS.size +
+                        BpfNetMapsConstants.METERED_DENY_CHAINS.size,
             declaredChains.size
         )
         declaredChains.forEach {
             assertTrue(
-                BpfNetMapsConstants.ALLOW_CHAINS.contains(it.get(null)) ||
-                    BpfNetMapsConstants.DENY_CHAINS.contains(it.get(null))
+                    BpfNetMapsConstants.ALLOW_CHAINS.contains(it.get(null)) ||
+                            BpfNetMapsConstants.METERED_ALLOW_CHAINS.contains(it.get(null)) ||
+                            BpfNetMapsConstants.DENY_CHAINS.contains(it.get(null)) ||
+                            BpfNetMapsConstants.METERED_DENY_CHAINS.contains(it.get(null))
             )
         }
     }
@@ -190,7 +195,16 @@ class NetworkStackBpfNetMapsTest {
 
         // Add uid1 to penalty box, verify the network is blocked for uid1, while uid2 is not
         // affected.
-        testUidOwnerMap.updateEntry(S32(TEST_UID1), UidOwnerValue(NO_IIF, PENALTY_BOX_MATCH))
+        testUidOwnerMap.updateEntry(S32(TEST_UID1), UidOwnerValue(NO_IIF, PENALTY_BOX_USER_MATCH))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2, metered = true))
+        testUidOwnerMap.updateEntry(S32(TEST_UID1), UidOwnerValue(NO_IIF, PENALTY_BOX_ADMIN_MATCH))
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID2, metered = true))
+        testUidOwnerMap.updateEntry(
+                S32(TEST_UID1),
+                UidOwnerValue(NO_IIF, PENALTY_BOX_USER_MATCH or PENALTY_BOX_ADMIN_MATCH)
+        )
         assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
         assertFalse(isUidNetworkingBlocked(TEST_UID2, metered = true))
 
@@ -206,7 +220,14 @@ class NetworkStackBpfNetMapsTest {
         // priority.
         testUidOwnerMap.updateEntry(
             S32(TEST_UID1),
-            UidOwnerValue(NO_IIF, PENALTY_BOX_MATCH or HAPPY_BOX_MATCH)
+            UidOwnerValue(NO_IIF, PENALTY_BOX_USER_MATCH or HAPPY_BOX_MATCH)
+        )
+        assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
+        assertTrue(isUidNetworkingBlocked(TEST_UID2, metered = true))
+        assertFalse(isUidNetworkingBlocked(TEST_UID3, metered = true))
+        testUidOwnerMap.updateEntry(
+                S32(TEST_UID1),
+                UidOwnerValue(NO_IIF, PENALTY_BOX_ADMIN_MATCH or HAPPY_BOX_MATCH)
         )
         assertTrue(isUidNetworkingBlocked(TEST_UID1, metered = true))
         assertTrue(isUidNetworkingBlocked(TEST_UID2, metered = true))
@@ -240,7 +261,7 @@ class NetworkStackBpfNetMapsTest {
         for (uid in FIRST_APPLICATION_UID - 5..FIRST_APPLICATION_UID + 5) {
             // system uid is not blocked regardless of firewall chains
             val expectBlocked = uid >= FIRST_APPLICATION_UID
-            testUidOwnerMap.updateEntry(S32(uid), UidOwnerValue(NO_IIF, PENALTY_BOX_MATCH))
+            testUidOwnerMap.updateEntry(S32(uid), UidOwnerValue(NO_IIF, PENALTY_BOX_USER_MATCH))
             assertEquals(
                 expectBlocked,
                     isUidNetworkingBlocked(uid, metered = true),
