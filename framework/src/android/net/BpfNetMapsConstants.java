@@ -19,6 +19,9 @@ package android.net;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_ALLOW;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_ADMIN;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_USER;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
@@ -67,7 +70,7 @@ public class BpfNetMapsConstants {
     // LINT.IfChange(match_type)
     public static final long NO_MATCH = 0;
     public static final long HAPPY_BOX_MATCH = (1 << 0);
-    public static final long PENALTY_BOX_MATCH = (1 << 1);
+    public static final long PENALTY_BOX_USER_MATCH = (1 << 1);
     public static final long DOZABLE_MATCH = (1 << 2);
     public static final long STANDBY_MATCH = (1 << 3);
     public static final long POWERSAVE_MATCH = (1 << 4);
@@ -79,10 +82,11 @@ public class BpfNetMapsConstants {
     public static final long OEM_DENY_2_MATCH = (1 << 10);
     public static final long OEM_DENY_3_MATCH = (1 << 11);
     public static final long BACKGROUND_MATCH = (1 << 12);
+    public static final long PENALTY_BOX_ADMIN_MATCH = (1 << 13);
 
     public static final List<Pair<Long, String>> MATCH_LIST = Arrays.asList(
             Pair.create(HAPPY_BOX_MATCH, "HAPPY_BOX_MATCH"),
-            Pair.create(PENALTY_BOX_MATCH, "PENALTY_BOX_MATCH"),
+            Pair.create(PENALTY_BOX_USER_MATCH, "PENALTY_BOX_USER_MATCH"),
             Pair.create(DOZABLE_MATCH, "DOZABLE_MATCH"),
             Pair.create(STANDBY_MATCH, "STANDBY_MATCH"),
             Pair.create(POWERSAVE_MATCH, "POWERSAVE_MATCH"),
@@ -93,11 +97,13 @@ public class BpfNetMapsConstants {
             Pair.create(OEM_DENY_1_MATCH, "OEM_DENY_1_MATCH"),
             Pair.create(OEM_DENY_2_MATCH, "OEM_DENY_2_MATCH"),
             Pair.create(OEM_DENY_3_MATCH, "OEM_DENY_3_MATCH"),
-            Pair.create(BACKGROUND_MATCH, "BACKGROUND_MATCH")
+            Pair.create(BACKGROUND_MATCH, "BACKGROUND_MATCH"),
+            Pair.create(PENALTY_BOX_ADMIN_MATCH, "PENALTY_BOX_ADMIN_MATCH")
     );
 
     /**
-     * List of all firewall allow chains.
+     * List of all firewall allow chains that are applied to all networks regardless of meteredness
+     * See {@link #METERED_ALLOW_CHAINS} for allow chains that are only applied to metered networks.
      *
      * Allow chains mean the firewall denies all uids by default, uids must be explicitly allowed.
      */
@@ -110,7 +116,8 @@ public class BpfNetMapsConstants {
     );
 
     /**
-     * List of all firewall deny chains.
+     * List of all firewall deny chains that are applied to all networks regardless of meteredness
+     * See {@link #METERED_DENY_CHAINS} for deny chains that are only applied to metered networks.
      *
      * Deny chains mean the firewall allows all uids by default, uids must be explicitly denied.
      */
@@ -119,6 +126,25 @@ public class BpfNetMapsConstants {
             FIREWALL_CHAIN_OEM_DENY_1,
             FIREWALL_CHAIN_OEM_DENY_2,
             FIREWALL_CHAIN_OEM_DENY_3
+    );
+
+    /**
+     * List of all firewall allow chains that are only applied to metered networks.
+     * See {@link #ALLOW_CHAINS} for allow chains that are applied to all networks regardless of
+     * meteredness.
+     */
+    public static final List<Integer> METERED_ALLOW_CHAINS = List.of(
+            FIREWALL_CHAIN_METERED_ALLOW
+    );
+
+    /**
+     * List of all firewall deny chains that are only applied to metered networks.
+     * See {@link #DENY_CHAINS} for deny chains that are applied to all networks regardless of
+     * meteredness.
+     */
+    public static final List<Integer> METERED_DENY_CHAINS = List.of(
+            FIREWALL_CHAIN_METERED_DENY_USER,
+            FIREWALL_CHAIN_METERED_DENY_ADMIN
     );
     // LINT.ThenChange(../../../../bpf_progs/netd.h)
 }
