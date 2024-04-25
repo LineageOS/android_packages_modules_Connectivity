@@ -1625,6 +1625,44 @@ class MdnsRecordRepositoryTest {
     }
 
     @Test
+    fun testGetConflictingServices_multipleRegistrationsForHostKey_noConflict() {
+        val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
+
+        repository.addServiceAndFinishProbing(TEST_SERVICE_ID_1, NsdServiceInfo().apply {
+            hostname = "MyHost"
+            hostAddresses = listOf(
+                parseNumericAddress("2001:db8::1"),
+                parseNumericAddress("2001:db8::2"))
+            publicKey = TEST_PUBLIC_KEY
+        })
+        repository.addService(TEST_SERVICE_ID_2, NsdServiceInfo().apply {
+            serviceType = "_testservice._tcp"
+            serviceName = "MyTestService"
+            port = TEST_PORT
+            hostname = "MyHost"
+            publicKey = TEST_PUBLIC_KEY
+        }, null /* ttl */)
+
+        // Although there's a KEY RR in the second registration being probed, it shouldn't conflict
+        // with an address record which is from a probed registration in the repository.
+        val otherTtlMillis = 1234L
+        val packet = MdnsPacket(
+            0 /* flags */,
+            emptyList() /* questions */,
+            listOf(
+                MdnsInetAddressRecord(
+                    arrayOf("MyHost", "local"),
+                    0L /* receiptTimeMillis */, true /* cacheFlush */,
+                    otherTtlMillis,
+                    parseNumericAddress("2001:db8::1"))
+            ) /* answers */,
+            emptyList() /* authorityRecords */,
+            emptyList() /* additionalRecords */)
+
+        assertEquals(mapOf(), repository.getConflictingServices(packet))
+    }
+
+    @Test
     fun testGetConflictingServices_IdenticalService() {
         val repository = MdnsRecordRepository(thread.looper, deps, TEST_HOSTNAME, makeFlags())
         repository.addService(TEST_SERVICE_ID_1, TEST_SERVICE_1, null /* ttl */)
