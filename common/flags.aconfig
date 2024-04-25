@@ -1,5 +1,5 @@
 package: "com.android.net.flags"
-container: "system"
+container: "com.android.tethering"
 
 # This file contains aconfig flags for FlaggedAPI annotations
 # Flags used from platform code must be in under frameworks
