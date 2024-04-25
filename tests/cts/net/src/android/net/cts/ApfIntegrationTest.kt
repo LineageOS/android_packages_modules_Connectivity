@@ -466,4 +466,42 @@ class ApfIntegrationTest {
         expect.withMessage("PACKET_SIZE").that(buffer.getInt()).isEqualTo(64 + 40 + 14)
         expect.withMessage("FILTER_AGE_SECONDS").that(buffer.getInt()).isLessThan(5)
     }
+
+    // APF integration is mostly broken before V
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    fun testFilterAgeIncreasesBetweenPackets() {
+        assumeApfVersionSupportAtLeast(4)
+        clearApfMemory()
+        val gen = ApfV4Generator(4)
+
+        // If not ICMPv6 Echo Reply -> PASS
+        gen.addPassIfNotIcmpv6EchoReply()
+
+        // Store all prefilled memory slots in counter region [500, 520)
+        val counterRegion = 500
+        gen.addLoadImmediate(R1, counterRegion)
+        gen.addLoadFromMemory(R0, MemorySlot.FILTER_AGE_SECONDS)
+        gen.addStoreData(R0, 0)
+
+        installProgram(gen.generate())
+        readProgram() // wait for install completion
+
+        val data = ByteArray(56).also { Random.nextBytes(it) }
+        packetReader.sendPing(data)
+        packetReader.expectPingReply()
+
+        var buffer = ByteBuffer.wrap(readProgram(), counterRegion, 4 /* length */)
+        val filterAgeSecondsOrig = buffer.getInt()
+
+        Thread.sleep(5100)
+
+        packetReader.sendPing(data)
+        packetReader.expectPingReply()
+
+        buffer = ByteBuffer.wrap(readProgram(), counterRegion, 4 /* length */)
+        val filterAgeSeconds = buffer.getInt()
+        // Assert that filter age has increased, but not too much.
+        assertThat(filterAgeSeconds - filterAgeSecondsOrig).isEqualTo(5)
+    }
 }
