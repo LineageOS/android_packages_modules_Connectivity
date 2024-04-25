@@ -51,11 +51,13 @@
 #include "bpf/BpfUtils.h"
 #include "loader.h"
 
-using android::base::EndsWith;
-using android::bpf::domain;
+namespace android {
+namespace bpf {
+
+using base::EndsWith;
 using std::string;
 
-bool exists(const char* const path) {
+static bool exists(const char* const path) {
     int v = access(path, F_OK);
     if (!v) {
         ALOGI("%s exists.", path);
@@ -67,7 +69,7 @@ bool exists(const char* const path) {
 }
 
 
-const android::bpf::Location locations[] = {
+const Location locations[] = {
         // S+ Tethering mainline module (network_stack): tether offload
         {
                 .dir = "/apex/com.android.tethering/etc/bpf/",
@@ -97,7 +99,7 @@ const android::bpf::Location locations[] = {
         },
 };
 
-int loadAllElfObjects(const unsigned int bpfloader_ver, const android::bpf::Location& location) {
+static int loadAllElfObjects(const unsigned int bpfloader_ver, const Location& location) {
     int retVal = 0;
     DIR* dir;
     struct dirent* ent;
@@ -111,7 +113,7 @@ int loadAllElfObjects(const unsigned int bpfloader_ver, const android::bpf::Loca
             progPath += s;
 
             bool critical;
-            int ret = android::bpf::loadProg(progPath.c_str(), &critical, bpfloader_ver, location);
+            int ret = loadProg(progPath.c_str(), &critical, bpfloader_ver, location);
             if (ret) {
                 if (critical) retVal = ret;
                 ALOGE("Failed to load object: %s, ret: %s", progPath.c_str(), std::strerror(-ret));
@@ -124,7 +126,7 @@ int loadAllElfObjects(const unsigned int bpfloader_ver, const android::bpf::Loca
     return retVal;
 }
 
-int createSysFsBpfSubDir(const char* const prefix) {
+static int createSysFsBpfSubDir(const char* const prefix) {
     if (*prefix) {
         mode_t prevUmask = umask(0);
 
@@ -147,8 +149,8 @@ int createSysFsBpfSubDir(const char* const prefix) {
 // Technically 'value' doesn't need to be newline terminated, but it's best
 // to include a newline to match 'echo "value" > /proc/sys/...foo' behaviour,
 // which is usually how kernel devs test the actual sysctl interfaces.
-int writeProcSysFile(const char *filename, const char *value) {
-    android::base::unique_fd fd(open(filename, O_WRONLY | O_CLOEXEC));
+static int writeProcSysFile(const char *filename, const char *value) {
+    base::unique_fd fd(open(filename, O_WRONLY | O_CLOEXEC));
     if (fd < 0) {
         const int err = errno;
         ALOGE("open('%s', O_WRONLY | O_CLOEXEC) -> %s", filename, strerror(err));
@@ -172,7 +174,7 @@ int writeProcSysFile(const char *filename, const char *value) {
 #define APEX_MOUNT_POINT "/apex/com.android.tethering"
 const char * const platformBpfLoader = "/system/bin/bpfloader";
 
-int logTetheringApexVersion(void) {
+static int logTetheringApexVersion(void) {
     char * found_blockdev = NULL;
     FILE * f = NULL;
     char buf[4096];
@@ -224,9 +226,8 @@ int logTetheringApexVersion(void) {
     return 0;
 }
 
-int main(int argc, char** argv, char * const envp[]) {
-    (void)argc;
-    android::base::InitLogging(argv, &android::base::KernelLogger);
+static int main(char** argv, char * const envp[]) {
+    base::InitLogging(argv, &base::KernelLogger);
 
     ALOGI("NetBpfLoad '%s' starting...", argv[0]);
 
@@ -242,7 +243,7 @@ int main(int argc, char** argv, char * const envp[]) {
 
     ALOGI("NetBpfLoad api:%d/%d kver:%07x rc:%d%d",
           android_get_application_target_sdk_version(), device_api_level,
-          android::bpf::kernelVersion(),
+          kernelVersion(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
@@ -262,27 +263,27 @@ int main(int argc, char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (isAtLeastT && !android::bpf::isAtLeastKernelVersion(4, 9, 0)) {
+    if (isAtLeastT && !isAtLeastKernelVersion(4, 9, 0)) {
         ALOGE("Android T requires kernel 4.9.");
         return 1;
     }
 
-    if (isAtLeastU && !android::bpf::isAtLeastKernelVersion(4, 14, 0)) {
+    if (isAtLeastU && !isAtLeastKernelVersion(4, 14, 0)) {
         ALOGE("Android U requires kernel 4.14.");
         return 1;
     }
 
-    if (isAtLeastV && !android::bpf::isAtLeastKernelVersion(4, 19, 0)) {
+    if (isAtLeastV && !isAtLeastKernelVersion(4, 19, 0)) {
         ALOGE("Android V requires kernel 4.19.");
         return 1;
     }
 
-    if (isAtLeastV && android::bpf::isX86() && !android::bpf::isKernel64Bit()) {
+    if (isAtLeastV && isX86() && !isKernel64Bit()) {
         ALOGE("Android V requires X86 kernel to be 64-bit.");
         return 1;
     }
 
-    if (android::bpf::isUserspace32bit() && android::bpf::isAtLeastKernelVersion(6, 2, 0)) {
+    if (isUserspace32bit() && isAtLeastKernelVersion(6, 2, 0)) {
         /* Android 14/U should only launch on 64-bit kernels
          *   T launches on 5.10/5.15
          *   U launches on 5.15/6.1
@@ -307,9 +308,9 @@ int main(int argc, char** argv, char * const envp[]) {
     }
 
     // Ensure we can determine the Android build type.
-    if (!android::bpf::isEng() && !android::bpf::isUser() && !android::bpf::isUserdebug()) {
+    if (!isEng() && !isUser() && !isUserdebug()) {
         ALOGE("Failed to determine the build type: got %s, want 'eng', 'user', or 'userdebug'",
-              android::bpf::getBuildType().c_str());
+              getBuildType().c_str());
         return 1;
     }
 
@@ -319,7 +320,7 @@ int main(int argc, char** argv, char * const envp[]) {
         // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on
         // pre-5.13, on 5.13+ it depends on CONFIG_BPF_UNPRIV_DEFAULT_OFF)
         if (writeProcSysFile("/proc/sys/kernel/unprivileged_bpf_disabled", "0\n") &&
-            android::bpf::isAtLeastKernelVersion(5, 13, 0)) return 1;
+            isAtLeastKernelVersion(5, 13, 0)) return 1;
     }
 
     if (isAtLeastU) {
@@ -373,9 +374,9 @@ int main(int argc, char** argv, char * const envp[]) {
 
     int key = 1;
     int value = 123;
-    android::base::unique_fd map(
-            android::bpf::createMap(BPF_MAP_TYPE_ARRAY, sizeof(key), sizeof(value), 2, 0));
-    if (android::bpf::writeToMapEntry(map, &key, &value, BPF_ANY)) {
+    base::unique_fd map(
+            createMap(BPF_MAP_TYPE_ARRAY, sizeof(key), sizeof(value), 2, 0));
+    if (writeToMapEntry(map, &key, &value, BPF_ANY)) {
         ALOGE("Critical kernel bug - failure to write into index 1 of 2 element bpf map array.");
         return 1;
     }
@@ -391,4 +392,11 @@ int main(int argc, char** argv, char * const envp[]) {
 
     ALOGI("mainline done!");
     return 0;
+}
+
+}  // namespace bpf
+}  // namespace android
+
+int main(int __unused argc, char** argv, char * const envp[]) {
+    return android::bpf::main(argv, envp);
 }
