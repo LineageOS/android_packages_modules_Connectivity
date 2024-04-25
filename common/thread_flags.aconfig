@@ -1,5 +1,5 @@
 package: "com.android.net.thread.flags"
-container: "system"
+container: "com.android.tethering"
 
 flag {
     name: "thread_enabled"

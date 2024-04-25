@@ -1,5 +1,5 @@
 package: "com.android.nearby.flags"
-container: "system"
+container: "com.android.tethering"
 
 flag {
     name: "powered_off_finding"
