@@ -12735,8 +12735,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if (um.isManagedProfile(profile.getIdentifier())) {
             return true;
         }
-        if (mDeps.isAtLeastT() && dpm.getDeviceOwner() != null) return true;
-        return false;
+
+        return mDeps.isAtLeastT() && dpm.getDeviceOwnerComponentOnAnyUser() != null;
     }
 
     /**
