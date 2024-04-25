@@ -83,3 +83,11 @@ flag {
   description: "Flag for API to register nsd offload engine"
   bug: "301713539"
 }
+
+flag {
+  name: "metered_network_firewall_chains"
+  is_exported: true
+  namespace: "android_core_networking"
+  description: "Flag for metered network firewall chain API"
+  bug: "332628891"
+}
