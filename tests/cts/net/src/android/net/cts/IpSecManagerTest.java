@@ -69,9 +69,11 @@ import android.net.IpSecManager;
 import android.net.IpSecManager.SecurityParameterIndex;
 import android.net.IpSecManager.UdpEncapsulationSocket;
 import android.net.IpSecTransform;
+import android.net.IpSecTransformState;
 import android.net.NetworkUtils;
 import android.net.TrafficStats;
 import android.os.Build;
+import android.os.OutcomeReceiver;
 import android.platform.test.annotations.AppModeFull;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -101,6 +103,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @ConnectivityModuleTest
 @RunWith(AndroidJUnit4.class)
@@ -1652,6 +1657,39 @@ public class IpSecManagerTest extends IpSecBaseTest {
                     2 * (long) expectedPacketCount,
                     2 * (long) expectedInnerPacketSize,
                     newReplayBitmap(expectedPacketCount));
+        }
+    }
+
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    public void testRequestIpSecTransformStateOnClosedTransform() throws Exception {
+        assumeRequestIpSecTransformStateSupported();
+
+        final InetAddress localAddr = InetAddresses.parseNumericAddress(IPV6_LOOPBACK);
+        final CompletableFuture<RuntimeException> futureError = new CompletableFuture<>();
+
+        try (SecurityParameterIndex spi = mISM.allocateSecurityParameterIndex(localAddr);
+                IpSecTransform transform =
+                        buildTransportModeTransform(spi, localAddr, null /* encapSocket*/)) {
+            transform.close();
+
+            transform.requestIpSecTransformState(
+                    Executors.newSingleThreadExecutor(),
+                    new OutcomeReceiver<IpSecTransformState, RuntimeException>() {
+                        @Override
+                        public void onResult(IpSecTransformState state) {
+                            fail("Expect to fail but received a state");
+                        }
+
+                        @Override
+                        public void onError(RuntimeException error) {
+                            futureError.complete(error);
+                        }
+                    });
+
+            assertTrue(
+                    futureError.get(SOCK_TIMEOUT, TimeUnit.MILLISECONDS)
+                            instanceof IllegalStateException);
         }
     }
 }
