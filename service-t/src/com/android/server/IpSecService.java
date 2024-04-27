@@ -1877,6 +1877,10 @@ public class IpSecService extends IIpSecService.Stub {
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.ACCESS_NETWORK_STATE, "IpsecService#getTransformState");
 
+        if (transformId == INVALID_RESOURCE_ID) {
+            throw new IllegalStateException("This transform is already closed");
+        }
+
         UserRecord userRecord = mUserResourceTracker.getUserRecord(Binder.getCallingUid());
         TransformRecord transformInfo =
                 userRecord.mTransformRecords.getResourceOrThrow(transformId);

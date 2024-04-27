@@ -42,8 +42,24 @@ static inline unsigned kernelVersion() {
     return kver;
 }
 
-static inline __unused bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
+static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
     return kernelVersion() >= KVER(major, minor, sub);
+}
+
+static inline bool isKernelVersion(unsigned major, unsigned minor) {
+    return isAtLeastKernelVersion(major, minor, 0) && !isAtLeastKernelVersion(major, minor + 1, 0);
+}
+
+static inline bool __unused isLtsKernel() {
+    return isKernelVersion(4,  4) ||  // minimum for Android R
+           isKernelVersion(4,  9) ||  // minimum for Android S & T
+           isKernelVersion(4, 14) ||  // minimum for Android U
+           isKernelVersion(4, 19) ||  // minimum for Android V
+           isKernelVersion(5,  4) ||  // first supported in Android R
+           isKernelVersion(5, 10) ||  // first supported in Android S
+           isKernelVersion(5, 15) ||  // first supported in Android T
+           isKernelVersion(6,  1) ||  // first supported in Android U
+           isKernelVersion(6,  6);    // first supported in Android V
 }
 
 // Figure out the bitness of userspace.
