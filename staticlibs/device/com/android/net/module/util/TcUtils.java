@@ -101,4 +101,12 @@ public class TcUtils {
      * @throws IOException
      */
     public static native void tcQdiscAddDevClsact(int ifIndex) throws IOException;
+
+    /**
+     * Attempt to fetch a bpf program from a path.
+     * Return true on success, false on non-existence or any other failure.
+     *
+     * @param bpfProgPath
+     */
+    public static native boolean isBpfProgramUsable(String bpfProgPath);
 }

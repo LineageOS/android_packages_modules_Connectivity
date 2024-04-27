@@ -64,6 +64,8 @@ public class DscpPolicyTracker {
         return "/sys/fs/bpf/net_shared/map_" + which + "_map";
     }
 
+    private final boolean mHaveProgram = TcUtils.isBpfProgramUsable(PROG_PATH);
+
     private Set<String> mAttachedIfaces;
 
     private final BpfMap<Struct.S32, DscpPolicyValue> mBpfDscpIpv4Policies;
@@ -325,6 +327,7 @@ public class DscpPolicyTracker {
      * Attach BPF program
      */
     private boolean attachProgram(@NonNull String iface) {
+        if (!mHaveProgram) return false;
         try {
             NetworkInterface netIface = NetworkInterface.getByName(iface);
             TcUtils.tcFilterAddDevBpf(netIface.getIndex(), false, PRIO_DSCP, (short) ETH_P_ALL,

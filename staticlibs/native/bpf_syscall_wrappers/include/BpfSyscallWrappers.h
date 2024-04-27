@@ -148,6 +148,13 @@ inline int retrieveProgram(const char* pathname) {
     return bpfFdGet(pathname, BPF_F_RDONLY);
 }
 
+inline bool usableProgram(const char* pathname) {
+    int fd = retrieveProgram(pathname);
+    bool ok = (fd >= 0);
+    if (ok) close(fd);
+    return ok;
+}
+
 inline int attachProgram(bpf_attach_type type, const BPF_FD_TYPE prog_fd,
                          const BPF_FD_TYPE cg_fd, uint32_t flags = 0) {
     return bpf(BPF_PROG_ATTACH, {
