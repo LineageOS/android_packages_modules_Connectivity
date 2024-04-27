@@ -241,9 +241,9 @@ static int main(char** argv, char * const envp[]) {
     // first in U QPR2 beta~2
     const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
 
-    ALOGI("NetBpfLoad api:%d/%d kver:%07x rc:%d%d",
+    ALOGI("NetBpfLoad api:%d/%d kver:%07x (%s) rc:%d%d",
           android_get_application_target_sdk_version(), device_api_level,
-          kernelVersion(),
+          kernelVersion(), describeArch(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
