@@ -226,10 +226,13 @@ static int logTetheringApexVersion(void) {
     return 0;
 }
 
+static bool isGSI() {
+    // From //system/gsid/libgsi.cpp IsGsiRunning()
+    return !access("/metadata/gsi/dsu/booted", F_OK);
+}
+
 static int main(char** argv, char * const envp[]) {
     base::InitLogging(argv, &base::KernelLogger);
-
-    ALOGI("NetBpfLoad '%s' starting...", argv[0]);
 
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
@@ -241,9 +244,9 @@ static int main(char** argv, char * const envp[]) {
     // first in U QPR2 beta~2
     const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
 
-    ALOGI("NetBpfLoad api:%d/%d kver:%07x rc:%d%d",
-          android_get_application_target_sdk_version(), device_api_level,
-          kernelVersion(),
+    ALOGI("NetBpfLoad (%s) api:%d/%d kver:%07x (%s) rc:%d%d",
+          argv[0], android_get_application_target_sdk_version(), device_api_level,
+          kernelVersion(), describeArch(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
@@ -281,6 +284,34 @@ static int main(char** argv, char * const envp[]) {
     if (isAtLeastV && isX86() && !isKernel64Bit()) {
         ALOGE("Android V requires X86 kernel to be 64-bit.");
         return 1;
+    }
+
+    if (isAtLeastV) {
+        bool bad = false;
+
+        if (!isLtsKernel()) {
+            ALOGW("Android V only supports LTS kernels.");
+            bad = true;
+        }
+
+#define REQUIRE(maj, min, sub) \
+        if (isKernelVersion(maj, min) && !isAtLeastKernelVersion(maj, min, sub)) { \
+            ALOGW("Android V requires %d.%d kernel to be %d.%d.%d+.", maj, min, maj, min, sub); \
+            bad = true; \
+        }
+
+        REQUIRE(4, 19, 236)
+        REQUIRE(5, 4, 186)
+        REQUIRE(5, 10, 199)
+        REQUIRE(5, 15, 136)
+        REQUIRE(6, 1, 57)
+        REQUIRE(6, 6, 0)
+
+#undef REQUIRE
+
+        if (bad && !isGSI()) {
+            ALOGE("Unsupported kernel version (%07x).", kernelVersion());
+        }
     }
 
     if (isUserspace32bit() && isAtLeastKernelVersion(6, 2, 0)) {
