@@ -226,6 +226,11 @@ static int logTetheringApexVersion(void) {
     return 0;
 }
 
+static bool isGSI() {
+    // From //system/gsid/libgsi.cpp IsGsiRunning()
+    return !access("/metadata/gsi/dsu/booted", F_OK);
+}
+
 static int main(char** argv, char * const envp[]) {
     base::InitLogging(argv, &base::KernelLogger);
 
@@ -279,6 +284,34 @@ static int main(char** argv, char * const envp[]) {
     if (isAtLeastV && isX86() && !isKernel64Bit()) {
         ALOGE("Android V requires X86 kernel to be 64-bit.");
         return 1;
+    }
+
+    if (isAtLeastV) {
+        bool bad = false;
+
+        if (!isLtsKernel()) {
+            ALOGW("Android V only supports LTS kernels.");
+            bad = true;
+        }
+
+#define REQUIRE(maj, min, sub) \
+        if (isKernelVersion(maj, min) && !isAtLeastKernelVersion(maj, min, sub)) { \
+            ALOGW("Android V requires %d.%d kernel to be %d.%d.%d+.", maj, min, maj, min, sub); \
+            bad = true; \
+        }
+
+        REQUIRE(4, 19, 236)
+        REQUIRE(5, 4, 186)
+        REQUIRE(5, 10, 199)
+        REQUIRE(5, 15, 136)
+        REQUIRE(6, 1, 57)
+        REQUIRE(6, 6, 0)
+
+#undef REQUIRE
+
+        if (bad && !isGSI()) {
+            ALOGE("Unsupported kernel version (%07x).", kernelVersion());
+        }
     }
 
     if (isUserspace32bit() && isAtLeastKernelVersion(6, 2, 0)) {
