@@ -229,8 +229,6 @@ static int logTetheringApexVersion(void) {
 static int main(char** argv, char * const envp[]) {
     base::InitLogging(argv, &base::KernelLogger);
 
-    ALOGI("NetBpfLoad '%s' starting...", argv[0]);
-
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
@@ -241,8 +239,8 @@ static int main(char** argv, char * const envp[]) {
     // first in U QPR2 beta~2
     const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
 
-    ALOGI("NetBpfLoad api:%d/%d kver:%07x (%s) rc:%d%d",
-          android_get_application_target_sdk_version(), device_api_level,
+    ALOGI("NetBpfLoad (%s) api:%d/%d kver:%07x (%s) rc:%d%d",
+          argv[0], android_get_application_target_sdk_version(), device_api_level,
           kernelVersion(), describeArch(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
