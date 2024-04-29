@@ -422,7 +422,21 @@ public final class FullThreadDevice {
                 PING_TIMEOUT_SECONDS);
     }
 
-    private void ping(
+    /** Returns the number of ping reply packets received. */
+    public int ping(Inet6Address address, int count) {
+        List<String> output =
+                ping(
+                        address,
+                        null,
+                        PING_SIZE,
+                        count,
+                        PING_INTERVAL,
+                        HOP_LIMIT,
+                        PING_TIMEOUT_SECONDS);
+        return getReceivedPacketsCount(output);
+    }
+
+    private List<String> ping(
             Inet6Address address,
             Inet6Address source,
             int size,
@@ -445,7 +459,21 @@ public final class FullThreadDevice {
                         + hopLimit
                         + " "
                         + timeout;
-        executeCommand(cmd);
+        return executeCommand(cmd);
+    }
+
+    private int getReceivedPacketsCount(List<String> stringList) {
+        Pattern pattern = Pattern.compile("([\\d]+) packets received");
+
+        for (String message : stringList) {
+            Matcher matcher = pattern.matcher(message);
+            if (matcher.find()) {
+                String packetCountStr = matcher.group(1);
+                return Integer.parseInt(packetCountStr);
+            }
+        }
+        // No match found
+        return -1;
     }
 
     @FormatMethod
