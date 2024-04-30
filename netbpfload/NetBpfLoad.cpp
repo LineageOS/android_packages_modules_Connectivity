@@ -59,10 +59,7 @@ using std::string;
 
 static bool exists(const char* const path) {
     int v = access(path, F_OK);
-    if (!v) {
-        ALOGI("%s exists.", path);
-        return true;
-    }
+    if (!v) return true;
     if (errno == ENOENT) return false;
     ALOGE("FATAL: access(%s, F_OK) -> %d [%d:%s]", path, v, errno, strerror(errno));
     abort();  // can only hit this if permissions (likely selinux) are screwed up
