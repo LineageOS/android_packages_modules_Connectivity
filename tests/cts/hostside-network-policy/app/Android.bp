@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2014 The Android Open Source Project
+// Copyright (C) 2024 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
 //
 
 package {
-    default_team: "trendy_team_fwk_core_networking",
+    default_team: "trendy_team_framework_backstage_power",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
 java_defaults {
-    name: "CtsHostsideNetworkTestsAppDefaults",
+    name: "CtsHostsideNetworkPolicyTestsAppDefaults",
     platform_apis: true,
     static_libs: [
-        "CtsHostsideNetworkTestsAidl",
+        "CtsHostsideNetworkPolicyTestsAidl",
         "androidx.test.ext.junit",
         "androidx.test.rules",
         "androidx.test.uiautomator_uiautomator",
@@ -38,6 +38,7 @@ java_defaults {
     ],
     srcs: [
         "src/**/*.java",
+        ":ArgumentConstants",
     ],
     // Tag this module as a cts test artifact
     test_suites: [
@@ -47,26 +48,10 @@ java_defaults {
 }
 
 android_test_helper_app {
-    name: "CtsHostsideNetworkTestsApp",
+    name: "CtsHostsideNetworkPolicyTestsApp",
     defaults: [
         "cts_support_defaults",
         "framework-connectivity-test-defaults",
-        "CtsHostsideNetworkTestsAppDefaults",
-    ],
-    static_libs: [
-        "NetworkStackApiStableShims",
-    ],
-}
-
-android_test_helper_app {
-    name: "CtsHostsideNetworkTestsAppNext",
-    defaults: [
-        "cts_support_defaults",
-        "framework-connectivity-test-defaults",
-        "CtsHostsideNetworkTestsAppDefaults",
-        "ConnectivityNextEnableDefaults",
-    ],
-    static_libs: [
-        "NetworkStackApiCurrentShims",
+        "CtsHostsideNetworkPolicyTestsAppDefaults",
     ],
 }

@@ -1,0 +1,3 @@
+# Bug component: 61373
+# Inherits parent owners
+include platform/frameworks/base:/services/core/java/com/android/server/net/OWNERS
