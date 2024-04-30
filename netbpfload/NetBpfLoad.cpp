@@ -59,10 +59,7 @@ using std::string;
 
 static bool exists(const char* const path) {
     int v = access(path, F_OK);
-    if (!v) {
-        ALOGI("%s exists.", path);
-        return true;
-    }
+    if (!v) return true;
     if (errno == ENOENT) return false;
     ALOGE("FATAL: access(%s, F_OK) -> %d [%d:%s]", path, v, errno, strerror(errno));
     abort();  // can only hit this if permissions (likely selinux) are screwed up
@@ -118,7 +115,7 @@ static int loadAllElfObjects(const unsigned int bpfloader_ver, const Location& l
                 if (critical) retVal = ret;
                 ALOGE("Failed to load object: %s, ret: %s", progPath.c_str(), std::strerror(-ret));
             } else {
-                ALOGI("Loaded object: %s", progPath.c_str());
+                ALOGD("Loaded object: %s", progPath.c_str());
             }
         }
         closedir(dir);
@@ -200,7 +197,7 @@ static int logTetheringApexVersion(void) {
     f = NULL;
 
     if (!found_blockdev) return 2;
-    ALOGD("Found Tethering Apex mounted from blockdev %s", found_blockdev);
+    ALOGV("Found Tethering Apex mounted from blockdev %s", found_blockdev);
 
     f = fopen("/proc/mounts", "re");
     if (!f) { free(found_blockdev); return 3; }
