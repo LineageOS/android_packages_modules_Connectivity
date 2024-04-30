@@ -512,7 +512,7 @@ static int readCodeSections(ifstream& elfFile, vector<codeSection>& cs, size_t s
 
         ret = readSectionByIdx(elfFile, i, cs_temp.data);
         if (ret) return ret;
-        ALOGD("Loaded code section %d (%s)", i, name.c_str());
+        ALOGV("Loaded code section %d (%s)", i, name.c_str());
 
         vector<string> csSymNames;
         ret = getSectionSymNames(elfFile, oldName, csSymNames, STT_FUNC);
@@ -532,13 +532,13 @@ static int readCodeSections(ifstream& elfFile, vector<codeSection>& cs, size_t s
             if (name == (".rel" + oldName)) {
                 ret = readSectionByIdx(elfFile, i + 1, cs_temp.rel_data);
                 if (ret) return ret;
-                ALOGD("Loaded relo section %d (%s)", i, name.c_str());
+                ALOGV("Loaded relo section %d (%s)", i, name.c_str());
             }
         }
 
         if (cs_temp.data.size() > 0) {
             cs.push_back(std::move(cs_temp));
-            ALOGD("Adding section %d to cs list", i);
+            ALOGV("Adding section %d to cs list", i);
         }
     }
     return 0;
@@ -869,7 +869,7 @@ static void applyRelo(void* insnsPtr, Elf64_Addr offset, int fd) {
 
     // Occasionally might be useful for relocation debugging, but pretty spammy
     if (0) {
-        ALOGD("applying relo to instruction at byte offset: %llu, "
+        ALOGV("applying relo to instruction at byte offset: %llu, "
               "insn offset %d, insn %llx",
               (unsigned long long)offset, insnIndex, *(unsigned long long*)insn);
     }
@@ -1177,7 +1177,7 @@ int loadProg(const char* const elfPath, bool* const isCritical, const unsigned i
     }
 
     for (int i = 0; i < (int)mapFds.size(); i++)
-        ALOGD("map_fd found at %d is %d in %s", i, mapFds[i].get(), elfPath);
+        ALOGV("map_fd found at %d is %d in %s", i, mapFds[i].get(), elfPath);
 
     applyMapRelo(elfFile, mapFds, cs);
 
