@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2014 The Android Open Source Project
+<!-- Copyright (C) 2024 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-     package="com.android.cts.net.hostside">
+     package="com.android.cts.netpolicy.hostside">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
@@ -34,18 +34,17 @@
 
     <application android:requestLegacyExternalStorage="true">
         <uses-library android:name="android.test.runner"/>
-        <activity android:name=".MyActivity"
-                  android:configChanges="density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"/>
-        <service android:name=".MyVpnService"
-             android:permission="android.permission.BIND_VPN_SERVICE"
+        <service android:name=".MyNotificationListenerService"
+             android:label="MyNotificationListenerService"
+             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
              android:exported="true">
             <intent-filter>
-                <action android:name="android.net.VpnService"/>
+                <action android:name="android.service.notification.NotificationListenerService"/>
             </intent-filter>
         </service>
     </application>
 
     <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
-         android:targetPackage="com.android.cts.net.hostside"/>
+         android:targetPackage="com.android.cts.netpolicy.hostside"/>
 
 </manifest>
