@@ -26,9 +26,9 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.apf.ApfCapabilities
-import android.net.apf.ApfConstant.ETH_ETHERTYPE_OFFSET
-import android.net.apf.ApfConstant.ICMP6_TYPE_OFFSET
-import android.net.apf.ApfConstant.IPV6_NEXT_HEADER_OFFSET
+import android.net.apf.ApfConstants.ETH_ETHERTYPE_OFFSET
+import android.net.apf.ApfConstants.ICMP6_TYPE_OFFSET
+import android.net.apf.ApfConstants.IPV6_NEXT_HEADER_OFFSET
 import android.net.apf.ApfV4Generator
 import android.net.apf.BaseApfGenerator
 import android.net.apf.BaseApfGenerator.MemorySlot
