@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 The Android Open Source Project
+// Copyright (C) 2024 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,18 +15,18 @@
 //
 
 package {
-    default_team: "trendy_team_fwk_core_networking",
+    default_team: "trendy_team_framework_backstage_power",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
 android_test_helper_app {
-    name: "CtsHostsideNetworkTestsApp2",
+    name: "CtsHostsideNetworkPolicyTestsApp2",
     defaults: ["cts_support_defaults"],
     platform_apis: true,
     static_libs: [
         "androidx.annotation_annotation",
-        "CtsHostsideNetworkTestsAidl",
-        "NetworkStackApiStableShims",
+        "CtsHostsideNetworkPolicyTestsAidl",
+        "modules-utils-build",
     ],
     srcs: ["src/**/*.java"],
     // Tag this module as a cts test artifact
@@ -35,4 +35,5 @@ android_test_helper_app {
         "general-tests",
         "sts",
     ],
+    certificate: ":cts-netpolicy-app",
 }

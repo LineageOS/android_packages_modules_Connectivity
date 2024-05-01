@@ -228,9 +228,7 @@ static bool isGSI() {
     return !access("/metadata/gsi/dsu/booted", F_OK);
 }
 
-static int main(char** argv, char * const envp[]) {
-    base::InitLogging(argv, &base::KernelLogger);
-
+static int doLoad(char** argv, char * const envp[]) {
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
@@ -425,6 +423,17 @@ static int main(char** argv, char * const envp[]) {
 }  // namespace bpf
 }  // namespace android
 
-int main(int __unused argc, char** argv, char * const envp[]) {
-    return android::bpf::main(argv, envp);
+int main(int argc, char** argv, char * const envp[]) {
+    android::base::InitLogging(argv, &android::base::KernelLogger);
+
+    if (argc == 2 && !strcmp(argv[1], "done")) {
+        // we're being re-exec'ed from platform bpfloader to 'finalize' things
+        if (!android::base::SetProperty("bpf.progs_loaded", "1")) {
+            ALOGE("Failed to set bpf.progs_loaded property to 1.");
+            return 125;
+        }
+        return 0;
+    }
+
+    return android::bpf::doLoad(argv, envp);
 }
