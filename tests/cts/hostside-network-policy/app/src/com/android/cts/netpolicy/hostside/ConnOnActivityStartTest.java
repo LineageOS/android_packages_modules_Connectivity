@@ -53,6 +53,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @After
     public final void tearDown() throws Exception {
         super.tearDown();
+        finishActivity();
         resetDeviceState();
     }
 
