@@ -399,6 +399,10 @@ public class ClatCoordinator {
         mCookieTagMap = mDeps.getBpfCookieTagMap();
     }
 
+    // Note that this may only be called on a brand new v4-* interface,
+    // because it uses bpfmap.insertEntry() which fails if entry exists,
+    // and because the value includes (initialized to 0) byte/packet
+    // counters, so a replace (instead of insert) would wipe those stats.
     private void maybeStartBpf(final ClatdTracker tracker) {
         if (mIngressMap == null || mEgressMap == null) return;
 
