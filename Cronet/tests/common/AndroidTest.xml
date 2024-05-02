@@ -24,10 +24,14 @@
         <option name="push-file" key="net" value="/storage/emulated/0/chromium_tests_root/net" />
         <option name="push-file" key="test_server" value="/storage/emulated/0/chromium_tests_root/components/cronet/testing/test_server" />
     </target_preparer>
-    <!-- Tethering/Connectivity is a SDK 30+ module -->
-    <!-- TODO Switch back to Sdk30 when b/270049141 is fixed -->
+    <!-- Tethering/Connectivity is a SDK 30+ module however Cronet is installed on 31+ due to b/270049141. -->
     <object type="module_controller"
             class="com.android.tradefed.testtype.suite.module.Sdk31ModuleController" />
+    <!-- Only run NetHttpCoverageTests in MTS if the Tethering Mainline module is installed. -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+        <option name="mainline-module-package-name" value="com.google.android.tethering" />
+    </object>
     <option name="config-descriptor:metadata" key="mainline-param"
             value="CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex" />
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
