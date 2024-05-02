@@ -25,6 +25,7 @@ package {
 // TODO: Consider merging with ConnectivityCoverageTests which is a collection of all
 // Connectivity tests being used for coverage. This will depend on how far we decide to
 // go with merging NetHttp and Tethering targets.
+// Target used for coverage. Combines CTS tests and our MTS tests.
 android_test {
     name: "NetHttpCoverageTests",
     enforce_default_target_sdk_version: true,
@@ -46,4 +47,33 @@ android_test {
         "libnativecoverage",
     ],
     data: [":cronet_javatests_resources"],
+}
+
+// MTS-only specific targets.
+java_genrule {
+    name: "net-http-test-jarjar-rules",
+    tool_files: [
+        ":NetHttpTestsLibPreJarJar{.jar}",
+        "jarjar_excludes.txt",
+    ],
+    tools: [
+        "jarjar-rules-generator",
+    ],
+    out: ["net_http_test_jarjar_rules.txt"],
+    cmd: "$(location jarjar-rules-generator) " +
+        "$(location :NetHttpTestsLibPreJarJar{.jar}) " +
+        "--prefix android.net.connectivity " +
+        "--excludes $(location jarjar_excludes.txt) " +
+        "--output $(out)",
+}
+
+android_library {
+    name: "NetHttpTestsLibPreJarJar",
+    static_libs: [
+        "cronet_aml_api_java",
+        "cronet_aml_java__testing",
+        "cronet_java_tests",
+    ],
+    sdk_version: "module_current",
+    min_sdk_version: "30",
 }

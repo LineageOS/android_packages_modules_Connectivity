@@ -19,12 +19,16 @@
           xmlns:tools="http://schemas.android.com/tools"
           package="com.android.net.http.tests.coverage">
 
-    <!-- NetHttpCoverageTests combines CtsNetHttpTestCases and NetHttpTests targets,
-     so permissions and others are declared in their respective manifests -->
-    <application tools:replace="android:label"
-                 android:label="NetHttp coverage tests">
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application android:networkSecurityConfig="@xml/network_security_config"
+                 tools:replace="android:label"
+                 android:label="NetHttp coverage tests" >
         <uses-library android:name="android.test.runner" />
     </application>
+
     <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
                      android:targetPackage="com.android.net.http.tests.coverage"
                      android:label="NetHttp coverage tests">
