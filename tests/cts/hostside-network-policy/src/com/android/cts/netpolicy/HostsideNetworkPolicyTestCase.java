@@ -106,8 +106,7 @@ abstract class HostsideNetworkPolicyTestCase extends BaseHostJUnit4Test {
         uninstallPackage(getTestInformation(), packageName, shouldSucceed);
     }
 
-    protected void assertPackageUninstalled(String packageName) throws DeviceNotAvailableException,
-            InterruptedException {
+    protected void assertPackageUninstalled(String packageName) throws DeviceNotAvailableException {
         final String command = "cmd package list packages " + packageName;
         final int max_tries = 5;
         for (int i = 1; i <= max_tries; i++) {
@@ -128,7 +127,6 @@ abstract class HostsideNetworkPolicyTestCase extends BaseHostJUnit4Test {
             if (!found) {
                 return;
             }
-            i++;
             Log.v(TAG, "Package " + packageName + " not uninstalled yet (" + result
                     + "); sleeping 1s before polling again");
             RunUtil.getDefault().sleep(1000);
