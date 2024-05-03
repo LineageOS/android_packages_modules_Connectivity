@@ -64,9 +64,7 @@ class ConnectivityMultiDevicesSnippet : Snippet {
     fun hasTelephonyFeature() = pm.hasSystemFeature(FEATURE_TELEPHONY)
 
     @Rpc(description = "Check whether the device supporters AP + STA concurrency.")
-    fun isStaApConcurrencySupported() {
-        wifiManager.isStaApConcurrencySupported()
-    }
+    fun isStaApConcurrencySupported() = wifiManager.isStaApConcurrencySupported()
 
     @Rpc(description = "Request cellular connection and ensure it is the default network.")
     fun requestCellularAndEnsureDefault() {
