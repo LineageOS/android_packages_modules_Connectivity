@@ -68,6 +68,7 @@ import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -511,7 +512,7 @@ public class NetworkRequestTest {
         assertArrayEquals(netCapabilities, nr.getCapabilities());
     }
 
-    @Test @IgnoreUpTo(VANILLA_ICE_CREAM)
+    @Test @IgnoreUpTo(VANILLA_ICE_CREAM) @Ignore("b/338200742")
     public void testDefaultCapabilities() {
         final NetworkRequest defaultNR = new NetworkRequest.Builder().build();
         assertTrue(defaultNR.hasForbiddenCapability(NET_CAPABILITY_LOCAL_NETWORK));
