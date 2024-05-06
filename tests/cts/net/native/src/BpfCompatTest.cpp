@@ -27,35 +27,32 @@
 
 using namespace android::bpf;
 
-void doBpfStructSizeTest(const char *elfPath) {
+void doBpfStructSizeTest(const char *elfPath, unsigned mapSz, unsigned progSz) {
   std::ifstream elfFile(elfPath, std::ios::in | std::ios::binary);
   ASSERT_TRUE(elfFile.is_open());
 
-  if (android::modules::sdklevel::IsAtLeastU()) {
-    EXPECT_EQ(120, readSectionUint("size_of_bpf_map_def", elfFile, 0));
-    EXPECT_EQ(92, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
-  } else if (android::modules::sdklevel::IsAtLeastT()) {
-    EXPECT_EQ(116, readSectionUint("size_of_bpf_map_def", elfFile, 0));
-    EXPECT_EQ(92, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
-  } else {
-    EXPECT_EQ(48, readSectionUint("size_of_bpf_map_def", elfFile, 0));
-    EXPECT_EQ(28, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
-  }
-}
-
-TEST(BpfTest, bpfStructSizeTestPreT) {
-  if (android::modules::sdklevel::IsAtLeastT()) GTEST_SKIP() << "T+ device.";
-  doBpfStructSizeTest("/system/etc/bpf/netd.o");
-  doBpfStructSizeTest("/system/etc/bpf/clatd.o");
+  EXPECT_EQ(mapSz, readSectionUint("size_of_bpf_map_def", elfFile, 0));
+  EXPECT_EQ(progSz, readSectionUint("size_of_bpf_prog_def", elfFile, 0));
 }
 
 TEST(BpfTest, bpfStructSizeTest) {
-  if (android::modules::sdklevel::IsAtLeastU()) {
-      doBpfStructSizeTest("/system/etc/bpf/gpuMem.o");
-      doBpfStructSizeTest("/system/etc/bpf/timeInState.o");
+  if (android::modules::sdklevel::IsAtLeastV()) {
+    // Due to V+ using mainline netbpfload, there is no longer a need to
+    // enforce consistency between platform and mainline bpf .o files.
+    GTEST_SKIP() << "V+ device.";
+  } else if (android::modules::sdklevel::IsAtLeastU()) {
+    doBpfStructSizeTest("/system/etc/bpf/gpuMem.o", 120, 92);
+    doBpfStructSizeTest("/system/etc/bpf/timeInState.o", 120, 92);
+  } else if (android::modules::sdklevel::IsAtLeastT()) {
+    doBpfStructSizeTest("/system/etc/bpf/gpu_mem.o", 116, 92);
+    doBpfStructSizeTest("/system/etc/bpf/time_in_state.o", 116, 92);
+  } else if (android::modules::sdklevel::IsAtLeastS()) {
+    // These files were moved to mainline in Android T
+    doBpfStructSizeTest("/system/etc/bpf/netd.o", 48, 28);
+    doBpfStructSizeTest("/system/etc/bpf/clatd.o", 48, 28);
   } else {
-      doBpfStructSizeTest("/system/etc/bpf/gpu_mem.o");
-      doBpfStructSizeTest("/system/etc/bpf/time_in_state.o");
+    // There is no mainline bpf code before S.
+    GTEST_SKIP() << "R- device.";
   }
 }
 
