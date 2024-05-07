@@ -93,7 +93,7 @@ public final class CtsNetUtils {
     private static final int SOCKET_TIMEOUT_MS = 10_000;
     private static final int PRIVATE_DNS_PROBE_MS = 1_000;
 
-    private static final int PRIVATE_DNS_SETTING_TIMEOUT_MS = 10_000;
+    private static final int PRIVATE_DNS_SETTING_TIMEOUT_MS = 30_000;
     private static final int CONNECTIVITY_CHANGE_TIMEOUT_SECS = 30;
 
     private static final String PRIVATE_DNS_MODE_OPPORTUNISTIC = "opportunistic";
