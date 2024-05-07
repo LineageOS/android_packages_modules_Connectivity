@@ -848,6 +848,21 @@ public final class BpfNetMapsTest {
     }
 
     @Test
+    @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
+    public void testGetNetPermFoUid() throws Exception {
+        mUidPermissionMap.deleteEntry(new S32(TEST_UID));
+        assertEquals(PERMISSION_INTERNET, mBpfNetMaps.getNetPermForUid(TEST_UID));
+
+        mUidPermissionMap.updateEntry(new S32(TEST_UID), new U8((short) PERMISSION_NONE));
+        assertEquals(PERMISSION_NONE, mBpfNetMaps.getNetPermForUid(TEST_UID));
+
+        mUidPermissionMap.updateEntry(new S32(TEST_UID),
+                new U8((short) (PERMISSION_INTERNET | PERMISSION_UPDATE_DEVICE_STATS)));
+        assertEquals(PERMISSION_INTERNET | PERMISSION_UPDATE_DEVICE_STATS,
+                mBpfNetMaps.getNetPermForUid(TEST_UID));
+    }
+
+    @Test
     @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testSwapActiveStatsMap() throws Exception {
         mConfigurationMap.updateEntry(
