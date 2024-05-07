@@ -432,6 +432,7 @@ int main(int argc, char** argv, char * const envp[]) {
             ALOGE("Failed to set bpf.progs_loaded property to 1.");
             return 125;
         }
+        ALOGI("success.");
         return 0;
     }
 
