@@ -130,6 +130,8 @@ public class ConnectivityManager {
                 "com.android.net.flags.basic_background_restrictions_enabled";
         static final String METERED_NETWORK_FIREWALL_CHAINS =
                 "com.android.net.flags.metered_network_firewall_chains";
+        static final String BLOCKED_REASON_OEM_DENY_CHAINS =
+                "com.android.net.flags.blocked_reason_oem_deny_chains";
     }
 
     /**
@@ -913,6 +915,19 @@ public class ConnectivityManager {
     public static final int BLOCKED_REASON_APP_BACKGROUND = 1 << 6;
 
     /**
+     * Flag to indicate that an app is subject to OEM-specific application restrictions that would
+     * result in its network access being blocked.
+     *
+     * @see #FIREWALL_CHAIN_OEM_DENY_1
+     * @see #FIREWALL_CHAIN_OEM_DENY_2
+     * @see #FIREWALL_CHAIN_OEM_DENY_3
+     * @hide
+     */
+    @FlaggedApi(Flags.BLOCKED_REASON_OEM_DENY_CHAINS)
+    @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+    public static final int BLOCKED_REASON_OEM_DENY = 1 << 7;
+
+    /**
      * Flag to indicate that an app is subject to Data saver restrictions that would
      * result in its metered network access being blocked.
      *
@@ -952,6 +967,7 @@ public class ConnectivityManager {
             BLOCKED_REASON_LOCKDOWN_VPN,
             BLOCKED_REASON_LOW_POWER_STANDBY,
             BLOCKED_REASON_APP_BACKGROUND,
+            BLOCKED_REASON_OEM_DENY,
             BLOCKED_METERED_REASON_DATA_SAVER,
             BLOCKED_METERED_REASON_USER_RESTRICTED,
             BLOCKED_METERED_REASON_ADMIN_DISABLED,
