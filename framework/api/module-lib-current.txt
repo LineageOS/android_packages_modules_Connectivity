@@ -52,6 +52,7 @@ package android.net {
     field public static final int BLOCKED_REASON_LOCKDOWN_VPN = 16; // 0x10
     field public static final int BLOCKED_REASON_LOW_POWER_STANDBY = 32; // 0x20
     field public static final int BLOCKED_REASON_NONE = 0; // 0x0
+    field @FlaggedApi("com.android.net.flags.blocked_reason_oem_deny_chains") public static final int BLOCKED_REASON_OEM_DENY = 128; // 0x80
     field public static final int BLOCKED_REASON_RESTRICTED_MODE = 8; // 0x8
     field @FlaggedApi("com.android.net.flags.basic_background_restrictions_enabled") public static final int FIREWALL_CHAIN_BACKGROUND = 6; // 0x6
     field public static final int FIREWALL_CHAIN_DOZABLE = 1; // 0x1
