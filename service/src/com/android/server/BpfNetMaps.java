@@ -32,6 +32,8 @@ import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
 import static android.net.BpfNetMapsUtils.getMatchByFirewallChain;
 import static android.net.BpfNetMapsUtils.isFirewallAllowList;
 import static android.net.BpfNetMapsUtils.matchToString;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_MASK;
+import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
 import static android.net.INetd.PERMISSION_INTERNET;
@@ -861,6 +863,30 @@ public class BpfNetMaps {
         } catch (ErrnoException e) {
             Log.e(TAG, "Failed to remove ingress discard rule for " + address + ", " + e);
         }
+    }
+
+    /**
+     * Get blocked reasons for specified uid
+     *
+     * @param uid Target Uid
+     * @return Reasons of network access blocking for an UID
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public int getUidNetworkingBlockedReasons(final int uid) {
+        return BpfNetMapsUtils.getUidNetworkingBlockedReasons(uid,
+                sConfigurationMap, sUidOwnerMap, sDataSaverEnabledMap);
+    }
+
+    /**
+     * Return whether the network access of specified uid is blocked on metered networks
+     *
+     * @param uid The target uid.
+     * @return True if the network access is blocked on metered networks. Otherwise, false
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public boolean isUidRestrictedOnMeteredNetworks(final int uid) {
+        final int blockedReasons = getUidNetworkingBlockedReasons(uid);
+        return (blockedReasons & BLOCKED_METERED_REASON_MASK) != BLOCKED_REASON_NONE;
     }
 
     /** Register callback for statsd to pull atom. */
