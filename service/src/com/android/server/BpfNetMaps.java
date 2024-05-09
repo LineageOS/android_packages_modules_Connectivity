@@ -806,6 +806,25 @@ public class BpfNetMaps {
     }
 
     /**
+     * Get granted permissions for specified uid. If uid is not in the map, this method returns
+     * {@link android.net.INetd.PERMISSION_INTERNET} since this is a default permission.
+     * See {@link #setNetPermForUids}
+     *
+     * @param uid target uid
+     * @return    granted permissions.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public int getNetPermForUid(final int uid) {
+        try {
+            final U8 permissions = sUidPermissionMap.getValue(new S32(uid));
+            return permissions != null ? permissions.val : PERMISSION_INTERNET;
+        } catch (ErrnoException e) {
+            Log.wtf(TAG, "Failed to get permission for uid: " + uid);
+            return PERMISSION_INTERNET;
+        }
+    }
+
+    /**
      * Set Data Saver enabled or disabled
      *
      * @param enable     whether Data Saver is enabled or disabled.
@@ -887,6 +906,25 @@ public class BpfNetMaps {
     public boolean isUidRestrictedOnMeteredNetworks(final int uid) {
         final int blockedReasons = getUidNetworkingBlockedReasons(uid);
         return (blockedReasons & BLOCKED_METERED_REASON_MASK) != BLOCKED_REASON_NONE;
+    }
+
+    /*
+     * Return whether the network is blocked by firewall chains for the given uid.
+     *
+     * Note that {@link #getDataSaverEnabled()} has a latency before V.
+     *
+     * @param uid The target uid.
+     * @param isNetworkMetered Whether the target network is metered.
+     *
+     * @return True if the network is blocked. Otherwise, false.
+     * @throws ServiceSpecificException if the read fails.
+     *
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public boolean isUidNetworkingBlocked(final int uid, boolean isNetworkMetered) {
+        return BpfNetMapsUtils.isUidNetworkingBlocked(uid, isNetworkMetered,
+                sConfigurationMap, sUidOwnerMap, sDataSaverEnabledMap);
     }
 
     /** Register callback for statsd to pull atom. */

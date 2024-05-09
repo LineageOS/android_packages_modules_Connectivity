@@ -64,6 +64,7 @@ import static android.net.ConnectivityManager.TYPE_WIFI_P2P;
 import static android.net.ConnectivityManager.getNetworkTypeName;
 import static android.net.ConnectivityManager.isNetworkTypeValid;
 import static android.net.ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC;
+import static android.net.INetd.PERMISSION_INTERNET;
 import static android.net.INetworkMonitor.NETWORK_VALIDATION_PROBE_PRIVDNS;
 import static android.net.INetworkMonitor.NETWORK_VALIDATION_RESULT_PARTIAL;
 import static android.net.INetworkMonitor.NETWORK_VALIDATION_RESULT_SKIPPED;
@@ -101,6 +102,7 @@ import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY;
 import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_MATCH_LOCAL_NETWORK;
 import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_SELF_CERTIFIED_CAPABILITIES_DECLARATION;
+import static android.net.connectivity.ConnectivityCompatChanges.NETWORKINFO_WITHOUT_INTERNET_BLOCKED;
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.VPN_UID;
 import static android.system.OsConstants.ETH_P_ALL;
@@ -2240,7 +2242,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final long ident = Binder.clearCallingIdentity();
         try {
             final boolean metered = nc == null ? true : nc.isMetered();
-            return mPolicyManager.isUidNetworkingBlocked(uid, metered);
+            if (mDeps.isAtLeastV()) {
+                return mBpfNetMaps.isUidNetworkingBlocked(uid, metered)
+                        || (mBpfNetMaps.getNetPermForUid(uid) & PERMISSION_INTERNET) == 0;
+            } else {
+                return mPolicyManager.isUidNetworkingBlocked(uid, metered);
+            }
         } finally {
             Binder.restoreCallingIdentity(ident);
         }
@@ -2318,7 +2325,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final int uid = mDeps.getCallingUid();
         final NetworkAgentInfo nai = getNetworkAgentInfoForUid(uid);
         if (nai == null) return null;
-        final NetworkInfo networkInfo = getFilteredNetworkInfo(nai, uid, false);
+        // Ignore blocked state to keep the backward compatibility if the compat flag is
+        // disabled and app does not have PERMISSION_INTERNET.
+        final boolean ignoreBlocked = mDeps.isAtLeastV()
+                && !mDeps.isChangeEnabled(NETWORKINFO_WITHOUT_INTERNET_BLOCKED, uid)
+                && (mBpfNetMaps.getNetPermForUid(uid) & PERMISSION_INTERNET) == 0;
+        final NetworkInfo networkInfo = getFilteredNetworkInfo(nai, uid, ignoreBlocked);
         maybeLogBlockedNetworkInfo(networkInfo, uid);
         return networkInfo;
     }
