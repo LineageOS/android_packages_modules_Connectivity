@@ -99,6 +99,25 @@ public final class ConnectivityCompatChanges {
     @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     public static final long ENABLE_MATCH_LOCAL_NETWORK = 319212206L;
 
+    /**
+     * On Android {@link android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM} or higher releases, when
+     * apps targeting Android {@link android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM} or higher
+     * that do not have the {@link android.Manifest.permission#INTERNET} permission call
+     * {@link android.net.ConnectivityManager#getActiveNetworkInfo()}, the state of the returned
+     * {@link android.net.NetworkInfo} object will always be
+     * {@link android.net.NetworkInfo.DetailedState#BLOCKED}. This is because apps without the
+     * permission cannot access any network.
+     * <p>
+     * For backwards compatibility, apps running on older releases, or targeting older SDK levels,
+     * will instead receive objects with the network's current state,
+     * such as {@link android.net.NetworkInfo.DetailedState#CONNECTED}.
+     *
+     * @hide
+     */
+    @ChangeId
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public static final long NETWORKINFO_WITHOUT_INTERNET_BLOCKED = 333340911L;
+
     private ConnectivityCompatChanges() {
     }
 }
