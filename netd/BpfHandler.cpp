@@ -110,8 +110,31 @@ static Status initPrograms(const char* cg2_path) {
     // TODO: delete the if statement once all devices should support cgroup
     // socket filter (ie. the minimum kernel version required is 4.14).
     if (bpf::isAtLeastKernelVersion(4, 14, 0)) {
-        RETURN_IF_NOT_OK(
-                attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
+        RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_INET_CREATE_PROG_PATH,
+                                    cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
+    }
+
+    if (modules::sdklevel::IsAtLeastV()) {
+        if (bpf::isAtLeastKernelVersion(5, 15, 0)) {
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_CONNECT4_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_INET4_CONNECT));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_CONNECT6_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_INET6_CONNECT))    ;
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_UDP4_RECVMSG_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_UDP4_RECVMSG));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_UDP6_RECVMSG_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_UDP6_RECVMSG));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_UDP4_SENDMSG_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_UDP4_SENDMSG));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_UDP6_SENDMSG_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_UDP6_SENDMSG));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_GETSOCKOPT_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_GETSOCKOPT));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_SETSOCKOPT_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_SETSOCKOPT));
+            RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_INET_RELEASE_PROG_PATH,
+                                        cg_fd, BPF_CGROUP_INET_SOCK_RELEASE));
+        }
     }
 
     if (bpf::isAtLeastKernelVersion(4, 19, 0)) {
@@ -129,6 +152,20 @@ static Status initPrograms(const char* cg2_path) {
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_CREATE) <= 0) abort();
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET4_BIND) <= 0) abort();
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET6_BIND) <= 0) abort();
+    }
+
+    if (modules::sdklevel::IsAtLeastV()) {
+        if (bpf::isAtLeastKernelVersion(5, 15, 0)) {
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_UDP4_RECVMSG) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_UDP6_RECVMSG) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_UDP4_SENDMSG) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_UDP6_SENDMSG) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_GETSOCKOPT) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_SETSOCKOPT) <= 0) abort();
+            if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_RELEASE) <= 0) abort();
+        }
     }
 
     return netdutils::status::ok;
