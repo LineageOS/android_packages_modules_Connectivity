@@ -19,6 +19,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="android.net.thread.unittests">
 
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+
     <application android:debuggable="true">
         <uses-library android:name="android.test.runner" />
     </application>

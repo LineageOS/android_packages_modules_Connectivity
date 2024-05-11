@@ -63,6 +63,14 @@ public class ThreadPersistentSettings {
     /** Stores the Thread feature toggle state, true for enabled and false for disabled. */
     public static final Key<Boolean> THREAD_ENABLED = new Key<>("thread_enabled", true);
 
+    /**
+     * Indicates that Thread was enabled (i.e. via the setEnabled() API) when the airplane mode is
+     * turned on in settings. When this value is {@code true}, the current airplane mode state will
+     * be ignored when evaluating the Thread enabled state.
+     */
+    public static final Key<Boolean> THREAD_ENABLED_IN_AIRPLANE_MODE =
+            new Key<>("thread_enabled_in_airplane_mode", false);
+
     /** Stores the Thread country code, null if no country code is stored. */
     public static final Key<String> THREAD_COUNTRY_CODE = new Key<>("thread_country_code", null);
 
