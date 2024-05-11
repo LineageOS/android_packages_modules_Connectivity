@@ -284,7 +284,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     private void maybeInitializeOtDaemon() {
-        if (!isEnabled()) {
+        if (!shouldEnableThread()) {
             return;
         }
 
@@ -319,7 +319,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
         otDaemon.initialize(
                 mTunIfController.getTunFd(),
-                isEnabled(),
+                shouldEnableThread(),
                 mNsdPublisher,
                 getMeshcopTxtAttributes(mResources.get()),
                 mOtDaemonCallbackProxy,
@@ -384,7 +384,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                     Log.d(
                             TAG,
                             "Initializing Thread system service: Thread is "
-                                    + (isEnabled() ? "enabled" : "disabled"));
+                                    + (shouldEnableThread() ? "enabled" : "disabled"));
                     try {
                         mTunIfController.createTunInterface();
                     } catch (IOException e) {
@@ -523,14 +523,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                         + newUserRestrictedState);
         mUserRestricted = newUserRestrictedState;
 
-        final boolean isEnabled = isEnabled();
+        final boolean shouldEnableThread = shouldEnableThread();
         final IOperationReceiver receiver =
                 new IOperationReceiver.Stub() {
                     @Override
                     public void onSuccess() {
                         Log.d(
                                 TAG,
-                                (isEnabled ? "Enabled" : "Disabled")
+                                (shouldEnableThread ? "Enabled" : "Disabled")
                                         + " Thread due to user restriction change");
                     }
 
@@ -539,13 +539,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                         Log.e(
                                 TAG,
                                 "Failed to "
-                                        + (isEnabled ? "enable" : "disable")
+                                        + (shouldEnableThread ? "enable" : "disable")
                                         + " Thread for user restriction change");
                     }
                 };
         // Do not save the user restriction state to persistent settings so that the user
         // configuration won't be overwritten
-        setEnabledInternal(isEnabled, false /* persist */, new OperationReceiverWrapper(receiver));
+        setEnabledInternal(
+                shouldEnableThread, false /* persist */, new OperationReceiverWrapper(receiver));
     }
 
     /** Returns {@code true} if Thread has been restricted for the user. */
@@ -574,14 +575,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         Log.i(TAG, "Airplane mode changed: " + mAirplaneModeOn + " -> " + newAirplaneModeOn);
         mAirplaneModeOn = newAirplaneModeOn;
 
-        final boolean isEnabled = isEnabled();
+        final boolean shouldEnableThread = shouldEnableThread();
         final IOperationReceiver receiver =
                 new IOperationReceiver.Stub() {
                     @Override
                     public void onSuccess() {
                         Log.d(
                                 TAG,
-                                (isEnabled ? "Enabled" : "Disabled")
+                                (shouldEnableThread ? "Enabled" : "Disabled")
                                         + " Thread due to airplane mode change");
                     }
 
@@ -590,13 +591,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                         Log.e(
                                 TAG,
                                 "Failed to "
-                                        + (isEnabled ? "enable" : "disable")
+                                        + (shouldEnableThread ? "enable" : "disable")
                                         + " Thread for airplane mode change");
                     }
                 };
         // Do not save the user restriction state to persistent settings so that the user
         // configuration won't be overwritten
-        setEnabledInternal(isEnabled, false /* persist */, new OperationReceiverWrapper(receiver));
+        setEnabledInternal(
+                shouldEnableThread, false /* persist */, new OperationReceiverWrapper(receiver));
     }
 
     /** Returns {@code true} if Airplane mode has been turned on. */
@@ -606,8 +608,11 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 == 1;
     }
 
-    /** Returns {@code true} if Thread is set enabled. */
-    private boolean isEnabled() {
+    /**
+     * Returns {@code true} if Thread should be enabled based on current settings, runtime user
+     * restriction and airplane mode state.
+     */
+    private boolean shouldEnableThread() {
         final boolean enabledInAirplaneMode =
                 mPersistentSettings.get(ThreadPersistentSettings.THREAD_ENABLED_IN_AIRPLANE_MODE);
 
@@ -1088,7 +1093,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         checkOnHandlerThread();
 
         // Fails early to avoid waking up ot-daemon by the ThreadNetworkCountryCode class
-        if (!isEnabled()) {
+        if (!shouldEnableThread()) {
             receiver.onError(
                     ERROR_THREAD_DISABLED, "Can't set country code when Thread is disabled");
             return;
