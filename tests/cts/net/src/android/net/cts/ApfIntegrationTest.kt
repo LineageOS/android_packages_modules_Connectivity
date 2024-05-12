@@ -313,11 +313,13 @@ class ApfIntegrationTest {
         // - [GMS-VSR-5.3.12-004] MUST indicate at least 1024 bytes of usable memory from calls to
         //   the getApfPacketFilterCapabilities HAL method.
         // TODO: check whether above text should be changed "34 or higher"
-        // This should assert apfVersionSupported >= 4 as per the VSR requirements, but there are
-        // currently no tests for APFv6 and there cannot be a valid implementation as the
-        // interpreter has yet to be finalized.
-        assertThat(caps.apfVersionSupported).isEqualTo(4)
+        assertThat(caps.apfVersionSupported).isAtLeast(4)
         assertThat(caps.maximumApfProgramSize).isAtLeast(1024)
+
+        if (caps.apfVersionSupported > 4) {
+            assertThat(caps.maximumApfProgramSize).isAtLeast(2048)
+            assertThat(caps.apfVersionSupported).isEqualTo(6000)  // v6.0000
+        }
 
         // DEVICEs launching with Android 15 (AOSP experimental) or higher with CHIPSETs that set
         // ro.board.first_api_level or ro.board.api_level to 202404 or higher:
