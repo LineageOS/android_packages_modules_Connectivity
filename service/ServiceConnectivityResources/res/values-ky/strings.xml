@@ -26,7 +26,7 @@
     <string name="mobile_network_available_no_internet_detailed" msgid="5438738723127062816">"<xliff:g id="NETWORK_CARRIER">%1$s</xliff:g> трафиги түгөнгөн окшойт. Параметрлерди ачуу үчүн таптаңыз."</string>
     <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Трафик түгөнгөн окшойт. Параметрлерди ачуу үчүн таптаңыз."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> Интернетке туташуусу жок"</string>
-    <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Параметрлерди ачуу үчүн таптап коюңуз"</string>
+    <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Параметрлерди ачуу үчүн тийип коюңуз"</string>
     <string name="mobile_no_internet" msgid="4087718456753201450">"Мобилдик Интернет жок"</string>
     <string name="other_networks_no_internet" msgid="5693932964749676542">"Тармактын Интернет жок"</string>
     <string name="private_dns_broken_detailed" msgid="2677123850463207823">"Жеке DNS сервери жеткиликсиз"</string>
