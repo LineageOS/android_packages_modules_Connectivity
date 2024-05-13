@@ -120,6 +120,7 @@ import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPer
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermissionOr;
 import static com.android.net.module.util.PermissionUtils.hasAnyPermissionOf;
 import static com.android.server.ConnectivityStatsLog.CONNECTIVITY_STATE_SAMPLE;
+import static com.android.server.connectivity.ConnectivityFlags.DELAY_DESTROY_SOCKETS;
 import static com.android.server.connectivity.ConnectivityFlags.REQUEST_RESTRICTED_WIFI;
 import static com.android.server.connectivity.ConnectivityFlags.INGRESS_TO_VPN_ADDRESS_FILTERING;
 
@@ -998,8 +999,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     // Flag to enable the feature of closing frozen app sockets.
     private final boolean mDestroyFrozenSockets;
 
-    // Flag to optimize closing frozen app sockets by waiting for the cellular modem to wake up.
-    private final boolean mDelayDestroyFrozenSockets;
+    // Flag to optimize closing app sockets by waiting for the cellular modem to wake up.
+    private final boolean mDelayDestroySockets;
 
     // Flag to allow SysUI to receive connectivity reports for wifi picker UI.
     private final boolean mAllowSysUiConnectivityReports;
@@ -1954,8 +1955,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
         mDestroyFrozenSockets = mDeps.isAtLeastV() || (mDeps.isAtLeastU()
                 && mDeps.isFeatureEnabled(context, KEY_DESTROY_FROZEN_SOCKETS_VERSION));
-        mDelayDestroyFrozenSockets = mDeps.isAtLeastU()
-                && mDeps.isFeatureEnabled(context, DELAY_DESTROY_FROZEN_SOCKETS_VERSION);
+        mDelayDestroySockets = mDeps.isFeatureNotChickenedOut(context, DELAY_DESTROY_SOCKETS);
         mAllowSysUiConnectivityReports = mDeps.isFeatureNotChickenedOut(
                 mContext, ALLOW_SYSUI_CONNECTIVITY_REPORTS);
         if (mDestroyFrozenSockets) {
@@ -3364,7 +3364,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             return;
         }
 
-        if (mDelayDestroyFrozenSockets && isCellNetworkIdle()) {
+        if (mDelayDestroySockets && isCellNetworkIdle()) {
             // Delay closing sockets to avoid waking the cell modem up.
             // Wi-Fi network state is not considered since waking Wi-Fi modem up is much cheaper
             // than waking cell modem up.
@@ -3403,7 +3403,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
             isCellNetworkActivity = params.label == TRANSPORT_CELLULAR;
         }
 
-        if (mDelayDestroyFrozenSockets
+        if (mDelayDestroySockets
                 && params.isActive
                 && isCellNetworkActivity
                 && !mPendingFrozenUids.isEmpty()) {
@@ -3435,7 +3435,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.println("CloseFrozenAppSockets:");
         pw.increaseIndent();
         pw.print("mDestroyFrozenSockets="); pw.println(mDestroyFrozenSockets);
-        pw.print("mDelayDestroyFrozenSockets="); pw.println(mDelayDestroyFrozenSockets);
+        pw.print("mDelayDestroySockets="); pw.println(mDelayDestroySockets);
         pw.print("mPendingFrozenUids="); pw.println(mPendingFrozenUids);
         pw.decreaseIndent();
     }
@@ -3462,9 +3462,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     @VisibleForTesting
     static final String KEY_DESTROY_FROZEN_SOCKETS_VERSION = "destroy_frozen_sockets_version";
-    @VisibleForTesting
-    static final String DELAY_DESTROY_FROZEN_SOCKETS_VERSION =
-            "delay_destroy_frozen_sockets_version";
 
     @VisibleForTesting
     public static final String ALLOW_SYSUI_CONNECTIVITY_REPORTS =
