@@ -122,6 +122,7 @@ import com.android.server.thread.openthread.IOtDaemonCallback;
 import com.android.server.thread.openthread.IOtStatusReceiver;
 import com.android.server.thread.openthread.Ipv6AddressInfo;
 import com.android.server.thread.openthread.MeshcopTxtAttributes;
+import com.android.server.thread.openthread.OnMeshPrefixConfig;
 import com.android.server.thread.openthread.OtDaemonState;
 
 import libcore.util.HexEncoding;
@@ -1234,6 +1235,18 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         }
     }
 
+    private void handlePrefixChanged(List<OnMeshPrefixConfig> onMeshPrefixConfigList) {
+        checkOnHandlerThread();
+
+        mTunIfController.updatePrefixes(onMeshPrefixConfigList);
+
+        // The OT daemon can send link property updates before the networkAgent is
+        // registered
+        if (mNetworkAgent != null) {
+            mNetworkAgent.sendLinkProperties(mTunIfController.getLinkProperties());
+        }
+    }
+
     private void sendLocalNetworkConfig() {
         if (mNetworkAgent == null) {
             return;
@@ -1580,6 +1593,11 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         @Override
         public void onBackboneRouterStateChanged(BackboneRouterState state) {
             mHandler.post(() -> handleMulticastForwardingChanged(state));
+        }
+
+        @Override
+        public void onPrefixChanged(List<OnMeshPrefixConfig> onMeshPrefixConfigList) {
+            mHandler.post(() -> handlePrefixChanged(onMeshPrefixConfigList));
         }
     }
 }
