@@ -35,6 +35,7 @@ import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
 import com.android.server.thread.openthread.Ipv6AddressInfo;
+import com.android.server.thread.openthread.OnMeshPrefixConfig;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -66,7 +67,8 @@ public class TunInterfaceController {
     private static int sNetlinkSeqNo = 0;
     private final MulticastSocket mMulticastSocket; // For join group and leave group
     private NetworkInterface mNetworkInterface;
-    private List<InetAddress> mMulticastAddresses = new ArrayList<>();
+    private final List<InetAddress> mMulticastAddresses = new ArrayList<>();
+    private final List<RouteInfo> mNetDataPrefixes = new ArrayList<>();
 
     /** Creates a new {@link TunInterfaceController} instance for given interface. */
     public TunInterfaceController(String interfaceName) {
@@ -243,13 +245,40 @@ public class TunInterfaceController {
         mMulticastAddresses.addAll(newMulticastAddresses);
     }
 
+    public void updatePrefixes(List<OnMeshPrefixConfig> onMeshPrefixConfigList) {
+        final List<RouteInfo> newNetDataPrefixes = new ArrayList<>();
+
+        for (OnMeshPrefixConfig onMeshPrefixConfig : onMeshPrefixConfigList) {
+            newNetDataPrefixes.add(getRouteForOnMeshPrefix(onMeshPrefixConfig));
+        }
+
+        final CompareResult<RouteInfo> prefixDiff =
+                new CompareResult<>(mNetDataPrefixes, newNetDataPrefixes);
+        for (RouteInfo routeRemoved : prefixDiff.removed) {
+            mLinkProperties.removeRoute(routeRemoved);
+        }
+        for (RouteInfo routeAdded : prefixDiff.added) {
+            mLinkProperties.addRoute(routeAdded);
+        }
+
+        mNetDataPrefixes.clear();
+        mNetDataPrefixes.addAll(newNetDataPrefixes);
+    }
+
     private RouteInfo getRouteForAddress(LinkAddress linkAddress) {
-        return new RouteInfo(
-                new IpPrefix(linkAddress.getAddress(), linkAddress.getPrefixLength()),
-                null,
-                mIfName,
-                RouteInfo.RTN_UNICAST,
-                MTU);
+        return getRouteForIpPrefix(
+                new IpPrefix(linkAddress.getAddress(), linkAddress.getPrefixLength()));
+    }
+
+    private RouteInfo getRouteForOnMeshPrefix(OnMeshPrefixConfig onMeshPrefixConfig) {
+        return getRouteForIpPrefix(
+                new IpPrefix(
+                        bytesToInet6Address(onMeshPrefixConfig.prefix),
+                        onMeshPrefixConfig.prefixLength));
+    }
+
+    private RouteInfo getRouteForIpPrefix(IpPrefix ipPrefix) {
+        return new RouteInfo(ipPrefix, null, mIfName, RouteInfo.RTN_UNICAST, MTU);
     }
 
     /** Called by {@link ThreadNetworkControllerService} to do clean up when ot-daemon is dead. */
