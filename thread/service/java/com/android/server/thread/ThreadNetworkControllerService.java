@@ -1358,7 +1358,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         private void notifyThreadEnabledUpdated(IStateCallback callback, int enabledState) {
             try {
                 callback.onThreadEnableStateChanged(enabledState);
-                Log.i(TAG, "onThreadEnableStateChanged " + enabledState);
             } catch (RemoteException ignored) {
                 // do nothing if the client is dead
             }
