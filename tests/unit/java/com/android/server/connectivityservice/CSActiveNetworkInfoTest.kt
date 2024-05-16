@@ -24,7 +24,7 @@ import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkInfo.DetailedState.BLOCKED
 import android.net.NetworkInfo.DetailedState.CONNECTED
-import android.net.connectivity.ConnectivityCompatChanges.NETWORKINFO_WITHOUT_INTERNET_BLOCKED
+import android.net.connectivity.ConnectivityCompatChanges.NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION
 import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
@@ -53,7 +53,7 @@ class CSActiveNetworkInfoTest : CSTest() {
             permissions: Int,
             expectBlocked: Boolean
     ) {
-        deps.setChangeIdEnabled(changeEnabled, NETWORKINFO_WITHOUT_INTERNET_BLOCKED)
+        deps.setChangeIdEnabled(changeEnabled, NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION)
         doReturn(permissions).`when`(bpfNetMaps).getNetPermForUid(anyInt())
 
         val agent = Agent(nc = nc())
@@ -66,6 +66,7 @@ class CSActiveNetworkInfoTest : CSTest() {
         } else {
             assertEquals(CONNECTED, networkInfo.detailedState)
         }
+        assertEquals(expectBlocked, cm.activeNetwork == null)
         agent.disconnect()
     }
 
@@ -82,8 +83,8 @@ class CSActiveNetworkInfoTest : CSTest() {
                 permissions = PERMISSION_INTERNET,
                 expectBlocked = true
         )
-        // getActiveNetworkInfo does not return NetworkInfo with blocked state if the compat change
-        // is disabled and the app does not have PERMISSION_INTERNET
+        // Network access is considered not blocked if the compat change is disabled and an app
+        // does not have PERMISSION_INTERNET
         doTestGetActiveNetworkInfo(
                 changeEnabled = false,
                 permissions = PERMISSION_NONE,
