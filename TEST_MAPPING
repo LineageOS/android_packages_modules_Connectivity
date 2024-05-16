@@ -1,4 +1,152 @@
 {
+  "captiveportal-networkstack-resolve-tethering-mainline-presubmit": [
+    {
+      "name": "CtsNetTestCasesLatestSdk",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
+    {
+      "name": "CtsNetTestCasesMaxTargetSdk30",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
+    {
+      "name": "CtsNetTestCasesMaxTargetSdk31",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
+    {
+      "name": "CtsNetTestCasesMaxTargetSdk33",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
+    },
+    {
+      "name": "bpf_existence_test"
+    },
+    {
+      "name": "connectivity_native_test"
+    },
+    {
+      "name": "netd_updatable_unit_test"
+    },
+    {
+      "name": "ConnectivityCoverageTests",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        }
+      ]
+    },
+    {
+      "name": "libnetworkstats_test"
+    },
+    {
+      "name": "NetHttpCoverageTests",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          // These sometimes take longer than 1 min which is the presubmit timeout
+          "exclude-annotation": "androidx.test.filters.LargeTest"
+        }
+      ]
+    },
+    {
+      "name": "CtsTetheringTestLatestSdk",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.NetworkStackModuleTest"
+        }
+      ]
+    }
+  ],
+  "captiveportal-networkstack-mainline-presubmit": [
+    // Test with APK modules only, in cases where APEX is not supported, or the other modules
+    // were simply not updated
+    {
+      "name": "CtsNetTestCasesLatestSdk",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.ConnectivityModuleTest"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.DnsResolverModuleTest"
+        }
+      ]
+    }
+  ],
+  "tethering-mainline-presubmit": [
+    // Test with connectivity/tethering module only, to catch integration issues with older versions
+    // of other modules. "new tethering + old NetworkStack" is not a configuration that should
+    // really exist in the field, but there is no strong guarantee, and it is required by MTS
+    // testing for module qualification, where modules are tested independently.
+    {
+      "name": "CtsNetTestCasesLatestSdk",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.SkipMainlinePresubmit"
+        },
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.DnsResolverModuleTest"
+        },
+        {
+          "exclude-annotation": "com.android.testutils.NetworkStackModuleTest"
+        }
+      ]
+    }
+  ],
   "presubmit": [
     {
       "name": "ConnectivityCoverageTests",

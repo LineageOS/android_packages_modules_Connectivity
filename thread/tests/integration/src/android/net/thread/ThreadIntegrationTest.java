@@ -22,6 +22,8 @@ import static android.net.thread.ThreadNetworkController.DEVICE_ROLE_STOPPED;
 import static android.net.thread.utils.IntegrationTestUtils.CALLBACK_TIMEOUT;
 import static android.net.thread.utils.IntegrationTestUtils.RESTART_JOIN_TIMEOUT;
 import static android.net.thread.utils.IntegrationTestUtils.getIpv6LinkAddresses;
+import static android.net.thread.utils.IntegrationTestUtils.getPrefixesFromNetData;
+import static android.net.thread.utils.IntegrationTestUtils.getThreadNetwork;
 import static android.net.thread.utils.IntegrationTestUtils.isInMulticastGroup;
 import static android.net.thread.utils.IntegrationTestUtils.waitFor;
 
@@ -34,9 +36,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
 import android.net.InetAddresses;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
+import android.net.LinkProperties;
 import android.net.thread.utils.FullThreadDevice;
 import android.net.thread.utils.OtDaemonController;
 import android.net.thread.utils.ThreadFeatureCheckerRule;
@@ -76,6 +80,9 @@ public class ThreadIntegrationTest {
     // The maximum time for OT addresses to be propagated to the TUN interface "thread-wpan"
     private static final Duration TUN_ADDR_UPDATE_TIMEOUT = Duration.ofSeconds(1);
 
+    // The maximum time for changes to be propagated to netdata.
+    private static final Duration NET_DATA_UPDATE_TIMEOUT = Duration.ofSeconds(1);
+
     // A valid Thread Active Operational Dataset generated from OpenThread CLI "dataset init new".
     private static final byte[] DEFAULT_DATASET_TLVS =
             base16().decode(
@@ -89,6 +96,10 @@ public class ThreadIntegrationTest {
 
     private static final Inet6Address GROUP_ADDR_ALL_ROUTERS =
             (Inet6Address) InetAddresses.parseNumericAddress("ff02::2");
+
+    private static final String TEST_NO_SLAAC_PREFIX = "9101:dead:beef:cafe::/64";
+    private static final InetAddress TEST_NO_SLAAC_PREFIX_ADDRESS =
+            InetAddresses.parseNumericAddress("9101:dead:beef:cafe::");
 
     @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
 
@@ -251,6 +262,49 @@ public class ThreadIntegrationTest {
                     .that(mFtd.ping(address, 2))
                     .isEqualTo(2);
         }
+    }
+
+    @Test
+    public void addPrefixToNetData_routeIsAddedToTunInterface() throws Exception {
+        ConnectivityManager cm = mContext.getSystemService(ConnectivityManager.class);
+        mController.joinAndWait(DEFAULT_DATASET);
+
+        // Ftd child doesn't have the ability to add a prefix, so let BR itself add a prefix.
+        mOtCtl.executeCommand("prefix add " + TEST_NO_SLAAC_PREFIX + " pros med");
+        mOtCtl.executeCommand("netdata register");
+        waitFor(
+                () -> {
+                    String netData = mOtCtl.executeCommand("netdata show");
+                    return getPrefixesFromNetData(netData).contains(TEST_NO_SLAAC_PREFIX);
+                },
+                NET_DATA_UPDATE_TIMEOUT);
+
+        LinkProperties lp = cm.getLinkProperties(getThreadNetwork(CALLBACK_TIMEOUT));
+        assertThat(lp).isNotNull();
+        assertThat(lp.getRoutes().stream().anyMatch(r -> r.matches(TEST_NO_SLAAC_PREFIX_ADDRESS)))
+                .isTrue();
+    }
+
+    @Test
+    public void removePrefixFromNetData_routeIsRemovedFromTunInterface() throws Exception {
+        ConnectivityManager cm = mContext.getSystemService(ConnectivityManager.class);
+        mController.joinAndWait(DEFAULT_DATASET);
+        mOtCtl.executeCommand("prefix add " + TEST_NO_SLAAC_PREFIX + " pros med");
+        mOtCtl.executeCommand("netdata register");
+
+        mOtCtl.executeCommand("prefix remove " + TEST_NO_SLAAC_PREFIX);
+        mOtCtl.executeCommand("netdata register");
+        waitFor(
+                () -> {
+                    String netData = mOtCtl.executeCommand("netdata show");
+                    return !getPrefixesFromNetData(netData).contains(TEST_NO_SLAAC_PREFIX);
+                },
+                NET_DATA_UPDATE_TIMEOUT);
+
+        LinkProperties lp = cm.getLinkProperties(getThreadNetwork(CALLBACK_TIMEOUT));
+        assertThat(lp).isNotNull();
+        assertThat(lp.getRoutes().stream().anyMatch(r -> r.matches(TEST_NO_SLAAC_PREFIX_ADDRESS)))
+                .isFalse();
     }
 
     // TODO (b/323300829): add more tests for integration with linux platform and

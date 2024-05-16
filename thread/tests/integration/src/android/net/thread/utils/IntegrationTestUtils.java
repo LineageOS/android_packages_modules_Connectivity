@@ -15,6 +15,7 @@
  */
 package android.net.thread.utils;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow;
@@ -24,17 +25,24 @@ import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ROUTER_AD
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
+import android.net.ConnectivityManager;
 import android.net.InetAddresses;
 import android.net.LinkAddress;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.TestNetworkInterface;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.net.thread.ThreadNetworkController;
+import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
+import androidx.test.core.app.ApplicationProvider;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.Icmpv6Header;
@@ -373,6 +381,36 @@ public final class IntegrationTestUtils {
         } finally {
             nsdManager.unregisterServiceInfoCallback(callback);
         }
+    }
+
+    public static String getPrefixesFromNetData(String netData) {
+        int startIdx = netData.indexOf("Prefixes:");
+        int endIdx = netData.indexOf("Routes:");
+        return netData.substring(startIdx, endIdx);
+    }
+
+    public static Network getThreadNetwork(Duration timeout) throws Exception {
+        CompletableFuture<Network> networkFuture = new CompletableFuture<>();
+        ConnectivityManager cm =
+                ApplicationProvider.getApplicationContext()
+                        .getSystemService(ConnectivityManager.class);
+        NetworkRequest.Builder networkRequestBuilder =
+                new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_THREAD);
+        // Before V, we need to explicitly set `NET_CAPABILITY_LOCAL_NETWORK` capability to request
+        // a Thread network.
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            networkRequestBuilder.addCapability(NET_CAPABILITY_LOCAL_NETWORK);
+        }
+        NetworkRequest networkRequest = networkRequestBuilder.build();
+        ConnectivityManager.NetworkCallback networkCallback =
+                new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(Network network) {
+                        networkFuture.complete(network);
+                    }
+                };
+        cm.registerNetworkCallback(networkRequest, networkCallback);
+        return networkFuture.get(timeout.toSeconds(), SECONDS);
     }
 
     private static class DefaultDiscoveryListener implements NsdManager.DiscoveryListener {
