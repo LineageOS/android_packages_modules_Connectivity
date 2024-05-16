@@ -21,7 +21,9 @@
 #include "logging.h"
 #include "bpf/KernelUtils.h"
 
+#include <BpfSyscallWrappers.h>
 #include <android-base/scopeguard.h>
+#include <android-base/unique_fd.h>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstring>
@@ -39,10 +41,6 @@
 #include <unistd.h>
 #include <utility>
 
-#define BPF_FD_JUST_USE_INT
-#include <BpfSyscallWrappers.h>
-#undef BPF_FD_JUST_USE_INT
-
 // The maximum length of TCA_BPF_NAME. Sync from net/sched/cls_bpf.c.
 #define CLS_BPF_NAME_LEN 256
 
@@ -51,6 +49,9 @@
 
 namespace android {
 namespace {
+
+using base::make_scope_guard;
+using base::unique_fd;
 
 /**
  * IngressPoliceFilterBuilder builds a nlmsg request equivalent to the following
@@ -130,7 +131,7 @@ class IngressPoliceFilterBuilder final {
   // class members
   const unsigned mBurstInBytes;
   const char *mBpfProgPath;
-  int mBpfFd;
+  unique_fd mBpfFd;
   Request mRequest;
 
   static double getTickInUsec() {
@@ -139,7 +140,7 @@ class IngressPoliceFilterBuilder final {
       ALOGE("fopen(\"/proc/net/psched\"): %s", strerror(errno));
       return 0.0;
     }
-    auto scopeGuard = base::make_scope_guard([fp] { fclose(fp); });
+    auto scopeGuard = make_scope_guard([fp] { fclose(fp); });
 
     uint32_t t2us;
     uint32_t us2t;
@@ -166,7 +167,6 @@ public:
                       unsigned burstInBytes, const char* bpfProgPath)
       : mBurstInBytes(burstInBytes),
         mBpfProgPath(bpfProgPath),
-        mBpfFd(-1),
         mRequest{
             .n = {
                 .nlmsg_len = sizeof(mRequest),
@@ -298,13 +298,6 @@ public:
   }
   // clang-format on
 
-  ~IngressPoliceFilterBuilder() {
-    // TODO: use unique_fd
-    if (mBpfFd != -1) {
-      close(mBpfFd);
-    }
-  }
-
   constexpr unsigned getRequestSize() const { return sizeof(Request); }
 
 private:
@@ -332,14 +325,14 @@ private:
   }
 
   int initBpfFd() {
-    mBpfFd = bpf::retrieveProgram(mBpfProgPath);
-    if (mBpfFd == -1) {
+    mBpfFd.reset(bpf::retrieveProgram(mBpfProgPath));
+    if (!mBpfFd.ok()) {
       int error = errno;
       ALOGE("retrieveProgram failed: %d", error);
       return -error;
     }
 
-    mRequest.opt.acts.act2.opt.fd.u32 = static_cast<uint32_t>(mBpfFd);
+    mRequest.opt.acts.act2.opt.fd.u32 = static_cast<uint32_t>(mBpfFd.get());
     snprintf(mRequest.opt.acts.act2.opt.name.str,
              sizeof(mRequest.opt.acts.act2.opt.name.str), "%s:[*fsobj]",
              basename(mBpfProgPath));
@@ -370,14 +363,13 @@ const uint16_t NETLINK_REQUEST_FLAGS = NLM_F_REQUEST | NLM_F_ACK;
 
 int sendAndProcessNetlinkResponse(const void *req, int len) {
   // TODO: use unique_fd instead of ScopeGuard
-  int fd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
-  if (fd == -1) {
+  unique_fd fd(socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE));
+  if (!fd.ok()) {
     int error = errno;
     ALOGE("socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE): %d",
              error);
     return -error;
   }
-  auto scopeGuard = base::make_scope_guard([fd] { close(fd); });
 
   static constexpr int on = 1;
   if (setsockopt(fd, SOL_NETLINK, NETLINK_CAP_ACK, &on, sizeof(on))) {
@@ -460,10 +452,9 @@ int sendAndProcessNetlinkResponse(const void *req, int len) {
 }
 
 int hardwareAddressType(const char *interface) {
-  int fd = socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-  if (fd < 0)
+  unique_fd fd(socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0));
+  if (!fd.ok())
     return -errno;
-  auto scopeGuard = base::make_scope_guard([fd] { close(fd); });
 
   struct ifreq ifr = {};
   // We use strncpy() instead of strlcpy() since kernel has to be able
@@ -576,12 +567,11 @@ int doTcQdiscClsact(int ifIndex, uint16_t nlMsgType, uint16_t nlMsgFlags) {
 // /sys/fs/bpf/... direct-action
 int tcAddBpfFilter(int ifIndex, bool ingress, uint16_t prio, uint16_t proto,
                    const char *bpfProgPath) {
-  const int bpfFd = bpf::retrieveProgram(bpfProgPath);
-  if (bpfFd == -1) {
+  unique_fd bpfFd(bpf::retrieveProgram(bpfProgPath));
+  if (!bpfFd.ok()) {
     ALOGE("retrieveProgram failed: %d", errno);
     return -errno;
   }
-  auto scopeGuard = base::make_scope_guard([bpfFd] { close(bpfFd); });
 
   struct {
     nlmsghdr n;
