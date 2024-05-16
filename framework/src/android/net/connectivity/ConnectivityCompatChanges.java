@@ -115,7 +115,7 @@ public final class ConnectivityCompatChanges {
      * @hide
      */
     @ChangeId
-    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @EnabledAfter(targetSdkVersion = 35)  // TODO: change to VANILLA_ICE_CREAM.
     public static final long NETWORKINFO_WITHOUT_INTERNET_BLOCKED = 333340911L;
 
     private ConnectivityCompatChanges() {
