@@ -1058,7 +1058,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     }
 
     @Override
-    public void leave(@NonNull IOperationReceiver receiver) throws RemoteException {
+    public void leave(@NonNull IOperationReceiver receiver) {
         enforceAllPermissionsGranted(PERMISSION_THREAD_NETWORK_PRIVILEGED);
 
         mHandler.post(() -> leaveInternal(new OperationReceiverWrapper(receiver)));
