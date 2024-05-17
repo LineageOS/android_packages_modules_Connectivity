@@ -100,23 +100,26 @@ public final class ConnectivityCompatChanges {
     public static final long ENABLE_MATCH_LOCAL_NETWORK = 319212206L;
 
     /**
-     * On Android {@link android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM} or higher releases, when
-     * apps targeting Android {@link android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM} or higher
-     * that do not have the {@link android.Manifest.permission#INTERNET} permission call
-     * {@link android.net.ConnectivityManager#getActiveNetworkInfo()}, the state of the returned
-     * {@link android.net.NetworkInfo} object will always be
-     * {@link android.net.NetworkInfo.DetailedState#BLOCKED}. This is because apps without the
-     * permission cannot access any network.
+     * On Android {@link android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM} or higher releases,
+     * network access from apps targeting Android 36 or higher that do not have the
+     * {@link android.Manifest.permission#INTERNET} permission is considered blocked.
+     * This results in API behaviors change for apps without
+     * {@link android.Manifest.permission#INTERNET} permission.
+     * {@link android.net.NetworkInfo} returned from {@link android.net.ConnectivityManager} APIs
+     * always has {@link android.net.NetworkInfo.DetailedState#BLOCKED}.
+     * {@link android.net.ConnectivityManager#getActiveNetwork()} always returns null.
+     * {@link android.net.ConnectivityManager.NetworkCallback#onBlockedStatusChanged()} is always
+     * called with blocked=true.
      * <p>
      * For backwards compatibility, apps running on older releases, or targeting older SDK levels,
-     * will instead receive objects with the network's current state,
-     * such as {@link android.net.NetworkInfo.DetailedState#CONNECTED}.
+     * network access from apps without {@link android.Manifest.permission#INTERNET} permission is
+     * considered not blocked even though apps cannot access any networks.
      *
      * @hide
      */
     @ChangeId
-    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    public static final long NETWORKINFO_WITHOUT_INTERNET_BLOCKED = 333340911L;
+    @EnabledAfter(targetSdkVersion = 35)  // TODO: change to VANILLA_ICE_CREAM.
+    public static final long NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION = 333340911L;
 
     private ConnectivityCompatChanges() {
     }

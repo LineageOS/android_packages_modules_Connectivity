@@ -102,7 +102,7 @@ import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST;
 import static android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST_ONLY;
 import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_MATCH_LOCAL_NETWORK;
 import static android.net.connectivity.ConnectivityCompatChanges.ENABLE_SELF_CERTIFIED_CAPABILITIES_DECLARATION;
-import static android.net.connectivity.ConnectivityCompatChanges.NETWORKINFO_WITHOUT_INTERNET_BLOCKED;
+import static android.net.connectivity.ConnectivityCompatChanges.NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION;
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.VPN_UID;
 import static android.system.OsConstants.ETH_P_ALL;
@@ -2229,6 +2229,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return nai;
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private boolean hasInternetPermission(final int uid) {
+        return (mBpfNetMaps.getNetPermForUid(uid) & PERMISSION_INTERNET) != 0;
+    }
+
     /**
      * Check if UID should be blocked from using the specified network.
      */
@@ -2243,8 +2248,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
         try {
             final boolean metered = nc == null ? true : nc.isMetered();
             if (mDeps.isAtLeastV()) {
-                return mBpfNetMaps.isUidNetworkingBlocked(uid, metered)
-                        || (mBpfNetMaps.getNetPermForUid(uid) & PERMISSION_INTERNET) == 0;
+                final boolean hasInternetPermission = hasInternetPermission(uid);
+                final boolean blockedByUidRules = mBpfNetMaps.isUidNetworkingBlocked(uid, metered);
+                if (mDeps.isChangeEnabled(NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION, uid)) {
+                    return blockedByUidRules || !hasInternetPermission;
+                } else {
+                    return hasInternetPermission && blockedByUidRules;
+                }
             } else {
                 return mPolicyManager.isUidNetworkingBlocked(uid, metered);
             }
@@ -2325,12 +2335,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final int uid = mDeps.getCallingUid();
         final NetworkAgentInfo nai = getNetworkAgentInfoForUid(uid);
         if (nai == null) return null;
-        // Ignore blocked state to keep the backward compatibility if the compat flag is
-        // disabled and app does not have PERMISSION_INTERNET.
-        final boolean ignoreBlocked = mDeps.isAtLeastV()
-                && !mDeps.isChangeEnabled(NETWORKINFO_WITHOUT_INTERNET_BLOCKED, uid)
-                && (mBpfNetMaps.getNetPermForUid(uid) & PERMISSION_INTERNET) == 0;
-        final NetworkInfo networkInfo = getFilteredNetworkInfo(nai, uid, ignoreBlocked);
+        final NetworkInfo networkInfo = getFilteredNetworkInfo(nai, uid, false /* ignoreBlocked */);
         maybeLogBlockedNetworkInfo(networkInfo, uid);
         return networkInfo;
     }
