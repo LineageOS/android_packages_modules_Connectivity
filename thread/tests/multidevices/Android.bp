@@ -20,7 +20,7 @@ package {
 }
 
 python_test_host {
-    name: "ThreadNetworkMultiDeviceTestCases",
+    name: "ThreadNetworkMultiDeviceTests",
     main: "thread_network_multi_device_test.py",
     srcs: ["thread_network_multi_device_test.py"],
     test_config: "AndroidTest.xml",
