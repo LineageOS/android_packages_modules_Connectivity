@@ -11,5 +11,8 @@
     }
   ],
   "postsubmit": [
+    {
+      "name": "ThreadNetworkMultiDeviceTests"
+    }
   ]
 }

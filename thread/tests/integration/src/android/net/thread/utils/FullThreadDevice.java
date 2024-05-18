@@ -80,9 +80,10 @@ public final class FullThreadDevice {
      */
     public FullThreadDevice(int nodeId) {
         try {
-            mProcess = Runtime.getRuntime().exec("/system/bin/ot-cli-ftd " + nodeId);
+            mProcess = Runtime.getRuntime().exec("/system/bin/ot-cli-ftd -Leth1 " + nodeId);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to start ot-cli-ftd (id=" + nodeId + ")", e);
+            throw new IllegalStateException(
+                    "Failed to start ot-cli-ftd -Leth1 (id=" + nodeId + ")", e);
         }
         mReader = new BufferedReader(new InputStreamReader(mProcess.getInputStream()));
         mWriter = new BufferedWriter(new OutputStreamWriter(mProcess.getOutputStream()));
