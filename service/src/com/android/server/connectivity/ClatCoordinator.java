@@ -637,9 +637,6 @@ public class ClatCoordinator {
             throw new IOException("Invalid IPv6 address " + v6Str);
         }
 
-        // [3] Open, configure and bring up the tun interface.
-        // Create the v4-... tun interface.
-
         // Initialize all required file descriptors with null pointer. This makes the following
         // error handling easier. Simply always call #maybeCleanUp for closing file descriptors,
         // if any valid ones, in error handling.
@@ -647,61 +644,9 @@ public class ClatCoordinator {
         ParcelFileDescriptor readSock6 = null;
         ParcelFileDescriptor writeSock6 = null;
 
-        final String tunIface = CLAT_PREFIX + iface;
-        try {
-            tunFd = mDeps.adoptFd(mDeps.createTunInterface(tunIface));
-        } catch (IOException e) {
-            throw new IOException("Create tun interface " + tunIface + " failed: " + e);
-        }
-
-        final int tunIfIndex = mDeps.getInterfaceIndex(tunIface);
-        if (tunIfIndex == INVALID_IFINDEX) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Fail to get interface index for interface " + tunIface);
-        }
-
-        // disable IPv6 on it - failing to do so is not a critical error
-        try {
-            mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
-        } catch (RemoteException | ServiceSpecificException e) {
-            Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
-        }
-
-        // Detect ipv4 mtu.
-        final int detectedMtu;
-        try {
-            detectedMtu = mDeps.detectMtu(pfx96Str,
-                ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Detect MTU on " + tunIface + " failed: " + e);
-        }
-        final int mtu = adjustMtu(detectedMtu);
-        Log.i(TAG, "detected ipv4 mtu of " + detectedMtu + " adjusted to " + mtu);
-
-        // Config tun interface mtu, address and bring up.
-        try {
-            mNetd.interfaceSetMtu(tunIface, mtu);
-        } catch (RemoteException | ServiceSpecificException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Set MTU " + mtu + " on " + tunIface + " failed: " + e);
-        }
-        final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
-        ifConfig.ifName = tunIface;
-        ifConfig.ipv4Addr = v4Str;
-        ifConfig.prefixLength = 32;
-        ifConfig.hwAddr = "";
-        ifConfig.flags = new String[] {IF_STATE_UP};
-        try {
-            mNetd.interfaceSetCfg(ifConfig);
-        } catch (RemoteException | ServiceSpecificException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Setting IPv4 address to " + ifConfig.ipv4Addr + "/"
-                    + ifConfig.prefixLength + " failed on " + ifConfig.ifName + ": " + e);
-        }
-
-        // [4] Open and configure local 464xlat read/write sockets.
+        // [3] Open and configure local 464xlat read/write sockets.
         // Opens a packet socket to receive IPv6 packets in clatd.
+
         try {
             // Use a JNI call to get native file descriptor instead of Os.socket() because we would
             // like to use ParcelFileDescriptor to manage file descriptor. But ctor
@@ -758,6 +703,63 @@ public class ClatCoordinator {
             }
             maybeCleanUp(tunFd, readSock6, writeSock6);
             throw new IOException("configure packet socket failed: " + e);
+        }
+
+        // [4] Open, configure and bring up the tun interface.
+        // Create the v4-... tun interface.
+
+        final String tunIface = CLAT_PREFIX + iface;
+        try {
+            tunFd = mDeps.adoptFd(mDeps.createTunInterface(tunIface));
+        } catch (IOException e) {
+            maybeCleanUp(tunFd, readSock6, writeSock6);
+            throw new IOException("Create tun interface " + tunIface + " failed: " + e);
+        }
+
+        final int tunIfIndex = mDeps.getInterfaceIndex(tunIface);
+        if (tunIfIndex == INVALID_IFINDEX) {
+            maybeCleanUp(tunFd, readSock6, writeSock6);
+            throw new IOException("Fail to get interface index for interface " + tunIface);
+        }
+
+        // disable IPv6 on it - failing to do so is not a critical error
+        try {
+            mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
+        } catch (RemoteException | ServiceSpecificException e) {
+            Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
+        }
+
+        // Detect ipv4 mtu.
+        final int detectedMtu;
+        try {
+            detectedMtu = mDeps.detectMtu(pfx96Str,
+                    ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
+        } catch (IOException e) {
+            maybeCleanUp(tunFd, readSock6, writeSock6);
+            throw new IOException("Detect MTU on " + tunIface + " failed: " + e);
+        }
+        final int mtu = adjustMtu(detectedMtu);
+        Log.i(TAG, "detected ipv4 mtu of " + detectedMtu + " adjusted to " + mtu);
+
+        // Config tun interface mtu, address and bring up.
+        try {
+            mNetd.interfaceSetMtu(tunIface, mtu);
+        } catch (RemoteException | ServiceSpecificException e) {
+            maybeCleanUp(tunFd, readSock6, writeSock6);
+            throw new IOException("Set MTU " + mtu + " on " + tunIface + " failed: " + e);
+        }
+        final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
+        ifConfig.ifName = tunIface;
+        ifConfig.ipv4Addr = v4Str;
+        ifConfig.prefixLength = 32;
+        ifConfig.hwAddr = "";
+        ifConfig.flags = new String[] {IF_STATE_UP};
+        try {
+            mNetd.interfaceSetCfg(ifConfig);
+        } catch (RemoteException | ServiceSpecificException e) {
+            maybeCleanUp(tunFd, readSock6, writeSock6);
+            throw new IOException("Setting IPv4 address to " + ifConfig.ipv4Addr + "/"
+                    + ifConfig.prefixLength + " failed on " + ifConfig.ifName + ": " + e);
         }
 
         // [5] Start clatd.
