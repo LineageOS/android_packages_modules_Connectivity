@@ -637,16 +637,15 @@ public class ClatCoordinator {
             throw new IOException("Invalid IPv6 address " + v6Str);
         }
 
-
-        // [3] Open and configure local 464xlat read/write sockets.
-        // Opens a packet socket to receive IPv6 packets in clatd.
-
         // Initialize all required file descriptors with null pointer. This makes the following
         // error handling easier. Simply always call #maybeCleanUp for closing file descriptors,
         // if any valid ones, in error handling.
         ParcelFileDescriptor tunFd = null;
         ParcelFileDescriptor readSock6 = null;
         ParcelFileDescriptor writeSock6 = null;
+
+        // [3] Open and configure local 464xlat read/write sockets.
+        // Opens a packet socket to receive IPv6 packets in clatd.
 
         try {
             // Use a JNI call to get native file descriptor instead of Os.socket() because we would
