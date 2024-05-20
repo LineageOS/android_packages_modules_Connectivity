@@ -307,6 +307,23 @@ public class ThreadIntegrationTest {
                 .isFalse();
     }
 
+    @Test
+    public void toggleThreadNetwork_routeFromPreviousNetDataIsRemoved() throws Exception {
+        ConnectivityManager cm = mContext.getSystemService(ConnectivityManager.class);
+        mController.joinAndWait(DEFAULT_DATASET);
+        mOtCtl.executeCommand("prefix add " + TEST_NO_SLAAC_PREFIX + " pros med");
+        mOtCtl.executeCommand("netdata register");
+
+        mController.leaveAndWait();
+        mOtCtl.factoryReset();
+        mController.joinAndWait(DEFAULT_DATASET);
+
+        LinkProperties lp = cm.getLinkProperties(getThreadNetwork(CALLBACK_TIMEOUT));
+        assertThat(lp).isNotNull();
+        assertThat(lp.getRoutes().stream().anyMatch(r -> r.matches(TEST_NO_SLAAC_PREFIX_ADDRESS)))
+                .isFalse();
+    }
+
     // TODO (b/323300829): add more tests for integration with linux platform and
     // ConnectivityService
 
