@@ -524,31 +524,6 @@ public class ClatCoordinator {
         }
     }
 
-    private void maybeCleanUp(ParcelFileDescriptor tunFd, ParcelFileDescriptor readSock6,
-            ParcelFileDescriptor writeSock6) {
-        if (tunFd != null) {
-            try {
-                tunFd.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Fail to close tun file descriptor " + e);
-            }
-        }
-        if (readSock6 != null) {
-            try {
-                readSock6.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Fail to close read socket " + e);
-            }
-        }
-        if (writeSock6 != null) {
-            try {
-                writeSock6.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Fail to close write socket " + e);
-            }
-        }
-    }
-
     private void tagSocketAsClat(long cookie) throws IOException {
         if (mCookieTagMap == null) {
             throw new IOException("Cookie tag map is not initialized");
@@ -604,39 +579,6 @@ public class ClatCoordinator {
             throw new IOException("Prefix must be 96 bits long: " + nat64Prefix);
         }
 
-        // [1] Pick an IPv4 address from 192.0.0.4, 192.0.0.5, 192.0.0.6 ..
-        final String v4Str;
-        try {
-            v4Str = mDeps.selectIpv4Address(INIT_V4ADDR_STRING, INIT_V4ADDR_PREFIX_LEN);
-        } catch (IOException e) {
-            throw new IOException("no IPv4 addresses were available for clat: " + e);
-        }
-
-        final Inet4Address v4;
-        try {
-            v4 = (Inet4Address) InetAddresses.parseNumericAddress(v4Str);
-        } catch (ClassCastException | IllegalArgumentException | NullPointerException e) {
-            throw new IOException("Invalid IPv4 address " + v4Str);
-        }
-
-        // [2] Generate a checksum-neutral IID.
-        final Integer fwmark = getFwmark(netId);
-        final String pfx96Str = nat64Prefix.getAddress().getHostAddress();
-        final String v6Str;
-        try {
-            v6Str = mDeps.generateIpv6Address(iface, v4Str, pfx96Str, fwmark);
-        } catch (IOException e) {
-            throw new IOException("no IPv6 addresses were available for clat: " + e);
-        }
-
-        final Inet6Address pfx96 = (Inet6Address) nat64Prefix.getAddress();
-        final Inet6Address v6;
-        try {
-            v6 = (Inet6Address) InetAddresses.parseNumericAddress(v6Str);
-        } catch (ClassCastException | IllegalArgumentException | NullPointerException e) {
-            throw new IOException("Invalid IPv6 address " + v6Str);
-        }
-
         // Initialize all required file descriptors with null pointer. This makes the following
         // error handling easier. Simply always call #maybeCleanUp for closing file descriptors,
         // if any valid ones, in error handling.
@@ -644,150 +586,112 @@ public class ClatCoordinator {
         ParcelFileDescriptor readSock6 = null;
         ParcelFileDescriptor writeSock6 = null;
 
-        // [3] Open and configure local 464xlat read/write sockets.
-        // Opens a packet socket to receive IPv6 packets in clatd.
+        long cookie = 0;
+        boolean isSocketTagged = false;
 
         try {
+            // [1] Pick an IPv4 address from 192.0.0.4, 192.0.0.5, 192.0.0.6 ..
+            final String v4Str = mDeps.selectIpv4Address(INIT_V4ADDR_STRING,
+                    INIT_V4ADDR_PREFIX_LEN);
+            final Inet4Address v4 = (Inet4Address) InetAddresses.parseNumericAddress(v4Str);
+
+            // [2] Generate a checksum-neutral IID.
+            final Integer fwmark = getFwmark(netId);
+            final String pfx96Str = nat64Prefix.getAddress().getHostAddress();
+            final String v6Str = mDeps.generateIpv6Address(iface, v4Str, pfx96Str, fwmark);
+            final Inet6Address pfx96 = (Inet6Address) nat64Prefix.getAddress();
+            final Inet6Address v6 = (Inet6Address) InetAddresses.parseNumericAddress(v6Str);
+
+            // [3] Open and configure local 464xlat read/write sockets.
+            // Opens a packet socket to receive IPv6 packets in clatd.
+
             // Use a JNI call to get native file descriptor instead of Os.socket() because we would
             // like to use ParcelFileDescriptor to manage file descriptor. But ctor
             // ParcelFileDescriptor(FileDescriptor fd) is a @hide function. Need to use native file
             // descriptor to initialize ParcelFileDescriptor object instead.
             readSock6 = mDeps.adoptFd(mDeps.openPacketSocket());
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Open packet socket failed: " + e);
-        }
 
-        // Opens a raw socket with a given fwmark to send IPv6 packets in clatd.
-        try {
+            // Opens a raw socket with a given fwmark to send IPv6 packets in clatd.
             // Use a JNI call to get native file descriptor instead of Os.socket(). See above
             // reason why we use jniOpenPacketSocket6().
             writeSock6 = mDeps.adoptFd(mDeps.openRawSocket6(fwmark));
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Open raw socket failed: " + e);
-        }
 
-        final int ifIndex = mDeps.getInterfaceIndex(iface);
-        if (ifIndex == INVALID_IFINDEX) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Fail to get interface index for interface " + iface);
-        }
+            final int ifIndex = mDeps.getInterfaceIndex(iface);
+            if (ifIndex == INVALID_IFINDEX) {
+                throw new IOException("Fail to get interface index for interface " + iface);
+            }
 
-        // Start translating packets to the new prefix.
-        try {
+            // Start translating packets to the new prefix.
             mDeps.addAnycastSetsockopt(writeSock6.getFileDescriptor(), v6Str, ifIndex);
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("add anycast sockopt failed: " + e);
-        }
-
-        // Tag socket as AID_CLAT to avoid duplicated CLAT data usage accounting.
-        final long cookie;
-        try {
+            // Tag socket as AID_CLAT to avoid duplicated CLAT data usage accounting.
             cookie = mDeps.getSocketCookie(writeSock6.getFileDescriptor());
             tagSocketAsClat(cookie);
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("tag raw socket failed: " + e);
-        }
-
-        // Update our packet socket filter to reflect the new 464xlat IP address.
-        try {
+            isSocketTagged = true;
+            // Update our packet socket filter to reflect the new 464xlat IP address.
             mDeps.configurePacketSocket(readSock6.getFileDescriptor(), v6Str, ifIndex);
-        } catch (IOException e) {
-            try {
-                untagSocket(cookie);
-            } catch (IOException e2) {
-                Log.e(TAG, "untagSocket cookie " + cookie + " failed: " + e2);
-            }
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("configure packet socket failed: " + e);
-        }
 
-        // [4] Open, configure and bring up the tun interface.
-        // Create the v4-... tun interface.
-
-        final String tunIface = CLAT_PREFIX + iface;
-        try {
+            // [4] Open, configure and bring up the tun interface.
+            // Create the v4-... tun interface.
+            final String tunIface = CLAT_PREFIX + iface;
             tunFd = mDeps.adoptFd(mDeps.createTunInterface(tunIface));
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Create tun interface " + tunIface + " failed: " + e);
-        }
-
-        final int tunIfIndex = mDeps.getInterfaceIndex(tunIface);
-        if (tunIfIndex == INVALID_IFINDEX) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Fail to get interface index for interface " + tunIface);
-        }
-
-        // disable IPv6 on it - failing to do so is not a critical error
-        try {
-            mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
-        } catch (RemoteException | ServiceSpecificException e) {
-            Log.e(TAG, "Disable IPv6 on " + tunIface + " failed: " + e);
-        }
-
-        // Detect ipv4 mtu.
-        final int detectedMtu;
-        try {
-            detectedMtu = mDeps.detectMtu(pfx96Str,
-                    ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
-        } catch (IOException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Detect MTU on " + tunIface + " failed: " + e);
-        }
-        final int mtu = adjustMtu(detectedMtu);
-        Log.i(TAG, "detected ipv4 mtu of " + detectedMtu + " adjusted to " + mtu);
-
-        // Config tun interface mtu, address and bring up.
-        try {
-            mNetd.interfaceSetMtu(tunIface, mtu);
-        } catch (RemoteException | ServiceSpecificException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Set MTU " + mtu + " on " + tunIface + " failed: " + e);
-        }
-        final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
-        ifConfig.ifName = tunIface;
-        ifConfig.ipv4Addr = v4Str;
-        ifConfig.prefixLength = 32;
-        ifConfig.hwAddr = "";
-        ifConfig.flags = new String[] {IF_STATE_UP};
-        try {
-            mNetd.interfaceSetCfg(ifConfig);
-        } catch (RemoteException | ServiceSpecificException e) {
-            maybeCleanUp(tunFd, readSock6, writeSock6);
-            throw new IOException("Setting IPv4 address to " + ifConfig.ipv4Addr + "/"
-                    + ifConfig.prefixLength + " failed on " + ifConfig.ifName + ": " + e);
-        }
-
-        // [5] Start clatd.
-        final int pid;
-        try {
-            pid = mDeps.startClatd(tunFd.getFileDescriptor(), readSock6.getFileDescriptor(),
-                    writeSock6.getFileDescriptor(), iface, pfx96Str, v4Str, v6Str);
-        } catch (IOException e) {
-            try {
-                untagSocket(cookie);
-            } catch (IOException e2) {
-                Log.e(TAG, "untagSocket cookie " + cookie + " failed: " + e2);
+            final int tunIfIndex = mDeps.getInterfaceIndex(tunIface);
+            if (tunIfIndex == INVALID_IFINDEX) {
+                throw new IOException("Fail to get interface index for interface " + tunIface);
             }
-            throw new IOException("Error start clatd on " + iface + ": " + e);
-        } finally {
-            // The file descriptors have been duplicated (dup2) to clatd in native_startClatd().
-            // Close these file descriptor stubs which are unused anymore.
-            maybeCleanUp(tunFd, readSock6, writeSock6);
+            // disable IPv6 on it - failing to do so is not a critical error
+            mNetd.interfaceSetEnableIPv6(tunIface, false /* enabled */);
+            // Detect ipv4 mtu.
+            final int detectedMtu = mDeps.detectMtu(pfx96Str,
+                    ByteBuffer.wrap(GOOGLE_DNS_4.getAddress()).getInt(), fwmark);
+            final int mtu = adjustMtu(detectedMtu);
+            Log.i(TAG, "detected ipv4 mtu of " + detectedMtu + " adjusted to " + mtu);
+            // Config tun interface mtu, address and bring up.
+            mNetd.interfaceSetMtu(tunIface, mtu);
+            final InterfaceConfigurationParcel ifConfig = new InterfaceConfigurationParcel();
+            ifConfig.ifName = tunIface;
+            ifConfig.ipv4Addr = v4Str;
+            ifConfig.prefixLength = 32;
+            ifConfig.hwAddr = "";
+            ifConfig.flags = new String[] {IF_STATE_UP};
+            mNetd.interfaceSetCfg(ifConfig);
+
+            // [5] Start clatd.
+            final int pid = mDeps.startClatd(tunFd.getFileDescriptor(),
+                    readSock6.getFileDescriptor(), writeSock6.getFileDescriptor(), iface, pfx96Str,
+                    v4Str, v6Str);
+
+            // [6] Initialize and store clatd tracker object.
+            mClatdTracker = new ClatdTracker(iface, ifIndex, tunIface, tunIfIndex, v4, v6, pfx96,
+                    pid, cookie);
+
+            // [7] Start BPF
+            maybeStartBpf(mClatdTracker);
+
+            return v6Str;
+        } catch (IOException | RemoteException | ServiceSpecificException | ClassCastException
+                 | IllegalArgumentException | NullPointerException e) {
+            if (isSocketTagged) {
+                try {
+                    untagSocket(cookie);
+                } catch (IOException e2) {
+                    Log.e(TAG, "untagSocket cookie " + cookie + " failed: " + e2);
+                }
+            }
+            try {
+                if (tunFd != null) {
+                    tunFd.close();
+                }
+                if (readSock6 != null) {
+                    readSock6.close();
+                }
+                if (writeSock6 != null) {
+                    writeSock6.close();
+                }
+            } catch (IOException e2) {
+                Log.e(TAG, "Fail to cleanup fd ", e);
+            }
+            throw new IOException("Failed to start clat ", e);
         }
-
-        // [6] Initialize and store clatd tracker object.
-        mClatdTracker = new ClatdTracker(iface, ifIndex, tunIface, tunIfIndex, v4, v6, pfx96,
-                pid, cookie);
-
-        // [7] Start BPF
-        maybeStartBpf(mClatdTracker);
-
-        return v6Str;
     }
 
     private void maybeStopBpf(final ClatdTracker tracker) {
