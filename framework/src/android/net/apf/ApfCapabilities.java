@@ -22,6 +22,8 @@ import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.Objects;
+
 /**
  * APF program support capabilities. APF stands for Android Packet Filtering and it is a flexible
  * way to drop unwanted network packets to save power.
@@ -100,6 +102,11 @@ public final class ApfCapabilities implements Parcelable {
         return apfVersionSupported == other.apfVersionSupported
                 && maximumApfProgramSize == other.maximumApfProgramSize
                 && apfPacketFormat == other.apfPacketFormat;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(apfVersionSupported, maximumApfProgramSize, apfPacketFormat);
     }
 
     /**
