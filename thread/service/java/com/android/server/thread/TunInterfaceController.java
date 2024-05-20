@@ -128,6 +128,10 @@ public class TunInterfaceController {
             for (LinkAddress address : mLinkProperties.getAllLinkAddresses()) {
                 removeAddress(address);
             }
+            for (RouteInfo route : mLinkProperties.getAllRoutes()) {
+                mLinkProperties.removeRoute(route);
+            }
+            mNetDataPrefixes.clear();
         }
         nativeSetInterfaceUp(mIfName, isUp);
     }
