@@ -49,7 +49,7 @@ public class StructIfinfoMsg extends Struct {
     @Field(order = 4, type = Type.U32)
     public final long change;
 
-    StructIfinfoMsg(short family, int type, int index, long flags, long change) {
+    public StructIfinfoMsg(short family, int type, int index, long flags, long change) {
         this.family = family;
         this.type = type;
         this.index = index;
