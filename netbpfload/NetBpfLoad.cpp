@@ -306,6 +306,7 @@ static int doLoad(char** argv, char * const envp[]) {
 
         if (bad && !isGSI()) {
             ALOGE("Unsupported kernel version (%07x).", kernelVersion());
+            sleep(60);
         }
     }
 
