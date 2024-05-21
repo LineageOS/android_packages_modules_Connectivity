@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "BpfHandler"
+#define LOG_TAG "NetdUpdatable"
 
 #include "BpfHandler.h"
 
