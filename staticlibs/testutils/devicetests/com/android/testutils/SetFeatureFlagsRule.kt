@@ -24,6 +24,7 @@ import org.junit.runners.model.Statement
  * A JUnit Rule that sets feature flags based on `@FeatureFlag` annotations.
  *
  * This rule enables dynamic control of feature flag states during testing.
+ * And restores the original values after performing tests.
  *
  * **Usage:**
  * ```kotlin
@@ -31,6 +32,8 @@ import org.junit.runners.model.Statement
  *   @get:Rule
  *   val setFeatureFlagsRule = SetFeatureFlagsRule(setFlagsMethod = (name, enabled) -> {
  *     // Custom handling code.
+ *   }, (name) -> {
+ *     // Custom getter code to retrieve the original values.
  *   })
  *
  *   // ... test methods with @FeatureFlag annotations
@@ -41,7 +44,10 @@ import org.junit.runners.model.Statement
  * }
  * ```
  */
-class SetFeatureFlagsRule(val setFlagsMethod: (name: String, enabled: Boolean) -> Unit) : TestRule {
+class SetFeatureFlagsRule(
+    val setFlagsMethod: (name: String, enabled: Boolean?) -> Unit,
+                          val getFlagsMethod: (name: String) -> Boolean?
+) : TestRule {
     /**
      * This annotation marks a test method as requiring a specific feature flag to be configured.
      *
@@ -69,13 +75,20 @@ class SetFeatureFlagsRule(val setFlagsMethod: (name: String, enabled: Boolean) -
                     FeatureFlag::class.java
                 )
 
+                val valuesToBeRestored = mutableMapOf<String, Boolean?>()
                 for (featureFlagAnnotation in featureFlagAnnotations) {
+                    valuesToBeRestored[featureFlagAnnotation.name] =
+                            getFlagsMethod(featureFlagAnnotation.name)
                     setFlagsMethod(featureFlagAnnotation.name, featureFlagAnnotation.enabled)
                 }
 
                 // Execute the test method, which includes methods annotated with
                 // @Before, @Test and @After.
                 base.evaluate()
+
+                valuesToBeRestored.forEach {
+                    setFlagsMethod(it.key, it.value)
+                }
             }
         }
     }
