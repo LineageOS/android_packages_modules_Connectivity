@@ -29,8 +29,6 @@ import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.VALIDATION_RESULT_FAILURE;
 import static android.net.resolv.aidl.IDnsResolverUnsolicitedEventListener.VALIDATION_RESULT_SUCCESS;
 
-import static com.android.testutils.MiscAsserts.assertContainsExactly;
-import static com.android.testutils.MiscAsserts.assertContainsStringsExactly;
 import static com.android.testutils.MiscAsserts.assertFieldCountEquals;
 
 import static org.junit.Assert.assertEquals;
@@ -38,12 +36,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivitySettingsManager;
@@ -74,7 +72,6 @@ import libcore.net.InetAddressUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -120,29 +117,6 @@ public class DnsManagerTest {
         assertEquals(actual.tcMode, expected.tcMode);
         assertEquals(actual.enforceDnsUid, expected.enforceDnsUid);
         assertFieldCountEquals(3, ResolverOptionsParcel.class);
-    }
-
-    private void assertResolverParamsEquals(@NonNull ResolverParamsParcel actual,
-            @NonNull ResolverParamsParcel expected) {
-        assertEquals(actual.netId, expected.netId);
-        assertEquals(actual.sampleValiditySeconds, expected.sampleValiditySeconds);
-        assertEquals(actual.successThreshold, expected.successThreshold);
-        assertEquals(actual.minSamples, expected.minSamples);
-        assertEquals(actual.maxSamples, expected.maxSamples);
-        assertEquals(actual.baseTimeoutMsec, expected.baseTimeoutMsec);
-        assertEquals(actual.retryCount, expected.retryCount);
-        assertContainsStringsExactly(actual.servers, expected.servers);
-        assertContainsStringsExactly(actual.domains, expected.domains);
-        assertEquals(actual.tlsName, expected.tlsName);
-        assertContainsStringsExactly(actual.tlsServers, expected.tlsServers);
-        assertContainsStringsExactly(actual.tlsFingerprints, expected.tlsFingerprints);
-        assertEquals(actual.caCertificate, expected.caCertificate);
-        assertEquals(actual.tlsConnectTimeoutMs, expected.tlsConnectTimeoutMs);
-        assertResolverOptionsEquals(actual.resolverOptions, expected.resolverOptions);
-        assertContainsExactly(actual.transportTypes, expected.transportTypes);
-        assertEquals(actual.meteredNetwork, expected.meteredNetwork);
-        assertEquals(actual.dohParams, expected.dohParams);
-        assertFieldCountEquals(18, ResolverParamsParcel.class);
     }
 
     @Before
@@ -365,11 +339,6 @@ public class DnsManagerTest {
         mDnsManager.noteDnsServersForNetwork(TEST_NETID, lp);
         mDnsManager.flushVmDnsCache();
 
-        final ArgumentCaptor<ResolverParamsParcel> resolverParamsParcelCaptor =
-                ArgumentCaptor.forClass(ResolverParamsParcel.class);
-        verify(mMockDnsResolver, times(1)).setResolverConfiguration(
-                resolverParamsParcelCaptor.capture());
-        final ResolverParamsParcel actualParams = resolverParamsParcelCaptor.getValue();
         final ResolverParamsParcel expectedParams = new ResolverParamsParcel();
         expectedParams.netId = TEST_NETID;
         expectedParams.sampleValiditySeconds = TEST_DEFAULT_SAMPLE_VALIDITY_SECONDS;
@@ -384,7 +353,8 @@ public class DnsManagerTest {
         expectedParams.resolverOptions = null;
         expectedParams.meteredNetwork = true;
         expectedParams.dohParams = null;
-        assertResolverParamsEquals(actualParams, expectedParams);
+        expectedParams.interfaceNames = new String[]{TEST_IFACENAME};
+        verify(mMockDnsResolver, times(1)).setResolverConfiguration(eq(expectedParams));
     }
 
     @Test
