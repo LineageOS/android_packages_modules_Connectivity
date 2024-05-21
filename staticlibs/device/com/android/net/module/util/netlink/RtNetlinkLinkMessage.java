@@ -41,6 +41,10 @@ public class RtNetlinkLinkMessage extends NetlinkMessage {
     public static final short IFLA_ADDRESS   = 1;
     public static final short IFLA_IFNAME    = 3;
     public static final short IFLA_MTU       = 4;
+    public static final short IFLA_INET6_ADDR_GEN_MODE = 8;
+    public static final short IFLA_AF_SPEC = 26;
+
+    public static final short IN6_ADDR_GEN_MODE_NONE = 1;
 
     private int mMtu;
     @NonNull
