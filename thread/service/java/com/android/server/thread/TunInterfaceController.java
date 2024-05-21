@@ -16,30 +16,40 @@
 
 package com.android.server.thread;
 
+import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.EADDRINUSE;
+import static android.system.OsConstants.IFF_MULTICAST;
+import static android.system.OsConstants.IFF_NOARP;
+import static android.system.OsConstants.NETLINK_ROUTE;
+
+import static com.android.net.module.util.netlink.NetlinkConstants.RTM_NEWLINK;
+import static com.android.net.module.util.netlink.RtNetlinkLinkMessage.IFLA_AF_SPEC;
+import static com.android.net.module.util.netlink.RtNetlinkLinkMessage.IFLA_INET6_ADDR_GEN_MODE;
+import static com.android.net.module.util.netlink.RtNetlinkLinkMessage.IN6_ADDR_GEN_MODE_NONE;
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_ACK;
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
 import android.annotation.Nullable;
 import android.net.IpPrefix;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.RouteInfo;
-import android.net.util.SocketUtils;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.system.OsConstants;
 import android.util.Log;
 
+import com.android.net.module.util.HexDump;
 import com.android.net.module.util.LinkPropertiesUtils.CompareResult;
 import com.android.net.module.util.netlink.NetlinkUtils;
-import com.android.net.module.util.netlink.RtNetlinkAddressMessage;
+import com.android.net.module.util.netlink.StructIfinfoMsg;
+import com.android.net.module.util.netlink.StructNlAttr;
+import com.android.net.module.util.netlink.StructNlMsgHdr;
 import com.android.server.thread.openthread.Ipv6AddressInfo;
 import com.android.server.thread.openthread.OnMeshPrefixConfig;
 
-import java.io.FileDescriptor;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -47,12 +57,15 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Controller for virtual/tunnel network interfaces. */
 public class TunInterfaceController {
     private static final String TAG = "TunIfController";
+    private static final boolean DBG = false;
     private static final long INFINITE_LIFETIME = 0xffffffffL;
     static final int MTU = 1280;
 
@@ -62,13 +75,12 @@ public class TunInterfaceController {
 
     private final String mIfName;
     private final LinkProperties mLinkProperties = new LinkProperties();
-    private ParcelFileDescriptor mParcelTunFd;
-    private FileDescriptor mNetlinkSocket;
-    private static int sNetlinkSeqNo = 0;
     private final MulticastSocket mMulticastSocket; // For join group and leave group
-    private NetworkInterface mNetworkInterface;
     private final List<InetAddress> mMulticastAddresses = new ArrayList<>();
     private final List<RouteInfo> mNetDataPrefixes = new ArrayList<>();
+
+    private ParcelFileDescriptor mParcelTunFd;
+    private NetworkInterface mNetworkInterface;
 
     /** Creates a new {@link TunInterfaceController} instance for given interface. */
     public TunInterfaceController(String interfaceName) {
@@ -91,26 +103,21 @@ public class TunInterfaceController {
     public void createTunInterface() throws IOException {
         mParcelTunFd = ParcelFileDescriptor.adoptFd(nativeCreateTunInterface(mIfName, MTU));
         try {
-            mNetlinkSocket = NetlinkUtils.netlinkSocketForProto(OsConstants.NETLINK_ROUTE);
-        } catch (ErrnoException e) {
-            throw new IOException("Failed to create netlink socket", e);
-        }
-        try {
             mNetworkInterface = NetworkInterface.getByName(mIfName);
         } catch (SocketException e) {
             throw new IOException("Failed to get NetworkInterface", e);
         }
+
+        setAddrGenModeToNone();
     }
 
     public void destroyTunInterface() {
         try {
             mParcelTunFd.close();
-            SocketUtils.closeSocket(mNetlinkSocket);
         } catch (IOException e) {
             // Should never fail
         }
         mParcelTunFd = null;
-        mNetlinkSocket = null;
         mNetworkInterface = null;
     }
 
@@ -142,14 +149,14 @@ public class TunInterfaceController {
     public void addAddress(LinkAddress address) {
         Log.d(TAG, "Adding address " + address + " with flags: " + address.getFlags());
 
-        long validLifetimeSeconds;
         long preferredLifetimeSeconds;
+        long validLifetimeSeconds;
 
         if (address.getDeprecationTime() == LinkAddress.LIFETIME_PERMANENT
                 || address.getDeprecationTime() == LinkAddress.LIFETIME_UNKNOWN) {
-            validLifetimeSeconds = INFINITE_LIFETIME;
+            preferredLifetimeSeconds = INFINITE_LIFETIME;
         } else {
-            validLifetimeSeconds =
+            preferredLifetimeSeconds =
                     Math.max(
                             (address.getDeprecationTime() - SystemClock.elapsedRealtime()) / 1000L,
                             0L);
@@ -157,28 +164,23 @@ public class TunInterfaceController {
 
         if (address.getExpirationTime() == LinkAddress.LIFETIME_PERMANENT
                 || address.getExpirationTime() == LinkAddress.LIFETIME_UNKNOWN) {
-            preferredLifetimeSeconds = INFINITE_LIFETIME;
+            validLifetimeSeconds = INFINITE_LIFETIME;
         } else {
-            preferredLifetimeSeconds =
+            validLifetimeSeconds =
                     Math.max(
                             (address.getExpirationTime() - SystemClock.elapsedRealtime()) / 1000L,
                             0L);
         }
 
-        byte[] message =
-                RtNetlinkAddressMessage.newRtmNewAddressMessage(
-                        sNetlinkSeqNo++,
-                        address.getAddress(),
-                        (short) address.getPrefixLength(),
-                        address.getFlags(),
-                        (byte) address.getScope(),
-                        Os.if_nametoindex(mIfName),
-                        validLifetimeSeconds,
-                        preferredLifetimeSeconds);
-        try {
-            Os.write(mNetlinkSocket, message, 0, message.length);
-        } catch (ErrnoException | InterruptedIOException e) {
-            Log.e(TAG, "Failed to add address " + address, e);
+        if (!NetlinkUtils.sendRtmNewAddressRequest(
+                Os.if_nametoindex(mIfName),
+                address.getAddress(),
+                (short) address.getPrefixLength(),
+                address.getFlags(),
+                (byte) address.getScope(),
+                preferredLifetimeSeconds,
+                validLifetimeSeconds)) {
+            Log.w(TAG, "Failed to add address " + address.getAddress().getHostAddress());
             return;
         }
         mLinkProperties.addLinkAddress(address);
@@ -188,22 +190,17 @@ public class TunInterfaceController {
     /** Removes an address from the interface. */
     public void removeAddress(LinkAddress address) {
         Log.d(TAG, "Removing address " + address);
-        byte[] message =
-                RtNetlinkAddressMessage.newRtmDelAddressMessage(
-                        sNetlinkSeqNo++,
-                        address.getAddress(),
-                        (short) address.getPrefixLength(),
-                        Os.if_nametoindex(mIfName));
 
         // Intentionally update the mLinkProperties before send netlink message because the
         // address is already removed from ot-daemon and apps can't reach to the address even
         // when the netlink request below fails
         mLinkProperties.removeLinkAddress(address);
         mLinkProperties.removeRoute(getRouteForAddress(address));
-        try {
-            Os.write(mNetlinkSocket, message, 0, message.length);
-        } catch (ErrnoException | InterruptedIOException e) {
-            Log.e(TAG, "Failed to remove address " + address, e);
+        if (!NetlinkUtils.sendRtmDelAddressRequest(
+                Os.if_nametoindex(mIfName),
+                (Inet6Address) address.getAddress(),
+                (short) address.getPrefixLength())) {
+            Log.w(TAG, "Failed to remove address " + address.getAddress().getHostAddress());
         }
     }
 
@@ -364,6 +361,68 @@ public class TunInterfaceController {
             mMulticastSocket.leaveGroup(socketAddress, mNetworkInterface);
         } catch (IOException e) {
             Log.e(TAG, "failed to leave group " + address.getHostAddress(), e);
+        }
+    }
+
+    /**
+     * Sets the address generation mode to {@code IN6_ADDR_GEN_MODE_NONE}.
+     *
+     * <p>So that the "thread-wpan" interface has only one IPv6 link local address which is
+     * generated by OpenThread.
+     */
+    private void setAddrGenModeToNone() {
+        StructNlMsgHdr header = new StructNlMsgHdr();
+        header.nlmsg_type = RTM_NEWLINK;
+        header.nlmsg_pid = 0;
+        header.nlmsg_seq = 0;
+        header.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+
+        StructIfinfoMsg ifInfo =
+                new StructIfinfoMsg(
+                        (short) 0 /* family */,
+                        0 /* type */,
+                        Os.if_nametoindex(mIfName),
+                        (IFF_MULTICAST | IFF_NOARP) /* flags */,
+                        0xffffffff /* change */);
+
+        // Nested attributes
+        // IFLA_AF_SPEC
+        //   AF_INET6
+        //     IFLA_INET6_ADDR_GEN_MODE
+        StructNlAttr addrGenMode =
+                new StructNlAttr(IFLA_INET6_ADDR_GEN_MODE, (byte) IN6_ADDR_GEN_MODE_NONE);
+        StructNlAttr afInet6 = new StructNlAttr((short) AF_INET6, addrGenMode);
+        StructNlAttr afSpec = new StructNlAttr(IFLA_AF_SPEC, afInet6);
+
+        final int msgLength =
+                StructNlMsgHdr.STRUCT_SIZE
+                        + StructIfinfoMsg.STRUCT_SIZE
+                        + afSpec.getAlignedLength();
+        byte[] msg = new byte[msgLength];
+        ByteBuffer buf = ByteBuffer.wrap(msg);
+        buf.order(ByteOrder.nativeOrder());
+
+        header.nlmsg_len = msgLength;
+        header.pack(buf);
+        ifInfo.pack(buf);
+        afSpec.pack(buf);
+
+        if (buf.position() != msgLength) {
+            throw new AssertionError(
+                    String.format(
+                            "Unexpected netlink message size (actual = %d, expected = %d)",
+                            buf.position(), msgLength));
+        }
+
+        if (DBG) {
+            Log.d(TAG, "ADDR_GEN_MODE message is:");
+            Log.d(TAG, HexDump.dumpHexString(msg));
+        }
+
+        try {
+            NetlinkUtils.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
+        } catch (ErrnoException e) {
+            Log.e(TAG, "Failed to set ADDR_GEN_MODE to NONE", e);
         }
     }
 }

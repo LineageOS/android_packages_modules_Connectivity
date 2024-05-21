@@ -301,7 +301,7 @@ public final class IntegrationTestUtils {
         return false;
     }
 
-    public static List<LinkAddress> getIpv6LinkAddresses(String interfaceName) throws IOException {
+    public static List<LinkAddress> getIpv6LinkAddresses(String interfaceName) {
         List<LinkAddress> addresses = new ArrayList<>();
         final String cmd = " ip -6 addr show dev " + interfaceName;
         final String output = runShellCommandOrThrow(cmd);
