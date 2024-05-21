@@ -554,6 +554,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
      * default network for each app.
      * Order ints passed to netd must be in the 0~999 range. Larger values code for
      * a lower priority, see {@link NativeUidRangeConfig}.
+     * Note that only the highest priority preference is applied if the uid is the target of
+     * multiple preferences.
      *
      * Requests that don't code for a per-app preference use PREFERENCE_ORDER_INVALID.
      * The default request uses PREFERENCE_ORDER_DEFAULT.
