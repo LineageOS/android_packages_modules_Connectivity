@@ -390,6 +390,7 @@ public class DnsManager {
                 : new String[0];            // Off
         paramsParcel.transportTypes = nc.getTransportTypes();
         paramsParcel.meteredNetwork = nc.isMetered();
+        paramsParcel.interfaceNames = lp.getAllInterfaceNames().toArray(new String[0]);
         // Prepare to track the validation status of the DNS servers in the
         // resolver config when private DNS is in opportunistic or strict mode.
         if (useTls) {
@@ -403,13 +404,14 @@ public class DnsManager {
         }
 
         Log.d(TAG, String.format("sendDnsConfigurationForNetwork(%d, %s, %s, %d, %d, %d, %d, "
-                + "%d, %d, %s, %s, %s, %b)", paramsParcel.netId,
+                + "%d, %d, %s, %s, %s, %b, %s)", paramsParcel.netId,
                 Arrays.toString(paramsParcel.servers), Arrays.toString(paramsParcel.domains),
                 paramsParcel.sampleValiditySeconds, paramsParcel.successThreshold,
                 paramsParcel.minSamples, paramsParcel.maxSamples, paramsParcel.baseTimeoutMsec,
                 paramsParcel.retryCount, paramsParcel.tlsName,
                 Arrays.toString(paramsParcel.tlsServers),
-                Arrays.toString(paramsParcel.transportTypes), paramsParcel.meteredNetwork));
+                Arrays.toString(paramsParcel.transportTypes), paramsParcel.meteredNetwork,
+                Arrays.toString(paramsParcel.interfaceNames)));
 
         try {
             mDnsResolver.setResolverConfiguration(paramsParcel);
