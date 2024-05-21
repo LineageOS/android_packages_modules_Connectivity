@@ -314,7 +314,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
             new SetFeatureFlagsRule((name, enabled) -> {
                 mFeatureFlags.put(name, enabled);
                 return null;
-            });
+            }, (name) -> mFeatureFlags.getOrDefault(name, false));
 
     private class MockContext extends BroadcastInterceptingContext {
         private final Context mBaseContext;
