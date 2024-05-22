@@ -44,6 +44,8 @@ public final class ConnectivityFlags {
 
     public static final String BACKGROUND_FIREWALL_CHAIN = "background_firewall_chain";
 
+    public static final String DELAY_DESTROY_SOCKETS = "delay_destroy_sockets";
+
     private boolean mNoRematchAllRequestsOnRegister;
 
     /**
