@@ -475,6 +475,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
     static final String TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG =
             "trafficstats_rate_limit_cache_enabled_flag";
     private final boolean mAlwaysUseTrafficStatsRateLimitCache;
+    private final int mTrafficStatsRateLimitCacheExpiryDuration;
+    private final int mTrafficStatsRateLimitCacheMaxEntries;
 
     private final Object mOpenSessionCallsLock = new Object();
 
@@ -665,16 +667,18 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             mEventLogger = null;
         }
 
-        final long cacheExpiryDurationMs = mDeps.getTrafficStatsRateLimitCacheExpiryDuration();
-        final int cacheMaxEntries = mDeps.getTrafficStatsRateLimitCacheMaxEntries();
         mAlwaysUseTrafficStatsRateLimitCache =
                 mDeps.alwaysUseTrafficStatsRateLimitCache(mContext);
+        mTrafficStatsRateLimitCacheExpiryDuration =
+                mDeps.getTrafficStatsRateLimitCacheExpiryDuration();
+        mTrafficStatsRateLimitCacheMaxEntries =
+                mDeps.getTrafficStatsRateLimitCacheMaxEntries();
         mTrafficStatsTotalCache = new TrafficStatsRateLimitCache(mClock,
-                cacheExpiryDurationMs, cacheMaxEntries);
+                mTrafficStatsRateLimitCacheExpiryDuration, mTrafficStatsRateLimitCacheMaxEntries);
         mTrafficStatsIfaceCache = new TrafficStatsRateLimitCache(mClock,
-                cacheExpiryDurationMs, cacheMaxEntries);
+                mTrafficStatsRateLimitCacheExpiryDuration, mTrafficStatsRateLimitCacheMaxEntries);
         mTrafficStatsUidCache = new TrafficStatsRateLimitCache(mClock,
-                cacheExpiryDurationMs, cacheMaxEntries);
+                mTrafficStatsRateLimitCacheExpiryDuration, mTrafficStatsRateLimitCacheMaxEntries);
 
         // TODO: Remove bpfNetMaps creation and always start SkDestroyListener
         // Following code is for the experiment to verify the SkDestroyListener refactoring. Based
@@ -2953,10 +2957,9 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
             pw.print("trafficstats.cache.alwaysuse", mAlwaysUseTrafficStatsRateLimitCache);
             pw.println();
             pw.print(TRAFFIC_STATS_CACHE_EXPIRY_DURATION_NAME,
-                    mDeps.getTrafficStatsRateLimitCacheExpiryDuration());
+                    mTrafficStatsRateLimitCacheExpiryDuration);
             pw.println();
-            pw.print(TRAFFIC_STATS_CACHE_MAX_ENTRIES_NAME,
-                    mDeps.getTrafficStatsRateLimitCacheMaxEntries());
+            pw.print(TRAFFIC_STATS_CACHE_MAX_ENTRIES_NAME, mTrafficStatsRateLimitCacheMaxEntries);
             pw.println();
 
             pw.decreaseIndent();
