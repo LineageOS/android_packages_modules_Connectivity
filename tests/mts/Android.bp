@@ -31,6 +31,8 @@ cc_test {
     header_libs: [
         "bpf_headers",
     ],
+    version_script: ":connectivity_mainline_test_map",
+    stl: "libc++_static",
     static_libs: [
         "libbase",
         "libmodules-utils-build",
