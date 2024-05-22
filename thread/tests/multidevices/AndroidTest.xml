@@ -44,7 +44,7 @@
 
     <test class="com.android.tradefed.testtype.mobly.MoblyBinaryHostTest">
       <!-- The mobly-par-file-name should match the module name -->
-      <option name="mobly-par-file-name" value="ThreadMultiDeviceTestCases" />
+      <option name="mobly-par-file-name" value="ThreadNetworkMultiDeviceTests" />
       <!-- Timeout limit in milliseconds for all test cases of the python binary -->
       <option name="mobly-test-timeout" value="180000" />
     </test>
