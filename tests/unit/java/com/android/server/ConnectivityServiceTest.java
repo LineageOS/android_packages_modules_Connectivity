@@ -163,7 +163,6 @@ import static android.telephony.DataConnectionRealTimeInfo.DC_POWER_STATE_HIGH;
 import static android.telephony.DataConnectionRealTimeInfo.DC_POWER_STATE_LOW;
 
 import static com.android.server.ConnectivityService.ALLOW_SATALLITE_NETWORK_FALLBACK;
-import static com.android.server.ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION;
 import static com.android.net.module.util.DeviceConfigUtils.TETHERING_MODULE_NAME;
 import static com.android.server.ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS;
 import static com.android.server.ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION;
@@ -178,6 +177,7 @@ import static com.android.server.ConnectivityServiceTestUtils.transportToLegacyT
 import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackRegister;
 import static com.android.server.NetworkAgentWrapper.CallbackType.OnQosCallbackUnregister;
 import static com.android.server.connectivity.ConnectivityFlags.BACKGROUND_FIREWALL_CHAIN;
+import static com.android.server.connectivity.ConnectivityFlags.DELAY_DESTROY_SOCKETS;
 import static com.android.server.connectivity.ConnectivityFlags.INGRESS_TO_VPN_ADDRESS_FILTERING;
 import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.ConcurrentUtils.await;
@@ -2169,8 +2169,6 @@ public class ConnectivityServiceTest {
                     return true;
                 case KEY_DESTROY_FROZEN_SOCKETS_VERSION:
                     return true;
-                case DELAY_DESTROY_FROZEN_SOCKETS_VERSION:
-                    return true;
                 default:
                     return super.isFeatureEnabled(context, name);
             }
@@ -2186,6 +2184,8 @@ public class ConnectivityServiceTest {
                 case INGRESS_TO_VPN_ADDRESS_FILTERING:
                     return true;
                 case BACKGROUND_FIREWALL_CHAIN:
+                    return true;
+                case DELAY_DESTROY_SOCKETS:
                     return true;
                 default:
                     return super.isFeatureNotChickenedOut(context, name);

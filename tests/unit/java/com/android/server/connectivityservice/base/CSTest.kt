@@ -157,11 +157,11 @@ open class CSTest {
         it[ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER] = true
         it[ConnectivityFlags.REQUEST_RESTRICTED_WIFI] = true
         it[ConnectivityService.KEY_DESTROY_FROZEN_SOCKETS_VERSION] = true
-        it[ConnectivityService.DELAY_DESTROY_FROZEN_SOCKETS_VERSION] = true
         it[ConnectivityService.ALLOW_SYSUI_CONNECTIVITY_REPORTS] = true
         it[ConnectivityService.ALLOW_SATALLITE_NETWORK_FALLBACK] = true
         it[ConnectivityFlags.INGRESS_TO_VPN_ADDRESS_FILTERING] = true
         it[ConnectivityFlags.BACKGROUND_FIREWALL_CHAIN] = true
+        it[ConnectivityFlags.DELAY_DESTROY_SOCKETS] = true
     }
     fun setFeatureEnabled(flag: String, enabled: Boolean) = enabledFeatures.set(flag, enabled)
 
@@ -171,7 +171,11 @@ open class CSTest {
     val contentResolver = makeMockContentResolver(context)
 
     val PRIMARY_USER = 0
-    val PRIMARY_USER_INFO = UserInfo(PRIMARY_USER, "" /* name */, UserInfo.FLAG_PRIMARY)
+    val PRIMARY_USER_INFO = UserInfo(
+            PRIMARY_USER,
+            "", // name
+            UserInfo.FLAG_PRIMARY
+    )
     val PRIMARY_USER_HANDLE = UserHandle(PRIMARY_USER)
     val userManager = makeMockUserManager(PRIMARY_USER_INFO, PRIMARY_USER_HANDLE)
     val activityManager = makeActivityManager()
@@ -186,7 +190,11 @@ open class CSTest {
     val bpfNetMaps = mock<BpfNetMaps>()
     val clatCoordinator = mock<ClatCoordinator>()
     val networkRequestStateStatsMetrics = mock<NetworkRequestStateStatsMetrics>()
-    val proxyTracker = ProxyTracker(context, mock<Handler>(), 16 /* EVENT_PROXY_HAS_CHANGED */)
+    val proxyTracker = ProxyTracker(
+            context,
+            mock<Handler>(),
+            16 // EVENT_PROXY_HAS_CHANGED
+    )
     val systemConfigManager = makeMockSystemConfigManager()
     val batteryStats = mock<IBatteryStats>()
     val batteryManager = BatteryStatsManager(batteryStats)
