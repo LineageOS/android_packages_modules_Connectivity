@@ -55,6 +55,7 @@ import android.net.UidOwnerValue;
 import android.os.Build;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.os.UserHandle;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.ArraySet;
@@ -815,8 +816,11 @@ public class BpfNetMaps {
      */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public int getNetPermForUid(final int uid) {
+        final int appId = UserHandle.getAppId(uid);
         try {
-            final U8 permissions = sUidPermissionMap.getValue(new S32(uid));
+            // Key of uid permission map is appId
+            // TODO: Rename map name
+            final U8 permissions = sUidPermissionMap.getValue(new S32(appId));
             return permissions != null ? permissions.val : PERMISSION_INTERNET;
         } catch (ErrnoException e) {
             Log.wtf(TAG, "Failed to get permission for uid: " + uid);
