@@ -17,8 +17,9 @@ cc_test {
         "connectivity_native_test.cpp",
     ],
     header_libs: ["bpf_connectivity_headers"],
+    version_script: ":connectivity_mainline_test_map",
+    stl: "libc++_static",
     shared_libs: [
-        "libbase",
         "libbinder_ndk",
         "liblog",
         "libnetutils",
@@ -26,6 +27,7 @@ cc_test {
     ],
     static_libs: [
         "connectivity_native_aidl_interface-lateststable-ndk",
+        "libbase",
         "libcutils",
         "libmodules-utils-build",
         "libutils",

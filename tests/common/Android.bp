@@ -201,3 +201,8 @@ java_defaults {
     name: "connectivity-mainline-presubmit-java-defaults",
     test_mainline_modules: mainline_presubmit_modules,
 }
+
+filegroup {
+    name: "connectivity_mainline_test_map",
+    srcs: ["connectivity_mainline_test.map"],
+}
