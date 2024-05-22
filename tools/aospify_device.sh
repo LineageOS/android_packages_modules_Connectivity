@@ -3,10 +3,14 @@
 # Script to swap core networking modules in a GMS userdebug device to AOSP modules, by remounting
 # the system partition and replacing module prebuilts. This is only to be used for local testing,
 # and should only be used on userdebug devices that support "adb root" and remounting the system
-# partition using overlayfs.
+# partition using overlayfs. The setup wizard should be cleared before running the script.
 #
 # Usage: aospify_device.sh [device_serial]
-# Reset by wiping data (adb reboot bootloader && fastboot erase userdata && fastboot reboot).
+#
+# Reset with "adb enable-verity", then wiping data (from Settings, or:
+# "adb reboot bootloader && fastboot erase userdata && fastboot reboot").
+# Some devices output errors like "Overlayfs teardown failed" on "enable-verity" but it still works
+# (/mnt/scratch should be deleted).
 #
 # This applies to NetworkStack, CaptivePortalLogin, dnsresolver, tethering, cellbroadcast modules,
 # which generally need to be preloaded together (core networking modules + cellbroadcast which
@@ -37,6 +41,10 @@ function push_apex {
     else
         rm -f /tmp/decompressed_$aosp_apex_name.apex
         $ANDROID_HOST_OUT/bin/deapexer decompress --input $ANDROID_PRODUCT_OUT/system/apex/$aosp_apex_name.capex --output /tmp/decompressed_$aosp_apex_name.apex
+        if ! $ADB_CMD shell ls /system/apex/$original_apex_name.apex 1>/dev/null 2>/dev/null; then
+            # Filename observed on some phones, even though it is not actually compressed
+            original_apex_name=${original_apex_name}_compressed
+        fi
         $ADB_CMD shell rm /system/apex/$original_apex_name.apex
         $ADB_CMD push /tmp/decompressed_$aosp_apex_name.apex /system/apex/$aosp_apex_name.apex
         rm /tmp/decompressed_$aosp_apex_name.apex
@@ -47,7 +55,7 @@ function push_apk {
     local app_type=$1
     local original_apk_name=$2
     local aosp_apk_name=$3
-    $ADB_CMD shell rm /system/$app_type/$original_apk_name/$original_apk_name.apk
+    $ADB_CMD shell rm /system/$app_type/$original_apk_name/$original_apk_name*.apk
     $ADB_CMD push $ANDROID_PRODUCT_OUT/system/$app_type/$aosp_apk_name/$aosp_apk_name.apk /system/$app_type/$original_apk_name/
 }
 
@@ -97,7 +105,7 @@ if [ -z "$ANDROID_BUILD_TOP" ]; then
     exit 1
 fi
 
-if ! $ADB_CMD wait-for-device shell pm path com.google.android.networkstack; then
+if ! $ADB_CMD wait-for-device shell pm path com.google.android.networkstack 1>/dev/null 2>/dev/null; then
     echo "This device is already not using GMS modules"
     exit 1
 fi
@@ -122,8 +130,7 @@ $ADB_CMD remount
 $ADB_CMD reboot
 
 echo "Waiting for boot..."
-$ADB_CMD wait-for-device;
-until [[ $($ADB_CMD shell getprop sys.boot_completed) == 1 ]]; do
+until [[ $($ADB_CMD wait-for-device shell getprop sys.boot_completed) == 1 ]]; do
     sleep 1;
 done
 
@@ -146,7 +153,12 @@ rm /tmp/pulled_plat_mac_permissions.xml
 
 # Update the networkstack privapp-permissions allowlist
 rm -f /tmp/pulled_privapp-permissions.xml
-$ADB_CMD pull /system/etc/permissions/privapp-permissions-google.xml /tmp/pulled_privapp-permissions.xml
+networkstack_permissions=/system/etc/permissions/GoogleNetworkStack_permissions.xml
+if ! $ADB_CMD shell ls $networkstack_permissions 1>/dev/null 2>/dev/null; then
+    networkstack_permissions=/system/etc/permissions/privapp-permissions-google.xml
+fi
+
+$ADB_CMD pull $networkstack_permissions /tmp/pulled_privapp-permissions.xml
 
 # Remove last </permission> line, and the permissions for com.google.android.networkstack
 sed -nE '1,/<\/permissions>/p' /tmp/pulled_privapp-permissions.xml \
@@ -156,7 +168,7 @@ sed -nE '/com.android.networkstack/,/privapp-permissions/p' $ANDROID_PRODUCT_OUT
     >> /tmp/modified_privapp-permissions.xml
 echo '</permissions>' >> /tmp/modified_privapp-permissions.xml
 
-$ADB_CMD push /tmp/modified_privapp-permissions.xml /system/etc/permissions/privapp-permissions-google.xml
+$ADB_CMD push /tmp/modified_privapp-permissions.xml $networkstack_permissions
 
 rm /tmp/pulled_privapp-permissions.xml /tmp/modified_privapp-permissions.xml
 
