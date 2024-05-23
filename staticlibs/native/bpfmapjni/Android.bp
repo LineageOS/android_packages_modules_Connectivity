@@ -39,7 +39,7 @@ cc_library_static {
         "-Werror",
         "-Wno-unused-parameter",
     ],
-    sdk_version: "30",
+    sdk_version: "current",
     min_sdk_version: "30",
     apex_available: [
         "com.android.tethering",

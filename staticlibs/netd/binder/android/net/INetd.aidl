@@ -1446,4 +1446,27 @@ interface INetd {
     *                               - subPriority: unused
     */
     void setNetworkAllowlist(in NativeUidRangeConfig[] allowedNetworks);
+
+    /**
+     * Allow the UID to explicitly select the given network even if it is subject to a VPN.
+     *
+     * Throws ServiceSpecificException with error code EEXISTS when trying to add a bypass rule that
+     * already exists, and ENOENT when trying to remove a bypass rule that does not exist.
+     *
+     * netId specific bypass rules can be combined and are allowed to overlap with global VPN
+     * exclusions (by calling networkSetProtectAllow / networkSetProtectDeny, or by setting netId to
+     * 0). Adding or removing global VPN bypass rules does not affect the netId specific rules and
+     * vice versa.
+     *
+     * Note that if netId is set to 0 (NETID_UNSET) this API is equivalent to
+     * networkSetProtectAllow} / #networkSetProtectDeny.
+     *
+     * @param allow whether to allow or disallow the operation.
+     * @param uid the UID
+     * @param netId the netId that the UID is allowed to select.
+     *
+     * @throws ServiceSpecificException in case of failure, with an error code indicating the
+     *         cause of the failure.
+     */
+    void networkAllowBypassVpnOnNetwork(boolean allow, int uid, int netId);
 }

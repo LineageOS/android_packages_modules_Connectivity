@@ -33,6 +33,7 @@ android_test {
         "mts-tethering",
     ],
     static_libs: [
+        "androidx.test.rules",
         "frameworks-base-testutils",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
