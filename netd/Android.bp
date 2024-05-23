@@ -72,6 +72,8 @@ cc_test {
         "BpfHandlerTest.cpp",
         "BpfBaseTest.cpp",
     ],
+    version_script: ":connectivity_mainline_test_map",
+    stl: "libc++_static",
     static_libs: [
         "libbase",
         "libnetd_updatable",
