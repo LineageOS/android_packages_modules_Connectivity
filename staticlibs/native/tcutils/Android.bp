@@ -21,7 +21,10 @@ cc_library_static {
     name: "libtcutils",
     srcs: ["tcutils.cpp"],
     export_include_dirs: ["include"],
-    header_libs: ["bpf_headers"],
+    header_libs: [
+        "bpf_headers",
+        "libbase_headers",
+    ],
     shared_libs: [
         "liblog",
     ],
@@ -31,7 +34,7 @@ cc_library_static {
         "-Werror",
         "-Wno-unused-parameter",
     ],
-    sdk_version: "30",
+    sdk_version: "current",
     min_sdk_version: "30",
     apex_available: [
         "com.android.tethering",
