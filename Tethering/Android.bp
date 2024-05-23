@@ -126,7 +126,7 @@ android_library {
 // Due to b/143733063, APK can't access a jni lib that is in APEX (but not in the APK).
 cc_library {
     name: "libcom_android_networkstack_tethering_util_jni",
-    sdk_version: "30",
+    sdk_version: "current",
     apex_available: [
         "com.android.tethering",
     ],
