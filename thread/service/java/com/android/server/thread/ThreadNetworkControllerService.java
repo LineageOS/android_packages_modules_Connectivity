@@ -465,6 +465,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     private void setEnabledInternal(
             boolean isEnabled, boolean persist, @NonNull OperationReceiverWrapper receiver) {
+        checkOnHandlerThread();
         if (isEnabled && isThreadUserRestricted()) {
             receiver.onError(
                     ERROR_FAILED_PRECONDITION,
@@ -960,7 +961,11 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     private void checkOnHandlerThread() {
         if (Looper.myLooper() != mHandler.getLooper()) {
-            Log.wtf(TAG, "Must be on the handler thread!");
+            throw new IllegalStateException(
+                    "Not running on ThreadNetworkControllerService thread ("
+                            + mHandler.getLooper()
+                            + ") : "
+                            + Looper.myLooper());
         }
     }
 
