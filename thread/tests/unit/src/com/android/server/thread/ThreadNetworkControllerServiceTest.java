@@ -69,6 +69,7 @@ import android.os.test.TestLooper;
 import android.provider.Settings;
 import android.util.AtomicFile;
 
+import androidx.test.annotation.UiThreadTest;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
@@ -97,6 +98,12 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Unit tests for {@link ThreadNetworkControllerService}. */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
+// This test doesn't really need to run on the UI thread, but @Before and @Test annotated methods
+// need to run in the same thread because there are code in {@code ThreadNetworkControllerService}
+// checking that all its methods are running in the thread of the handler it's using. This is due
+// to a bug in TestLooper that it executes all tasks on the current thread rather than the thread
+// associated to the backed Looper object.
+@UiThreadTest
 public final class ThreadNetworkControllerServiceTest {
     // A valid Thread Active Operational Dataset generated from OpenThread CLI "dataset new":
     // Active Timestamp: 1
