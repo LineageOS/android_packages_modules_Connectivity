@@ -76,6 +76,8 @@ cc_test {
         "-Wno-unused-parameter",
         "-Wthread-safety",
     ],
+    version_script: ":connectivity_mainline_test_map",
+    stl: "libc++_static",
     static_libs: [
         "libbase",
         "libgmock",
