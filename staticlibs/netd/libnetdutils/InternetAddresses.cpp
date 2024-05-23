@@ -16,6 +16,7 @@
 
 #include "netdutils/InternetAddresses.h"
 
+#include <stdlib.h>
 #include <string>
 
 #include <android-base/stringprintf.h>
