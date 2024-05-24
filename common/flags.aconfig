@@ -99,11 +99,3 @@ flag {
   description: "Flag for oem deny chains blocked reasons API"
   bug: "328732146"
 }
-
-flag {
-  name: "blocked_reason_network_restricted"
-  is_exported: true
-  namespace: "android_core_networking"
-  description: "Flag for BLOCKED_REASON_NETWORK_RESTRICTED API"
-  bug: "339559837"
-}

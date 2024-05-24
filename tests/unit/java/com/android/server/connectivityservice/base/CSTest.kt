@@ -27,7 +27,6 @@ import android.content.pm.UserInfo
 import android.content.res.Resources
 import android.net.ConnectivityManager
 import android.net.INetd
-import android.net.INetd.PERMISSION_INTERNET
 import android.net.InetAddresses
 import android.net.LinkProperties
 import android.net.LocalNetworkConfig
@@ -90,7 +89,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TestName
 import org.mockito.AdditionalAnswers.delegatesTo
-import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
@@ -189,9 +187,7 @@ open class CSTest {
     val connResources = makeMockConnResources(sysResources, packageManager)
 
     val netd = mock<INetd>()
-    val bpfNetMaps = mock<BpfNetMaps>().also {
-        doReturn(PERMISSION_INTERNET).`when`(it).getNetPermForUid(anyInt())
-    }
+    val bpfNetMaps = mock<BpfNetMaps>()
     val clatCoordinator = mock<ClatCoordinator>()
     val networkRequestStateStatsMetrics = mock<NetworkRequestStateStatsMetrics>()
     val proxyTracker = ProxyTracker(
