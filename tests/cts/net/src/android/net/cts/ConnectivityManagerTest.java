@@ -36,11 +36,22 @@ import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.content.pm.PackageManager.FEATURE_WIFI_DIRECT;
 import static android.content.pm.PackageManager.GET_PERMISSIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_ADMIN_DISABLED;
+import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_USER_RESTRICTED;
+import static android.net.ConnectivityManager.BLOCKED_REASON_APP_BACKGROUND;
+import static android.net.ConnectivityManager.BLOCKED_REASON_APP_STANDBY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_BATTERY_SAVER;
+import static android.net.ConnectivityManager.BLOCKED_REASON_DOZE;
+import static android.net.ConnectivityManager.BLOCKED_REASON_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_OEM_DENY;
+import static android.net.ConnectivityManager.BLOCKED_REASON_RESTRICTED_MODE;
 import static android.net.ConnectivityManager.EXTRA_NETWORK;
 import static android.net.ConnectivityManager.EXTRA_NETWORK_REQUEST;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_DOZABLE;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_LOW_POWER_STANDBY;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_ADMIN;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_METERED_DENY_USER;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
@@ -196,6 +207,7 @@ import com.android.testutils.AutoReleaseNetworkCallbackRule;
 import com.android.testutils.CompatUtil;
 import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DeviceConfigRule;
 import com.android.testutils.DeviceInfoUtils;
@@ -2472,8 +2484,11 @@ public class ConnectivityManagerTest {
         }
     }
 
+    // On V+, ConnectivityService generates blockedReasons based on bpf map contents even if the
+    // otherUid does not exist on device. So if allowlist chain (e.g. background chain) is enabled,
+    // blockedReasons for otherUid will not be BLOCKED_REASON_NONE.
     @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
-    @Test
+    @Test @IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     public void testBlockedStatusCallback() throws Exception {
         // Cannot use @IgnoreUpTo(Build.VERSION_CODES.R) because this test also requires API 31
         // shims, and @IgnoreUpTo does not check that.
@@ -3711,6 +3726,260 @@ public class ConnectivityManagerTest {
                 Process.myUid() + 1, EXPECT_OPEN);
         doTestFirewallCloseSocket(FIREWALL_CHAIN_STANDBY, FIREWALL_RULE_DENY,
                 Process.myUid() + 1, EXPECT_OPEN);
+    }
+
+    private int getBlockedReason(final int chain) {
+        switch(chain) {
+            case FIREWALL_CHAIN_DOZABLE:
+                return BLOCKED_REASON_DOZE;
+            case  FIREWALL_CHAIN_POWERSAVE:
+                return BLOCKED_REASON_BATTERY_SAVER;
+            case  FIREWALL_CHAIN_RESTRICTED:
+                return BLOCKED_REASON_RESTRICTED_MODE;
+            case  FIREWALL_CHAIN_LOW_POWER_STANDBY:
+                return BLOCKED_REASON_LOW_POWER_STANDBY;
+            case  FIREWALL_CHAIN_BACKGROUND:
+                return BLOCKED_REASON_APP_BACKGROUND;
+            case  FIREWALL_CHAIN_STANDBY:
+                return BLOCKED_REASON_APP_STANDBY;
+            case FIREWALL_CHAIN_METERED_DENY_USER:
+                return BLOCKED_METERED_REASON_USER_RESTRICTED;
+            case FIREWALL_CHAIN_METERED_DENY_ADMIN:
+                return BLOCKED_METERED_REASON_ADMIN_DISABLED;
+            case FIREWALL_CHAIN_OEM_DENY_1:
+            case FIREWALL_CHAIN_OEM_DENY_2:
+            case FIREWALL_CHAIN_OEM_DENY_3:
+                return BLOCKED_REASON_OEM_DENY;
+            default:
+                throw new IllegalArgumentException(
+                        "Failed to find blockedReasons for chain: " + chain);
+        }
+    }
+
+    private void doTestBlockedReasons_setUidFirewallRule(final int chain, final boolean metered)
+            throws Exception {
+        assumeTrue(mPackageManager.hasSystemFeature(FEATURE_WIFI));
+
+        // Store current Wi-Fi metered value and update metered value
+        final Network currentWifiNetwork = mCtsNetUtils.ensureWifiConnected();
+        final NetworkCapabilities wifiNetworkCapabilities = callWithShellPermissionIdentity(
+                () -> mCm.getNetworkCapabilities(currentWifiNetwork));
+        final String ssid = unquoteSSID(wifiNetworkCapabilities.getSsid());
+        final boolean oldMeteredValue = wifiNetworkCapabilities.isMetered();
+        final Network wifiNetwork =
+                setWifiMeteredStatusAndWait(ssid, metered, true /* waitForValidation */);
+
+        // Store current firewall chains status. This test operates on the chain that is passed in,
+        // but also always operates on FIREWALL_CHAIN_METERED_DENY_USER to ensure that metered
+        // chains are tested as well.
+        final int myUid = Process.myUid();
+        final boolean wasChainEnabled = runWithShellPermissionIdentity(
+                () -> mCm.getFirewallChainEnabled(chain), NETWORK_SETTINGS);
+        final int previousFirewallRule = runWithShellPermissionIdentity(
+                () -> mCm.getUidFirewallRule(chain, myUid));
+        final int previousMeteredDenyFirewallRule = runWithShellPermissionIdentity(
+                () -> mCm.getUidFirewallRule(FIREWALL_CHAIN_METERED_DENY_USER, myUid));
+
+        final DetailedBlockedStatusCallback cb = new DetailedBlockedStatusCallback();
+        networkCallbackRule.requestNetwork(makeWifiNetworkRequest(), cb);
+        testAndCleanup(() -> {
+            int blockedReasonsWithoutChain = BLOCKED_REASON_NONE;
+            int blockedReasonsWithChain = getBlockedReason(chain);
+            int blockedReasonsWithChainAndLockDown =
+                    getBlockedReason(chain) | BLOCKED_REASON_LOCKDOWN_VPN;
+            if (metered) {
+                blockedReasonsWithoutChain |= BLOCKED_METERED_REASON_USER_RESTRICTED;
+                blockedReasonsWithChain |= BLOCKED_METERED_REASON_USER_RESTRICTED;
+                blockedReasonsWithChainAndLockDown |= BLOCKED_METERED_REASON_USER_RESTRICTED;
+            }
+
+            // Set RULE_DENY on target chain and metered deny chain
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, true /* enable */);
+                mCm.setUidFirewallRule(chain, myUid, FIREWALL_RULE_DENY);
+                mCm.setUidFirewallRule(FIREWALL_CHAIN_METERED_DENY_USER, myUid,
+                        FIREWALL_RULE_DENY);
+            }, NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(wifiNetwork, blockedReasonsWithChain);
+
+            // Set VPN lockdown
+            final Range<Integer> myUidRange = new Range<>(myUid, myUid);
+            runWithShellPermissionIdentity(() -> setRequireVpnForUids(
+                    true /* requireVpn */, List.of(myUidRange)), NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(wifiNetwork,
+                    blockedReasonsWithChainAndLockDown);
+
+            // Unset VPN lockdown
+            runWithShellPermissionIdentity(() -> setRequireVpnForUids(
+                    false /* requireVpn */, List.of(myUidRange)), NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(wifiNetwork, blockedReasonsWithChain);
+
+            // Set RULE_ALLOW on target chain
+            runWithShellPermissionIdentity(
+                    () -> mCm.setUidFirewallRule(chain, myUid, FIREWALL_RULE_ALLOW),
+                    NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(wifiNetwork, blockedReasonsWithoutChain);
+
+            // Set RULE_ALLOW on metered deny chain
+            runWithShellPermissionIdentity(() -> mCm.setUidFirewallRule(
+                            FIREWALL_CHAIN_METERED_DENY_USER, myUid, FIREWALL_RULE_ALLOW),
+                    NETWORK_SETTINGS);
+            if (metered) {
+                cb.eventuallyExpectBlockedStatusCallback(wifiNetwork, BLOCKED_REASON_NONE);
+            }
+        }, /* cleanup */ () -> {
+            setWifiMeteredStatusAndWait(ssid, oldMeteredValue, false /* waitForValidation */);
+        }, /* cleanup */ () -> {
+            mCm.unregisterNetworkCallback(cb);
+        }, /* cleanup */ () -> {
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, wasChainEnabled);
+                try {
+                    mCm.setUidFirewallRule(chain, myUid, previousFirewallRule);
+                } catch (IllegalStateException ignored) {
+                    // Removing match causes an exception when the rule entry for the uid does
+                    // not exist. But this is fine and can be ignored.
+                }
+                try {
+                    mCm.setUidFirewallRule(FIREWALL_CHAIN_METERED_DENY_USER, myUid,
+                            previousMeteredDenyFirewallRule);
+                } catch (IllegalStateException ignored) {
+                    // Removing match causes an exception when the rule entry for the uid does
+                    // not exist. But this is fine and can be ignored.
+                }
+            }, NETWORK_SETTINGS);
+        });
+    }
+
+    @AppModeFull(reason = "Cannot get WifiManager in instant app mode")
+    @Test @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) @ConnectivityModuleTest
+    public void testBlockedReasons_setUidFirewallRule() throws Exception {
+        doTestBlockedReasons_setUidFirewallRule(FIREWALL_CHAIN_DOZABLE, true /* metered */);
+        doTestBlockedReasons_setUidFirewallRule(FIREWALL_CHAIN_STANDBY, false /* metered */);
+    }
+
+    private void doTestBlockedReasons_setFirewallChainEnabled(final int chain) {
+        // Store current firewall chains status.
+        final int myUid = Process.myUid();
+        // TODO(b/342508466): Use runAsShell
+        final boolean wasChainEnabled = runWithShellPermissionIdentity(
+                () -> mCm.getFirewallChainEnabled(chain), NETWORK_SETTINGS);
+        final int previousFirewallRule = runWithShellPermissionIdentity(
+                () -> mCm.getUidFirewallRule(chain, myUid), NETWORK_SETTINGS);
+
+        final DetailedBlockedStatusCallback cb = new DetailedBlockedStatusCallback();
+        networkCallbackRule.registerDefaultNetworkCallback(cb);
+        final Network network = cb.expect(CallbackEntry.AVAILABLE).getNetwork();
+        testAndCleanup(() -> {
+            // Disable chain and set RULE_DENY on target chain
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, false /* enable */);
+                mCm.setUidFirewallRule(chain, myUid, FIREWALL_RULE_DENY);
+            }, NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(network, BLOCKED_REASON_NONE);
+
+            // Enable chain
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, true /* enable */);
+            }, NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(network, getBlockedReason(chain));
+
+            // Disable chain
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, false /* enable */);
+            }, NETWORK_SETTINGS);
+            cb.eventuallyExpectBlockedStatusCallback(network, BLOCKED_REASON_NONE);
+        }, /* cleanup */ () -> {
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, wasChainEnabled);
+                try {
+                    mCm.setUidFirewallRule(chain, myUid, previousFirewallRule);
+                } catch (IllegalStateException ignored) {
+                    // Removing match causes an exception when the rule entry for the uid does
+                    // not exist. But this is fine and can be ignored.
+                }
+            }, NETWORK_SETTINGS);
+        });
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) @ConnectivityModuleTest
+    public void testBlockedReasons_setFirewallChainEnabled() {
+        doTestBlockedReasons_setFirewallChainEnabled(FIREWALL_CHAIN_POWERSAVE);
+        doTestBlockedReasons_setFirewallChainEnabled(FIREWALL_CHAIN_OEM_DENY_1);
+    }
+
+    private void doTestBlockedReasons_replaceFirewallChain(
+            final int chain, final boolean isAllowList) {
+        // Store current firewall chains status.
+        final int myUid = Process.myUid();
+        final boolean wasChainEnabled = runWithShellPermissionIdentity(
+                () -> mCm.getFirewallChainEnabled(chain), NETWORK_SETTINGS);
+        final int previousFirewallRule = runWithShellPermissionIdentity(
+                () -> mCm.getUidFirewallRule(chain, myUid), NETWORK_SETTINGS);
+
+        final DetailedBlockedStatusCallback cb = new DetailedBlockedStatusCallback();
+        networkCallbackRule.registerDefaultNetworkCallback(cb);
+        final Network network = cb.expect(CallbackEntry.AVAILABLE).getNetwork();
+        testAndCleanup(() -> {
+            cb.eventuallyExpectBlockedStatusCallback(network, BLOCKED_REASON_NONE);
+
+            // Remove uid from the target chain and enable chain
+            runWithShellPermissionIdentity(() -> {
+                // Note that this removes *all* UIDs from the chain, not just the UID that is
+                // being tested. This is probably OK since FIREWALL_CHAIN_OEM_DENY_2 is unused
+                // in AOSP and FIREWALL_CHAIN_BACKGROUND is probably empty when running this
+                // test (since nothing is in the foreground).
+                //
+                // TODO(b/342508466): add a getFirewallUidChainContents or similar method to fetch
+                // chain contents, and update this test to use it.
+                mCm.replaceFirewallChain(chain, new int[0]);
+                mCm.setFirewallChainEnabled(chain, true /* enable */);
+            }, NETWORK_SETTINGS);
+
+            if (isAllowList) {
+                cb.eventuallyExpectBlockedStatusCallback(network, getBlockedReason(chain));
+            } else {
+                cb.assertNoBlockedStatusCallback();
+            }
+
+            // Put uid on the target chain
+            runWithShellPermissionIdentity(
+                    () -> mCm.replaceFirewallChain(chain, new int[]{myUid}), NETWORK_SETTINGS);
+
+            if (isAllowList) {
+                cb.eventuallyExpectBlockedStatusCallback(network, BLOCKED_REASON_NONE);
+            } else {
+                cb.eventuallyExpectBlockedStatusCallback(network, getBlockedReason(chain));
+            }
+
+            // Remove uid from the target chain
+            runWithShellPermissionIdentity(
+                    () -> mCm.replaceFirewallChain(chain, new int[0]), NETWORK_SETTINGS);
+
+            if (isAllowList) {
+                cb.eventuallyExpectBlockedStatusCallback(network, getBlockedReason(chain));
+            } else {
+                cb.eventuallyExpectBlockedStatusCallback(network, BLOCKED_REASON_NONE);
+            }
+        }, /* cleanup */ () -> {
+            runWithShellPermissionIdentity(() -> {
+                mCm.setFirewallChainEnabled(chain, wasChainEnabled);
+                try {
+                    mCm.setUidFirewallRule(chain, myUid, previousFirewallRule);
+                } catch (IllegalStateException ignored) {
+                    // Removing match causes an exception when the rule entry for the uid does
+                    // not exist. But this is fine and can be ignored.
+                }
+            }, NETWORK_SETTINGS);
+        });
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) @ConnectivityModuleTest
+    public void testBlockedReasons_replaceFirewallChain() {
+        doTestBlockedReasons_replaceFirewallChain(
+                FIREWALL_CHAIN_BACKGROUND, true /* isAllowChain */);
+        doTestBlockedReasons_replaceFirewallChain(
+                FIREWALL_CHAIN_OEM_DENY_2, false /* isAllowChain */);
     }
 
     private void assumeTestSApis() {
