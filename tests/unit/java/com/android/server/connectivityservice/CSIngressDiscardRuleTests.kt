@@ -37,7 +37,6 @@ import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChange
 import com.android.testutils.TestableNetworkCallback
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.InOrder
 import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.never
 import org.mockito.Mockito.timeout
@@ -97,11 +96,6 @@ class CSIngressDiscardRuleTests : CSTest() {
     private val LOCAL_IPV6_ADDRRESS = InetAddresses.parseNumericAddress("fe80::1234")
     private val LOCAL_IPV6_LINK_ADDRRESS = LinkAddress(LOCAL_IPV6_ADDRRESS, 64)
 
-    fun verifyNoMoreIngressDiscardRuleChange(inorder: InOrder) {
-        inorder.verify(bpfNetMaps, never()).setIngressDiscardRule(any(), any())
-        inorder.verify(bpfNetMaps, never()).removeIngressDiscardRule(any())
-    }
-
     @Test
     fun testVpnIngressDiscardRule_UpdateVpnAddress() {
         // non-VPN network whose address will be not duplicated with VPN address
@@ -154,7 +148,7 @@ class CSIngressDiscardRuleTests : CSTest() {
 
         // IngressDiscardRule is added to the VPN address
         inorder.verify(bpfNetMaps).setIngressDiscardRule(IPV6_ADDRESS, VPN_IFNAME)
-        verifyNoMoreIngressDiscardRuleChange(inorder)
+        inorder.verifyNoMoreInteractions()
 
         // The VPN interface name is changed
         val newlp = lp(VPN_IFNAME2, IPV6_LINK_ADDRESS, LOCAL_IPV6_LINK_ADDRRESS)
@@ -163,7 +157,7 @@ class CSIngressDiscardRuleTests : CSTest() {
 
         // IngressDiscardRule is updated with the new interface name
         inorder.verify(bpfNetMaps).setIngressDiscardRule(IPV6_ADDRESS, VPN_IFNAME2)
-        verifyNoMoreIngressDiscardRuleChange(inorder)
+        inorder.verifyNoMoreInteractions()
 
         agent.disconnect()
         inorder.verify(bpfNetMaps, timeout(TIMEOUT_MS)).removeIngressDiscardRule(IPV6_ADDRESS)
@@ -212,10 +206,10 @@ class CSIngressDiscardRuleTests : CSTest() {
         // IngressDiscardRule for IPV6_ADDRESS2 is removed but IngressDiscardRule for
         // IPV6_LINK_ADDRESS is not added since Wi-Fi also uses IPV6_LINK_ADDRESS
         inorder.verify(bpfNetMaps).removeIngressDiscardRule(IPV6_ADDRESS2)
-        verifyNoMoreIngressDiscardRuleChange(inorder)
+        inorder.verifyNoMoreInteractions()
 
         vpnAgent.disconnect()
-        verifyNoMoreIngressDiscardRuleChange(inorder)
+        inorder.verifyNoMoreInteractions()
 
         cm.unregisterNetworkCallback(cb)
     }
@@ -231,7 +225,7 @@ class CSIngressDiscardRuleTests : CSTest() {
 
         // IngressDiscardRule is added to the VPN address
         inorder.verify(bpfNetMaps).setIngressDiscardRule(IPV6_ADDRESS, VPN_IFNAME)
-        verifyNoMoreIngressDiscardRuleChange(inorder)
+        inorder.verifyNoMoreInteractions()
 
         val nr = nr(TRANSPORT_WIFI)
         val cb = TestableNetworkCallback()
@@ -253,7 +247,7 @@ class CSIngressDiscardRuleTests : CSTest() {
         // IngressDiscardRule is added to the VPN address since the VPN address is not duplicated
         // with the Wi-Fi address
         inorder.verify(bpfNetMaps).setIngressDiscardRule(IPV6_ADDRESS, VPN_IFNAME)
-        verifyNoMoreIngressDiscardRuleChange(inorder)
+        inorder.verifyNoMoreInteractions()
 
         // The Wi-Fi address is changed back to the same address as the VPN interface
         wifiAgent.sendLinkProperties(wifiLp)

@@ -132,8 +132,6 @@ public class ConnectivityManager {
                 "com.android.net.flags.metered_network_firewall_chains";
         static final String BLOCKED_REASON_OEM_DENY_CHAINS =
                 "com.android.net.flags.blocked_reason_oem_deny_chains";
-        static final String BLOCKED_REASON_NETWORK_RESTRICTED =
-                "com.android.net.flags.blocked_reason_network_restricted";
     }
 
     /**
@@ -930,17 +928,6 @@ public class ConnectivityManager {
     public static final int BLOCKED_REASON_OEM_DENY = 1 << 7;
 
     /**
-     * Flag to indicate that an app does not have permission to access the specified network,
-     * for example, because it does not have the {@link android.Manifest.permission#INTERNET}
-     * permission.
-     *
-     * @hide
-     */
-    @FlaggedApi(Flags.BLOCKED_REASON_NETWORK_RESTRICTED)
-    @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
-    public static final int BLOCKED_REASON_NETWORK_RESTRICTED = 1 << 8;
-
-    /**
      * Flag to indicate that an app is subject to Data saver restrictions that would
      * result in its metered network access being blocked.
      *
@@ -981,7 +968,6 @@ public class ConnectivityManager {
             BLOCKED_REASON_LOW_POWER_STANDBY,
             BLOCKED_REASON_APP_BACKGROUND,
             BLOCKED_REASON_OEM_DENY,
-            BLOCKED_REASON_NETWORK_RESTRICTED,
             BLOCKED_METERED_REASON_DATA_SAVER,
             BLOCKED_METERED_REASON_USER_RESTRICTED,
             BLOCKED_METERED_REASON_ADMIN_DISABLED,
