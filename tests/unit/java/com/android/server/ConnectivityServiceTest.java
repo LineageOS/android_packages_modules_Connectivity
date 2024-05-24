@@ -7527,13 +7527,13 @@ public class ConnectivityServiceTest {
     @Test
     public void testNetworkCallbackMaximum() throws Exception {
         final int MAX_REQUESTS = 100;
-        final int CALLBACKS = 87;
+        final int CALLBACKS = 88;
         final int DIFF_INTENTS = 10;
         final int SAME_INTENTS = 10;
         final int SYSTEM_ONLY_MAX_REQUESTS = 250;
-        // Assert 1 (Default request filed before testing) + CALLBACKS + DIFF_INTENTS +
-        // 1 (same intent) = MAX_REQUESTS - 1, since the capacity is MAX_REQUEST - 1.
-        assertEquals(MAX_REQUESTS - 1, 1 + CALLBACKS + DIFF_INTENTS + 1);
+        // CALLBACKS + DIFF_INTENTS + 1 (same intent)
+        // = MAX_REQUESTS - 1, since the capacity is MAX_REQUEST - 1.
+        assertEquals(MAX_REQUESTS - 1, CALLBACKS + DIFF_INTENTS + 1);
 
         NetworkRequest networkRequest = new NetworkRequest.Builder().build();
         ArrayList<Object> registered = new ArrayList<>();
