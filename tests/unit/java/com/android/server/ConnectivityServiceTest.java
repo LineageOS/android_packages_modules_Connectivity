@@ -1746,7 +1746,15 @@ public class ConnectivityServiceTest {
 
     private void setBlockedReasonChanged(int blockedReasons) {
         mBlockedReasons = blockedReasons;
-        mPolicyCallback.onUidBlockedReasonChanged(Process.myUid(), blockedReasons);
+        if (mDeps.isAtLeastV()) {
+            visibleOnHandlerThread(mCsHandlerThread.getThreadHandler(),
+                    () -> mService.handleBlockedReasonsChanged(
+                            List.of(new Pair<>(Process.myUid(), blockedReasons))
+
+                    ));
+        } else {
+            mPolicyCallback.onUidBlockedReasonChanged(Process.myUid(), blockedReasons);
+        }
     }
 
     private Nat464Xlat getNat464Xlat(NetworkAgentWrapper mna) {
@@ -1927,11 +1935,16 @@ public class ConnectivityServiceTest {
         mService.mLingerDelayMs = TEST_LINGER_DELAY_MS;
         mService.mNascentDelayMs = TEST_NASCENT_DELAY_MS;
 
-        final ArgumentCaptor<NetworkPolicyCallback> policyCallbackCaptor =
-                ArgumentCaptor.forClass(NetworkPolicyCallback.class);
-        verify(mNetworkPolicyManager).registerNetworkPolicyCallback(any(),
-                policyCallbackCaptor.capture());
-        mPolicyCallback = policyCallbackCaptor.getValue();
+        if (mDeps.isAtLeastV()) {
+            verify(mNetworkPolicyManager, never()).registerNetworkPolicyCallback(any(), any());
+            mPolicyCallback = null;
+        } else {
+            final ArgumentCaptor<NetworkPolicyCallback> policyCallbackCaptor =
+                    ArgumentCaptor.forClass(NetworkPolicyCallback.class);
+            verify(mNetworkPolicyManager).registerNetworkPolicyCallback(any(),
+                    policyCallbackCaptor.capture());
+            mPolicyCallback = policyCallbackCaptor.getValue();
+        }
 
         // Create local CM before sending system ready so that we can answer
         // getSystemService() correctly.
