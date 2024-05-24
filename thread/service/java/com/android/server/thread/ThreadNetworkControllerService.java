@@ -619,7 +619,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
         return !mForceStopOtDaemonEnabled
                 && !mUserRestricted
-                && (!mAirplaneModeOn || enabledInAirplaneMode)
+                // FIXME(b/340744397): Note that here we need to call `isAirplaneModeOn()` to get
+                // the latest state of airplane mode but can't use `mIsAirplaneMode`. This is for
+                // avoiding the race conditions described in b/340744397
+                && (!isAirplaneModeOn() || enabledInAirplaneMode)
                 && mPersistentSettings.get(ThreadPersistentSettings.THREAD_ENABLED);
     }
 
