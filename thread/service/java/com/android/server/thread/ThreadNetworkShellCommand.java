@@ -16,50 +16,57 @@
 
 package com.android.server.thread;
 
-import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.content.Context;
+import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.IOperationReceiver;
+import android.net.thread.OperationalDatasetTimestamp;
+import android.net.thread.PendingOperationalDataset;
 import android.net.thread.ThreadNetworkException;
-import android.os.Binder;
-import android.os.Process;
 import android.text.TextUtils;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.BasicShellCommandHandler;
+import com.android.net.module.util.HexDump;
 
 import java.io.PrintWriter;
 import java.time.Duration;
-import java.util.List;
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Interprets and executes 'adb shell cmd thread_network [args]'.
+ * Interprets and executes 'adb shell cmd thread_network <subcommand>'.
+ *
+ * <p>Subcommands which don't have an equivalent Java API now require the
+ * "android.permission.THREAD_NETWORK_TESTING" permission. For a specific subcommand, it also
+ * requires the same permissions of the equivalent Java / AIDL API.
  *
  * <p>To add new commands: - onCommand: Add a case "<command>" execute. Return a 0 if command
  * executed successfully. - onHelp: add a description string.
- *
- * <p>Permissions: currently root permission is required for some commands. Others will enforce the
- * corresponding API permissions.
  */
-public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
+public final class ThreadNetworkShellCommand extends BasicShellCommandHandler {
     private static final Duration SET_ENABLED_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration LEAVE_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration MIGRATE_TIMEOUT = Duration.ofSeconds(2);
     private static final Duration FORCE_STOP_TIMEOUT = Duration.ofSeconds(1);
+    private static final String PERMISSION_THREAD_NETWORK_TESTING =
+            "android.permission.THREAD_NETWORK_TESTING";
 
-    // These don't require root access.
-    private static final List<String> NON_PRIVILEGED_COMMANDS =
-            List.of("help", "get-country-code", "enable", "disable");
+    private final Context mContext;
+    private final ThreadNetworkControllerService mControllerService;
+    private final ThreadNetworkCountryCode mCountryCode;
 
-    @NonNull private final ThreadNetworkControllerService mControllerService;
-    @NonNull private final ThreadNetworkCountryCode mCountryCode;
     @Nullable private PrintWriter mOutputWriter;
     @Nullable private PrintWriter mErrorWriter;
 
-    ThreadNetworkShellCommand(
-            @NonNull ThreadNetworkControllerService controllerService,
-            @NonNull ThreadNetworkCountryCode countryCode) {
+    public ThreadNetworkShellCommand(
+            Context context,
+            ThreadNetworkControllerService controllerService,
+            ThreadNetworkCountryCode countryCode) {
+        mContext = context;
         mControllerService = controllerService;
         mCountryCode = countryCode;
     }
@@ -79,29 +86,34 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
     }
 
     @Override
+    public void onHelp() {
+        final PrintWriter pw = getOutputWriter();
+        pw.println("Thread network commands:");
+        pw.println("  help or -h");
+        pw.println("    Print this help text.");
+        pw.println("  enable");
+        pw.println("    Enables Thread radio");
+        pw.println("  disable");
+        pw.println("    Disables Thread radio");
+        pw.println("  join <active-dataset-tlvs>");
+        pw.println("    Joins a network of the given dataset");
+        pw.println("  migrate <active-dataset-tlvs> <delay-seconds>");
+        pw.println("    Migrate to the given network by a specific delay");
+        pw.println("  leave");
+        pw.println("    Leave the current network and erase datasets");
+        pw.println("  force-stop-ot-daemon enabled | disabled ");
+        pw.println("    force stop ot-daemon service");
+        pw.println("  get-country-code");
+        pw.println("    Gets country code as a two-letter string");
+        pw.println("  force-country-code enabled <two-letter code> | disabled ");
+        pw.println("    Sets country code to <two-letter code> or left for normal value");
+    }
+
+    @Override
     public int onCommand(String cmd) {
-        // Treat no command as help command.
+        // Treat no command as the "help" command
         if (TextUtils.isEmpty(cmd)) {
             cmd = "help";
-        }
-
-        final PrintWriter pw = getOutputWriter();
-        final PrintWriter perr = getErrorWriter();
-
-        // Explicit exclusion from root permission
-        if (!NON_PRIVILEGED_COMMANDS.contains(cmd)) {
-            final int uid = Binder.getCallingUid();
-
-            if (uid != Process.ROOT_UID) {
-                perr.println(
-                        "Uid "
-                                + uid
-                                + " does not have access to "
-                                + cmd
-                                + " thread command "
-                                + "(or such command doesn't exist)");
-                return -1;
-            }
         }
 
         switch (cmd) {
@@ -109,49 +121,85 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
                 return setThreadEnabled(true);
             case "disable":
                 return setThreadEnabled(false);
+            case "join":
+                return join();
+            case "leave":
+                return leave();
+            case "migrate":
+                return migrate();
             case "force-stop-ot-daemon":
                 return forceStopOtDaemon();
             case "force-country-code":
-                boolean enabled;
-                try {
-                    enabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
-                } catch (IllegalArgumentException e) {
-                    perr.println("Invalid argument: " + e.getMessage());
-                    return -1;
-                }
-
-                if (enabled) {
-                    String countryCode = getNextArgRequired();
-                    if (!ThreadNetworkCountryCode.isValidCountryCode(countryCode)) {
-                        perr.println(
-                                "Invalid argument: Country code must be a 2-Character"
-                                        + " string. But got country code "
-                                        + countryCode
-                                        + " instead");
-                        return -1;
-                    }
-                    mCountryCode.setOverrideCountryCode(countryCode);
-                    pw.println("Set Thread country code: " + countryCode);
-
-                } else {
-                    mCountryCode.clearOverrideCountryCode();
-                }
-                return 0;
+                return forceCountryCode();
             case "get-country-code":
-                pw.println("Thread country code = " + mCountryCode.getCountryCode());
-                return 0;
+                return getCountryCode();
             default:
                 return handleDefaultCommands(cmd);
         }
     }
 
+    private void ensureTestingPermission() {
+        mContext.enforceCallingOrSelfPermission(
+                PERMISSION_THREAD_NETWORK_TESTING,
+                "Permission " + PERMISSION_THREAD_NETWORK_TESTING + " is missing!");
+    }
+
     private int setThreadEnabled(boolean enabled) {
         CompletableFuture<Void> setEnabledFuture = new CompletableFuture<>();
         mControllerService.setEnabled(enabled, newOperationReceiver(setEnabledFuture));
-        return waitForFuture(setEnabledFuture, FORCE_STOP_TIMEOUT, getErrorWriter());
+        return waitForFuture(setEnabledFuture, SET_ENABLED_TIMEOUT, getErrorWriter());
+    }
+
+    private int join() {
+        byte[] datasetTlvs = HexDump.hexStringToByteArray(getNextArgRequired());
+        ActiveOperationalDataset dataset;
+        try {
+            dataset = ActiveOperationalDataset.fromThreadTlvs(datasetTlvs);
+        } catch (IllegalArgumentException e) {
+            getErrorWriter().println("Invalid dataset argument: " + e.getMessage());
+            return -1;
+        }
+        // Do not wait for join to complete because this can take 8 to 30 seconds
+        mControllerService.join(dataset, new IOperationReceiver.Default());
+        return 0;
+    }
+
+    private int leave() {
+        CompletableFuture<Void> leaveFuture = new CompletableFuture<>();
+        mControllerService.leave(newOperationReceiver(leaveFuture));
+        return waitForFuture(leaveFuture, LEAVE_TIMEOUT, getErrorWriter());
+    }
+
+    private int migrate() {
+        byte[] datasetTlvs = HexDump.hexStringToByteArray(getNextArgRequired());
+        ActiveOperationalDataset dataset;
+        try {
+            dataset = ActiveOperationalDataset.fromThreadTlvs(datasetTlvs);
+        } catch (IllegalArgumentException e) {
+            getErrorWriter().println("Invalid dataset argument: " + e.getMessage());
+            return -1;
+        }
+
+        int delaySeconds;
+        try {
+            delaySeconds = Integer.parseInt(getNextArgRequired());
+        } catch (NumberFormatException e) {
+            getErrorWriter().println("Invalid delay argument: " + e.getMessage());
+            return -1;
+        }
+
+        PendingOperationalDataset pendingDataset =
+                new PendingOperationalDataset(
+                        dataset,
+                        OperationalDatasetTimestamp.fromInstant(Instant.now()),
+                        Duration.ofSeconds(delaySeconds));
+        CompletableFuture<Void> migrateFuture = new CompletableFuture<>();
+        mControllerService.scheduleMigration(pendingDataset, newOperationReceiver(migrateFuture));
+        return waitForFuture(migrateFuture, MIGRATE_TIMEOUT, getErrorWriter());
     }
 
     private int forceStopOtDaemon() {
+        ensureTestingPermission();
         final PrintWriter errorWriter = getErrorWriter();
         boolean enabled;
         try {
@@ -164,6 +212,40 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
         CompletableFuture<Void> forceStopFuture = new CompletableFuture<>();
         mControllerService.forceStopOtDaemonForTest(enabled, newOperationReceiver(forceStopFuture));
         return waitForFuture(forceStopFuture, FORCE_STOP_TIMEOUT, getErrorWriter());
+    }
+
+    private int forceCountryCode() {
+        ensureTestingPermission();
+        final PrintWriter perr = getErrorWriter();
+        boolean enabled;
+        try {
+            enabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
+        } catch (IllegalArgumentException e) {
+            perr.println("Invalid argument: " + e.getMessage());
+            return -1;
+        }
+
+        if (enabled) {
+            String countryCode = getNextArgRequired();
+            if (!ThreadNetworkCountryCode.isValidCountryCode(countryCode)) {
+                perr.println(
+                        "Invalid argument: Country code must be a 2-letter"
+                                + " string. But got country code "
+                                + countryCode
+                                + " instead");
+                return -1;
+            }
+            mCountryCode.setOverrideCountryCode(countryCode);
+        } else {
+            mCountryCode.clearOverrideCountryCode();
+        }
+        return 0;
+    }
+
+    private int getCountryCode() {
+        ensureTestingPermission();
+        getOutputWriter().println("Thread country code = " + mCountryCode.getCountryCode());
+        return 0;
     }
 
     private static IOperationReceiver newOperationReceiver(CompletableFuture<Void> future) {
@@ -223,34 +305,5 @@ public class ThreadNetworkShellCommand extends BasicShellCommandHandler {
     private boolean getNextArgRequiredTrueOrFalse(String trueString, String falseString) {
         String nextArg = getNextArgRequired();
         return argTrueOrFalse(nextArg, trueString, falseString);
-    }
-
-    private void onHelpNonPrivileged(PrintWriter pw) {
-        pw.println("  enable");
-        pw.println("    Enables Thread radio");
-        pw.println("  disable");
-        pw.println("    Disables Thread radio");
-        pw.println("  get-country-code");
-        pw.println("    Gets country code as a two-letter string");
-    }
-
-    private void onHelpPrivileged(PrintWriter pw) {
-        pw.println("  force-country-code enabled <two-letter code> | disabled ");
-        pw.println("    Sets country code to <two-letter code> or left for normal value");
-        pw.println("  force-stop-ot-daemon enabled | disabled ");
-        pw.println("    force stop ot-daemon service");
-    }
-
-    @Override
-    public void onHelp() {
-        final PrintWriter pw = getOutputWriter();
-        pw.println("Thread network commands:");
-        pw.println("  help or -h");
-        pw.println("    Print this help text.");
-        onHelpNonPrivileged(pw);
-        if (Binder.getCallingUid() == Process.ROOT_UID) {
-            onHelpPrivileged(pw);
-        }
-        pw.println();
     }
 }
