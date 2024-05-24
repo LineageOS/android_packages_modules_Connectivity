@@ -64,6 +64,7 @@ import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 import static android.text.format.DateUtils.WEEK_IN_MILLIS;
 
+import static com.android.dx.mockito.inline.extended.ExtendedMockito.doThrow;
 import static com.android.server.net.NetworkStatsEventLogger.POLL_REASON_RAT_CHANGED;
 import static com.android.server.net.NetworkStatsEventLogger.PollEvent.pollReasonNameOf;
 import static com.android.server.net.NetworkStatsService.ACTION_NETWORK_STATS_POLL;
@@ -101,6 +102,7 @@ import android.annotation.NonNull;
 import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.net.DataUsageRequest;
@@ -131,6 +133,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.SimpleClock;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.system.ErrnoException;
 import android.telephony.TelephonyManager;
@@ -255,6 +258,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     private static @Mock WifiInfo sWifiInfo;
     private @Mock INetd mNetd;
     private @Mock TetheringManager mTetheringManager;
+    private @Mock PackageManager mPm;
     private @Mock NetworkStatsFactory mStatsFactory;
     @NonNull
     private final TestNetworkStatsSettings mSettings =
@@ -322,6 +326,16 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         MockContext(Context base) {
             super(base);
             mBaseContext = base;
+        }
+
+        @Override
+        public PackageManager getPackageManager() {
+            return mPm;
+        }
+
+        @Override
+        public Context createContextAsUser(UserHandle user, int flags) {
+            return this;
         }
 
         @Override
@@ -444,6 +458,9 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         verify(mTetheringManager).registerTetheringEventCallback(
                 any(), tetheringEventCbCaptor.capture());
         mTetheringEventCallback = tetheringEventCbCaptor.getValue();
+
+        doReturn(Process.myUid()).when(mPm)
+                .getPackageUid(eq(mServiceContext.getPackageName()), anyInt());
 
         mUsageCallback = new TestableUsageCallback(mUsageCallbackBinder);
     }
@@ -1704,7 +1721,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         // Register and verify request and that binder was called
         DataUsageRequest request = mService.registerUsageCallback(
-                mServiceContext.getOpPackageName(), inputRequest, mUsageCallback);
+                mServiceContext.getPackageName(), inputRequest, mUsageCallback);
         assertTrue(request.requestId > 0);
         assertTrue(Objects.equals(sTemplateWifi, request.template));
         long minThresholdInBytes = 2 * 1024 * 1024; // 2 MB
@@ -2976,6 +2993,38 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_UMTS);
         final String dump = getDump();
         assertDumpContains(dump, pollReasonNameOf(POLL_REASON_RAT_CHANGED));
+    }
+
+    @Test
+    public void testEnforcePackageNameMatchesUid() throws Exception {
+        final String testMyPackageName = "test.package.myname";
+        final String testRedPackageName = "test.package.red";
+        final String testInvalidPackageName = "test.package.notfound";
+
+        doReturn(UID_RED).when(mPm).getPackageUid(eq(testRedPackageName), anyInt());
+        doReturn(Process.myUid()).when(mPm).getPackageUid(eq(testMyPackageName), anyInt());
+        doThrow(new PackageManager.NameNotFoundException()).when(mPm)
+                .getPackageUid(eq(testInvalidPackageName), anyInt());
+
+        assertThrows(SecurityException.class, () ->
+                mService.openSessionForUsageStats(0 /* flags */, testRedPackageName));
+        assertThrows(SecurityException.class, () ->
+                mService.openSessionForUsageStats(0 /* flags */, testInvalidPackageName));
+        assertThrows(NullPointerException.class, () ->
+                mService.openSessionForUsageStats(0 /* flags */, null));
+        // Verify package name belongs to ourselves does not throw.
+        mService.openSessionForUsageStats(0 /* flags */, testMyPackageName);
+
+        long thresholdInBytes = 10 * 1024 * 1024;  // 10 MB
+        DataUsageRequest request = new DataUsageRequest(
+                2 /* requestId */, sTemplateImsi1, thresholdInBytes);
+        assertThrows(SecurityException.class, () ->
+                mService.registerUsageCallback(testRedPackageName, request, mUsageCallback));
+        assertThrows(SecurityException.class, () ->
+                mService.registerUsageCallback(testInvalidPackageName, request, mUsageCallback));
+        assertThrows(NullPointerException.class, () ->
+                mService.registerUsageCallback(null, request, mUsageCallback));
+        mService.registerUsageCallback(testMyPackageName, request, mUsageCallback);
     }
 
     @Test
