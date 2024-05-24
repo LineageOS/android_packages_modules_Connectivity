@@ -27,6 +27,7 @@ import android.content.res.Resources
 import android.net.ConnectivityManager
 import android.net.IDnsResolver
 import android.net.INetd
+import android.net.INetd.PERMISSION_INTERNET
 import android.net.LinkProperties
 import android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
@@ -225,6 +226,9 @@ class ConnectivityServiceIntegrationTest {
         override fun getSystemProperties() = mock(MockableSystemProperties::class.java)
         override fun makeNetIdManager() = TestNetIdManager()
         override fun getBpfNetMaps(context: Context?, netd: INetd?) = mock(BpfNetMaps::class.java)
+                .also {
+                    doReturn(PERMISSION_INTERNET).`when`(it).getNetPermForUid(anyInt())
+                }
         override fun isChangeEnabled(changeId: Long, uid: Int) = true
 
         override fun makeMultinetworkPolicyTracker(
