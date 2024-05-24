@@ -72,7 +72,10 @@ public class ThreadNetworkService extends IThreadNetworkManager.Stub {
             // PHASE_ACTIVITY_MANAGER_READY and PHASE_THIRD_PARTY_APPS_CAN_START
             mCountryCode.initialize();
             mShellCommand =
-                    new ThreadNetworkShellCommand(requireNonNull(mControllerService), mCountryCode);
+                    new ThreadNetworkShellCommand(
+                            mContext,
+                            requireNonNull(mControllerService),
+                            requireNonNull(mCountryCode));
         }
     }
 
