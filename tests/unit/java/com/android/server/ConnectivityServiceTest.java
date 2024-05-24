@@ -53,7 +53,6 @@ import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_DATA_SAVER;
 import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_MASK;
 import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_USER_RESTRICTED;
 import static android.net.ConnectivityManager.BLOCKED_REASON_BATTERY_SAVER;
-import static android.net.ConnectivityManager.BLOCKED_REASON_DOZE;
 import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static android.net.ConnectivityManager.EXTRA_DEVICE_TYPE;
@@ -9880,28 +9879,6 @@ public class ConnectivityServiceTest {
         assertActiveNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertNetworkInfo(TYPE_MOBILE, DetailedState.CONNECTED);
         assertExtraInfoFromCmPresent(mCellAgent);
-
-        // Remove PERMISSION_INTERNET and disable NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION
-        doReturn(INetd.PERMISSION_NONE).when(mBpfNetMaps).getNetPermForUid(Process.myUid());
-        mDeps.setChangeIdEnabled(false,
-                NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION, Process.myUid());
-
-        setBlockedReasonChanged(BLOCKED_REASON_DOZE);
-        if (mDeps.isAtLeastV()) {
-            // On V+, network access from app that does not have INTERNET permission is considered
-            // not blocked if NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION is disabled.
-            // So blocked status does not change from BLOCKED_REASON_NONE
-            cellNetworkCallback.assertNoCallback();
-            detailedCallback.assertNoCallback();
-        } else {
-            // On U-, onBlockedStatusChanged callback is called with blocked reasons CS receives
-            // from NPMS callback regardless of permission app has.
-            // Note that this cannot actually happen because on U-, NPMS will never notify any
-            // blocked reasons for apps that don't have the INTERNET permission.
-            cellNetworkCallback.expect(BLOCKED_STATUS, mCellAgent, cb -> cb.getBlocked());
-            detailedCallback.expect(BLOCKED_STATUS_INT, mCellAgent,
-                    cb -> cb.getReason() == BLOCKED_REASON_DOZE);
-        }
 
         mCm.unregisterNetworkCallback(cellNetworkCallback);
     }
