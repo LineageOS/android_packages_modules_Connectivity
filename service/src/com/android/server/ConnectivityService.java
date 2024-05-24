@@ -5697,6 +5697,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void handleRemoveNetworkRequest(@NonNull final NetworkRequestInfo nri) {
+        handleRemoveNetworkRequest(nri, true /* untrackUids */);
+    }
+
+    private void handleRemoveNetworkRequest(@NonNull final NetworkRequestInfo nri,
+            final boolean untrackUids) {
         ensureRunningOnConnectivityServiceThread();
         for (final NetworkRequest req : nri.mRequests) {
             if (null == mNetworkRequests.remove(req)) {
@@ -5731,7 +5736,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
             }
         }
 
-        nri.mPerUidCounter.decrementCount(nri.mUid);
+        if (untrackUids) {
+            maybeUntrackUid(nri);
+        }
         mNetworkRequestInfoLogs.log("RELEASE " + nri);
         checkNrisConsistency(nri);
 
@@ -5753,12 +5760,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
     }
 
     private void handleRemoveNetworkRequests(@NonNull final Set<NetworkRequestInfo> nris) {
+        handleRemoveNetworkRequests(nris, true /* untrackUids */);
+    }
+
+    private void handleRemoveNetworkRequests(@NonNull final Set<NetworkRequestInfo> nris,
+            final boolean untrackUids) {
         for (final NetworkRequestInfo nri : nris) {
             if (mDefaultRequest == nri) {
                 // Make sure we never remove the default request.
                 continue;
             }
-            handleRemoveNetworkRequest(nri);
+            handleRemoveNetworkRequest(nri, untrackUids);
         }
     }
 
@@ -7413,7 +7425,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mUid = mDeps.getCallingUid();
             mAsUid = asUid;
             mPerUidCounter = getRequestCounter(this);
-            mPerUidCounter.incrementCountOrThrow(mUid);
             /**
              * Location sensitive data not included in pending intent. Only included in
              * {@link NetworkCallback}.
@@ -7447,7 +7458,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mAsUid = asUid;
             mPendingIntent = null;
             mPerUidCounter = getRequestCounter(this);
-            mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = callbackFlags;
             mCallingAttributionTag = callingAttributionTag;
             mPreferenceOrder = PREFERENCE_ORDER_INVALID;
@@ -7487,7 +7497,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             mAsUid = nri.mAsUid;
             mPendingIntent = nri.mPendingIntent;
             mPerUidCounter = nri.mPerUidCounter;
-            mPerUidCounter.incrementCountOrThrow(mUid);
             mCallbackFlags = nri.mCallbackFlags;
             mCallingAttributionTag = nri.mCallingAttributionTag;
             mPreferenceOrder = PREFERENCE_ORDER_INVALID;
@@ -7792,13 +7801,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
             throw new IllegalArgumentException("Bad timeout specified");
         }
 
-        final NetworkRequest networkRequest = new NetworkRequest(networkCapabilities, legacyType,
-                nextNetworkRequestId(), reqType);
-        final NetworkRequestInfo nri = getNriToRegister(
-                asUid, networkRequest, messenger, binder, callbackFlags,
-                callingAttributionTag);
-        if (DBG) log("requestNetwork for " + nri);
-
         // For TRACK_SYSTEM_DEFAULT callbacks, the capabilities have been modified since they were
         // copied from the default request above. (This is necessary to ensure, for example, that
         // the callback does not leak sensitive information to unprivileged apps.) Check that the
@@ -7810,7 +7812,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
                     + networkCapabilities + " vs. " + defaultNc);
         }
 
-        mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_REQUEST, nri));
+        final NetworkRequest networkRequest = new NetworkRequest(networkCapabilities, legacyType,
+                nextNetworkRequestId(), reqType);
+        final NetworkRequestInfo nri = getNriToRegister(
+                asUid, networkRequest, messenger, binder, callbackFlags,
+                callingAttributionTag);
+        if (DBG) log("requestNetwork for " + nri);
+        trackUidAndRegisterNetworkRequest(EVENT_REGISTER_NETWORK_REQUEST, nri);
         if (timeoutMs > 0) {
             mHandler.sendMessageDelayed(mHandler.obtainMessage(EVENT_TIMEOUT_NETWORK_REQUEST,
                     nri), timeoutMs);
@@ -8019,8 +8027,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         NetworkRequestInfo nri = new NetworkRequestInfo(callingUid, networkRequest, operation,
                 callingAttributionTag);
         if (DBG) log("pendingRequest for " + nri);
-        mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_REQUEST_WITH_INTENT,
-                nri));
+        trackUidAndRegisterNetworkRequest(EVENT_REGISTER_NETWORK_REQUEST_WITH_INTENT, nri);
         return networkRequest;
     }
 
@@ -8059,6 +8066,31 @@ public class ConnectivityService extends IConnectivityManager.Stub
         return true;
     }
 
+    private void trackUid(final NetworkRequestInfo nri) {
+        if (nri.mMessenger == null && nri.mPendingIntent == null) {
+            Log.wtf(TAG, "trackUid is called for nri with "
+                    + "null mMessenger and mPendingIntent: " + nri);
+            return;
+        }
+        nri.mPerUidCounter.incrementCountOrThrow(nri.mUid);
+    }
+
+    private void trackUidAndRegisterNetworkRequest(final int event, NetworkRequestInfo nri) {
+        // Once trackUid is called, the register network
+        // request event must be posted, because otherwise the counter for uid will never be
+        // decremented.
+        trackUid(nri);
+        mHandler.sendMessage(mHandler.obtainMessage(event, nri));
+    }
+
+    private void maybeUntrackUid(final NetworkRequestInfo nri) {
+        if (nri.mMessenger == null && nri.mPendingIntent == null) {
+            // Not an app request.
+            return;
+        }
+        nri.mPerUidCounter.decrementCount(nri.mUid);
+    }
+
     @Override
     public NetworkRequest listenForNetwork(NetworkCapabilities networkCapabilities,
             Messenger messenger, IBinder binder,
@@ -8088,7 +8120,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                         callingAttributionTag);
         if (VDBG) log("listenForNetwork for " + nri);
 
-        mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_LISTENER, nri));
+        trackUidAndRegisterNetworkRequest(EVENT_REGISTER_NETWORK_LISTENER, nri);
         return networkRequest;
     }
 
@@ -8113,8 +8145,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 callingAttributionTag);
         if (VDBG) log("pendingListenForNetwork for " + nri);
 
-        mHandler.sendMessage(mHandler.obtainMessage(
-                    EVENT_REGISTER_NETWORK_LISTENER_WITH_INTENT, nri));
+        trackUidAndRegisterNetworkRequest(EVENT_REGISTER_NETWORK_LISTENER_WITH_INTENT, nri);
     }
 
     /** Returns the next Network provider ID. */
@@ -12176,6 +12207,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // handleRegisterConnectivityDiagnosticsCallback(). nri will be cleaned up as part of the
         // callback's binder death.
         final NetworkRequestInfo nri = new NetworkRequestInfo(callingUid, requestWithId);
+        nri.mPerUidCounter.incrementCountOrThrow(nri.mUid);
         final ConnectivityDiagnosticsCallbackInfo cbInfo =
                 new ConnectivityDiagnosticsCallbackInfo(callback, nri, callingPackageName);
 
@@ -13270,7 +13302,17 @@ public class ConnectivityService extends IConnectivityManager.Stub
         final ArraySet<NetworkRequestInfo> perAppCallbackRequestsToUpdate =
                 getPerAppCallbackRequestsToUpdate();
         final ArraySet<NetworkRequestInfo> nrisToRegister = new ArraySet<>(nris);
-        handleRemoveNetworkRequests(perAppCallbackRequestsToUpdate);
+        // This method does not need to modify perUidCounter because:
+        // - |nris| only contains per-app network requests created by ConnectivityService which
+        //   are internal requests and so do not need to be tracked in perUidCounter.
+        // - The requests in perAppCallbackRequestsToUpdate are removed, modified, and re-added,
+        //   but the same number of requests is removed and re-added, and none of the requests
+        //   changes mUid, so the perUidCounter before and after this method remains the same.
+        //   Re-adding the requests does not modify perUidCounter (that is done when the app
+        //   registers the request), so removing them must not modify perUidCounter.
+        // TODO(b/341228979): Modify nris in place instead of removing them and re-adding them
+        handleRemoveNetworkRequests(perAppCallbackRequestsToUpdate,
+                false /* untrackUids */);
         nrisToRegister.addAll(
                 createPerAppCallbackRequestsToRegister(perAppCallbackRequestsToUpdate));
         handleRegisterNetworkRequests(nrisToRegister);
