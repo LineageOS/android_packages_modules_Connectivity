@@ -64,6 +64,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
+import android.os.SystemClock;
 import android.os.UserManager;
 import android.os.test.TestLooper;
 import android.provider.Settings;
@@ -75,6 +76,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
 import com.android.connectivity.resources.R;
+import com.android.dx.mockito.inline.extended.ExtendedMockito;
 import com.android.server.connectivity.ConnectivityResources;
 import com.android.server.thread.openthread.MeshcopTxtAttributes;
 import com.android.server.thread.openthread.testing.FakeOtDaemon;
@@ -90,7 +92,10 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.MockitoSession;
 
+import java.time.Clock;
+import java.time.DateTimeException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -532,6 +537,53 @@ public final class ThreadNetworkControllerServiceTest {
                 future.completeExceptionally(new ThreadNetworkException(errorCode, errorMessage));
             }
         };
+    }
+
+    @Test
+    public void
+            createRandomizedDataset_noNetworkTimeClock_datasetActiveTimestampIsNotAuthoritative()
+                    throws Exception {
+        MockitoSession session =
+                ExtendedMockito.mockitoSession().mockStatic(SystemClock.class).startMocking();
+        final IActiveOperationalDatasetReceiver mockReceiver =
+                ExtendedMockito.mock(IActiveOperationalDatasetReceiver.class);
+
+        try {
+            ExtendedMockito.when(SystemClock.currentNetworkTimeClock())
+                    .thenThrow(new DateTimeException("fake throw"));
+            mService.createRandomizedDataset(DEFAULT_NETWORK_NAME, mockReceiver);
+            mTestLooper.dispatchAll();
+        } finally {
+            session.finishMocking();
+        }
+
+        verify(mockReceiver, never()).onError(anyInt(), anyString());
+        verify(mockReceiver, times(1)).onSuccess(mActiveDatasetCaptor.capture());
+        ActiveOperationalDataset activeDataset = mActiveDatasetCaptor.getValue();
+        assertThat(activeDataset.getActiveTimestamp().isAuthoritativeSource()).isFalse();
+    }
+
+    @Test
+    public void createRandomizedDataset_hasNetworkTimeClock_datasetActiveTimestampIsAuthoritative()
+            throws Exception {
+        MockitoSession session =
+                ExtendedMockito.mockitoSession().mockStatic(SystemClock.class).startMocking();
+        final IActiveOperationalDatasetReceiver mockReceiver =
+                ExtendedMockito.mock(IActiveOperationalDatasetReceiver.class);
+
+        try {
+            ExtendedMockito.when(SystemClock.currentNetworkTimeClock())
+                    .thenReturn(Clock.systemUTC());
+            mService.createRandomizedDataset(DEFAULT_NETWORK_NAME, mockReceiver);
+            mTestLooper.dispatchAll();
+        } finally {
+            session.finishMocking();
+        }
+
+        verify(mockReceiver, never()).onError(anyInt(), anyString());
+        verify(mockReceiver, times(1)).onSuccess(mActiveDatasetCaptor.capture());
+        ActiveOperationalDataset activeDataset = mActiveDatasetCaptor.getValue();
+        assertThat(activeDataset.getActiveTimestamp().isAuthoritativeSource()).isTrue();
     }
 
     @Test

@@ -1746,7 +1746,15 @@ public class ConnectivityServiceTest {
 
     private void setBlockedReasonChanged(int blockedReasons) {
         mBlockedReasons = blockedReasons;
-        mPolicyCallback.onUidBlockedReasonChanged(Process.myUid(), blockedReasons);
+        if (mDeps.isAtLeastV()) {
+            visibleOnHandlerThread(mCsHandlerThread.getThreadHandler(),
+                    () -> mService.handleBlockedReasonsChanged(
+                            List.of(new Pair<>(Process.myUid(), blockedReasons))
+
+                    ));
+        } else {
+            mPolicyCallback.onUidBlockedReasonChanged(Process.myUid(), blockedReasons);
+        }
     }
 
     private Nat464Xlat getNat464Xlat(NetworkAgentWrapper mna) {
@@ -1927,11 +1935,16 @@ public class ConnectivityServiceTest {
         mService.mLingerDelayMs = TEST_LINGER_DELAY_MS;
         mService.mNascentDelayMs = TEST_NASCENT_DELAY_MS;
 
-        final ArgumentCaptor<NetworkPolicyCallback> policyCallbackCaptor =
-                ArgumentCaptor.forClass(NetworkPolicyCallback.class);
-        verify(mNetworkPolicyManager).registerNetworkPolicyCallback(any(),
-                policyCallbackCaptor.capture());
-        mPolicyCallback = policyCallbackCaptor.getValue();
+        if (mDeps.isAtLeastV()) {
+            verify(mNetworkPolicyManager, never()).registerNetworkPolicyCallback(any(), any());
+            mPolicyCallback = null;
+        } else {
+            final ArgumentCaptor<NetworkPolicyCallback> policyCallbackCaptor =
+                    ArgumentCaptor.forClass(NetworkPolicyCallback.class);
+            verify(mNetworkPolicyManager).registerNetworkPolicyCallback(any(),
+                    policyCallbackCaptor.capture());
+            mPolicyCallback = policyCallbackCaptor.getValue();
+        }
 
         // Create local CM before sending system ready so that we can answer
         // getSystemService() correctly.
@@ -7527,13 +7540,13 @@ public class ConnectivityServiceTest {
     @Test
     public void testNetworkCallbackMaximum() throws Exception {
         final int MAX_REQUESTS = 100;
-        final int CALLBACKS = 87;
+        final int CALLBACKS = 88;
         final int DIFF_INTENTS = 10;
         final int SAME_INTENTS = 10;
         final int SYSTEM_ONLY_MAX_REQUESTS = 250;
-        // Assert 1 (Default request filed before testing) + CALLBACKS + DIFF_INTENTS +
-        // 1 (same intent) = MAX_REQUESTS - 1, since the capacity is MAX_REQUEST - 1.
-        assertEquals(MAX_REQUESTS - 1, 1 + CALLBACKS + DIFF_INTENTS + 1);
+        // CALLBACKS + DIFF_INTENTS + 1 (same intent)
+        // = MAX_REQUESTS - 1, since the capacity is MAX_REQUEST - 1.
+        assertEquals(MAX_REQUESTS - 1, CALLBACKS + DIFF_INTENTS + 1);
 
         NetworkRequest networkRequest = new NetworkRequest.Builder().build();
         ArrayList<Object> registered = new ArrayList<>();
