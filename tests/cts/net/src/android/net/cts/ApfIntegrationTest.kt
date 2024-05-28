@@ -318,7 +318,7 @@ class ApfIntegrationTest {
 
         if (caps.apfVersionSupported > 4) {
             assertThat(caps.maximumApfProgramSize).isAtLeast(2048)
-            assertThat(caps.apfVersionSupported).isEqualTo(6000)  // v6.0000
+            assertThat(caps.apfVersionSupported).isEqualTo(6000) // v6.0000
         }
 
         // DEVICEs launching with Android 15 (AOSP experimental) or higher with CHIPSETs that set
@@ -388,6 +388,10 @@ class ApfIntegrationTest {
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testDropPingReply() {
+        // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
+        // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
+        // should be turned on.
+        assume().that(getVsrApiLevel()).isAtLeast(34)
         assumeApfVersionSupportAtLeast(4)
 
         // clear any active APF filter
@@ -427,6 +431,10 @@ class ApfIntegrationTest {
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testPrefilledMemorySlotsV4() {
+        // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
+        // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
+        // should be turned on.
+        assume().that(getVsrApiLevel()).isAtLeast(34)
         // Test v4 memory slots on both v4 and v6 interpreters.
         assumeApfVersionSupportAtLeast(4)
         clearApfMemory()
