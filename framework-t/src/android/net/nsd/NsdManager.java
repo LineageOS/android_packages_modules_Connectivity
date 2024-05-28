@@ -1782,16 +1782,16 @@ public final class NsdManager {
         if (!hasServiceName && !hasServiceType && serviceInfo.getPort() == 0) {
             return ServiceValidationType.NO_SERVICE;
         }
-        if (hasServiceName && hasServiceType) {
-            if (serviceInfo.getPort() < 0) {
-                throw new IllegalArgumentException("Invalid port");
-            }
-            if (serviceInfo.getPort() == 0) {
-                return ServiceValidationType.HAS_SERVICE_ZERO_PORT;
-            }
-            return ServiceValidationType.HAS_SERVICE;
+        if (!hasServiceName || !hasServiceType) {
+            throw new IllegalArgumentException("The service name or the service type is missing");
         }
-        throw new IllegalArgumentException("The service name or the service type is missing");
+        if (serviceInfo.getPort() < 0) {
+            throw new IllegalArgumentException("Invalid port");
+        }
+        if (serviceInfo.getPort() == 0) {
+            return ServiceValidationType.HAS_SERVICE_ZERO_PORT;
+        }
+        return ServiceValidationType.HAS_SERVICE;
     }
 
     /**
