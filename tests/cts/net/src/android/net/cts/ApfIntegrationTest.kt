@@ -51,6 +51,7 @@ import android.system.OsConstants.SOCK_NONBLOCK
 import android.util.Log
 import androidx.test.filters.RequiresDevice
 import androidx.test.platform.app.InstrumentationRegistry
+import com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel
 import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
@@ -356,9 +357,15 @@ class ApfIntegrationTest {
     fun testReadWriteProgram() {
         assumeApfVersionSupportAtLeast(4)
 
-        // Only test down to 2 bytes. The first byte always stays PASS.
+        val minReadWriteSize = if (getFirstApiLevel() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            2
+        } else {
+            8
+        }
+
+        // The minReadWriteSize is 2 bytes. The first byte always stays PASS.
         val program = ByteArray(caps.maximumApfProgramSize)
-        for (i in caps.maximumApfProgramSize downTo 2) {
+        for (i in caps.maximumApfProgramSize downTo minReadWriteSize) {
             // Randomize bytes in range [1, i). And install first [0, i) bytes of program.
             // Note that only the very first instruction (PASS) is valid APF bytecode.
             Random.nextBytes(program, 1 /* fromIndex */, i /* toIndex */)
