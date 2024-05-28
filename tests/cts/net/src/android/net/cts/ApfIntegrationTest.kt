@@ -373,7 +373,15 @@ class ApfIntegrationTest {
 
             // Compare entire memory region.
             val readResult = readProgram()
-            assertWithMessage("read/write $i byte prog failed").that(readResult).isEqualTo(program)
+            val errMsg = """
+                read/write $i byte prog failed.
+                In APFv4, the APF memory region MUST NOT be modified or cleared except by APF
+                instructions executed by the interpreter or by Android OS calls to the HAL. If this
+                requirement cannot be met, the firmware cannot declare that it supports APFv4 and
+                it should declare that it only supports APFv3(if counter is partially supported) or
+                APFv2.
+            """.trimIndent()
+            assertWithMessage(errMsg).that(readResult).isEqualTo(program)
         }
     }
 
