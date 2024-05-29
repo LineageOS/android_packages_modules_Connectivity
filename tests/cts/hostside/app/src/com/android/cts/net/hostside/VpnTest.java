@@ -22,6 +22,7 @@ import static android.Manifest.permission.READ_DEVICE_CONFIG;
 import static android.Manifest.permission.WRITE_DEVICE_CONFIG;
 import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
 import static android.content.pm.PackageManager.FEATURE_WIFI;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
 import static android.net.ConnectivityManager.TYPE_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
@@ -51,6 +52,7 @@ import static com.android.networkstack.apishim.ConstantsShim.RECEIVER_EXPORTED;
 import static com.android.testutils.Cleanup.testAndCleanup;
 import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.RecorderCallback.CallbackEntry.BLOCKED_STATUS_INT;
+import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -977,11 +979,18 @@ public class VpnTest {
                 registerDefaultNetworkCallbackForUid(otherUid, otherUidCallback, h);
                 registerDefaultNetworkCallbackForUid(Process.myUid(), myUidCallback, h);
             }, NETWORK_SETTINGS);
-            for (TestableNetworkCallback callback :
-                    List.of(systemDefaultCallback, otherUidCallback, myUidCallback)) {
+            for (TestableNetworkCallback callback : List.of(systemDefaultCallback, myUidCallback)) {
                 callback.expectAvailableCallbacks(defaultNetwork, false /* suspended */,
                         true /* validated */, false /* blocked */, TIMEOUT_MS);
             }
+            // On V+, ConnectivityService generates blockedReasons based on bpf map contents even if
+            // the otherUid does not exist on device. So if the background chain is enabled,
+            // otherUid is blocked.
+            final boolean isOtherUidBlocked = SdkLevel.isAtLeastV()
+                    && runAsShell(NETWORK_SETTINGS, () -> mCM.getFirewallChainEnabled(
+                            FIREWALL_CHAIN_BACKGROUND));
+            otherUidCallback.expectAvailableCallbacks(defaultNetwork, false /* suspended */,
+                    true /* validated */, isOtherUidBlocked, TIMEOUT_MS);
         }
 
         FileDescriptor fd = openSocketFdInOtherApp(TEST_HOST, 80, TIMEOUT_MS);
