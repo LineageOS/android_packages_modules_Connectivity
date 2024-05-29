@@ -488,6 +488,10 @@ class ApfIntegrationTest {
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testFilterAgeIncreasesBetweenPackets() {
+        // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
+        // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
+        // should be turned on.
+        assume().that(getVsrApiLevel()).isAtLeast(34)
         assumeApfVersionSupportAtLeast(4)
         clearApfMemory()
         val gen = ApfV4Generator(4)
