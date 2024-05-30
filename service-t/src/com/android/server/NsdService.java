@@ -1634,6 +1634,12 @@ public class NsdService extends INsdManager.Stub {
                         NsdManager.nameOf(code), transactionId));
                 switch (code) {
                     case NsdManager.SERVICE_FOUND:
+                        // Set the ServiceFromCache flag only if the service is actually being
+                        // retrieved from the cache. This flag should not be overridden by later
+                        // service found event, which may not be cached.
+                        if (event.mIsServiceFromCache) {
+                            request.setServiceFromCache(true);
+                        }
                         clientInfo.onServiceFound(clientRequestId, info, request);
                         break;
                     case NsdManager.SERVICE_LOST:
@@ -2887,7 +2893,8 @@ public class NsdService extends INsdManager.Stub {
                                 request.getFoundServiceCount(),
                                 request.getLostServiceCount(),
                                 request.getServicesCount(),
-                                request.getSentQueryCount());
+                                request.getSentQueryCount(),
+                                request.isServiceFromCache());
                     } else if (listener instanceof ResolutionListener) {
                         mMetrics.reportServiceResolutionStop(false /* isLegacy */, transactionId,
                                 request.calculateRequestDurationMs(mClock.elapsedRealtime()),
@@ -2927,7 +2934,8 @@ public class NsdService extends INsdManager.Stub {
                                 request.getFoundServiceCount(),
                                 request.getLostServiceCount(),
                                 request.getServicesCount(),
-                                NO_SENT_QUERY_COUNT);
+                                NO_SENT_QUERY_COUNT,
+                                request.isServiceFromCache());
                         break;
                     case NsdManager.RESOLVE_SERVICE:
                         stopResolveService(transactionId);
@@ -3050,7 +3058,8 @@ public class NsdService extends INsdManager.Stub {
                     request.getFoundServiceCount(),
                     request.getLostServiceCount(),
                     request.getServicesCount(),
-                    request.getSentQueryCount());
+                    request.getSentQueryCount(),
+                    request.isServiceFromCache());
             try {
                 mCb.onStopDiscoverySucceeded(listenerKey);
             } catch (RemoteException e) {

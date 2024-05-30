@@ -193,7 +193,8 @@ public class NetworkNsdReportedMetrics {
      * @param sentQueryCount The count of sent queries before stop discovery.
      */
     public void reportServiceDiscoveryStop(boolean isLegacy, int transactionId, long durationMs,
-            int foundCallbackCount, int lostCallbackCount, int servicesCount, int sentQueryCount) {
+            int foundCallbackCount, int lostCallbackCount, int servicesCount, int sentQueryCount,
+            boolean isServiceFromCache) {
         final Builder builder = makeReportedBuilder(isLegacy, transactionId);
         builder.setType(NsdEventType.NET_DISCOVER);
         builder.setQueryResult(MdnsQueryResult.MQR_SERVICE_DISCOVERY_STOP);
@@ -202,6 +203,7 @@ public class NetworkNsdReportedMetrics {
         builder.setLostCallbackCount(lostCallbackCount);
         builder.setFoundServiceCount(servicesCount);
         builder.setSentQueryCount(sentQueryCount);
+        builder.setIsKnownService(isServiceFromCache);
         mDependencies.statsWrite(builder.build());
     }
 
