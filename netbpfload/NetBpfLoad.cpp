@@ -54,6 +54,7 @@
 namespace android {
 namespace bpf {
 
+using base::StartsWith;
 using base::EndsWith;
 using std::string;
 
@@ -228,6 +229,30 @@ static bool isGSI() {
     return !access("/metadata/gsi/dsu/booted", F_OK);
 }
 
+static bool hasGSM() {
+    static string ph = base::GetProperty("gsm.current.phone-type", "");
+    static bool gsm = (ph != "");
+    static bool logged = false;
+    if (!logged) {
+        logged = true;
+        ALOGI("hasGSM(gsm.current.phone-type='%s'): %s", ph.c_str(), gsm ? "true" : "false");
+    }
+    return gsm;
+}
+
+static bool isTV() {
+    if (hasGSM()) return false;  // TVs don't do GSM
+
+    static string key = base::GetProperty("ro.oem.key1", "");
+    static bool tv = StartsWith(key, "ATV00");
+    static bool logged = false;
+    if (!logged) {
+        logged = true;
+        ALOGI("isTV(ro.oem.key1='%s'): %s.", key.c_str(), tv ? "true" : "false");
+    }
+    return tv;
+}
+
 static int doLoad(char** argv, char * const envp[]) {
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
@@ -278,7 +303,7 @@ static int doLoad(char** argv, char * const envp[]) {
 
     if (isAtLeastV && isX86() && !isKernel64Bit()) {
         ALOGE("Android V requires X86 kernel to be 64-bit.");
-        return 1;
+        if (!isTV()) return 1;
     }
 
     if (isAtLeastV) {
@@ -330,7 +355,7 @@ static int doLoad(char** argv, char * const envp[]) {
          * and 32-bit userspace on 64-bit kernel bpf ringbuffer compatibility is broken.
          */
         ALOGE("64-bit userspace required on 6.2+ kernels.");
-        return 1;
+        if (!isTV()) return 1;
     }
 
     // Ensure we can determine the Android build type.
