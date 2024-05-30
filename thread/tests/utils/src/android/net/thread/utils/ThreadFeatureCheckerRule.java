@@ -21,7 +21,6 @@ import static com.android.testutils.DeviceInfoUtils.isKernelVersionAtLeast;
 import static org.junit.Assume.assumeTrue;
 
 import android.content.Context;
-import android.net.thread.ThreadNetworkManager;
 import android.os.SystemProperties;
 import android.os.VintfRuntimeInfo;
 
@@ -122,7 +121,10 @@ public final class ThreadFeatureCheckerRule implements TestRule {
     /** Returns {@code true} if this device has the Thread feature supported. */
     private static boolean hasThreadFeature() {
         final Context context = ApplicationProvider.getApplicationContext();
-        return context.getSystemService(ThreadNetworkManager.class) != null;
+
+        // Use service name rather than `ThreadNetworkManager.class` to avoid
+        // `ClassNotFoundException` on U- devices.
+        return context.getSystemService("thread_network") != null;
     }
 
     /**

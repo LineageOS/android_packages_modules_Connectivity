@@ -30,6 +30,8 @@ import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.ActiveOperationalDataset.Builder;
 import android.net.thread.ActiveOperationalDataset.SecurityPolicy;
 import android.net.thread.OperationalDatasetTimestamp;
+import android.net.thread.utils.ThreadFeatureCheckerRule;
+import android.net.thread.utils.ThreadFeatureCheckerRule.RequiresThreadFeature;
 import android.util.SparseArray;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -38,6 +40,7 @@ import androidx.test.filters.SmallTest;
 import com.google.common.primitives.Bytes;
 import com.google.common.testing.EqualsTester;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -46,6 +49,7 @@ import java.util.Arrays;
 
 /** CTS tests for {@link ActiveOperationalDataset}. */
 @SmallTest
+@RequiresThreadFeature
 @RunWith(AndroidJUnit4.class)
 public final class ActiveOperationalDatasetTest {
     private static final int TYPE_ACTIVE_TIMESTAMP = 14;
@@ -80,6 +84,8 @@ public final class ActiveOperationalDatasetTest {
 
     private static final ActiveOperationalDataset DEFAULT_DATASET =
             ActiveOperationalDataset.fromThreadTlvs(VALID_DATASET_TLVS);
+
+    @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
 
     private static byte[] removeTlv(byte[] dataset, int type) {
         ByteArrayOutputStream os = new ByteArrayOutputStream(dataset.length);
