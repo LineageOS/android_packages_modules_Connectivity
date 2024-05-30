@@ -28,6 +28,8 @@ import android.net.thread.ActiveOperationalDataset;
 import android.net.thread.ActiveOperationalDataset.SecurityPolicy;
 import android.net.thread.OperationalDatasetTimestamp;
 import android.net.thread.PendingOperationalDataset;
+import android.net.thread.utils.ThreadFeatureCheckerRule;
+import android.net.thread.utils.ThreadFeatureCheckerRule.RequiresThreadFeature;
 import android.util.SparseArray;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -36,6 +38,7 @@ import androidx.test.filters.SmallTest;
 import com.google.common.primitives.Bytes;
 import com.google.common.testing.EqualsTester;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -44,8 +47,11 @@ import java.time.Duration;
 
 /** Tests for {@link PendingOperationalDataset}. */
 @SmallTest
+@RequiresThreadFeature
 @RunWith(AndroidJUnit4.class)
 public final class PendingOperationalDatasetTest {
+    @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
+
     private static ActiveOperationalDataset createActiveDataset() throws Exception {
         SparseArray<byte[]> channelMask = new SparseArray<>(1);
         channelMask.put(0, new byte[] {0x00, 0x1f, (byte) 0xff, (byte) 0xe0});
