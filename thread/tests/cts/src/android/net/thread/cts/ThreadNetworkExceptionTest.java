@@ -25,17 +25,23 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import android.net.thread.ThreadNetworkException;
+import android.net.thread.utils.ThreadFeatureCheckerRule;
+import android.net.thread.utils.ThreadFeatureCheckerRule.RequiresThreadFeature;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /** CTS tests for {@link ThreadNetworkException}. */
 @SmallTest
+@RequiresThreadFeature
 @RunWith(AndroidJUnit4.class)
 public final class ThreadNetworkExceptionTest {
+    @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
+
     @Test
     public void constructor_validValues_valuesAreConnectlySet() throws Exception {
         ThreadNetworkException errorThreadDisabled =
