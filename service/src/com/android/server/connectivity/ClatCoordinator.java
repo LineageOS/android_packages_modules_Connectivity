@@ -659,6 +659,8 @@ public class ClatCoordinator {
             final int pid = mDeps.startClatd(tunFd.getFileDescriptor(),
                     readSock6.getFileDescriptor(), writeSock6.getFileDescriptor(), iface, pfx96Str,
                     v4Str, v6Str);
+            // The file descriptors have been duplicated (dup2) to clatd in native_startClatd().
+            // Close these file descriptor stubs in finally block.
 
             // [6] Initialize and store clatd tracker object.
             mClatdTracker = new ClatdTracker(iface, ifIndex, tunIface, tunIfIndex, v4, v6, pfx96,
@@ -677,20 +679,17 @@ public class ClatCoordinator {
                     Log.e(TAG, "untagSocket cookie " + cookie + " failed: " + e2);
                 }
             }
-            try {
-                if (tunFd != null) {
-                    tunFd.close();
-                }
-                if (readSock6 != null) {
-                    readSock6.close();
-                }
-                if (writeSock6 != null) {
-                    writeSock6.close();
-                }
-            } catch (IOException e2) {
-                Log.e(TAG, "Fail to cleanup fd ", e);
-            }
             throw new IOException("Failed to start clat ", e);
+        } finally {
+            if (tunFd != null) {
+                tunFd.close();
+            }
+            if (readSock6 != null) {
+                readSock6.close();
+            }
+            if (writeSock6 != null) {
+                writeSock6.close();
+            }
         }
     }
 
