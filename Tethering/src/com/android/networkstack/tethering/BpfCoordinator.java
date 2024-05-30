@@ -69,7 +69,6 @@ import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.NetworkStackConstants;
 import com.android.net.module.util.SharedLog;
-import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.bpf.Tether4Key;
 import com.android.net.module.util.bpf.Tether4Value;
@@ -1343,19 +1342,6 @@ public class BpfCoordinator {
         pw.decreaseIndent();
     }
 
-    private <K extends Struct, V extends Struct> void dumpRawMap(IBpfMap<K, V> map,
-            IndentingPrintWriter pw) throws ErrnoException {
-        if (map == null) {
-            pw.println("No BPF support");
-            return;
-        }
-        if (map.isEmpty()) {
-            pw.println("No entries");
-            return;
-        }
-        map.forEach((k, v) -> pw.println(BpfDump.toBase64EncodedString(k, v)));
-    }
-
     /**
      * Dump raw BPF map into the base64 encoded strings "<base64 key>,<base64 value>".
      * Allow to dump only one map path once. For test only.
@@ -1375,7 +1361,7 @@ public class BpfCoordinator {
         // TODO: dump downstream4 map.
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_STATS)) {
             try (IBpfMap<TetherStatsKey, TetherStatsValue> statsMap = mDeps.getBpfStatsMap()) {
-                dumpRawMap(statsMap, pw);
+                BpfDump.dumpRawMap(statsMap, pw);
             } catch (ErrnoException | IOException e) {
                 pw.println("Error dumping stats map: " + e);
             }
@@ -1383,7 +1369,7 @@ public class BpfCoordinator {
         }
         if (CollectionUtils.contains(args, DUMPSYS_RAWMAP_ARG_UPSTREAM4)) {
             try (IBpfMap<Tether4Key, Tether4Value> upstreamMap = mDeps.getBpfUpstream4Map()) {
-                dumpRawMap(upstreamMap, pw);
+                BpfDump.dumpRawMap(upstreamMap, pw);
             } catch (ErrnoException | IOException e) {
                 pw.println("Error dumping IPv4 map: " + e);
             }
