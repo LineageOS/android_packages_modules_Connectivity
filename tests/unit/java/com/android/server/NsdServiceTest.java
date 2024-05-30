@@ -1196,7 +1196,7 @@ public class NsdServiceTest {
                 Instant.MAX /* expirationTime */);
 
         // Verify onServiceNameDiscovered callback
-        listener.onServiceNameDiscovered(foundInfo, false /* isServiceFromCache */);
+        listener.onServiceNameDiscovered(foundInfo, true /* isServiceFromCache */);
         verify(discListener, timeout(TIMEOUT_MS)).onServiceFound(argThat(info ->
                 info.getServiceName().equals(SERVICE_NAME)
                         // Service type in discovery callbacks has a dot at the end
@@ -1232,7 +1232,7 @@ public class NsdServiceTest {
         verify(mSocketProvider, timeout(CLEANUP_DELAY_MS + TIMEOUT_MS)).requestStopWhenInactive();
         verify(mMetrics).reportServiceDiscoveryStop(false /* isLegacy */, discId,
                 10L /* durationMs */, 1 /* foundCallbackCount */, 1 /* lostCallbackCount */,
-                1 /* servicesCount */, 3 /* sentQueryCount */);
+                1 /* servicesCount */, 3 /* sentQueryCount */, true /* isServiceFromCache */);
     }
 
     @Test

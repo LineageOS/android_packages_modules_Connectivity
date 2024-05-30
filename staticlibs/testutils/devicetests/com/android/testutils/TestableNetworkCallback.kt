@@ -360,16 +360,28 @@ open class TestableNetworkCallback private constructor(
         timeoutMs: Long = defaultTimeoutMs,
         errorMsg: String? = null,
         test: (T) -> Boolean = { true }
-    ) = (poll(timeoutMs) ?: fail("Did not receive ${T::class.simpleName} after ${timeoutMs}ms"))
+    ) = (poll(timeoutMs) ?: failWithErrorReason(errorMsg,
+        "Did not receive ${T::class.simpleName} after ${timeoutMs}ms"))
             .also {
-                if (it !is T) fail("Expected callback ${T::class.simpleName}, got $it")
+                if (it !is T) {
+                    failWithErrorReason(
+                        errorMsg,
+                        "Expected callback ${T::class.simpleName}, got $it"
+                    )
+                }
                 if (ANY_NETWORK !== network && it.network != network) {
-                    fail("Expected network $network for callback : $it")
+                    failWithErrorReason(errorMsg, "Expected network $network for callback : $it")
                 }
                 if (!test(it)) {
-                    fail("${errorMsg ?: "Callback doesn't match predicate"} : $it")
+                    failWithErrorReason(errorMsg, "Callback doesn't match predicate : $it")
                 }
             } as T
+
+    // "Nothing" is the return type to declare a function never returns a value.
+    fun failWithErrorReason(errorMsg: String?, errorReason: String): Nothing {
+        val message = if (errorMsg != null) "$errorMsg : $errorReason" else errorReason
+        fail(message)
+    }
 
     inline fun <reified T : CallbackEntry> expect(
         network: HasNetwork,

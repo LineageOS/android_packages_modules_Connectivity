@@ -51,6 +51,7 @@ import android.system.OsConstants.SOCK_NONBLOCK
 import android.util.Log
 import androidx.test.filters.RequiresDevice
 import androidx.test.platform.app.InstrumentationRegistry
+import com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel
 import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
@@ -191,8 +192,8 @@ class ApfIntegrationTest {
             futureReply!!.complete(recvbuf.sliceArray(8..<length))
         }
 
-        fun sendPing(data: ByteArray) {
-            require(data.size == 56)
+        fun sendPing(data: ByteArray, payloadSize: Int) {
+            require(data.size == payloadSize)
 
             // rfc4443#section-4.1: Echo Request Message
             //   0                   1                   2                   3
@@ -318,7 +319,7 @@ class ApfIntegrationTest {
 
         if (caps.apfVersionSupported > 4) {
             assertThat(caps.maximumApfProgramSize).isAtLeast(2048)
-            assertThat(caps.apfVersionSupported).isEqualTo(6000)  // v6.0000
+            assertThat(caps.apfVersionSupported).isEqualTo(6000) // v6.0000
         }
 
         // DEVICEs launching with Android 15 (AOSP experimental) or higher with CHIPSETs that set
@@ -356,9 +357,15 @@ class ApfIntegrationTest {
     fun testReadWriteProgram() {
         assumeApfVersionSupportAtLeast(4)
 
-        // Only test down to 2 bytes. The first byte always stays PASS.
+        val minReadWriteSize = if (getFirstApiLevel() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            2
+        } else {
+            8
+        }
+
+        // The minReadWriteSize is 2 bytes. The first byte always stays PASS.
         val program = ByteArray(caps.maximumApfProgramSize)
-        for (i in caps.maximumApfProgramSize downTo 2) {
+        for (i in caps.maximumApfProgramSize downTo minReadWriteSize) {
             // Randomize bytes in range [1, i). And install first [0, i) bytes of program.
             // Note that only the very first instruction (PASS) is valid APF bytecode.
             Random.nextBytes(program, 1 /* fromIndex */, i /* toIndex */)
@@ -366,7 +373,15 @@ class ApfIntegrationTest {
 
             // Compare entire memory region.
             val readResult = readProgram()
-            assertWithMessage("read/write $i byte prog failed").that(readResult).isEqualTo(program)
+            val errMsg = """
+                read/write $i byte prog failed.
+                In APFv4, the APF memory region MUST NOT be modified or cleared except by APF
+                instructions executed by the interpreter or by Android OS calls to the HAL. If this
+                requirement cannot be met, the firmware cannot declare that it supports APFv4 and
+                it should declare that it only supports APFv3(if counter is partially supported) or
+                APFv2.
+            """.trimIndent()
+            assertWithMessage(errMsg).that(readResult).isEqualTo(program)
         }
     }
 
@@ -388,6 +403,10 @@ class ApfIntegrationTest {
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testDropPingReply() {
+        // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
+        // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
+        // should be turned on.
+        assume().that(getVsrApiLevel()).isAtLeast(34)
         assumeApfVersionSupportAtLeast(4)
 
         // clear any active APF filter
@@ -396,8 +415,13 @@ class ApfIntegrationTest {
         readProgram() // wait for install completion
 
         // Assert that initial ping does not get filtered.
-        val data = ByteArray(56).also { Random.nextBytes(it) }
-        packetReader.sendPing(data)
+        val payloadSize = if (getFirstApiLevel() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            68
+        } else {
+            4
+        }
+        val data = ByteArray(payloadSize).also { Random.nextBytes(it) }
+        packetReader.sendPing(data, payloadSize)
         assertThat(packetReader.expectPingReply()).isEqualTo(data)
 
         // Generate an APF program that drops the next ping
@@ -417,7 +441,7 @@ class ApfIntegrationTest {
         installProgram(program)
         readProgram() // wait for install completion
 
-        packetReader.sendPing(data)
+        packetReader.sendPing(data, payloadSize)
         packetReader.expectPingDropped()
     }
 
@@ -427,6 +451,10 @@ class ApfIntegrationTest {
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
     fun testPrefilledMemorySlotsV4() {
+        // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
+        // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
+        // should be turned on.
+        assume().that(getVsrApiLevel()).isAtLeast(34)
         // Test v4 memory slots on both v4 and v6 interpreters.
         assumeApfVersionSupportAtLeast(4)
         clearApfMemory()
@@ -455,8 +483,13 @@ class ApfIntegrationTest {
         readProgram() // wait for install completion
 
         // Trigger the program by sending a ping and waiting on the reply.
-        val data = ByteArray(56).also { Random.nextBytes(it) }
-        packetReader.sendPing(data)
+        val payloadSize = if (getFirstApiLevel() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            68
+        } else {
+            4
+        }
+        val data = ByteArray(payloadSize).also { Random.nextBytes(it) }
+        packetReader.sendPing(data, payloadSize)
         packetReader.expectPingReply()
 
         val readResult = readProgram()
@@ -464,8 +497,51 @@ class ApfIntegrationTest {
         expect.withMessage("PROGRAM_SIZE").that(buffer.getInt()).isEqualTo(program.size)
         expect.withMessage("RAM_LEN").that(buffer.getInt()).isEqualTo(caps.maximumApfProgramSize)
         expect.withMessage("IPV4_HEADER_SIZE").that(buffer.getInt()).isEqualTo(0)
-        // Ping packet (64) + IPv6 header (40) + ethernet header (14)
-        expect.withMessage("PACKET_SIZE").that(buffer.getInt()).isEqualTo(64 + 40 + 14)
+        // Ping packet payload + ICMPv6 header (8)  + IPv6 header (40) + ethernet header (14)
+        expect.withMessage("PACKET_SIZE").that(buffer.getInt()).isEqualTo(payloadSize + 8 + 40 + 14)
         expect.withMessage("FILTER_AGE_SECONDS").that(buffer.getInt()).isLessThan(5)
+    }
+
+    // APF integration is mostly broken before V
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    fun testFilterAgeIncreasesBetweenPackets() {
+        // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
+        // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
+        // should be turned on.
+        assume().that(getVsrApiLevel()).isAtLeast(34)
+        assumeApfVersionSupportAtLeast(4)
+        clearApfMemory()
+        val gen = ApfV4Generator(4)
+
+        // If not ICMPv6 Echo Reply -> PASS
+        gen.addPassIfNotIcmpv6EchoReply()
+
+        // Store all prefilled memory slots in counter region [500, 520)
+        val counterRegion = 500
+        gen.addLoadImmediate(R1, counterRegion)
+        gen.addLoadFromMemory(R0, MemorySlot.FILTER_AGE_SECONDS)
+        gen.addStoreData(R0, 0)
+
+        installProgram(gen.generate())
+        readProgram() // wait for install completion
+
+        val payloadSize = 56
+        val data = ByteArray(payloadSize).also { Random.nextBytes(it) }
+        packetReader.sendPing(data, payloadSize)
+        packetReader.expectPingReply()
+
+        var buffer = ByteBuffer.wrap(readProgram(), counterRegion, 4 /* length */)
+        val filterAgeSecondsOrig = buffer.getInt()
+
+        Thread.sleep(5100)
+
+        packetReader.sendPing(data, payloadSize)
+        packetReader.expectPingReply()
+
+        buffer = ByteBuffer.wrap(readProgram(), counterRegion, 4 /* length */)
+        val filterAgeSeconds = buffer.getInt()
+        // Assert that filter age has increased, but not too much.
+        assertThat(filterAgeSeconds - filterAgeSecondsOrig).isEqualTo(5)
     }
 }

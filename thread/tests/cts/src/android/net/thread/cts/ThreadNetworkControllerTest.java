@@ -43,7 +43,6 @@ import static com.android.testutils.TestPermissionUtil.runAsShell;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
@@ -171,6 +170,17 @@ public class ThreadNetworkControllerTest {
         } finally {
             runAsShell(ACCESS_NETWORK_STATE, () -> mController.unregisterStateCallback(callback));
         }
+    }
+
+    @Test
+    public void subscribeThreadEnableState_getActiveDataset_onThreadEnableStateChangedNotCalled()
+            throws Exception {
+        EnabledStateListener listener = new EnabledStateListener(mController);
+        listener.expectThreadEnabledState(STATE_ENABLED);
+
+        getActiveOperationalDataset(mController);
+
+        listener.expectCallbackNotCalled();
     }
 
     @Test
@@ -1016,7 +1026,11 @@ public class ThreadNetworkControllerTest {
         }
 
         public void expectThreadEnabledState(int enabled) {
-            assertNotNull(mReadHead.poll(ENABLED_TIMEOUT_MILLIS, e -> (e == enabled)));
+            assertThat(mReadHead.poll(ENABLED_TIMEOUT_MILLIS, e -> (e == enabled))).isNotNull();
+        }
+
+        public void expectCallbackNotCalled() {
+            assertThat(mReadHead.poll(CALLBACK_TIMEOUT_MILLIS, e -> true)).isNull();
         }
 
         public void unregisterStateCallback() {

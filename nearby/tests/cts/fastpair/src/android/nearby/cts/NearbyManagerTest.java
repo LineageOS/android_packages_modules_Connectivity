@@ -28,9 +28,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assume.assumeTrue;
 
 import android.app.UiAutomation;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.cts.BTAdapterUtils;
+import android.bluetooth.test_utils.EnableBluetoothRule;
 import android.content.Context;
 import android.location.LocationManager;
 import android.nearby.BroadcastCallback;
@@ -58,6 +56,7 @@ import com.android.compatibility.common.util.SystemUtil;
 import com.android.modules.utils.build.SdkLevel;
 
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -76,6 +75,9 @@ import java.util.function.Consumer;
 @RunWith(AndroidJUnit4.class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class NearbyManagerTest {
+
+    @ClassRule static final EnableBluetoothRule sEnableBluetooth = new EnableBluetoothRule();
+
     private static final byte[] SALT = new byte[]{1, 2};
     private static final byte[] SECRET_ID = new byte[]{1, 2, 3, 4};
     private static final byte[] META_DATA_ENCRYPTION_KEY = new byte[14];
@@ -128,8 +130,6 @@ public class NearbyManagerTest {
 
         mContext = InstrumentationRegistry.getContext();
         mNearbyManager = mContext.getSystemService(NearbyManager.class);
-
-        enableBluetooth();
     }
 
     @Test
@@ -279,14 +279,6 @@ public class NearbyManagerTest {
         mUiAutomation.dropShellPermissionIdentity();
 
         assertThrows(SecurityException.class, () -> mNearbyManager.getPoweredOffFindingMode());
-    }
-
-    private void enableBluetooth() {
-        BluetoothManager manager = mContext.getSystemService(BluetoothManager.class);
-        BluetoothAdapter bluetoothAdapter = manager.getAdapter();
-        if (!bluetoothAdapter.isEnabled()) {
-            assertThat(BTAdapterUtils.enableAdapter(bluetoothAdapter, mContext)).isTrue();
-        }
     }
 
     private void enableLocation() {

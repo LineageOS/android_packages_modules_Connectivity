@@ -77,18 +77,6 @@
       "name": "libnetworkstats_test"
     },
     {
-      "name": "NetHttpCoverageTests",
-      "options": [
-        {
-          "exclude-annotation": "com.android.testutils.SkipPresubmit"
-        },
-        {
-          // These sometimes take longer than 1 min which is the presubmit timeout
-          "exclude-annotation": "androidx.test.filters.LargeTest"
-        }
-      ]
-    },
-    {
       "name": "CtsTetheringTestLatestSdk",
       "options": [
         {

@@ -623,7 +623,10 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
         return !mForceStopOtDaemonEnabled
                 && !mUserRestricted
-                && (!mAirplaneModeOn || enabledInAirplaneMode)
+                // FIXME(b/340744397): Note that here we need to call `isAirplaneModeOn()` to get
+                // the latest state of airplane mode but can't use `mIsAirplaneMode`. This is for
+                // avoiding the race conditions described in b/340744397
+                && (!isAirplaneModeOn() || enabledInAirplaneMode)
                 && mPersistentSettings.get(ThreadPersistentSettings.THREAD_ENABLED);
     }
 
@@ -1384,14 +1387,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             }
         }
 
-        private void notifyThreadEnabledUpdated(IStateCallback callback, int enabledState) {
-            try {
-                callback.onThreadEnableStateChanged(enabledState);
-            } catch (RemoteException ignored) {
-                // do nothing if the client is dead
-            }
-        }
-
         public void unregisterStateCallback(IStateCallback callback) {
             checkOnHandlerThread();
             if (!mStateCallbacks.containsKey(callback)) {
@@ -1458,15 +1453,19 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             }
         }
 
-        @Override
-        public void onThreadEnabledChanged(int state) {
-            mHandler.post(() -> onThreadEnabledChangedInternal(state));
-        }
-
-        private void onThreadEnabledChangedInternal(int state) {
+        private void onThreadEnabledChanged(int state, long listenerId) {
             checkOnHandlerThread();
-            for (IStateCallback callback : mStateCallbacks.keySet()) {
-                notifyThreadEnabledUpdated(callback, otStateToAndroidState(state));
+            boolean stateChanged = (mState == null || mState.threadEnabled != state);
+
+            for (var callbackEntry : mStateCallbacks.entrySet()) {
+                if (!stateChanged && callbackEntry.getValue().id != listenerId) {
+                    continue;
+                }
+                try {
+                    callbackEntry.getKey().onThreadEnableStateChanged(otStateToAndroidState(state));
+                } catch (RemoteException ignored) {
+                    // do nothing if the client is dead
+                }
             }
         }
 
@@ -1493,6 +1492,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             onInterfaceStateChanged(newState.isInterfaceUp);
             onDeviceRoleChanged(newState.deviceRole, listenerId);
             onPartitionIdChanged(newState.partitionId, listenerId);
+            onThreadEnabledChanged(newState.threadEnabled, listenerId);
             mState = newState;
 
             ActiveOperationalDataset newActiveDataset;
