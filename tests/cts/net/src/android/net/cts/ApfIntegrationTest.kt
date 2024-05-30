@@ -415,7 +415,11 @@ class ApfIntegrationTest {
         readProgram() // wait for install completion
 
         // Assert that initial ping does not get filtered.
-        val payloadSize = 56
+        val payloadSize = if (getFirstApiLevel() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            68
+        } else {
+            4
+        }
         val data = ByteArray(payloadSize).also { Random.nextBytes(it) }
         packetReader.sendPing(data, payloadSize)
         assertThat(packetReader.expectPingReply()).isEqualTo(data)
@@ -479,7 +483,11 @@ class ApfIntegrationTest {
         readProgram() // wait for install completion
 
         // Trigger the program by sending a ping and waiting on the reply.
-        val payloadSize = 56
+        val payloadSize = if (getFirstApiLevel() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            68
+        } else {
+            4
+        }
         val data = ByteArray(payloadSize).also { Random.nextBytes(it) }
         packetReader.sendPing(data, payloadSize)
         packetReader.expectPingReply()
@@ -489,8 +497,8 @@ class ApfIntegrationTest {
         expect.withMessage("PROGRAM_SIZE").that(buffer.getInt()).isEqualTo(program.size)
         expect.withMessage("RAM_LEN").that(buffer.getInt()).isEqualTo(caps.maximumApfProgramSize)
         expect.withMessage("IPV4_HEADER_SIZE").that(buffer.getInt()).isEqualTo(0)
-        // Ping packet (64) + IPv6 header (40) + ethernet header (14)
-        expect.withMessage("PACKET_SIZE").that(buffer.getInt()).isEqualTo(64 + 40 + 14)
+        // Ping packet payload + ICMPv6 header (8)  + IPv6 header (40) + ethernet header (14)
+        expect.withMessage("PACKET_SIZE").that(buffer.getInt()).isEqualTo(payloadSize + 8 + 40 + 14)
         expect.withMessage("FILTER_AGE_SECONDS").that(buffer.getInt()).isLessThan(5)
     }
 
