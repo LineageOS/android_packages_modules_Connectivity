@@ -21,12 +21,15 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import android.net.thread.OperationalDatasetTimestamp;
+import android.net.thread.utils.ThreadFeatureCheckerRule;
+import android.net.thread.utils.ThreadFeatureCheckerRule.RequiresThreadFeature;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
 import com.google.common.testing.EqualsTester;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -34,8 +37,11 @@ import java.time.Instant;
 
 /** Tests for {@link OperationalDatasetTimestamp}. */
 @SmallTest
+@RequiresThreadFeature
 @RunWith(AndroidJUnit4.class)
 public final class OperationalDatasetTimestampTest {
+    @Rule public final ThreadFeatureCheckerRule mThreadRule = new ThreadFeatureCheckerRule();
+
     @Test
     public void fromInstant_tooLargeInstant_throwsIllegalArgument() {
         assertThrows(
