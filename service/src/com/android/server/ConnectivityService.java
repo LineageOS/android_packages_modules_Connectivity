@@ -77,6 +77,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_ENTERPRISE;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
@@ -13282,11 +13283,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
         requests.add(createDefaultInternetRequestForTransport(
                 TYPE_NONE, NetworkRequest.Type.TRACK_DEFAULT));
 
-        // request: restricted Satellite internet
+        // request: Satellite internet, satellite network could be restricted or constrained
         final NetworkCapabilities cap = new NetworkCapabilities.Builder()
                 .addCapability(NET_CAPABILITY_INTERNET)
                 .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
                 .removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                .removeCapability(NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)
                 .addTransportType(NetworkCapabilities.TRANSPORT_SATELLITE)
                 .build();
         requests.add(createNetworkRequest(NetworkRequest.Type.REQUEST, cap));

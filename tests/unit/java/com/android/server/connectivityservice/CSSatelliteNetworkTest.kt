@@ -43,7 +43,6 @@ import android.util.ArraySet
 import com.android.net.module.util.CollectionUtils
 import com.android.server.ConnectivityService.PREFERENCE_ORDER_SATELLITE_FALLBACK
 import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.TestableNetworkCallback
@@ -88,54 +87,60 @@ class CSSatelliteNetworkTest : CSTest() {
     }
 
     /**
-     * Test that SATELLITE_NETWORK_PREFERENCE_UIDS changes will send correct net id and uid ranges
-     * to netd.
+     * Test that satellite network satisfies satellite fallback per-app default network request and
+     * send correct net id and uid ranges to netd.
      */
-    // TODO(aosp/3109163): Run on V+ where NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED is set by
-    //                     default
-    @Test @IgnoreAfter(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    fun testSatelliteNetworkPreferredUidsChanged() {
+    private fun doTestSatelliteNetworkFallbackUids(restricted: Boolean) {
         val netdInOrder = inOrder(netd)
 
-        val satelliteAgent = createSatelliteAgent("satellite0")
+        val satelliteAgent = createSatelliteAgent("satellite0", restricted)
         satelliteAgent.connect()
 
         val satelliteNetId = satelliteAgent.network.netId
+        val permission = if (restricted) {INetd.PERMISSION_SYSTEM} else {INetd.PERMISSION_NONE}
         netdInOrder.verify(netd).networkCreate(
-            nativeNetworkConfigPhysical(satelliteNetId, INetd.PERMISSION_SYSTEM))
+            nativeNetworkConfigPhysical(satelliteNetId, permission))
 
         val uid1 = PRIMARY_USER_HANDLE.getUid(TEST_PACKAGE_UID)
         val uid2 = PRIMARY_USER_HANDLE.getUid(TEST_PACKAGE_UID2)
         val uid3 = SECONDARY_USER_HANDLE.getUid(TEST_PACKAGE_UID)
 
-        // Initial satellite network preferred uids status.
-        setAndUpdateSatelliteNetworkPreferredUids(setOf())
+        // Initial satellite network fallback uids status.
+        updateSatelliteNetworkFallbackUids(setOf())
         netdInOrder.verify(netd, never()).networkAddUidRangesParcel(any())
         netdInOrder.verify(netd, never()).networkRemoveUidRangesParcel(any())
 
-        // Set SATELLITE_NETWORK_PREFERENCE_UIDS setting and verify that net id and uid ranges
-        // send to netd
+        // Update satellite network fallback uids and verify that net id and uid ranges send to netd
         var uids = mutableSetOf(uid1, uid2, uid3)
         val uidRanges1 = toUidRangeStableParcels(uidRangesForUids(uids))
         val config1 = NativeUidRangeConfig(
             satelliteNetId, uidRanges1,
             PREFERENCE_ORDER_SATELLITE_FALLBACK
         )
-        setAndUpdateSatelliteNetworkPreferredUids(uids)
+        updateSatelliteNetworkFallbackUids(uids)
         netdInOrder.verify(netd).networkAddUidRangesParcel(config1)
         netdInOrder.verify(netd, never()).networkRemoveUidRangesParcel(any())
 
-        // Set SATELLITE_NETWORK_PREFERENCE_UIDS setting again and verify that old rules are removed
-        // and new rules are added.
+        // Update satellite network fallback uids and verify that net id and uid ranges send to netd
         uids = mutableSetOf(uid1)
         val uidRanges2: Array<UidRangeParcel?> = toUidRangeStableParcels(uidRangesForUids(uids))
         val config2 = NativeUidRangeConfig(
             satelliteNetId, uidRanges2,
             PREFERENCE_ORDER_SATELLITE_FALLBACK
         )
-        setAndUpdateSatelliteNetworkPreferredUids(uids)
+        updateSatelliteNetworkFallbackUids(uids)
         netdInOrder.verify(netd).networkRemoveUidRangesParcel(config1)
         netdInOrder.verify(netd).networkAddUidRangesParcel(config2)
+    }
+
+    @Test
+    fun testSatelliteNetworkFallbackUids_restricted() {
+        doTestSatelliteNetworkFallbackUids(restricted = true)
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    fun testSatelliteNetworkFallbackUids_nonRestricted() {
+        doTestSatelliteNetworkFallbackUids(restricted = false)
     }
 
     private fun doTestSatelliteNeverBecomeDefaultNetwork(restricted: Boolean) {
@@ -169,7 +174,7 @@ class CSSatelliteNetworkTest : CSTest() {
         assertEquals(PREFERENCE_ORDER_SATELLITE_FALLBACK, nri.mPreferenceOrder)
     }
 
-    private fun setAndUpdateSatelliteNetworkPreferredUids(uids: Set<Int>) {
+    private fun updateSatelliteNetworkFallbackUids(uids: Set<Int>) {
         visibleOnHandlerThread(csHandler) {
             deps.satelliteNetworkFallbackUidUpdate!!.accept(uids)
         }
