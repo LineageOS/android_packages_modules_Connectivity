@@ -61,7 +61,7 @@ private const val TEST_PACKAGE_UID2 = 321
 @DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
-class CSSatelliteNetworkPreferredTest : CSTest() {
+class CSSatelliteNetworkTest : CSTest() {
     /**
      * Test createMultiLayerNrisFromSatelliteNetworkPreferredUids returns correct
      * NetworkRequestInfo.
@@ -92,7 +92,7 @@ class CSSatelliteNetworkPreferredTest : CSTest() {
 
         val satelliteNetId = satelliteAgent.network.netId
         netdInOrder.verify(netd).networkCreate(
-            nativeNetworkConfigPhysical(satelliteNetId, INetd.PERMISSION_NONE))
+            nativeNetworkConfigPhysical(satelliteNetId, INetd.PERMISSION_SYSTEM))
 
         val uid1 = PRIMARY_USER_HANDLE.getUid(TEST_PACKAGE_UID)
         val uid2 = PRIMARY_USER_HANDLE.getUid(TEST_PACKAGE_UID2)
@@ -152,7 +152,7 @@ class CSSatelliteNetworkPreferredTest : CSTest() {
 
     private fun createSatelliteAgent(name: String): CSAgentWrapper {
         return Agent(score = keepScore(), lp = lp(name),
-            nc = nc(TRANSPORT_SATELLITE, NET_CAPABILITY_INTERNET)
+            nc = satelliteNc()
         )
     }
 
@@ -176,17 +176,16 @@ class CSSatelliteNetworkPreferredTest : CSTest() {
         return uidRangesForUids(*CollectionUtils.toIntArray(uids))
     }
 
-    private fun nc(transport: Int, vararg caps: Int) = NetworkCapabilities.Builder().apply {
-        addTransportType(transport)
-        caps.forEach {
-            addCapability(it)
-        }
-        // Useful capabilities for everybody
-        addCapability(NET_CAPABILITY_NOT_RESTRICTED)
-        addCapability(NET_CAPABILITY_NOT_SUSPENDED)
-        addCapability(NET_CAPABILITY_NOT_ROAMING)
-        addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
-    }.build()
+    private fun satelliteNc() =
+            NetworkCapabilities.Builder().apply {
+                addTransportType(TRANSPORT_SATELLITE)
+
+                addCapability(NET_CAPABILITY_INTERNET)
+                addCapability(NET_CAPABILITY_NOT_SUSPENDED)
+                addCapability(NET_CAPABILITY_NOT_ROAMING)
+                addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                removeCapability(NET_CAPABILITY_NOT_RESTRICTED)
+            }.build()
 
     private fun lp(iface: String) = LinkProperties().apply {
         interfaceName = iface
