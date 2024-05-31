@@ -16,11 +16,11 @@
 
 package com.google.snippet.connectivity
 
+import android.Manifest.permission.NETWORK_SETTINGS
 import android.Manifest.permission.OVERRIDE_WIFI_CONFIG
 import android.content.pm.PackageManager.FEATURE_TELEPHONY
 import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
-import android.net.Network
 import android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
@@ -30,20 +30,24 @@ import android.net.wifi.ScanResult
 import android.net.wifi.SoftApConfiguration
 import android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA2_PSK
 import android.net.wifi.WifiConfiguration
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSpecifier
 import android.net.wifi.WifiSsid
 import androidx.test.platform.app.InstrumentationRegistry
+import com.android.testutils.AutoReleaseNetworkCallbackRule
 import com.android.testutils.ConnectUtil
 import com.android.testutils.NetworkCallbackHelper
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.runAsShell
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.Rpc
+import org.junit.Rule
 
 class ConnectivityMultiDevicesSnippet : Snippet {
+    @get:Rule
+    val networkCallbackRule = AutoReleaseNetworkCallbackRule()
     private val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
     private val wifiManager = context.getSystemService(WifiManager::class.java)!!
     private val cm = context.getSystemService(ConnectivityManager::class.java)!!
@@ -88,10 +92,8 @@ class ConnectivityMultiDevicesSnippet : Snippet {
     // Suppress warning because WifiManager methods to connect to a config are
     // documented not to be deprecated for privileged users.
     @Suppress("DEPRECATION")
-    fun connectToWifi(ssid: String, passphrase: String, requireValidation: Boolean): Network {
+    fun connectToWifi(ssid: String, passphrase: String): Long {
         val specifier = WifiNetworkSpecifier.Builder()
-            .setSsid(ssid)
-            .setWpa2Passphrase(passphrase)
             .setBand(ScanResult.WIFI_BAND_24_GHZ)
             .build()
         val wifiConfig = WifiConfiguration()
@@ -102,27 +104,28 @@ class ConnectivityMultiDevicesSnippet : Snippet {
         wifiConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP)
         wifiConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP)
 
-        // Register network callback for the specific wifi.
+        // Add the test configuration and connect to it.
+        val connectUtil = ConnectUtil(context)
+        connectUtil.connectToWifiConfig(wifiConfig)
+
+        // Implement manual SSID matching. Specifying the SSID in
+        // NetworkSpecifier is ineffective
+        // (see WifiNetworkAgentSpecifier#canBeSatisfiedBy for details).
+        // Note that holding permission is necessary when waiting for
+        // the callbacks. The handler thread checks permission; if
+        // it's not present, the SSID will be redacted.
         val networkCallback = TestableNetworkCallback()
-        val wifiRequest = NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI)
-            .setNetworkSpecifier(specifier)
-            .build()
-        cm.registerNetworkCallback(wifiRequest, networkCallback)
-
-        try {
-            // Add the test configuration and connect to it.
-            val connectUtil = ConnectUtil(context)
-            connectUtil.connectToWifiConfig(wifiConfig)
-
-            val event = networkCallback.expect<Available>()
-            if (requireValidation) {
-                networkCallback.eventuallyExpect<CapabilitiesChanged> {
-                    it.caps.hasCapability(NET_CAPABILITY_VALIDATED)
-                }
-            }
-            return event.network
-        } finally {
-            cm.unregisterNetworkCallback(networkCallback)
+        val wifiRequest = NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).build()
+        return runAsShell(NETWORK_SETTINGS) {
+            // Register the network callback is needed here.
+            // This is to avoid the race condition where callback is fired before
+            // acquiring permission.
+            networkCallbackRule.registerNetworkCallback(wifiRequest, networkCallback)
+            return@runAsShell networkCallback.eventuallyExpect<CapabilitiesChanged> {
+                // Remove double quotes.
+                val ssidFromCaps = (WifiInfo::sanitizeSsid)(it.caps.ssid)
+                ssidFromCaps == ssid && it.caps.hasCapability(NET_CAPABILITY_VALIDATED)
+            }.network.networkHandle
         }
     }
 
