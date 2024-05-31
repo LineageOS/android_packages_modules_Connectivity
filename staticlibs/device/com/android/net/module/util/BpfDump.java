@@ -84,16 +84,20 @@ public class BpfDump {
      * Dump the BpfMap entries with base64 format encoding.
      */
     public static <K extends Struct, V extends Struct> void dumpRawMap(IBpfMap<K, V> map,
-            PrintWriter pw) throws ErrnoException {
-        if (map == null) {
-            pw.println("BPF map is null");
-            return;
+            PrintWriter pw) {
+        try {
+            if (map == null) {
+                pw.println("BPF map is null");
+                return;
+            }
+            if (map.isEmpty()) {
+                pw.println("No entries");
+                return;
+            }
+            map.forEach((k, v) -> pw.println(toBase64EncodedString(k, v)));
+        } catch (ErrnoException e) {
+            pw.println("Map dump end with error: " + Os.strerror(e.errno));
         }
-        if (map.isEmpty()) {
-            pw.println("No entries");
-            return;
-        }
-        map.forEach((k, v) -> pw.println(toBase64EncodedString(k, v)));
     }
 
     /**
