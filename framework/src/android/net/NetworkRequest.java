@@ -20,6 +20,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
@@ -286,7 +287,8 @@ public class NetworkRequest implements Parcelable {
                 NET_CAPABILITY_PARTIAL_CONNECTIVITY,
                 NET_CAPABILITY_TEMPORARILY_NOT_METERED,
                 NET_CAPABILITY_TRUSTED,
-                NET_CAPABILITY_VALIDATED);
+                NET_CAPABILITY_VALIDATED,
+                NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED);
 
         private final NetworkCapabilities mNetworkCapabilities;
 

@@ -107,3 +107,11 @@ flag {
   description: "Flag for BLOCKED_REASON_NETWORK_RESTRICTED API"
   bug: "339559837"
 }
+
+flag {
+  name: "net_capability_not_bandwidth_constrained"
+  is_exported: true
+  namespace: "android_core_networking"
+  description: "Flag for NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED API"
+  bug: "343823469"
+}
