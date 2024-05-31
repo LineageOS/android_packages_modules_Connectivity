@@ -4794,7 +4794,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 final String logMsg = !TextUtils.isEmpty(redirectUrl)
                         ? " with redirect to " + redirectUrl
                         : "";
-                log(nai.toShortString() + " validation " + (valid ? "passed" : "failed") + logMsg);
+                final String statusMsg;
+                if (valid) {
+                    statusMsg = "passed";
+                } else if (!TextUtils.isEmpty(redirectUrl)) {
+                    statusMsg = "detected a portal";
+                } else {
+                    statusMsg = "failed";
+                }
+                log(nai.toShortString() + " validation " + statusMsg + logMsg);
             }
             if (valid != wasValidated) {
                 final FullScore oldScore = nai.getScore();
