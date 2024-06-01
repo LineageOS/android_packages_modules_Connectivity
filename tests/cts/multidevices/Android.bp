@@ -14,12 +14,16 @@
 
 package {
     default_applicable_licenses: ["Android-Apache-2.0"],
+    default_team: "trendy_team_fwk_core_networking",
 }
 
 python_test_host {
     name: "CtsConnectivityMultiDevicesTestCases",
     main: "connectivity_multi_devices_test.py",
-    srcs: ["connectivity_multi_devices_test.py"],
+    srcs: [
+        "connectivity_multi_devices_test.py",
+        "tether_utils.py",
+    ],
     libs: [
         "mobly",
     ],

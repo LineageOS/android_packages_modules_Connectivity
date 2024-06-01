@@ -403,6 +403,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final String NETWORK_ARG = "networks";
     private static final String REQUEST_ARG = "requests";
     private static final String TRAFFICCONTROLLER_ARG = "trafficcontroller";
+    public static final String CLATEGRESS4RAWBPFMAP_ARG = "clatEgress4RawBpfMap";
+    public static final String CLATINGRESS6RAWBPFMAP_ARG = "clatIngress6RawBpfMap";
 
     private static final boolean DBG = true;
     private static final boolean DDBG = Log.isLoggable(TAG, Log.DEBUG);
@@ -4141,6 +4143,12 @@ public class ConnectivityService extends IConnectivityManager.Stub
             boolean verbose = !CollectionUtils.contains(args, SHORT_ARG);
             dumpTrafficController(pw, fd, verbose);
             return;
+        } else if (CollectionUtils.contains(args, CLATEGRESS4RAWBPFMAP_ARG)) {
+            dumpClatBpfRawMap(pw, true /* isEgress4Map */);
+            return;
+        } else if (CollectionUtils.contains(args, CLATINGRESS6RAWBPFMAP_ARG)) {
+            dumpClatBpfRawMap(pw, false /* isEgress4Map */);
+            return;
         }
 
         pw.println("NetworkProviders for:");
@@ -4397,6 +4405,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
             pw.println(e.getMessage());
         } catch (IOException e) {
             loge("Dump BPF maps failed, " + e);
+        }
+    }
+
+    private void dumpClatBpfRawMap(IndentingPrintWriter pw, boolean isEgress4Map) {
+        for (NetworkAgentInfo nai : networksSortedById()) {
+            if (nai.clatd != null) {
+                nai.clatd.dumpRawBpfMap(pw, isEgress4Map);
+                break;
+            }
         }
     }
 
@@ -4777,7 +4794,15 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 final String logMsg = !TextUtils.isEmpty(redirectUrl)
                         ? " with redirect to " + redirectUrl
                         : "";
-                log(nai.toShortString() + " validation " + (valid ? "passed" : "failed") + logMsg);
+                final String statusMsg;
+                if (valid) {
+                    statusMsg = "passed";
+                } else if (!TextUtils.isEmpty(redirectUrl)) {
+                    statusMsg = "detected a portal";
+                } else {
+                    statusMsg = "failed";
+                }
+                log(nai.toShortString() + " validation " + statusMsg + logMsg);
             }
             if (valid != wasValidated) {
                 final FullScore oldScore = nai.getScore();
