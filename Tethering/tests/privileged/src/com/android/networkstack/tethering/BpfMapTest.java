@@ -25,6 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -36,6 +37,7 @@ import android.system.OsConstants;
 import android.util.ArrayMap;
 
 import com.android.net.module.util.BpfMap;
+import com.android.net.module.util.SingleWriterBpfMap;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -43,11 +45,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -63,6 +68,17 @@ public final class BpfMapTest {
     private ArrayMap<TetherDownstream6Key, Tether6Value> mTestData;
 
     private BpfMap<TetherDownstream6Key, Tether6Value> mTestMap;
+
+    private final boolean mShouldTestSingleWriterMap;
+
+    @Parameterized.Parameters
+    public static Collection<Boolean> shouldTestSingleWriterMap() {
+        return Arrays.asList(true, false);
+    }
+
+    public BpfMapTest(boolean shouldTestSingleWriterMap) {
+        mShouldTestSingleWriterMap = shouldTestSingleWriterMap;
+    }
 
     @BeforeClass
     public static void setupOnce() {
@@ -85,11 +101,16 @@ public final class BpfMapTest {
         initTestMap();
     }
 
-    private void initTestMap() throws Exception {
-        mTestMap = new BpfMap<>(
-                TETHER_DOWNSTREAM6_FS_PATH,
-                TetherDownstream6Key.class, Tether6Value.class);
+    private BpfMap<TetherDownstream6Key, Tether6Value> openTestMap() throws Exception {
+        return mShouldTestSingleWriterMap
+                ? new SingleWriterBpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
+                Tether6Value.class)
+                : new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
+                        Tether6Value.class);
+    }
 
+    private void initTestMap() throws Exception {
+        mTestMap = openTestMap();
         mTestMap.forEach((key, value) -> {
             try {
                 assertTrue(mTestMap.deleteEntry(key));
@@ -360,6 +381,25 @@ public final class BpfMapTest {
     }
 
     @Test
+    public void testMapContentsCorrectOnOpen() throws Exception {
+        final BpfMap<TetherDownstream6Key, Tether6Value> map1, map2;
+
+        map1 = openTestMap();
+        map1.clear();
+        for (int i = 0; i < mTestData.size(); i++) {
+            map1.insertEntry(mTestData.keyAt(i), mTestData.valueAt(i));
+        }
+
+        // We can't close and reopen map1, because close does nothing. Open another map instead.
+        map2 = openTestMap();
+        for (int i = 0; i < mTestData.size(); i++) {
+            assertEquals(mTestData.valueAt(i), map2.getValue(mTestData.keyAt(i)));
+        }
+
+        map1.clear();
+    }
+
+    @Test
     public void testInsertOverflow() throws Exception {
         final ArrayMap<TetherDownstream6Key, Tether6Value> testData =
                 new ArrayMap<>();
@@ -431,5 +471,11 @@ public final class BpfMapTest {
 
         // Check that the number of open fds is the same as before.
         assertEquals("Fd leak after " + iterations + " iterations: ", before, after);
+    }
+
+    @Test
+    public void testNullKey() {
+        assertThrows(NullPointerException.class, () ->
+                mTestMap.insertOrReplaceEntry(null, mTestData.valueAt(0)));
     }
 }
