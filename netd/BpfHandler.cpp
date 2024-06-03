@@ -85,31 +85,6 @@ static Status initPrograms(const char* cg2_path) {
         return Status("U+ platform with kernel version < 4.14.0 is unsupported");
     }
 
-    if (modules::sdklevel::IsAtLeastV()) {
-        // V bumps the kernel requirement up to 4.19
-        // see also: //system/netd/tests/kernel_test.cpp TestKernel419
-        if (!bpf::isAtLeastKernelVersion(4, 19, 0)) {
-            return Status("V+ platform with kernel version < 4.19.0 is unsupported");
-        }
-
-        // Technically already required by U, but only enforce on V+
-        // see also: //system/netd/tests/kernel_test.cpp TestKernel64Bit
-        if (bpf::isKernel32Bit() && bpf::isAtLeastKernelVersion(5, 16, 0)) {
-            return Status("V+ platform with 32 bit kernel, version >= 5.16.0 is unsupported");
-        }
-    }
-
-    // Linux 6.1 is highest version supported by U, starting with V new kernels,
-    // ie. 6.2+ we are dropping various kernel/system userspace 32-on-64 hacks
-    // (for example "ANDROID: xfrm: remove in_compat_syscall() checks").
-    // Note: this check/enforcement only applies to *system* userspace code,
-    // it does not affect unprivileged apps, the 32-on-64 compatibility
-    // problems are AFAIK limited to various CAP_NET_ADMIN protected interfaces.
-    // see also: //system/bpf/bpfloader/BpfLoader.cpp main()
-    if (bpf::isUserspace32bit() && bpf::isAtLeastKernelVersion(6, 2, 0)) {
-        return Status("32 bit userspace with Kernel version >= 6.2.0 is unsupported");
-    }
-
     // U mandates this mount point (though it should also be the case on T)
     if (modules::sdklevel::IsAtLeastU() && !!strcmp(cg2_path, "/sys/fs/cgroup")) {
         return Status("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
