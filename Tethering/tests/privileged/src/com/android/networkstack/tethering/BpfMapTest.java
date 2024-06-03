@@ -28,9 +28,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import android.net.MacAddress;
 import android.os.Build;
+import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -54,6 +56,9 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.NoSuchElementException;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -477,5 +482,64 @@ public final class BpfMapTest {
     public void testNullKey() {
         assertThrows(NullPointerException.class, () ->
                 mTestMap.insertOrReplaceEntry(null, mTestData.valueAt(0)));
+    }
+
+    private void runBenchmarkThread(BpfMap<TetherDownstream6Key, Tether6Value> map,
+            CompletableFuture<Integer> future, int runtimeMs) {
+        int numReads = 0;
+        final Random r = new Random();
+        final long start = SystemClock.elapsedRealtime();
+        final long stop = start + runtimeMs;
+        while (SystemClock.elapsedRealtime() < stop) {
+            try {
+                final Tether6Value v = map.getValue(mTestData.keyAt(r.nextInt(mTestData.size())));
+                assertNotNull(v);
+                numReads++;
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+                return;
+            }
+        }
+        future.complete(numReads);
+    }
+
+    @Test
+    public void testSingleWriterCacheEffectiveness() throws Exception {
+        assumeTrue(mShouldTestSingleWriterMap);
+
+        // Ensure the map is not empty.
+        for (int i = 0; i < mTestData.size(); i++) {
+            mTestMap.insertEntry(mTestData.keyAt(i), mTestData.valueAt(i));
+        }
+
+        // Benchmark parameters.
+        final int timeoutMs = 5_000;  // Only hit if threads don't complete.
+        final int benchmarkTimeMs = 2_000;
+        final int minReads = 50;
+        // Local testing on cuttlefish suggests that caching is ~10x faster.
+        // Only require 3x to reduce test flakiness.
+        final int expectedSpeedup = 3;
+
+        final BpfMap cachedMap = new SingleWriterBpfMap(TETHER_DOWNSTREAM6_FS_PATH,
+                TetherDownstream6Key.class, Tether6Value.class);
+        final BpfMap uncachedMap = new BpfMap(TETHER_DOWNSTREAM6_FS_PATH,
+                TetherDownstream6Key.class, Tether6Value.class);
+
+        final CompletableFuture<Integer> cachedResult = new CompletableFuture<>();
+        final CompletableFuture<Integer> uncachedResult = new CompletableFuture<>();
+
+        new Thread(() -> runBenchmarkThread(uncachedMap, uncachedResult, benchmarkTimeMs)).start();
+        new Thread(() -> runBenchmarkThread(cachedMap, cachedResult, benchmarkTimeMs)).start();
+
+        final int cached = cachedResult.get(timeoutMs, TimeUnit.MILLISECONDS);
+        final int uncached = uncachedResult.get(timeoutMs, TimeUnit.MILLISECONDS);
+
+        // Uncomment to see benchmark results.
+        // fail("Cached " + cached + ", uncached " + uncached + ": " + cached / uncached  +"x");
+
+        assertTrue("Less than " + minReads + "cached reads observed", cached > minReads);
+        assertTrue("Less than " + minReads + "uncached reads observed", uncached > minReads);
+        assertTrue("Cached map not at least " + expectedSpeedup + "x faster",
+                cached > expectedSpeedup * uncached);
     }
 }
