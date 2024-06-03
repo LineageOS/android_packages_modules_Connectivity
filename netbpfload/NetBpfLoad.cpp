@@ -286,22 +286,34 @@ static int doLoad(char** argv, char * const envp[]) {
         return 1;
     }
 
+    // both S and T require kernel 4.9 (and eBpf support)
     if (isAtLeastT && !isAtLeastKernelVersion(4, 9, 0)) {
         ALOGE("Android T requires kernel 4.9.");
         return 1;
     }
 
+    // U bumps the kernel requirement up to 4.14
     if (isAtLeastU && !isAtLeastKernelVersion(4, 14, 0)) {
         ALOGE("Android U requires kernel 4.14.");
         return 1;
     }
 
+    // V bumps the kernel requirement up to 4.19
+    // see also: //system/netd/tests/kernel_test.cpp TestKernel419
     if (isAtLeastV && !isAtLeastKernelVersion(4, 19, 0)) {
         ALOGE("Android V requires kernel 4.19.");
         return 1;
     }
 
-    if (isAtLeastV && isX86() && !isKernel64Bit()) {
+    // Technically already required by U, but only enforce on V+
+    // see also: //system/netd/tests/kernel_test.cpp TestKernel64Bit
+    if (isAtLeastV && isKernel32Bit() && isAtLeastKernelVersion(5, 16, 0)) {
+        ALOGE("Android V+ platform with 32 bit kernel version >= 5.16.0 is unsupported");
+        if (!isTV()) return 1;
+    }
+
+    // Various known ABI layout issues, particularly wrt. bpf and ipsec/xfrm.
+    if (isAtLeastV && isKernel32Bit() && isX86()) {
         ALOGE("Android V requires X86 kernel to be 64-bit.");
         if (!isTV()) return 1;
     }
@@ -350,6 +362,10 @@ static int doLoad(char** argv, char * const envp[]) {
          * Some of these have userspace or kernel workarounds/hacks.
          * Some of them don't...
          * We're going to be removing the hacks.
+         * (for example "ANDROID: xfrm: remove in_compat_syscall() checks").
+         * Note: this check/enforcement only applies to *system* userspace code,
+         * it does not affect unprivileged apps, the 32-on-64 compatibility
+         * problems are AFAIK limited to various CAP_NET_ADMIN protected interfaces.
          *
          * Additionally the 32-bit kernel jit support is poor,
          * and 32-bit userspace on 64-bit kernel bpf ringbuffer compatibility is broken.
