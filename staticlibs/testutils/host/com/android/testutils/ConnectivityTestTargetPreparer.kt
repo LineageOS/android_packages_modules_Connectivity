@@ -61,6 +61,7 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
         setUpdaterNetworkingEnabled(testInfo, enableChain = true,
                 enablePkgs = UPDATER_PKGS.associateWith { false })
         runPreparerApk(testInfo)
+        refreshTime(testInfo)
     }
 
     private fun runPreparerApk(testInfo: TestInformation) {
@@ -140,6 +141,14 @@ open class ConnectivityTestTargetPreparer : BaseTargetPreparer() {
                 !testInfo.exec("cmd connectivity get-package-networking-enabled $pkg")
                         .contains(":deny")
             }
+
+    private fun refreshTime(testInfo: TestInformation,) {
+        // Forces a synchronous time refresh using the network. Time is fetched synchronously but
+        // this does not guarantee that system time is updated when it returns.
+        // This avoids flakes where the system clock rolls back, for example when using test
+        // settings like test_url_expiration_time in NetworkMonitor.
+        testInfo.exec("cmd network_time_update_service force_refresh")
+    }
 
     override fun tearDown(testInfo: TestInformation, e: Throwable?) {
         if (isTearDownDisabled) return
