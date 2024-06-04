@@ -27,7 +27,7 @@
     <string name="mobile_network_available_no_internet_detailed_unknown_carrier" msgid="5375681117265354337">"Таны дата дууссан байж магадгүй. Сонголтыг харахын тулд товшино уу."</string>
     <string name="wifi_no_internet" msgid="1326348603404555475">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g>-д интернэтийн хандалт алга"</string>
     <string name="wifi_no_internet_detailed" msgid="1746921096565304090">"Сонголт хийхийн тулд товшино уу"</string>
-    <string name="mobile_no_internet" msgid="4087718456753201450">"Мобайл сүлжээнд интернэт хандалт байхгүй байна"</string>
+    <string name="mobile_no_internet" msgid="4087718456753201450">"Хөдөлгөөнт холбооны сүлжээнд интернэт хандалт байхгүй байна"</string>
     <string name="other_networks_no_internet" msgid="5693932964749676542">"Сүлжээнд интернэт хандалт байхгүй байна"</string>
     <string name="private_dns_broken_detailed" msgid="2677123850463207823">"Хувийн DNS серверт хандах боломжгүй байна"</string>
     <string name="network_partial_connectivity" msgid="5549503845834993258">"<xliff:g id="NETWORK_SSID">%1$s</xliff:g> зарим үйлчилгээнд хандах боломжгүй байна"</string>
