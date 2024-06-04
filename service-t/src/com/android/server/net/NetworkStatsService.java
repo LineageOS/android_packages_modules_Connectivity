@@ -926,7 +926,8 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
          * to ensure that the code does not need to deal with flag values changing at runtime.
          */
         public boolean supportTrafficStatsRateLimitCache(@NonNull Context ctx) {
-            return false;
+            return SdkLevel.isAtLeastV() && DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                    ctx, TRAFFICSTATS_RATE_LIMIT_CACHE_ENABLED_FLAG);
         }
 
         /**
