@@ -180,6 +180,7 @@ public final class NetworkStackConstants {
     public static final int ICMPV6_NS_HEADER_LEN = 24;
     public static final int ICMPV6_NA_HEADER_LEN = 24;
     public static final int ICMPV6_ND_OPTION_TLLA_LEN = 8;
+    public static final int ICMPV6_ND_OPTION_SLLA_LEN = 8;
 
     public static final int NEIGHBOR_ADVERTISEMENT_FLAG_ROUTER    = 1 << 31;
     public static final int NEIGHBOR_ADVERTISEMENT_FLAG_SOLICITED = 1 << 30;
