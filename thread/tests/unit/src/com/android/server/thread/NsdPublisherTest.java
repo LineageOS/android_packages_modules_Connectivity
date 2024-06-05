@@ -16,6 +16,7 @@
 
 package com.android.server.thread;
 
+import static android.net.DnsResolver.ERROR_SYSTEM;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.PROTOCOL_DNS_SD;
 
@@ -30,15 +31,19 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import android.net.DnsResolver;
 import android.net.InetAddresses;
+import android.net.Network;
 import android.net.nsd.DiscoveryRequest;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.test.TestLooper;
 
 import com.android.server.thread.openthread.DnsTxtAttribute;
 import com.android.server.thread.openthread.INsdDiscoverServiceCallback;
+import com.android.server.thread.openthread.INsdResolveHostCallback;
 import com.android.server.thread.openthread.INsdResolveServiceCallback;
 import com.android.server.thread.openthread.INsdStatusReceiver;
 
@@ -61,11 +66,14 @@ import java.util.concurrent.Executor;
 /** Unit tests for {@link NsdPublisher}. */
 public final class NsdPublisherTest {
     @Mock private NsdManager mMockNsdManager;
+    @Mock private DnsResolver mMockDnsResolver;
 
     @Mock private INsdStatusReceiver mRegistrationReceiver;
     @Mock private INsdStatusReceiver mUnregistrationReceiver;
     @Mock private INsdDiscoverServiceCallback mDiscoverServiceCallback;
     @Mock private INsdResolveServiceCallback mResolveServiceCallback;
+    @Mock private INsdResolveHostCallback mResolveHostCallback;
+    @Mock private Network mNetwork;
 
     private TestLooper mTestLooper;
     private NsdPublisher mNsdPublisher;
@@ -637,6 +645,84 @@ public final class NsdPublisherTest {
     }
 
     @Test
+    public void resolveHost_hostResolved() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.resolveHost("test", mResolveHostCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+
+        ArgumentCaptor<DnsResolver.Callback<List<InetAddress>>> resolveHostCallbackArgumentCaptor =
+                ArgumentCaptor.forClass(DnsResolver.Callback.class);
+        verify(mMockDnsResolver, times(1))
+                .query(
+                        eq(mNetwork),
+                        eq("test.local"),
+                        eq(DnsResolver.FLAG_NO_CACHE_LOOKUP),
+                        any(Executor.class),
+                        any(CancellationSignal.class),
+                        resolveHostCallbackArgumentCaptor.capture());
+        resolveHostCallbackArgumentCaptor
+                .getValue()
+                .onAnswer(
+                        List.of(
+                                InetAddresses.parseNumericAddress("2001::1"),
+                                InetAddresses.parseNumericAddress("2001::2")),
+                        0);
+        mTestLooper.dispatchAll();
+
+        verify(mResolveHostCallback, times(1))
+                .onHostResolved("test", List.of("2001::1", "2001::2"));
+    }
+
+    @Test
+    public void resolveHost_errorReported() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.resolveHost("test", mResolveHostCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+
+        ArgumentCaptor<DnsResolver.Callback<List<InetAddress>>> resolveHostCallbackArgumentCaptor =
+                ArgumentCaptor.forClass(DnsResolver.Callback.class);
+        verify(mMockDnsResolver, times(1))
+                .query(
+                        eq(mNetwork),
+                        eq("test.local"),
+                        eq(DnsResolver.FLAG_NO_CACHE_LOOKUP),
+                        any(Executor.class),
+                        any(CancellationSignal.class),
+                        resolveHostCallbackArgumentCaptor.capture());
+        resolveHostCallbackArgumentCaptor
+                .getValue()
+                .onError(new DnsResolver.DnsException(ERROR_SYSTEM, null /* cause */));
+        mTestLooper.dispatchAll();
+
+        verify(mResolveHostCallback, times(1)).onHostResolved("test", Collections.emptyList());
+    }
+
+    @Test
+    public void stopHostResolution() throws Exception {
+        prepareTest();
+
+        mNsdPublisher.resolveHost("test", mResolveHostCallback, 10 /* listenerId */);
+        mTestLooper.dispatchAll();
+        ArgumentCaptor<CancellationSignal> cancellationSignalArgumentCaptor =
+                ArgumentCaptor.forClass(CancellationSignal.class);
+        verify(mMockDnsResolver, times(1))
+                .query(
+                        eq(mNetwork),
+                        eq("test.local"),
+                        eq(DnsResolver.FLAG_NO_CACHE_LOOKUP),
+                        any(Executor.class),
+                        cancellationSignalArgumentCaptor.capture(),
+                        any(DnsResolver.Callback.class));
+
+        mNsdPublisher.stopHostResolution(10 /* listenerId */);
+        mTestLooper.dispatchAll();
+
+        assertThat(cancellationSignalArgumentCaptor.getValue().isCanceled()).isTrue();
+    }
+
+    @Test
     public void reset_unregisterAll() {
         prepareTest();
 
@@ -780,6 +866,7 @@ public final class NsdPublisherTest {
     private void prepareTest() {
         mTestLooper = new TestLooper();
         Handler handler = new Handler(mTestLooper.getLooper());
-        mNsdPublisher = new NsdPublisher(mMockNsdManager, handler);
+        mNsdPublisher = new NsdPublisher(mMockNsdManager, mMockDnsResolver, handler);
+        mNsdPublisher.setNetworkForHostResolution(mNetwork);
     }
 }
