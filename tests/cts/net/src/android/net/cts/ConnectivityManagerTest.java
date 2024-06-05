@@ -309,6 +309,7 @@ public class ConnectivityManagerTest {
 
     // Airplane Mode BroadcastReceiver Timeout
     private static final long AIRPLANE_MODE_CHANGE_TIMEOUT_MS = 10_000L;
+    private static final long CELL_DATA_AVAILABLE_TIMEOUT_MS = 120_000L;
 
     // Timeout for applying uids allowed on restricted networks
     private static final long APPLYING_UIDS_ALLOWED_ON_RESTRICTED_NETWORKS_TIMEOUT_MS = 3_000L;
@@ -2242,7 +2243,10 @@ public class ConnectivityManagerTest {
             // connectToCell only registers a request, it cannot / does not need to be called twice
             mCtsNetUtils.ensureWifiConnected();
             if (verifyWifi) waitForAvailable(wifiCb);
-            if (supportTelephony) waitForAvailable(telephonyCb);
+            if (supportTelephony) {
+                telephonyCb.eventuallyExpect(
+                        CallbackEntry.AVAILABLE, CELL_DATA_AVAILABLE_TIMEOUT_MS);
+            }
         } finally {
             // Restore the previous state of airplane mode and permissions:
             runShellCommand("cmd connectivity airplane-mode "
