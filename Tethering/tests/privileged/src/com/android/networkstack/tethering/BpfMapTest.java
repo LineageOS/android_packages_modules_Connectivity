@@ -22,6 +22,7 @@ import static com.android.networkstack.tethering.util.TetheringUtils.getTetherin
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -45,6 +46,8 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -396,8 +399,18 @@ public final class BpfMapTest {
         }
     }
 
-    private static int getNumOpenFds() {
-        return new File("/proc/" + Os.getpid() + "/fd").listFiles().length;
+    private static int getNumOpenBpfMapFds() throws Exception {
+        int numFds = 0;
+        File[] openFiles = new File("/proc/" + Os.getpid() + "/fd").listFiles();
+        for (int i = 0; i < openFiles.length; i++) {
+            final Path path = openFiles[i].toPath();
+            if (!Files.isSymbolicLink(path)) continue;
+            if ("anon_inode:bpf-map".equals(Files.readSymbolicLink(path).toString())) {
+                numFds++;
+            }
+        }
+        assertNotEquals("Couldn't find any BPF map fds opened by this process", 0, numFds);
+        return numFds;
     }
 
     @Test
@@ -406,7 +419,7 @@ public final class BpfMapTest {
         // cache, expect that the fd amount is not increased in the iterations.
         // See the comment of BpfMap#close.
         final int iterations = 1000;
-        final int before = getNumOpenFds();
+        final int before = getNumOpenBpfMapFds();
         for (int i = 0; i < iterations; i++) {
             try (BpfMap<TetherDownstream6Key, Tether6Value> map = new BpfMap<>(
                     TETHER_DOWNSTREAM6_FS_PATH,
@@ -414,15 +427,9 @@ public final class BpfMapTest {
                 // do nothing
             }
         }
-        final int after = getNumOpenFds();
+        final int after = getNumOpenBpfMapFds();
 
         // Check that the number of open fds is the same as before.
-        // If this exact match becomes flaky, we probably need to distinguish that fd is belong
-        // to "bpf-map".
-        // ex:
-        // $ adb shell ls -all /proc/16196/fd
-        // [..] network_stack 64 2022-07-26 22:01:02.300002956 +0800 749 -> anon_inode:bpf-map
-        // [..] network_stack 64 2022-07-26 22:01:02.188002956 +0800 75 -> anon_inode:[eventfd]
         assertEquals("Fd leak after " + iterations + " iterations: ", before, after);
     }
 }
