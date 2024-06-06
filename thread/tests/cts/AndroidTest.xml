@@ -38,6 +38,11 @@
         <option name="mainline-module-package-name" value="com.google.android.tethering" />
     </object>
 
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.DeviceFeatureModuleController">
+        <option name="required-feature" value="android.hardware.thread_network" />
+    </object>
+
     <!-- Install test -->
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="CtsThreadNetworkTestCases.apk" />
