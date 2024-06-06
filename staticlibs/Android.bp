@@ -135,6 +135,7 @@ java_library {
         "device/com/android/net/module/util/BpfUtils.java",
         "device/com/android/net/module/util/IBpfMap.java",
         "device/com/android/net/module/util/JniUtil.java",
+        "device/com/android/net/module/util/SingleWriterBpfMap.java",
         "device/com/android/net/module/util/TcUtils.java",
     ],
     sdk_version: "module_current",
