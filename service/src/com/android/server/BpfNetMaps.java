@@ -72,6 +72,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
+import com.android.net.module.util.SingleWriterBpfMap;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.S32;
 import com.android.net.module.util.Struct.U32;
@@ -188,7 +189,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U32> getConfigurationMap() {
         try {
-            return new BpfMap<>(
+            return new SingleWriterBpfMap<>(
                     CONFIGURATION_MAP_PATH, S32.class, U32.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open netd configuration map", e);
@@ -198,7 +199,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, UidOwnerValue> getUidOwnerMap() {
         try {
-            return new BpfMap<>(
+            return new SingleWriterBpfMap<>(
                     UID_OWNER_MAP_PATH, S32.class, UidOwnerValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid owner map", e);
@@ -208,7 +209,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U8> getUidPermissionMap() {
         try {
-            return new BpfMap<>(
+            return new SingleWriterBpfMap<>(
                     UID_PERMISSION_MAP_PATH, S32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid permission map", e);
@@ -218,6 +219,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
         try {
+            // Cannot use SingleWriterBpfMap because it's written by ClatCoordinator as well.
             return new BpfMap<>(COOKIE_TAG_MAP_PATH,
                     CookieTagMapKey.class, CookieTagMapValue.class);
         } catch (ErrnoException e) {
@@ -228,7 +230,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U8> getDataSaverEnabledMap() {
         try {
-            return new BpfMap<>(
+            return new SingleWriterBpfMap<>(
                     DATA_SAVER_ENABLED_MAP_PATH, S32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open data saver enabled map", e);
@@ -238,7 +240,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<IngressDiscardKey, IngressDiscardValue> getIngressDiscardMap() {
         try {
-            return new BpfMap<>(INGRESS_DISCARD_MAP_PATH,
+            return new SingleWriterBpfMap<>(INGRESS_DISCARD_MAP_PATH,
                     IngressDiscardKey.class, IngressDiscardValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open ingress discard map", e);
