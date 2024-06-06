@@ -61,6 +61,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 import static android.os.Process.INVALID_UID;
+
 import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastV;
@@ -68,6 +69,7 @@ import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.MiscAsserts.assertEmpty;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -83,20 +85,24 @@ import android.net.wifi.aware.WifiAwareNetworkSpecifier;
 import android.os.Build;
 import android.util.ArraySet;
 import android.util.Range;
+
 import androidx.test.filters.SmallTest;
+
 import com.android.testutils.CompatUtil;
 import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 @SmallTest
 @RunWith(DevSdkIgnoreRunner.class)
@@ -1464,5 +1470,27 @@ public class NetworkCapabilitiesTest {
                 nc2.describeCapsDifferencesFrom(nc1));
         assertEquals("-SUPL-VALIDATED-CAPTIVE_PORTAL+MMS+OEM_PAID",
                 nc1.describeCapsDifferencesFrom(nc2));
+    }
+
+    @Test
+    public void testInvalidCapability() {
+        final int invalidCapability = Integer.MAX_VALUE;
+        // Passing invalid capability does not throw
+        final NetworkCapabilities nc1 = new NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addForbiddenCapability(NET_CAPABILITY_NOT_ROAMING)
+                .removeCapability(invalidCapability)
+                .removeForbiddenCapability(invalidCapability)
+                .addCapability(invalidCapability)
+                .addForbiddenCapability(invalidCapability)
+                .build();
+
+        final NetworkCapabilities nc2 = new NetworkCapabilities.Builder()
+                .addCapability(NET_CAPABILITY_INTERNET)
+                .addForbiddenCapability(NET_CAPABILITY_NOT_ROAMING)
+                .build();
+
+        // nc1 and nc2 are the same since invalid capability is ignored
+        assertEquals(nc1, nc2);
     }
 }
