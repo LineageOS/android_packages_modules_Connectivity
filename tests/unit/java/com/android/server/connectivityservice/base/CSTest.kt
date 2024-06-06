@@ -164,6 +164,7 @@ open class CSTest {
         it[ConnectivityFlags.INGRESS_TO_VPN_ADDRESS_FILTERING] = true
         it[ConnectivityFlags.BACKGROUND_FIREWALL_CHAIN] = true
         it[ConnectivityFlags.DELAY_DESTROY_SOCKETS] = true
+        it[ConnectivityFlags.USE_DECLARED_METHODS_FOR_CALLBACKS] = true
     }
     fun setFeatureEnabled(flag: String, enabled: Boolean) = enabledFeatures.set(flag, enabled)
 
