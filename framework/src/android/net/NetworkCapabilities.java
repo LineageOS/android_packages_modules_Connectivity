@@ -36,6 +36,7 @@ import android.os.Parcelable;
 import android.os.Process;
 import android.text.TextUtils;
 import android.util.ArraySet;
+import android.util.Log;
 import android.util.Range;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -843,7 +844,10 @@ public final class NetworkCapabilities implements Parcelable {
         // If the given capability was previously added to the list of forbidden capabilities
         // then the capability will also be removed from the list of forbidden capabilities.
         // TODO: Add forbidden capabilities to the public API
-        checkValidCapability(capability);
+        if (!isValidCapability(capability)) {
+            Log.e(TAG, "addCapability is called with invalid capability: " + capability);
+            return this;
+        }
         mNetworkCapabilities |= 1L << capability;
         // remove from forbidden capability list
         mForbiddenNetworkCapabilities &= ~(1L << capability);
@@ -864,7 +868,10 @@ public final class NetworkCapabilities implements Parcelable {
      * @hide
      */
     public void addForbiddenCapability(@NetCapability int capability) {
-        checkValidCapability(capability);
+        if (!isValidCapability(capability)) {
+            Log.e(TAG, "addForbiddenCapability is called with invalid capability: " + capability);
+            return;
+        }
         mForbiddenNetworkCapabilities |= 1L << capability;
         mNetworkCapabilities &= ~(1L << capability);  // remove from requested capabilities
     }
@@ -878,7 +885,10 @@ public final class NetworkCapabilities implements Parcelable {
      * @hide
      */
     public @NonNull NetworkCapabilities removeCapability(@NetCapability int capability) {
-        checkValidCapability(capability);
+        if (!isValidCapability(capability)) {
+            Log.e(TAG, "removeCapability is called with invalid capability: " + capability);
+            return this;
+        }
         final long mask = ~(1L << capability);
         mNetworkCapabilities &= mask;
         return this;
@@ -893,7 +903,11 @@ public final class NetworkCapabilities implements Parcelable {
      * @hide
      */
     public @NonNull NetworkCapabilities removeForbiddenCapability(@NetCapability int capability) {
-        checkValidCapability(capability);
+        if (!isValidCapability(capability)) {
+            Log.e(TAG,
+                    "removeForbiddenCapability is called with invalid capability: " + capability);
+            return this;
+        }
         mForbiddenNetworkCapabilities &= ~(1L << capability);
         return this;
     }
@@ -2630,12 +2644,6 @@ public final class NetworkCapabilities implements Parcelable {
 
     private static boolean isValidCapability(@NetworkCapabilities.NetCapability int capability) {
         return capability >= 0 && capability <= MAX_NET_CAPABILITY;
-    }
-
-    private static void checkValidCapability(@NetworkCapabilities.NetCapability int capability) {
-        if (!isValidCapability(capability)) {
-            throw new IllegalArgumentException("NetworkCapability " + capability + " out of range");
-        }
     }
 
     private static boolean isValidEnterpriseId(
