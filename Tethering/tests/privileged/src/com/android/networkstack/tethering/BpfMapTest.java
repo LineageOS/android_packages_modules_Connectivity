@@ -446,7 +446,7 @@ public final class BpfMapTest {
 
     private static int getNumOpenBpfMapFds() throws Exception {
         int numFds = 0;
-        File[] openFiles = new File("/proc/" + Os.getpid() + "/fd").listFiles();
+        File[] openFiles = new File("/proc/self/fd").listFiles();
         for (int i = 0; i < openFiles.length; i++) {
             final Path path = openFiles[i].toPath();
             if (!Files.isSymbolicLink(path)) continue;
