@@ -259,4 +259,6 @@ interface IConnectivityManager
     void setTestLowTcpPollingTimerForKeepalive(long timeMs);
 
     IBinder getRoutingCoordinatorService();
+
+    long getEnabledConnectivityManagerFeatures();
 }

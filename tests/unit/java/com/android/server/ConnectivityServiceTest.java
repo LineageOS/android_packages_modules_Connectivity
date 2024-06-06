@@ -2178,9 +2178,8 @@ public class ConnectivityServiceTest {
             switch (name) {
                 case ConnectivityFlags.NO_REMATCH_ALL_REQUESTS_ON_REGISTER:
                 case ConnectivityFlags.CARRIER_SERVICE_CHANGED_USE_CALLBACK:
-                    return true;
                 case ConnectivityFlags.REQUEST_RESTRICTED_WIFI:
-                    return true;
+                case ConnectivityFlags.USE_DECLARED_METHODS_FOR_CALLBACKS:
                 case KEY_DESTROY_FROZEN_SOCKETS_VERSION:
                     return true;
                 default:
