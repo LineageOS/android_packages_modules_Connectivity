@@ -44,6 +44,7 @@ android_test_helper_app {
         "CtsHostsideNetworkCapTestsAppDefaults",
     ],
     manifest: "AndroidManifestWithoutProperty.xml",
+    sdk_version: "test_current",
 }
 
 android_test_helper_app {
@@ -53,6 +54,7 @@ android_test_helper_app {
         "CtsHostsideNetworkCapTestsAppDefaults",
     ],
     manifest: "AndroidManifestWithProperty.xml",
+    sdk_version: "test_current",
 }
 
 android_test_helper_app {
@@ -63,4 +65,5 @@ android_test_helper_app {
     ],
     target_sdk_version: "33",
     manifest: "AndroidManifestWithoutProperty.xml",
+    sdk_version: "test_current",
 }
