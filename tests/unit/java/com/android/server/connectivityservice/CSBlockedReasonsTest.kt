@@ -387,6 +387,10 @@ class CSBlockedReasonsTest : CSTest() {
                     BLOCKED_REASON_NETWORK_RESTRICTED or BLOCKED_REASON_APP_BACKGROUND
             )
         }
+        // waitForIdle since stubbing bpfNetMaps while CS handler thread calls
+        // bpfNetMaps.getNetPermForUid throws exception.
+        // ConnectivityService might haven't finished checking blocked status for all requests.
+        waitForIdle()
 
         // Disable background firewall chain
         doReturn(BLOCKED_REASON_NONE)
