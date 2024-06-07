@@ -76,7 +76,7 @@ import java.util.function.Consumer;
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class NearbyManagerTest {
 
-    @ClassRule static final EnableBluetoothRule sEnableBluetooth = new EnableBluetoothRule();
+    @ClassRule public static final EnableBluetoothRule sEnableBluetooth = new EnableBluetoothRule();
 
     private static final byte[] SALT = new byte[]{1, 2};
     private static final byte[] SECRET_ID = new byte[]{1, 2, 3, 4};
