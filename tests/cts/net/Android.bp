@@ -180,4 +180,5 @@ android_test_helper_app {
         "cts",
         "general-tests",
     ],
+    sdk_version: "test_current",
 }

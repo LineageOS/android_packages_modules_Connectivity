@@ -56,4 +56,5 @@ android_test {
         ":CtsNetTestAppForApi23",
     ],
     per_testcase_directory: true,
+    sdk_version: "test_current",
 }
