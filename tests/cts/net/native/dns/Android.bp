@@ -3,6 +3,11 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+filegroup {
+    name: "dns_async_test_default_map",
+    srcs: ["dns_async_test_default.map"],
+}
+
 cc_defaults {
     name: "dns_async_defaults",
 
@@ -20,6 +25,14 @@ cc_defaults {
     srcs: [
         "NativeDnsAsyncTest.cpp",
     ],
+    // This test runs on older platform versions, so many libraries (such as libbase and libc++)
+    // need to be linked statically. The test also needs to be linked with a version script to
+    // ensure that the statically-linked library isn't exported from the executable, where it
+    // would override the shared libraries that the platform itself uses.
+    // See http://b/333438055 for an example of what goes wrong when libc++ is partially exported
+    // from an executable.
+    version_script: ":dns_async_test_default_map",
+    stl: "libc++_static",
     shared_libs: [
         "libandroid",
         "liblog",
