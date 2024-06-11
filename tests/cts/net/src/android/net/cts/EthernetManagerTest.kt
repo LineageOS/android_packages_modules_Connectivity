@@ -303,18 +303,6 @@ class EthernetManagerTest {
         fun expectOnAvailable(timeout: Long = TIMEOUT_MS): String {
             return available.get(timeout, TimeUnit.MILLISECONDS)
         }
-
-        fun expectOnUnavailable() {
-            // Assert that the future fails with the IllegalStateException from the
-            // completeExceptionally() call inside onUnavailable.
-            assertFailsWith(IllegalStateException::class) {
-                try {
-                    available.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                } catch (e: ExecutionException) {
-                    throw e.cause!!
-                }
-            }
-        }
     }
 
     private class EthernetOutcomeReceiver :
