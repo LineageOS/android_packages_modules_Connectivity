@@ -268,6 +268,7 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
         setRestrictBackground(false);
         setBatterySaverMode(false);
         unregisterNetworkCallback();
+        stopApp();
 
         if (SdkLevel.isAtLeastT() && (mCtsNetUtils != null)) {
             mCtsNetUtils.restorePrivateDnsSetting();
@@ -387,7 +388,7 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
 
             finishActivity();
             assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            SystemClock.sleep(mProcessStateTransitionLongDelayMs);
             assertNetworkAccess(false, null);
             mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, true);
             assertNetworkAccessBlockedByBpf(true, mUid, true /* metered */);
@@ -413,7 +414,7 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
 
             finishActivity();
             assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            SystemClock.sleep(mProcessStateTransitionLongDelayMs);
             assertNetworkAccess(false, null);
             mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, true);
             assertNetworkAccessBlockedByBpf(true, mUid, false /* metered */);
