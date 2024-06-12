@@ -17,7 +17,9 @@ package android.net.thread.utils;
 
 import static android.net.thread.utils.IntegrationTestUtils.SERVICE_DISCOVERY_TIMEOUT;
 import static android.net.thread.utils.IntegrationTestUtils.waitFor;
+
 import static com.google.common.io.BaseEncoding.base16;
+
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import android.net.InetAddresses;
@@ -26,7 +28,9 @@ import android.net.nsd.NsdServiceInfo;
 import android.net.thread.ActiveOperationalDataset;
 import android.os.Handler;
 import android.os.HandlerThread;
+
 import com.google.errorprone.annotations.FormatMethod;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
