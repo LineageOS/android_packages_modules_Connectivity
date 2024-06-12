@@ -45,7 +45,6 @@ import com.android.server.thread.openthread.INsdStatusReceiver;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -615,9 +614,8 @@ public final class NsdPublisher extends INsdPublisher.Stub {
             }
             List<DnsTxtAttribute> txtList = new ArrayList<>();
             for (Map.Entry<String, byte[]> entry : serviceInfo.getAttributes().entrySet()) {
-                DnsTxtAttribute attribute = new DnsTxtAttribute();
-                attribute.name = entry.getKey();
-                attribute.value = Arrays.copyOf(entry.getValue(), entry.getValue().length);
+                DnsTxtAttribute attribute =
+                        new DnsTxtAttribute(entry.getKey(), entry.getValue().clone());
                 txtList.add(attribute);
             }
             // TODO: b/329018320 - Use the serviceInfo.getExpirationTime to derive TTL.
