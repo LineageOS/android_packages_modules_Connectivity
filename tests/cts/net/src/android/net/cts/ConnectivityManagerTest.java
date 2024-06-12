@@ -1237,13 +1237,14 @@ public class ConnectivityManagerTest {
             final IntentFilter filter = new IntentFilter();
             filter.addAction(broadcastAction);
 
+            final CompletableFuture<NetworkRequest> requestFuture = new CompletableFuture<>();
             final CompletableFuture<Network> networkFuture = new CompletableFuture<>();
             final AtomicInteger receivedCount = new AtomicInteger(0);
             receiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     final NetworkRequest request = intent.getParcelableExtra(EXTRA_NETWORK_REQUEST);
-                    assertPendingIntentRequestMatches(request, secondRequest, useListen);
+                    requestFuture.complete(request);
                     receivedCount.incrementAndGet();
                     networkFuture.complete(intent.getParcelableExtra(EXTRA_NETWORK));
                 }
@@ -1258,6 +1259,9 @@ public class ConnectivityManagerTest {
             } catch (TimeoutException e) {
                 throw new AssertionError("PendingIntent not received for " + secondRequest, e);
             }
+            assertPendingIntentRequestMatches(
+                    requestFuture.get(NETWORK_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS),
+                    secondRequest, useListen);
 
             // Sleep for a small amount of time to try to check that only one callback is ever
             // received (so the first callback was really unregistered). This does not guarantee
