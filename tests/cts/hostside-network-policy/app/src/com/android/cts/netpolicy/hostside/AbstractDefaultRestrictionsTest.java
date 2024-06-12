@@ -16,7 +16,7 @@
 
 package com.android.cts.netpolicy.hostside;
 
-import static android.app.ActivityManager.PROCESS_STATE_TOP_SLEEPING;
+import static android.app.ActivityManager.PROCESS_STATE_LAST_ACTIVITY;
 
 import static org.junit.Assume.assumeTrue;
 
@@ -46,14 +46,15 @@ abstract class AbstractDefaultRestrictionsTest extends AbstractRestrictBackgroun
     public final void tearDown() throws Exception {
         super.tearDown();
 
+        stopApp();
         removePowerSaveModeWhitelist(TEST_APP2_PKG);
         removePowerSaveModeExceptIdleWhitelist(TEST_APP2_PKG);
     }
 
     @Test
     public void testFgsNetworkAccess() throws Exception {
-        assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-        SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+        assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
+        SystemClock.sleep(mProcessStateTransitionShortDelayMs);
         assertNetworkAccess(false, null);
 
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
@@ -61,8 +62,8 @@ abstract class AbstractDefaultRestrictionsTest extends AbstractRestrictBackgroun
 
     @Test
     public void testActivityNetworkAccess() throws Exception {
-        assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-        SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+        assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
+        SystemClock.sleep(mProcessStateTransitionShortDelayMs);
         assertNetworkAccess(false, null);
 
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_ACTIVTIY);
@@ -70,23 +71,23 @@ abstract class AbstractDefaultRestrictionsTest extends AbstractRestrictBackgroun
 
     @Test
     public void testBackgroundNetworkAccess_inFullAllowlist() throws Exception {
-        assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-        SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+        assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
+        SystemClock.sleep(mProcessStateTransitionShortDelayMs);
         assertNetworkAccess(false, null);
 
         addPowerSaveModeWhitelist(TEST_APP2_PKG);
-        assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+        assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
         assertNetworkAccess(true, null);
     }
 
     @Test
     public void testBackgroundNetworkAccess_inExceptIdleAllowlist() throws Exception {
-        assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-        SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+        assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
+        SystemClock.sleep(mProcessStateTransitionShortDelayMs);
         assertNetworkAccess(false, null);
 
         addPowerSaveModeExceptIdleWhitelist(TEST_APP2_PKG);
-        assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+        assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
         assertNetworkAccess(true, null);
     }
 }

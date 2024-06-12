@@ -96,7 +96,12 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
     protected static final String TEST_PKG = "com.android.cts.netpolicy.hostside";
     protected static final String TEST_APP2_PKG = "com.android.cts.netpolicy.hostside.app2";
     // TODO(b/321797685): Configure it via device-config once it is available.
-    protected static final long PROCESS_STATE_TRANSITION_DELAY_MS = TimeUnit.SECONDS.toMillis(5);
+    protected final long mProcessStateTransitionLongDelayMs =
+            useDifferentDelaysForBackgroundChain() ? TimeUnit.SECONDS.toMillis(20)
+                    : TimeUnit.SECONDS.toMillis(5);
+    protected final long mProcessStateTransitionShortDelayMs =
+            useDifferentDelaysForBackgroundChain() ? TimeUnit.SECONDS.toMillis(2)
+                    : TimeUnit.SECONDS.toMillis(5);
 
     private static final String TEST_APP2_ACTIVITY_CLASS = TEST_APP2_PKG + ".MyActivity";
     private static final String TEST_APP2_SERVICE_CLASS = TEST_APP2_PKG + ".MyForegroundService";
@@ -238,6 +243,22 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
         }
         final String output = executeShellCommand("device_config get backstage_power"
                 + " com.android.server.net.network_blocked_for_top_sleeping_and_above");
+        return Boolean.parseBoolean(output);
+    }
+
+    /**
+     * Check if the flag to use different delays for sensitive proc-states is enabled.
+     * This is a manual check because the feature flag infrastructure may not be available
+     * in all the branches that will get this code.
+     * TODO: b/322115994 - Use @RequiresFlagsEnabled with
+     * Flags.FLAG_USE_DIFFERENT_DELAYS_FOR_BACKGROUND_CHAIN once the tests are moved to cts.
+     */
+    private boolean useDifferentDelaysForBackgroundChain() {
+        if (!SdkLevel.isAtLeastV()) {
+            return false;
+        }
+        final String output = executeShellCommand("device_config get backstage_power"
+                + " com.android.server.net.use_different_delays_for_background_chain");
         return Boolean.parseBoolean(output);
     }
 
@@ -822,6 +843,10 @@ public abstract class AbstractRestrictBackgroundNetworkTestCase {
 
     protected void assertDozeMode(boolean enabled) throws Exception {
         assertDelayedShellCommand("dumpsys deviceidle get deep", enabled ? "IDLE" : "ACTIVE");
+    }
+
+    protected void stopApp() {
+        executeSilentShellCommand("am stop-app " + TEST_APP2_PKG);
     }
 
     protected void setAppIdle(boolean isIdle) throws Exception {

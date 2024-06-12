@@ -17,6 +17,7 @@
 package com.android.cts.netpolicy.hostside;
 
 import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+import static android.app.ActivityManager.PROCESS_STATE_LAST_ACTIVITY;
 import static android.app.ActivityManager.PROCESS_STATE_TOP_SLEEPING;
 import static android.os.Process.SYSTEM_UID;
 
@@ -65,6 +66,7 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
         setRestrictBackground(false);
         setRestrictedNetworkingMode(false);
         unregisterNetworkCallback();
+        stopApp();
     }
 
     @Test
@@ -248,8 +250,8 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
         assumeTrue("Feature not enabled", isNetworkBlockedForTopSleepingAndAbove());
 
         try {
-            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            assertProcessStateBelow(PROCESS_STATE_LAST_ACTIVITY);
+            SystemClock.sleep(mProcessStateTransitionShortDelayMs);
             assertNetworkingBlockedStatusForUid(mUid, METERED, true /* expectedResult */);
             assertTrue(isUidNetworkingBlocked(mUid, NON_METERED));
 
@@ -260,7 +262,7 @@ public class NetworkPolicyManagerTest extends AbstractRestrictBackgroundNetworkT
 
             finishActivity();
             assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            SystemClock.sleep(mProcessStateTransitionLongDelayMs);
             assertNetworkingBlockedStatusForUid(mUid, METERED, true /* expectedResult */);
             assertTrue(isUidNetworkingBlocked(mUid, NON_METERED));
 
