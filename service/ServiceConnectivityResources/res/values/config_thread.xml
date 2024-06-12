@@ -53,4 +53,10 @@
     UTF-8 bytes.
     -->
     <string translatable="false" name="config_thread_model_name">Thread Border Router</string>
+
+    <!-- Whether the Thread network will be managed by the Google Home ecosystem. When this value
+    is set, a TXT entry "vgh=0" or "vgh=1" will be added to the "_mehscop._udp" mDNS service
+    respectively (The TXT value is a string).
+    -->
+    <bool name="config_thread_managed_by_google_home">false</bool>
 </resources>
