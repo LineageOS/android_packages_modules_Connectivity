@@ -53,7 +53,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
     @After
     public final void tearDown() throws Exception {
         super.tearDown();
-        finishActivity();
+        stopApp();
         resetDeviceState();
     }
 
@@ -108,7 +108,7 @@ public class ConnOnActivityStartTest extends AbstractRestrictBackgroundNetworkTe
         assumeTrue("Feature not enabled", isNetworkBlockedForTopSleepingAndAbove());
         assertLaunchedActivityHasNetworkAccess("testStartActivity_default", () -> {
             assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
-            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            SystemClock.sleep(mProcessStateTransitionLongDelayMs);
             assertNetworkAccess(false, null);
         });
     }
