@@ -34,6 +34,9 @@ class ConnectivityMultiDevicesTest(base_test.BaseTestClass):
     )
 
   def test_hotspot_upstream_wifi(self):
+    tether_utils.assume_hotspot_test_preconditions(
+        self.serverDevice, self.clientDevice, UpstreamType.WIFI
+    )
     try:
       # Connectivity of the client verified by asserting the validated capability.
       tether_utils.setup_hotspot_and_client_for_upstream_type(
@@ -45,6 +48,9 @@ class ConnectivityMultiDevicesTest(base_test.BaseTestClass):
       )
 
   def test_hotspot_upstream_cellular(self):
+    tether_utils.assume_hotspot_test_preconditions(
+        self.serverDevice, self.clientDevice, UpstreamType.CELLULAR
+    )
     try:
       # Connectivity of the client verified by asserting the validated capability.
       tether_utils.setup_hotspot_and_client_for_upstream_type(

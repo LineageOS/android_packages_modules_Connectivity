@@ -77,9 +77,9 @@ class ConnectivityMultiDevicesSnippet : Snippet {
         ctsNetUtils.expectNetworkIsSystemDefault(network)
     }
 
-    @Rpc(description = "Unrequest cellular connection.")
-    fun unrequestCellular() {
-        cbHelper.unrequestCell()
+    @Rpc(description = "Unregister all connections.")
+    fun unregisterAll() {
+        cbHelper.unregisterAll()
     }
 
     @Rpc(description = "Ensure any wifi is connected and is the default network.")
