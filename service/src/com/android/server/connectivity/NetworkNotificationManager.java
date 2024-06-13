@@ -170,9 +170,11 @@ public class NetworkNotificationManager {
                     && !TextUtils.isEmpty(nai.linkProperties.getCaptivePortalData()
                     .getVenueFriendlyName())) {
                 name = nai.linkProperties.getCaptivePortalData().getVenueFriendlyName();
+            } else if (!TextUtils.isEmpty(extraInfo)) {
+                name = extraInfo;
             } else {
-                name = TextUtils.isEmpty(extraInfo)
-                        ? WifiInfo.sanitizeSsid(nai.networkCapabilities.getSsid()) : extraInfo;
+                final String ssid = WifiInfo.sanitizeSsid(nai.networkCapabilities.getSsid());
+                name = ssid == null ? "" : ssid;
             }
             // Only notify for Internet-capable networks.
             if (!nai.networkCapabilities.hasCapability(NET_CAPABILITY_INTERNET)) return;
