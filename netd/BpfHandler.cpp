@@ -34,6 +34,7 @@ namespace android {
 namespace net {
 
 using base::unique_fd;
+using base::WaitForProperty;
 using bpf::getSocketCookie;
 using bpf::retrieveProgram;
 using netdutils::Status;
@@ -140,39 +141,47 @@ BpfHandler::BpfHandler()
 BpfHandler::BpfHandler(uint32_t perUidLimit, uint32_t totalLimit)
     : mPerUidStatsEntriesLimit(perUidLimit), mTotalUidStatsEntriesLimit(totalLimit) {}
 
+static bool mainlineNetBpfLoadDone() {
+    return !access("/sys/fs/bpf/netd_shared/mainline_done", F_OK);
+}
+
 // copied with minor changes from waitForProgsLoaded()
 // p/m/C's staticlibs/native/bpf_headers/include/bpf/WaitForProgsLoaded.h
 static inline void waitForNetProgsLoaded() {
     // infinite loop until success with 5/10/20/40/60/60/60... delay
     for (int delay = 5;; delay *= 2) {
         if (delay > 60) delay = 60;
-        if (base::WaitForProperty("init.svc.bpfloader", "stopped", std::chrono::seconds(delay))
-            && !access("/sys/fs/bpf/netd_shared", F_OK))
+        if (WaitForProperty("init.svc.mdnsd_netbpfload", "stopped", std::chrono::seconds(delay))
+            && mainlineNetBpfLoadDone())
             return;
-        ALOGW("Waited %ds for init.svc.bpfloader=stopped, still waiting...", delay);
+        ALOGW("Waited %ds for init.svc.mdnsd_netbpfload=stopped, still waiting...", delay);
     }
 }
 
 Status BpfHandler::init(const char* cg2_path) {
+    // Note: netd *can* be restarted, so this might get called a second time after boot is complete
+    // at which point we don't need to (and shouldn't) wait for (more importantly start) loading bpf
+
     if (base::GetProperty("bpf.progs_loaded", "") != "1") {
-        // Make sure BPF programs are loaded before doing anything
-        ALOGI("Waiting for BPF programs");
-
-        // TODO: use !modules::sdklevel::IsAtLeastV() once api finalized
-        if (android_get_device_api_level() < __ANDROID_API_V__) {
-            waitForNetProgsLoaded();
-            ALOGI("Networking BPF programs are loaded");
-
-            if (!base::SetProperty("ctl.start", "mdnsd_netbpfload")) {
-                ALOGE("Failed to set property ctl.start=mdnsd_netbpfload, see dmesg for reason.");
-                abort();
-            }
-
-            ALOGI("Waiting for remaining BPF programs");
-        }
-
+        // AOSP platform netd & mainline don't need this (at least prior to U QPR3),
+        // but there could be platform provided (xt_)bpf programs that oem/vendor
+        // modified netd (which calls us during init) depends on...
+        ALOGI("Waiting for platform BPF programs");
         android::bpf::waitForProgsLoaded();
     }
+
+    if (!mainlineNetBpfLoadDone()) {
+        // we're on < U QPR3 & it's the first time netd is starting up (unless crashlooping)
+        if (!base::SetProperty("ctl.start", "mdnsd_netbpfload")) {
+            ALOGE("Failed to set property ctl.start=mdnsd_netbpfload, see dmesg for reason.");
+            abort();
+        }
+
+        ALOGI("Waiting for Networking BPF programs");
+        waitForNetProgsLoaded();
+        ALOGI("Networking BPF programs are loaded");
+    }
+
     ALOGI("BPF programs are loaded");
 
     RETURN_IF_NOT_OK(initPrograms(cg2_path));
