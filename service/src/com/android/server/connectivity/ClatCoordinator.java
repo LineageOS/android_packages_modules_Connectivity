@@ -683,13 +683,25 @@ public class ClatCoordinator {
             throw new IOException("Failed to start clat ", e);
         } finally {
             if (tunFd != null) {
-                tunFd.close();
+                try {
+                    tunFd.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Fail to close tun file descriptor " + e);
+                }
             }
             if (readSock6 != null) {
-                readSock6.close();
+                try {
+                    readSock6.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Fail to close read socket " + e);
+                }
             }
             if (writeSock6 != null) {
-                writeSock6.close();
+                try {
+                    writeSock6.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Fail to close write socket " + e);
+                }
             }
         }
     }
