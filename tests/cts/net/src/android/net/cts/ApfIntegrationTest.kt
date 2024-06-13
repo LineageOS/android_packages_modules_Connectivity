@@ -361,7 +361,8 @@ class ApfIntegrationTest {
     @SkipPresubmit(reason = "This test takes longer than 1 minute, do not run it on presubmit.")
     // APF integration is mostly broken before V, only run the full read / write test on V+.
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    @Test
+    // Increase timeout for test to 15 minutes to accommodate device with large APF RAM.
+    @Test(timeout = 15 * 60 * 1000)
     fun testReadWriteProgram() {
         assumeApfVersionSupportAtLeast(4)
 
