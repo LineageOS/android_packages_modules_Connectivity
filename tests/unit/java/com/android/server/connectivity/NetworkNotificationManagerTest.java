@@ -113,6 +113,7 @@ public class NetworkNotificationManagerTest {
     private static final NetworkCapabilities CELL_CAPABILITIES = new NetworkCapabilities();
     private static final NetworkCapabilities WIFI_CAPABILITIES = new NetworkCapabilities();
     private static final NetworkCapabilities VPN_CAPABILITIES = new NetworkCapabilities();
+    private static final NetworkCapabilities BT_CAPABILITIES = new NetworkCapabilities();
     static {
         CELL_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
         CELL_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
@@ -128,6 +129,9 @@ public class NetworkNotificationManagerTest {
         VPN_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_VPN);
         VPN_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         VPN_CAPABILITIES.removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
+
+        BT_CAPABILITIES.addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH);
+        BT_CAPABILITIES.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
     }
 
     /**
@@ -159,7 +163,9 @@ public class NetworkNotificationManagerTest {
     @Mock NetworkAgentInfo mWifiNai;
     @Mock NetworkAgentInfo mCellNai;
     @Mock NetworkAgentInfo mVpnNai;
+    @Mock NetworkAgentInfo mBluetoothNai;
     @Mock NetworkInfo mNetworkInfo;
+    @Mock NetworkInfo mEmptyNetworkInfo;
     ArgumentCaptor<Notification> mCaptor;
 
     NetworkNotificationManager mManager;
@@ -174,6 +180,8 @@ public class NetworkNotificationManagerTest {
         mCellNai.networkInfo = mNetworkInfo;
         mVpnNai.networkCapabilities = VPN_CAPABILITIES;
         mVpnNai.networkInfo = mNetworkInfo;
+        mBluetoothNai.networkCapabilities = BT_CAPABILITIES;
+        mBluetoothNai.networkInfo = mEmptyNetworkInfo;
         mDisplayMetrics.density = 2.275f;
         doReturn(true).when(mVpnNai).isVPN();
         doReturn(mResources).when(mCtx).getResources();
@@ -542,10 +550,11 @@ public class NetworkNotificationManagerTest {
                 R.string.wifi_no_internet_detailed);
     }
 
-    private void runTelephonySignInNotificationTest(String testTitle, String testContents) {
+    private void runSignInNotificationTest(NetworkAgentInfo nai, String testTitle,
+            String testContents) {
         final int id = 101;
         final String tag = NetworkNotificationManager.tagFor(id);
-        mManager.showNotification(id, SIGN_IN, mCellNai, null, null, false);
+        mManager.showNotification(id, SIGN_IN, nai, null, null, false);
 
         final ArgumentCaptor<Notification> noteCaptor = ArgumentCaptor.forClass(Notification.class);
         verify(mNotificationManager).notify(eq(tag), eq(SIGN_IN.eventId), noteCaptor.capture());
@@ -565,7 +574,7 @@ public class NetworkNotificationManagerTest {
         doReturn(testContents).when(mResources).getString(
                 R.string.mobile_network_available_no_internet_detailed, TEST_OPERATOR_NAME);
 
-        runTelephonySignInNotificationTest(testTitle, testContents);
+        runSignInNotificationTest(mCellNai, testTitle, testContents);
     }
 
     @Test
@@ -579,6 +588,21 @@ public class NetworkNotificationManagerTest {
         doReturn(testContents).when(mResources).getString(
                 R.string.mobile_network_available_no_internet_detailed_unknown_carrier);
 
-        runTelephonySignInNotificationTest(testTitle, testContents);
+        runSignInNotificationTest(mCellNai, testTitle, testContents);
+    }
+
+    @Test
+    public void testBluetoothSignInNotification_EmptyNotificationContents() {
+        final String testTitle = "Test title";
+        final String testContents = "Test contents";
+        doReturn(testTitle).when(mResources).getString(
+                R.string.network_available_sign_in, 0);
+        doReturn(testContents).when(mResources).getString(
+                eq(R.string.network_available_sign_in_detailed), any());
+
+        runSignInNotificationTest(mBluetoothNai, testTitle, testContents);
+        // The details should be queried with an empty string argument. In practice the notification
+        // contents may just be an empty string, since the default translation just outputs the arg.
+        verify(mResources).getString(eq(R.string.network_available_sign_in_detailed), eq(""));
     }
 }
