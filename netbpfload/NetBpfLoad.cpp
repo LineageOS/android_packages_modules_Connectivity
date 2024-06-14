@@ -254,7 +254,7 @@ static bool isTV() {
 }
 
 static int doLoad(char** argv, char * const envp[]) {
-    const bool runningAsRoot = !getuid();
+    const bool runningAsRoot = !getuid();  // true iff U QPR3 or V+
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
@@ -456,17 +456,25 @@ static int doLoad(char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (isAtLeastV) {
-        ALOGI("done, transferring control to platform bpfloader.");
+    // leave a flag that we're done
+    if (createSysFsBpfSubDir("netd_shared/mainline_done")) return 1;
 
-        const char * args[] = { platformBpfLoader, NULL, };
-        execve(args[0], (char**)args, envp);
-        ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
-        return 1;
+    // platform bpfloader will only succeed when run as root
+    if (!runningAsRoot) {
+        // unreachable on U QPR3+ which always runs netbpfload as root
+
+        ALOGI("mainline done, no need to transfer control to platform bpf loader.");
+        return 0;
     }
 
-    ALOGI("mainline done!");
-    return 0;
+    // unreachable before U QPR3
+    ALOGI("done, transferring control to platform bpfloader.");
+
+    // platform BpfLoader *needs* to run as root
+    const char * args[] = { platformBpfLoader, NULL, };
+    execve(args[0], (char**)args, envp);
+    ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
+    return 1;
 }
 
 }  // namespace bpf
