@@ -255,7 +255,9 @@ static bool isTV() {
 
 static int doLoad(char** argv, char * const envp[]) {
     const bool runningAsRoot = !getuid();  // true iff U QPR3 or V+
-    const int device_api_level = android_get_device_api_level();
+    const bool unreleased = (base::GetProperty("ro.build.version.codename", "") != "REL");
+
+    const int device_api_level = android_get_device_api_level() + (int)unreleased;
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
     const bool isAtLeastV = (device_api_level >= __ANDROID_API_V__);
@@ -272,8 +274,9 @@ static int doLoad(char** argv, char * const envp[]) {
     if (runningAsRoot) ++bpfloader_ver;  // [45] BPFLOADER_MAINLINE_U_QPR3_VERSION
     if (isAtLeastV) ++bpfloader_ver;     // [46] BPFLOADER_MAINLINE_V_VERSION
 
-    ALOGI("NetBpfLoad v0.%u (%s) api:%d kver:%07x (%s) uid:%d rc:%d%d",
-          bpfloader_ver, argv[0], device_api_level, kernelVersion(), describeArch(), getuid(),
+    ALOGI("NetBpfLoad v0.%u (%s) api:%d/%d kver:%07x (%s) uid:%d rc:%d%d",
+          bpfloader_ver, argv[0], android_get_device_api_level(), device_api_level,
+          kernelVersion(), describeArch(), getuid(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
