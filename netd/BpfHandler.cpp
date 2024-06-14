@@ -171,7 +171,10 @@ Status BpfHandler::init(const char* cg2_path) {
     }
 
     if (false && !mainlineNetBpfLoadDone()) {
-        // we're on < U QPR3 & it's the first time netd is starting up (unless crashlooping)
+        // We're on < U QPR3 & it's the first time netd is starting up (unless crashlooping)
+        //
+        // On U QPR3+ netbpfload is guaranteed to run before the platform bpfloader,
+        // so waitForProgsLoaded() implies mainlineNetBpfLoadDone().
         if (!base::SetProperty("ctl.start", "mdnsd_netbpfload")) {
             ALOGE("Failed to set property ctl.start=mdnsd_netbpfload, see dmesg for reason.");
             abort();
