@@ -170,7 +170,7 @@ Status BpfHandler::init(const char* cg2_path) {
         android::bpf::waitForProgsLoaded();
     }
 
-    if (!mainlineNetBpfLoadDone()) {
+    if (false && !mainlineNetBpfLoadDone()) {
         // we're on < U QPR3 & it's the first time netd is starting up (unless crashlooping)
         if (!base::SetProperty("ctl.start", "mdnsd_netbpfload")) {
             ALOGE("Failed to set property ctl.start=mdnsd_netbpfload, see dmesg for reason.");
