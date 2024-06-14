@@ -17,5 +17,5 @@ service mdnsd_netbpfload /apex/com.android.tethering/bin/netbpfload
     file /dev/kmsg w
     rlimit memlock 1073741824 1073741824
     oneshot
-    reboot_on_failure reboot,bpfloader-failed
+    # TODO: reboot_on_failure reboot,netbpfload-failed
     override
