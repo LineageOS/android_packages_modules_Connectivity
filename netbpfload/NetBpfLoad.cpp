@@ -224,11 +224,6 @@ static int logTetheringApexVersion(void) {
     return 0;
 }
 
-static bool isGSI() {
-    // From //system/gsid/libgsi.cpp IsGsiRunning()
-    return !access("/metadata/gsi/dsu/booted", F_OK);
-}
-
 static bool hasGSM() {
     static string ph = base::GetProperty("gsm.current.phone-type", "");
     static bool gsm = (ph != "");
@@ -351,7 +346,7 @@ static int doLoad(char** argv, char * const envp[]) {
 
 #undef REQUIRE
 
-        if (bad && !isGSI()) {
+        if (bad) {
             ALOGE("Unsupported kernel version (%07x).", kernelVersion());
         }
     }
