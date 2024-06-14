@@ -204,7 +204,7 @@ static void mapLockTest(void) {
     const char * const m1 = BPF_NETD_PATH "map_netd_lock_array_test_map";
     const char * const m2 = BPF_NETD_PATH "map_netd_lock_hash_test_map";
 
-    unique_fd fd0(bpf::mapRetrieveExclusiveRW(m1)); if (!fd0.ok()) abort();
+    unique_fd fd0(bpf::mapRetrieveExclusiveRW(m1)); if (!fd0.ok()) abort();  // grabs exclusive lock
 
     unique_fd fd1(bpf::mapRetrieveExclusiveRW(m2)); if (!fd1.ok()) abort();  // no conflict with fd0
     unique_fd fd2(bpf::mapRetrieveExclusiveRW(m2)); if ( fd2.ok()) abort();  // busy due to fd1
@@ -215,6 +215,9 @@ static void mapLockTest(void) {
     unique_fd fd6(bpf::mapRetrieveRW(m2));          if (!fd6.ok()) abort();  // now ok
     unique_fd fd7(bpf::mapRetrieveRO(m2));          if (!fd7.ok()) abort();  // no lock taken
     unique_fd fd8(bpf::mapRetrieveExclusiveRW(m2)); if ( fd8.ok()) abort();  // busy due to fd6
+
+    fd0.reset();  // releases exclusive lock
+    unique_fd fd9(bpf::mapRetrieveWO(m1));          if (!fd9.ok()) abort();  // grabs exclusive lock
 }
 
 Status BpfHandler::initMaps() {
