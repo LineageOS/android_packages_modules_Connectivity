@@ -239,3 +239,4 @@ DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM, schedcls_s
 LICENSE("Apache 2.0");
 CRITICAL("Connectivity");
 DISABLE_BTF_ON_USER_BUILDS();
+DISABLE_ON_MAINLINE_BEFORE_U_QPR3();

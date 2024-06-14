@@ -117,6 +117,9 @@
     unsigned _btf_min_bpfloader_ver SECTION("btf_min_bpfloader_ver") = 39u; \
     unsigned _btf_user_min_bpfloader_ver SECTION("btf_user_min_bpfloader_ver") = 0xFFFFFFFFu
 
+#define DISABLE_ON_MAINLINE_BEFORE_U_QPR3() \
+    unsigned _netbpfload_min_ver SECTION("netbpfload_min_ver") = BPFLOADER_MAINLINE_U_QPR3_VERSION;
+
 /* flag the resulting bpf .o file as critical to system functionality,
  * loading all kernel version appropriate programs in it must succeed
  * for bpfloader success

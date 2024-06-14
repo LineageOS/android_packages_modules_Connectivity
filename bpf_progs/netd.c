@@ -679,3 +679,4 @@ DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_soc
 LICENSE("Apache 2.0");
 CRITICAL("Connectivity and netd");
 DISABLE_BTF_ON_USER_BUILDS();
+DISABLE_ON_MAINLINE_BEFORE_U_QPR3();
