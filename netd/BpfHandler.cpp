@@ -163,8 +163,8 @@ Status BpfHandler::init(const char* cg2_path) {
             waitForNetProgsLoaded();
             ALOGI("Networking BPF programs are loaded");
 
-            if (!base::SetProperty("ctl.start", "mdnsd_loadbpf")) {
-                ALOGE("Failed to set property ctl.start=mdnsd_loadbpf, see dmesg for reason.");
+            if (!base::SetProperty("ctl.start", "mdnsd_netbpfload")) {
+                ALOGE("Failed to set property ctl.start=mdnsd_netbpfload, see dmesg for reason.");
                 abort();
             }
 
