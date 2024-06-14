@@ -265,8 +265,14 @@ static int doLoad(char** argv, char * const envp[]) {
     // first in U QPR2 beta~2
     const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
 
-    ALOGI("NetBpfLoad (%s) api:%d kver:%07x (%s) uid:%d rc:%d%d",
-          argv[0], device_api_level, kernelVersion(), describeArch(), getuid(),
+    // Version of Network BpfLoader depends on the Android OS version
+    unsigned int bpfloader_ver = 42u;  // [42] BPFLOADER_MAINLINE_VERSION
+    if (isAtLeastT) ++bpfloader_ver;   // [43] BPFLOADER_MAINLINE_T_VERSION
+    if (isAtLeastU) ++bpfloader_ver;   // [44] BPFLOADER_MAINLINE_U_VERSION
+    if (isAtLeastV) ++bpfloader_ver;   // [45] BPFLOADER_MAINLINE_V_VERSION
+
+    ALOGI("NetBpfLoad v0.%u (%s) api:%d kver:%07x (%s) uid:%d rc:%d%d",
+          bpfloader_ver, argv[0], device_api_level, kernelVersion(), describeArch(), getuid(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
@@ -426,12 +432,6 @@ static int doLoad(char** argv, char * const envp[]) {
     // and as such this will likely always be the case.
     // Thus we need to manually create the /sys/fs/bpf/loader subdirectory.
     if (createSysFsBpfSubDir("loader")) return 1;
-
-    // Version of Network BpfLoader depends on the Android OS version
-    unsigned int bpfloader_ver = 42u;  // [42] BPFLOADER_MAINLINE_VERSION
-    if (isAtLeastT) ++bpfloader_ver;   // [43] BPFLOADER_MAINLINE_T_VERSION
-    if (isAtLeastU) ++bpfloader_ver;   // [44] BPFLOADER_MAINLINE_U_VERSION
-    if (isAtLeastV) ++bpfloader_ver;   // [45] BPFLOADER_MAINLINE_V_VERSION
 
     // Load all ELF objects, create programs and maps, and pin them
     for (const auto& location : locations) {
