@@ -254,6 +254,7 @@ static bool isTV() {
 }
 
 static int doLoad(char** argv, char * const envp[]) {
+    const bool runningAsRoot = !getuid();
     const int device_api_level = android_get_device_api_level();
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
@@ -264,8 +265,8 @@ static int doLoad(char** argv, char * const envp[]) {
     // first in U QPR2 beta~2
     const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
 
-    ALOGI("NetBpfLoad (%s) api:%d kver:%07x (%s) rc:%d%d",
-          argv[0], device_api_level, kernelVersion(), describeArch(),
+    ALOGI("NetBpfLoad (%s) api:%d kver:%07x (%s) uid:%d rc:%d%d",
+          argv[0], device_api_level, kernelVersion(), describeArch(), getuid(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
@@ -380,7 +381,9 @@ static int doLoad(char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (isAtLeastV) {
+    if (runningAsRoot) {
+        // Note: writing this proc file requires being root (always the case on V+)
+
         // Linux 5.16-rc1 changed the default to 2 (disabled but changeable),
         // but we need 0 (enabled)
         // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on
@@ -390,6 +393,11 @@ static int doLoad(char** argv, char * const envp[]) {
     }
 
     if (isAtLeastU) {
+        // Note: writing these proc files requires CAP_NET_ADMIN
+        // and sepolicy which is only present on U+,
+        // on Android T and earlier versions they're written from the 'load_bpf_programs'
+        // trigger (ie. by init itself) instead.
+
         // Enable the eBPF JIT -- but do note that on 64-bit kernels it is likely
         // already force enabled by the kernel config option BPF_JIT_ALWAYS_ON.
         // (Note: this (open) will fail with ENOENT 'No such file or directory' if
