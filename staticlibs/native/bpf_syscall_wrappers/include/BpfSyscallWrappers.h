@@ -22,8 +22,6 @@
 #include <linux/unistd.h>
 #include <sys/file.h>
 
-#include "../../bpf_headers/include/bpf/KernelUtils.h"
-
 #ifdef BPF_FD_JUST_USE_INT
   #define BPF_FD_TYPE int
   #define BPF_FD_TO_U32(x) static_cast<__u32>(x)
@@ -136,15 +134,18 @@ inline int bpfFdGet(const char* pathname, uint32_t flag) {
 int bpfGetFdMapId(const BPF_FD_TYPE map_fd);
 
 inline int bpfLock(int fd, short type) {
-    if (!isAtLeastKernelVersion(4, 14, 0)) return fd;  // 4.14+ required to fetch map id
     if (fd < 0) return fd;  // pass any errors straight through
 #ifdef BPF_FD_JUST_USE_INT
     int mapId = bpfGetFdMapId(fd);
+    int saved_errno = errno;
 #else
     base::unique_fd ufd(fd);
     int mapId = bpfGetFdMapId(ufd);
+    int saved_errno = errno;
     (void)ufd.release();
 #endif
+    // 4.14+ required to fetch map id, but we don't want to call isAtLeastKernelVersion
+    if (mapId == -1 && saved_errno == EINVAL) return fd;
     if (mapId <= 0) abort();  // should not be possible
 
     // on __LP64__ (aka. 64-bit userspace) 'struct flock64' is the same as 'struct flock'
