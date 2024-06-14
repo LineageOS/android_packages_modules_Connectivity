@@ -16,8 +16,13 @@
 
 #pragma once
 
+#include <stdlib.h>
+#include <unistd.h>
 #include <linux/bpf.h>
 #include <linux/unistd.h>
+#include <sys/file.h>
+
+#include "../../bpf_headers/include/bpf/KernelUtils.h"
 
 #ifdef BPF_FD_JUST_USE_INT
   #define BPF_FD_TYPE int
@@ -128,14 +133,49 @@ inline int bpfFdGet(const char* pathname, uint32_t flag) {
                             });
 }
 
+int bpfGetFdMapId(const BPF_FD_TYPE map_fd);
+
+inline int bpfLock(int fd, short type) {
+    if (!isAtLeastKernelVersion(4, 14, 0)) return fd;  // 4.14+ required to fetch map id
+    if (fd < 0) return fd;  // pass any errors straight through
+#ifdef BPF_FD_JUST_USE_INT
+    int mapId = bpfGetFdMapId(fd);
+#else
+    base::unique_fd ufd(fd);
+    int mapId = bpfGetFdMapId(ufd);
+    (void)ufd.release();
+#endif
+    if (mapId <= 0) abort();  // should not be possible
+
+    // on __LP64__ (aka. 64-bit userspace) 'struct flock64' is the same as 'struct flock'
+    struct flock64 fl = {
+        .l_type = type,        // short: F_{RD,WR,UN}LCK
+        .l_whence = SEEK_SET,  // short: SEEK_{SET,CUR,END}
+        .l_start = mapId,      // off_t: start offset
+        .l_len = 1,            // off_t: number of bytes
+    };
+
+    // see: bionic/libc/bionic/fcntl.cpp: iff !__LP64__ this uses fcntl64
+    int ret = fcntl(fd, F_OFD_SETLK, &fl);
+    if (!ret) return fd;  // success
+    close(fd);
+    return ret;  // most likely -1 with errno == EAGAIN, due to already held lock
+}
+
+inline int mapRetrieveExclusiveRW(const char* pathname) {
+    return bpfLock(bpfFdGet(pathname, 0), F_WRLCK);
+}
 inline int mapRetrieveRW(const char* pathname) {
-    return bpfFdGet(pathname, 0);
+    return bpfLock(bpfFdGet(pathname, 0), F_RDLCK);
 }
 
 inline int mapRetrieveRO(const char* pathname) {
     return bpfFdGet(pathname, BPF_F_RDONLY);
 }
 
+// WARNING: it's impossible to grab a shared (ie. read) lock on a write-only fd,
+// so only use this if you don't care about locking, ie. never use
+// mapRetrieveExclusiveRW() on the same map (ie. pathname).
 inline int mapRetrieveWO(const char* pathname) {
     return bpfFdGet(pathname, BPF_F_WRONLY);
 }
