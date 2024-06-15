@@ -175,10 +175,9 @@ inline int mapRetrieveRO(const char* pathname) {
 }
 
 // WARNING: it's impossible to grab a shared (ie. read) lock on a write-only fd,
-// so only use this if you don't care about locking, ie. never use
-// mapRetrieveExclusiveRW() on the same map (ie. pathname).
+// so we instead choose to grab an exclusive (ie. write) lock.
 inline int mapRetrieveWO(const char* pathname) {
-    return bpfFdGet(pathname, BPF_F_WRONLY);
+    return bpfLock(bpfFdGet(pathname, BPF_F_WRONLY), F_WRLCK);
 }
 
 inline int retrieveProgram(const char* pathname) {
