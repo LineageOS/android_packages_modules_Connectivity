@@ -135,6 +135,9 @@ int bpfGetFdMapId(const BPF_FD_TYPE map_fd);
 
 inline int bpfLock(int fd, short type) {
     if (fd < 0) return fd;  // pass any errors straight through
+#ifdef BPF_MAP_LOCKLESS_FOR_TEST
+    return fd;
+#endif
 #ifdef BPF_FD_JUST_USE_INT
     int mapId = bpfGetFdMapId(fd);
     int saved_errno = errno;
