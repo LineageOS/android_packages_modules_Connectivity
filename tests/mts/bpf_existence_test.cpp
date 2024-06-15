@@ -69,6 +69,7 @@ static const set<string> MAINLINE_FOR_S_PLUS = {
     TETHERING "map_test_bitmap",
     TETHERING "map_test_tether_downstream6_map",
     TETHERING "map_test_tether2_downstream6_map",
+    TETHERING "map_test_tether3_downstream6_map",
     TETHERING "prog_offload_schedcls_tether_downstream4_ether",
     TETHERING "prog_offload_schedcls_tether_downstream4_rawip",
     TETHERING "prog_offload_schedcls_tether_downstream6_ether",
