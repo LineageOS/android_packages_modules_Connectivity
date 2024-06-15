@@ -69,6 +69,8 @@ public final class BpfMapTest {
     private static final int TEST_MAP_SIZE = 16;
     private static final String TETHER_DOWNSTREAM6_FS_PATH =
             "/sys/fs/bpf/tethering/map_test_tether_downstream6_map";
+    private static final String TETHER2_DOWNSTREAM6_FS_PATH =
+            "/sys/fs/bpf/tethering/map_test_tether2_downstream6_map";
 
     private ArrayMap<TetherDownstream6Key, Tether6Value> mTestData;
 
@@ -108,7 +110,7 @@ public final class BpfMapTest {
 
     private BpfMap<TetherDownstream6Key, Tether6Value> openTestMap() throws Exception {
         return mShouldTestSingleWriterMap
-                ? new SingleWriterBpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
+                ? new SingleWriterBpfMap<>(TETHER2_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
                 Tether6Value.class)
                 : new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
                         Tether6Value.class);
