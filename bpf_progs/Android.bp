@@ -85,6 +85,16 @@ bpf {
 }
 
 bpf {
+    name: "gentle.o",
+    srcs: ["gentle.c"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sub_dir: "net_shared",
+}
+
+bpf {
     name: "offload.o",
     srcs: ["offload.c"],
     cflags: [
