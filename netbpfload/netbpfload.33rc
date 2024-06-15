@@ -1,3 +1,15 @@
+# This file takes effect only on T and U (on V netbpfload.35rc takes priority).
+#
+# The service is started from netd's libnetd_updatable shared library
+# on initial (boot time) startup of netd.
+#
+# However we never start this service on U QPR3.
+#
+# This is due to lack of a need: U QPR2 split the previously single
+# platform bpfloader into platform netbpfload -> platform bpfloader.
+# U QPR3 made the platform netbpfload unconditionally exec apex netbpfload,
+# so by the time U QPR3's netd runs, apex netbpfload is already done.
+
 service mdnsd_netbpfload /apex/com.android.tethering/bin/netbpfload
     capabilities CHOWN SYS_ADMIN NET_ADMIN
     group system root graphics network_stack net_admin net_bw_acct net_bw_stats net_raw
@@ -5,5 +17,5 @@ service mdnsd_netbpfload /apex/com.android.tethering/bin/netbpfload
     file /dev/kmsg w
     rlimit memlock 1073741824 1073741824
     oneshot
-    reboot_on_failure reboot,bpfloader-failed
+    # TODO: reboot_on_failure reboot,netbpfload-failed
     override

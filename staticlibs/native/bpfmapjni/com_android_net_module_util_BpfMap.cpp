@@ -35,7 +35,24 @@ static jint com_android_net_module_util_BpfMap_nativeBpfFdGet(JNIEnv *env, jclas
         jstring path, jint mode, jint keySize, jint valueSize) {
     ScopedUtfChars pathname(env, path);
 
-    jint fd = bpf::bpfFdGet(pathname.c_str(), static_cast<unsigned>(mode));
+    jint fd = -1;
+    switch (mode) {
+      case 0:
+        fd = bpf::mapRetrieveRW(pathname.c_str());
+        break;
+      case BPF_F_RDONLY:
+        fd = bpf::mapRetrieveRO(pathname.c_str());
+        break;
+      case BPF_F_WRONLY:
+        fd = bpf::mapRetrieveWO(pathname.c_str());
+        break;
+      case BPF_F_RDONLY|BPF_F_WRONLY:
+        fd = bpf::mapRetrieveExclusiveRW(pathname.c_str());
+        break;
+      default:
+        errno = EINVAL;
+        break;
+    }
 
     if (fd < 0) {
         jniThrowErrnoException(env, "nativeBpfFdGet", errno);

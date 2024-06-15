@@ -250,12 +250,38 @@ static bool isTV() {
 
 static int doLoad(char** argv, char * const envp[]) {
     const bool runningAsRoot = !getuid();  // true iff U QPR3 or V+
-    const bool unreleased = (base::GetProperty("ro.build.version.codename", "") != "REL");
 
-    const int device_api_level = android_get_device_api_level() + (int)unreleased;
-    const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
-    const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
-    const bool isAtLeastV = (device_api_level >= __ANDROID_API_V__);
+    // Any released device will have codename REL instead of a 'real' codename.
+    // For safety: default to 'REL' so we default to unreleased=false on failure.
+    const bool unreleased = (base::GetProperty("ro.build.version.codename", "REL") != "REL");
+
+    // goog/main device_api_level is bumped *way* before aosp/main api level
+    // (the latter only gets bumped during the push of goog/main to aosp/main)
+    //
+    // Since we develop in AOSP, we want it to behave as if it was bumped too.
+    //
+    // Note that AOSP doesn't really have a good api level (for example during
+    // early V dev cycle, it would have *all* of T, some but not all of U, and some V).
+    // One could argue that for our purposes AOSP api level should be infinite or 10000.
+    //
+    // This could also cause api to be increased in goog/main or other branches,
+    // but I can't imagine a case where this would be a problem: the problem
+    // is rather a too low api level, rather than some ill defined high value.
+    // For example as I write this aosp is 34/U, and goog is 35/V,
+    // we want to treat both goog & aosp as 35/V, but it's harmless if we
+    // treat goog as 36 because that value isn't yet defined to mean anything,
+    // and we thus never compare against it.
+    //
+    // Also note that 'android_get_device_api_level()' is what the
+    //   //system/core/init/apex_init_util.cpp
+    // apex init .XXrc parsing code uses for XX filtering.
+    //
+    // That code has a hack to bump <35 to 35 (to force aosp/main to parse .35rc),
+    // but could (should?) perhaps be adjusted to match this.
+    const int effective_api_level = android_get_device_api_level() + (int)unreleased;
+    const bool isAtLeastT = (effective_api_level >= __ANDROID_API_T__);
+    const bool isAtLeastU = (effective_api_level >= __ANDROID_API_U__);
+    const bool isAtLeastV = (effective_api_level >= __ANDROID_API_V__);
 
     // last in U QPR2 beta1
     const bool has_platform_bpfloader_rc = exists("/system/etc/init/bpfloader.rc");
@@ -270,7 +296,7 @@ static int doLoad(char** argv, char * const envp[]) {
     if (isAtLeastV) ++bpfloader_ver;     // [46] BPFLOADER_MAINLINE_V_VERSION
 
     ALOGI("NetBpfLoad v0.%u (%s) api:%d/%d kver:%07x (%s) uid:%d rc:%d%d",
-          bpfloader_ver, argv[0], android_get_device_api_level(), device_api_level,
+          bpfloader_ver, argv[0], android_get_device_api_level(), effective_api_level,
           kernelVersion(), describeArch(), getuid(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 

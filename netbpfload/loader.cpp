@@ -1122,10 +1122,19 @@ int loadProg(const char* const elfPath, bool* const isCritical, const unsigned i
             readSectionUint("bpfloader_max_ver", elfFile, DEFAULT_BPFLOADER_MAX_VER);
     unsigned int bpfLoaderMinRequiredVer =
             readSectionUint("bpfloader_min_required_ver", elfFile, 0);
+    unsigned int netBpfLoadMinVer =
+            readSectionUint("netbpfload_min_ver", elfFile, 0);
     size_t sizeOfBpfMapDef =
             readSectionUint("size_of_bpf_map_def", elfFile, DEFAULT_SIZEOF_BPF_MAP_DEF);
     size_t sizeOfBpfProgDef =
             readSectionUint("size_of_bpf_prog_def", elfFile, DEFAULT_SIZEOF_BPF_PROG_DEF);
+
+    // temporary hack to enable gentle enablement of mainline NetBpfLoad
+    if (bpfloader_ver < netBpfLoadMinVer) {
+        ALOGI("NetBpfLoad version %d ignoring ELF object %s with netbpfload min ver %d",
+              bpfloader_ver, elfPath, netBpfLoadMinVer);
+        return 0;
+    }
 
     // inclusive lower bound check
     if (bpfloader_ver < bpfLoaderMinVer) {

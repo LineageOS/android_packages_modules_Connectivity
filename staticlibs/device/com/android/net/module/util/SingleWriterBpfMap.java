@@ -61,14 +61,9 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
     // our code can contain hundreds of items.
     private final HashMap<K, V> mCache = new HashMap<>();
 
-    protected SingleWriterBpfMap(@NonNull final String path, final int flag, final Class<K> key,
+    public SingleWriterBpfMap(@NonNull final String path, final Class<K> key,
             final Class<V> value) throws ErrnoException, NullPointerException {
-        super(path, flag, key, value);
-
-        if (flag != BPF_F_RDWR) {
-            throw new IllegalArgumentException(
-                    "Using " + getClass().getName() + " for read-only maps does not make sense");
-        }
+        super(path, BPF_F_RDWR_EXCLUSIVE, key, value);
 
         // Populate cache with the current map contents.
         K currentKey = super.getFirstKey();
@@ -76,11 +71,6 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
             mCache.put(currentKey, super.getValue(currentKey));
             currentKey = super.getNextKey(currentKey);
         }
-    }
-
-    public SingleWriterBpfMap(@NonNull final String path, final Class<K> key,
-            final Class<V> value) throws ErrnoException, NullPointerException {
-        this(path, BPF_F_RDWR, key, value);
     }
 
     @Override

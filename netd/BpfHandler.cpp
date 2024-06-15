@@ -170,16 +170,25 @@ Status BpfHandler::init(const char* cg2_path) {
         android::bpf::waitForProgsLoaded();
     }
 
-    if (false && !mainlineNetBpfLoadDone()) {
-        // we're on < U QPR3 & it's the first time netd is starting up (unless crashlooping)
+    if (!mainlineNetBpfLoadDone()) {
+        const bool enforce_mainline = false; // TODO: flip to true
+
+        // We're on < U QPR3 & it's the first time netd is starting up (unless crashlooping)
+        //
+        // On U QPR3+ netbpfload is guaranteed to run before the platform bpfloader,
+        // so waitForProgsLoaded() implies mainlineNetBpfLoadDone().
         if (!base::SetProperty("ctl.start", "mdnsd_netbpfload")) {
             ALOGE("Failed to set property ctl.start=mdnsd_netbpfload, see dmesg for reason.");
-            abort();
+            if (enforce_mainline) abort();
         }
 
-        ALOGI("Waiting for Networking BPF programs");
-        waitForNetProgsLoaded();
-        ALOGI("Networking BPF programs are loaded");
+        if (enforce_mainline) {
+            ALOGI("Waiting for Networking BPF programs");
+            waitForNetProgsLoaded();
+            ALOGI("Networking BPF programs are loaded");
+        } else {
+            ALOGI("Started mdnsd_netbpfload asynchronously.");
+        }
     }
 
     ALOGI("BPF programs are loaded");
@@ -190,7 +199,30 @@ Status BpfHandler::init(const char* cg2_path) {
     return netdutils::status::ok;
 }
 
+static void mapLockTest(void) {
+    // The maps must be R/W, and as yet unopened (or more specifically not yet lock'ed).
+    const char * const m1 = BPF_NETD_PATH "map_netd_lock_array_test_map";
+    const char * const m2 = BPF_NETD_PATH "map_netd_lock_hash_test_map";
+
+    unique_fd fd0(bpf::mapRetrieveExclusiveRW(m1)); if (!fd0.ok()) abort();  // grabs exclusive lock
+
+    unique_fd fd1(bpf::mapRetrieveExclusiveRW(m2)); if (!fd1.ok()) abort();  // no conflict with fd0
+    unique_fd fd2(bpf::mapRetrieveExclusiveRW(m2)); if ( fd2.ok()) abort();  // busy due to fd1
+    unique_fd fd3(bpf::mapRetrieveRO(m2));          if (!fd3.ok()) abort();  // no lock taken
+    unique_fd fd4(bpf::mapRetrieveRW(m2));          if ( fd4.ok()) abort();  // busy due to fd1
+    fd1.reset();  // releases exclusive lock
+    unique_fd fd5(bpf::mapRetrieveRO(m2));          if (!fd5.ok()) abort();  // no lock taken
+    unique_fd fd6(bpf::mapRetrieveRW(m2));          if (!fd6.ok()) abort();  // now ok
+    unique_fd fd7(bpf::mapRetrieveRO(m2));          if (!fd7.ok()) abort();  // no lock taken
+    unique_fd fd8(bpf::mapRetrieveExclusiveRW(m2)); if ( fd8.ok()) abort();  // busy due to fd6
+
+    fd0.reset();  // releases exclusive lock
+    unique_fd fd9(bpf::mapRetrieveWO(m1));          if (!fd9.ok()) abort();  // grabs exclusive lock
+}
+
 Status BpfHandler::initMaps() {
+    mapLockTest();
+
     RETURN_IF_NOT_OK(mStatsMapA.init(STATS_MAP_A_PATH));
     RETURN_IF_NOT_OK(mStatsMapB.init(STATS_MAP_B_PATH));
     RETURN_IF_NOT_OK(mConfigurationMap.init(CONFIGURATION_MAP_PATH));
