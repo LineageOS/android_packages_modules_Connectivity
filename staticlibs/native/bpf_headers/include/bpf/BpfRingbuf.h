@@ -151,7 +151,7 @@ class BpfRingbuf : public BpfRingbufBase {
 
 
 inline base::Result<void> BpfRingbufBase::Init(const char* path) {
-  mRingFd.reset(mapRetrieveRW(path));
+  mRingFd.reset(mapRetrieveExclusiveRW(path));
   if (!mRingFd.ok()) {
     return android::base::ErrnoError()
            << "failed to retrieve ringbuffer at " << path;
