@@ -15,6 +15,7 @@
  */
 package com.android.net.module.util;
 
+import static android.system.OsConstants.EBUSY;
 import static android.system.OsConstants.EEXIST;
 import static android.system.OsConstants.ENOENT;
 
@@ -72,6 +73,12 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     private static ConcurrentHashMap<Pair<String, Integer>, ParcelFileDescriptor> sFdCache =
             new ConcurrentHashMap<>();
 
+    private static ParcelFileDescriptor checkModeExclusivity(ParcelFileDescriptor fd, int mode)
+            throws ErrnoException {
+        if (mode == BPF_F_RDWR_EXCLUSIVE) throw new ErrnoException("cachedBpfFdGet", EBUSY);
+        return fd;
+    }
+
     private static ParcelFileDescriptor cachedBpfFdGet(String path, int mode,
                                                        int keySize, int valueSize)
             throws ErrnoException, NullPointerException {
@@ -82,12 +89,12 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
         var key = Pair.create(path, (mode << 26) ^ (keySize << 16) ^ valueSize);
         // unlocked fetch is safe: map is concurrent read capable, and only inserted into
         ParcelFileDescriptor fd = sFdCache.get(key);
-        if (fd != null) return fd;
+        if (fd != null) return checkModeExclusivity(fd, mode);
         // ok, no cached fd present, need to grab a lock
         synchronized (BpfMap.class) {
             // need to redo the check
             fd = sFdCache.get(key);
-            if (fd != null) return fd;
+            if (fd != null) return checkModeExclusivity(fd, mode);
             // okay, we really haven't opened this before...
             fd = ParcelFileDescriptor.adoptFd(nativeBpfFdGet(path, mode, keySize, valueSize));
             sFdCache.put(key, fd);
