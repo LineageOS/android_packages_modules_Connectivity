@@ -385,6 +385,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.StringJoiner;
@@ -1839,6 +1840,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Temporary hack to report netbpfload result.
         // TODO: remove in 2024-09 when netbpfload starts loading mainline bpf programs.
         mHandler.postDelayed(() -> {
+            // Test Pitot pipeline, ignore this Log.wtf if it shows up in the logs.
+            final Random r = new Random();
+            if (Build.TYPE.equals("user") && r.nextInt(1000) == 0) {
+                Log.wtf(TAG, "NOT A FAILURE, PLEASE IGNORE! Test Pitot pipeline works correctly");
+            }
             // Did netbpfload create the map?
             try {
                 Os.access("/sys/fs/bpf/net_shared/map_gentle_test", F_OK);
