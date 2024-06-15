@@ -224,11 +224,6 @@ static int logTetheringApexVersion(void) {
     return 0;
 }
 
-static bool isGSI() {
-    // From //system/gsid/libgsi.cpp IsGsiRunning()
-    return !access("/metadata/gsi/dsu/booted", F_OK);
-}
-
 static bool hasGSM() {
     static string ph = base::GetProperty("gsm.current.phone-type", "");
     static bool gsm = (ph != "");
@@ -254,7 +249,10 @@ static bool isTV() {
 }
 
 static int doLoad(char** argv, char * const envp[]) {
-    const int device_api_level = android_get_device_api_level();
+    const bool runningAsRoot = !getuid();  // true iff U QPR3 or V+
+    const bool unreleased = (base::GetProperty("ro.build.version.codename", "") != "REL");
+
+    const int device_api_level = android_get_device_api_level() + (int)unreleased;
     const bool isAtLeastT = (device_api_level >= __ANDROID_API_T__);
     const bool isAtLeastU = (device_api_level >= __ANDROID_API_U__);
     const bool isAtLeastV = (device_api_level >= __ANDROID_API_V__);
@@ -264,9 +262,16 @@ static int doLoad(char** argv, char * const envp[]) {
     // first in U QPR2 beta~2
     const bool has_platform_netbpfload_rc = exists("/system/etc/init/netbpfload.rc");
 
-    ALOGI("NetBpfLoad (%s) api:%d/%d kver:%07x (%s) rc:%d%d",
-          argv[0], android_get_application_target_sdk_version(), device_api_level,
-          kernelVersion(), describeArch(),
+    // Version of Network BpfLoader depends on the Android OS version
+    unsigned int bpfloader_ver = 42u;    // [42] BPFLOADER_MAINLINE_VERSION
+    if (isAtLeastT) ++bpfloader_ver;     // [43] BPFLOADER_MAINLINE_T_VERSION
+    if (isAtLeastU) ++bpfloader_ver;     // [44] BPFLOADER_MAINLINE_U_VERSION
+    if (runningAsRoot) ++bpfloader_ver;  // [45] BPFLOADER_MAINLINE_U_QPR3_VERSION
+    if (isAtLeastV) ++bpfloader_ver;     // [46] BPFLOADER_MAINLINE_V_VERSION
+
+    ALOGI("NetBpfLoad v0.%u (%s) api:%d/%d kver:%07x (%s) uid:%d rc:%d%d",
+          bpfloader_ver, argv[0], android_get_device_api_level(), device_api_level,
+          kernelVersion(), describeArch(), getuid(),
           has_platform_bpfloader_rc, has_platform_netbpfload_rc);
 
     if (!has_platform_bpfloader_rc && !has_platform_netbpfload_rc) {
@@ -341,7 +346,7 @@ static int doLoad(char** argv, char * const envp[]) {
 
 #undef REQUIRE
 
-        if (bad && !isGSI()) {
+        if (bad) {
             ALOGE("Unsupported kernel version (%07x).", kernelVersion());
         }
     }
@@ -381,7 +386,9 @@ static int doLoad(char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (isAtLeastV) {
+    if (runningAsRoot) {
+        // Note: writing this proc file requires being root (always the case on V+)
+
         // Linux 5.16-rc1 changed the default to 2 (disabled but changeable),
         // but we need 0 (enabled)
         // (this writeFile is known to fail on at least 4.19, but always defaults to 0 on
@@ -391,6 +398,11 @@ static int doLoad(char** argv, char * const envp[]) {
     }
 
     if (isAtLeastU) {
+        // Note: writing these proc files requires CAP_NET_ADMIN
+        // and sepolicy which is only present on U+,
+        // on Android T and earlier versions they're written from the 'load_bpf_programs'
+        // trigger (ie. by init itself) instead.
+
         // Enable the eBPF JIT -- but do note that on 64-bit kernels it is likely
         // already force enabled by the kernel config option BPF_JIT_ALWAYS_ON.
         // (Note: this (open) will fail with ENOENT 'No such file or directory' if
@@ -420,12 +432,6 @@ static int doLoad(char** argv, char * const envp[]) {
     // Thus we need to manually create the /sys/fs/bpf/loader subdirectory.
     if (createSysFsBpfSubDir("loader")) return 1;
 
-    // Version of Network BpfLoader depends on the Android OS version
-    unsigned int bpfloader_ver = 42u;  // [42] BPFLOADER_MAINLINE_VERSION
-    if (isAtLeastT) ++bpfloader_ver;   // [43] BPFLOADER_MAINLINE_T_VERSION
-    if (isAtLeastU) ++bpfloader_ver;   // [44] BPFLOADER_MAINLINE_U_VERSION
-    if (isAtLeastV) ++bpfloader_ver;   // [45] BPFLOADER_MAINLINE_V_VERSION
-
     // Load all ELF objects, create programs and maps, and pin them
     for (const auto& location : locations) {
         if (loadAllElfObjects(bpfloader_ver, location) != 0) {
@@ -448,17 +454,25 @@ static int doLoad(char** argv, char * const envp[]) {
         return 1;
     }
 
-    if (isAtLeastV) {
-        ALOGI("done, transferring control to platform bpfloader.");
+    // leave a flag that we're done
+    if (createSysFsBpfSubDir("netd_shared/mainline_done")) return 1;
 
-        const char * args[] = { platformBpfLoader, NULL, };
-        execve(args[0], (char**)args, envp);
-        ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
-        return 1;
+    // platform bpfloader will only succeed when run as root
+    if (!runningAsRoot) {
+        // unreachable on U QPR3+ which always runs netbpfload as root
+
+        ALOGI("mainline done, no need to transfer control to platform bpf loader.");
+        return 0;
     }
 
-    ALOGI("mainline done!");
-    return 0;
+    // unreachable before U QPR3
+    ALOGI("done, transferring control to platform bpfloader.");
+
+    // platform BpfLoader *needs* to run as root
+    const char * args[] = { platformBpfLoader, NULL, };
+    execve(args[0], (char**)args, envp);
+    ALOGE("FATAL: execve('%s'): %d[%s]", platformBpfLoader, errno, strerror(errno));
+    return 1;
 }
 
 }  // namespace bpf

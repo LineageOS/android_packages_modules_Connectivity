@@ -39,11 +39,12 @@
 // Android U / 14 (api level 34) - various new program types added
 #define BPFLOADER_U_VERSION 38u
 
-// Android V / 15 (api level 35) - platform only
+// Android U QPR2 / 14 (api level 34) - platform only
 // (note: the platform bpfloader in V isn't really versioned at all,
 //  as there is no need as it can only load objects compiled at the
 //  same time as itself and the rest of the platform)
-#define BPFLOADER_PLATFORM_VERSION 41u
+#define BPFLOADER_U_QPR2_VERSION 41u
+#define BPFLOADER_PLATFORM_VERSION BPFLOADER_U_QPR2_VERSION
 
 // Android Mainline - this bpfloader should eventually go back to T (or even S)
 // Note: this value (and the following +1u's) are hardcoded in NetBpfLoad.cpp
@@ -55,8 +56,11 @@
 // Android Mainline BpfLoader when running on Android U
 #define BPFLOADER_MAINLINE_U_VERSION (BPFLOADER_MAINLINE_T_VERSION + 1u)
 
+// Android Mainline BpfLoader when running on Android U QPR3
+#define BPFLOADER_MAINLINE_U_QPR3_VERSION (BPFLOADER_MAINLINE_U_VERSION + 1u)
+
 // Android Mainline BpfLoader when running on Android V
-#define BPFLOADER_MAINLINE_V_VERSION (BPFLOADER_MAINLINE_U_VERSION + 1u)
+#define BPFLOADER_MAINLINE_V_VERSION (BPFLOADER_MAINLINE_U_QPR3_VERSION + 1u)
 
 /* For mainline module use, you can #define BPFLOADER_{MIN/MAX}_VER
  * before #include "bpf_helpers.h" to change which bpfloaders will
