@@ -52,6 +52,9 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     public static final int BPF_F_RDONLY = 1 << 3;
     public static final int BPF_F_WRONLY = 1 << 4;
 
+    // magic value for jni consumption, invalid from kernel point of view
+    public static final int BPF_F_RDWR_EXCLUSIVE = BPF_F_RDONLY | BPF_F_WRONLY;
+
     public static final int BPF_MAP_TYPE_HASH = 1;
 
     private static final int BPF_F_NO_PREALLOC = 1;

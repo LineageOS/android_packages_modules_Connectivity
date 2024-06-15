@@ -63,7 +63,7 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
 
     public SingleWriterBpfMap(@NonNull final String path, final Class<K> key,
             final Class<V> value) throws ErrnoException, NullPointerException {
-        super(path, BPF_F_RDWR, key, value);
+        super(path, BPF_F_RDWR_EXCLUSIVE, key, value);
 
         // Populate cache with the current map contents.
         K currentKey = super.getFirstKey();
