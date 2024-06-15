@@ -112,8 +112,8 @@ public final class BpfMapTest {
 
     private BpfMap<TetherDownstream6Key, Tether6Value> openTestMap() throws Exception {
         return mShouldTestSingleWriterMap
-                ? new SingleWriterBpfMap<>(TETHER2_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
-                Tether6Value.class)
+                ? SingleWriterBpfMap.getSingleton(TETHER2_DOWNSTREAM6_FS_PATH,
+                        TetherDownstream6Key.class, Tether6Value.class)
                 : new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, TetherDownstream6Key.class,
                         Tether6Value.class);
     }
@@ -510,12 +510,6 @@ public final class BpfMapTest {
     @Test
     public void testSingleWriterCacheEffectiveness() throws Exception {
         assumeTrue(mShouldTestSingleWriterMap);
-
-        // Ensure the map is not empty.
-        for (int i = 0; i < mTestData.size(); i++) {
-            mTestMap.insertEntry(mTestData.keyAt(i), mTestData.valueAt(i));
-        }
-
         // Benchmark parameters.
         final int timeoutMs = 5_000;  // Only hit if threads don't complete.
         final int benchmarkTimeMs = 2_000;
@@ -524,10 +518,16 @@ public final class BpfMapTest {
         // Only require 3x to reduce test flakiness.
         final int expectedSpeedup = 3;
 
-        final BpfMap cachedMap = new SingleWriterBpfMap(TETHER_DOWNSTREAM6_FS_PATH,
+        final BpfMap cachedMap = SingleWriterBpfMap.getSingleton(TETHER2_DOWNSTREAM6_FS_PATH,
                 TetherDownstream6Key.class, Tether6Value.class);
         final BpfMap uncachedMap = new BpfMap(TETHER_DOWNSTREAM6_FS_PATH,
                 TetherDownstream6Key.class, Tether6Value.class);
+
+        // Ensure the maps are not empty.
+        for (int i = 0; i < mTestData.size(); i++) {
+            cachedMap.insertEntry(mTestData.keyAt(i), mTestData.valueAt(i));
+            uncachedMap.insertEntry(mTestData.keyAt(i), mTestData.valueAt(i));
+        }
 
         final CompletableFuture<Integer> cachedResult = new CompletableFuture<>();
         final CompletableFuture<Integer> uncachedResult = new CompletableFuture<>();
