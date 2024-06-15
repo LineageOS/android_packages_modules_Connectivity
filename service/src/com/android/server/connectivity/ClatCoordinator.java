@@ -45,6 +45,7 @@ import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
+import com.android.net.module.util.SingleWriterBpfMap;
 import com.android.net.module.util.TcUtils;
 import com.android.net.module.util.bpf.ClatEgress4Key;
 import com.android.net.module.util.bpf.ClatEgress4Value;
@@ -256,7 +257,7 @@ public class ClatCoordinator {
         @Nullable
         public IBpfMap<ClatIngress6Key, ClatIngress6Value> getBpfIngress6Map() {
             try {
-                return new BpfMap<>(CLAT_INGRESS6_MAP_PATH,
+                return SingleWriterBpfMap.getSingleton(CLAT_INGRESS6_MAP_PATH,
                        ClatIngress6Key.class, ClatIngress6Value.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create ingress6 map: " + e);
@@ -268,7 +269,7 @@ public class ClatCoordinator {
         @Nullable
         public IBpfMap<ClatEgress4Key, ClatEgress4Value> getBpfEgress4Map() {
             try {
-                return new BpfMap<>(CLAT_EGRESS4_MAP_PATH,
+                return SingleWriterBpfMap.getSingleton(CLAT_EGRESS4_MAP_PATH,
                        ClatEgress4Key.class, ClatEgress4Value.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create egress4 map: " + e);
@@ -280,6 +281,7 @@ public class ClatCoordinator {
         @Nullable
         public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
             try {
+                // also read and written from other locations
                 return new BpfMap<>(COOKIE_TAG_MAP_PATH,
                        CookieTagMapKey.class, CookieTagMapValue.class);
             } catch (ErrnoException e) {
