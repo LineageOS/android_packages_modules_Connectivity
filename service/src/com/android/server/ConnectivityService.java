@@ -109,6 +109,7 @@ import static android.net.connectivity.ConnectivityCompatChanges.NETWORK_BLOCKED
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.VPN_UID;
 import static android.system.OsConstants.ETH_P_ALL;
+import static android.system.OsConstants.F_OK;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
@@ -268,6 +269,7 @@ import android.stats.connectivity.RequestType;
 import android.stats.connectivity.ValidatedState;
 import android.sysprop.NetworkProperties;
 import android.system.ErrnoException;
+import android.system.Os;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -1834,6 +1836,28 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 new PermissionMonitor(mContext, mNetd, mBpfNetMaps, mHandlerThread);
         mHandlerThread.start();
         mHandler = new InternalHandler(mHandlerThread.getLooper());
+        // Temporary hack to report netbpfload result.
+        // TODO: remove in 2024-09 when netbpfload starts loading mainline bpf programs.
+        mHandler.postDelayed(() -> {
+            // Did netbpfload create the map?
+            try {
+                Os.access("/sys/fs/bpf/net_shared/map_gentle_test", F_OK);
+            } catch (ErrnoException e) {
+                Log.wtf(TAG, "netbpfload did not create map", e);
+            }
+            // Did netbpfload create the program?
+            try {
+                Os.access("/sys/fs/bpf/net_shared/prog_gentle_skfilter_accept", F_OK);
+            } catch (ErrnoException e) {
+                Log.wtf(TAG, "netbpfload did not create program", e);
+            }
+            // Did netbpfload run to completion?
+            try {
+                Os.access("/sys/fs/bpf/netd_shared/mainline_done", F_OK);
+            } catch (ErrnoException e) {
+                Log.wtf(TAG, "netbpfload did not run to completion", e);
+            }
+        }, 30_000 /* delayMillis */);
         mTrackerHandler = new NetworkStateTrackerHandler(mHandlerThread.getLooper());
         mConnectivityDiagnosticsHandler =
                 new ConnectivityDiagnosticsHandler(mHandlerThread.getLooper());
