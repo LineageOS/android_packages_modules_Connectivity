@@ -166,11 +166,16 @@ inline int bpfLock(int fd, short type) {
     return ret;  // most likely -1 with errno == EAGAIN, due to already held lock
 }
 
-inline int mapRetrieveExclusiveRW(const char* pathname) {
-    return bpfLock(bpfFdGet(pathname, 0), F_WRLCK);
+inline int mapRetrieveLocklessRW(const char* pathname) {
+    return bpfFdGet(pathname, 0);
 }
+
+inline int mapRetrieveExclusiveRW(const char* pathname) {
+    return bpfLock(mapRetrieveLocklessRW(pathname), F_WRLCK);
+}
+
 inline int mapRetrieveRW(const char* pathname) {
-    return bpfLock(bpfFdGet(pathname, 0), F_RDLCK);
+    return bpfLock(mapRetrieveLocklessRW(pathname), F_RDLCK);
 }
 
 inline int mapRetrieveRO(const char* pathname) {
