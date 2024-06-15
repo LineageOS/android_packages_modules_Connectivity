@@ -71,6 +71,8 @@ public final class BpfMapTest {
             "/sys/fs/bpf/tethering/map_test_tether_downstream6_map";
     private static final String TETHER2_DOWNSTREAM6_FS_PATH =
             "/sys/fs/bpf/tethering/map_test_tether2_downstream6_map";
+    private static final String TETHER3_DOWNSTREAM6_FS_PATH =
+            "/sys/fs/bpf/tethering/map_test_tether3_downstream6_map";
 
     private ArrayMap<TetherDownstream6Key, Tether6Value> mTestData;
 
@@ -156,7 +158,7 @@ public final class BpfMapTest {
                 assertEquals(OsConstants.EPERM, expected.errno);
             }
         }
-        try (BpfMap writeOnlyMap = new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, BpfMap.BPF_F_WRONLY,
+        try (BpfMap writeOnlyMap = new BpfMap<>(TETHER3_DOWNSTREAM6_FS_PATH, BpfMap.BPF_F_WRONLY,
                 TetherDownstream6Key.class, Tether6Value.class)) {
             assertNotNull(writeOnlyMap);
             try {
