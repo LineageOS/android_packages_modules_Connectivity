@@ -18,6 +18,7 @@
 #pragma once
 
 #include <android-base/thread_annotations.h>
+#define BPF_MAP_LOCKLESS_FOR_TEST
 #include <bpf/BpfMap.h>
 #include "netd.h"
 
