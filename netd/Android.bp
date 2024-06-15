@@ -14,6 +14,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -58,21 +59,24 @@ cc_library {
 cc_test {
     name: "netd_updatable_unit_test",
     defaults: ["netd_defaults"],
-    test_suites: ["general-tests", "mts-tethering"],
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
     test_config_template: ":net_native_test_config_template",
-    require_root: true,  // required by setrlimitForTest()
+    require_root: true, // required by setrlimitForTest()
     header_libs: [
         "bpf_connectivity_headers",
     ],
     srcs: [
         "BpfHandlerTest.cpp",
-        "BpfBaseTest.cpp"
+        "BpfBaseTest.cpp",
     ],
     static_libs: [
+        "libbase",
         "libnetd_updatable",
     ],
     shared_libs: [
-        "libbase",
         "libcutils",
         "liblog",
         "libnetdutils",

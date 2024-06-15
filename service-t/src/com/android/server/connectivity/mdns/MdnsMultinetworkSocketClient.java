@@ -96,7 +96,8 @@ public class MdnsMultinetworkSocketClient implements MdnsSocketClientBase {
         @Override
         public void onInterfaceDestroyed(@NonNull SocketKey socketKey,
                 @NonNull MdnsInterfaceSocket socket) {
-            notifySocketDestroyed(socketKey);
+            mActiveSockets.remove(socketKey);
+            mSocketCreationCallback.onSocketDestroyed(socketKey);
             maybeCleanupPacketHandler(socketKey);
         }
 

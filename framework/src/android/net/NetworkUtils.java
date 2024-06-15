@@ -438,4 +438,9 @@ public class NetworkUtils {
     public static native void setsockoptBytes(FileDescriptor fd, int level, int option,
             byte[] value) throws ErrnoException;
 
+    /** Returns whether the Linux Kernel is 64 bit */
+    public static native boolean isKernel64Bit();
+
+    /** Returns whether the Linux Kernel is x86 */
+    public static native boolean isKernelX86();
 }

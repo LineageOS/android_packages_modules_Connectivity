@@ -30,7 +30,7 @@ pub extern "system" fn Java_com_android_server_remoteauth_jni_NativeRemoteAuthJa
     logger::init(
         logger::Config::default()
             .with_tag_on_device("remoteauth")
-            .with_min_level(log::Level::Trace)
+            .with_max_level(log::LevelFilter::Trace)
             .with_filter("trace,jni=info"),
     );
     get_boolean_result(native_init(env), "native_init")

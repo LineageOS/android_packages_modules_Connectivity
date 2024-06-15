@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -43,7 +44,6 @@ android_test {
         "platform-test-annotations",
         "service-nearby-pre-jarjar",
         "truth",
-        // "Robolectric_all-target",
     ],
     // these are needed for Extended Mockito
     jni_libs: [

@@ -31,6 +31,7 @@ import org.junit.runner.manipulation.Sorter
 import org.junit.runner.notification.Failure
 import org.junit.runner.notification.RunNotifier
 import org.junit.runners.Parameterized
+import org.mockito.Mockito
 
 /**
  * A runner that can skip tests based on the development SDK as defined in [DevSdkIgnoreRule].
@@ -124,6 +125,9 @@ class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, So
             notifier.fireTestFailure(Failure(leakMonitorDesc,
                     IllegalStateException("Unexpected thread changes: $threadsDiff")))
         }
+        // Clears up internal state of all inline mocks.
+        // TODO: Call clearInlineMocks() at the end of each test.
+        Mockito.framework().clearInlineMocks()
         notifier.fireTestFinished(leakMonitorDesc)
     }
 

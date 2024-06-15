@@ -79,6 +79,17 @@ public final class ThreadNetworkManager {
     public static final String PERMISSION_THREAD_NETWORK_PRIVILEGED =
             "android.permission.THREAD_NETWORK_PRIVILEGED";
 
+    /**
+     * This user restriction specifies if Thread network is disallowed on the device. If Thread
+     * network is disallowed it cannot be turned on via Settings.
+     *
+     * <p>this is a mirror of {@link UserManager#DISALLOW_THREAD_NETWORK} which is not available on
+     * Android U devices.
+     *
+     * @hide
+     */
+    public static final String DISALLOW_THREAD_NETWORK = "no_thread_network";
+
     @NonNull private final Context mContext;
     @NonNull private final List<ThreadNetworkController> mUnmodifiableControllerServices;
 

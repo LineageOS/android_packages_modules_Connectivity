@@ -298,17 +298,6 @@ public class ConnectivityDiagnosticsManagerTest {
                 },
                 android.Manifest.permission.MODIFY_PHONE_STATE);
 
-        // TODO(b/157779832): This should use android.permission.CHANGE_NETWORK_STATE. However, the
-        // shell does not have CHANGE_NETWORK_STATE, so use CONNECTIVITY_INTERNAL until the shell
-        // permissions are updated.
-        runWithShellPermissionIdentity(
-                () -> mConnectivityManager.requestNetwork(
-                        CELLULAR_NETWORK_REQUEST, testNetworkCallback),
-                android.Manifest.permission.CONNECTIVITY_INTERNAL);
-
-        final Network network = testNetworkCallback.waitForAvailable();
-        assertNotNull(network);
-
         assertTrue("Didn't receive broadcast for ACTION_CARRIER_CONFIG_CHANGED for subId=" + subId,
                 carrierConfigReceiver.waitForCarrierConfigChanged());
 
@@ -323,6 +312,17 @@ public class ConnectivityDiagnosticsManagerTest {
         waitForBroadcastIdle(DELAY_FOR_BROADCAST_IDLE);
 
         Thread.sleep(5_000);
+
+        // TODO(b/157779832): This should use android.permission.CHANGE_NETWORK_STATE. However, the
+        // shell does not have CHANGE_NETWORK_STATE, so use CONNECTIVITY_INTERNAL until the shell
+        // permissions are updated.
+        runWithShellPermissionIdentity(
+                () -> mConnectivityManager.requestNetwork(
+                        CELLULAR_NETWORK_REQUEST, testNetworkCallback),
+                android.Manifest.permission.CONNECTIVITY_INTERNAL);
+
+        final Network network = testNetworkCallback.waitForAvailable();
+        assertNotNull(network);
 
         // TODO(b/217559768): Receiving carrier config change and immediately checking carrier
         //  privileges is racy, as the CP status is updated after receiving the same signal. Move

@@ -36,8 +36,7 @@ public class InfraInterfaceController {
      * @return an ICMPv6 socket file descriptor on the Infrastructure network interface.
      * @throws IOException when fails to create the socket.
      */
-    public static ParcelFileDescriptor createIcmp6Socket(String infraInterfaceName)
-            throws IOException {
+    public ParcelFileDescriptor createIcmp6Socket(String infraInterfaceName) throws IOException {
         return ParcelFileDescriptor.adoptFd(nativeCreateIcmp6Socket(infraInterfaceName));
     }
 

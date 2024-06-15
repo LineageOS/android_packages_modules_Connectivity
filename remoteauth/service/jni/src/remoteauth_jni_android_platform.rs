@@ -67,7 +67,7 @@ fn insert_platform_handle(handle: i64, item: Arc<Mutex<JavaPlatform>>) {
         logger::init(
             logger::Config::default()
                 .with_tag_on_device("remoteauth")
-                .with_min_level(log::Level::Trace)
+                .with_max_level(log::LevelFilter::Trace)
                 .with_filter("trace,jni=info"),
         );
     }

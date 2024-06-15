@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -30,7 +31,7 @@ java_library {
     srcs: [":nearby-service-srcs"],
 
     defaults: [
-        "framework-system-server-module-defaults"
+        "framework-system-server-module-defaults",
     ],
     libs: [
         "androidx.annotation_annotation",
@@ -42,6 +43,7 @@ java_library {
     ],
     static_libs: [
         "androidx.core_core",
+        "android.hardware.bluetooth.finder-V1-java",
         "guava",
         "libprotobuf-java-lite",
         "modules-utils-build",
@@ -66,13 +68,16 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 genrule {
     name: "statslog-nearby-java-gen",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module nearby " +
-         " --javaPackage com.android.server.nearby.proto --javaClass NearbyStatsLog" +
-         " --minApiLevel 33",
+        " --javaPackage com.android.server.nearby.proto --javaClass NearbyStatsLog" +
+        " --minApiLevel 33",
     out: ["com/android/server/nearby/proto/NearbyStatsLog.java"],
 }

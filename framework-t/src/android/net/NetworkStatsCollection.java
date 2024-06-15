@@ -60,6 +60,7 @@ import android.util.proto.ProtoOutputStream;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.FileRotator;
+import com.android.modules.utils.FastDataInput;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetworkStatsUtils;
 
@@ -116,15 +117,28 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
     private long mEndMillis;
     private long mTotalBytes;
     private boolean mDirty;
+    private final boolean mUseFastDataInput;
 
     /**
      * Construct a {@link NetworkStatsCollection} object.
      *
-     * @param bucketDuration duration of the buckets in this object, in milliseconds.
+     * @param bucketDurationMillis duration of the buckets in this object, in milliseconds.
      * @hide
      */
     public NetworkStatsCollection(long bucketDurationMillis) {
+        this(bucketDurationMillis, false /* useFastDataInput */);
+    }
+
+    /**
+     * Construct a {@link NetworkStatsCollection} object.
+     *
+     * @param bucketDurationMillis duration of the buckets in this object, in milliseconds.
+     * @param useFastDataInput true if using {@link FastDataInput} is preferred. Otherwise, false.
+     * @hide
+     */
+    public NetworkStatsCollection(long bucketDurationMillis, boolean useFastDataInput) {
         mBucketDurationMillis = bucketDurationMillis;
+        mUseFastDataInput = useFastDataInput;
         reset();
     }
 
@@ -483,7 +497,11 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
     /** @hide */
     @Override
     public void read(InputStream in) throws IOException {
-        read((DataInput) new DataInputStream(in));
+        if (mUseFastDataInput) {
+            read(FastDataInput.obtain(in));
+        } else {
+            read((DataInput) new DataInputStream(in));
+        }
     }
 
     private void read(DataInput in) throws IOException {
@@ -967,8 +985,8 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
      * @hide
      */
     @Nullable
-    public static String compareStats(
-            NetworkStatsCollection migrated, NetworkStatsCollection legacy) {
+    public static String compareStats(NetworkStatsCollection migrated,
+                                      NetworkStatsCollection legacy, boolean allowKeyChange) {
         final Map<NetworkStatsCollection.Key, NetworkStatsHistory> migEntries =
                 migrated.getEntries();
         final Map<NetworkStatsCollection.Key, NetworkStatsHistory> legEntries = legacy.getEntries();
@@ -980,7 +998,7 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
             final NetworkStatsHistory legHistory = legEntries.get(legKey);
             final NetworkStatsHistory migHistory = migEntries.get(legKey);
 
-            if (migHistory == null && couldKeyChangeOnImport(legKey)) {
+            if (migHistory == null && allowKeyChange && couldKeyChangeOnImport(legKey)) {
                 unmatchedLegKeys.remove(legKey);
                 continue;
             }

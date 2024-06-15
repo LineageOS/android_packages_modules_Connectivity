@@ -25,9 +25,6 @@ import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_SNDTIMEO;
 
-import static com.android.net.module.util.netlink.NetlinkConstants.NLMSG_DONE;
-import static com.android.net.module.util.netlink.NetlinkConstants.SOCKDIAG_MSG_HEADER_SIZE;
-import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DIAG_BY_FAMILY;
 import static com.android.net.module.util.netlink.NetlinkUtils.IO_TIMEOUT_MS;
 
 import android.annotation.IntDef;
@@ -53,7 +50,6 @@ import android.system.StructTimeval;
 import android.util.LocalLog;
 import android.util.Log;
 import android.util.Pair;
-import android.util.Range;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -78,7 +74,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Manages automatic on/off socket keepalive requests.
@@ -90,6 +85,7 @@ import java.util.Set;
  */
 public class AutomaticOnOffKeepaliveTracker {
     private static final String TAG = "AutomaticOnOffKeepaliveTracker";
+    private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     private static final int[] ADDRESS_FAMILIES = new int[] {AF_INET6, AF_INET};
     private static final long LOW_TCP_POLLING_INTERVAL_MS = 1_000L;
     private static final int ADJUST_TCP_POLLING_DELAY_MS = 2000;
@@ -375,27 +371,26 @@ public class AutomaticOnOffKeepaliveTracker {
      * Determine if any state transition is needed for the specific automatic keepalive.
      */
     public void handleMonitorAutomaticKeepalive(@NonNull final AutomaticOnOffKeepalive ki,
-            final int vpnNetId, @NonNull Set<Range<Integer>> vpnUidRanges) {
+            final int vpnNetId) {
         // Might happen if the automatic keepalive was removed by the app just as the alarm fires.
         if (!mAutomaticOnOffKeepalives.contains(ki)) return;
         if (STATE_ALWAYS_ON == ki.mAutomaticOnOffState) {
             throw new IllegalStateException("Should not monitor non-auto keepalive");
         }
 
-        handleMonitorTcpConnections(ki, vpnNetId, vpnUidRanges);
+        handleMonitorTcpConnections(ki, vpnNetId);
     }
 
     /**
      * Determine if disable or re-enable keepalive is needed or not based on TCP sockets status.
      */
-    private void handleMonitorTcpConnections(@NonNull AutomaticOnOffKeepalive ki, int vpnNetId,
-            @NonNull Set<Range<Integer>> vpnUidRanges) {
+    private void handleMonitorTcpConnections(@NonNull AutomaticOnOffKeepalive ki, int vpnNetId) {
         // Might happen if the automatic keepalive was removed by the app just as the alarm fires.
         if (!mAutomaticOnOffKeepalives.contains(ki)) return;
         if (STATE_ALWAYS_ON == ki.mAutomaticOnOffState) {
             throw new IllegalStateException("Should not monitor non-auto keepalive");
         }
-        if (!isAnyTcpSocketConnected(vpnNetId, vpnUidRanges)) {
+        if (!isAnyTcpSocketConnected(vpnNetId)) {
             // No TCP socket exists. Stop keepalive if ENABLED, and remain SUSPENDED if currently
             // SUSPENDED.
             if (ki.mAutomaticOnOffState == STATE_ENABLED) {
@@ -747,7 +742,7 @@ public class AutomaticOnOffKeepaliveTracker {
     }
 
     @VisibleForTesting
-    boolean isAnyTcpSocketConnected(int netId, @NonNull Set<Range<Integer>> vpnUidRanges) {
+    boolean isAnyTcpSocketConnected(int netId) {
         FileDescriptor fd = null;
 
         try {
@@ -760,8 +755,7 @@ public class AutomaticOnOffKeepaliveTracker {
 
             // Send request for each IP family
             for (final int family : ADDRESS_FAMILIES) {
-                if (isAnyTcpSocketConnectedForFamily(
-                        fd, family, networkMark, networkMask, vpnUidRanges)) {
+                if (isAnyTcpSocketConnectedForFamily(fd, family, networkMark, networkMask)) {
                     return true;
                 }
             }
@@ -775,7 +769,7 @@ public class AutomaticOnOffKeepaliveTracker {
     }
 
     private boolean isAnyTcpSocketConnectedForFamily(FileDescriptor fd, int family, int networkMark,
-            int networkMask, @NonNull Set<Range<Integer>> vpnUidRanges)
+            int networkMask)
             throws ErrnoException, InterruptedIOException {
         ensureRunningOnHandlerThread();
         // Build SocketDiag messages and cache it.
@@ -794,22 +788,18 @@ public class AutomaticOnOffKeepaliveTracker {
 
             try {
                 while (NetlinkUtils.enoughBytesRemainForValidNlMsg(bytes)) {
-                    final int startPos = bytes.position();
+                    // NetlinkMessage.parse() will move the byte buffer position.
+                    // TODO: Parse dst address information to filter socket.
+                    final NetlinkMessage nlMsg = NetlinkMessage.parse(
+                            bytes, OsConstants.NETLINK_INET_DIAG);
+                    if (!(nlMsg instanceof InetDiagMessage)) {
+                        if (DBG) Log.e(TAG, "Not a SOCK_DIAG_BY_FAMILY msg");
+                        return false;
+                    }
 
-                    final int nlmsgLen = bytes.getInt();
-                    final int nlmsgType = bytes.getShort();
-                    if (isEndOfMessageOrError(nlmsgType)) return false;
-                    // TODO: Parse InetDiagMessage to get uid and dst address information to filter
-                    //  socket via NetlinkMessage.parse.
-
-                    // Skip the header to move to data part.
-                    bytes.position(startPos + SOCKDIAG_MSG_HEADER_SIZE);
-
-                    if (isTargetTcpSocket(bytes, nlmsgLen, networkMark, networkMask)) {
-                        if (Log.isLoggable(TAG, Log.DEBUG)) {
-                            bytes.position(startPos);
-                            final InetDiagMessage diagMsg = (InetDiagMessage) NetlinkMessage.parse(
-                                    bytes, OsConstants.NETLINK_INET_DIAG);
+                    final InetDiagMessage diagMsg = (InetDiagMessage) nlMsg;
+                    if (isTargetTcpSocket(diagMsg, networkMark, networkMask)) {
+                        if (DBG) {
                             Log.d(TAG, String.format("Found open TCP connection by uid %d to %s"
                                             + " cookie %d",
                                     diagMsg.inetDiagMsg.idiag_uid,
@@ -834,26 +824,20 @@ public class AutomaticOnOffKeepaliveTracker {
         return false;
     }
 
-    private boolean isEndOfMessageOrError(int nlmsgType) {
-        return nlmsgType == NLMSG_DONE || nlmsgType != SOCK_DIAG_BY_FAMILY;
-    }
-
-    private boolean isTargetTcpSocket(@NonNull ByteBuffer bytes, int nlmsgLen, int networkMark,
-            int networkMask) {
-        final int mark = readSocketDataAndReturnMark(bytes, nlmsgLen);
+    private boolean isTargetTcpSocket(@NonNull InetDiagMessage diagMsg,
+            int networkMark, int networkMask) {
+        final int mark = readSocketDataAndReturnMark(diagMsg);
         return (mark & networkMask) == networkMark;
     }
 
-    private int readSocketDataAndReturnMark(@NonNull ByteBuffer bytes, int nlmsgLen) {
-        final int nextMsgOffset = bytes.position() + nlmsgLen - SOCKDIAG_MSG_HEADER_SIZE;
+    private int readSocketDataAndReturnMark(@NonNull InetDiagMessage diagMsg) {
         int mark = NetlinkUtils.INIT_MARK_VALUE;
         // Get socket mark
-        // TODO: Add a parsing method in NetlinkMessage.parse to support this to skip the remaining
-        //  data.
-        while (bytes.position() < nextMsgOffset) {
-            final StructNlAttr nlattr = StructNlAttr.parse(bytes);
-            if (nlattr != null && nlattr.nla_type == NetlinkUtils.INET_DIAG_MARK) {
-                mark = nlattr.getValueAsInteger();
+        for (StructNlAttr attr : diagMsg.nlAttrs) {
+            if (attr.nla_type == NetlinkUtils.INET_DIAG_MARK) {
+                // The netlink attributes should contain only one INET_DIAG_MARK for each socket.
+                mark = attr.getValueAsInteger();
+                break;
             }
         }
         return mark;

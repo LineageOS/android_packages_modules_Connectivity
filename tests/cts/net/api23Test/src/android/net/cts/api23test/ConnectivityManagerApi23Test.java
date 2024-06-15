@@ -65,7 +65,7 @@ public class ConnectivityManagerApi23Test extends AndroidTestCase {
         }
         ConnectivityReceiver.prepare();
 
-        mCtsNetUtils.toggleWifi();
+        mCtsNetUtils.reconnectWifiAndWaitForConnectivityAction();
 
         // The connectivity broadcast has been sent; push through a terminal broadcast
         // to wait for in the receive to confirm it didn't see the connectivity change.
@@ -88,7 +88,7 @@ public class ConnectivityManagerApi23Test extends AndroidTestCase {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         Thread.sleep(200);
 
-        mCtsNetUtils.toggleWifi();
+        mCtsNetUtils.reconnectWifiAndWaitForConnectivityAction();
 
         Intent getConnectivityCount = new Intent(GET_WIFI_CONNECTIVITY_ACTION_COUNT);
         assertEquals(2, sendOrderedBroadcastAndReturnResultCode(
@@ -106,7 +106,7 @@ public class ConnectivityManagerApi23Test extends AndroidTestCase {
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         mContext.registerReceiver(receiver, filter);
 
-        mCtsNetUtils.toggleWifi();
+        mCtsNetUtils.reconnectWifiAndWaitForConnectivityAction();
         Intent finalIntent = new Intent(ConnectivityReceiver.FINAL_ACTION);
         finalIntent.setClass(mContext, ConnectivityReceiver.class);
         mContext.sendBroadcast(finalIntent);

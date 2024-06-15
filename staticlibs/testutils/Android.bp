@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -24,11 +25,11 @@ java_library {
     ],
     defaults: [
         "framework-connectivity-test-defaults",
-        "lib_mockito_extended"
+        "lib_mockito_extended",
     ],
     libs: [
         "androidx.annotation_annotation",
-        "net-utils-device-common-bpf",  // TestBpfMap extends IBpfMap.
+        "net-utils-device-common-bpf", // TestBpfMap extends IBpfMap.
     ],
     static_libs: [
         "androidx.test.ext.junit",
@@ -42,7 +43,9 @@ java_library {
         "net-utils-device-common-wear",
         "modules-utils-build_system",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }
 
 java_library {
@@ -72,9 +75,11 @@ java_library {
         "jsr305",
     ],
     static_libs: [
-        "kotlin-test"
+        "kotlin-test",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }
 
 java_test_host {
@@ -84,6 +89,15 @@ java_test_host {
         "host/**/*.kt",
     ],
     libs: ["tradefed"],
-    test_suites: ["ats", "device-tests", "general-tests", "cts", "mts-networking"],
+    test_suites: [
+        "ats",
+        "device-tests",
+        "general-tests",
+        "cts",
+        "mts-networking",
+        "mcts-networking",
+        "mts-tethering",
+        "mcts-tethering",
+    ],
     data: [":ConnectivityTestPreparer"],
 }

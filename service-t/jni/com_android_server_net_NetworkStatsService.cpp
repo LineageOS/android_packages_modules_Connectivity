@@ -34,77 +34,77 @@
 
 using android::bpf::bpfGetUidStats;
 using android::bpf::bpfGetIfaceStats;
-using android::bpf::bpfGetIfIndexStats;
+using android::bpf::bpfRegisterIface;
 using android::bpf::NetworkTraceHandler;
 
 namespace android {
 
-// NOTE: keep these in sync with TrafficStats.java
-static const uint64_t UNKNOWN = -1;
-
-enum StatsType {
-    RX_BYTES = 0,
-    RX_PACKETS = 1,
-    TX_BYTES = 2,
-    TX_PACKETS = 3,
-};
-
-static uint64_t getStatsType(StatsValue* stats, StatsType type) {
-    switch (type) {
-        case RX_BYTES:
-            return stats->rxBytes;
-        case RX_PACKETS:
-            return stats->rxPackets;
-        case TX_BYTES:
-            return stats->txBytes;
-        case TX_PACKETS:
-            return stats->txPackets;
-        default:
-            return UNKNOWN;
-    }
+static void nativeRegisterIface(JNIEnv* env, jclass clazz, jstring iface) {
+    ScopedUtfChars iface8(env, iface);
+    if (iface8.c_str() == nullptr) return;
+    bpfRegisterIface(iface8.c_str());
 }
 
-static jlong nativeGetTotalStat(JNIEnv* env, jclass clazz, jint type) {
+static jobject statsValueToEntry(JNIEnv* env, StatsValue* stats) {
+    // Find the Java class that represents the structure
+    jclass gEntryClass = env->FindClass("android/net/NetworkStats$Entry");
+    if (gEntryClass == nullptr) {
+        return nullptr;
+    }
+
+    // Find the constructor.
+    jmethodID constructorID = env->GetMethodID(gEntryClass, "<init>", "()V");
+    if (constructorID == nullptr) {
+        return nullptr;
+    }
+
+    // Create a new instance of the Java class
+    jobject result = env->NewObject(gEntryClass, constructorID);
+    if (result == nullptr) {
+        return nullptr;
+    }
+
+    // Set the values of the structure fields in the Java object
+    env->SetLongField(result, env->GetFieldID(gEntryClass, "rxBytes", "J"), stats->rxBytes);
+    env->SetLongField(result, env->GetFieldID(gEntryClass, "txBytes", "J"), stats->txBytes);
+    env->SetLongField(result, env->GetFieldID(gEntryClass, "rxPackets", "J"), stats->rxPackets);
+    env->SetLongField(result, env->GetFieldID(gEntryClass, "txPackets", "J"), stats->txPackets);
+
+    return result;
+}
+
+static jobject nativeGetTotalStat(JNIEnv* env, jclass clazz) {
     StatsValue stats = {};
 
-    if (bpfGetIfaceStats(NULL, &stats) == 0) {
-        return getStatsType(&stats, (StatsType) type);
+    if (bpfGetIfaceStats(nullptr, &stats) == 0) {
+        return statsValueToEntry(env, &stats);
     } else {
-        return UNKNOWN;
+        return nullptr;
     }
 }
 
-static jlong nativeGetIfaceStat(JNIEnv* env, jclass clazz, jstring iface, jint type) {
+static jobject nativeGetIfaceStat(JNIEnv* env, jclass clazz, jstring iface) {
     ScopedUtfChars iface8(env, iface);
-    if (iface8.c_str() == NULL) {
-        return UNKNOWN;
+    if (iface8.c_str() == nullptr) {
+        return nullptr;
     }
 
     StatsValue stats = {};
 
     if (bpfGetIfaceStats(iface8.c_str(), &stats) == 0) {
-        return getStatsType(&stats, (StatsType) type);
+        return statsValueToEntry(env, &stats);
     } else {
-        return UNKNOWN;
+        return nullptr;
     }
 }
 
-static jlong nativeGetIfIndexStat(JNIEnv* env, jclass clazz, jint ifindex, jint type) {
-    StatsValue stats = {};
-    if (bpfGetIfIndexStats(ifindex, &stats) == 0) {
-        return getStatsType(&stats, (StatsType) type);
-    } else {
-        return UNKNOWN;
-    }
-}
-
-static jlong nativeGetUidStat(JNIEnv* env, jclass clazz, jint uid, jint type) {
+static jobject nativeGetUidStat(JNIEnv* env, jclass clazz, jint uid) {
     StatsValue stats = {};
 
     if (bpfGetUidStats(uid, &stats) == 0) {
-        return getStatsType(&stats, (StatsType) type);
+        return statsValueToEntry(env, &stats);
     } else {
-        return UNKNOWN;
+        return nullptr;
     }
 }
 
@@ -113,11 +113,31 @@ static void nativeInitNetworkTracing(JNIEnv* env, jclass clazz) {
 }
 
 static const JNINativeMethod gMethods[] = {
-        {"nativeGetTotalStat", "(I)J", (void*)nativeGetTotalStat},
-        {"nativeGetIfaceStat", "(Ljava/lang/String;I)J", (void*)nativeGetIfaceStat},
-        {"nativeGetIfIndexStat", "(II)J", (void*)nativeGetIfIndexStat},
-        {"nativeGetUidStat", "(II)J", (void*)nativeGetUidStat},
-        {"nativeInitNetworkTracing", "()V", (void*)nativeInitNetworkTracing},
+        {
+            "nativeRegisterIface",
+            "(Ljava/lang/String;)V",
+            (void*)nativeRegisterIface
+        },
+        {
+            "nativeGetTotalStat",
+            "()Landroid/net/NetworkStats$Entry;",
+            (void*)nativeGetTotalStat
+        },
+        {
+            "nativeGetIfaceStat",
+            "(Ljava/lang/String;)Landroid/net/NetworkStats$Entry;",
+            (void*)nativeGetIfaceStat
+        },
+        {
+            "nativeGetUidStat",
+            "(I)Landroid/net/NetworkStats$Entry;",
+            (void*)nativeGetUidStat
+        },
+        {
+            "nativeInitNetworkTracing",
+            "()V",
+            (void*)nativeInitNetworkTracing
+        },
 };
 
 int register_android_server_net_NetworkStatsService(JNIEnv* env) {

@@ -36,6 +36,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import android.annotation.NonNull;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.LinkProperties;
@@ -51,6 +52,7 @@ import android.net.SocketKeepalive;
 import android.os.ConditionVariable;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.util.CloseGuard;
 import android.util.Log;
 import android.util.Range;
 
@@ -65,11 +67,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
+    private static final long DESTROY_TIMEOUT_MS = 10_000L;
+
     // Note : Please do not add any new instrumentation here. If you need new instrumentation,
     // please add it in CSAgentWrapper and use subclasses of CSTest instead of adding more
     // tools in ConnectivityServiceTest.
     private final NetworkCapabilities mNetworkCapabilities;
     private final HandlerThread mHandlerThread;
+    private final CloseGuard mCloseGuard;
     private final Context mContext;
     private final String mLogTag;
     private final NetworkAgentConfig mNetworkAgentConfig;
@@ -157,6 +162,8 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
         mLogTag = "Mock-" + typeName;
         mHandlerThread = new HandlerThread(mLogTag);
         mHandlerThread.start();
+        mCloseGuard = new CloseGuard();
+        mCloseGuard.open("destroy");
 
         // extraInfo is set to "" by default in NetworkAgentConfig.
         final String extraInfo = (transport == TRANSPORT_CELLULAR) ? "internet.apn" : "";
@@ -357,6 +364,35 @@ public class NetworkAgentWrapper implements TestableNetworkCallback.HasNetwork {
 
     public void disconnect() {
         mNetworkAgent.unregister();
+    }
+
+    /**
+     * Destroy the network agent and stop its looper.
+     *
+     * <p>This must always be called.
+     */
+    public void destroy() {
+        mHandlerThread.quitSafely();
+        try {
+            mHandlerThread.join(DESTROY_TIMEOUT_MS);
+        } catch (InterruptedException e) {
+            Log.e(mLogTag, "Interrupted when waiting for handler thread on destroy", e);
+        }
+        mCloseGuard.close();
+    }
+
+    @SuppressLint("Finalize") // Follows the recommended pattern for CloseGuard
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            // Note that mCloseGuard could be null if the constructor threw.
+            if (mCloseGuard != null) {
+                mCloseGuard.warnIfOpen();
+            }
+            destroy();
+        } finally {
+            super.finalize();
+        }
     }
 
     @Override

@@ -16,6 +16,7 @@
 
 package com.android.testutils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkAddress
@@ -31,61 +32,65 @@ import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import java.net.InetAddress
 import libcore.io.IoUtils
 
-private const val MIN_PORT_NUMBER = 1025
-private const val MAX_PORT_NUMBER = 65535
-
 /**
- * A class that set up two {@link TestNetworkInterface} with NAT, and forward packets between them.
+ * A class that set up two {@link TestNetworkInterface}, and forward packets between them.
  *
- * See {@link NatPacketForwarder} for more detailed information.
+ * See {@link PacketForwarder} for more detailed information.
  */
 class PacketBridge(
     context: Context,
-    internalAddr: LinkAddress,
-    externalAddr: LinkAddress,
-    dnsAddr: InetAddress
+    addresses: List<LinkAddress>,
+    dnsAddr: InetAddress,
+    portMapping: List<Pair<Int, Int>>
 ) {
-    private val natMap = NatMap()
     private val binder = Binder()
 
     private val cm = context.getSystemService(ConnectivityManager::class.java)!!
     private val tnm = context.getSystemService(TestNetworkManager::class.java)!!
 
-    // Create test networks.
-    private val internalIface = tnm.createTunInterface(listOf(internalAddr))
-    private val externalIface = tnm.createTunInterface(listOf(externalAddr))
+    // Create test networks. The needed permissions should be supplied by the callers.
+    @SuppressLint("MissingPermission")
+    private val internalIface = tnm.createTunInterface(addresses)
+    @SuppressLint("MissingPermission")
+    private val externalIface = tnm.createTunInterface(addresses)
 
     // Register test networks to ConnectivityService.
     private val internalNetworkCallback: TestableNetworkCallback
     private val externalNetworkCallback: TestableNetworkCallback
+
+    private val internalForwardMap = HashMap<Int, Int>()
+    private val externalForwardMap = HashMap<Int, Int>()
+
     val internalNetwork: Network
     val externalNetwork: Network
     init {
-        val (inCb, inNet) = createTestNetwork(internalIface, internalAddr, dnsAddr)
-        val (exCb, exNet) = createTestNetwork(externalIface, externalAddr, dnsAddr)
+        val (inCb, inNet) = createTestNetwork(internalIface, addresses, dnsAddr)
+        val (exCb, exNet) = createTestNetwork(externalIface, addresses, dnsAddr)
         internalNetworkCallback = inCb
         externalNetworkCallback = exCb
         internalNetwork = inNet
         externalNetwork = exNet
+        for (mapping in portMapping) {
+            internalForwardMap[mapping.first] = mapping.second
+            externalForwardMap[mapping.second] = mapping.first
+        }
     }
 
-    // Setup the packet bridge.
+    // Set up the packet bridge.
     private val internalFd = internalIface.fileDescriptor.fileDescriptor
     private val externalFd = externalIface.fileDescriptor.fileDescriptor
 
-    private val pr1 = NatInternalPacketForwarder(
+    private val pr1 = InternalPacketForwarder(
         internalFd,
         1500,
         externalFd,
-        externalAddr.address,
-        natMap
+        internalForwardMap
     )
-    private val pr2 = NatExternalPacketForwarder(
+    private val pr2 = ExternalPacketForwarder(
         externalFd,
         1500,
         internalFd,
-        externalAddr.address,
-        natMap
+        externalForwardMap
     )
 
     fun start() {
@@ -107,7 +112,7 @@ class PacketBridge(
      */
     private fun createTestNetwork(
         testIface: TestNetworkInterface,
-        addr: LinkAddress,
+        addresses: List<LinkAddress>,
         dnsAddr: InetAddress
     ): Pair<TestableNetworkCallback, Network> {
         // Make a network request to hold the test network
@@ -120,7 +125,7 @@ class PacketBridge(
         cm.requestNetwork(nr, testCb)
 
         val lp = LinkProperties().apply {
-            addLinkAddress(addr)
+            setLinkAddresses(addresses)
             interfaceName = testIface.interfaceName
             addDnsServer(dnsAddr)
         }
@@ -129,45 +134,5 @@ class PacketBridge(
         // Wait for available before return.
         val network = testCb.expect<Available>().network
         return testCb to network
-    }
-
-    /**
-     * A helper class to maintain the mappings between internal addresses/ports and external
-     * ports.
-     *
-     * This class assigns an unused external port number if the mapping between
-     * srcaddress:srcport:protocol and the external port does not exist yet.
-     *
-     * Note that this class is not thread-safe. The instance of the class needs to be
-     * synchronized in the callers when being used in multiple threads.
-     */
-    class NatMap {
-        data class AddressInfo(val address: InetAddress, val port: Int, val protocol: Int)
-
-        private val mToExternalPort = HashMap<AddressInfo, Int>()
-        private val mFromExternalPort = HashMap<Int, AddressInfo>()
-
-        // Skip well-known port 0~1024.
-        private var nextExternalPort = MIN_PORT_NUMBER
-
-        fun toExternalPort(addr: InetAddress, port: Int, protocol: Int): Int {
-            val info = AddressInfo(addr, port, protocol)
-            val extPort: Int
-            if (!mToExternalPort.containsKey(info)) {
-                extPort = nextExternalPort++
-                if (nextExternalPort > MAX_PORT_NUMBER) {
-                    throw IllegalStateException("Available ports are exhausted")
-                }
-                mToExternalPort[info] = extPort
-                mFromExternalPort[extPort] = info
-            } else {
-                extPort = mToExternalPort[info]!!
-            }
-            return extPort
-        }
-
-        fun fromExternalPort(port: Int): AddressInfo? {
-            return mFromExternalPort[port]
-        }
     }
 }

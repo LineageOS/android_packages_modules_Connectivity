@@ -21,9 +21,11 @@ import static android.system.OsConstants.AF_INET6;
 
 import static com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_ANY;
 import static com.android.net.module.util.NetworkStackConstants.IPV6_ADDR_ANY;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 
 import android.annotation.SuppressLint;
 import android.net.IpPrefix;
+import android.net.RouteInfo;
 import android.system.OsConstants;
 
 import androidx.annotation.NonNull;
@@ -49,31 +51,78 @@ import java.nio.ByteBuffer;
  */
 public class RtNetlinkRouteMessage extends NetlinkMessage {
     public static final short RTA_DST           = 1;
+    public static final short RTA_SRC           = 2;
+    public static final short RTA_IIF           = 3;
     public static final short RTA_OIF           = 4;
     public static final short RTA_GATEWAY       = 5;
     public static final short RTA_CACHEINFO     = 12;
+    public static final short RTA_EXPIRES       = 23;
 
-    private int mIfindex;
+    public static final short RTNH_F_UNRESOLVED = 32;   // The multicast route is unresolved
+
+    public static final String TAG = "NetlinkRouteMessage";
+
+    // For multicast routes, whether the route is resolved or unresolved
+    private boolean mIsResolved;
+    // The interface index for incoming interface, this is set for multicast
+    // routes, see common/net/ipv4/ipmr_base.c mr_fill_mroute
+    private int mIifIndex; // Incoming interface of a route, for resolved multicast routes
+    private int mOifIndex;
     @NonNull
     private StructRtMsg mRtmsg;
-    @NonNull
-    private IpPrefix mDestination;
+    @Nullable
+    private IpPrefix mSource; // Source address of a route, for all multicast routes
+    @Nullable
+    private IpPrefix mDestination; // Destination of a route, can be null for RTM_GETROUTE
     @Nullable
     private InetAddress mGateway;
     @Nullable
     private StructRtaCacheInfo mRtaCacheInfo;
+    private long mSinceLastUseMillis; // Milliseconds since the route was used,
+                                      // for resolved multicast routes
 
-    private RtNetlinkRouteMessage(StructNlMsgHdr header) {
+
+    @VisibleForTesting
+    public RtNetlinkRouteMessage(final StructNlMsgHdr header, final StructRtMsg rtMsg,
+            final IpPrefix source, final IpPrefix destination, final InetAddress gateway,
+            int iif, int oif, final StructRtaCacheInfo cacheInfo) {
         super(header);
-        mRtmsg = null;
-        mDestination = null;
-        mGateway = null;
-        mIfindex = 0;
-        mRtaCacheInfo = null;
+        mRtmsg = rtMsg;
+        mSource = source;
+        mDestination = destination;
+        mGateway = gateway;
+        mIifIndex = iif;
+        mOifIndex = oif;
+        mRtaCacheInfo = cacheInfo;
+        mSinceLastUseMillis = -1;
+    }
+
+    public RtNetlinkRouteMessage(StructNlMsgHdr header, StructRtMsg rtMsg) {
+        this(header, rtMsg, null /* source */, null /* destination */, null /* gateway */,
+                0 /* iif */, 0 /* oif */, null /* cacheInfo */);
+    }
+
+    /**
+     * Returns the rtnetlink family.
+     */
+    public short getRtmFamily() {
+        return mRtmsg.family;
+    }
+
+    /**
+     * Returns if the route is resolved. This is always true for unicast,
+     * and may be false only for multicast routes.
+     */
+    public boolean isResolved() {
+        return mIsResolved;
+    }
+
+    public int getIifIndex() {
+        return mIifIndex;
     }
 
     public int getInterfaceIndex() {
-        return mIfindex;
+        return mOifIndex;
     }
 
     @NonNull
@@ -84,6 +133,14 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     @NonNull
     public IpPrefix getDestination() {
         return mDestination;
+    }
+
+    /**
+     * Get source address of a route. This is for multicast routes.
+     */
+    @NonNull
+    public IpPrefix getSource() {
+        return mSource;
     }
 
     @Nullable
@@ -97,6 +154,18 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     }
 
     /**
+     * RTA_EXPIRES attribute returned by kernel to indicate the clock ticks
+     * from the route was last used to now, converted to milliseconds.
+     * This is set for multicast routes.
+     *
+     * Note that this value is not updated with the passage of time. It always
+     * returns the value that was read when the netlink message was parsed.
+     */
+    public long getSinceLastUseMillis() {
+        return mSinceLastUseMillis;
+    }
+
+    /**
      * Check whether the address families of destination and gateway match rtm_family in
      * StructRtmsg.
      *
@@ -107,7 +176,8 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     private static boolean matchRouteAddressFamily(@NonNull final InetAddress address,
             int family) {
         return ((address instanceof Inet4Address) && (family == AF_INET))
-                || ((address instanceof Inet6Address) && (family == AF_INET6));
+                || ((address instanceof Inet6Address) &&
+                        (family == AF_INET6 || family == RTNL_FAMILY_IP6MR));
     }
 
     /**
@@ -121,11 +191,11 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
     @Nullable
     public static RtNetlinkRouteMessage parse(@NonNull final StructNlMsgHdr header,
             @NonNull final ByteBuffer byteBuffer) {
-        final RtNetlinkRouteMessage routeMsg = new RtNetlinkRouteMessage(header);
-
-        routeMsg.mRtmsg = StructRtMsg.parse(byteBuffer);
-        if (routeMsg.mRtmsg == null) return null;
+        final StructRtMsg rtmsg = StructRtMsg.parse(byteBuffer);
+        if (rtmsg == null) return null;
+        final RtNetlinkRouteMessage routeMsg = new RtNetlinkRouteMessage(header, rtmsg);
         int rtmFamily = routeMsg.mRtmsg.family;
+        routeMsg.mIsResolved = ((routeMsg.mRtmsg.flags & RTNH_F_UNRESOLVED) == 0);
 
         // RTA_DST
         final int baseOffset = byteBuffer.position();
@@ -139,10 +209,22 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
             routeMsg.mDestination = new IpPrefix(destination, routeMsg.mRtmsg.dstLen);
         } else if (rtmFamily == AF_INET) {
             routeMsg.mDestination = new IpPrefix(IPV4_ADDR_ANY, 0);
-        } else if (rtmFamily == AF_INET6) {
+        } else if (rtmFamily == AF_INET6 || rtmFamily == RTNL_FAMILY_IP6MR) {
             routeMsg.mDestination = new IpPrefix(IPV6_ADDR_ANY, 0);
         } else {
             return null;
+        }
+
+        // RTA_SRC
+        byteBuffer.position(baseOffset);
+        nlAttr = StructNlAttr.findNextAttrOfType(RTA_SRC, byteBuffer);
+        if (nlAttr != null) {
+            final InetAddress source = nlAttr.getValueAsInetAddress();
+            // If the RTA_SRC attribute is malformed, return null.
+            if (source == null) return null;
+            // If the address family of destination doesn't match rtm_family, return null.
+            if (!matchRouteAddressFamily(source, rtmFamily)) return null;
+            routeMsg.mSource = new IpPrefix(source, routeMsg.mRtmsg.srcLen);
         }
 
         // RTA_GATEWAY
@@ -156,6 +238,17 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
             if (!matchRouteAddressFamily(routeMsg.mGateway, rtmFamily)) return null;
         }
 
+        // RTA_IIF
+        byteBuffer.position(baseOffset);
+        nlAttr = StructNlAttr.findNextAttrOfType(RTA_IIF, byteBuffer);
+        if (nlAttr != null) {
+            Integer iifInteger = nlAttr.getValueAsInteger();
+            if (iifInteger == null) {
+                return null;
+            }
+            routeMsg.mIifIndex = iifInteger;
+        }
+
         // RTA_OIF
         byteBuffer.position(baseOffset);
         nlAttr = StructNlAttr.findNextAttrOfType(RTA_OIF, byteBuffer);
@@ -164,7 +257,7 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
             // the interface index to a name themselves. This may not succeed or may be
             // incorrect, because the interface might have been deleted, or even deleted
             // and re-added with a different index, since the netlink message was sent.
-            routeMsg.mIfindex = nlAttr.getValueAsInt(0 /* 0 isn't a valid ifindex */);
+            routeMsg.mOifIndex = nlAttr.getValueAsInt(0 /* 0 isn't a valid ifindex */);
         }
 
         // RTA_CACHEINFO
@@ -174,32 +267,58 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
             routeMsg.mRtaCacheInfo = StructRtaCacheInfo.parse(nlAttr.getValueAsByteBuffer());
         }
 
+        // RTA_EXPIRES
+        byteBuffer.position(baseOffset);
+        nlAttr = StructNlAttr.findNextAttrOfType(RTA_EXPIRES, byteBuffer);
+        if (nlAttr != null) {
+            final Long sinceLastUseCentis = nlAttr.getValueAsLong();
+            // If the RTA_EXPIRES attribute is malformed, return null.
+            if (sinceLastUseCentis == null) return null;
+            // RTA_EXPIRES returns time in clock ticks of USER_HZ(100), which is centiseconds
+            routeMsg.mSinceLastUseMillis = sinceLastUseCentis * 10;
+        }
+
         return routeMsg;
     }
 
     /**
      * Write a rtnetlink address message to {@link ByteBuffer}.
      */
-    @VisibleForTesting
-    protected void pack(ByteBuffer byteBuffer) {
+    public void pack(ByteBuffer byteBuffer) {
         getHeader().pack(byteBuffer);
         mRtmsg.pack(byteBuffer);
 
-        final StructNlAttr destination = new StructNlAttr(RTA_DST, mDestination.getAddress());
-        destination.pack(byteBuffer);
+        if (mSource != null) {
+            final StructNlAttr source = new StructNlAttr(RTA_SRC, mSource.getAddress());
+            source.pack(byteBuffer);
+        }
+
+        if (mDestination != null) {
+            final StructNlAttr destination = new StructNlAttr(RTA_DST, mDestination.getAddress());
+            destination.pack(byteBuffer);
+        }
 
         if (mGateway != null) {
             final StructNlAttr gateway = new StructNlAttr(RTA_GATEWAY, mGateway.getAddress());
             gateway.pack(byteBuffer);
         }
-        if (mIfindex != 0) {
-            final StructNlAttr ifindex = new StructNlAttr(RTA_OIF, mIfindex);
-            ifindex.pack(byteBuffer);
+        if (mIifIndex != 0) {
+            final StructNlAttr iifindex = new StructNlAttr(RTA_IIF, mIifIndex);
+            iifindex.pack(byteBuffer);
+        }
+        if (mOifIndex != 0) {
+            final StructNlAttr oifindex = new StructNlAttr(RTA_OIF, mOifIndex);
+            oifindex.pack(byteBuffer);
         }
         if (mRtaCacheInfo != null) {
             final StructNlAttr cacheInfo = new StructNlAttr(RTA_CACHEINFO,
                     mRtaCacheInfo.writeToBytes());
             cacheInfo.pack(byteBuffer);
+        }
+        if (mSinceLastUseMillis >= 0) {
+            final long sinceLastUseCentis = mSinceLastUseMillis / 10;
+            final StructNlAttr expires = new StructNlAttr(RTA_EXPIRES, sinceLastUseCentis);
+            expires.pack(byteBuffer);
         }
     }
 
@@ -208,10 +327,14 @@ public class RtNetlinkRouteMessage extends NetlinkMessage {
         return "RtNetlinkRouteMessage{ "
                 + "nlmsghdr{" + mHeader.toString(OsConstants.NETLINK_ROUTE) + "}, "
                 + "Rtmsg{" + mRtmsg.toString() + "}, "
-                + "destination{" + mDestination.getAddress().getHostAddress() + "}, "
+                + (mSource == null ? "" : "source{" + mSource.getAddress().getHostAddress() + "}, ")
+                + (mDestination == null ?
+                        "" : "destination{" + mDestination.getAddress().getHostAddress() + "}, ")
                 + "gateway{" + (mGateway == null ? "" : mGateway.getHostAddress()) + "}, "
-                + "ifindex{" + mIfindex + "}, "
+                + (mIifIndex == 0 ? "" : "iifindex{" + mIifIndex + "}, ")
+                + "oifindex{" + mOifIndex + "}, "
                 + "rta_cacheinfo{" + (mRtaCacheInfo == null ? "" : mRtaCacheInfo.toString()) + "} "
+                + (mSinceLastUseMillis < 0 ? "" : "sinceLastUseMillis{" + mSinceLastUseMillis + "}")
                 + "}";
     }
 }

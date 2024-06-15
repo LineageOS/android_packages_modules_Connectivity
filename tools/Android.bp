@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -41,6 +42,7 @@ java_library {
     name: "jarjar-rules-generator-testjavalib",
     srcs: ["testdata/java/**/*.java"],
     libs: ["unsupportedappusage"],
+    sdk_version: "core_platform",
     visibility: ["//visibility:private"],
 }
 
@@ -55,6 +57,7 @@ java_library {
     static_libs: [
         "framework-connectivity.stubs.module_lib",
     ],
+    sdk_version: "module_current",
     // Not strictly necessary but specified as this MUST not have generate
     // a dex jar as that will break the tests.
     compile_dex: false,
@@ -66,6 +69,7 @@ java_library {
     static_libs: [
         "framework-connectivity-t.stubs.module_lib",
     ],
+    sdk_version: "module_current",
     // Not strictly necessary but specified as this MUST not have generate
     // a dex jar as that will break the tests.
     compile_dex: false,

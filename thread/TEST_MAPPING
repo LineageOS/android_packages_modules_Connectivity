@@ -2,11 +2,14 @@
   "presubmit": [
     {
       "name": "CtsThreadNetworkTestCases"
+    },
+    {
+      "name": "ThreadNetworkUnitTests"
+    },
+    {
+      "name": "ThreadNetworkIntegrationTests"
     }
   ],
   "postsubmit": [
-    {
-      "name": "ThreadNetworkUnitTests"
-    }
   ]
 }

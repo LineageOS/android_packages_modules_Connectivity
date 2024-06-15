@@ -17,6 +17,7 @@
 // They must be fast and stable, and exercise public or test APIs.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -28,7 +29,10 @@ android_test {
     name: "NetHttpCoverageTests",
     enforce_default_target_sdk_version: true,
     min_sdk_version: "30",
-    test_suites: ["general-tests", "mts-tethering"],
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
     static_libs: [
         "modules-utils-native-coverage-listener",
         "CtsNetHttpTestsLib",
@@ -37,6 +41,8 @@ android_test {
     jarjar_rules: ":net-http-test-jarjar-rules",
     compile_multilib: "both", // Include both the 32 and 64 bit versions
     jni_libs: [
-       "cronet_aml_components_cronet_android_cronet_tests__testing"
+        "cronet_aml_components_cronet_android_cronet_tests__testing",
+        "cronet_aml_third_party_netty_tcnative_netty_tcnative_so__testing",
     ],
+    data: [":cronet_javatests_resources"],
 }

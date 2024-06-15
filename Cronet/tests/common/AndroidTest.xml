@@ -19,6 +19,11 @@
         <option name="install-arg" value="-t" />
     </target_preparer>
     <option name="test-tag" value="NetHttpCoverageTests" />
+
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="push-file" key="net" value="/storage/emulated/0/chromium_tests_root/net" />
+        <option name="push-file" key="test_server" value="/storage/emulated/0/chromium_tests_root/components/cronet/testing/test_server" />
+    </target_preparer>
     <!-- Tethering/Connectivity is a SDK 30+ module -->
     <!-- TODO Switch back to Sdk30 when b/270049141 is fixed -->
     <object type="module_controller"
@@ -28,7 +33,28 @@
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="com.android.net.http.tests.coverage" />
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
+        <!-- b/298380508 -->
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testSetLibraryLoaderIsEnforcedByDefaultEmbeddedProvider" />
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testSetLibraryLoaderIsIgnoredInNativeCronetEngineBuilderImpl" />
+        <!-- b/316571753 -->
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testBaseFeatureFlagsOverridesEnabled" />
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAppliedIfAppIdMatches" />
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAreLoaded" />
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testSetLibraryLoaderIsEnforcedByDefaultEmbeddedProvider" />
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAppliedIfAtMinVersion" />
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestContextTest#testHttpFlagsAppliedIfAboveMinVersion" />
+        <!-- b/316567693 -->
+        <option name="exclude-filter" value="org.chromium.net.CronetUrlRequestTest#testSSLCertificateError" />
+        <!-- b/316559294 -->
+        <option name="exclude-filter" value="org.chromium.net.NQETest#testQuicDisabled" />
+        <!-- b/316559294 -->
+        <option name="exclude-filter" value="org.chromium.net.NQETest#testPrefsWriteRead" />
+        <!-- b/316554711-->
+        <option name="exclude-filter" value="org.chromium.net.NetworkChangesTest" /> 
+        <!-- b/316550794 -->
+        <option name="exclude-filter" value="org.chromium.net.impl.CronetLoggerTest#testEngineCreation" />
         <option name="hidden-api-checks" value="false"/>
+        <option name="isolated-storage" value="false"/>
         <option
             name="device-listeners"
             value="com.android.modules.utils.testing.NativeCoverageHackInstrumentationListener" />

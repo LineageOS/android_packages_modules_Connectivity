@@ -2,6 +2,7 @@
 // Build FrameworksNetTests package
 //########################################################################
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     // A large-scale-change added 'default_applicable_licenses' to import
     // all of the 'license_kinds' from "Android-Apache-2.0"
@@ -65,15 +66,13 @@ filegroup {
         "java/android/net/netstats/NetworkStatsDataMigrationUtilsTest.kt",
         "java/com/android/internal/net/NetworkUtilsInternalTest.java",
         "java/com/android/internal/net/VpnProfileTest.java",
-        "java/com/android/server/VpnManagerServiceTest.java",
         "java/com/android/server/connectivity/IpConnectivityEventBuilderTest.java",
         "java/com/android/server/connectivity/IpConnectivityMetricsTest.java",
         "java/com/android/server/connectivity/MetricsTestUtil.java",
         "java/com/android/server/connectivity/MultipathPolicyTrackerTest.java",
         "java/com/android/server/connectivity/NetdEventListenerServiceTest.java",
-        "java/com/android/server/connectivity/VpnTest.java",
         "java/com/android/server/net/ipmemorystore/*.java",
-    ]
+    ],
 }
 
 // Subset of services-core used to by ConnectivityService tests to test VPN realistically.
@@ -115,7 +114,7 @@ java_defaults {
         "service-connectivity-tiramisu-pre-jarjar",
         "services.core-vpn",
         "testables",
-        "cts-net-utils"
+        "cts-net-utils",
     ],
     libs: [
         "android.net.ipsec.ike.stubs.module_lib",

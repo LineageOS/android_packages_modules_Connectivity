@@ -31,9 +31,12 @@ import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.junit4.AfterClassWithInfo;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
 import com.android.tradefed.testtype.junit4.BeforeClassWithInfo;
+import com.android.tradefed.testtype.junit4.DeviceTestRunOptions;
 import com.android.tradefed.util.RunUtil;
 
 import org.junit.runner.RunWith;
+
+import java.util.Map;
 
 @RunWith(DeviceJUnit4ClassRunner.class)
 abstract class HostsideNetworkTestCase extends BaseHostJUnit4Test {
@@ -144,6 +147,17 @@ abstract class HostsideNetworkTestCase extends BaseHostJUnit4Test {
         }
         throw new IllegalStateException("Failed to find the test app on the device; pkg="
                 + packageName + ", u=" + currentUser);
+    }
+
+    protected boolean runDeviceTestsWithArgs(String packageName, String className,
+            String methodName, Map<String, String> args) throws DeviceNotAvailableException {
+        final DeviceTestRunOptions deviceTestRunOptions = new DeviceTestRunOptions(packageName)
+                .setTestClassName(className)
+                .setTestMethodName(methodName);
+        for (Map.Entry<String, String> arg : args.entrySet()) {
+            deviceTestRunOptions.addInstrumentationArg(arg.getKey(), arg.getValue());
+        }
+        return runDeviceTests(deviceTestRunOptions);
     }
 
     protected String runCommand(String command) throws DeviceNotAvailableException {

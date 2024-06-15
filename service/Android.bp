@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -178,6 +179,8 @@ java_library {
         "unsupportedappusage",
         "ServiceConnectivityResources",
         "framework-statsd",
+        "framework-permission",
+        "framework-permission-s",
     ],
     static_libs: [
         // Do not add libs here if they are already included
@@ -185,7 +188,7 @@ java_library {
         "androidx.annotation_annotation",
         "connectivity-net-module-utils-bpf",
         "connectivity_native_aidl_interface-lateststable-java",
-        "dnsresolver_aidl_interface-V13-java",
+        "dnsresolver_aidl_interface-V14-java",
         "modules-utils-shell-command-handler",
         "net-utils-device-common",
         "net-utils-device-common-ip",
@@ -196,11 +199,15 @@ java_library {
         "PlatformProperties",
         "service-connectivity-protos",
         "service-connectivity-stats-protos",
+        "net-utils-multicast-forwarding-structs",
     ],
     apex_available: [
         "com.android.tethering",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+
+    },
     visibility: [
         "//packages/modules/Connectivity/service-t",
         "//packages/modules/Connectivity/tests:__subpackages__",
@@ -225,6 +232,7 @@ java_library {
     ],
     lint: {
         strict_updatability_linting: true,
+
     },
 }
 
@@ -260,6 +268,8 @@ java_defaults {
         "framework-tethering.impl",
         "framework-wifi",
         "libprotobuf-java-nano",
+        "framework-permission",
+        "framework-permission-s",
     ],
     jarjar_rules: ":connectivity-jarjar-rules",
     apex_available: [
@@ -267,9 +277,6 @@ java_defaults {
     ],
     optimize: {
         proguard_flags_files: ["proguard.flags"],
-    },
-    lint: {
-        strict_updatability_linting: true,
     },
 }
 

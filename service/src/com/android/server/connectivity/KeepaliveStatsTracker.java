@@ -74,9 +74,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class KeepaliveStatsTracker {
     private static final String TAG = KeepaliveStatsTracker.class.getSimpleName();
     private static final int INVALID_KEEPALIVE_ID = -1;
-    // 1 hour acceptable deviation in metrics collection duration time.
+    // 2 hour acceptable deviation in metrics collection duration time to account for the 1 hour
+    // window of AlarmManager.
     private static final long MAX_EXPECTED_DURATION_MS =
-            AutomaticOnOffKeepaliveTracker.METRICS_COLLECTION_DURATION_MS + 1 * 60 * 60 * 1_000L;
+            AutomaticOnOffKeepaliveTracker.METRICS_COLLECTION_DURATION_MS + 2 * 60 * 60 * 1_000L;
 
     @NonNull private final Handler mConnectivityServiceHandler;
     @NonNull private final Dependencies mDependencies;

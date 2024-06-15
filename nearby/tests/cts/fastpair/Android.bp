@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -33,12 +34,14 @@ android_test {
         "framework-bluetooth.stubs.module_lib",
         "framework-configinfrastructure",
         "framework-connectivity-t.impl",
+        "framework-location.stubs.module_lib",
     ],
     srcs: ["src/**/*.java"],
     test_suites: [
         "cts",
         "general-tests",
         "mts-tethering",
+        "mcts-tethering",
     ],
     certificate: "platform",
     sdk_version: "module_current",

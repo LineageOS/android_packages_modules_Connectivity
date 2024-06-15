@@ -21,7 +21,13 @@ import static android.system.OsConstants.IPPROTO_ICMPV6;
 import static android.system.OsConstants.SOCK_DGRAM;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_RCVTIMEO;
+
+import static com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel;
+
 import static junit.framework.Assert.assertEquals;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import android.os.Build;
 import android.system.ErrnoException;
@@ -38,7 +44,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.FileDescriptor;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -154,10 +159,9 @@ public class NetworkUtilsTest {
         return timeval;
     }
 
-    @Test
-    public void testSetSockOptBytes() throws ErrnoException {
-        final FileDescriptor sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6);
-        final StructTimeval writeTimeval = StructTimeval.fromMillis(1200);
+    private void testSetSockOptBytes(FileDescriptor sock, long timeValMillis)
+            throws ErrnoException {
+        final StructTimeval writeTimeval = StructTimeval.fromMillis(timeValMillis);
         byte[] timeval = getTimevalBytes(writeTimeval);
         final StructTimeval readTimeval;
 
@@ -165,6 +169,22 @@ public class NetworkUtilsTest {
         readTimeval = Os.getsockoptTimeval(sock, SOL_SOCKET, SO_RCVTIMEO);
 
         assertEquals(writeTimeval, readTimeval);
+    }
+
+    @Test
+    public void testSetSockOptBytes() throws ErrnoException {
+        final FileDescriptor sock = Os.socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6);
+
+        testSetSockOptBytes(sock, 3000);
+
+        testSetSockOptBytes(sock, 5000);
+
         SocketUtils.closeSocketQuietly(sock);
+    }
+
+    @Test
+    public void testIsKernel64Bit() {
+        assumeTrue(getVsrApiLevel() > Build.VERSION_CODES.TIRAMISU);
+        assertTrue(NetworkUtils.isKernel64Bit());
     }
 }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -48,19 +49,20 @@ android_library {
 }
 
 android_test {
-     name: "NetHttpTests",
-     defaults: [
+    name: "NetHttpTests",
+    defaults: [
         "mts-target-sdk-version-current",
-     ],
-     static_libs: ["NetHttpTestsLibPreJarJar"],
-     jarjar_rules: ":net-http-test-jarjar-rules",
-     jni_libs: [
+    ],
+    static_libs: ["NetHttpTestsLibPreJarJar"],
+    jarjar_rules: ":net-http-test-jarjar-rules",
+    jni_libs: [
         "cronet_aml_components_cronet_android_cronet__testing",
         "cronet_aml_components_cronet_android_cronet_tests__testing",
-     ],
-     test_suites: [
-         "general-tests",
-         "mts-tethering",
-     ],
+        "cronet_aml_third_party_netty_tcnative_netty_tcnative_so__testing",
+    ],
+    test_suites: [
+        "general-tests",
+        "mts-tethering",
+    ],
+    data: [":cronet_javatests_resources"],
 }
-

@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <string>
 
 #include "netdutils/NetworkConstants.h"

@@ -14,6 +14,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -35,7 +36,7 @@ java_sdk_library {
         "//frameworks/base/core/tests/bandwidthtests",
         "//frameworks/base/core/tests/benchmarks",
         "//frameworks/base/core/tests/utillib",
-        "//frameworks/base/packages/Connectivity/tests:__subpackages__",
+        "//frameworks/base/services/tests/VpnTests",
         "//frameworks/base/tests/vcn",
         "//frameworks/opt/telephony/tests/telephonytests",
         "//packages/modules/CaptivePortalLogin/tests",
@@ -43,6 +44,7 @@ java_sdk_library {
         "//packages/modules/Connectivity/staticlibs/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
         "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/Connectivity/thread/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
         "//packages/modules/NetworkStack/tests:__subpackages__",
         "//packages/modules/Wifi/service/tests/wifitests",
@@ -54,14 +56,19 @@ java_sdk_library {
 
     hostdex: true, // for hiddenapi check
     permitted_packages: ["android.net"],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
+    aconfig_declarations: [
+        "com.android.net.flags-aconfig",
+    ],
 }
 
 java_library {
-  name: "framework-tethering-pre-jarjar",
-  defaults: [
-    "framework-tethering-defaults",
-  ],
+    name: "framework-tethering-pre-jarjar",
+    defaults: [
+        "framework-tethering-defaults",
+    ],
 }
 
 java_genrule {
@@ -87,7 +94,7 @@ java_defaults {
     name: "framework-tethering-defaults",
     defaults: ["framework-module-defaults"],
     srcs: [
-      ":framework-tethering-srcs"
+        ":framework-tethering-srcs",
     ],
     libs: ["framework-connectivity.stubs.module_lib"],
     aidl: {
@@ -106,5 +113,5 @@ filegroup {
         "src/**/*.aidl",
         "src/**/*.java",
     ],
-    path: "src"
+    path: "src",
 }

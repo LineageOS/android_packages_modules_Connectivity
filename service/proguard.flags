@@ -15,3 +15,7 @@
     static final % EVENT_*;
 }
 
+# b/313539492 Keep the onLocalNetworkInfoChanged method in classes extending Connectivity.NetworkCallback.
+-keepclassmembers class * extends **android.net.ConnectivityManager$NetworkCallback {
+    public void onLocalNetworkInfoChanged(**android.net.Network, **android.net.LocalNetworkInfo);
+}

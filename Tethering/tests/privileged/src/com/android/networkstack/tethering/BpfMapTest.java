@@ -84,7 +84,7 @@ public final class BpfMapTest {
 
     private void initTestMap() throws Exception {
         mTestMap = new BpfMap<>(
-                TETHER_DOWNSTREAM6_FS_PATH, BpfMap.BPF_F_RDWR,
+                TETHER_DOWNSTREAM6_FS_PATH,
                 TetherDownstream6Key.class, Tether6Value.class);
 
         mTestMap.forEach((key, value) -> {
@@ -135,7 +135,7 @@ public final class BpfMapTest {
                 assertEquals(OsConstants.EPERM, expected.errno);
             }
         }
-        try (BpfMap readWriteMap = new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH, BpfMap.BPF_F_RDWR,
+        try (BpfMap readWriteMap = new BpfMap<>(TETHER_DOWNSTREAM6_FS_PATH,
                 TetherDownstream6Key.class, Tether6Value.class)) {
             assertNotNull(readWriteMap);
         }
@@ -389,7 +389,7 @@ public final class BpfMapTest {
     public void testOpenNonexistentMap() throws Exception {
         try {
             final BpfMap<TetherDownstream6Key, Tether6Value> nonexistentMap = new BpfMap<>(
-                    "/sys/fs/bpf/tethering/nonexistent", BpfMap.BPF_F_RDWR,
+                    "/sys/fs/bpf/tethering/nonexistent",
                     TetherDownstream6Key.class, Tether6Value.class);
         } catch (ErrnoException expected) {
             assertEquals(OsConstants.ENOENT, expected.errno);
@@ -409,8 +409,8 @@ public final class BpfMapTest {
         final int before = getNumOpenFds();
         for (int i = 0; i < iterations; i++) {
             try (BpfMap<TetherDownstream6Key, Tether6Value> map = new BpfMap<>(
-                TETHER_DOWNSTREAM6_FS_PATH, BpfMap.BPF_F_RDWR,
-                TetherDownstream6Key.class, Tether6Value.class)) {
+                    TETHER_DOWNSTREAM6_FS_PATH,
+                    TetherDownstream6Key.class, Tether6Value.class)) {
                 // do nothing
             }
         }

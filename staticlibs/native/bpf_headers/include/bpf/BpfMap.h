@@ -26,6 +26,8 @@
 #include "BpfSyscallWrappers.h"
 #include "bpf/BpfUtils.h"
 
+#include <functional>
+
 namespace android {
 namespace bpf {
 

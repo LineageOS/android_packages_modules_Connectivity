@@ -30,6 +30,12 @@ import static android.system.OsConstants.SO_RCVBUF;
 import static android.system.OsConstants.SO_RCVTIMEO;
 import static android.system.OsConstants.SO_SNDTIMEO;
 
+import static com.android.net.module.util.netlink.NetlinkConstants.hexify;
+import static com.android.net.module.util.netlink.NetlinkConstants.NLMSG_DONE;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
+import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
+
 import android.net.util.SocketUtils;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -44,10 +50,14 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Utilities for netlink related class that may not be able to fit into a specific class.
@@ -76,6 +86,7 @@ public class NetlinkUtils {
 
     public static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
     public static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
+    public static final int SOCKET_DUMP_RECV_BUFSIZE = 128 * 1024;
 
     /**
      * Return whether the input ByteBuffer contains enough remaining bytes for
@@ -150,7 +161,7 @@ public class NetlinkUtils {
      */
     public static void sendOneShotKernelMessage(int nlProto, byte[] msg) throws ErrnoException {
         final String errPrefix = "Error in NetlinkSocket.sendOneShotKernelMessage";
-        final FileDescriptor fd = netlinkSocketForProto(nlProto);
+        final FileDescriptor fd = netlinkSocketForProto(nlProto, SOCKET_RECV_BUFSIZE);
 
         try {
             connectToKernel(fd);
@@ -163,28 +174,24 @@ public class NetlinkUtils {
             Log.e(TAG, errPrefix, e);
             throw new ErrnoException(errPrefix, EIO, e);
         } finally {
-            try {
-                SocketUtils.closeSocket(fd);
-            } catch (IOException e) {
-                // Nothing we can do here
-            }
+            closeSocketQuietly(fd);
         }
     }
 
     /**
-     * Send an RTM_NEWADDR message to kernel to add or update an IPv6 address.
+     * Send an RTM_NEWADDR message to kernel to add or update an IP address.
      *
      * @param ifIndex interface index.
-     * @param ip IPv6 address to be added.
-     * @param prefixlen IPv6 address prefix length.
-     * @param flags IPv6 address flags.
-     * @param scope IPv6 address scope.
-     * @param preferred The preferred lifetime of IPv6 address.
-     * @param valid The valid lifetime of IPv6 address.
+     * @param ip IP address to be added.
+     * @param prefixlen IP address prefix length.
+     * @param flags IP address flags.
+     * @param scope IP address scope.
+     * @param preferred The preferred lifetime of IP address.
+     * @param valid The valid lifetime of IP address.
      */
-    public static boolean sendRtmNewAddressRequest(int ifIndex, @NonNull final Inet6Address ip,
+    public static boolean sendRtmNewAddressRequest(int ifIndex, @NonNull final InetAddress ip,
             short prefixlen, int flags, byte scope, long preferred, long valid) {
-        Objects.requireNonNull(ip, "IPv6 address to be added should not be null.");
+        Objects.requireNonNull(ip, "IP address to be added should not be null.");
         final byte[] msg = RtNetlinkAddressMessage.newRtmNewAddressMessage(1 /* seqNo*/, ip,
                 prefixlen, flags, scope, ifIndex, preferred, valid);
         try {
@@ -218,22 +225,41 @@ public class NetlinkUtils {
     }
 
     /**
-     * Create netlink socket with the given netlink protocol type.
+     * Create netlink socket with the given netlink protocol type and buffersize.
+     *
+     * @param nlProto the netlink protocol
+     * @param bufferSize the receive buffer size to set when the value is not 0
      *
      * @return fd the fileDescriptor of the socket.
      * @throws ErrnoException if the FileDescriptor not connect to be created successfully
      */
-    public static FileDescriptor netlinkSocketForProto(int nlProto) throws ErrnoException {
-        final FileDescriptor fd = Os.socket(AF_NETLINK, SOCK_DGRAM, nlProto);
-        Os.setsockoptInt(fd, SOL_SOCKET, SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+    public static FileDescriptor netlinkSocketForProto(int nlProto, int bufferSize)
+            throws ErrnoException {
+        final FileDescriptor fd = Os.socket(AF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC, nlProto);
+        if (bufferSize > 0) {
+            Os.setsockoptInt(fd, SOL_SOCKET, SO_RCVBUF, bufferSize);
+        }
         return fd;
+    }
+
+    /**
+     * Create netlink socket with the given netlink protocol type. Receive buffer size is not set.
+     *
+     * @param nlProto the netlink protocol
+     *
+     * @return fd the fileDescriptor of the socket.
+     * @throws ErrnoException if the FileDescriptor not connect to be created successfully
+     */
+    public static FileDescriptor netlinkSocketForProto(int nlProto)
+            throws ErrnoException {
+        return netlinkSocketForProto(nlProto, 0);
     }
 
     /**
      * Construct a netlink inet_diag socket.
      */
     public static FileDescriptor createNetLinkInetDiagSocket() throws ErrnoException {
-        return Os.socket(AF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC, NETLINK_INET_DIAG);
+        return netlinkSocketForProto(NETLINK_INET_DIAG);
     }
 
     /**
@@ -308,4 +334,139 @@ public class NetlinkUtils {
     }
 
     private NetlinkUtils() {}
+
+    private static <T extends NetlinkMessage> void getAndProcessNetlinkDumpMessagesWithFd(
+            FileDescriptor fd, byte[] dumpRequestMessage, int nlFamily, Class<T> msgClass,
+            Consumer<T> func)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        // connecToKernel throws ErrnoException and SocketException, should be handled by caller
+        connectToKernel(fd);
+
+        // sendMessage throws InterruptedIOException and ErrnoException,
+        // should be handled by caller
+        sendMessage(fd, dumpRequestMessage, 0, dumpRequestMessage.length, IO_TIMEOUT_MS);
+
+        while (true) {
+            // recvMessage throws ErrnoException, InterruptedIOException
+            // should be handled by caller
+            final ByteBuffer buf = recvMessage(
+                    fd, NetlinkUtils.DEFAULT_RECV_BUFSIZE, IO_TIMEOUT_MS);
+
+            while (buf.remaining() > 0) {
+                final int position = buf.position();
+                final NetlinkMessage nlMsg = NetlinkMessage.parse(buf, nlFamily);
+                if (nlMsg == null) {
+                    // Move to the position where parse started for error log.
+                    buf.position(position);
+                    Log.e(TAG, "Failed to parse netlink message: " + hexify(buf));
+                    break;
+                }
+
+                if (nlMsg.getHeader().nlmsg_type == NLMSG_DONE) {
+                    return;
+                }
+
+                if (!msgClass.isInstance(nlMsg)) {
+                    Log.wtf(TAG, "Received unexpected netlink message: " + nlMsg);
+                    continue;
+                }
+
+                final T msg = (T) nlMsg;
+                func.accept(msg);
+            }
+        }
+    }
+    /**
+     * Sends a netlink dump request and processes the returned dump messages
+     *
+     * @param <T> extends NetlinkMessage
+     * @param dumpRequestMessage netlink dump request message to be sent
+     * @param nlFamily netlink family
+     * @param msgClass expected class of the netlink message
+     * @param func function defined by caller to handle the dump messages
+     * @throws SocketException when fails to connect socket to kernel
+     * @throws InterruptedIOException when fails to read the dumpFd
+     * @throws ErrnoException when fails to create dump fd, send dump request
+     *                        or receive messages
+     */
+    public static <T extends NetlinkMessage> void getAndProcessNetlinkDumpMessages(
+            byte[] dumpRequestMessage, int nlFamily, Class<T> msgClass,
+            Consumer<T> func)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        // Create socket
+        final FileDescriptor fd = netlinkSocketForProto(nlFamily, SOCKET_DUMP_RECV_BUFSIZE);
+        try {
+            getAndProcessNetlinkDumpMessagesWithFd(fd, dumpRequestMessage, nlFamily,
+                    msgClass, func);
+        } finally {
+            closeSocketQuietly(fd);
+        }
+    }
+
+    /**
+     * Construct a RTM_GETROUTE message for dumping multicast IPv6 routes from kernel.
+     */
+    private static byte[] newIpv6MulticastRouteDumpRequest() {
+        final StructNlMsgHdr nlmsghdr = new StructNlMsgHdr();
+        nlmsghdr.nlmsg_type = NetlinkConstants.RTM_GETROUTE;
+        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+        final short shortZero = 0;
+
+        // family must be RTNL_FAMILY_IP6MR to dump IPv6 multicast routes.
+        // dstLen, srcLen, tos and scope must be zero in FIB dump request.
+        // protocol, flags must be 0, and type must be RTN_MULTICAST (if not 0) for multicast
+        // dump request.
+        // table or RTA_TABLE attributes can be used to dump a specific routing table.
+        // RTA_OIF attribute can be used to dump only routes containing given oif.
+        // Here no attributes are set so the kernel can return all multicast routes.
+        final StructRtMsg rtMsg =
+                new StructRtMsg(RTNL_FAMILY_IP6MR /* family */, shortZero /* dstLen */,
+                        shortZero /* srcLen */, shortZero /* tos */, shortZero /* table */,
+                        shortZero /* protocol */, shortZero /* scope */, shortZero /* type */,
+                        0L /* flags */);
+        final RtNetlinkRouteMessage msg =
+            new RtNetlinkRouteMessage(nlmsghdr, rtMsg);
+
+        final int spaceRequired = StructNlMsgHdr.STRUCT_SIZE + StructRtMsg.STRUCT_SIZE;
+        nlmsghdr.nlmsg_len = spaceRequired;
+        final byte[] bytes = new byte[NetlinkConstants.alignedLengthOf(spaceRequired)];
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+        byteBuffer.order(ByteOrder.nativeOrder());
+        msg.pack(byteBuffer);
+        return bytes;
+     }
+
+    /**
+     * Get the list of IPv6 multicast route messages from kernel.
+     */
+    public static List<RtNetlinkRouteMessage> getIpv6MulticastRoutes() {
+        final byte[] dumpMsg = newIpv6MulticastRouteDumpRequest();
+        List<RtNetlinkRouteMessage> routes = new ArrayList<>();
+        Consumer<RtNetlinkRouteMessage> handleNlDumpMsg = (msg) -> {
+            if (msg.getRtmFamily() == RTNL_FAMILY_IP6MR) {
+                // Sent rtmFamily RTNL_FAMILY_IP6MR in dump request to make sure ipv6
+                // multicast routes are included in netlink reply messages, the kernel
+                // may also reply with other kind of routes, so we filter them out here.
+                routes.add(msg);
+            }
+        };
+        try {
+            NetlinkUtils.<RtNetlinkRouteMessage>getAndProcessNetlinkDumpMessages(
+                    dumpMsg, NETLINK_ROUTE, RtNetlinkRouteMessage.class,
+                    handleNlDumpMsg);
+        } catch (SocketException | InterruptedIOException | ErrnoException e) {
+            Log.e(TAG, "Failed to dump multicast routes");
+            return routes;
+        }
+
+        return routes;
+    }
+
+    private static void closeSocketQuietly(final FileDescriptor fd) {
+        try {
+            SocketUtils.closeSocket(fd);
+        } catch (IOException e) {
+            // Nothing we can do here
+        }
+    }
 }

@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_thread_network",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -29,22 +30,38 @@ android_test {
     ],
     test_suites: [
         "general-tests",
+        "mts-tethering",
     ],
     static_libs: [
-        "androidx.test.ext.junit",
-        "compatibility-device-util-axt",
+        "frameworks-base-testutils",
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
+        "framework-location.stubs.module_lib",
         "guava",
         "guava-android-testlib",
-        "mockito-target-minus-junit4",
+        "mockito-target-extended-minus-junit4",
         "net-tests-utils",
+        "ot-daemon-aidl-java",
+        "ot-daemon-testing",
+        "service-connectivity-pre-jarjar",
+        "service-thread-pre-jarjar",
         "truth",
+        "service-thread-pre-jarjar",
     ],
     libs: [
         "android.test.base",
         "android.test.runner",
+        "ServiceConnectivityResources",
+        "framework-wifi",
     ],
+    jni_libs: [
+        "libservice-thread-jni",
+
+        // these are needed for Extended Mockito
+        "libdexmakerjvmtiagent",
+        "libstaticjvmtiagent",
+    ],
+    jni_uses_platform_apis: true,
     jarjar_rules: ":connectivity-jarjar-rules",
     // Test coverage system runs on different devices. Need to
     // compile for all architectures.

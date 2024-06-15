@@ -31,7 +31,6 @@ import static android.net.BpfNetMapsConstants.PENALTY_BOX_MATCH;
 import static android.net.BpfNetMapsConstants.UID_OWNER_MAP_PATH;
 import static android.net.BpfNetMapsConstants.UID_PERMISSION_MAP_PATH;
 import static android.net.BpfNetMapsConstants.UID_RULES_CONFIGURATION_KEY;
-import static android.net.BpfNetMapsUtils.PRE_T;
 import static android.net.BpfNetMapsUtils.getMatchByFirewallChain;
 import static android.net.BpfNetMapsUtils.isFirewallAllowList;
 import static android.net.BpfNetMapsUtils.matchToString;
@@ -68,6 +67,7 @@ import androidx.annotation.RequiresApi;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.BackgroundThread;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
@@ -95,7 +95,7 @@ import java.util.StringJoiner;
  */
 public class BpfNetMaps {
     static {
-        if (!PRE_T) {
+        if (SdkLevel.isAtLeastT()) {
             System.loadLibrary("service-connectivity");
         }
     }
@@ -184,60 +184,67 @@ public class BpfNetMaps {
         sIngressDiscardMap = ingressDiscardMap;
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U32> getConfigurationMap() {
         try {
             return new BpfMap<>(
-                    CONFIGURATION_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U32.class);
+                    CONFIGURATION_MAP_PATH, S32.class, U32.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open netd configuration map", e);
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, UidOwnerValue> getUidOwnerMap() {
         try {
             return new BpfMap<>(
-                    UID_OWNER_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, UidOwnerValue.class);
+                    UID_OWNER_MAP_PATH, S32.class, UidOwnerValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid owner map", e);
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U8> getUidPermissionMap() {
         try {
             return new BpfMap<>(
-                    UID_PERMISSION_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U8.class);
+                    UID_PERMISSION_MAP_PATH, S32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open uid permission map", e);
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
         try {
-            return new BpfMap<>(COOKIE_TAG_MAP_PATH, BpfMap.BPF_F_RDWR,
+            return new BpfMap<>(COOKIE_TAG_MAP_PATH,
                     CookieTagMapKey.class, CookieTagMapValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open cookie tag map", e);
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<S32, U8> getDataSaverEnabledMap() {
         try {
             return new BpfMap<>(
-                    DATA_SAVER_ENABLED_MAP_PATH, BpfMap.BPF_F_RDWR, S32.class, U8.class);
+                    DATA_SAVER_ENABLED_MAP_PATH, S32.class, U8.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open data saver enabled map", e);
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static IBpfMap<IngressDiscardKey, IngressDiscardValue> getIngressDiscardMap() {
         try {
-            return new BpfMap<>(INGRESS_DISCARD_MAP_PATH, BpfMap.BPF_F_RDWR,
+            return new BpfMap<>(INGRESS_DISCARD_MAP_PATH,
                     IngressDiscardKey.class, IngressDiscardValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open ingress discard map", e);
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static void initBpfMaps() {
         if (sConfigurationMap == null) {
             sConfigurationMap = getConfigurationMap();
@@ -295,6 +302,7 @@ public class BpfNetMaps {
      * Initializes the class if it is not already initialized. This method will open maps but not
      * cause any other effects. This method may be called multiple times on any thread.
      */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private static synchronized void ensureInitialized(final Context context) {
         if (sInitialized) return;
         initBpfMaps();
@@ -348,7 +356,7 @@ public class BpfNetMaps {
     public BpfNetMaps(final Context context) {
         this(context, null);
 
-        if (PRE_T) throw new IllegalArgumentException("BpfNetMaps need to use netd before T");
+        if (!SdkLevel.isAtLeastT()) throw new IllegalArgumentException("BpfNetMaps need to use netd before T");
     }
 
     public BpfNetMaps(final Context context, final INetd netd) {
@@ -357,7 +365,7 @@ public class BpfNetMaps {
 
     @VisibleForTesting
     public BpfNetMaps(final Context context, final INetd netd, final Dependencies deps) {
-        if (!PRE_T) {
+        if (SdkLevel.isAtLeastT()) {
             ensureInitialized(context);
         }
         mNetd = netd;
@@ -371,7 +379,7 @@ public class BpfNetMaps {
     }
 
     private void throwIfPreT(final String msg) {
-        if (PRE_T) {
+        if (!SdkLevel.isAtLeastT()) {
             throw new UnsupportedOperationException(msg);
         }
     }
@@ -712,7 +720,7 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void addUidInterfaceRules(final String ifName, final int[] uids) throws RemoteException {
-        if (PRE_T) {
+        if (!SdkLevel.isAtLeastT()) {
             mNetd.firewallAddUidInterfaceRules(ifName, uids);
             return;
         }
@@ -750,7 +758,7 @@ public class BpfNetMaps {
      *                                  cause of the failure.
      */
     public void removeUidInterfaceRules(final int[] uids) throws RemoteException {
-        if (PRE_T) {
+        if (!SdkLevel.isAtLeastT()) {
             mNetd.firewallRemoveUidInterfaceRules(uids);
             return;
         }
@@ -829,7 +837,7 @@ public class BpfNetMaps {
      * @throws RemoteException when netd has crashed.
      */
     public void setNetPermForUids(final int permissions, final int[] uids) throws RemoteException {
-        if (PRE_T) {
+        if (!SdkLevel.isAtLeastT()) {
             mNetd.trafficSetNetPermForUids(permissions, uids);
             return;
         }
@@ -1019,7 +1027,7 @@ public class BpfNetMaps {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void dump(final IndentingPrintWriter pw, final FileDescriptor fd, boolean verbose)
             throws IOException, ServiceSpecificException {
-        if (PRE_T) {
+        if (!SdkLevel.isAtLeastT()) {
             throw new ServiceSpecificException(
                     EOPNOTSUPP, "dumpsys connectivity trafficcontroller dump not available on pre-T"
                     + " devices, use dumpsys netd trafficcontroller instead.");

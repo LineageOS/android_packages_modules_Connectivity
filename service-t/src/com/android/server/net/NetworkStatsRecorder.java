@@ -22,6 +22,7 @@ import static android.net.TrafficStats.MB_IN_BYTES;
 import static android.text.format.DateUtils.YEAR_IN_MILLIS;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.NetworkIdentitySet;
 import android.net.NetworkStats;
 import android.net.NetworkStats.NonMonotonicObserver;
@@ -32,17 +33,20 @@ import android.net.NetworkTemplate;
 import android.net.TrafficStats;
 import android.os.Binder;
 import android.os.DropBoxManager;
+import android.os.SystemClock;
 import android.service.NetworkStatsRecorderProto;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.proto.ProtoOutputStream;
 
 import com.android.internal.util.FileRotator;
+import com.android.metrics.NetworkStatsMetricsLogger;
 import com.android.net.module.util.NetworkStatsUtils;
 
 import libcore.io.IoUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -79,6 +83,7 @@ public class NetworkStatsRecorder {
     private final long mBucketDuration;
     private final boolean mOnlyTags;
     private final boolean mWipeOnError;
+    private final boolean mUseFastDataInput;
 
     private long mPersistThresholdBytes = 2 * MB_IN_BYTES;
     private NetworkStats mLastSnapshot;
@@ -89,6 +94,9 @@ public class NetworkStatsRecorder {
     private final CombiningRewriter mPendingRewriter;
 
     private WeakReference<NetworkStatsCollection> mComplete;
+    private final NetworkStatsMetricsLogger mMetricsLogger = new NetworkStatsMetricsLogger();
+    @Nullable
+    private final File mStatsDir;
 
     /**
      * Non-persisted recorder, with only one bucket. Used by {@link NetworkStatsObservers}.
@@ -104,11 +112,13 @@ public class NetworkStatsRecorder {
         mBucketDuration = YEAR_IN_MILLIS;
         mOnlyTags = false;
         mWipeOnError = true;
+        mUseFastDataInput = false;
 
         mPending = null;
         mSinceBoot = new NetworkStatsCollection(mBucketDuration);
 
         mPendingRewriter = null;
+        mStatsDir = null;
     }
 
     /**
@@ -116,7 +126,7 @@ public class NetworkStatsRecorder {
      */
     public NetworkStatsRecorder(FileRotator rotator, NonMonotonicObserver<String> observer,
             DropBoxManager dropBox, String cookie, long bucketDuration, boolean onlyTags,
-            boolean wipeOnError) {
+            boolean wipeOnError, boolean useFastDataInput, @Nullable File statsDir) {
         mRotator = Objects.requireNonNull(rotator, "missing FileRotator");
         mObserver = Objects.requireNonNull(observer, "missing NonMonotonicObserver");
         mDropBox = Objects.requireNonNull(dropBox, "missing DropBoxManager");
@@ -125,11 +135,13 @@ public class NetworkStatsRecorder {
         mBucketDuration = bucketDuration;
         mOnlyTags = onlyTags;
         mWipeOnError = wipeOnError;
+        mUseFastDataInput = useFastDataInput;
 
         mPending = new NetworkStatsCollection(bucketDuration);
         mSinceBoot = new NetworkStatsCollection(bucketDuration);
 
         mPendingRewriter = new CombiningRewriter(mPending);
+        mStatsDir = statsDir;
     }
 
     public void setPersistThreshold(long thresholdBytes) {
@@ -179,8 +191,16 @@ public class NetworkStatsRecorder {
         Objects.requireNonNull(mRotator, "missing FileRotator");
         NetworkStatsCollection res = mComplete != null ? mComplete.get() : null;
         if (res == null) {
+            final long readStart = SystemClock.elapsedRealtime();
             res = loadLocked(Long.MIN_VALUE, Long.MAX_VALUE);
             mComplete = new WeakReference<NetworkStatsCollection>(res);
+            final long readEnd = SystemClock.elapsedRealtime();
+            // For legacy recorders which are used for data integrity check, which
+            // have wipeOnError flag unset, skip reporting metrics.
+            if (mWipeOnError) {
+                mMetricsLogger.logRecorderFileReading(mCookie, (int) (readEnd - readStart),
+                        mStatsDir, res, mUseFastDataInput);
+            }
         }
         return res;
     }
@@ -195,8 +215,12 @@ public class NetworkStatsRecorder {
     }
 
     private NetworkStatsCollection loadLocked(long start, long end) {
-        if (LOGD) Log.d(TAG, "loadLocked() reading from disk for " + mCookie);
-        final NetworkStatsCollection res = new NetworkStatsCollection(mBucketDuration);
+        if (LOGD) {
+            Log.d(TAG, "loadLocked() reading from disk for " + mCookie
+                    + " useFastDataInput: " + mUseFastDataInput);
+        }
+        final NetworkStatsCollection res =
+                new NetworkStatsCollection(mBucketDuration, mUseFastDataInput);
         try {
             mRotator.readMatching(res, start, end);
             res.recordCollection(mPending);

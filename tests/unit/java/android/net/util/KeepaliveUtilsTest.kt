@@ -95,11 +95,11 @@ class KeepaliveUtilsTest {
 
         // Check resource with invalid transport type.
         assertRunWithException(arrayOf("-1,3"))
-        assertRunWithException(arrayOf("10,3"))
+        assertRunWithException(arrayOf("11,3"))
 
         // Check valid customization generates expected array.
         val validRes = arrayOf("0,3", "1,0", "4,4")
-        val expectedValidRes = intArrayOf(3, 0, 0, 0, 4, 0, 0, 0, 0, 0)
+        val expectedValidRes = intArrayOf(3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0)
 
         val mockContext = getMockedContextWithStringArrayRes(
                 R.array.config_networkSupportedKeepaliveCount,

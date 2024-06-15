@@ -59,11 +59,17 @@ package android.nearby {
   }
 
   public class NearbyManager {
+    method @FlaggedApi("com.android.nearby.flags.powered_off_finding") @RequiresPermission(android.Manifest.permission.BLUETOOTH_PRIVILEGED) public int getPoweredOffFindingMode();
     method public void queryOffloadCapability(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<android.nearby.OffloadCapability>);
+    method @FlaggedApi("com.android.nearby.flags.powered_off_finding") @RequiresPermission(android.Manifest.permission.BLUETOOTH_PRIVILEGED) public void setPoweredOffFindingEphemeralIds(@NonNull java.util.List<byte[]>);
+    method @FlaggedApi("com.android.nearby.flags.powered_off_finding") @RequiresPermission(android.Manifest.permission.BLUETOOTH_PRIVILEGED) public void setPoweredOffFindingMode(int);
     method @RequiresPermission(allOf={android.Manifest.permission.BLUETOOTH_ADVERTISE, android.Manifest.permission.BLUETOOTH_PRIVILEGED}) public void startBroadcast(@NonNull android.nearby.BroadcastRequest, @NonNull java.util.concurrent.Executor, @NonNull android.nearby.BroadcastCallback);
     method @RequiresPermission(allOf={android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_PRIVILEGED}) public int startScan(@NonNull android.nearby.ScanRequest, @NonNull java.util.concurrent.Executor, @NonNull android.nearby.ScanCallback);
     method @RequiresPermission(allOf={android.Manifest.permission.BLUETOOTH_ADVERTISE, android.Manifest.permission.BLUETOOTH_PRIVILEGED}) public void stopBroadcast(@NonNull android.nearby.BroadcastCallback);
     method @RequiresPermission(allOf={android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_PRIVILEGED}) public void stopScan(@NonNull android.nearby.ScanCallback);
+    field @FlaggedApi("com.android.nearby.flags.powered_off_finding") public static final int POWERED_OFF_FINDING_MODE_DISABLED = 1; // 0x1
+    field @FlaggedApi("com.android.nearby.flags.powered_off_finding") public static final int POWERED_OFF_FINDING_MODE_ENABLED = 2; // 0x2
+    field @FlaggedApi("com.android.nearby.flags.powered_off_finding") public static final int POWERED_OFF_FINDING_MODE_UNSUPPORTED = 0; // 0x0
   }
 
   public final class OffloadCapability implements android.os.Parcelable {
@@ -500,6 +506,7 @@ package android.net.thread {
     method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_NETWORK_STATE, "android.permission.THREAD_NETWORK_PRIVILEGED"}) public void registerOperationalDatasetCallback(@NonNull java.util.concurrent.Executor, @NonNull android.net.thread.ThreadNetworkController.OperationalDatasetCallback);
     method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void registerStateCallback(@NonNull java.util.concurrent.Executor, @NonNull android.net.thread.ThreadNetworkController.StateCallback);
     method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void scheduleMigration(@NonNull android.net.thread.PendingOperationalDataset, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
+    method @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED") public void setEnabled(boolean, @NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<java.lang.Void,android.net.thread.ThreadNetworkException>);
     method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_NETWORK_STATE, "android.permission.THREAD_NETWORK_PRIVILEGED"}) public void unregisterOperationalDatasetCallback(@NonNull android.net.thread.ThreadNetworkController.OperationalDatasetCallback);
     method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void unregisterStateCallback(@NonNull android.net.thread.ThreadNetworkController.StateCallback);
     field public static final int DEVICE_ROLE_CHILD = 2; // 0x2
@@ -507,6 +514,9 @@ package android.net.thread {
     field public static final int DEVICE_ROLE_LEADER = 4; // 0x4
     field public static final int DEVICE_ROLE_ROUTER = 3; // 0x3
     field public static final int DEVICE_ROLE_STOPPED = 0; // 0x0
+    field public static final int STATE_DISABLED = 0; // 0x0
+    field public static final int STATE_DISABLING = 2; // 0x2
+    field public static final int STATE_ENABLED = 1; // 0x1
     field public static final int THREAD_VERSION_1_3 = 4; // 0x4
   }
 
@@ -518,6 +528,7 @@ package android.net.thread {
   public static interface ThreadNetworkController.StateCallback {
     method public void onDeviceRoleChanged(int);
     method public default void onPartitionIdChanged(long);
+    method public default void onThreadEnableStateChanged(int);
   }
 
   @FlaggedApi("com.android.net.thread.flags.thread_enabled") public class ThreadNetworkException extends java.lang.Exception {
@@ -530,8 +541,10 @@ package android.net.thread {
     field public static final int ERROR_REJECTED_BY_PEER = 8; // 0x8
     field public static final int ERROR_RESOURCE_EXHAUSTED = 10; // 0xa
     field public static final int ERROR_RESPONSE_BAD_FORMAT = 9; // 0x9
+    field public static final int ERROR_THREAD_DISABLED = 12; // 0xc
     field public static final int ERROR_TIMEOUT = 3; // 0x3
     field public static final int ERROR_UNAVAILABLE = 4; // 0x4
+    field public static final int ERROR_UNKNOWN = 11; // 0xb
     field public static final int ERROR_UNSUPPORTED_CHANNEL = 7; // 0x7
   }
 

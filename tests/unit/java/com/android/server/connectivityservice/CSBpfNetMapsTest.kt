@@ -38,6 +38,7 @@ import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @IgnoreUpTo(Build.VERSION_CODES.S_V2) // Bpf only supports in T+.

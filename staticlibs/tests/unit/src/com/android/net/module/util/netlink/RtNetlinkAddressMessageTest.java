@@ -42,6 +42,7 @@ import libcore.util.HexEncoding;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -175,6 +176,57 @@ public class RtNetlinkAddressMessageTest {
                 TEST_LINK_LOCAL, (short) 64 /* prefix len */, IFA_F_PERMANENT /* flags */,
                 (byte) RT_SCOPE_LINK /* scope */, 23 /* ifindex */,
                 (long) 0xFFFFFFFF /* preferred */, (long) 0xFFFFFFFF /* valid */);
+        assertArrayEquals(expectedNewAddress, bytes);
+    }
+
+    @Test
+    public void testCreateRtmNewAddressMessage_IPv4Address() {
+        // Hexadecimal representation of our created packet.
+        final String expectedNewAddressHex =
+                // struct nlmsghdr
+                "4c000000"      // length = 76
+                + "1400"        // type = 20 (RTM_NEWADDR)
+                + "0501"        // flags = NLM_F_ACK | NLM_F_REQUEST | NLM_F_REPLACE
+                + "01000000"    // seqno = 1
+                + "00000000"    // pid = 0 (send to kernel)
+                // struct IfaddrMsg
+                + "02"          // family = inet
+                + "18"          // prefix len = 24
+                + "00"          // flags = 0
+                + "00"          // scope = RT_SCOPE_UNIVERSE
+                + "14000000"    // ifindex = 20
+                // struct nlattr: IFA_ADDRESS
+                + "0800"        // len
+                + "0100"        // type
+                + "C0A80491"    // IPv4 address = 192.168.4.145
+                // struct nlattr: IFA_CACHEINFO
+                + "1400"        // len
+                + "0600"        // type
+                + "C0A80000"    // preferred = 43200s
+                + "C0A80000"    // valid = 43200s
+                + "00000000"    // cstamp
+                + "00000000"    // tstamp
+                // struct nlattr: IFA_FLAGS
+                + "0800"        // len
+                + "0800"        // type
+                + "00000000"    // flags = 0
+                // struct nlattr: IFA_LOCAL
+                + "0800"        // len
+                + "0200"        // type
+                + "C0A80491"    // local address = 192.168.4.145
+                // struct nlattr: IFA_BROADCAST
+                + "0800"        // len
+                + "0400"        // type
+                + "C0A804FF";   // broadcast address = 192.168.4.255
+        final byte[] expectedNewAddress =
+                HexEncoding.decode(expectedNewAddressHex.toCharArray(), false);
+
+        final Inet4Address ipAddress =
+                (Inet4Address) InetAddresses.parseNumericAddress("192.168.4.145");
+        final byte[] bytes = RtNetlinkAddressMessage.newRtmNewAddressMessage(1 /* seqno */,
+                ipAddress, (short) 24 /* prefix len */, 0 /* flags */,
+                (byte) RT_SCOPE_UNIVERSE /* scope */, 20 /* ifindex */,
+                (long) 0xA8C0 /* preferred */, (long) 0xA8C0 /* valid */);
         assertArrayEquals(expectedNewAddress, bytes);
     }
 

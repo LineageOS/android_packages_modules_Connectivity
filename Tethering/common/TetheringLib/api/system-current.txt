@@ -95,13 +95,16 @@ package android.net {
     method public default void onUpstreamChanged(@Nullable android.net.Network);
   }
 
-  public static class TetheringManager.TetheringRequest {
+  public static final class TetheringManager.TetheringRequest implements android.os.Parcelable {
+    method @FlaggedApi("com.android.net.flags.tethering_request_with_soft_ap_config") public int describeContents();
     method @Nullable public android.net.LinkAddress getClientStaticIpv4Address();
     method public int getConnectivityScope();
     method @Nullable public android.net.LinkAddress getLocalIpv4Address();
     method public boolean getShouldShowEntitlementUi();
     method public int getTetheringType();
     method public boolean isExemptFromEntitlementCheck();
+    method @FlaggedApi("com.android.net.flags.tethering_request_with_soft_ap_config") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.net.flags.tethering_request_with_soft_ap_config") @NonNull public static final android.os.Parcelable.Creator<android.net.TetheringManager.TetheringRequest> CREATOR;
   }
 
   public static class TetheringManager.TetheringRequest.Builder {

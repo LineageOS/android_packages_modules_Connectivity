@@ -10,6 +10,7 @@
 // TODO: remove this hack when there is a better solution for jni_libs that includes
 // dependent libraries.
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }

@@ -17,11 +17,14 @@
 package com.android.server.connectivity.mdns;
 
 import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
+import static com.android.server.connectivity.mdns.MdnsInterfaceAdvertiser.CONFLICT_HOST;
+import static com.android.server.connectivity.mdns.MdnsInterfaceAdvertiser.CONFLICT_SERVICE;
 import static com.android.server.connectivity.mdns.MdnsRecord.MAX_LABEL_LENGTH;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresApi;
+import android.content.Context;
 import android.net.LinkAddress;
 import android.net.Network;
 import android.net.nsd.NsdManager;
@@ -30,13 +33,16 @@ import android.net.nsd.OffloadEngine;
 import android.net.nsd.OffloadServiceInfo;
 import android.os.Build;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.SharedLog;
+import com.android.server.connectivity.ConnectivityResources;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.util.ArrayList;
@@ -44,6 +50,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -83,6 +90,7 @@ public class MdnsAdvertiser {
     private final Map<String, List<OffloadServiceInfoWrapper>> mInterfaceOffloadServices =
             new ArrayMap<>();
     private final MdnsFeatureFlags mMdnsFeatureFlags;
+    private final Map<String, Integer> mServiceTypeToOffloadPriority;
 
     /**
      * Dependencies for {@link MdnsAdvertiser}, useful for testing.
@@ -146,7 +154,9 @@ public class MdnsAdvertiser {
                 mSharedLog.wtf("Register succeeded for unknown registration");
                 return;
             }
-            if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled) {
+            if (mMdnsFeatureFlags.mIsMdnsOffloadFeatureEnabled
+                    // TODO: Enable offload when the serviceInfo contains a custom host.
+                    && TextUtils.isEmpty(registration.getServiceInfo().getHostname())) {
                 final String interfaceName = advertiser.getSocketInterfaceName();
                 final List<OffloadServiceInfoWrapper> existingOffloadServiceInfoWrappers =
                         mInterfaceOffloadServices.computeIfAbsent(interfaceName,
@@ -174,8 +184,11 @@ public class MdnsAdvertiser {
         }
 
         @Override
-        public void onServiceConflict(@NonNull MdnsInterfaceAdvertiser advertiser, int serviceId) {
-            mSharedLog.i("Found conflict, restarted probing for service " + serviceId);
+        public void onServiceConflict(@NonNull MdnsInterfaceAdvertiser advertiser, int serviceId,
+                int conflictType) {
+            mSharedLog.i("Found conflict, restarted probing for service "
+                    + serviceId + " "
+                    + conflictType);
 
             final Registration registration = mRegistrations.get(serviceId);
             if (registration == null) return;
@@ -200,10 +213,22 @@ public class MdnsAdvertiser {
                 return;
             }
 
-            // Conflict was found during probing; rename once to find a name that has no conflict
-            registration.updateForConflict(
-                    registration.makeNewServiceInfoForConflict(1 /* renameCount */),
-                    1 /* renameCount */);
+            if ((conflictType & CONFLICT_SERVICE) != 0) {
+                // Service conflict was found during probing; rename once to find a name that has no
+                // conflict
+                registration.updateForServiceConflict(
+                        registration.makeNewServiceInfoForServiceConflict(1 /* renameCount */),
+                        1 /* renameCount */);
+            }
+
+            if ((conflictType & CONFLICT_HOST) != 0) {
+                // Host conflict was found during probing; rename once to find a name that has no
+                // conflict
+                registration.updateForHostConflict(
+                        registration.makeNewServiceInfoForHostConflict(1 /* renameCount */),
+                        1 /* renameCount */);
+            }
+
             registration.mConflictDuringProbingCount++;
 
             // Keep renaming if the new name conflicts in local registrations
@@ -226,23 +251,54 @@ public class MdnsAdvertiser {
         }
     };
 
-    private boolean hasAnyConflict(
+    private boolean hasAnyServiceConflict(
             @NonNull BiPredicate<Network, InterfaceAdvertiserRequest> applicableAdvertiserFilter,
-            @NonNull NsdServiceInfo newInfo) {
-        return any(mAdvertiserRequests, (network, adv) ->
-                applicableAdvertiserFilter.test(network, adv) && adv.hasConflict(newInfo));
+            @NonNull NsdServiceInfo newInfo,
+            @NonNull Registration originalRegistration) {
+        return any(
+                mAdvertiserRequests,
+                (network, adv) ->
+                        applicableAdvertiserFilter.test(network, adv)
+                                && adv.hasServiceConflict(newInfo, originalRegistration));
+    }
+
+    private boolean hasAnyHostConflict(
+            @NonNull BiPredicate<Network, InterfaceAdvertiserRequest> applicableAdvertiserFilter,
+            @NonNull NsdServiceInfo newInfo,
+            int clientUid) {
+        // Check if it conflicts with custom hosts.
+        if (any(
+                mAdvertiserRequests,
+                (network, adv) ->
+                        applicableAdvertiserFilter.test(network, adv)
+                                && adv.hasHostConflict(newInfo, clientUid))) {
+            return true;
+        }
+        // Check if it conflicts with the default hostname.
+        return MdnsUtils.equalsIgnoreDnsCase(newInfo.getHostname(), mDeviceHostName[0]);
     }
 
     private void updateRegistrationUntilNoConflict(
             @NonNull BiPredicate<Network, InterfaceAdvertiserRequest> applicableAdvertiserFilter,
             @NonNull Registration registration) {
-        int renameCount = 0;
         NsdServiceInfo newInfo = registration.getServiceInfo();
-        while (hasAnyConflict(applicableAdvertiserFilter, newInfo)) {
-            renameCount++;
-            newInfo = registration.makeNewServiceInfoForConflict(renameCount);
+
+        int renameServiceCount = 0;
+        while (hasAnyServiceConflict(applicableAdvertiserFilter, newInfo, registration)) {
+            renameServiceCount++;
+            newInfo = registration.makeNewServiceInfoForServiceConflict(renameServiceCount);
         }
-        registration.updateForConflict(newInfo, renameCount);
+        registration.updateForServiceConflict(newInfo, renameServiceCount);
+
+        if (!TextUtils.isEmpty(registration.getServiceInfo().getHostname())) {
+            int renameHostCount = 0;
+            while (hasAnyHostConflict(
+                    applicableAdvertiserFilter, newInfo, registration.mClientUid)) {
+                renameHostCount++;
+                newInfo = registration.makeNewServiceInfoForHostConflict(renameHostCount);
+            }
+            registration.updateForHostConflict(newInfo, renameHostCount);
+        }
     }
 
     private void maybeSendOffloadStop(final String interfaceName, int serviceId) {
@@ -321,17 +377,34 @@ public class MdnsAdvertiser {
 
         /**
          * Return whether using the proposed new {@link NsdServiceInfo} to add a registration would
-         * cause a conflict in this {@link InterfaceAdvertiserRequest}.
+         * cause a conflict of the service in this {@link InterfaceAdvertiserRequest}.
          */
-        boolean hasConflict(@NonNull NsdServiceInfo newInfo) {
-            return getConflictingService(newInfo) >= 0;
+        boolean hasServiceConflict(
+                @NonNull NsdServiceInfo newInfo, @NonNull Registration originalRegistration) {
+            return getConflictingRegistrationDueToService(newInfo, originalRegistration) >= 0;
         }
 
         /**
-         * Get the ID of a conflicting service, or -1 if none.
+         * Return whether using the proposed new {@link NsdServiceInfo} to add a registration would
+         * cause a conflict of the host in this {@link InterfaceAdvertiserRequest}.
+         *
+         * @param clientUid UID of the user who wants to advertise the serviceInfo.
          */
-        int getConflictingService(@NonNull NsdServiceInfo info) {
+        boolean hasHostConflict(@NonNull NsdServiceInfo newInfo, int clientUid) {
+            return getConflictingRegistrationDueToHost(newInfo, clientUid) >= 0;
+        }
+
+        /** Get the ID of a conflicting registration due to service, or -1 if none. */
+        int getConflictingRegistrationDueToService(
+                @NonNull NsdServiceInfo info, @NonNull Registration originalRegistration) {
+            if (TextUtils.isEmpty(info.getServiceName())) {
+                return -1;
+            }
             for (int i = 0; i < mPendingRegistrations.size(); i++) {
+                // Never conflict with itself
+                if (mPendingRegistrations.valueAt(i) == originalRegistration) {
+                    continue;
+                }
                 final NsdServiceInfo other = mPendingRegistrations.valueAt(i).getServiceInfo();
                 if (MdnsUtils.equalsIgnoreDnsCase(info.getServiceName(), other.getServiceName())
                         && MdnsUtils.equalsIgnoreDnsCase(info.getServiceType(),
@@ -343,16 +416,41 @@ public class MdnsAdvertiser {
         }
 
         /**
+         * Get the ID of a conflicting registration due to host, or -1 if none.
+         *
+         * <p>It's valid that multiple registrations from the same user are using the same hostname.
+         *
+         * <p>If there's already another registration with the same hostname requested by another
+         * user, this is considered a conflict.
+         */
+        int getConflictingRegistrationDueToHost(@NonNull NsdServiceInfo info, int clientUid) {
+            if (TextUtils.isEmpty(info.getHostname())) {
+                return -1;
+            }
+            for (int i = 0; i < mPendingRegistrations.size(); i++) {
+                final Registration otherRegistration = mPendingRegistrations.valueAt(i);
+                final NsdServiceInfo otherInfo = otherRegistration.getServiceInfo();
+                if (clientUid != otherRegistration.mClientUid
+                        && MdnsUtils.equalsIgnoreDnsCase(
+                                info.getHostname(), otherInfo.getHostname())) {
+                    return mPendingRegistrations.keyAt(i);
+                }
+            }
+            return -1;
+        }
+
+        /**
          * Add a service to advertise.
          *
-         * Conflicts must be checked via {@link #getConflictingService} before attempting to add.
+         * <p>Conflicts must be checked via {@link #getConflictingRegistrationDueToService} and
+         * {@link #getConflictingRegistrationDueToHost} before attempting to add.
          */
         void addService(int id, @NonNull Registration registration) {
             mPendingRegistrations.put(id, registration);
             for (int i = 0; i < mAdvertisers.size(); i++) {
                 try {
                     mAdvertisers.valueAt(i).addService(id, registration.getServiceInfo(),
-                            registration.getSubtype());
+                            registration.getAdvertisingOptions());
                 } catch (NameConflictException e) {
                     mSharedLog.wtf("Name conflict adding services that should have unique names",
                             e);
@@ -367,7 +465,8 @@ public class MdnsAdvertiser {
         void updateService(int id, @NonNull Registration registration) {
             mPendingRegistrations.put(id, registration);
             for (int i = 0; i < mAdvertisers.size(); i++) {
-                mAdvertisers.valueAt(i).updateService(id, registration.getSubtype());
+                mAdvertisers.valueAt(i).updateService(
+                        id, registration.getServiceInfo().getSubtypes());
             }
         }
 
@@ -417,7 +516,7 @@ public class MdnsAdvertiser {
                 final Registration registration = mPendingRegistrations.valueAt(i);
                 try {
                     advertiser.addService(mPendingRegistrations.keyAt(i),
-                            registration.getServiceInfo(), registration.getSubtype());
+                            registration.getServiceInfo(), registration.getAdvertisingOptions());
                 } catch (NameConflictException e) {
                     mSharedLog.wtf("Name conflict adding services that should have unique names",
                             e);
@@ -479,38 +578,45 @@ public class MdnsAdvertiser {
     }
 
     private static class Registration {
-        @NonNull
-        final String mOriginalName;
+        @Nullable
+        final String mOriginalServiceName;
+        @Nullable
+        final String mOriginalHostname;
         boolean mNotifiedRegistrationSuccess;
-        private int mConflictCount;
+        private int mServiceNameConflictCount;
+        private int mHostnameConflictCount;
         @NonNull
         private NsdServiceInfo mServiceInfo;
-        @Nullable
-        private String mSubtype;
-
+        final int mClientUid;
+        private final MdnsAdvertisingOptions mAdvertisingOptions;
         int mConflictDuringProbingCount;
         int mConflictAfterProbingCount;
 
-        private Registration(@NonNull NsdServiceInfo serviceInfo, @Nullable String subtype) {
-            this.mOriginalName = serviceInfo.getServiceName();
+        private Registration(@NonNull NsdServiceInfo serviceInfo, int clientUid,
+                @NonNull MdnsAdvertisingOptions advertisingOptions) {
+            this.mOriginalServiceName = serviceInfo.getServiceName();
+            this.mOriginalHostname = serviceInfo.getHostname();
             this.mServiceInfo = serviceInfo;
-            this.mSubtype = subtype;
+            this.mClientUid = clientUid;
+            this.mAdvertisingOptions = advertisingOptions;
+        }
+
+        /** Check if the new {@link NsdServiceInfo} doesn't update any data other than subtypes. */
+        public boolean isSubtypeOnlyUpdate(@NonNull NsdServiceInfo newInfo) {
+            return Objects.equals(newInfo.getServiceName(), mOriginalServiceName)
+                    && Objects.equals(newInfo.getServiceType(), mServiceInfo.getServiceType())
+                    && newInfo.getPort() == mServiceInfo.getPort()
+                    && Objects.equals(newInfo.getHostname(), mOriginalHostname)
+                    && Objects.equals(newInfo.getHostAddresses(), mServiceInfo.getHostAddresses())
+                    && Objects.equals(newInfo.getNetwork(), mServiceInfo.getNetwork());
         }
 
         /**
-         * Matches between the NsdServiceInfo in the Registration and the provided argument.
+         * Update subTypes for the registration.
          */
-        public boolean matches(@Nullable NsdServiceInfo newInfo) {
-            return Objects.equals(newInfo.getServiceName(), mOriginalName) && Objects.equals(
-                    newInfo.getServiceType(), mServiceInfo.getServiceType()) && Objects.equals(
-                    newInfo.getNetwork(), mServiceInfo.getNetwork());
-        }
-
-        /**
-         * Update subType for the registration.
-         */
-        public void updateSubtype(@Nullable String subtype) {
-            this.mSubtype = subtype;
+        public void updateSubtypes(@NonNull Set<String> subtypes) {
+            mServiceInfo = new NsdServiceInfo(mServiceInfo);
+            mServiceInfo.setSubtypes(subtypes);
         }
 
         /**
@@ -519,8 +625,19 @@ public class MdnsAdvertiser {
          * @param newInfo New service info to use.
          * @param renameCount How many renames were done before reaching the current name.
          */
-        private void updateForConflict(@NonNull NsdServiceInfo newInfo, int renameCount) {
-            mConflictCount += renameCount;
+        private void updateForServiceConflict(@NonNull NsdServiceInfo newInfo, int renameCount) {
+            mServiceNameConflictCount += renameCount;
+            mServiceInfo = newInfo;
+        }
+
+        /**
+         * Update the registration to use a different host name, after a conflict was found.
+         *
+         * @param newInfo New service info to use.
+         * @param renameCount How many renames were done before reaching the current name.
+         */
+        private void updateForHostConflict(@NonNull NsdServiceInfo newInfo, int renameCount) {
+            mHostnameConflictCount += renameCount;
             mServiceInfo = newInfo;
         }
 
@@ -536,29 +653,47 @@ public class MdnsAdvertiser {
          * @param renameCount How much to increase the number suffix for this conflict.
          */
         @NonNull
-        public NsdServiceInfo makeNewServiceInfoForConflict(int renameCount) {
+        public NsdServiceInfo makeNewServiceInfoForServiceConflict(int renameCount) {
             // In case of conflict choose a different service name. After the first conflict use
             // "Name (2)", then "Name (3)" etc.
             // TODO: use a hidden method in NsdServiceInfo once MdnsAdvertiser is moved to service-t
-            final NsdServiceInfo newInfo = new NsdServiceInfo();
+            final NsdServiceInfo newInfo = new NsdServiceInfo(mServiceInfo);
             newInfo.setServiceName(getUpdatedServiceName(renameCount));
-            newInfo.setServiceType(mServiceInfo.getServiceType());
-            for (Map.Entry<String, byte[]> attr : mServiceInfo.getAttributes().entrySet()) {
-                newInfo.setAttribute(attr.getKey(),
-                        attr.getValue() == null ? null : new String(attr.getValue()));
-            }
-            newInfo.setHost(mServiceInfo.getHost());
-            newInfo.setPort(mServiceInfo.getPort());
-            newInfo.setNetwork(mServiceInfo.getNetwork());
-            // interfaceIndex is not set when registering
+            return newInfo;
+        }
+
+        /**
+         * Make a new hostname for the registration, after a conflict was found.
+         *
+         * <p>If a name conflict was found during probing or because different advertising requests
+         * used the same name, the registration is attempted again with a new name (here using a
+         * number suffix, -1, -2, etc). Registration success is notified once probing succeeds with
+         * a new name.
+         *
+         * @param renameCount How much to increase the number suffix for this conflict.
+         */
+        @NonNull
+        public NsdServiceInfo makeNewServiceInfoForHostConflict(int renameCount) {
+            // In case of conflict choose a different hostname. After the first conflict use
+            // "Name-2", then "Name-3" etc.
+            final NsdServiceInfo newInfo = new NsdServiceInfo(mServiceInfo);
+            newInfo.setHostname(getUpdatedHostname(renameCount));
             return newInfo;
         }
 
         private String getUpdatedServiceName(int renameCount) {
-            final String suffix = " (" + (mConflictCount + renameCount + 1) + ")";
-            final String truncatedServiceName = MdnsUtils.truncateServiceName(mOriginalName,
+            final String suffix = " (" + (mServiceNameConflictCount + renameCount + 1) + ")";
+            final String truncatedServiceName = MdnsUtils.truncateServiceName(mOriginalServiceName,
                     MAX_LABEL_LENGTH - suffix.length());
             return truncatedServiceName + suffix;
+        }
+
+        private String getUpdatedHostname(int renameCount) {
+            final String suffix = "-" + (mHostnameConflictCount + renameCount + 1);
+            final String truncatedHostname =
+                    MdnsUtils.truncateServiceName(
+                            mOriginalHostname, MAX_LABEL_LENGTH - suffix.length());
+            return truncatedHostname + suffix;
         }
 
         @NonNull
@@ -566,9 +701,9 @@ public class MdnsAdvertiser {
             return mServiceInfo;
         }
 
-        @Nullable
-        public String getSubtype() {
-            return mSubtype;
+        @NonNull
+        public MdnsAdvertisingOptions getAdvertisingOptions() {
+            return mAdvertisingOptions;
         }
     }
 
@@ -637,14 +772,16 @@ public class MdnsAdvertiser {
 
     public MdnsAdvertiser(@NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
             @NonNull AdvertiserCallback cb, @NonNull SharedLog sharedLog,
-            @NonNull MdnsFeatureFlags mDnsFeatureFlags) {
-        this(looper, socketProvider, cb, new Dependencies(), sharedLog, mDnsFeatureFlags);
+            @NonNull MdnsFeatureFlags mDnsFeatureFlags, @NonNull Context context) {
+        this(looper, socketProvider, cb, new Dependencies(), sharedLog, mDnsFeatureFlags,
+                context);
     }
 
     @VisibleForTesting
     MdnsAdvertiser(@NonNull Looper looper, @NonNull MdnsSocketProvider socketProvider,
             @NonNull AdvertiserCallback cb, @NonNull Dependencies deps,
-            @NonNull SharedLog sharedLog, @NonNull MdnsFeatureFlags mDnsFeatureFlags) {
+            @NonNull SharedLog sharedLog, @NonNull MdnsFeatureFlags mDnsFeatureFlags,
+            @NonNull Context context) {
         mLooper = looper;
         mCb = cb;
         mSocketProvider = socketProvider;
@@ -652,6 +789,31 @@ public class MdnsAdvertiser {
         mDeviceHostName = deps.generateHostname();
         mSharedLog = sharedLog;
         mMdnsFeatureFlags = mDnsFeatureFlags;
+        final ConnectivityResources res = new ConnectivityResources(context);
+        mServiceTypeToOffloadPriority = parseOffloadPriorityList(
+                res.get().getStringArray(R.array.config_nsdOffloadServicesPriority), sharedLog);
+    }
+
+    private static Map<String, Integer> parseOffloadPriorityList(
+            @NonNull String[] resValues, SharedLog sharedLog) {
+        final Map<String, Integer> priorities = new ArrayMap<>(resValues.length);
+        for (String entry : resValues) {
+            final String[] priorityAndType = entry.split(":", 2);
+            if (priorityAndType.length != 2) {
+                sharedLog.wtf("Invalid config_nsdOffloadServicesPriority ignored: " + entry);
+                continue;
+            }
+
+            final int priority;
+            try {
+                priority = Integer.parseInt(priorityAndType[0]);
+            } catch (NumberFormatException e) {
+                sharedLog.wtf("Invalid priority in config_nsdOffloadServicesPriority: " + entry);
+                continue;
+            }
+            priorities.put(MdnsUtils.toDnsLowerCase(priorityAndType[1]), priority);
+        }
+        return priorities;
     }
 
     private void checkThread() {
@@ -665,14 +827,15 @@ public class MdnsAdvertiser {
      *
      * @param id A unique ID for the service.
      * @param service The service info to advertise.
-     * @param subtype An optional subtype to advertise the service with.
      * @param advertisingOptions The advertising options.
+     * @param clientUid The UID who wants to advertise the service.
      */
-    public void addOrUpdateService(int id, NsdServiceInfo service, @Nullable String subtype,
-            MdnsAdvertisingOptions advertisingOptions) {
+    public void addOrUpdateService(int id, NsdServiceInfo service,
+            MdnsAdvertisingOptions advertisingOptions, int clientUid) {
         checkThread();
         final Registration existingRegistration = mRegistrations.get(id);
         final Network network = service.getNetwork();
+        final Set<String> subtypes = service.getSubtypes();
         Registration registration;
         if (advertisingOptions.isOnlyUpdate()) {
             if (existingRegistration == null) {
@@ -680,17 +843,17 @@ public class MdnsAdvertiser {
                 mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
                 return;
             }
-            if (!(existingRegistration.matches(service))) {
+            if (!(existingRegistration.isSubtypeOnlyUpdate(service))) {
                 mSharedLog.e("Update request can only update subType, serviceInfo: " + service
                         + ", existing serviceInfo: " + existingRegistration.getServiceInfo());
                 mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
                 return;
 
             }
-            mSharedLog.i("Update service " + service + " with ID " + id + " and subtype " + subtype
-                    + " advertisingOptions " + advertisingOptions);
+            mSharedLog.i("Update service " + service + " with ID " + id + " and subtypes "
+                    + subtypes + " advertisingOptions " + advertisingOptions);
             registration = existingRegistration;
-            registration.updateSubtype(subtype);
+            registration.updateSubtypes(subtypes);
         } else {
             if (existingRegistration != null) {
                 mSharedLog.e("Adding duplicate registration for " + service);
@@ -698,9 +861,9 @@ public class MdnsAdvertiser {
                 mCb.onRegisterServiceFailed(id, NsdManager.FAILURE_INTERNAL_ERROR);
                 return;
             }
-            mSharedLog.i("Adding service " + service + " with ID " + id + " and subtype " + subtype
-                    + " advertisingOptions " + advertisingOptions);
-            registration = new Registration(service, subtype);
+            mSharedLog.i("Adding service " + service + " with ID " + id + " and subtypes "
+                    + subtypes + " advertisingOptions " + advertisingOptions);
+            registration = new Registration(service, clientUid, advertisingOptions);
             final BiPredicate<Network, InterfaceAdvertiserRequest> checkConflictFilter;
             if (network == null) {
                 // If registering on all networks, no advertiser must have conflicts
@@ -793,21 +956,17 @@ public class MdnsAdvertiser {
     private OffloadServiceInfoWrapper createOffloadService(int serviceId,
             @NonNull Registration registration, byte[] rawOffloadPacket) {
         final NsdServiceInfo nsdServiceInfo = registration.getServiceInfo();
-        final List<String> subTypes = new ArrayList<>();
-        String subType = registration.getSubtype();
-        if (subType != null) {
-            subTypes.add(subType);
-        }
+        final Integer mapPriority = mServiceTypeToOffloadPriority.get(
+                MdnsUtils.toDnsLowerCase(nsdServiceInfo.getServiceType()));
+        // Higher values of priority are less prioritized
+        final int priority = mapPriority == null ? Integer.MAX_VALUE : mapPriority;
         final OffloadServiceInfo offloadServiceInfo = new OffloadServiceInfo(
                 new OffloadServiceInfo.Key(nsdServiceInfo.getServiceName(),
                         nsdServiceInfo.getServiceType()),
-                subTypes,
+                new ArrayList<>(nsdServiceInfo.getSubtypes()),
                 String.join(".", mDeviceHostName),
                 rawOffloadPacket,
-                // TODO: define overlayable resources in
-                // ServiceConnectivityResources that set the priority based on
-                // service type.
-                0 /* priority */,
+                priority,
                 // TODO: set the offloadType based on the callback timing.
                 OffloadEngine.OFFLOAD_TYPE_REPLY);
         return new OffloadServiceInfoWrapper(serviceId, offloadServiceInfo);

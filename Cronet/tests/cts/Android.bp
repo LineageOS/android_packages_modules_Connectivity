@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -46,7 +47,9 @@ android_library {
         "framework-connectivity",
         "org.apache.http.legacy",
     ],
-    lint: { test: true }
+    lint: {
+        test: true,
+    },
 }
 
 android_test {
@@ -62,6 +65,7 @@ android_test {
     test_suites: [
         "cts",
         "general-tests",
-        "mts-tethering"
+        "mts-tethering",
+        "mcts-tethering",
     ],
 }

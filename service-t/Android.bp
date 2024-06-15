@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -31,6 +32,7 @@ filegroup {
     ],
     visibility: ["//visibility:private"],
 }
+
 // The above filegroup can be used to specify different sources depending
 // on the branch, while minimizing merge conflicts in the rest of the
 // build rules.
@@ -73,11 +75,15 @@ java_library {
         "com.android.tethering",
     ],
     visibility: [
+        "//frameworks/base/services/tests/VpnTests",
         "//frameworks/base/tests/vcn",
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Test building mDNS as a standalone, so that it can be imported into other repositories as-is.
@@ -94,11 +100,12 @@ java_library {
     min_sdk_version: "21",
     lint: {
         error_checks: ["NewApi"],
+
     },
     srcs: [
         "src/com/android/server/connectivity/mdns/**/*.java",
         ":framework-connectivity-t-mdns-standalone-build-sources",
-        ":service-mdns-droidstubs"
+        ":service-mdns-droidstubs",
     ],
     exclude_srcs: [
         "src/com/android/server/connectivity/mdns/internal/SocketNetlinkMonitor.java",
@@ -127,7 +134,7 @@ droidstubs {
     srcs: ["src/com/android/server/connectivity/mdns/SocketNetLinkMonitorFactory.java"],
     libs: [
         "net-utils-device-common-mdns-standalone-build-test",
-        "service-connectivity-tiramisu-pre-jarjar"
+        "service-connectivity-tiramisu-pre-jarjar",
     ],
     visibility: [
         "//visibility:private",

@@ -20,6 +20,7 @@ import static android.system.OsConstants.AF_INET6;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -62,6 +63,20 @@ public class NduseroptMessage extends NetlinkMessage {
 
     /** The IP address that sent the packet containing the option. */
     public final InetAddress srcaddr;
+
+    @VisibleForTesting
+    public NduseroptMessage(@NonNull final StructNlMsgHdr header, byte family, int optslen,
+            int ifindex, byte icmptype, byte icmpcode, @NonNull final NdOption option,
+            final InetAddress srcaddr) {
+        super(header);
+        this.family = family;
+        this.opts_len = optslen;
+        this.ifindex = ifindex;
+        this.icmp_type = icmptype;
+        this.icmp_code = icmpcode;
+        this.option = option;
+        this.srcaddr = srcaddr;
+    }
 
     NduseroptMessage(@NonNull StructNlMsgHdr header, @NonNull ByteBuffer buf)
             throws UnknownHostException {

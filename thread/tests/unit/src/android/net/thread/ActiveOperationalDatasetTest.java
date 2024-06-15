@@ -33,11 +33,7 @@ import com.google.common.primitives.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.security.SecureRandom;
-import java.util.Random;
 
 /** Unit tests for {@link ActiveOperationalDataset}. */
 @SmallTest
@@ -61,9 +57,6 @@ public class ActiveOperationalDatasetTest {
                                     + "53760F519A63BAFDDFFC80D2AF030F4F70656E5468726561"
                                     + "642D643961300102D9A00410A245479C836D551B9CA557F7"
                                     + "B9D351B40C0402A0FFF8");
-
-    @Mock private Random mockRandom;
-    @Mock private SecureRandom mockSecureRandom;
 
     @Before
     public void setUp() {

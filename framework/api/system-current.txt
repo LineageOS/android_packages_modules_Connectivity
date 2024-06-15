@@ -307,7 +307,6 @@ package android.net {
     method @NonNull public int[] getAdministratorUids();
     method @Nullable public static String getCapabilityCarrierName(int);
     method @Nullable public String getSsid();
-    method @NonNull public java.util.Set<java.lang.Integer> getSubscriptionIds();
     method @NonNull public int[] getTransportTypes();
     method @Nullable public java.util.List<android.net.Network> getUnderlyingNetworks();
     method public boolean isPrivateDnsBroken();
@@ -373,7 +372,6 @@ package android.net {
 
   public static class NetworkRequest.Builder {
     method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_SIGNAL_STRENGTH_WAKEUP) public android.net.NetworkRequest.Builder setSignalStrength(int);
-    method @NonNull public android.net.NetworkRequest.Builder setSubscriptionIds(@NonNull java.util.Set<java.lang.Integer>);
   }
 
   public final class NetworkScore implements android.os.Parcelable {

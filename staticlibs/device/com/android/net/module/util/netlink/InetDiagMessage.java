@@ -24,14 +24,14 @@ import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 import static android.system.OsConstants.NETLINK_INET_DIAG;
 
-import static com.android.net.module.util.netlink.NetlinkConstants.NLMSG_DONE;
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DESTROY;
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DIAG_BY_FAMILY;
-import static com.android.net.module.util.netlink.NetlinkConstants.hexify;
+import static com.android.net.module.util.netlink.NetlinkConstants.SOCKDIAG_MSG_HEADER_SIZE;
 import static com.android.net.module.util.netlink.NetlinkConstants.stringForAddressFamily;
 import static com.android.net.module.util.netlink.NetlinkConstants.stringForProtocol;
 import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.NetlinkUtils.IO_TIMEOUT_MS;
+import static com.android.net.module.util.netlink.NetlinkUtils.SOCKET_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.NetlinkUtils.TCP_ALIVE_STATE_FILTER;
 import static com.android.net.module.util.netlink.NetlinkUtils.connectToKernel;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
@@ -59,8 +59,11 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -154,7 +157,8 @@ public class InetDiagMessage extends NetlinkMessage {
     }
 
     public StructInetDiagMsg inetDiagMsg;
-
+    // The netlink attributes.
+    public List<StructNlAttr> nlAttrs = new ArrayList<>();
     @VisibleForTesting
     public InetDiagMessage(@NonNull StructNlMsgHdr header) {
         super(header);
@@ -172,6 +176,19 @@ public class InetDiagMessage extends NetlinkMessage {
         if (msg.inetDiagMsg == null) {
             return null;
         }
+        final int payloadLength = header.nlmsg_len - SOCKDIAG_MSG_HEADER_SIZE;
+        final ByteBuffer payload = byteBuffer.slice();
+        while (payload.position() < payloadLength) {
+            final StructNlAttr attr = StructNlAttr.parse(payload);
+            // Stop parsing for truncated or malformed attribute
+            if (attr == null)  {
+                Log.wtf(TAG, "Got truncated or malformed attribute");
+                return null;
+            }
+
+            msg.nlAttrs.add(attr);
+        }
+
         return msg;
     }
 
@@ -265,7 +282,7 @@ public class InetDiagMessage extends NetlinkMessage {
         int uid = INVALID_UID;
         FileDescriptor fd = null;
         try {
-            fd = NetlinkUtils.netlinkSocketForProto(NETLINK_INET_DIAG);
+            fd = NetlinkUtils.netlinkSocketForProto(NETLINK_INET_DIAG, SOCKET_RECV_BUFSIZE);
             connectToKernel(fd);
             uid = lookupUid(protocol, local, remote, fd);
         } catch (ErrnoException | SocketException | IllegalArgumentException
@@ -307,9 +324,8 @@ public class InetDiagMessage extends NetlinkMessage {
         NetlinkUtils.receiveNetlinkAck(fd);
     }
 
-    private static void sendNetlinkDumpRequest(FileDescriptor fd, int proto, int states, int family)
-            throws InterruptedIOException, ErrnoException {
-        final byte[] dumpMsg = InetDiagMessage.inetDiagReqV2(
+    private static byte [] makeNetlinkDumpRequest(int proto, int states, int family) {
+        return InetDiagMessage.inetDiagReqV2(
                 proto,
                 null /* id */,
                 family,
@@ -318,51 +334,29 @@ public class InetDiagMessage extends NetlinkMessage {
                 0 /* pad */,
                 0 /* idiagExt */,
                 states);
-        NetlinkUtils.sendMessage(fd, dumpMsg, 0, dumpMsg.length, IO_TIMEOUT_MS);
     }
 
-    private static int processNetlinkDumpAndDestroySockets(FileDescriptor dumpFd,
+    private static int processNetlinkDumpAndDestroySockets(byte[] dumpReq,
             FileDescriptor destroyFd, int proto, Predicate<InetDiagMessage> filter)
-            throws InterruptedIOException, ErrnoException {
-        int destroyedSockets = 0;
-
-        while (true) {
-            final ByteBuffer buf = NetlinkUtils.recvMessage(
-                    dumpFd, DEFAULT_RECV_BUFSIZE, IO_TIMEOUT_MS);
-
-            while (buf.remaining() > 0) {
-                final int position = buf.position();
-                final NetlinkMessage nlMsg = NetlinkMessage.parse(buf, NETLINK_INET_DIAG);
-                if (nlMsg == null) {
-                    // Move to the position where parse started for error log.
-                    buf.position(position);
-                    Log.e(TAG, "Failed to parse netlink message: " + hexify(buf));
-                    break;
-                }
-
-                if (nlMsg.getHeader().nlmsg_type == NLMSG_DONE) {
-                    return destroyedSockets;
-                }
-
-                if (!(nlMsg instanceof InetDiagMessage)) {
-                    Log.wtf(TAG, "Received unexpected netlink message: " + nlMsg);
-                    continue;
-                }
-
-                final InetDiagMessage diagMsg = (InetDiagMessage) nlMsg;
-                if (filter.test(diagMsg)) {
-                    try {
-                        sendNetlinkDestroyRequest(destroyFd, proto, diagMsg);
-                        destroyedSockets++;
-                    } catch (InterruptedIOException | ErrnoException e) {
-                        if (!(e instanceof ErrnoException
-                                && ((ErrnoException) e).errno == ENOENT)) {
-                            Log.e(TAG, "Failed to destroy socket: diagMsg=" + diagMsg + ", " + e);
-                        }
+            throws SocketException, InterruptedIOException, ErrnoException {
+        AtomicInteger destroyedSockets = new AtomicInteger(0);
+        Consumer<InetDiagMessage> handleNlDumpMsg = (diagMsg) -> {
+            if (filter.test(diagMsg)) {
+                try {
+                    sendNetlinkDestroyRequest(destroyFd, proto, diagMsg);
+                    destroyedSockets.getAndIncrement();
+                } catch (InterruptedIOException | ErrnoException e) {
+                    if (!(e instanceof ErrnoException
+                            && ((ErrnoException) e).errno == ENOENT)) {
+                        Log.e(TAG, "Failed to destroy socket: diagMsg=" + diagMsg + ", " + e);
                     }
                 }
             }
-        }
+        };
+
+        NetlinkUtils.<InetDiagMessage>getAndProcessNetlinkDumpMessages(dumpReq,
+                NETLINK_INET_DIAG, InetDiagMessage.class, handleNlDumpMsg);
+        return destroyedSockets.get();
     }
 
     /**
@@ -420,31 +414,28 @@ public class InetDiagMessage extends NetlinkMessage {
 
     private static void destroySockets(int proto, int states, Predicate<InetDiagMessage> filter)
             throws ErrnoException, SocketException, InterruptedIOException {
-        FileDescriptor dumpFd = null;
         FileDescriptor destroyFd = null;
 
         try {
-            dumpFd = NetlinkUtils.createNetLinkInetDiagSocket();
             destroyFd = NetlinkUtils.createNetLinkInetDiagSocket();
-            connectToKernel(dumpFd);
             connectToKernel(destroyFd);
 
             for (int family : List.of(AF_INET, AF_INET6)) {
+                byte[] req = makeNetlinkDumpRequest(proto, states, family);
+
                 try {
-                    sendNetlinkDumpRequest(dumpFd, proto, states, family);
-                } catch (InterruptedIOException | ErrnoException e) {
-                    Log.e(TAG, "Failed to send netlink dump request: " + e);
-                    continue;
-                }
-                final int destroyedSockets = processNetlinkDumpAndDestroySockets(
-                        dumpFd, destroyFd, proto, filter);
-                Log.d(TAG, "Destroyed " + destroyedSockets + " sockets"
+                    final int destroyedSockets = processNetlinkDumpAndDestroySockets(
+                            req, destroyFd, proto, filter);
+                    Log.d(TAG, "Destroyed " + destroyedSockets + " sockets"
                         + ", proto=" + stringForProtocol(proto)
                         + ", family=" + stringForAddressFamily(family)
                         + ", states=" + states);
+                } catch (SocketException | InterruptedIOException | ErrnoException e) {
+                    Log.e(TAG, "Failed to send netlink dump request or receive messages: " + e);
+                    continue;
+                }
             }
         } finally {
-            closeSocketQuietly(dumpFd);
             closeSocketQuietly(destroyFd);
         }
     }

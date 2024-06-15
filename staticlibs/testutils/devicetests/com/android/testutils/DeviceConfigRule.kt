@@ -22,12 +22,12 @@ import android.provider.DeviceConfig
 import android.util.Log
 import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.FunctionalUtils.ThrowingRunnable
-import org.junit.rules.TestRule
-import org.junit.runner.Description
-import org.junit.runners.model.Statement
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
+import org.junit.rules.TestRule
+import org.junit.runner.Description
+import org.junit.runners.model.Statement
 
 private val TAG = DeviceConfigRule::class.simpleName
 
@@ -147,11 +147,11 @@ class DeviceConfigRule @JvmOverloads constructor(
         return tryTest {
             runAsShell(*readWritePermissions) {
                 DeviceConfig.addOnPropertiesChangedListener(
-                        DeviceConfig.NAMESPACE_CONNECTIVITY,
+                        namespace,
                         inlineExecutor,
                         listener)
                 DeviceConfig.setProperty(
-                        DeviceConfig.NAMESPACE_CONNECTIVITY,
+                        namespace,
                         key,
                         value,
                         false /* makeDefault */)

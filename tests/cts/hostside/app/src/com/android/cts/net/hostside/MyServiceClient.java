@@ -34,26 +34,30 @@ public class MyServiceClient {
 
     private Context mContext;
     private ServiceConnection mServiceConnection;
-    private IMyService mService;
+    private volatile IMyService mService;
+    private final ConditionVariable mServiceCondition = new ConditionVariable();
 
     public MyServiceClient(Context context) {
         mContext = context;
     }
 
-    public void bind() {
+    /**
+     * Binds to a service in the test app to communicate state.
+     * @param bindPriorityFlags Flags to influence the process-state of the bound app.
+     */
+    public void bind(int bindPriorityFlags) {
         if (mService != null) {
             throw new IllegalStateException("Already bound");
         }
-
-        final ConditionVariable cv = new ConditionVariable();
         mServiceConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 mService = IMyService.Stub.asInterface(service);
-                cv.open();
+                mServiceCondition.open();
             }
             @Override
             public void onServiceDisconnected(ComponentName name) {
+                mServiceCondition.close();
                 mService = null;
             }
         };
@@ -63,12 +67,8 @@ public class MyServiceClient {
         // Needs to use BIND_NOT_FOREGROUND so app2 does not run in
         // the same process state as app
         mContext.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE
-                | Context.BIND_NOT_FOREGROUND);
-        cv.block(TIMEOUT_MS);
-        if (mService == null) {
-            throw new IllegalStateException(
-                    "Could not bind to MyService service after " + TIMEOUT_MS + "ms");
-        }
+                | bindPriorityFlags);
+        ensureServiceConnection();
     }
 
     public void unbind() {
@@ -77,37 +77,56 @@ public class MyServiceClient {
         }
     }
 
+    private void ensureServiceConnection() {
+        if (mService != null) {
+            return;
+        }
+        mServiceCondition.block(TIMEOUT_MS);
+        if (mService == null) {
+            throw new IllegalStateException(
+                    "Could not bind to MyService service after " + TIMEOUT_MS + "ms");
+        }
+    }
+
     public void registerBroadcastReceiver() throws RemoteException {
+        ensureServiceConnection();
         mService.registerBroadcastReceiver();
     }
 
     public int getCounters(String receiverName, String action) throws RemoteException {
+        ensureServiceConnection();
         return mService.getCounters(receiverName, action);
     }
 
     public String checkNetworkStatus() throws RemoteException {
+        ensureServiceConnection();
         return mService.checkNetworkStatus();
     }
 
     public String getRestrictBackgroundStatus() throws RemoteException {
+        ensureServiceConnection();
         return mService.getRestrictBackgroundStatus();
     }
 
     public void sendNotification(int notificationId, String notificationType)
             throws RemoteException {
+        ensureServiceConnection();
         mService.sendNotification(notificationId, notificationType);
     }
 
     public void registerNetworkCallback(final NetworkRequest request, INetworkCallback cb)
             throws RemoteException {
+        ensureServiceConnection();
         mService.registerNetworkCallback(request, cb);
     }
 
     public void unregisterNetworkCallback() throws RemoteException {
+        ensureServiceConnection();
         mService.unregisterNetworkCallback();
     }
 
     public int scheduleJob(JobInfo jobInfo) throws RemoteException {
+        ensureServiceConnection();
         return mService.scheduleJob(jobInfo);
     }
 }

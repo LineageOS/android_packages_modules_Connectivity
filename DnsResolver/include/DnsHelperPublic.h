@@ -25,7 +25,8 @@ __BEGIN_DECLS
  * Perform any required initialization - including opening any required BPF maps. This function
  * needs to be called before using other functions of this library.
  *
- * Returns 0 on success, a negative POSIX error code (see errno.h) on other failures.
+ * Returns 0 on success, -EOPNOTSUPP when the function is called on the Android version before
+ * T. Returns a negative POSIX error code (see errno.h) on other failures.
  */
 int ADnsHelper_init();
 
@@ -36,7 +37,9 @@ int ADnsHelper_init();
  * |uid| is a Linux/Android UID to be queried. It is a combination of UserID and AppID.
  * |metered| indicates whether the uid is currently using a billing network.
  *
- * Returns 0(false)/1(true) on success, a negative POSIX error code (see errno.h) on other failures.
+ * Returns 0(false)/1(true) on success, -EUNATCH when the ADnsHelper_init is not called before
+ * calling this function. Returns a negative POSIX error code (see errno.h) on other failures
+ * that return from bpf syscall.
  */
 int ADnsHelper_isUidNetworkingBlocked(uid_t uid, bool metered);
 

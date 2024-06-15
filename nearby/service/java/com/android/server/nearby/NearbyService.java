@@ -35,12 +35,14 @@ import android.nearby.IBroadcastListener;
 import android.nearby.INearbyManager;
 import android.nearby.IScanListener;
 import android.nearby.NearbyManager;
+import android.nearby.PoweredOffFindingEphemeralId;
 import android.nearby.ScanRequest;
 import android.nearby.aidl.IOffloadCallback;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.nearby.injector.Injector;
+import com.android.server.nearby.managers.BluetoothFinderManager;
 import com.android.server.nearby.managers.BroadcastProviderManager;
 import com.android.server.nearby.managers.DiscoveryManager;
 import com.android.server.nearby.managers.DiscoveryProviderManager;
@@ -49,6 +51,8 @@ import com.android.server.nearby.presence.PresenceManager;
 import com.android.server.nearby.util.identity.CallerIdentity;
 import com.android.server.nearby.util.permissions.BroadcastPermissions;
 import com.android.server.nearby.util.permissions.DiscoveryPermissions;
+
+import java.util.List;
 
 /** Service implementing nearby functionality. */
 public class NearbyService extends INearbyManager.Stub {
@@ -79,6 +83,7 @@ public class NearbyService extends INearbyManager.Stub {
             };
     private final DiscoveryManager mDiscoveryProviderManager;
     private final BroadcastProviderManager mBroadcastProviderManager;
+    private final BluetoothFinderManager mBluetoothFinderManager;
 
     public NearbyService(Context context) {
         mContext = context;
@@ -90,6 +95,7 @@ public class NearbyService extends INearbyManager.Stub {
                 mNearbyConfiguration.refactorDiscoveryManager()
                         ? new DiscoveryProviderManager(context, mInjector)
                         : new DiscoveryProviderManagerLegacy(context, mInjector);
+        mBluetoothFinderManager = new BluetoothFinderManager();
     }
 
     @VisibleForTesting
@@ -146,6 +152,30 @@ public class NearbyService extends INearbyManager.Stub {
     @Override
     public void queryOffloadCapability(IOffloadCallback callback) {
         mDiscoveryProviderManager.queryOffloadCapability(callback);
+    }
+
+    @Override
+    public void setPoweredOffFindingEphemeralIds(List<PoweredOffFindingEphemeralId> eids) {
+        // Permissions check
+        enforceBluetoothPrivilegedPermission(mContext);
+
+        mBluetoothFinderManager.sendEids(eids);
+    }
+
+    @Override
+    public void setPoweredOffModeEnabled(boolean enabled) {
+        // Permissions check
+        enforceBluetoothPrivilegedPermission(mContext);
+
+        mBluetoothFinderManager.setPoweredOffFinderMode(enabled);
+    }
+
+    @Override
+    public boolean getPoweredOffModeEnabled() {
+        // Permissions check
+        enforceBluetoothPrivilegedPermission(mContext);
+
+        return mBluetoothFinderManager.getPoweredOffFinderMode();
     }
 
     /**

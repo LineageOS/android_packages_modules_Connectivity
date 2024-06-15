@@ -16,6 +16,8 @@
 
 package com.android.cts.net.hostside;
 
+import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+
 import static com.android.cts.net.hostside.Property.DOZE_MODE;
 import static com.android.cts.net.hostside.Property.NOT_LOW_RAM_DEVICE;
 
@@ -62,9 +64,9 @@ abstract class AbstractDozeModeTestCase extends AbstractRestrictBackgroundNetwor
         setDozeMode(false);
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
         setDozeMode(true);
-        assertForegroundNetworkAccess();
+        assertForegroundServiceNetworkAccess();
         stopForegroundService();
-        assertBackgroundState();
+        assertProcessStateBelow(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
         assertBackgroundNetworkAccess(false);
     }
 
@@ -136,6 +138,6 @@ abstract class AbstractDozeModeTestCase extends AbstractRestrictBackgroundNetwor
     protected void assertsForegroundAlwaysHasNetworkAccess() throws Exception {
         launchComponentAndAssertNetworkAccess(TYPE_COMPONENT_FOREGROUND_SERVICE);
         stopForegroundService();
-        assertBackgroundState();
+        assertProcessStateBelow(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
     }
 }

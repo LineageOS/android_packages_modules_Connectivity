@@ -21,7 +21,9 @@ import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.AF_UNSPEC;
 import static android.system.OsConstants.EACCES;
 import static android.system.OsConstants.NETLINK_ROUTE;
-
+import static android.system.OsConstants.SOL_SOCKET;
+import static android.system.OsConstants.SO_RCVBUF;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
@@ -33,6 +35,8 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
 import android.content.Context;
+import android.net.util.SocketUtils;
+import android.os.Build;
 import android.system.ErrnoException;
 import android.system.NetlinkSocketAddress;
 import android.system.Os;
@@ -43,6 +47,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.Struct;
+import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 
 import libcore.io.IoUtils;
 
@@ -55,6 +60,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -65,18 +73,13 @@ public class NetlinkUtilsTest {
 
     @Test
     public void testGetNeighborsQuery() throws Exception {
-        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
-        assertNotNull(fd);
-
-        NetlinkUtils.connectToKernel(fd);
-
-        final NetlinkSocketAddress localAddr = (NetlinkSocketAddress) Os.getsockname(fd);
-        assertNotNull(localAddr);
-        assertEquals(0, localAddr.getGroupsMask());
-        assertTrue(0 != localAddr.getPortId());
-
         final byte[] req = RtNetlinkNeighborMessage.newGetNeighborsRequest(TEST_SEQNO);
         assertNotNull(req);
+
+        List<RtNetlinkNeighborMessage> msgs = new ArrayList<>();
+        Consumer<RtNetlinkNeighborMessage> handleNlDumpMsg = (msg) -> {
+            msgs.add(msg);
+        };
 
         final Context ctx = InstrumentationRegistry.getInstrumentation().getContext();
         final int targetSdk =
@@ -94,7 +97,8 @@ public class NetlinkUtilsTest {
             assumeFalse("network_stack context is expected to have permission to send RTM_GETNEIGH",
                     ctxt.startsWith("u:r:network_stack:s0"));
             try {
-                NetlinkUtils.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS);
+                NetlinkUtils.<RtNetlinkNeighborMessage>getAndProcessNetlinkDumpMessages(req,
+                        NETLINK_ROUTE, RtNetlinkNeighborMessage.class, handleNlDumpMsg);
                 fail("RTM_GETNEIGH is not allowed for apps targeting SDK > 31 on T+ platforms,"
                         + " target SDK version: " + targetSdk);
             } catch (ErrnoException e) {
@@ -105,106 +109,70 @@ public class NetlinkUtilsTest {
         }
 
         // Check that apps targeting lower API levels / running on older platforms succeed
-        assertEquals(req.length,
-                NetlinkUtils.sendMessage(fd, req, 0, req.length, TEST_TIMEOUT_MS));
+        NetlinkUtils.<RtNetlinkNeighborMessage>getAndProcessNetlinkDumpMessages(req,
+                NETLINK_ROUTE, RtNetlinkNeighborMessage.class, handleNlDumpMsg);
 
-        int neighMessageCount = 0;
-        int doneMessageCount = 0;
-
-        while (doneMessageCount == 0) {
-            ByteBuffer response =
-                    NetlinkUtils.recvMessage(fd, DEFAULT_RECV_BUFSIZE, TEST_TIMEOUT_MS);
-            assertNotNull(response);
-            assertTrue(StructNlMsgHdr.STRUCT_SIZE <= response.limit());
-            assertEquals(0, response.position());
-            assertEquals(ByteOrder.nativeOrder(), response.order());
-
-            // Verify the messages at least appears minimally reasonable.
-            while (response.remaining() > 0) {
-                final NetlinkMessage msg = NetlinkMessage.parse(response, NETLINK_ROUTE);
-                assertNotNull(msg);
-                final StructNlMsgHdr hdr = msg.getHeader();
-                assertNotNull(hdr);
-
-                if (hdr.nlmsg_type == NetlinkConstants.NLMSG_DONE) {
-                    doneMessageCount++;
-                    continue;
-                }
-
-                assertEquals(NetlinkConstants.RTM_NEWNEIGH, hdr.nlmsg_type);
-                assertTrue(msg instanceof RtNetlinkNeighborMessage);
-                assertTrue((hdr.nlmsg_flags & StructNlMsgHdr.NLM_F_MULTI) != 0);
-                assertEquals(TEST_SEQNO, hdr.nlmsg_seq);
-                assertEquals(localAddr.getPortId(), hdr.nlmsg_pid);
-
-                neighMessageCount++;
-            }
+        for (var msg : msgs) {
+            assertNotNull(msg);
+            final StructNlMsgHdr hdr = msg.getHeader();
+            assertNotNull(hdr);
+            assertEquals(NetlinkConstants.RTM_NEWNEIGH, hdr.nlmsg_type);
+            assertTrue((hdr.nlmsg_flags & StructNlMsgHdr.NLM_F_MULTI) != 0);
+            assertEquals(TEST_SEQNO, hdr.nlmsg_seq);
         }
 
-        assertEquals(1, doneMessageCount);
         // TODO: make sure this test passes sanely in airplane mode.
-        assertTrue(neighMessageCount > 0);
-
-        IoUtils.closeQuietly(fd);
+        assertTrue(msgs.size() > 0);
     }
 
     @Test
     public void testBasicWorkingGetAddrQuery() throws Exception {
-        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
-        assertNotNull(fd);
-
-        NetlinkUtils.connectToKernel(fd);
-
-        final NetlinkSocketAddress localAddr = (NetlinkSocketAddress) Os.getsockname(fd);
-        assertNotNull(localAddr);
-        assertEquals(0, localAddr.getGroupsMask());
-        assertTrue(0 != localAddr.getPortId());
-
         final int testSeqno = 8;
         final byte[] req = newGetAddrRequest(testSeqno);
         assertNotNull(req);
 
-        final long timeout = 500;
-        assertEquals(req.length, NetlinkUtils.sendMessage(fd, req, 0, req.length, timeout));
+        List<RtNetlinkAddressMessage> msgs = new ArrayList<>();
+        Consumer<RtNetlinkAddressMessage> handleNlDumpMsg = (msg) -> {
+            msgs.add(msg);
+        };
+        NetlinkUtils.<RtNetlinkAddressMessage>getAndProcessNetlinkDumpMessages(req, NETLINK_ROUTE,
+                RtNetlinkAddressMessage.class, handleNlDumpMsg);
 
-        int addrMessageCount = 0;
+        boolean ipv4LoopbackAddressFound = false;
+        boolean ipv6LoopbackAddressFound = false;
+        final InetAddress loopbackIpv4 = InetAddress.getByName("127.0.0.1");
+        final InetAddress loopbackIpv6 = InetAddress.getByName("::1");
 
-        while (true) {
-            ByteBuffer response = NetlinkUtils.recvMessage(fd, DEFAULT_RECV_BUFSIZE, timeout);
-            assertNotNull(response);
-            assertTrue(StructNlMsgHdr.STRUCT_SIZE <= response.limit());
-            assertEquals(0, response.position());
-            assertEquals(ByteOrder.nativeOrder(), response.order());
-
-            final NetlinkMessage msg = NetlinkMessage.parse(response, NETLINK_ROUTE);
+        for (var msg : msgs) {
             assertNotNull(msg);
             final StructNlMsgHdr nlmsghdr = msg.getHeader();
             assertNotNull(nlmsghdr);
-
-            if (nlmsghdr.nlmsg_type == NetlinkConstants.NLMSG_DONE) {
-                break;
-            }
-
             assertEquals(NetlinkConstants.RTM_NEWADDR, nlmsghdr.nlmsg_type);
             assertTrue((nlmsghdr.nlmsg_flags & StructNlMsgHdr.NLM_F_MULTI) != 0);
             assertEquals(testSeqno, nlmsghdr.nlmsg_seq);
-            assertEquals(localAddr.getPortId(), nlmsghdr.nlmsg_pid);
             assertTrue(msg instanceof RtNetlinkAddressMessage);
-            addrMessageCount++;
-
-            // From the query response we can see the RTM_NEWADDR messages representing for IPv4
-            // and IPv6 loopback address: 127.0.0.1 and ::1.
+            // When parsing the full response we can see the RTM_NEWADDR messages representing for
+            // IPv4 and IPv6 loopback address: 127.0.0.1 and ::1 and non-loopback addresses.
             final StructIfaddrMsg ifaMsg = ((RtNetlinkAddressMessage) msg).getIfaddrHeader();
             final InetAddress ipAddress = ((RtNetlinkAddressMessage) msg).getIpAddress();
             assertTrue(
                     "Non-IP address family: " + ifaMsg.family,
                     ifaMsg.family == AF_INET || ifaMsg.family == AF_INET6);
-            assertTrue(ipAddress.isLoopbackAddress());
+            assertNotNull(ipAddress);
+
+            if (ipAddress.equals(loopbackIpv4)) {
+                ipv4LoopbackAddressFound = true;
+                assertTrue(ipAddress.isLoopbackAddress());
+            }
+            if (ipAddress.equals(loopbackIpv6)) {
+                ipv6LoopbackAddressFound = true;
+                assertTrue(ipAddress.isLoopbackAddress());
+            }
         }
 
-        assertTrue(addrMessageCount > 0);
-
-        IoUtils.closeQuietly(fd);
+        assertTrue(msgs.size() > 0);
+        // Check ipv4 and ipv6 loopback addresses are in the output
+        assertTrue(ipv4LoopbackAddressFound && ipv6LoopbackAddressFound);
     }
 
     /** A convenience method to create an RTM_GETADDR request message. */
@@ -227,5 +195,37 @@ public class NetlinkUtilsTest {
         addrMsg.pack(byteBuffer);
 
         return bytes;
+    }
+
+    @Test
+    public void testGetIpv6MulticastRoutes_doesNotThrow() {
+        var multicastRoutes = NetlinkUtils.getIpv6MulticastRoutes();
+
+        for (var route : multicastRoutes) {
+            assertNotNull(route);
+            assertEquals("Route is not IP6MR: " + route,
+                    RTNL_FAMILY_IP6MR, route.getRtmFamily());
+            assertNotNull("Route doesn't contain source: " + route, route.getSource());
+            assertNotNull("Route doesn't contain destination: " + route, route.getDestination());
+        }
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) // getsockoptInt requires > R
+    public void testNetlinkSocketForProto_defaultBufferSize() throws Exception {
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE);
+        final int bufferSize = Os.getsockoptInt(fd, SOL_SOCKET, SO_RCVBUF) / 2;
+
+        assertTrue("bufferSize: " + bufferSize, bufferSize > 0); // whatever the default value is
+        SocketUtils.closeSocket(fd);
+    }
+
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R) // getsockoptInt requires > R
+    public void testNetlinkSocketForProto_setBufferSize() throws Exception {
+        final FileDescriptor fd = NetlinkUtils.netlinkSocketForProto(NETLINK_ROUTE,
+                8000);
+        final int bufferSize = Os.getsockoptInt(fd, SOL_SOCKET, SO_RCVBUF) / 2;
+
+        assertEquals(8000, bufferSize);
+        SocketUtils.closeSocket(fd);
     }
 }

@@ -1551,7 +1551,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * @param hasAutomotiveFeature true if this device has the automotive feature, false otherwise
      * @param authenticator the carrier privilege authenticator to check for telephony constraints
      */
-    public void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
+    public static void restrictCapabilitiesFromNetworkAgent(@NonNull final NetworkCapabilities nc,
             final int creatorUid, final boolean hasAutomotiveFeature,
             @NonNull final ConnectivityService.Dependencies deps,
             @Nullable final CarrierPrivilegeAuthenticator authenticator) {
@@ -1564,7 +1564,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         }
     }
 
-    private boolean areAllowedUidsAcceptableFromNetworkAgent(
+    private static boolean areAllowedUidsAcceptableFromNetworkAgent(
             @NonNull final NetworkCapabilities nc, final boolean hasAutomotiveFeature,
             @NonNull final ConnectivityService.Dependencies deps,
             @Nullable final CarrierPrivilegeAuthenticator carrierPrivilegeAuthenticator) {

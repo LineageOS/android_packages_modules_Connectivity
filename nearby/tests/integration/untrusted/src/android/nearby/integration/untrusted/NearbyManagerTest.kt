@@ -30,12 +30,12 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.LogcatWaitMixin
 import com.google.common.truth.Truth.assertThat
+import java.time.Duration
+import java.util.Calendar
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Duration
-import java.util.Calendar
 
 @RunWith(AndroidJUnit4::class)
 class NearbyManagerTest {
@@ -149,6 +149,46 @@ class NearbyManagerTest {
                 WAIT_INVALID_OPERATIONS_LOGS_TIMEOUT
             )
         ).isTrue()
+    }
+
+    /**
+     * Verify untrusted app can't set powered off finding ephemeral IDs because it needs
+     * BLUETOOTH_PRIVILEGED permission which is not for use by third-party applications.
+     */
+    @Test
+    fun testNearbyManagerSetPoweredOffFindingEphemeralIds_fromUnTrustedApp_throwsException() {
+        val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+        val eid = ByteArray(20)
+
+        assertThrows(SecurityException::class.java) {
+            nearbyManager.setPoweredOffFindingEphemeralIds(listOf(eid))
+        }
+    }
+
+    /**
+     * Verify untrusted app can't set powered off finding mode because it needs BLUETOOTH_PRIVILEGED
+     * permission which is not for use by third-party applications.
+     */
+    @Test
+    fun testNearbyManagerSetPoweredOffFindingMode_fromUnTrustedApp_throwsException() {
+        val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+
+        assertThrows(SecurityException::class.java) {
+            nearbyManager.setPoweredOffFindingMode(NearbyManager.POWERED_OFF_FINDING_MODE_ENABLED)
+        }
+    }
+
+    /**
+     * Verify untrusted app can't get powered off finding mode because it needs BLUETOOTH_PRIVILEGED
+     * permission which is not for use by third-party applications.
+     */
+    @Test
+    fun testNearbyManagerGetPoweredOffFindingMode_fromUnTrustedApp_throwsException() {
+        val nearbyManager = appContext.getSystemService(Context.NEARBY_SERVICE) as NearbyManager
+
+        assertThrows(SecurityException::class.java) {
+            nearbyManager.getPoweredOffFindingMode()
+        }
     }
 
     companion object {

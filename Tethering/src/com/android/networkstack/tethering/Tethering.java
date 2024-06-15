@@ -137,6 +137,7 @@ import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.HandlerUtils;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.SdkUtil.LateSdk;
 import com.android.net.module.util.SharedLog;
@@ -164,11 +165,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -373,6 +371,7 @@ public class Tethering {
 
         // Load tethering configuration.
         updateConfiguration();
+        mConfig.readEnableSyncSM(mContext);
         // It is OK for the configuration to be passed to the PrivateAddressCoordinator at
         // construction time because the only part of the configuration it uses is
         // shouldEnableWifiP2pDedicatedIp(), and currently do not support changing that.
@@ -2714,31 +2713,10 @@ public class Tethering {
             return;
         }
 
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        // Don't crash the system if something in doDump throws an exception, but try to propagate
-        // the exception to the caller.
-        AtomicReference<RuntimeException> exceptionRef = new AtomicReference<>();
-        mHandler.post(() -> {
-            try {
-                doDump(fd, writer, args);
-            } catch (RuntimeException e) {
-                exceptionRef.set(e);
-            }
-            latch.countDown();
-        });
-
-        try {
-            if (!latch.await(DUMP_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                writer.println("Dump timeout after " + DUMP_TIMEOUT_MS + "ms");
-                return;
-            }
-        } catch (InterruptedException e) {
-            exceptionRef.compareAndSet(null, new IllegalStateException("Dump interrupted", e));
+        if (!HandlerUtils.runWithScissorsForDump(mHandler, () -> doDump(fd, writer, args),
+                DUMP_TIMEOUT_MS)) {
+            writer.println("Dump timeout after " + DUMP_TIMEOUT_MS + "ms");
         }
-
-        final RuntimeException e = exceptionRef.get();
-        if (e != null) throw e;
     }
 
     private void maybeDhcpLeasesChanged() {

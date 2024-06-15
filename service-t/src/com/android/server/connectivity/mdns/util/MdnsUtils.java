@@ -86,7 +86,10 @@ public class MdnsUtils {
     /**
      * Compare two strings by DNS case-insensitive lowercase.
      */
-    public static boolean equalsIgnoreDnsCase(@NonNull String a, @NonNull String b) {
+    public static boolean equalsIgnoreDnsCase(@Nullable String a, @Nullable String b) {
+        if (a == null || b == null) {
+            return a == null && b == null;
+        }
         if (a.length() != b.length()) return false;
         for (int i = 0; i < a.length(); i++) {
             if (toDnsLowerCase(a.charAt(i)) != toDnsLowerCase(b.charAt(i))) {
@@ -231,6 +234,20 @@ public class MdnsUtils {
     public static boolean isRecordRenewalNeeded(@NonNull MdnsRecord mdnsRecord, final long now) {
         return mdnsRecord.getTtl() > 0
                 && mdnsRecord.getRemainingTTL(now) <= mdnsRecord.getTtl() / 2;
+    }
+
+    /**
+     * Creates a new full subtype name with given service type and subtype labels.
+     *
+     * For example, given ["_http", "_tcp"] and "_printer", this method returns a new String array
+     * of ["_printer", "_sub", "_http", "_tcp"].
+     */
+    public static String[] constructFullSubtype(String[] serviceType, String subtype) {
+        String[] fullSubtype = new String[serviceType.length + 2];
+        fullSubtype[0] = subtype;
+        fullSubtype[1] = MdnsConstants.SUBTYPE_LABEL;
+        System.arraycopy(serviceType, 0, fullSubtype, 2, serviceType.length);
+        return fullSubtype;
     }
 
     /** A wrapper class of {@link SystemClock} to be mocked in unit tests. */

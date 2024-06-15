@@ -31,6 +31,7 @@ import android.os.OutcomeReceiver;
 import android.os.RemoteException;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.internal.annotations.VisibleForTesting;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -67,6 +68,15 @@ public final class ThreadNetworkController {
     /** The device is a Thread Leader. */
     public static final int DEVICE_ROLE_LEADER = 4;
 
+    /** The Thread radio is disabled. */
+    public static final int STATE_DISABLED = 0;
+
+    /** The Thread radio is enabled. */
+    public static final int STATE_ENABLED = 1;
+
+    /** The Thread radio is being disabled. */
+    public static final int STATE_DISABLING = 2;
+
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({
@@ -77,6 +87,13 @@ public final class ThreadNetworkController {
         DEVICE_ROLE_LEADER
     })
     public @interface DeviceRole {}
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            prefix = {"STATE_"},
+            value = {STATE_DISABLED, STATE_ENABLED, STATE_DISABLING})
+    public @interface EnabledState {}
 
     /** Thread standard version 1.3. */
     public static final int THREAD_VERSION_1_3 = 4;
@@ -103,6 +120,40 @@ public final class ThreadNetworkController {
     public ThreadNetworkController(@NonNull IThreadNetworkController controllerService) {
         requireNonNull(controllerService, "controllerService cannot be null");
         mControllerService = controllerService;
+    }
+
+    /**
+     * Enables/Disables the radio of this ThreadNetworkController. The requested enabled state will
+     * be persistent and survives device reboots.
+     *
+     * <p>When Thread is in {@code STATE_DISABLED}, {@link ThreadNetworkController} APIs which
+     * require the Thread radio will fail with error code {@link
+     * ThreadNetworkException#ERROR_THREAD_DISABLED}. When Thread is in {@code STATE_DISABLING},
+     * {@link ThreadNetworkController} APIs that return a {@link ThreadNetworkException} will fail
+     * with error code {@link ThreadNetworkException#ERROR_BUSY}.
+     *
+     * <p>On success, {@link OutcomeReceiver#onResult} of {@code receiver} is called. It indicates
+     * the operation has completed. But there maybe subsequent calls to update the enabled state,
+     * callers of this method should use {@link #registerStateCallback} to subscribe to the Thread
+     * enabled state changes.
+     *
+     * <p>On failure, {@link OutcomeReceiver#onError} of {@code receiver} will be invoked with a
+     * specific error in {@link ThreadNetworkException#ERROR_}.
+     *
+     * @param enabled {@code true} for enabling Thread
+     * @param executor the executor to execute {@code receiver}
+     * @param receiver the receiver to receive result of this operation
+     */
+    @RequiresPermission("android.permission.THREAD_NETWORK_PRIVILEGED")
+    public void setEnabled(
+            boolean enabled,
+            @NonNull @CallbackExecutor Executor executor,
+            @NonNull OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        try {
+            mControllerService.setEnabled(enabled, new OperationReceiverProxy(executor, receiver));
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 
     /** Returns the Thread version this device is operating on. */
@@ -169,6 +220,16 @@ public final class ThreadNetworkController {
          * @param partitionId the new Thread partition ID
          */
         default void onPartitionIdChanged(long partitionId) {}
+
+        /**
+         * The Thread enabled state has changed.
+         *
+         * <p>The Thread enabled state can be set with {@link setEnabled}, it may also be updated by
+         * airplane mode or admin control.
+         *
+         * @param enabledState the new Thread enabled state
+         */
+        default void onThreadEnableStateChanged(@EnabledState int enabledState) {}
     }
 
     private static final class StateCallbackProxy extends IStateCallback.Stub {
@@ -195,6 +256,16 @@ public final class ThreadNetworkController {
             final long identity = Binder.clearCallingIdentity();
             try {
                 mExecutor.execute(() -> mCallback.onPartitionIdChanged(partitionId));
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+
+        @Override
+        public void onThreadEnableStateChanged(@EnabledState int enabled) {
+            final long identity = Binder.clearCallingIdentity();
+            try {
+                mExecutor.execute(() -> mCallback.onThreadEnableStateChanged(enabled));
             } finally {
                 Binder.restoreCallingIdentity(identity);
             }
@@ -494,6 +565,32 @@ public final class ThreadNetworkController {
         requireNonNull(receiver, "receiver cannot be null");
         try {
             mControllerService.leave(new OperationReceiverProxy(executor, receiver));
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Sets to use a specified test network as the upstream.
+     *
+     * @param testNetworkInterfaceName The name of the test network interface. When it's null,
+     *     forbids using test network as an upstream.
+     * @param executor the executor to execute {@code receiver}
+     * @param receiver the receiver to receive result of this operation
+     * @hide
+     */
+    @VisibleForTesting
+    @RequiresPermission(
+            allOf = {"android.permission.THREAD_NETWORK_PRIVILEGED", permission.NETWORK_SETTINGS})
+    public void setTestNetworkAsUpstream(
+            @Nullable String testNetworkInterfaceName,
+            @NonNull @CallbackExecutor Executor executor,
+            @NonNull OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        requireNonNull(executor, "executor cannot be null");
+        requireNonNull(receiver, "receiver cannot be null");
+        try {
+            mControllerService.setTestNetworkAsUpstream(
+                    testNetworkInterfaceName, new OperationReceiverProxy(executor, receiver));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

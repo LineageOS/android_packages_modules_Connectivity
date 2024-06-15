@@ -16,26 +16,29 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.server.connectivity.mdns.util.MdnsUtils.ensureRunningOnHandlerThread;
-
 import android.Manifest.permission;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
+
+import androidx.annotation.GuardedBy;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.SharedLog;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 
 /**
  * This class keeps tracking the set of registered {@link MdnsServiceBrowserListener} instances, and
@@ -50,10 +53,12 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     @NonNull private final SharedLog sharedLog;
 
     @NonNull private final PerSocketServiceTypeClients perSocketServiceTypeClients;
-    @NonNull private final Handler handler;
-    @Nullable private final HandlerThread handlerThread;
-    @NonNull private final MdnsServiceCache serviceCache;
+    @NonNull private final DiscoveryExecutor discoveryExecutor;
     @NonNull private final MdnsFeatureFlags mdnsFeatureFlags;
+
+    // Only accessed on the handler thread, initialized before first use
+    @Nullable
+    private MdnsServiceCache serviceCache;
 
     private static class PerSocketServiceTypeClients {
         private final ArrayMap<Pair<String, SocketKey>, MdnsServiceTypeClient> clients =
@@ -125,23 +130,74 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
         this.sharedLog = sharedLog;
         this.perSocketServiceTypeClients = new PerSocketServiceTypeClients();
         this.mdnsFeatureFlags = mdnsFeatureFlags;
-        if (socketClient.getLooper() != null) {
-            this.handlerThread = null;
-            this.handler = new Handler(socketClient.getLooper());
-            this.serviceCache = new MdnsServiceCache(socketClient.getLooper(), mdnsFeatureFlags);
-        } else {
-            this.handlerThread = new HandlerThread(MdnsDiscoveryManager.class.getSimpleName());
-            this.handlerThread.start();
-            this.handler = new Handler(handlerThread.getLooper());
-            this.serviceCache = new MdnsServiceCache(handlerThread.getLooper(), mdnsFeatureFlags);
-        }
+        this.discoveryExecutor = new DiscoveryExecutor(socketClient.getLooper());
     }
 
-    private void checkAndRunOnHandlerThread(@NonNull Runnable function) {
-        if (this.handlerThread == null) {
-            function.run();
-        } else {
+    private static class DiscoveryExecutor implements Executor {
+        private final HandlerThread handlerThread;
+
+        @GuardedBy("pendingTasks")
+        @Nullable private Handler handler;
+        @GuardedBy("pendingTasks")
+        @NonNull private final ArrayList<Runnable> pendingTasks = new ArrayList<>();
+
+        DiscoveryExecutor(@Nullable Looper defaultLooper) {
+            if (defaultLooper != null) {
+                this.handlerThread = null;
+                synchronized (pendingTasks) {
+                    this.handler = new Handler(defaultLooper);
+                }
+            } else {
+                this.handlerThread = new HandlerThread(MdnsDiscoveryManager.class.getSimpleName()) {
+                    @Override
+                    protected void onLooperPrepared() {
+                        synchronized (pendingTasks) {
+                            handler = new Handler(getLooper());
+                            for (Runnable pendingTask : pendingTasks) {
+                                handler.post(pendingTask);
+                            }
+                            pendingTasks.clear();
+                        }
+                    }
+                };
+                this.handlerThread.start();
+            }
+        }
+
+        public void checkAndRunOnHandlerThread(@NonNull Runnable function) {
+            if (this.handlerThread == null) {
+                // Callers are expected to already be running on the handler when a defaultLooper
+                // was provided
+                function.run();
+            } else {
+                execute(function);
+            }
+        }
+
+        @Override
+        public void execute(Runnable function) {
+            final Handler handler;
+            synchronized (pendingTasks) {
+                if (this.handler == null) {
+                    pendingTasks.add(function);
+                    return;
+                } else {
+                    handler = this.handler;
+                }
+            }
             handler.post(function);
+        }
+
+        void shutDown() {
+            if (this.handlerThread != null) {
+                this.handlerThread.quitSafely();
+            }
+        }
+
+        void ensureRunningOnHandlerThread() {
+            synchronized (pendingTasks) {
+                MdnsUtils.ensureRunningOnHandlerThread(handler);
+            }
         }
     }
 
@@ -149,9 +205,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
      * Do the cleanup of the MdnsDiscoveryManager
      */
     public void shutDown() {
-        if (this.handlerThread != null) {
-            this.handlerThread.quitSafely();
-        }
+        discoveryExecutor.shutDown();
     }
 
     /**
@@ -169,7 +223,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
             @NonNull MdnsServiceBrowserListener listener,
             @NonNull MdnsSearchOptions searchOptions) {
         sharedLog.i("Registering listener for serviceType: " + serviceType);
-        checkAndRunOnHandlerThread(() ->
+        discoveryExecutor.checkAndRunOnHandlerThread(() ->
                 handleRegisterListener(serviceType, listener, searchOptions));
     }
 
@@ -191,7 +245,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
                 new MdnsSocketClientBase.SocketCreationCallback() {
                     @Override
                     public void onSocketCreated(@NonNull SocketKey socketKey) {
-                        ensureRunningOnHandlerThread(handler);
+                        discoveryExecutor.ensureRunningOnHandlerThread();
                         // All listeners of the same service types shares the same
                         // MdnsServiceTypeClient.
                         MdnsServiceTypeClient serviceTypeClient =
@@ -206,7 +260,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
 
                     @Override
                     public void onSocketDestroyed(@NonNull SocketKey socketKey) {
-                        ensureRunningOnHandlerThread(handler);
+                        discoveryExecutor.ensureRunningOnHandlerThread();
                         final MdnsServiceTypeClient serviceTypeClient =
                                 perSocketServiceTypeClients.get(serviceType, socketKey);
                         if (serviceTypeClient == null) return;
@@ -229,7 +283,8 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     public void unregisterListener(
             @NonNull String serviceType, @NonNull MdnsServiceBrowserListener listener) {
         sharedLog.i("Unregistering listener for serviceType:" + serviceType);
-        checkAndRunOnHandlerThread(() -> handleUnregisterListener(serviceType, listener));
+        discoveryExecutor.checkAndRunOnHandlerThread(() ->
+                handleUnregisterListener(serviceType, listener));
     }
 
     private void handleUnregisterListener(
@@ -260,7 +315,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
 
     @Override
     public void onResponseReceived(@NonNull MdnsPacket packet, @NonNull SocketKey socketKey) {
-        checkAndRunOnHandlerThread(() ->
+        discoveryExecutor.checkAndRunOnHandlerThread(() ->
                 handleOnResponseReceived(packet, socketKey));
     }
 
@@ -282,7 +337,7 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     @Override
     public void onFailedToParseMdnsResponse(int receivedPacketNumber, int errorCode,
             @NonNull SocketKey socketKey) {
-        checkAndRunOnHandlerThread(() ->
+        discoveryExecutor.checkAndRunOnHandlerThread(() ->
                 handleOnFailedToParseMdnsResponse(receivedPacketNumber, errorCode, socketKey));
     }
 
@@ -296,12 +351,31 @@ public class MdnsDiscoveryManager implements MdnsSocketClientBase.Callback {
     @VisibleForTesting
     MdnsServiceTypeClient createServiceTypeClient(@NonNull String serviceType,
             @NonNull SocketKey socketKey) {
+        discoveryExecutor.ensureRunningOnHandlerThread();
         sharedLog.log("createServiceTypeClient for type:" + serviceType + " " + socketKey);
         final String tag = serviceType + "-" + socketKey.getNetwork()
                 + "/" + socketKey.getInterfaceIndex();
+        final Looper looper = Looper.myLooper();
+        if (serviceCache == null) {
+            serviceCache = new MdnsServiceCache(looper, mdnsFeatureFlags);
+        }
         return new MdnsServiceTypeClient(
                 serviceType, socketClient,
                 executorProvider.newServiceTypeClientSchedulerExecutor(), socketKey,
-                sharedLog.forSubComponent(tag), handler.getLooper(), serviceCache);
+                sharedLog.forSubComponent(tag), looper, serviceCache);
+    }
+
+    /**
+     * Dump DiscoveryManager state.
+     */
+    public void dump(PrintWriter pw) {
+        discoveryExecutor.checkAndRunOnHandlerThread(() -> {
+            pw.println();
+            // Dump ServiceTypeClients
+            for (MdnsServiceTypeClient serviceTypeClient
+                    : perSocketServiceTypeClients.getAllMdnsServiceTypeClient()) {
+                serviceTypeClient.dump(pw);
+            }
+        });
     }
 }

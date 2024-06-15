@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_thread_network",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -35,17 +36,18 @@ java_library {
     libs: [
         "framework-connectivity-pre-jarjar",
         "framework-connectivity-t-pre-jarjar",
+        "framework-location.stubs.module_lib",
+        "framework-wifi",
         "service-connectivity-pre-jarjar",
+        "ServiceConnectivityResources",
     ],
     static_libs: [
+        "modules-utils-shell-command-handler",
         "net-utils-device-common",
         "net-utils-device-common-netlink",
         "ot-daemon-aidl-java",
     ],
     apex_available: ["com.android.tethering"],
-    optimize: {
-        proguard_flags_files: ["proguard.flags"],
-    },
 }
 
 cc_library_shared {

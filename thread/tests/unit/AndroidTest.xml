@@ -19,6 +19,18 @@
     <option name="test-tag" value="ThreadNetworkUnitTests" />
     <option name="test-suite-tag" value="apct" />
 
+    <!--
+        Only run tests if the device under test is SDK version 34 (Android 14) or above.
+    -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.Sdk34ModuleController" />
+
+    <!-- Run tests in MTS only if the Tethering Mainline module is installed. -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+        <option name="mainline-module-package-name" value="com.google.android.tethering" />
+    </object>
+
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="ThreadNetworkUnitTests.apk" />
         <option name="check-min-sdk" value="true" />
@@ -30,5 +42,8 @@
         <option name="hidden-api-checks" value="false"/>
         <!-- Ignores tests introduced by guava-android-testlib -->
         <option name="exclude-annotation" value="org.junit.Ignore"/>
+        <!-- Ignores tests introduced by frameworks-base-testutils -->
+        <option name="exclude-filter" value="android.os.test.TestLooperTest"/>
+        <option name="exclude-filter" value="com.android.test.filters.SelectTestTests"/>
     </test>
 </configuration>

@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-next_app_data = [ ":CtsHostsideNetworkTestsAppNext" ]
+next_app_data = [":CtsHostsideNetworkTestsAppNext"]
 
 // The above line is put in place to prevent any future automerger merge conflict between aosp,
 // downstream branches. The CtsHostsideNetworkTestsAppNext target will not exist in
 // some downstream branches, but it should exist in aosp and some downstream branches.
 
-
-
-
-
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -30,7 +27,10 @@ java_test_host {
     name: "CtsHostsideNetworkTests",
     defaults: ["cts_defaults"],
     // Only compile source java files in this apk.
-    srcs: ["src/**/*.java"],
+    srcs: [
+        "src/**/*.java",
+        ":ArgumentConstants",
+    ],
     libs: [
         "net-tests-utils-host-device-common",
         "cts-tradefed",
@@ -43,7 +43,9 @@ java_test_host {
     test_suites: [
         "cts",
         "general-tests",
-        "sts"
+        "mcts-tethering",
+        "mts-tethering",
+        "sts",
     ],
     data: [
         ":CtsHostsideNetworkTestsApp",

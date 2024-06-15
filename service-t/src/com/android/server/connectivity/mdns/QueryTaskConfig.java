@@ -16,14 +16,13 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.AGGRESSIVE_QUERY_MODE;
+import static com.android.server.connectivity.mdns.MdnsSearchOptions.PASSIVE_QUERY_MODE;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * A configuration for the PeriodicalQueryTask that contains parameters to build a query packet.
@@ -33,19 +32,26 @@ public class QueryTaskConfig {
 
     private static final int INITIAL_TIME_BETWEEN_BURSTS_MS =
             (int) MdnsConfigs.initialTimeBetweenBurstsMs();
-    private static final int TIME_BETWEEN_BURSTS_MS = (int) MdnsConfigs.timeBetweenBurstsMs();
+    private static final int MAX_TIME_BETWEEN_ACTIVE_PASSIVE_BURSTS_MS =
+            (int) MdnsConfigs.timeBetweenBurstsMs();
     private static final int QUERIES_PER_BURST = (int) MdnsConfigs.queriesPerBurst();
     private static final int TIME_BETWEEN_QUERIES_IN_BURST_MS =
             (int) MdnsConfigs.timeBetweenQueriesInBurstMs();
     private static final int QUERIES_PER_BURST_PASSIVE_MODE =
             (int) MdnsConfigs.queriesPerBurstPassive();
     private static final int UNSIGNED_SHORT_MAX_VALUE = 65536;
-    // The following fields are used by QueryTask so we need to test them.
     @VisibleForTesting
-    final List<String> subtypes;
+    // RFC 6762 5.2: The interval between the first two queries MUST be at least one second.
+    static final int INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS = 1000;
+    @VisibleForTesting
+    // Basically this tries to send one query per typical DTIM interval 100ms, to maximize the
+    // chances that a query will be received if devices are using a DTIM multiplier (in which case
+    // they only listen once every [multiplier] DTIM intervals).
+    static final int TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS = 100;
+    static final int MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS = 60000;
     private final boolean alwaysAskForUnicastResponse =
             MdnsConfigs.alwaysAskForUnicastResponseInEachBurst();
-    private final boolean usePassiveMode;
+    private final int queryMode;
     final boolean onlyUseIpv6OnIpv6OnlyNetworks;
     private final int numOfQueriesBeforeBackoff;
     @VisibleForTesting
@@ -65,8 +71,7 @@ public class QueryTaskConfig {
             boolean expectUnicastResponse, boolean isFirstBurst, int burstCounter,
             int queriesPerBurst, int timeBetweenBurstsInMs,
             long delayUntilNextTaskWithoutBackoffMs) {
-        this.subtypes = new ArrayList<>(other.subtypes);
-        this.usePassiveMode = other.usePassiveMode;
+        this.queryMode = other.queryMode;
         this.onlyUseIpv6OnIpv6OnlyNetworks = other.onlyUseIpv6OnIpv6OnlyNetworks;
         this.numOfQueriesBeforeBackoff = other.numOfQueriesBeforeBackoff;
         this.transactionId = transactionId;
@@ -79,36 +84,72 @@ public class QueryTaskConfig {
         this.queryCount = queryCount;
         this.socketKey = other.socketKey;
     }
-    QueryTaskConfig(@NonNull Collection<String> subtypes,
-            boolean usePassiveMode,
+
+    QueryTaskConfig(int queryMode,
             boolean onlyUseIpv6OnIpv6OnlyNetworks,
             int numOfQueriesBeforeBackoff,
             @Nullable SocketKey socketKey) {
-        this.usePassiveMode = usePassiveMode;
+        this.queryMode = queryMode;
         this.onlyUseIpv6OnIpv6OnlyNetworks = onlyUseIpv6OnIpv6OnlyNetworks;
         this.numOfQueriesBeforeBackoff = numOfQueriesBeforeBackoff;
-        this.subtypes = new ArrayList<>(subtypes);
         this.queriesPerBurst = QUERIES_PER_BURST;
         this.burstCounter = 0;
         this.transactionId = 1;
         this.expectUnicastResponse = true;
         this.isFirstBurst = true;
         // Config the scan frequency based on the scan mode.
-        if (this.usePassiveMode) {
+        if (this.queryMode == AGGRESSIVE_QUERY_MODE) {
+            this.timeBetweenBurstsInMs = INITIAL_AGGRESSIVE_TIME_BETWEEN_BURSTS_MS;
+            this.delayUntilNextTaskWithoutBackoffMs =
+                    TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS;
+        } else if (this.queryMode == PASSIVE_QUERY_MODE) {
             // In passive scan mode, sends a single burst of QUERIES_PER_BURST queries, and then
             // in each TIME_BETWEEN_BURSTS interval, sends QUERIES_PER_BURST_PASSIVE_MODE
             // queries.
-            this.timeBetweenBurstsInMs = TIME_BETWEEN_BURSTS_MS;
+            this.timeBetweenBurstsInMs = MAX_TIME_BETWEEN_ACTIVE_PASSIVE_BURSTS_MS;
+            this.delayUntilNextTaskWithoutBackoffMs = TIME_BETWEEN_QUERIES_IN_BURST_MS;
         } else {
             // In active scan mode, sends a burst of QUERIES_PER_BURST queries,
             // TIME_BETWEEN_QUERIES_IN_BURST_MS apart, then waits for the scan interval, and
             // then repeats. The scan interval starts as INITIAL_TIME_BETWEEN_BURSTS_MS and
             // doubles until it maxes out at TIME_BETWEEN_BURSTS_MS.
             this.timeBetweenBurstsInMs = INITIAL_TIME_BETWEEN_BURSTS_MS;
+            this.delayUntilNextTaskWithoutBackoffMs = TIME_BETWEEN_QUERIES_IN_BURST_MS;
         }
         this.socketKey = socketKey;
         this.queryCount = 0;
-        this.delayUntilNextTaskWithoutBackoffMs = TIME_BETWEEN_QUERIES_IN_BURST_MS;
+    }
+
+    long getDelayUntilNextTaskWithoutBackoff(boolean isFirstQueryInBurst,
+            boolean isLastQueryInBurst) {
+        if (isFirstQueryInBurst && queryMode == AGGRESSIVE_QUERY_MODE) {
+            return 0;
+        }
+        if (isLastQueryInBurst) {
+            return timeBetweenBurstsInMs;
+        }
+        return queryMode == AGGRESSIVE_QUERY_MODE
+                ? TIME_BETWEEN_RETRANSMISSION_QUERIES_IN_BURST_MS
+                : TIME_BETWEEN_QUERIES_IN_BURST_MS;
+    }
+
+    boolean getNextExpectUnicastResponse(boolean isLastQueryInBurst) {
+        if (!isLastQueryInBurst) {
+            return false;
+        }
+        if (queryMode == AGGRESSIVE_QUERY_MODE) {
+            return true;
+        }
+        return alwaysAskForUnicastResponse;
+    }
+
+    int getNextTimeBetweenBurstsMs(boolean isLastQueryInBurst) {
+        if (!isLastQueryInBurst) {
+            return timeBetweenBurstsInMs;
+        }
+        final int maxTimeBetweenBursts = queryMode == AGGRESSIVE_QUERY_MODE
+                ? MAX_TIME_BETWEEN_AGGRESSIVE_BURSTS_MS : MAX_TIME_BETWEEN_ACTIVE_PASSIVE_BURSTS_MS;
+        return Math.min(timeBetweenBurstsInMs * 2, maxTimeBetweenBursts);
     }
 
     /**
@@ -120,43 +161,26 @@ public class QueryTaskConfig {
         if (newTransactionId > UNSIGNED_SHORT_MAX_VALUE) {
             newTransactionId = 1;
         }
-        boolean newExpectUnicastResponse = false;
-        boolean newIsFirstBurst = isFirstBurst;
+
         int newQueriesPerBurst = queriesPerBurst;
         int newBurstCounter = burstCounter + 1;
-        long newDelayUntilNextTaskWithoutBackoffMs = delayUntilNextTaskWithoutBackoffMs;
-        int newTimeBetweenBurstsInMs = timeBetweenBurstsInMs;
-        // Only the first query expects uni-cast response.
-        if (newBurstCounter == queriesPerBurst) {
+        final boolean isFirstQueryInBurst = newBurstCounter == 1;
+        final boolean isLastQueryInBurst = newBurstCounter == queriesPerBurst;
+        boolean newIsFirstBurst = isFirstBurst && !isLastQueryInBurst;
+        if (isLastQueryInBurst) {
             newBurstCounter = 0;
-
-            if (alwaysAskForUnicastResponse) {
-                newExpectUnicastResponse = true;
-            }
             // In passive scan mode, sends a single burst of QUERIES_PER_BURST queries, and
             // then in each TIME_BETWEEN_BURSTS interval, sends QUERIES_PER_BURST_PASSIVE_MODE
             // queries.
-            if (isFirstBurst) {
-                newIsFirstBurst = false;
-                if (usePassiveMode) {
-                    newQueriesPerBurst = QUERIES_PER_BURST_PASSIVE_MODE;
-                }
+            if (isFirstBurst && queryMode == PASSIVE_QUERY_MODE) {
+                newQueriesPerBurst = QUERIES_PER_BURST_PASSIVE_MODE;
             }
-            // In active scan mode, sends a burst of QUERIES_PER_BURST queries,
-            // TIME_BETWEEN_QUERIES_IN_BURST_MS apart, then waits for the scan interval, and
-            // then repeats. The scan interval starts as INITIAL_TIME_BETWEEN_BURSTS_MS and
-            // doubles until it maxes out at TIME_BETWEEN_BURSTS_MS.
-            newDelayUntilNextTaskWithoutBackoffMs = timeBetweenBurstsInMs;
-            if (timeBetweenBurstsInMs < TIME_BETWEEN_BURSTS_MS) {
-                newTimeBetweenBurstsInMs = Math.min(timeBetweenBurstsInMs * 2,
-                        TIME_BETWEEN_BURSTS_MS);
-            }
-        } else {
-            newDelayUntilNextTaskWithoutBackoffMs = TIME_BETWEEN_QUERIES_IN_BURST_MS;
         }
+
         return new QueryTaskConfig(this, newQueryCount, newTransactionId,
-                newExpectUnicastResponse, newIsFirstBurst, newBurstCounter, newQueriesPerBurst,
-                newTimeBetweenBurstsInMs, newDelayUntilNextTaskWithoutBackoffMs);
+                getNextExpectUnicastResponse(isLastQueryInBurst), newIsFirstBurst, newBurstCounter,
+                newQueriesPerBurst, getNextTimeBetweenBurstsMs(isLastQueryInBurst),
+                getDelayUntilNextTaskWithoutBackoff(isFirstQueryInBurst, isLastQueryInBurst));
     }
 
     /**

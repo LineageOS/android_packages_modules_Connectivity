@@ -215,7 +215,7 @@ public final class IpSecTransform implements AutoCloseable {
      * @see IpSecTransformState
      */
     @FlaggedApi(IPSEC_TRANSFORM_STATE)
-    public void getIpSecTransformState(
+    public void requestIpSecTransformState(
             @CallbackExecutor @NonNull Executor executor,
             @NonNull OutcomeReceiver<IpSecTransformState, RuntimeException> callback) {
         Objects.requireNonNull(executor);

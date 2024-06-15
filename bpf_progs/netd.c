@@ -461,8 +461,18 @@ static __always_inline inline int bpf_traffic_account(struct __sk_buff* skb,
                                                       const struct egress_bool egress,
                                                       const bool enable_tracing,
                                                       const struct kver_uint kver) {
+    // sock_uid will be 'overflowuid' if !sk_fullsock(sk_to_full_sk(skb->sk))
     uint32_t sock_uid = bpf_get_socket_uid(skb);
-    uint64_t cookie = bpf_get_socket_cookie(skb);
+
+    // kernel's DEFAULT_OVERFLOWUID is 65534, this is the overflow 'nobody' uid,
+    // usually this being returned means that skb->sk is NULL during RX
+    // (early decap socket lookup failure), which commonly happens for incoming
+    // packets to an unconnected udp socket.
+    // But it can also happen for egress from a timewait socket.
+    // Let's treat such cases as 'root' which is_system_uid()
+    if (sock_uid == 65534) sock_uid = 0;
+
+    uint64_t cookie = bpf_get_socket_cookie(skb);  // 0 iff !skb->sk
     UidTagValue* utag = bpf_cookie_tag_map_lookup_elem(&cookie);
     uint32_t uid, tag;
     if (utag) {
@@ -555,7 +565,7 @@ DEFINE_BPF_PROG_EXT("cgroupskb/egress/stats$trace_user", AID_ROOT, AID_SYSTEM,
                     bpf_cgroup_egress_trace_user, KVER_5_8, KVER_INF,
                     BPFLOADER_IGNORED_ON_VERSION, BPFLOADER_MAX_VER, OPTIONAL,
                     "fs_bpf_netd_readonly", "",
-                    LOAD_ON_ENG, IGNORE_ON_USER, LOAD_ON_USERDEBUG)
+                    IGNORE_ON_ENG, LOAD_ON_USER, IGNORE_ON_USERDEBUG)
 (struct __sk_buff* skb) {
     return bpf_traffic_account(skb, EGRESS, TRACE_ON, KVER_5_8);
 }
@@ -631,12 +641,13 @@ DEFINE_XTBPF_PROG("skfilter/allowlist/xtbpf", AID_ROOT, AID_NET_ADMIN, xt_bpf_al
     uint32_t sock_uid = bpf_get_socket_uid(skb);
     if (is_system_uid(sock_uid)) return BPF_MATCH;
 
-    // 65534 is the overflow 'nobody' uid, usually this being returned means
-    // that skb->sk is NULL during RX (early decap socket lookup failure),
-    // which commonly happens for incoming packets to an unconnected udp socket.
-    // Additionally bpf_get_socket_cookie() returns 0 if skb->sk is NULL
-    if ((sock_uid == 65534) && !bpf_get_socket_cookie(skb) && is_received_skb(skb))
-        return BPF_MATCH;
+    // kernel's DEFAULT_OVERFLOWUID is 65534, this is the overflow 'nobody' uid,
+    // usually this being returned means that skb->sk is NULL during RX
+    // (early decap socket lookup failure), which commonly happens for incoming
+    // packets to an unconnected udp socket.
+    // But it can also happen for egress from a timewait socket.
+    // Let's treat such cases as 'root' which is_system_uid()
+    if (sock_uid == 65534) return BPF_MATCH;
 
     UidOwnerValue* allowlistMatch = bpf_uid_owner_map_lookup_elem(&sock_uid);
     if (allowlistMatch) return allowlistMatch->rule & HAPPY_BOX_MATCH ? BPF_MATCH : BPF_NOMATCH;

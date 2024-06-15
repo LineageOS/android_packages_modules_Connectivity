@@ -18,14 +18,17 @@ package com.android.server.connectivity
 
 import android.net.INetd
 import android.os.Build
+import android.util.Log
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.tryTest
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.mock
-import kotlin.test.assertFailsWith
 
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.TIRAMISU)
@@ -46,9 +49,15 @@ class RoutingCoordinatorServiceTest {
         inOrder.verify(mNetd).tetherAddForward("from2", "to1")
         inOrder.verify(mNetd).ipfwdAddInterfaceForward("from2", "to1")
 
-        assertFailsWith<IllegalStateException> {
-            // Can't add the same pair again
+        val hasFailed = AtomicBoolean(false)
+        val prevHandler = Log.setWtfHandler { tag, what, system ->
+            hasFailed.set(true)
+        }
+        tryTest {
             mService.addInterfaceForward("from2", "to1")
+            assertTrue(hasFailed.get())
+        } cleanup {
+            Log.setWtfHandler(prevHandler)
         }
 
         mService.removeInterfaceForward("from1", "to1")

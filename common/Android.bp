@@ -15,11 +15,12 @@
 //
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-build = ["TrunkStable.bp"]
+build = ["FlaggedApi.bp"]
 
 // This is a placeholder comment to avoid merge conflicts
 // as the above target may not exist
@@ -49,5 +50,7 @@ java_library {
     apex_available: [
         "com.android.tethering",
     ],
-    lint: { strict_updatability_linting: true },
+    lint: {
+        strict_updatability_linting: true,
+    },
 }

@@ -3,12 +3,16 @@
 //########################################################################
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
 android_library {
     name: "NetworkStaticLibTestsLib",
-    srcs: ["src/**/*.java","src/**/*.kt"],
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
     min_sdk_version: "30",
     defaults: ["framework-connectivity-test-defaults"],
     static_libs: [
@@ -34,8 +38,7 @@ android_library {
         "//packages/modules/NetworkStack/tests/integration",
     ],
     lint: {
-        strict_updatability_linting: true,
-        test: true
+        test: true,
     },
 }
 
@@ -52,5 +55,4 @@ android_test {
     ],
     jarjar_rules: "jarjar-rules.txt",
     test_suites: ["device-tests"],
-    lint: { strict_updatability_linting: true },
 }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -54,27 +55,26 @@ java_defaults {
         "junit",
         "junit-params",
         "modules-utils-build",
+        "net-tests-utils",
         "net-utils-framework-common",
         "truth",
         "TetheringIntegrationTestsBaseLib",
     ],
 
-    // uncomment when b/13249961 is fixed
-    // sdk_version: "current",
-    platform_apis: true,
+    min_sdk_version: "30",
     per_testcase_directory: true,
     host_required: ["net-tests-utils-host-common"],
     test_config_template: "AndroidTestTemplate.xml",
     data: [
         ":ConnectivityTestPreparer",
         ":CtsCarrierServicePackage",
-    ]
+    ],
 }
 
 // Networking CTS tests for development and release. These tests always target the platform SDK
 // version, and are subject to all the restrictions appropriate to that version. Before SDK
-// finalization, these tests have a min_sdk_version of 10000, and cannot be installed on release
-// devices.
+// finalization, these tests have a min_sdk_version of 10000, but they can still be installed on
+// release devices as their min_sdk_version is set to a production version.
 android_test {
     name: "CtsNetTestCases",
     defaults: [
@@ -87,6 +87,14 @@ android_test {
     ],
     test_suites: [
         "cts",
+        "mts-dnsresolver",
+        "mts-networking",
+        "mts-tethering",
+        "mts-wifi",
+        "mcts-dnsresolver",
+        "mcts-networking",
+        "mcts-tethering",
+        "mcts-wifi",
         "general-tests",
     ],
 }
@@ -131,6 +139,7 @@ java_defaults {
         "cts",
         "general-tests",
         "mts-tethering",
+        "mcts-tethering",
     ],
 }
 

@@ -18,7 +18,6 @@ package android.net.ip;
 
 import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.IPPROTO_ICMPV6;
-import static android.system.OsConstants.SOCK_NONBLOCK;
 import static android.system.OsConstants.SOCK_RAW;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_SNDTIMEO;
@@ -39,21 +38,13 @@ import android.net.LinkAddress;
 import android.net.MacAddress;
 import android.net.TrafficStats;
 import android.net.util.SocketUtils;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
-import android.os.Message;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.StructTimeval;
+import android.util.ArraySet;
 import android.util.Log;
-import android.util.Pair;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.GuardedBy;
-import com.android.net.module.util.FdEventsReader;
 import com.android.net.module.util.InterfaceParams;
 import com.android.net.module.util.structs.Icmpv6Header;
 import com.android.net.module.util.structs.LlaOption;
@@ -113,11 +104,6 @@ public class RouterAdvertisementDaemon {
 
     private static final int DAY_IN_SECONDS = 86_400;
 
-    // Commands for IpServer to control RouterAdvertisementDaemon
-    private static final int CMD_START        = 1;
-    private static final int CMD_STOP         = 2;
-    private static final int CMD_BUILD_NEW_RA = 3;
-
     private final InterfaceParams mInterface;
     private final InetSocketAddress mAllNodes;
 
@@ -135,13 +121,9 @@ public class RouterAdvertisementDaemon {
     @GuardedBy("mLock")
     private RaParams mRaParams;
 
-    // To be accessed only from RaMessageHandler
-    private RsPacketListener mRsPacketListener;
-
     private volatile FileDescriptor mSocket;
     private volatile MulticastTransmitter mMulticastTransmitter;
-    private volatile RaMessageHandler mRaMessageHandler;
-    private volatile HandlerThread mRaHandlerThread;
+    private volatile UnicastResponder mUnicastResponder;
 
     /** Encapsulate the RA parameters for RouterAdvertisementDaemon.*/
     public static class RaParams {
@@ -153,23 +135,23 @@ public class RouterAdvertisementDaemon {
         public boolean hasDefaultRoute;
         public byte hopLimit;
         public int mtu;
-        public HashSet<IpPrefix> prefixes;
-        public HashSet<Inet6Address> dnses;
+        public ArraySet<IpPrefix> prefixes;
+        public ArraySet<Inet6Address> dnses;
 
         public RaParams() {
             hasDefaultRoute = false;
             hopLimit = DEFAULT_HOPLIMIT;
             mtu = IPV6_MIN_MTU;
-            prefixes = new HashSet<IpPrefix>();
-            dnses = new HashSet<Inet6Address>();
+            prefixes = new ArraySet<IpPrefix>();
+            dnses = new ArraySet<Inet6Address>();
         }
 
         public RaParams(RaParams other) {
             hasDefaultRoute = other.hasDefaultRoute;
             hopLimit = other.hopLimit;
             mtu = other.mtu;
-            prefixes = (HashSet) other.prefixes.clone();
-            dnses = (HashSet) other.dnses.clone();
+            prefixes = new ArraySet<IpPrefix>(other.prefixes);
+            dnses = new ArraySet<Inet6Address>(other.dnses);
         }
 
         /**
@@ -263,94 +245,6 @@ public class RouterAdvertisementDaemon {
         }
     }
 
-    private class RaMessageHandler extends Handler {
-        RaMessageHandler(Looper looper) {
-            super(looper);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case CMD_START:
-                    mRsPacketListener = new RsPacketListener(this);
-                    mRsPacketListener.start();
-                    break;
-                case CMD_STOP:
-                    if (mRsPacketListener != null) {
-                        mRsPacketListener.stop();
-                        mRsPacketListener = null;
-                    }
-                    break;
-                case CMD_BUILD_NEW_RA:
-                    synchronized (mLock) {
-                        // raInfo.first is deprecatedParams and raInfo.second is newParams.
-                        final Pair<RaParams, RaParams> raInfo = (Pair<RaParams, RaParams>) msg.obj;
-                        if (raInfo.first != null) {
-                            mDeprecatedInfoTracker.putPrefixes(raInfo.first.prefixes);
-                            mDeprecatedInfoTracker.putDnses(raInfo.first.dnses);
-                        }
-
-                        if (raInfo.second != null) {
-                            // Process information that is no longer deprecated.
-                            mDeprecatedInfoTracker.removePrefixes(raInfo.second.prefixes);
-                            mDeprecatedInfoTracker.removeDnses(raInfo.second.dnses);
-                        }
-                        mRaParams = raInfo.second;
-                        assembleRaLocked();
-                    }
-
-                    maybeNotifyMulticastTransmitter();
-                    break;
-                default:
-                    Log.e(TAG, "Unknown message, cmd = " + String.valueOf(msg.what));
-                    break;
-            }
-        }
-    }
-
-    private class RsPacketListener extends FdEventsReader<RsPacketListener.RecvBuffer> {
-        private static final class RecvBuffer {
-            // The recycled buffer for receiving Router Solicitations from clients.
-            // If the RS is larger than IPV6_MIN_MTU the packets are truncated.
-            // This is fine since currently only byte 0 is examined anyway.
-            final byte[] mBytes = new byte[IPV6_MIN_MTU];
-            final InetSocketAddress mSrcAddr = new InetSocketAddress(0);
-        }
-
-        RsPacketListener(@NonNull Handler handler) {
-            super(handler, new RecvBuffer());
-        }
-
-        @Override
-        protected int recvBufSize(@NonNull RecvBuffer buffer) {
-            return buffer.mBytes.length;
-        }
-
-        @Override
-        protected FileDescriptor createFd() {
-            return mSocket;
-        }
-
-        @Override
-        protected int readPacket(@NonNull FileDescriptor fd, @NonNull RecvBuffer buffer)
-                throws Exception {
-            return Os.recvfrom(
-                    fd, buffer.mBytes, 0, buffer.mBytes.length, 0 /* flags */, buffer.mSrcAddr);
-        }
-
-        @Override
-        protected final void handlePacket(@NonNull RecvBuffer buffer, int length) {
-            // Do the least possible amount of validations.
-            if (buffer.mSrcAddr == null
-                    || length <= 0
-                    || buffer.mBytes[0] != asByte(ICMPV6_ROUTER_SOLICITATION)) {
-                return;
-            }
-
-            maybeSendRA(buffer.mSrcAddr);
-        }
-    }
-
     public RouterAdvertisementDaemon(InterfaceParams ifParams) {
         mInterface = ifParams;
         mAllNodes = new InetSocketAddress(getAllNodesForScopeId(mInterface.index), 0);
@@ -359,43 +253,48 @@ public class RouterAdvertisementDaemon {
 
     /** Build new RA.*/
     public void buildNewRa(RaParams deprecatedParams, RaParams newParams) {
-        final Pair<RaParams, RaParams> raInfo = new Pair<>(deprecatedParams, newParams);
-        sendMessage(CMD_BUILD_NEW_RA, raInfo);
+        synchronized (mLock) {
+            if (deprecatedParams != null) {
+                mDeprecatedInfoTracker.putPrefixes(deprecatedParams.prefixes);
+                mDeprecatedInfoTracker.putDnses(deprecatedParams.dnses);
+            }
+
+            if (newParams != null) {
+                // Process information that is no longer deprecated.
+                mDeprecatedInfoTracker.removePrefixes(newParams.prefixes);
+                mDeprecatedInfoTracker.removeDnses(newParams.dnses);
+            }
+
+            mRaParams = newParams;
+            assembleRaLocked();
+        }
+
+        maybeNotifyMulticastTransmitter();
     }
 
     /** Start router advertisement daemon. */
     public boolean start() {
         if (!createSocket()) {
-            Log.e(TAG, "Failed to start RouterAdvertisementDaemon.");
             return false;
         }
 
         mMulticastTransmitter = new MulticastTransmitter();
         mMulticastTransmitter.start();
 
-        mRaHandlerThread = new HandlerThread(TAG);
-        mRaHandlerThread.start();
-        mRaMessageHandler = new RaMessageHandler(mRaHandlerThread.getLooper());
+        mUnicastResponder = new UnicastResponder();
+        mUnicastResponder.start();
 
-        return sendMessage(CMD_START);
+        return true;
     }
 
     /** Stop router advertisement daemon. */
     public void stop() {
-        if (!sendMessage(CMD_STOP)) {
-            Log.e(TAG, "RouterAdvertisementDaemon has been stopped or was never started.");
-            return;
-        }
-
-        mRaHandlerThread.quitSafely();
-        mRaHandlerThread = null;
-        mRaMessageHandler = null;
-
         closeSocket();
         // Wake up mMulticastTransmitter thread to interrupt a potential 1 day sleep before
         // the thread's termination.
         maybeNotifyMulticastTransmitter();
         mMulticastTransmitter = null;
+        mUnicastResponder = null;
     }
 
     @GuardedBy("mLock")
@@ -605,7 +504,7 @@ public class RouterAdvertisementDaemon {
 
         final int oldTag = TrafficStats.getAndSetThreadStatsTag(TAG_SYSTEM_NEIGHBOR);
         try {
-            mSocket = Os.socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_ICMPV6);
+            mSocket = Os.socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
             // Setting SNDTIMEO is purely for defensive purposes.
             Os.setsockoptTimeval(
                     mSocket, SOL_SOCKET, SO_SNDTIMEO, StructTimeval.fromMillis(send_timout_ms));
@@ -667,17 +566,34 @@ public class RouterAdvertisementDaemon {
         }
     }
 
-    private boolean sendMessage(int cmd) {
-        return sendMessage(cmd, null);
-    }
+    private final class UnicastResponder extends Thread {
+        private final InetSocketAddress mSolicitor = new InetSocketAddress(0);
+        // The recycled buffer for receiving Router Solicitations from clients.
+        // If the RS is larger than IPV6_MIN_MTU the packets are truncated.
+        // This is fine since currently only byte 0 is examined anyway.
+        private final byte[] mSolicitation = new byte[IPV6_MIN_MTU];
 
-    private boolean sendMessage(int cmd, @Nullable Object obj) {
-        if (mRaMessageHandler == null) {
-            return false;
+        @Override
+        public void run() {
+            while (isSocketValid()) {
+                try {
+                    // Blocking receive.
+                    final int rval = Os.recvfrom(
+                            mSocket, mSolicitation, 0, mSolicitation.length, 0, mSolicitor);
+                    // Do the least possible amount of validation.
+                    if (rval < 1 || mSolicitation[0] != asByte(ICMPV6_ROUTER_SOLICITATION)) {
+                        continue;
+                    }
+                } catch (ErrnoException | SocketException e) {
+                    if (isSocketValid()) {
+                        Log.e(TAG, "recvfrom error: " + e);
+                    }
+                    continue;
+                }
+
+                maybeSendRA(mSolicitor);
+            }
         }
-
-        return mRaMessageHandler.sendMessage(
-                Message.obtain(mRaMessageHandler, cmd, obj));
     }
 
     // TODO: Consider moving this to run on a provided Looper as a Handler,

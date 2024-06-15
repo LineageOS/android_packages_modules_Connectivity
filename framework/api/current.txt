@@ -315,6 +315,7 @@ package android.net {
     method @Nullable public android.net.NetworkSpecifier getNetworkSpecifier();
     method public int getOwnerUid();
     method public int getSignalStrength();
+    method @FlaggedApi("com.android.net.flags.request_restricted_wifi") @NonNull public java.util.Set<java.lang.Integer> getSubscriptionIds();
     method @Nullable public android.net.TransportInfo getTransportInfo();
     method public boolean hasCapability(int);
     method public boolean hasEnterpriseId(int);
@@ -332,6 +333,7 @@ package android.net {
     field public static final int NET_CAPABILITY_IA = 7; // 0x7
     field public static final int NET_CAPABILITY_IMS = 4; // 0x4
     field public static final int NET_CAPABILITY_INTERNET = 12; // 0xc
+    field @FlaggedApi("com.android.net.flags.net_capability_local_network") public static final int NET_CAPABILITY_LOCAL_NETWORK = 36; // 0x24
     field public static final int NET_CAPABILITY_MCX = 23; // 0x17
     field public static final int NET_CAPABILITY_MMS = 0; // 0x0
     field public static final int NET_CAPABILITY_MMTEL = 33; // 0x21
@@ -360,6 +362,7 @@ package android.net {
     field public static final int TRANSPORT_CELLULAR = 0; // 0x0
     field public static final int TRANSPORT_ETHERNET = 3; // 0x3
     field public static final int TRANSPORT_LOWPAN = 6; // 0x6
+    field @FlaggedApi("com.android.net.flags.support_transport_satellite") public static final int TRANSPORT_SATELLITE = 10; // 0xa
     field public static final int TRANSPORT_THREAD = 9; // 0x9
     field public static final int TRANSPORT_USB = 8; // 0x8
     field public static final int TRANSPORT_VPN = 4; // 0x4
@@ -418,6 +421,7 @@ package android.net {
     method public int describeContents();
     method @NonNull public int[] getCapabilities();
     method @Nullable public android.net.NetworkSpecifier getNetworkSpecifier();
+    method @FlaggedApi("com.android.net.flags.request_restricted_wifi") @NonNull public java.util.Set<java.lang.Integer> getSubscriptionIds();
     method @NonNull public int[] getTransportTypes();
     method public boolean hasCapability(int);
     method public boolean hasTransport(int);
@@ -437,6 +441,7 @@ package android.net {
     method @NonNull public android.net.NetworkRequest.Builder setIncludeOtherUidNetworks(boolean);
     method @Deprecated public android.net.NetworkRequest.Builder setNetworkSpecifier(String);
     method public android.net.NetworkRequest.Builder setNetworkSpecifier(android.net.NetworkSpecifier);
+    method @FlaggedApi("com.android.net.flags.request_restricted_wifi") @NonNull public android.net.NetworkRequest.Builder setSubscriptionIds(@NonNull java.util.Set<java.lang.Integer>);
   }
 
   public class ParseException extends java.lang.RuntimeException {

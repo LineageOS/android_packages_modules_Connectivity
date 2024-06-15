@@ -30,6 +30,8 @@ import com.android.net.module.util.netlink.InetDiagMessage;
 import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.StructInetDiagSockId;
 
+import java.io.PrintWriter;
+
 /**
  * Monitor socket destroy and delete entry from cookie tag bpf map.
  */
@@ -71,5 +73,12 @@ public class SkDestroyListener extends NetlinkMonitor {
         } catch (ErrnoException e) {
             mLog.e("Failed to delete CookieTagMap entry for " + sockId.cookie  + ": " + e);
         }
+    }
+
+    /**
+     * Dump the contents of SkDestroyListener log.
+     */
+    public void dump(PrintWriter pw) {
+        mLog.reverseDump(pw);
     }
 }

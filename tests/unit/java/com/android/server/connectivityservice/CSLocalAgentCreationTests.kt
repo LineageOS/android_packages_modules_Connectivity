@@ -33,6 +33,7 @@ import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.RecorderCallback.CallbackEntry.Available
 import com.android.testutils.TestableNetworkCallback
+import kotlin.test.assertFailsWith
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +42,6 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.never
 import org.mockito.Mockito.timeout
-import kotlin.test.assertFailsWith
 
 private const val TIMEOUT_MS = 2_000L
 private const val NO_CALLBACK_TIMEOUT_MS = 200L
@@ -51,6 +51,7 @@ private fun keepConnectedScore() =
 
 private fun defaultLnc() = FromS(LocalNetworkConfig.Builder().build())
 
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @IgnoreUpTo(Build.VERSION_CODES.R)

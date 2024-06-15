@@ -16,6 +16,7 @@
 
 // Tests in this folder are included both in unit tests and CTS.
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -23,7 +24,7 @@ java_library {
     name: "TetheringCommonTests",
     srcs: [
         "common/**/*.java",
-        "common/**/*.kt"
+        "common/**/*.kt",
     ],
     static_libs: [
         "androidx.test.rules",
@@ -95,7 +96,7 @@ android_library {
     visibility: [
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/Connectivity/Tethering/tests:__subpackages__",
-    ]
+    ],
 }
 
 android_test {

@@ -87,31 +87,6 @@ public class PacketReflector extends Thread {
         mBuf = new byte[mtu];
     }
 
-    private static void swapBytes(@NonNull byte[] buf, int pos1, int pos2, int len) {
-        for (int i = 0; i < len; i++) {
-            byte b = buf[pos1 + i];
-            buf[pos1 + i] = buf[pos2 + i];
-            buf[pos2 + i] = b;
-        }
-    }
-
-    private static void swapAddresses(@NonNull byte[] buf, int version) {
-        int addrPos, addrLen;
-        switch (version) {
-            case 4:
-                addrPos = IPV4_ADDR_OFFSET;
-                addrLen = IPV4_ADDR_LENGTH;
-                break;
-            case 6:
-                addrPos = IPV6_ADDR_OFFSET;
-                addrLen = IPV6_ADDR_LENGTH;
-                break;
-            default:
-                throw new IllegalArgumentException();
-        }
-        swapBytes(buf, addrPos, addrPos + addrLen, addrLen);
-    }
-
     // Reflect TCP packets: swap the source and destination addresses, but don't change the ports.
     // This is used by the test to "connect to itself" through the VPN.
     private void processTcpPacket(@NonNull byte[] buf, int version, int len, int hdrLen) {
@@ -120,7 +95,7 @@ public class PacketReflector extends Thread {
         }
 
         // Swap src and dst IP addresses.
-        swapAddresses(buf, version);
+        PacketReflectorUtil.swapAddresses(buf, version);
 
         // Send the packet back.
         writePacket(buf, len);
@@ -134,11 +109,11 @@ public class PacketReflector extends Thread {
         }
 
         // Swap src and dst IP addresses.
-        swapAddresses(buf, version);
+        PacketReflectorUtil.swapAddresses(buf, version);
 
         // Swap dst and src ports.
         int portOffset = hdrLen;
-        swapBytes(buf, portOffset, portOffset + 2, 2);
+        PacketReflectorUtil.swapBytes(buf, portOffset, portOffset + 2, 2);
 
         // Send the packet back.
         writePacket(buf, len);
@@ -160,7 +135,7 @@ public class PacketReflector extends Thread {
 
         // Swap src and dst IP addresses, and send the packet back.
         // This effectively pings the device to see if it replies.
-        swapAddresses(buf, version);
+        PacketReflectorUtil.swapAddresses(buf, version);
         writePacket(buf, len);
 
         // The device should have replied, and buf should now contain a ping response.
@@ -202,7 +177,7 @@ public class PacketReflector extends Thread {
         }
 
         // Now swap the addresses again and reflect the packet. This sends a ping reply.
-        swapAddresses(buf, version);
+        PacketReflectorUtil.swapAddresses(buf, version);
         writePacket(buf, len);
     }
 

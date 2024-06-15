@@ -53,6 +53,7 @@ import com.android.internal.util.test.FakeSettingsProvider
 import com.android.modules.utils.build.SdkLevel
 import com.android.server.ConnectivityService.Dependencies
 import com.android.server.connectivity.ConnectivityResources
+import kotlin.test.fail
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyInt
@@ -64,7 +65,6 @@ import org.mockito.Mockito
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.doReturn
-import kotlin.test.fail
 
 internal inline fun <reified T> mock() = Mockito.mock(T::class.java)
 internal inline fun <reified T> any() = any(T::class.java)
@@ -128,8 +128,8 @@ internal fun makeMockConnResources(resources: Resources, pm: PackageManager) = m
 }
 
 private val UNREASONABLY_LONG_ALARM_WAIT_MS = 1000
-internal fun makeMockAlarmManager() = mock<AlarmManager>().also { am ->
-    val alrmHdlr = HandlerThread("TestAlarmManager").also { it.start() }.threadHandler
+internal fun makeMockAlarmManager(handlerThread: HandlerThread) = mock<AlarmManager>().also { am ->
+    val alrmHdlr = handlerThread.threadHandler
     doAnswer {
         val (_, date, _, wakeupMsg, handler) = it.arguments
         wakeupMsg as WakeupMessage

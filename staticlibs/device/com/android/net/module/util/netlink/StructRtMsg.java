@@ -18,6 +18,7 @@ package com.android.net.module.util.netlink;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Field;
@@ -57,8 +58,9 @@ public class StructRtMsg extends Struct {
     @Field(order = 8, type = Type.U32)
     public final long flags;
 
-    StructRtMsg(short family, short dstLen, short srcLen, short tos, short table, short protocol,
-            short scope, short type, long flags) {
+    @VisibleForTesting
+    public StructRtMsg(short family, short dstLen, short srcLen, short tos, short table,
+            short protocol, short scope, short type, long flags) {
         this.family = family;
         this.dstLen = dstLen;
         this.srcLen = srcLen;

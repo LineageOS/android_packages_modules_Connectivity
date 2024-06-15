@@ -50,6 +50,8 @@ public final class ArpPacketTest {
             0x00, 0x1a, 0x11, 0x22, 0x33, 0x33 };
     private static final byte[] TEST_TARGET_MAC_ADDR = new byte[] {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    private static final MacAddress TEST_DESTINATION_MAC = MacAddress.fromBytes(ETHER_BROADCAST);
+    private static final MacAddress TEST_SOURCE_MAC = MacAddress.fromBytes(TEST_SENDER_MAC_ADDR);
     private static final byte[] TEST_ARP_PROBE = new byte[] {
         // dst mac address
         (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
@@ -163,6 +165,8 @@ public final class ArpPacketTest {
     @Test
     public void testParseArpProbePacket() throws Exception {
         final ArpPacket packet = ArpPacket.parseArpPacket(TEST_ARP_PROBE, TEST_ARP_PROBE.length);
+        assertEquals(packet.destination, TEST_DESTINATION_MAC);
+        assertEquals(packet.source, TEST_SOURCE_MAC);
         assertEquals(packet.opCode, ARP_REQUEST);
         assertEquals(packet.senderHwAddress, MacAddress.fromBytes(TEST_SENDER_MAC_ADDR));
         assertEquals(packet.targetHwAddress, MacAddress.fromBytes(TEST_TARGET_MAC_ADDR));
@@ -174,6 +178,8 @@ public final class ArpPacketTest {
     public void testParseArpAnnouncePacket() throws Exception {
         final ArpPacket packet = ArpPacket.parseArpPacket(TEST_ARP_ANNOUNCE,
                 TEST_ARP_ANNOUNCE.length);
+        assertEquals(packet.destination, TEST_DESTINATION_MAC);
+        assertEquals(packet.source, TEST_SOURCE_MAC);
         assertEquals(packet.opCode, ARP_REQUEST);
         assertEquals(packet.senderHwAddress, MacAddress.fromBytes(TEST_SENDER_MAC_ADDR));
         assertEquals(packet.targetHwAddress, MacAddress.fromBytes(TEST_TARGET_MAC_ADDR));

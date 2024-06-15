@@ -16,7 +16,9 @@
 
 package com.android.net.module.util.netlink;
 
+import static android.system.OsConstants.AF_INET6;
 import static android.system.OsConstants.NETLINK_ROUTE;
+import static com.android.net.module.util.netlink.NetlinkConstants.RTNL_FAMILY_IP6MR;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -38,6 +40,7 @@ import org.junit.runner.RunWith;
 import java.net.Inet6Address;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -125,6 +128,72 @@ public class RtNetlinkRouteMessageTest {
         packBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
         routeMsg.pack(packBuffer);
         assertEquals(RTM_NEWROUTE_PACK_HEX, HexDump.toHexString(packBuffer.array()));
+    }
+
+    private static final String RTM_GETROUTE_MULTICAST_IPV6_HEX =
+            "1C0000001A0001030000000000000000"             // struct nlmsghr
+            + "810000000000000000000000";                  // struct rtmsg
+
+    private static final String RTM_NEWROUTE_MULTICAST_IPV6_HEX =
+            "88000000180002000000000000000000"             // struct nlmsghr
+            + "81808000FE11000500000000"                   // struct rtmsg
+            + "08000F00FE000000"                           // RTA_TABLE
+            + "14000200FDACC0F1DBDB000195B7C1A464F944EA"   // RTA_SRC
+            + "14000100FF040000000000000000000000001234"   // RTA_DST
+            + "0800030014000000"                           // RTA_IIF
+            + "0C0009000800000111000000"                   // RTA_MULTIPATH
+            + "1C00110001000000000000009400000000000000"   // RTA_STATS
+            + "0000000000000000"
+            + "0C0017007617000000000000";                  // RTA_EXPIRES
+
+    @Test
+    public void testParseRtmNewRoute_MulticastIpv6() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_MULTICAST_IPV6_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkRouteMessage);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+        final StructNlMsgHdr hdr = routeMsg.getHeader();
+        assertNotNull(hdr);
+        assertEquals(136, hdr.nlmsg_len);
+        assertEquals(NetlinkConstants.RTM_NEWROUTE, hdr.nlmsg_type);
+
+        final StructRtMsg rtmsg = routeMsg.getRtMsgHeader();
+        assertNotNull(rtmsg);
+        assertEquals((byte) 129, (byte) rtmsg.family);
+        assertEquals(128, rtmsg.dstLen);
+        assertEquals(128, rtmsg.srcLen);
+        assertEquals(0xFE, rtmsg.table);
+
+        assertEquals(routeMsg.getSource(),
+                new IpPrefix("fdac:c0f1:dbdb:1:95b7:c1a4:64f9:44ea/128"));
+        assertEquals(routeMsg.getDestination(), new IpPrefix("ff04::1234/128"));
+        assertEquals(20, routeMsg.getIifIndex());
+        assertEquals(60060, routeMsg.getSinceLastUseMillis());
+    }
+
+    // NEWROUTE message for multicast IPv6 with the packed attributes
+    private static final String RTM_NEWROUTE_MULTICAST_IPV6_PACK_HEX =
+            "58000000180002000000000000000000"             // struct nlmsghr
+            + "81808000FE11000500000000"                   // struct rtmsg
+            + "14000200FDACC0F1DBDB000195B7C1A464F944EA"   // RTA_SRC
+            + "14000100FF040000000000000000000000001234"   // RTA_DST
+            + "0800030014000000"                           // RTA_IIF
+            + "0C0017007617000000000000";                  // RTA_EXPIRES
+    @Test
+    public void testPackRtmNewRoute_MulticastIpv6() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_MULTICAST_IPV6_PACK_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+
+        final ByteBuffer packBuffer = ByteBuffer.allocate(88);
+        packBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        routeMsg.pack(packBuffer);
+        assertEquals(RTM_NEWROUTE_MULTICAST_IPV6_PACK_HEX,
+                HexDump.toHexString(packBuffer.array()));
     }
 
     private static final String RTM_NEWROUTE_TRUNCATED_HEX =
@@ -220,10 +289,79 @@ public class RtNetlinkRouteMessageTest {
                 + "scope: 0, type: 1, flags: 0}, "
                 + "destination{2001:db8:1::}, "
                 + "gateway{fe80::1}, "
-                + "ifindex{735}, "
+                + "oifindex{735}, "
                 + "rta_cacheinfo{clntref: 0, lastuse: 0, expires: 59998, error: 0, used: 0, "
                 + "id: 0, ts: 0, tsage: 0} "
                 + "}";
         assertEquals(expected, routeMsg.toString());
+    }
+
+    @Test
+    public void testToString_RtmGetRoute() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_GETROUTE_MULTICAST_IPV6_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkRouteMessage);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+        final String expected = "RtNetlinkRouteMessage{ "
+                + "nlmsghdr{"
+                + "StructNlMsgHdr{ nlmsg_len{28}, nlmsg_type{26(RTM_GETROUTE)}, "
+                + "nlmsg_flags{769(NLM_F_REQUEST|NLM_F_DUMP)}, nlmsg_seq{0}, nlmsg_pid{0} }}, "
+                + "Rtmsg{"
+                + "family: 129, dstLen: 0, srcLen: 0, tos: 0, table: 0, protocol: 0, "
+                + "scope: 0, type: 0, flags: 0}, "
+                + "destination{::}, "
+                + "gateway{}, "
+                + "oifindex{0}, "
+                + "rta_cacheinfo{} "
+                + "}";
+        assertEquals(expected, routeMsg.toString());
+    }
+
+    @Test
+    public void testToString_RtmNewRouteMulticastIpv6() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_MULTICAST_IPV6_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        assertNotNull(msg);
+        assertTrue(msg instanceof RtNetlinkRouteMessage);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+        final String expected = "RtNetlinkRouteMessage{ "
+                + "nlmsghdr{"
+                + "StructNlMsgHdr{ nlmsg_len{136}, nlmsg_type{24(RTM_NEWROUTE)}, "
+                + "nlmsg_flags{2(NLM_F_MULTI)}, nlmsg_seq{0}, nlmsg_pid{0} }}, "
+                + "Rtmsg{"
+                + "family: 129, dstLen: 128, srcLen: 128, tos: 0, table: 254, protocol: 17, "
+                + "scope: 0, type: 5, flags: 0}, "
+                + "source{fdac:c0f1:dbdb:1:95b7:c1a4:64f9:44ea}, "
+                + "destination{ff04::1234}, "
+                + "gateway{}, "
+                + "iifindex{20}, "
+                + "oifindex{0}, "
+                + "rta_cacheinfo{} "
+                + "sinceLastUseMillis{60060}"
+                + "}";
+        assertEquals(expected, routeMsg.toString());
+    }
+
+    @Test
+    public void testGetRtmFamily_RTNL_FAMILY_IP6MR() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_MULTICAST_IPV6_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+
+        assertEquals(RTNL_FAMILY_IP6MR, routeMsg.getRtmFamily());
+    }
+
+    @Test
+    public void testGetRtmFamily_AF_INET6() {
+        final ByteBuffer byteBuffer = toByteBuffer(RTM_NEWROUTE_HEX);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);  // For testing.
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_ROUTE);
+        final RtNetlinkRouteMessage routeMsg = (RtNetlinkRouteMessage) msg;
+
+        assertEquals(AF_INET6, routeMsg.getRtmFamily());
     }
 }

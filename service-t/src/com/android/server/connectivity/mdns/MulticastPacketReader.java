@@ -42,6 +42,12 @@ public class MulticastPacketReader extends FdEventsReader<MulticastPacketReader.
     private final Set<PacketHandler> mPacketHandlers = MdnsUtils.newSet();
 
     interface PacketHandler {
+        /**
+         * Handle an incoming packet.
+         *
+         * The recvbuf and src <b>will be reused and modified</b> after this method returns, so
+         * implementers must ensure that they are not accessed after handlePacket returns.
+         */
         void handlePacket(byte[] recvbuf, int length, InetSocketAddress src);
     }
 

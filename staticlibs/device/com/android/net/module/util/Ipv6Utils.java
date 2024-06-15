@@ -166,6 +166,24 @@ public class Ipv6Utils {
     }
 
     /**
+     * Build an ICMPv6 Router Solicitation packet from the required specified parameters without
+     * ethernet header.
+     */
+    public static ByteBuffer buildRsPacket(
+            final Inet6Address srcIp, final Inet6Address dstIp, final ByteBuffer... options) {
+        final RsHeader rsHeader = new RsHeader((int) 0 /* reserved */);
+        final ByteBuffer[] payload =
+                buildIcmpv6Payload(
+                        ByteBuffer.wrap(rsHeader.writeToBytes(ByteOrder.BIG_ENDIAN)), options);
+        return buildIcmpv6Packet(
+                srcIp,
+                dstIp,
+                (byte) ICMPV6_ROUTER_SOLICITATION /* type */,
+                (byte) 0 /* code */,
+                payload);
+    }
+
+    /**
      * Build an ICMPv6 Echo Request packet from the required specified parameters.
      */
     public static ByteBuffer buildEchoRequestPacket(final MacAddress srcMac,
@@ -176,10 +194,20 @@ public class Ipv6Utils {
     }
 
     /**
-     * Build an ICMPv6 Echo Reply packet without ethernet header.
+     * Build an ICMPv6 Echo Request packet from the required specified parameters without ethernet
+     * header.
      */
-    public static ByteBuffer buildEchoReplyPacket(final Inet6Address srcIp,
+    public static ByteBuffer buildEchoRequestPacket(final Inet6Address srcIp,
             final Inet6Address dstIp) {
+        final ByteBuffer payload = ByteBuffer.allocate(4); // ID and Sequence number may be zero.
+        return buildIcmpv6Packet(srcIp, dstIp, (byte) ICMPV6_ECHO_REQUEST_TYPE /* type */,
+                (byte) 0 /* code */,
+                payload);
+    }
+
+    /** Build an ICMPv6 Echo Reply packet without ethernet header. */
+    public static ByteBuffer buildEchoReplyPacket(
+            final Inet6Address srcIp, final Inet6Address dstIp) {
         final ByteBuffer payload = ByteBuffer.allocate(4); // ID and Sequence number may be zero.
         return buildIcmpv6Packet(srcIp, dstIp, (byte) ICMPV6_ECHO_REPLY_TYPE /* type */,
                 (byte) 0 /* code */, payload);

@@ -133,7 +133,16 @@ class NetworkStatsTest {
     }
 
     @Test
-    fun testReadFromRecorder_manyUids() {
+    fun testReadFromRecorder_manyUids_useDataInput() {
+        doTestReadFromRecorder_manyUids(useFastDataInput = false)
+    }
+
+    @Test
+    fun testReadFromRecorder_manyUids_useFastDataInput() {
+        doTestReadFromRecorder_manyUids(useFastDataInput = true)
+    }
+
+    fun doTestReadFromRecorder_manyUids(useFastDataInput: Boolean) {
         val mockObserver = mock<NonMonotonicObserver<String>>()
         val mockDropBox = mock<DropBoxManager>()
         testFilesAssets.forEach {
@@ -146,7 +155,9 @@ class NetworkStatsTest {
                 PREFIX_UID,
                 UID_COLLECTION_BUCKET_DURATION_MS,
                 false /* includeTags */,
-                false /* wipeOnError */
+                false /* wipeOnError */,
+                useFastDataInput /* useFastDataInput */,
+                it
             )
             recorder.orLoadCompleteLocked
         }

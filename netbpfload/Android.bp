@@ -14,6 +14,10 @@
 // limitations under the License.
 //
 
+package {
+    default_team: "trendy_team_fwk_core_networking",
+}
+
 cc_binary {
     name: "netbpfload",
 
@@ -40,7 +44,7 @@ cc_binary {
         "com.android.tethering",
         "//apex_available:platform",
     ],
-    // really should be Android 14/U (34), but we cannot include binaries built
+    // really should be Android 13/T (33), but we cannot include binaries built
     // against newer sdk in the apex, which still targets 30(R):
     // module "netbpfload" variant "android_x86_apex30": should support
     // min_sdk_version(30) for "com.android.tethering": newer SDK(34).
@@ -48,4 +52,16 @@ cc_binary {
 
     init_rc: ["netbpfload.rc"],
     required: ["bpfloader"],
+}
+
+// Versioned netbpfload init rc: init system will process it only on api T/33+ devices
+// Note: R[30] S[31] Sv2[32] T[33] U[34] V[35])
+//
+// For details of versioned rc files see:
+// https://android.googlesource.com/platform/system/core/+/HEAD/init/README.md#versioned-rc-files-within-apexs
+prebuilt_etc {
+    name: "netbpfload.mainline.rc",
+    src: "netbpfload.mainline.rc",
+    filename: "netbpfload.33rc",
+    installable: false,
 }

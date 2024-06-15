@@ -25,8 +25,10 @@ import java.io.IOException
  * A minimal HTTP server running on a random available port.
  *
  * @param host The host to listen to, or null to listen on all hosts
+ * @param port The port to listen to, or 0 to auto select
  */
-class TestHttpServer(host: String? = null) : NanoHTTPD(host, 0 /* auto-select the port */) {
+class TestHttpServer
+    @JvmOverloads constructor(host: String? = null, port: Int = 0) : NanoHTTPD(host, port) {
     // Map of URL path -> HTTP response code
     private val responses = HashMap<Request, Response>()
 

@@ -14,14 +14,17 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_core_networking",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// TODO: delete this as it is a cross-module api boundary violation
 cc_test_library {
     name: "libconnectivity_native_test_utils",
+    visibility: ["//packages/modules/DnsResolver/tests:__subpackages__"],
     defaults: [
         "netd_defaults",
-        "resolv_test_defaults"
+        "resolv_test_defaults",
     ],
     srcs: [
         "firewall.cpp",

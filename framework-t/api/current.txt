@@ -127,7 +127,7 @@ package android.net {
 
   public final class IpSecTransform implements java.lang.AutoCloseable {
     method public void close();
-    method @FlaggedApi("com.android.net.flags.ipsec_transform_state") public void getIpSecTransformState(@NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<android.net.IpSecTransformState,java.lang.RuntimeException>);
+    method @FlaggedApi("com.android.net.flags.ipsec_transform_state") public void requestIpSecTransformState(@NonNull java.util.concurrent.Executor, @NonNull android.os.OutcomeReceiver<android.net.IpSecTransformState,java.lang.RuntimeException>);
   }
 
   public static class IpSecTransform.Builder {
@@ -145,7 +145,7 @@ package android.net {
     method public long getPacketCount();
     method @NonNull public byte[] getReplayBitmap();
     method public long getRxHighestSequenceNumber();
-    method public long getTimestamp();
+    method public long getTimestampMillis();
     method public long getTxHighestSequenceNumber();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.IpSecTransformState> CREATOR;
@@ -158,7 +158,7 @@ package android.net {
     method @NonNull public android.net.IpSecTransformState.Builder setPacketCount(long);
     method @NonNull public android.net.IpSecTransformState.Builder setReplayBitmap(@NonNull byte[]);
     method @NonNull public android.net.IpSecTransformState.Builder setRxHighestSequenceNumber(long);
-    method @NonNull public android.net.IpSecTransformState.Builder setTimestamp(long);
+    method @NonNull public android.net.IpSecTransformState.Builder setTimestampMillis(long);
     method @NonNull public android.net.IpSecTransformState.Builder setTxHighestSequenceNumber(long);
   }
 
@@ -210,9 +210,26 @@ package android.net {
 
 package android.net.nsd {
 
+  @FlaggedApi("com.android.net.flags.nsd_subtypes_support_enabled") public final class DiscoveryRequest implements android.os.Parcelable {
+    method public int describeContents();
+    method @Nullable public android.net.Network getNetwork();
+    method @NonNull public String getServiceType();
+    method @Nullable public String getSubtype();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.nsd.DiscoveryRequest> CREATOR;
+  }
+
+  public static final class DiscoveryRequest.Builder {
+    ctor public DiscoveryRequest.Builder(@NonNull String);
+    method @NonNull public android.net.nsd.DiscoveryRequest build();
+    method @NonNull public android.net.nsd.DiscoveryRequest.Builder setNetwork(@Nullable android.net.Network);
+    method @NonNull public android.net.nsd.DiscoveryRequest.Builder setSubtype(@Nullable String);
+  }
+
   public final class NsdManager {
     method public void discoverServices(String, int, android.net.nsd.NsdManager.DiscoveryListener);
     method public void discoverServices(@NonNull String, int, @Nullable android.net.Network, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
+    method @FlaggedApi("com.android.net.flags.nsd_subtypes_support_enabled") public void discoverServices(@NonNull android.net.nsd.DiscoveryRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
     method @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) public void discoverServices(@NonNull String, int, @NonNull android.net.NetworkRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.DiscoveryListener);
     method public void registerService(android.net.nsd.NsdServiceInfo, int, android.net.nsd.NsdManager.RegistrationListener);
     method public void registerService(@NonNull android.net.nsd.NsdServiceInfo, int, @NonNull java.util.concurrent.Executor, @NonNull android.net.nsd.NsdManager.RegistrationListener);
@@ -275,6 +292,7 @@ package android.net.nsd {
     method public int getPort();
     method public String getServiceName();
     method public String getServiceType();
+    method @FlaggedApi("com.android.net.flags.nsd_subtypes_support_enabled") @NonNull public java.util.Set<java.lang.String> getSubtypes();
     method public void removeAttribute(String);
     method public void setAttribute(String, String);
     method @Deprecated public void setHost(java.net.InetAddress);
@@ -283,6 +301,7 @@ package android.net.nsd {
     method public void setPort(int);
     method public void setServiceName(String);
     method public void setServiceType(String);
+    method @FlaggedApi("com.android.net.flags.nsd_subtypes_support_enabled") public void setSubtypes(@NonNull java.util.Set<java.lang.String>);
     method public void writeToParcel(android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.nsd.NsdServiceInfo> CREATOR;
   }

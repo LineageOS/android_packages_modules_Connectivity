@@ -92,4 +92,26 @@ public class StructNlAttrTest {
         assertNull(integer3);
         assertEquals(int3, 0x08 /* default value */);
     }
+
+    @Test
+    public void testGetValueAsLong() {
+        final Long input = 1234567L;
+        // Not a real netlink attribute, just for testing
+        final StructNlAttr attr = new StructNlAttr(IFA_FLAGS, input);
+
+        final Long output = attr.getValueAsLong();
+
+        assertEquals(input, output);
+    }
+
+    @Test
+    public void testGetValueAsLong_malformed() {
+        final int input = 1234567;
+        // Not a real netlink attribute, just for testing
+        final StructNlAttr attr = new StructNlAttr(IFA_FLAGS, input);
+
+        final Long output = attr.getValueAsLong();
+
+        assertNull(output);
+    }
 }

@@ -16,6 +16,8 @@
 
 package com.android.cts.net.hostside;
 
+import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+import static android.app.ActivityManager.PROCESS_STATE_TOP_SLEEPING;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED;
 
@@ -33,6 +35,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.cts.util.CtsNetUtils;
+import android.os.SystemClock;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
@@ -42,6 +45,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -144,10 +148,20 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
         public Network expectAvailableCallbackAndGetNetwork() {
             final CallbackInfo cb = nextCallback(TEST_CONNECT_TIMEOUT_MS);
             if (cb.state != CallbackState.AVAILABLE) {
-                fail("Network is not available. Instead obtained the following callback :"
-                        + cb);
+                fail("Network is not available. Instead obtained the following callback :" + cb);
             }
             return cb.network;
+        }
+
+        public void drainAndWaitForIdle() {
+            try {
+                do {
+                    mCallbacks.drainTo(new ArrayList<>());
+                } while (mCallbacks.poll(TEST_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS) != null);
+            } catch (InterruptedException ie) {
+                Log.e(TAG, "Interrupted while draining callback queue", ie);
+                Thread.currentThread().interrupt();
+            }
         }
 
         public void expectBlockedStatusCallback(Network expectedNetwork, boolean expectBlocked) {
@@ -203,6 +217,7 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
         // Initial state
         setBatterySaverMode(false);
         setRestrictBackground(false);
+        setAppIdle(false);
 
         // Get transports of the active network, this has to be done before changing meteredness,
         // since wifi will be disconnected when changing from non-metered to metered.
@@ -223,7 +238,7 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
         // Check that the network is metered.
         mTestNetworkCallback.expectCapabilitiesCallbackEventually(mNetwork,
                 false /* hasCapability */, NET_CAPABILITY_NOT_METERED);
-        mTestNetworkCallback.expectBlockedStatusCallback(mNetwork, false);
+        mTestNetworkCallback.drainAndWaitForIdle();
 
         // Before Android T, DNS queries over private DNS should be but are not restricted by Power
         // Saver or Data Saver. The issue is fixed in mainline update and apps can no longer request
@@ -312,7 +327,8 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
             // Enable Power Saver
             setBatterySaverMode(true);
             if (SdkLevel.isAtLeastT()) {
-                assertBackgroundNetworkAccess(false, "java.net.UnknownHostException");
+                assertProcessStateBelow(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
+                assertNetworkAccess(false, "java.net.UnknownHostException");
             } else {
                 assertBackgroundNetworkAccess(false);
             }
@@ -336,7 +352,8 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
             // Enable Power Saver
             setBatterySaverMode(true);
             if (SdkLevel.isAtLeastT()) {
-                assertBackgroundNetworkAccess(false, "java.net.UnknownHostException");
+                assertProcessStateBelow(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
+                assertNetworkAccess(false, "java.net.UnknownHostException");
             } else {
                 assertBackgroundNetworkAccess(false);
             }
@@ -348,6 +365,58 @@ public class NetworkCallbackTest extends AbstractRestrictBackgroundNetworkTestCa
             assertBackgroundNetworkAccess(true);
             mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, false);
             assertNetworkAccessBlockedByBpf(false, mUid, false /* metered */);
+        } finally {
+            mMeterednessConfiguration.resetNetworkMeteredness();
+        }
+    }
+
+    @Test
+    public void testOnBlockedStatusChanged_default() throws Exception {
+        assumeTrue("Feature not enabled", isNetworkBlockedForTopSleepingAndAbove());
+
+        try {
+            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+            assertNetworkAccess(false, null);
+            assertNetworkAccessBlockedByBpf(true, mUid, true /* metered */);
+
+            launchActivity();
+            assertTopState();
+            assertNetworkAccess(true, null);
+            mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, false);
+            assertNetworkAccessBlockedByBpf(false, mUid, true /* metered */);
+
+            finishActivity();
+            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            assertNetworkAccess(false, null);
+            mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, true);
+            assertNetworkAccessBlockedByBpf(true, mUid, true /* metered */);
+
+        } finally {
+            mMeterednessConfiguration.resetNetworkMeteredness();
+        }
+
+        // Set to non-metered network
+        mMeterednessConfiguration.configureNetworkMeteredness(false);
+        mTestNetworkCallback.expectCapabilitiesCallbackEventually(mNetwork,
+                true /* hasCapability */, NET_CAPABILITY_NOT_METERED);
+        try {
+            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+            assertNetworkAccess(false, null);
+            assertNetworkAccessBlockedByBpf(true, mUid, false /* metered */);
+
+            launchActivity();
+            assertTopState();
+            assertNetworkAccess(true, null);
+            mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, false);
+            assertNetworkAccessBlockedByBpf(false, mUid, false /* metered */);
+
+            finishActivity();
+            assertProcessStateBelow(PROCESS_STATE_TOP_SLEEPING);
+            SystemClock.sleep(PROCESS_STATE_TRANSITION_DELAY_MS);
+            assertNetworkAccess(false, null);
+            mTestNetworkCallback.expectBlockedStatusCallbackEventually(mNetwork, true);
+            assertNetworkAccessBlockedByBpf(true, mUid, false /* metered */);
         } finally {
             mMeterednessConfiguration.resetNetworkMeteredness();
         }

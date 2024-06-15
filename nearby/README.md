@@ -47,8 +47,17 @@ Then, add the jar in IDE as below.
 ## Build and Install
 
 ```sh
-Build unbundled module using banchan
+For master on AOSP (Android) host
+$ source build/envsetup.sh
+$ lunch aosp_oriole-trunk_staging-userdebug
+$ m com.android.tethering
+$ $ANDROID_BUILD_TOP/out/host/linux-x86/bin/deapexer decompress --input $ANDROID_PRODUCT_OUT/system/apex/com.android.tethering.capex --output /tmp/tethering.apex
+$ adb install /tmp/tethering.apex
+$ adb reboot
 
+NOTE: Developers should use AOSP by default, udc-mainline-prod should not be used unless for Google internal features.
+For udc-mainline-prod on Google internal host
+Build unbundled module using banchan
 $ source build/envsetup.sh
 $ banchan com.google.android.tethering mainline_modules_arm64
 $ m apps_only dist

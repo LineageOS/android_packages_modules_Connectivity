@@ -23,11 +23,12 @@ import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import org.junit.Test
-import org.junit.runner.RunWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
 
+@DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @IgnoreUpTo(Build.VERSION_CODES.R)

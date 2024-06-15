@@ -46,10 +46,12 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.CollectionUtils;
 
 import java.lang.annotation.Retention;
@@ -57,6 +59,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * The Network Service Discovery Manager class provides the API to discover services
@@ -150,7 +154,63 @@ public final class NsdManager {
     public static class Flags {
         static final String REGISTER_NSD_OFFLOAD_ENGINE_API =
                 "com.android.net.flags.register_nsd_offload_engine_api";
+        static final String NSD_SUBTYPES_SUPPORT_ENABLED =
+                "com.android.net.flags.nsd_subtypes_support_enabled";
+        static final String ADVERTISE_REQUEST_API =
+                "com.android.net.flags.advertise_request_api";
+        static final String NSD_CUSTOM_HOSTNAME_ENABLED =
+                "com.android.net.flags.nsd_custom_hostname_enabled";
+        static final String NSD_CUSTOM_TTL_ENABLED =
+                "com.android.net.flags.nsd_custom_ttl_enabled";
     }
+
+    /**
+     * A regex for the acceptable format of a type or subtype label.
+     * @hide
+     */
+    public static final String TYPE_LABEL_REGEX = "_[a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]";
+
+    /**
+     * A regex for the acceptable format of a subtype label.
+     *
+     * As per RFC 6763 7.1, "Subtype strings are not required to begin with an underscore, though
+     * they often do.", and "Subtype strings [...] may be constructed using arbitrary 8-bit data
+     * values.  In many cases these data values may be UTF-8 [RFC3629] representations of text, or
+     * even (as in the example above) plain ASCII [RFC20], but they do not have to be.".
+     *
+     * This regex is overly conservative as it mandates the underscore and only allows printable
+     * ASCII characters (codes 0x20 to 0x7e, space to tilde), except for comma (0x2c) and dot
+     * (0x2e); so the NsdManager API does not allow everything the RFC allows. This may be revisited
+     * in the future, but using arbitrary bytes makes logging and testing harder, and using other
+     * characters would probably be a bad idea for interoperability for apps.
+     * @hide
+     */
+    public static final String SUBTYPE_LABEL_REGEX = "_["
+            + "\\x20-\\x2b"
+            + "\\x2d"
+            + "\\x2f-\\x7e"
+            + "]{1,62}";
+
+    /**
+     * A regex for the acceptable format of a service type specification.
+     *
+     * When it matches, matcher group 1 is an optional leading subtype when using legacy dot syntax
+     * (_subtype._type._tcp). Matcher group 2 is the actual type, and matcher group 3 contains
+     * optional comma-separated subtypes.
+     * @hide
+     */
+    public static final String TYPE_REGEX =
+            // Optional leading subtype (_subtype._type._tcp)
+            // (?: xxx) is a non-capturing parenthesis, don't capture the dot
+            "^(?:(" + SUBTYPE_LABEL_REGEX + ")\\.)?"
+                    // Actual type (_type._tcp.local)
+                    + "(" + TYPE_LABEL_REGEX + "\\._(?:tcp|udp))"
+                    // Drop '.' at the end of service type that is compatible with old backend.
+                    // e.g. allow "_type._tcp.local."
+                    + "\\.?"
+                    // Optional subtype after comma, for "_type._tcp,_subtype1,_subtype2" format
+                    + "((?:," + SUBTYPE_LABEL_REGEX + ")*)"
+                    + "$";
 
     /**
      * Broadcast intent action to indicate whether network service discovery is
@@ -269,6 +329,20 @@ public final class NsdManager {
     /** Dns based service discovery protocol */
     public static final int PROTOCOL_DNS_SD = 0x0001;
 
+    /**
+     * The minimum TTL seconds which is allowed for a service registration.
+     *
+     * @hide
+     */
+    public static final long TTL_SECONDS_MIN = 30L;
+
+    /**
+     * The maximum TTL seconds which is allowed for a service registration.
+     *
+     * @hide
+     */
+    public static final long TTL_SECONDS_MAX = 10 * 3600L;
+
     private static final SparseArray<String> EVENT_NAMES = new SparseArray<>();
     static {
         EVENT_NAMES.put(DISCOVER_SERVICES, "DISCOVER_SERVICES");
@@ -324,6 +398,8 @@ public final class NsdManager {
     private final SparseArray mListenerMap = new SparseArray();
     @GuardedBy("mMapLock")
     private final SparseArray<NsdServiceInfo> mServiceMap = new SparseArray<>();
+    @GuardedBy("mMapLock")
+    private final SparseArray<DiscoveryRequest> mDiscoveryMap = new SparseArray<>();
     @GuardedBy("mMapLock")
     private final SparseArray<Executor> mExecutorMap = new SparseArray<>();
     private final Object mMapLock = new Object();
@@ -654,9 +730,12 @@ public final class NsdManager {
             throw new RuntimeException("Failed to connect to NsdService");
         }
 
-        // Only proactively start the daemon if the target SDK < S, otherwise the internal service
-        // would automatically start/stop the native daemon as needed.
-        if (!CompatChanges.isChangeEnabled(RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)) {
+        // Only proactively start the daemon if the target SDK < S AND platform < V, For target
+        // SDK >= S AND platform < V, the internal service would automatically start/stop the native
+        // daemon as needed. For platform >= V, no action is required because the native daemon is
+        // completely removed.
+        if (!CompatChanges.isChangeEnabled(RUN_NATIVE_NSD_ONLY_IF_LEGACY_APPS_T_AND_LATER)
+                && !SdkLevel.isAtLeastV()) {
             try {
                 mService.startDaemon();
             } catch (RemoteException e) {
@@ -677,6 +756,12 @@ public final class NsdManager {
             mServHandler.sendMessage(mServHandler.obtainMessage(message, 0, listenerKey, info));
         }
 
+        private void sendDiscoveryRequest(
+                int message, int listenerKey, DiscoveryRequest discoveryRequest) {
+            mServHandler.sendMessage(
+                    mServHandler.obtainMessage(message, 0, listenerKey, discoveryRequest));
+        }
+
         private void sendError(int message, int listenerKey, int error) {
             mServHandler.sendMessage(mServHandler.obtainMessage(message, error, listenerKey));
         }
@@ -686,8 +771,8 @@ public final class NsdManager {
         }
 
         @Override
-        public void onDiscoverServicesStarted(int listenerKey, NsdServiceInfo info) {
-            sendInfo(DISCOVER_SERVICES_STARTED, listenerKey, info);
+        public void onDiscoverServicesStarted(int listenerKey, DiscoveryRequest discoveryRequest) {
+            sendDiscoveryRequest(DISCOVER_SERVICES_STARTED, listenerKey, discoveryRequest);
         }
 
         @Override
@@ -965,10 +1050,12 @@ public final class NsdManager {
             final Object obj = message.obj;
             final Object listener;
             final NsdServiceInfo ns;
+            final DiscoveryRequest discoveryRequest;
             final Executor executor;
             synchronized (mMapLock) {
                 listener = mListenerMap.get(key);
                 ns = mServiceMap.get(key);
+                discoveryRequest = mDiscoveryMap.get(key);
                 executor = mExecutorMap.get(key);
             }
             if (listener == null) {
@@ -976,17 +1063,22 @@ public final class NsdManager {
                 return;
             }
             if (DBG) {
-                Log.d(TAG, "received " + nameOf(what) + " for key " + key + ", service " + ns);
+                if (discoveryRequest != null) {
+                    Log.d(TAG, "received " + nameOf(what) + " for key " + key + ", discovery "
+                            + discoveryRequest);
+                } else {
+                    Log.d(TAG, "received " + nameOf(what) + " for key " + key + ", service " + ns);
+                }
             }
             switch (what) {
                 case DISCOVER_SERVICES_STARTED:
-                    final String s = getNsdServiceInfoType((NsdServiceInfo) obj);
+                    final String s = getNsdServiceInfoType((DiscoveryRequest) obj);
                     executor.execute(() -> ((DiscoveryListener) listener).onDiscoveryStarted(s));
                     break;
                 case DISCOVER_SERVICES_FAILED:
                     removeListener(key);
                     executor.execute(() -> ((DiscoveryListener) listener).onStartDiscoveryFailed(
-                            getNsdServiceInfoType(ns), errorCode));
+                            getNsdServiceInfoType(discoveryRequest), errorCode));
                     break;
                 case SERVICE_FOUND:
                     executor.execute(() -> ((DiscoveryListener) listener).onServiceFound(
@@ -1001,12 +1093,12 @@ public final class NsdManager {
                     // the effect for the client is indistinguishable from STOP_DISCOVERY_SUCCEEDED
                     removeListener(key);
                     executor.execute(() -> ((DiscoveryListener) listener).onStopDiscoveryFailed(
-                            getNsdServiceInfoType(ns), errorCode));
+                            getNsdServiceInfoType(discoveryRequest), errorCode));
                     break;
                 case STOP_DISCOVERY_SUCCEEDED:
                     removeListener(key);
                     executor.execute(() -> ((DiscoveryListener) listener).onDiscoveryStopped(
-                            getNsdServiceInfoType(ns)));
+                            getNsdServiceInfoType(discoveryRequest)));
                     break;
                 case REGISTER_SERVICE_FAILED:
                     removeListener(key);
@@ -1079,17 +1171,39 @@ public final class NsdManager {
         return mListenerKey;
     }
 
-    // Assert that the listener is not in the map, then add it and returns its key
-    private int putListener(Object listener, Executor e, NsdServiceInfo s) {
-        checkListener(listener);
-        final int key;
+    private int putListener(Object listener, Executor e, NsdServiceInfo serviceInfo) {
         synchronized (mMapLock) {
-            int valueIndex = mListenerMap.indexOfValue(listener);
+            return putListener(listener, e, mServiceMap, serviceInfo);
+        }
+    }
+
+    private int putListener(Object listener, Executor e, DiscoveryRequest discoveryRequest) {
+        synchronized (mMapLock) {
+            return putListener(listener, e, mDiscoveryMap, discoveryRequest);
+        }
+    }
+
+    // Assert that the listener is not in the map, then add it and returns its key
+    private <T> int putListener(Object listener, Executor e, SparseArray<T> map, T value) {
+        synchronized (mMapLock) {
+            checkListener(listener);
+            final int key;
+            final int valueIndex = mListenerMap.indexOfValue(listener);
             if (valueIndex != -1) {
                 throw new IllegalArgumentException("listener already in use");
             }
             key = nextListenerKey();
             mListenerMap.put(key, listener);
+            map.put(key, value);
+            mExecutorMap.put(key, e);
+            return key;
+        }
+    }
+
+    private int updateRegisteredListener(Object listener, Executor e, NsdServiceInfo s) {
+        final int key;
+        synchronized (mMapLock) {
+            key = getListenerKey(listener);
             mServiceMap.put(key, s);
             mExecutorMap.put(key, e);
         }
@@ -1100,6 +1214,7 @@ public final class NsdManager {
         synchronized (mMapLock) {
             mListenerMap.remove(key);
             mServiceMap.remove(key);
+            mDiscoveryMap.remove(key);
             mExecutorMap.remove(key);
         }
     }
@@ -1115,9 +1230,9 @@ public final class NsdManager {
         }
     }
 
-    private static String getNsdServiceInfoType(NsdServiceInfo s) {
-        if (s == null) return "?";
-        return s.getServiceType();
+    private static String getNsdServiceInfoType(DiscoveryRequest r) {
+        if (r == null) return "?";
+        return r.getServiceType();
     }
 
     /**
@@ -1160,14 +1275,111 @@ public final class NsdManager {
      */
     public void registerService(@NonNull NsdServiceInfo serviceInfo, int protocolType,
             @NonNull Executor executor, @NonNull RegistrationListener listener) {
-        if (serviceInfo.getPort() <= 0) {
-            throw new IllegalArgumentException("Invalid port number");
-        }
-        checkServiceInfo(serviceInfo);
+        checkServiceInfoForRegistration(serviceInfo);
         checkProtocol(protocolType);
-        int key = putListener(listener, executor, serviceInfo);
+        final AdvertisingRequest.Builder builder = new AdvertisingRequest.Builder(serviceInfo,
+                protocolType);
+        // Optionally assume that the request is an update request if it uses subtypes and the same
+        // listener. This is not documented behavior as support for advertising subtypes via
+        // "_servicename,_sub1,_sub2" has never been documented in the first place, and using
+        // multiple subtypes was broken in T until a later module update. Subtype registration is
+        // documented in the NsdServiceInfo.setSubtypes API instead, but this provides a limited
+        // option for users of the older undocumented behavior, only for subtype changes.
+        if (isSubtypeUpdateRequest(serviceInfo, listener)) {
+            builder.setAdvertisingConfig(AdvertisingRequest.NSD_ADVERTISING_UPDATE_ONLY);
+        }
+        registerService(builder.build(), executor, listener);
+    }
+
+    private boolean isSubtypeUpdateRequest(@NonNull NsdServiceInfo serviceInfo, @NonNull
+            RegistrationListener listener) {
+        // If the listener is the same object, serviceInfo is for the same service name and
+        // type (outside of subtypes), and either of them use subtypes, treat the request as a
+        // subtype update request.
+        synchronized (mMapLock) {
+            int valueIndex = mListenerMap.indexOfValue(listener);
+            if (valueIndex == -1) {
+                return false;
+            }
+            final int key = mListenerMap.keyAt(valueIndex);
+            NsdServiceInfo existingService = mServiceMap.get(key);
+            if (existingService == null) {
+                return false;
+            }
+            final Pair<String, String> existingTypeSubtype = getTypeAndSubtypes(
+                    existingService.getServiceType());
+            final Pair<String, String> newTypeSubtype = getTypeAndSubtypes(
+                    serviceInfo.getServiceType());
+            if (existingTypeSubtype == null || newTypeSubtype == null) {
+                return false;
+            }
+            final boolean existingHasNoSubtype = TextUtils.isEmpty(existingTypeSubtype.second);
+            final boolean updatedHasNoSubtype = TextUtils.isEmpty(newTypeSubtype.second);
+            if (existingHasNoSubtype && updatedHasNoSubtype) {
+                // Only allow subtype changes when subtypes are used. This ensures that this
+                // behavior does not affect most requests.
+                return false;
+            }
+
+            return Objects.equals(existingService.getServiceName(), serviceInfo.getServiceName())
+                    && Objects.equals(existingTypeSubtype.first, newTypeSubtype.first);
+        }
+    }
+
+    /**
+     * Get the base type from a type specification with "_type._tcp,sub1,sub2" syntax.
+     *
+     * <p>This rejects specifications using dot syntax to specify subtypes ("_sub1._type._tcp").
+     *
+     * @return Type and comma-separated list of subtypes, or null if invalid format.
+     */
+    @Nullable
+    private static Pair<String, String> getTypeAndSubtypes(@Nullable String typeWithSubtype) {
+        if (typeWithSubtype == null) {
+            return null;
+        }
+        final Matcher matcher = Pattern.compile(TYPE_REGEX).matcher(typeWithSubtype);
+        if (!matcher.matches()) return null;
+        // Reject specifications using leading subtypes with a dot
+        if (!TextUtils.isEmpty(matcher.group(1))) return null;
+        return new Pair<>(matcher.group(2), matcher.group(3));
+    }
+
+    /**
+     * Register a service to be discovered by other services.
+     *
+     * <p> The function call immediately returns after sending a request to register service
+     * to the framework. The application is notified of a successful registration
+     * through the callback {@link RegistrationListener#onServiceRegistered} or a failure
+     * through {@link RegistrationListener#onRegistrationFailed}.
+     *
+     * <p> The application should call {@link #unregisterService} when the service
+     * registration is no longer required, and/or whenever the application is stopped.
+     * @param  advertisingRequest service being registered
+     * @param executor Executor to run listener callbacks with
+     * @param listener The listener notifies of a successful registration and is used to
+     * unregister this service through a call on {@link #unregisterService}. Cannot be null.
+     *
+     * @hide
+     */
+//    @FlaggedApi(Flags.ADVERTISE_REQUEST_API)
+    public void registerService(@NonNull AdvertisingRequest advertisingRequest,
+            @NonNull Executor executor,
+            @NonNull RegistrationListener listener) {
+        final NsdServiceInfo serviceInfo = advertisingRequest.getServiceInfo();
+        final int protocolType = advertisingRequest.getProtocolType();
+        checkServiceInfoForRegistration(serviceInfo);
+        checkProtocol(protocolType);
+        final int key;
+        // For update only request, the old listener has to be reused
+        if ((advertisingRequest.getAdvertisingConfig()
+                & AdvertisingRequest.NSD_ADVERTISING_UPDATE_ONLY) > 0) {
+            key = updateRegisteredListener(listener, executor, serviceInfo);
+        } else {
+            key = putListener(listener, executor, serviceInfo);
+        }
         try {
-            mService.registerService(key, serviceInfo);
+            mService.registerService(key, advertisingRequest);
         } catch (RemoteException e) {
             e.rethrowFromSystemServer();
         }
@@ -1261,15 +1473,44 @@ public final class NsdManager {
         if (TextUtils.isEmpty(serviceType)) {
             throw new IllegalArgumentException("Service type cannot be empty");
         }
-        checkProtocol(protocolType);
+        DiscoveryRequest request = new DiscoveryRequest.Builder(protocolType, serviceType)
+                .setNetwork(network).build();
+        discoverServices(request, executor, listener);
+    }
 
-        NsdServiceInfo s = new NsdServiceInfo();
-        s.setServiceType(serviceType);
-        s.setNetwork(network);
-
-        int key = putListener(listener, executor, s);
+    /**
+     * Initiates service discovery to browse for instances of a service type. Service discovery
+     * consumes network bandwidth and will continue until the application calls
+     * {@link #stopServiceDiscovery}.
+     *
+     * <p> The function call immediately returns after sending a request to start service
+     * discovery to the framework. The application is notified of a success to initiate
+     * discovery through the callback {@link DiscoveryListener#onDiscoveryStarted} or a failure
+     * through {@link DiscoveryListener#onStartDiscoveryFailed}.
+     *
+     * <p> Upon successful start, application is notified when a service is found with
+     * {@link DiscoveryListener#onServiceFound} or when a service is lost with
+     * {@link DiscoveryListener#onServiceLost}.
+     *
+     * <p> Upon failure to start, service discovery is not active and application does
+     * not need to invoke {@link #stopServiceDiscovery}
+     *
+     * <p> The application should call {@link #stopServiceDiscovery} when discovery of this
+     * service type is no longer required, and/or whenever the application is paused or
+     * stopped.
+     *
+     * @param discoveryRequest the {@link DiscoveryRequest} object which specifies the discovery
+     * parameters such as service type, subtype and network
+     * @param executor Executor to run listener callbacks with
+     * @param listener  The listener notifies of a successful discovery and is used
+     * to stop discovery on this serviceType through a call on {@link #stopServiceDiscovery}.
+     */
+    @FlaggedApi(Flags.NSD_SUBTYPES_SUPPORT_ENABLED)
+    public void discoverServices(@NonNull DiscoveryRequest discoveryRequest,
+            @NonNull Executor executor, @NonNull DiscoveryListener listener) {
+        int key = putListener(listener, executor, discoveryRequest);
         try {
-            mService.discoverServices(key, s);
+            mService.discoverServices(key, discoveryRequest);
         } catch (RemoteException e) {
             e.rethrowFromSystemServer();
         }
@@ -1320,12 +1561,10 @@ public final class NsdManager {
             throw new IllegalArgumentException("Service type cannot be empty");
         }
         Objects.requireNonNull(networkRequest, "NetworkRequest cannot be null");
-        checkProtocol(protocolType);
+        DiscoveryRequest discoveryRequest =
+                new DiscoveryRequest.Builder(protocolType, serviceType).build();
 
-        NsdServiceInfo s = new NsdServiceInfo();
-        s.setServiceType(serviceType);
-
-        final int baseListenerKey = putListener(listener, executor, s);
+        final int baseListenerKey = putListener(listener, executor, discoveryRequest);
 
         final PerNetworkDiscoveryTracker discoveryInfo = new PerNetworkDiscoveryTracker(
                 serviceType, protocolType, executor, listener);
@@ -1406,7 +1645,7 @@ public final class NsdManager {
     @Deprecated
     public void resolveService(@NonNull NsdServiceInfo serviceInfo,
             @NonNull Executor executor, @NonNull ResolveListener listener) {
-        checkServiceInfo(serviceInfo);
+        checkServiceInfoForResolution(serviceInfo);
         int key = putListener(listener, executor, serviceInfo);
         try {
             mService.resolveService(key, serviceInfo);
@@ -1457,9 +1696,10 @@ public final class NsdManager {
      * @param executor Executor to run callbacks with
      * @param listener to receive callback upon service update
      */
+    // TODO: use {@link DiscoveryRequest} to specify the service to be subscribed
     public void registerServiceInfoCallback(@NonNull NsdServiceInfo serviceInfo,
             @NonNull Executor executor, @NonNull ServiceInfoCallback listener) {
-        checkServiceInfo(serviceInfo);
+        checkServiceInfoForResolution(serviceInfo);
         int key = putListener(listener, executor, serviceInfo);
         try {
             mService.registerServiceInfoCallback(key, serviceInfo);
@@ -1498,19 +1738,61 @@ public final class NsdManager {
         Objects.requireNonNull(listener, "listener cannot be null");
     }
 
-    private static void checkProtocol(int protocolType) {
+    static void checkProtocol(int protocolType) {
         if (protocolType != PROTOCOL_DNS_SD) {
             throw new IllegalArgumentException("Unsupported protocol");
         }
     }
 
-    private static void checkServiceInfo(NsdServiceInfo serviceInfo) {
+    private static void checkServiceInfoForResolution(NsdServiceInfo serviceInfo) {
         Objects.requireNonNull(serviceInfo, "NsdServiceInfo cannot be null");
         if (TextUtils.isEmpty(serviceInfo.getServiceName())) {
             throw new IllegalArgumentException("Service name cannot be empty");
         }
         if (TextUtils.isEmpty(serviceInfo.getServiceType())) {
             throw new IllegalArgumentException("Service type cannot be empty");
+        }
+    }
+
+    /**
+     * Check if the {@link NsdServiceInfo} is valid for registration.
+     *
+     * The following can be registered:
+     * - A service with an optional host.
+     * - A hostname with addresses.
+     *
+     * Note that:
+     * - When registering a service, the service name, service type and port must be specified. If
+     *   hostname is specified, the host addresses can optionally be specified.
+     * - When registering a host without a service, the addresses must be specified.
+     *
+     * @hide
+     */
+    public static void checkServiceInfoForRegistration(NsdServiceInfo serviceInfo) {
+        Objects.requireNonNull(serviceInfo, "NsdServiceInfo cannot be null");
+        boolean hasServiceName = !TextUtils.isEmpty(serviceInfo.getServiceName());
+        boolean hasServiceType = !TextUtils.isEmpty(serviceInfo.getServiceType());
+        boolean hasHostname = !TextUtils.isEmpty(serviceInfo.getHostname());
+        boolean hasHostAddresses = !CollectionUtils.isEmpty(serviceInfo.getHostAddresses());
+
+        if (serviceInfo.getPort() < 0) {
+            throw new IllegalArgumentException("Invalid port");
+        }
+
+        if (hasServiceType || hasServiceName || (serviceInfo.getPort() > 0)) {
+            if (!(hasServiceType && hasServiceName && (serviceInfo.getPort() > 0))) {
+                throw new IllegalArgumentException(
+                        "The service type, service name or port is missing");
+            }
+        }
+
+        if (!hasServiceType && !hasHostname) {
+            throw new IllegalArgumentException("No service or host specified in NsdServiceInfo");
+        }
+
+        if (!hasServiceType && hasHostname && !hasHostAddresses) {
+            // TODO: b/317946010 - This may be allowed when it supports registering KEY RR.
+            throw new IllegalArgumentException("No host addresses specified in NsdServiceInfo");
         }
     }
 }

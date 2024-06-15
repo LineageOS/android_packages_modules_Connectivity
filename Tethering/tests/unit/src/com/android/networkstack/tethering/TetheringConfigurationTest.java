@@ -757,23 +757,24 @@ public class TetheringConfigurationTest {
 
     private void setTetherEnableSyncSMFlagEnabled(Boolean enabled) {
         mDeps.setFeatureEnabled(TetheringConfiguration.TETHER_ENABLE_SYNC_SM, enabled);
+        new TetheringConfiguration(
+                mMockContext, mLog, INVALID_SUBSCRIPTION_ID, mDeps).readEnableSyncSM(mMockContext);
     }
 
-    private void assertEnableSyncSMIs(boolean value) {
-        assertEquals(value, new TetheringConfiguration(
-                mMockContext, mLog, INVALID_SUBSCRIPTION_ID, mDeps).isSyncSM());
+    private void assertEnableSyncSM(boolean value) {
+        assertEquals(value, TetheringConfiguration.USE_SYNC_SM);
     }
 
     @Test
     public void testEnableSyncSMFlag() throws Exception {
         // Test default disabled
         setTetherEnableSyncSMFlagEnabled(null);
-        assertEnableSyncSMIs(false);
+        assertEnableSyncSM(false);
 
         setTetherEnableSyncSMFlagEnabled(true);
-        assertEnableSyncSMIs(true);
+        assertEnableSyncSM(true);
 
         setTetherEnableSyncSMFlagEnabled(false);
-        assertEnableSyncSMIs(false);
+        assertEnableSyncSM(false);
     }
 }

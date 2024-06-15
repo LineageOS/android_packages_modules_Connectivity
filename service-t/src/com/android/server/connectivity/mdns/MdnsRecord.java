@@ -176,6 +176,16 @@ public abstract class MdnsRecord {
     }
 
     /**
+     * For questions, returns whether a unicast reply was requested.
+     *
+     * In practice this is identical to {@link #getCacheFlush()}, as the "cache flush" flag in
+     * replies is the same as "unicast reply requested" in questions.
+     */
+    public final boolean isUnicastReplyRequested() {
+        return (cls & MdnsConstants.QCLASS_UNICAST) != 0;
+    }
+
+    /**
      * Returns the record's remaining TTL.
      *
      * If the record was not sent yet (receipt time {@link #RECEIPT_TIME_NOT_SENT}), this is the
