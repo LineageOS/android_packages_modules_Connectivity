@@ -134,6 +134,7 @@ import android.Manifest;
 import android.annotation.CheckResult;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
@@ -282,8 +283,6 @@ import android.util.Range;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.util.StatsEvent;
-
-import androidx.annotation.RequiresApi;
 
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
@@ -3596,6 +3595,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.decreaseIndent();
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private void dumpBpfProgramStatus(IndentingPrintWriter pw) {
         pw.println("Bpf Program Status:");
         pw.increaseIndent();
@@ -4259,8 +4259,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.println();
         dumpDestroySockets(pw);
 
-        pw.println();
-        dumpBpfProgramStatus(pw);
+        if (mDeps.isAtLeastT()) {
+            // R: https://android.googlesource.com/platform/system/core/+/refs/heads/android11-release/rootdir/init.rc
+            //   shows /dev/cg2_bpf
+            // S: https://android.googlesource.com/platform/system/core/+/refs/heads/android12-release/rootdir/init.rc
+            //   does not
+            // Thus cgroups are mounted at /dev/cg2_bpf on R and not on /sys/fs/cgroup
+            // so the following won't work (on R) anyway.
+            // The /sys/fs/cgroup path is only actually enforced/required starting with U,
+            // but it is very likely to already be the case (though not guaranteed) on T.
+            // I'm not at all sure about S - let's just skip it to get rid of lint warnings.
+            pw.println();
+            dumpBpfProgramStatus(pw);
+        }
 
         if (null != mCarrierPrivilegeAuthenticator) {
             pw.println();
