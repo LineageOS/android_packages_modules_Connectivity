@@ -45,6 +45,10 @@
 // Used only by TetheringPrivilegedTests, not by production code.
 DEFINE_BPF_MAP_GRW(tether_downstream6_map, HASH, TetherDownstream6Key, Tether6Value, 16,
                    TETHERING_GID)
+DEFINE_BPF_MAP_GRW(tether2_downstream6_map, HASH, TetherDownstream6Key, Tether6Value, 16,
+                   TETHERING_GID)
+DEFINE_BPF_MAP_GRW(tether3_downstream6_map, HASH, TetherDownstream6Key, Tether6Value, 16,
+                   TETHERING_GID)
 // Used only by BpfBitmapTest, not by production code.
 DEFINE_BPF_MAP_GRW(bitmap, ARRAY, int, uint64_t, 2, TETHERING_GID)
 

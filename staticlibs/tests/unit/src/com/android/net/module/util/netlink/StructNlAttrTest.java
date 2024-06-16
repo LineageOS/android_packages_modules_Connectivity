@@ -69,11 +69,11 @@ public class StructNlAttrTest {
     }
 
     @Test
-    public void testGetValueAsIntger() {
+    public void testGetValueAsInteger() {
         final StructNlAttr attr1 = new StructNlAttr(IFA_FLAGS, TEST_ADDR_FLAGS);
         final Integer integer1 = attr1.getValueAsInteger();
         final int int1 = attr1.getValueAsInt(0x08 /* default value */);
-        assertEquals(integer1, new Integer(TEST_ADDR_FLAGS));
+        assertEquals(integer1, Integer.valueOf(TEST_ADDR_FLAGS));
         assertEquals(int1, TEST_ADDR_FLAGS);
 
         // Malformed attribute.

@@ -113,11 +113,20 @@ import static android.system.OsConstants.F_OK;
 import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_GETSOCKOPT;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET4_BIND;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET4_CONNECT;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET6_BIND;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET6_CONNECT;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_EGRESS;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_INGRESS;
 import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_SOCK_CREATE;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_INET_SOCK_RELEASE;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_SETSOCKOPT;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_UDP4_RECVMSG;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_UDP4_SENDMSG;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_UDP6_RECVMSG;
+import static com.android.net.module.util.BpfUtils.BPF_CGROUP_UDP6_SENDMSG;
 import static com.android.net.module.util.NetworkMonitorUtils.isPrivateDnsValidationRequired;
 import static com.android.net.module.util.PermissionUtils.enforceAnyPermissionOf;
 import static com.android.net.module.util.PermissionUtils.enforceNetworkStackPermission;
@@ -134,6 +143,7 @@ import android.Manifest;
 import android.annotation.CheckResult;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.RequiresApi;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
@@ -283,8 +293,6 @@ import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.util.StatsEvent;
 
-import androidx.annotation.RequiresApi;
-
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -385,6 +393,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.StringJoiner;
@@ -1839,6 +1848,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // Temporary hack to report netbpfload result.
         // TODO: remove in 2024-09 when netbpfload starts loading mainline bpf programs.
         mHandler.postDelayed(() -> {
+            // Test Pitot pipeline, ignore this Log.wtf if it shows up in the logs.
+            final Random r = new Random();
+            if (Build.TYPE.equals("user") && r.nextInt(1000) == 0) {
+                Log.wtf(TAG, "NOT A FAILURE, PLEASE IGNORE! Test Pitot pipeline works correctly");
+            }
             // Did netbpfload create the map?
             try {
                 Os.access("/sys/fs/bpf/net_shared/map_gentle_test", F_OK);
@@ -3590,6 +3604,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.decreaseIndent();
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private void dumpBpfProgramStatus(IndentingPrintWriter pw) {
         pw.println("Bpf Program Status:");
         pw.increaseIndent();
@@ -3598,12 +3613,37 @@ public class ConnectivityService extends IConnectivityManager.Stub
             pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_INGRESS));
             pw.print("CGROUP_INET_EGRESS: ");
             pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_EGRESS));
+
             pw.print("CGROUP_INET_SOCK_CREATE: ");
             pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_SOCK_CREATE));
+
             pw.print("CGROUP_INET4_BIND: ");
             pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET4_BIND));
             pw.print("CGROUP_INET6_BIND: ");
             pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET6_BIND));
+
+            pw.print("CGROUP_INET4_CONNECT: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET4_CONNECT));
+            pw.print("CGROUP_INET6_CONNECT: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET6_CONNECT));
+
+            pw.print("CGROUP_UDP4_SENDMSG: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_UDP4_SENDMSG));
+            pw.print("CGROUP_UDP6_SENDMSG: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_UDP6_SENDMSG));
+
+            pw.print("CGROUP_UDP4_RECVMSG: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_UDP4_RECVMSG));
+            pw.print("CGROUP_UDP6_RECVMSG: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_UDP6_RECVMSG));
+
+            pw.print("CGROUP_GETSOCKOPT: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_GETSOCKOPT));
+            pw.print("CGROUP_SETSOCKOPT: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_SETSOCKOPT));
+
+            pw.print("CGROUP_INET_SOCK_RELEASE: ");
+            pw.println(mDeps.getBpfProgramId(BPF_CGROUP_INET_SOCK_RELEASE));
         } catch (IOException e) {
             pw.println("  IOException");
         }
@@ -4253,8 +4293,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
         pw.println();
         dumpDestroySockets(pw);
 
-        pw.println();
-        dumpBpfProgramStatus(pw);
+        if (mDeps.isAtLeastT()) {
+            // R: https://android.googlesource.com/platform/system/core/+/refs/heads/android11-release/rootdir/init.rc
+            //   shows /dev/cg2_bpf
+            // S: https://android.googlesource.com/platform/system/core/+/refs/heads/android12-release/rootdir/init.rc
+            //   does not
+            // Thus cgroups are mounted at /dev/cg2_bpf on R and not on /sys/fs/cgroup
+            // so the following won't work (on R) anyway.
+            // The /sys/fs/cgroup path is only actually enforced/required starting with U,
+            // but it is very likely to already be the case (though not guaranteed) on T.
+            // I'm not at all sure about S - let's just skip it to get rid of lint warnings.
+            pw.println();
+            dumpBpfProgramStatus(pw);
+        }
 
         if (null != mCarrierPrivilegeAuthenticator) {
             pw.println();

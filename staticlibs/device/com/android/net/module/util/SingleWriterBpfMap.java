@@ -17,6 +17,7 @@ package com.android.net.module.util;
 
 import android.os.Build;
 import android.system.ErrnoException;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -61,7 +62,12 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
     // our code can contain hundreds of items.
     private final HashMap<K, V> mCache = new HashMap<>();
 
-    public SingleWriterBpfMap(@NonNull final String path, final Class<K> key,
+    // This should only ever be called (hence private) once for a given 'path'.
+    // Java-wise what matters is the entire {path, key, value} triplet,
+    // but of course the kernel exclusive lock is just on the path (fd),
+    // and any BpfMap has (or should have...) well defined key/value types
+    // (or at least their sizes) so in practice it doesn't really matter.
+    private SingleWriterBpfMap(@NonNull final String path, final Class<K> key,
             final Class<V> value) throws ErrnoException, NullPointerException {
         super(path, BPF_F_RDWR_EXCLUSIVE, key, value);
 
@@ -71,6 +77,24 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
             mCache.put(currentKey, super.getValue(currentKey));
             currentKey = super.getNextKey(currentKey);
         }
+    }
+
+    // This allows reuse of SingleWriterBpfMap objects for the same {path, keyClass, valueClass}.
+    // These are never destroyed, so once created the lock is (effectively) held till process death
+    // (even if fixed, there would still be a write-only fd cache in underlying BpfMap base class).
+    private static final HashMap<Pair<String, Pair<Class, Class>>, SingleWriterBpfMap>
+            singletonCache = new HashMap<>();
+
+    // This is the public 'factory method' that (creates if needed and) returns a singleton instance
+    // for a given map.  This holds an exclusive lock and has a permanent write-through cache.
+    // It will not be released until process death (or at least unload of the relevant class loader)
+    public synchronized static <KK extends Struct, VV extends Struct> SingleWriterBpfMap<KK,VV>
+            getSingleton(@NonNull final String path, final Class<KK> key, final Class<VV> value)
+            throws ErrnoException, NullPointerException {
+        var cacheKey = new Pair<>(path, new Pair<Class,Class>(key, value));
+        if (!singletonCache.containsKey(cacheKey))
+            singletonCache.put(cacheKey, new SingleWriterBpfMap(path, key, value));
+        return singletonCache.get(cacheKey);
     }
 
     @Override
