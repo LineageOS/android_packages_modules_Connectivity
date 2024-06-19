@@ -682,7 +682,7 @@ DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet_create", AID_ROOT, AID_ROOT, inet_soc
 }
 
 DEFINE_NETD_V_BPF_PROG_KVER("cgroupsockrelease/inet_release", AID_ROOT, AID_ROOT,
-                            inet_socket_release, KVER_5_15)
+                            inet_socket_release, KVER_5_10)
 (struct bpf_sock* sk) {
     uint64_t cookie = bpf_get_sk_cookie(sk);
     if (cookie) bpf_cookie_tag_map_delete_elem(&cookie);
@@ -708,44 +708,50 @@ static __always_inline inline int check_localhost(struct bpf_sock_addr *ctx) {
     return 1;
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("connect4/inet4_connect", AID_ROOT, AID_ROOT, inet4_connect, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("connect4/inet4_connect", AID_ROOT, AID_ROOT, inet4_connect, KVER_4_14)
 (struct bpf_sock_addr *ctx) {
     return check_localhost(ctx);
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("connect6/inet6_connect", AID_ROOT, AID_ROOT, inet6_connect, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("connect6/inet6_connect", AID_ROOT, AID_ROOT, inet6_connect, KVER_4_14)
 (struct bpf_sock_addr *ctx) {
     return check_localhost(ctx);
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("recvmsg4/udp4_recvmsg", AID_ROOT, AID_ROOT, udp4_recvmsg, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("recvmsg4/udp4_recvmsg", AID_ROOT, AID_ROOT, udp4_recvmsg, KVER_4_14)
 (struct bpf_sock_addr *ctx) {
     return check_localhost(ctx);
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("recvmsg6/udp6_recvmsg", AID_ROOT, AID_ROOT, udp6_recvmsg, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("recvmsg6/udp6_recvmsg", AID_ROOT, AID_ROOT, udp6_recvmsg, KVER_4_14)
 (struct bpf_sock_addr *ctx) {
     return check_localhost(ctx);
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("sendmsg4/udp4_sendmsg", AID_ROOT, AID_ROOT, udp4_sendmsg, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("sendmsg4/udp4_sendmsg", AID_ROOT, AID_ROOT, udp4_sendmsg, KVER_4_14)
 (struct bpf_sock_addr *ctx) {
     return check_localhost(ctx);
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("sendmsg6/udp6_sendmsg", AID_ROOT, AID_ROOT, udp6_sendmsg, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("sendmsg6/udp6_sendmsg", AID_ROOT, AID_ROOT, udp6_sendmsg, KVER_4_14)
 (struct bpf_sock_addr *ctx) {
     return check_localhost(ctx);
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("getsockopt/prog", AID_ROOT, AID_ROOT, getsockopt_prog, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("getsockopt/prog", AID_ROOT, AID_ROOT, getsockopt_prog, KVER_5_4)
 (struct bpf_sockopt *ctx) {
-    return 1;
+    // Tell kernel to return 'original' kernel reply (instead of the bpf modified buffer)
+    // This is important if the answer is larger than PAGE_SIZE (max size this bpf hook can provide)
+    ctx->optlen = 0;
+    return 1; // ALLOW
 }
 
-DEFINE_NETD_V_BPF_PROG_KVER("setsockopt/prog", AID_ROOT, AID_ROOT, setsockopt_prog, KVER_5_15)
+DEFINE_NETD_V_BPF_PROG_KVER("setsockopt/prog", AID_ROOT, AID_ROOT, setsockopt_prog, KVER_5_4)
 (struct bpf_sockopt *ctx) {
-    return 1;
+    // Tell kernel to use/process original buffer provided by userspace.
+    // This is important if it is larger than PAGE_SIZE (max size this bpf hook can handle).
+    ctx->optlen = 0;
+    return 1; // ALLOW
 }
 
 LICENSE("Apache 2.0");
