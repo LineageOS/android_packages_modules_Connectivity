@@ -87,7 +87,9 @@ import android.net.INetd;
 import android.net.InetAddresses;
 import android.net.UidOwnerValue;
 import android.os.Build;
+import android.os.Process;
 import android.os.ServiceSpecificException;
+import android.os.UserHandle;
 import android.system.ErrnoException;
 import android.util.ArraySet;
 import android.util.IndentingPrintWriter;
@@ -1247,6 +1249,32 @@ public final class BpfNetMapsTest {
                 DATA_SAVER_ENABLED,
                 BLOCKED_REASON_APP_STANDBY | BLOCKED_METERED_REASON_USER_RESTRICTED
         );
+    }
+
+    @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testIsUidNetworkingBlockedForCoreUids() throws Exception {
+        final long allowlistMatch = BACKGROUND_MATCH;    // Enable any allowlist match.
+        mConfigurationMap.updateEntry(UID_RULES_CONFIGURATION_KEY, new U32(allowlistMatch));
+
+        // Verify that a normal uid that is not on this chain is indeed blocked.
+        assertTrue(BpfNetMapsUtils.isUidNetworkingBlocked(TEST_UID, false, mConfigurationMap,
+                mUidOwnerMap, mDataSaverEnabledMap));
+
+        final int[] coreAids = new int[] {
+                Process.ROOT_UID,
+                Process.SYSTEM_UID,
+                Process.FIRST_APPLICATION_UID - 10,
+                Process.FIRST_APPLICATION_UID - 1,
+        };
+        // Core appIds are not on the chain but should still be allowed on any user.
+        for (int userId = 0; userId < 20; userId++) {
+            for (final int aid : coreAids) {
+                final int uid = UserHandle.getUid(userId, aid);
+                assertFalse(BpfNetMapsUtils.isUidNetworkingBlocked(uid, false, mConfigurationMap,
+                        mUidOwnerMap, mDataSaverEnabledMap));
+            }
+        }
     }
 
     private void doTestIsUidRestrictedOnMeteredNetworks(

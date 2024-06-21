@@ -68,6 +68,7 @@ import static android.system.OsConstants.EINVAL;
 import android.os.Build;
 import android.os.Process;
 import android.os.ServiceSpecificException;
+import android.os.UserHandle;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Pair;
@@ -330,9 +331,9 @@ public class BpfNetMapsUtils {
     ) {
         throwIfPreT("isUidBlockedByFirewallChains is not available on pre-T devices");
 
-        // System uid is not blocked by firewall chains, see bpf_progs/netd.c
-        // TODO: use UserHandle.isCore() once it is accessible
-        if (uid < Process.FIRST_APPLICATION_UID) {
+        // System uids are not blocked by firewall chains, see bpf_progs/netd.c
+        // TODO: b/348513058 - use UserHandle.isCore() once it is accessible
+        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
             return false;
         }
 
