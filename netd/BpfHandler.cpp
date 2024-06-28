@@ -266,7 +266,10 @@ static void mapLockTest(void) {
 }
 
 Status BpfHandler::initMaps() {
-    mapLockTest();
+    // bpfLock() requires bpfGetFdMapId which is only available on 4.14+ kernels.
+    if (bpf::isAtLeastKernelVersion(4, 14, 0)) {
+        mapLockTest();
+    }
 
     RETURN_IF_NOT_OK(mStatsMapA.init(STATS_MAP_A_PATH));
     RETURN_IF_NOT_OK(mStatsMapB.init(STATS_MAP_B_PATH));
