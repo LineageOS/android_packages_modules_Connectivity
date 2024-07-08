@@ -1847,31 +1847,33 @@ public class ConnectivityService extends IConnectivityManager.Stub
         mHandler = new InternalHandler(mHandlerThread.getLooper());
         // Temporary hack to report netbpfload result.
         // TODO: remove in 2024-09 when netbpfload starts loading mainline bpf programs.
-        mHandler.postDelayed(() -> {
-            // Test Pitot pipeline, ignore this Log.wtf if it shows up in the logs.
-            final Random r = new Random();
-            if (Build.TYPE.equals("user") && r.nextInt(1000) == 0) {
-                Log.wtf(TAG, "NOT A FAILURE, PLEASE IGNORE! Test Pitot pipeline works correctly");
-            }
-            // Did netbpfload create the map?
-            try {
-                Os.access("/sys/fs/bpf/net_shared/map_gentle_test", F_OK);
-            } catch (ErrnoException e) {
-                Log.wtf(TAG, "netbpfload did not create map", e);
-            }
-            // Did netbpfload create the program?
-            try {
-                Os.access("/sys/fs/bpf/net_shared/prog_gentle_skfilter_accept", F_OK);
-            } catch (ErrnoException e) {
-                Log.wtf(TAG, "netbpfload did not create program", e);
-            }
-            // Did netbpfload run to completion?
-            try {
-                Os.access("/sys/fs/bpf/netd_shared/mainline_done", F_OK);
-            } catch (ErrnoException e) {
-                Log.wtf(TAG, "netbpfload did not run to completion", e);
-            }
-        }, 30_000 /* delayMillis */);
+        if (!mDeps.isAtLeastV()) {
+            mHandler.postDelayed(() -> {
+                // Test Log.wtf reporting pipeline. Ignore this Log.wtf if it shows up in the logs.
+                final Random r = new Random();
+                if (Build.TYPE.equals("user") && r.nextInt(1000) == 0) {
+                    Log.wtf(TAG, "NOT A FAILURE, PLEASE IGNORE! Ensure netbpfload result reported");
+                }
+                // Did netbpfload create the map?
+                try {
+                    Os.access("/sys/fs/bpf/net_shared/map_gentle_test", F_OK);
+                } catch (ErrnoException e) {
+                    Log.wtf(TAG, "netbpfload did not create map", e);
+                }
+                // Did netbpfload create the program?
+                try {
+                    Os.access("/sys/fs/bpf/net_shared/prog_gentle_skfilter_accept", F_OK);
+                } catch (ErrnoException e) {
+                    Log.wtf(TAG, "netbpfload did not create program", e);
+                }
+                // Did netbpfload run to completion?
+                try {
+                    Os.access("/sys/fs/bpf/netd_shared/mainline_done", F_OK);
+                } catch (ErrnoException e) {
+                    Log.wtf(TAG, "netbpfload did not run to completion", e);
+                }
+            }, 30_000 /* delayMillis */);
+        }
         mTrackerHandler = new NetworkStateTrackerHandler(mHandlerThread.getLooper());
         mConnectivityDiagnosticsHandler =
                 new ConnectivityDiagnosticsHandler(mHandlerThread.getLooper());
