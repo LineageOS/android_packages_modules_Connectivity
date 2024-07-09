@@ -270,5 +270,5 @@ static inline bool isBlockedByUidRules(BpfConfig enabledRules, uint32_t uidRules
 static inline bool is_system_uid(uint32_t uid) {
     // MIN_SYSTEM_UID is AID_ROOT == 0, so uint32_t is *always* >= 0
     // MAX_SYSTEM_UID is AID_NOBODY == 9999, while AID_APP_START == 10000
-    return (uid < AID_APP_START);
+    return ((uid % AID_USER_OFFSET) < AID_APP_START);
 }
