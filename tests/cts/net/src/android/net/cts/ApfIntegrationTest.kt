@@ -420,8 +420,7 @@ class ApfIntegrationTest {
         assumeApfVersionSupportAtLeast(4)
 
         // clear any active APF filter
-        var gen = ApfV4Generator(4).addPass()
-        installProgram(gen.generate())
+        clearApfMemory()
         readProgram() // wait for install completion
 
         // Assert that initial ping does not get filtered.
@@ -435,7 +434,7 @@ class ApfIntegrationTest {
         assertThat(packetReader.expectPingReply()).isEqualTo(data)
 
         // Generate an APF program that drops the next ping
-        gen = ApfV4Generator(4)
+        val gen = ApfV4Generator(4)
 
         // If not ICMPv6 Echo Reply -> PASS
         gen.addPassIfNotIcmpv6EchoReply()
