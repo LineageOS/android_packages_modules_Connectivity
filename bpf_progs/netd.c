@@ -142,11 +142,6 @@ DEFINE_BPF_MAP_RO_NETD(data_saver_enabled_map, ARRAY, uint32_t, bool,
 #define DEFINE_NETD_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
     DEFINE_NETD_BPF_PROG_KVER(SECTION_NAME, prog_uid, prog_gid, the_prog, KVER_NONE)
 
-#define DEFINE_NETD_V_BPF_PROG_KVER(SECTION_NAME, prog_uid, prog_gid, the_prog, minKV)            \
-    DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, minKV,                        \
-                        KVER_INF, BPFLOADER_MAINLINE_V_VERSION, BPFLOADER_MAX_VER, MANDATORY,     \
-                        "fs_bpf_netd_readonly", "", LOAD_ON_ENG, LOAD_ON_USER, LOAD_ON_USERDEBUG)
-
 // programs that only need to be usable by the system server
 #define DEFINE_SYS_BPF_PROG(SECTION_NAME, prog_uid, prog_gid, the_prog) \
     DEFINE_BPF_PROG_EXT(SECTION_NAME, prog_uid, prog_gid, the_prog, KVER_NONE, KVER_INF,  \
@@ -674,84 +669,11 @@ static __always_inline inline uint8_t get_app_permissions() {
     return permissions ? *permissions : BPF_PERMISSION_INTERNET;
 }
 
-DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet_create", AID_ROOT, AID_ROOT, inet_socket_create,
+DEFINE_NETD_BPF_PROG_KVER("cgroupsock/inet/create", AID_ROOT, AID_ROOT, inet_socket_create,
                           KVER_4_14)
 (struct bpf_sock* sk) {
     // A return value of 1 means allow, everything else means deny.
     return (get_app_permissions() & BPF_PERMISSION_INTERNET) ? 1 : 0;
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("cgroupsockrelease/inet_release", AID_ROOT, AID_ROOT,
-                            inet_socket_release, KVER_5_10)
-(struct bpf_sock* sk) {
-    uint64_t cookie = bpf_get_sk_cookie(sk);
-    if (cookie) bpf_cookie_tag_map_delete_elem(&cookie);
-
-    return 1;
-}
-
-static __always_inline inline int check_localhost(struct bpf_sock_addr *ctx) {
-    // See include/uapi/linux/bpf.h:
-    //
-    // struct bpf_sock_addr {
-    //   __u32 user_family;	//     R: 4 byte
-    //   __u32 user_ip4;	// BE, R: 1,2,4-byte,   W: 4-byte
-    //   __u32 user_ip6[4];	// BE, R: 1,2,4,8-byte, W: 4,8-byte
-    //   __u32 user_port;	// BE, R: 1,2,4-byte,   W: 4-byte
-    //   __u32 family;		//     R: 4 byte
-    //   __u32 type;		//     R: 4 byte
-    //   __u32 protocol;	//     R: 4 byte
-    //   __u32 msg_src_ip4;	// BE, R: 1,2,4-byte,   W: 4-byte
-    //   __u32 msg_src_ip6[4];	// BE, R: 1,2,4,8-byte, W: 4,8-byte
-    //   __bpf_md_ptr(struct bpf_sock *, sk);
-    // };
-    return 1;
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("connect4/inet4_connect", AID_ROOT, AID_ROOT, inet4_connect, KVER_4_14)
-(struct bpf_sock_addr *ctx) {
-    return check_localhost(ctx);
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("connect6/inet6_connect", AID_ROOT, AID_ROOT, inet6_connect, KVER_4_14)
-(struct bpf_sock_addr *ctx) {
-    return check_localhost(ctx);
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("recvmsg4/udp4_recvmsg", AID_ROOT, AID_ROOT, udp4_recvmsg, KVER_4_14)
-(struct bpf_sock_addr *ctx) {
-    return check_localhost(ctx);
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("recvmsg6/udp6_recvmsg", AID_ROOT, AID_ROOT, udp6_recvmsg, KVER_4_14)
-(struct bpf_sock_addr *ctx) {
-    return check_localhost(ctx);
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("sendmsg4/udp4_sendmsg", AID_ROOT, AID_ROOT, udp4_sendmsg, KVER_4_14)
-(struct bpf_sock_addr *ctx) {
-    return check_localhost(ctx);
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("sendmsg6/udp6_sendmsg", AID_ROOT, AID_ROOT, udp6_sendmsg, KVER_4_14)
-(struct bpf_sock_addr *ctx) {
-    return check_localhost(ctx);
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("getsockopt/prog", AID_ROOT, AID_ROOT, getsockopt_prog, KVER_5_4)
-(struct bpf_sockopt *ctx) {
-    // Tell kernel to return 'original' kernel reply (instead of the bpf modified buffer)
-    // This is important if the answer is larger than PAGE_SIZE (max size this bpf hook can provide)
-    ctx->optlen = 0;
-    return 1; // ALLOW
-}
-
-DEFINE_NETD_V_BPF_PROG_KVER("setsockopt/prog", AID_ROOT, AID_ROOT, setsockopt_prog, KVER_5_4)
-(struct bpf_sockopt *ctx) {
-    // Tell kernel to use/process original buffer provided by userspace.
-    // This is important if it is larger than PAGE_SIZE (max size this bpf hook can handle).
-    ctx->optlen = 0;
-    return 1; // ALLOW
 }
 
 LICENSE("Apache 2.0");

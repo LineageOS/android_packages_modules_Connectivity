@@ -140,7 +140,6 @@ struct kver_uint { unsigned int kver; };
 #define KVER_5_4  KVER(5, 4, 0)
 #define KVER_5_8  KVER(5, 8, 0)
 #define KVER_5_9  KVER(5, 9, 0)
-#define KVER_5_10 KVER(5, 10, 0)
 #define KVER_5_15 KVER(5, 15, 0)
 #define KVER_6_1  KVER(6, 1, 0)
 #define KVER_6_6  KVER(6, 6, 0)

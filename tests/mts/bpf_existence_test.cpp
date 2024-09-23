@@ -145,27 +145,6 @@ static const set<string> MAINLINE_FOR_U_5_10_PLUS = {
     NETD "map_netd_packet_trace_ringbuf",
 };
 
-// Provided by *current* mainline module for V+ devices
-static const set<string> MAINLINE_FOR_V_PLUS = {
-    NETD "prog_netd_connect4_inet4_connect",
-    NETD "prog_netd_connect6_inet6_connect",
-    NETD "prog_netd_recvmsg4_udp4_recvmsg",
-    NETD "prog_netd_recvmsg6_udp6_recvmsg",
-    NETD "prog_netd_sendmsg4_udp4_sendmsg",
-    NETD "prog_netd_sendmsg6_udp6_sendmsg",
-};
-
-// Provided by *current* mainline module for V+ devices with 5.4+ kernels
-static const set<string> MAINLINE_FOR_V_5_4_PLUS = {
-    NETD "prog_netd_getsockopt_prog",
-    NETD "prog_netd_setsockopt_prog",
-};
-
-// Provided by *current* mainline module for U+ devices with 5.10+ kernels
-static const set<string> MAINLINE_FOR_V_5_10_PLUS = {
-    NETD "prog_netd_cgroupsockrelease_inet_release",
-};
-
 static void addAll(set<string>& a, const set<string>& b) {
     a.insert(b.begin(), b.end());
 }
@@ -213,9 +192,6 @@ TEST_F(BpfExistenceTest, TestPrograms) {
 
     // V requires Linux Kernel 4.19+, but nothing (as yet) added or removed in V.
     if (IsAtLeastV()) ASSERT_TRUE(isAtLeastKernelVersion(4, 19, 0));
-    DO_EXPECT(IsAtLeastV(), MAINLINE_FOR_V_PLUS);
-    DO_EXPECT(IsAtLeastV() && isAtLeastKernelVersion(5, 4, 0), MAINLINE_FOR_V_5_4_PLUS);
-    DO_EXPECT(IsAtLeastV() && isAtLeastKernelVersion(5, 10, 0), MAINLINE_FOR_V_5_10_PLUS);
 
     for (const auto& file : mustExist) {
         EXPECT_EQ(0, access(file.c_str(), R_OK)) << file << " does not exist";
