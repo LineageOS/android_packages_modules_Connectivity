@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "69141822_2b0f3fa3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29742
+      },
+      "writtenOn": "2024-09-24T02:15:01Z",
+      "side": 1,
+      "message": "I kind of hate if having to revert commits from Google compatibility. However, this patch is temporary, it will be abandoned if a better patch is found.",
+      "revId": "c9855046e2f3e5add631bf89b67d8f85e1ec0cf9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
