@@ -1914,9 +1914,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // If shouldTrackUidsForBlockedStatusCallbacks() is true (On V+), ConnectivityService
         // updates blocked reasons when firewall chain and data saver status is updated based on
         // bpf map contents instead of receiving callbacks from NPMS
-        if (!shouldTrackUidsForBlockedStatusCallbacks()) {
-            mPolicyManager.registerNetworkPolicyCallback(null, mPolicyCallback);
-        }
+        // LineageOS / CalyxOS: Always register callback, as it is needed for transport firewall.
+        mPolicyManager.registerNetworkPolicyCallback(null, mPolicyCallback);
 
         final PowerManager powerManager = (PowerManager) context.getSystemService(
                 Context.POWER_SERVICE);
@@ -3404,7 +3403,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         @Override
         public void onUidBlockedReasonChanged(int uid, @BlockedReason int blockedReasons) {
             if (shouldTrackUidsForBlockedStatusCallbacks()) {
-                Log.wtf(TAG, "Received unexpected NetworkPolicy callback");
                 return;
             }
             mHandler.sendMessage(mHandler.obtainMessage(
