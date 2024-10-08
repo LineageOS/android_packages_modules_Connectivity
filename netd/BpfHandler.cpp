@@ -104,7 +104,7 @@ static Status initPrograms(const char* cg2_path) {
                                     cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
     }
 
-    if (modules::sdklevel::IsAtLeastV() && bpf::isAtLeastKernelVersion(4, 14, 0)) {
+    if (modules::sdklevel::IsAtLeastV() && bpf::isAtLeastKernelVersion(4, 19, 0)) {
         RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_CONNECT4_PROG_PATH,
                                     cg_fd, BPF_CGROUP_INET4_CONNECT));
         RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_CONNECT6_PROG_PATH,
@@ -148,7 +148,7 @@ static Status initPrograms(const char* cg2_path) {
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET6_BIND) <= 0) abort();
     }
 
-    if (modules::sdklevel::IsAtLeastV() && bpf::isAtLeastKernelVersion(4, 14, 0)) {
+    if (modules::sdklevel::IsAtLeastV() && bpf::isAtLeastKernelVersion(4, 19, 0)) {
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0) abort();
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0) abort();
         if (bpf::queryProgram(cg_fd, BPF_CGROUP_UDP4_RECVMSG) <= 0) abort();
