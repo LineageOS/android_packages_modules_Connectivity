@@ -16,6 +16,24 @@
       "message": "Is this still needed?",
       "revId": "c223b889859a7d5f49089442b903919b477bef88",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b8bf207b_223d7ab9",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2024-10-10T15:41:36Z",
+      "side": 1,
+      "message": "It\u0027s kind of a rabbit hole I don\u0027t want to dive into at the moment. I think yes for now? I believe this issue is related but not 100% sure: https://gitlab.com/CalyxOS/calyxos/-/issues/2192",
+      "parentUuid": "11c236ec_731736fb",
+      "revId": "c223b889859a7d5f49089442b903919b477bef88",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
