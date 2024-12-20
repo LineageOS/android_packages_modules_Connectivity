@@ -6406,6 +6406,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
         Objects.requireNonNull(score);
         Objects.requireNonNull(caps);
         Objects.requireNonNull(callback);
+        if (caps.hasTransport(TRANSPORT_TEST)) {
+            enforceAnyPermissionOf(Manifest.permission.MANAGE_TEST_NETWORKS);
+        } else {
+            enforceNetworkFactoryPermission();
+        }
         final NetworkOffer offer = new NetworkOffer(
                 FullScore.makeProspectiveScore(score, caps), caps, callback, providerId);
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_OFFER, offer));
