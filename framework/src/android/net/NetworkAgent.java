@@ -679,6 +679,21 @@ public abstract class NetworkAgent {
                     synchronized (mRegisterLock) {
                         mState = STATE_UNREGISTERED;
                         mConnected = false;
+                        // Nulling out the registry here is necessary for the GC to notice that
+                        // this object can be reclaimed. Because :
+                        // ■ Here in the client side :
+                        // - the agent is a Binder object to the system server
+                        // - the agent owns the registry
+                        // - the registry is a Binder object from the system server
+                        // ■ On the system server side :
+                        // - the registry is a NetworkAgentInfo Binder to the client
+                        // - the NetworkAgentInfo owns the NetworkAgent
+                        // - the NetworkAgent is a Binder object from the client
+                        // This means there is a four-way binder interlock preventing the GC from
+                        // noticing these objects can be reclaimed. Nulling out the registry here
+                        // breaks that loop, which the GC can then unwind.
+                        // See b/400358935 for details.
+                        mRegistry = null;
                     }
                     break;
                 }
