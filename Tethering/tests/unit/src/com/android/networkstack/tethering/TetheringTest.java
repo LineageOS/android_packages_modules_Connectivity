@@ -3311,6 +3311,10 @@ public class TetheringTest {
 
         @Override
         public void onResult(final int resultCode) {
+            if (mHasResult) {
+                fail("Received result: " + resultCode + ", but we already have a result: "
+                        + mExpectedResult);
+            }
             mHasResult = true;
             if (resultCode != mExpectedResult) {
                 fail("expected result: " + mExpectedResult + " but actual result: " + resultCode);
@@ -3333,11 +3337,9 @@ public class TetheringTest {
         final LinkAddress serverLinkAddr = new LinkAddress("192.168.20.1/24");
         final LinkAddress clientLinkAddr = new LinkAddress("192.168.20.42/24");
         final String serverAddr = "192.168.20.1";
-        final ResultListener firstResult = new ResultListener(TETHER_ERROR_NO_ERROR);
-        final ResultListener secondResult = new ResultListener(TETHER_ERROR_NO_ERROR);
-        final ResultListener thirdResult = new ResultListener(TETHER_ERROR_NO_ERROR);
 
         // Enable USB tethering and check that Tethering starts USB.
+        final ResultListener firstResult = new ResultListener(TETHER_ERROR_NO_ERROR);
         mTethering.startTethering(createTetheringRequest(TETHERING_USB), TEST_CALLER_PKG,
                 firstResult);
         mLooper.dispatchAll();
@@ -3346,6 +3348,7 @@ public class TetheringTest {
         verifyNoMoreInteractions(mUsbManager);
 
         // Enable USB tethering again with the same request and expect no change to USB.
+        final ResultListener secondResult = new ResultListener(TETHER_ERROR_NO_ERROR);
         mTethering.startTethering(createTetheringRequest(TETHERING_USB), TEST_CALLER_PKG,
                 secondResult);
         mLooper.dispatchAll();
@@ -3355,22 +3358,24 @@ public class TetheringTest {
 
         // Enable USB tethering again with the same request but different uid/package and expect no
         // change to USB.
+        final ResultListener thirdResult = new ResultListener(TETHER_ERROR_NO_ERROR);
         TetheringRequest differentUidPackage = createTetheringRequest(TETHERING_USB);
         differentUidPackage.setUid(TEST_CALLER_UID_2);
         differentUidPackage.setPackageName(TEST_CALLER_PKG_2);
-        mTethering.startTethering(differentUidPackage, TEST_CALLER_PKG_2, secondResult);
+        mTethering.startTethering(differentUidPackage, TEST_CALLER_PKG_2, thirdResult);
         mLooper.dispatchAll();
-        secondResult.assertHasResult();
+        thirdResult.assertHasResult();
         verify(mUsbManager, never()).setCurrentFunctions(UsbManager.FUNCTION_NONE);
         reset(mUsbManager);
 
         // Enable USB tethering with a different request and expect that USB is stopped and
         // started.
+        final ResultListener fourthResult = new ResultListener(TETHER_ERROR_NO_ERROR);
         mTethering.startTethering(createTetheringRequest(TETHERING_USB,
                   serverLinkAddr, clientLinkAddr, false, CONNECTIVITY_SCOPE_GLOBAL, null),
-                  TEST_CALLER_PKG, thirdResult);
+                  TEST_CALLER_PKG, fourthResult);
         mLooper.dispatchAll();
-        thirdResult.assertHasResult();
+        fourthResult.assertHasResult();
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_NONE);
         verify(mUsbManager, times(1)).setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
 
@@ -4025,6 +4030,38 @@ public class TetheringTest {
     }
 
     @Test
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
+    public void testPendingBluetoothRequestRemovedWhenPanServiceDisconnectsBeforeIfaceAvailable()
+            throws Exception {
+        initTetheringOnTestThread();
+
+        final ResultListener result = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mockBluetoothSettings(true /* bluetoothOn */, true /* tetheringOn */);
+        mTethering.startTethering(createTetheringRequest(TETHERING_BLUETOOTH),
+                TEST_CALLER_PKG, result);
+        mLooper.dispatchAll();
+        ServiceListener serviceListener =
+                verifySetBluetoothTethering(true /* enable */, true /* bindToPanService */);
+        result.assertHasResult();
+
+        // Mock BT turning off
+        serviceListener.onServiceDisconnected(BluetoothProfile.PAN);
+        mLooper.dispatchAll();
+
+        // Pending request should be removed
+        assertTrue(mTethering.getPendingTetheringRequests().isEmpty());
+        // Mock BT tethering started again should succeed
+        final ResultListener result2 = new ResultListener(TETHER_ERROR_NO_ERROR);
+        mockBluetoothSettings(true /* bluetoothOn */, true /* tetheringOn */);
+        mTethering.startTethering(createTetheringRequest(TETHERING_BLUETOOTH),
+                TEST_CALLER_PKG, result2);
+        serviceListener.onServiceConnected(BluetoothProfile.PAN, mBluetoothPan);
+        mLooper.dispatchAll();
+        verifySetBluetoothTethering(true /* enable */, false /* bindToPanService */);
+        result2.assertHasResult();
+    }
+
+    @Test
     @IgnoreAfter(Build.VERSION_CODES.S_V2)
     public void testBluetoothTetheringBeforeT() throws Exception {
         initTetheringOnTestThread();
@@ -4239,7 +4276,7 @@ public class TetheringTest {
         }
         verify(mBluetoothPan).isTetheringOn();
         verifyNoMoreInteractions(mBluetoothAdapter, mBluetoothPan);
-        reset(mBluetoothAdapter, mBluetoothPan);
+        reset(mBluetoothAdapter, mBluetoothPan, mBluetoothPanShim);
 
         return listener;
     }

@@ -968,13 +968,15 @@ public class Tethering {
                 // reachable before next onServiceConnected.
                 mIsConnected = false;
 
-                if (mPendingPanRequestListener != null) {
-                    sendTetherResultAndRemoveOnError(
-                            mRequestTracker.getOrCreatePendingRequest(TETHERING_BLUETOOTH),
-                            mPendingPanRequestListener,
-                            TETHER_ERROR_SERVICE_UNAVAIL);
-                }
-                mPendingPanRequestListener = null;
+                // Remove any pending request even if bluetooth tethering is not started.
+                // Call sendTetherResultAndRemoveOnError for convenience (and to update the metrics)
+                // even though mPendingPanRequestListener is guaranteed to be null here (when the
+                // service connects onServiceConnected sets it to null, and whenever the service is
+                // connected, it's never set to non-null).
+                sendTetherResultAndRemoveOnError(
+                        mRequestTracker.getOrCreatePendingRequest(TETHERING_BLUETOOTH),
+                        null /* listener */,
+                        TETHER_ERROR_SERVICE_UNAVAIL);
                 mBluetoothIfaceRequest = null;
                 mBluetoothCallback = null;
                 maybeDisableBluetoothIpServing();
