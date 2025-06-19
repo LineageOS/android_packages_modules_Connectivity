@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c8f52a96_cff65150",
+        "filename": "service/src/com/android/server/ConnectivityService.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 240,
+      "author": {
+        "id": 34512
+      },
+      "writtenOn": "2025-06-19T09:47:35Z",
+      "side": 1,
+      "message": "error: symbol not found android.net.NetworkPolicyManager$AllowedTransportsCallback",
+      "revId": "a7a8dc528d5f56f84f4ed2c5c277f7b50a2dbe37",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
