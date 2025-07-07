@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/personality.h>
+#include <sys/system_properties.h>
 #include <sys/utsname.h>
 
 namespace android {
@@ -34,7 +35,10 @@ static inline unsigned uncachedKernelVersion() {
     unsigned kver_major = 0;
     unsigned kver_minor = 0;
     unsigned kver_sub = 0;
-    if (sscanf(buf.release, "%u.%u.%u", &kver_major, &kver_minor, &kver_sub) < 2) abort();
+    char kver_override[PROP_VALUE_MAX];
+    int kver_override_len = __system_property_get("ro.bpf.kver_override", kver_override);
+    if (sscanf(kver_override_len > 0 ? kver_override : buf.release, "%u.%u.%u",
+               &kver_major, &kver_minor, &kver_sub) < 2) abort();
     return KVER(kver_major, kver_minor, kver_sub);
 }
 
