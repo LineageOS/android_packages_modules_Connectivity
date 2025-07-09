@@ -16,6 +16,23 @@
       "message": "Needs to be tested",
       "revId": "f23b7f5373932e502d85d3870148837de7034cc1",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8d9fcfdc_4fd2f024",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2025-07-09T03:34:39Z",
+      "side": 1,
+      "message": "shell@TP1803 / $ getprop | grep bpf\n[init.svc.bpfloader]: [stopped]\n[ro.bpf.kver_override]: [5.4.0]\n\nshell@TP1803 / $ logcat | grep -i bpf\n01-08 23:19:50.015     0     0 I NetBpfLoad: NetBpfLoad v0.47 (/apex/com.android.tethering/bin/netbpfload) api:36/36 kver:5040000 (64-on-aarch64) libbpf: v1.4 uid:0 rc:01\n01-08 23:19:50.016     0     0 I NetBpfLoad: Tethering APEX version 360499999\n01-08 23:19:50.016     0     0 W NetBpfLoad: Android V+ requires 5.4 kernel to be 5.4.186+.\n01-08 23:19:50.016     0     0 E NetBpfLoad: Unsupported kernel version (5040000).\n01-08 23:19:50.016     0     0 I NetBpfLoad: detected 5 of 5: 2025Q2 api:36.0.0\n01-08 23:19:50.019     0     0 I NetBpfLoad: map /sys/fs/bpf/tethering/map_test_tether_downstream6_map id 1\n01-08 23:19:50.019     0     0 I NetBpfLoad: map /sys/fs/bpf/tethering/map_test_tether2_downstream6_map id 2\n01-08 23:19:50.020     0     0 I NetBpfLoad: map /sys/fs/bpf/tethering/map_test_tether3_downstream6_map id 3\n01-08 23:19:50.020     0     0 I NetBpfLoad: map /sys/fs/bpf/tethering/map_test_bitmap id 4\n01-08 23:19:50.026     0     0 I NetBpfLoad: map /sys/fs/bpf/tethering/map_offload_tether_error_map id 5\n01-08 23:19:50.254     0     0 W netbpfload: 109 output lines suppressed due to ratelimiting\n01-08 23:19:50.484     0     0 W HealthLoop: failed to load BPF program /sys/fs/bpf/vendor/prog_filterPowerSupplyEvents_skfilter_power_supply: No such file or directory. This is expected in recovery mode and also for kernel versions before 5.10.",
+      "revId": "f23b7f5373932e502d85d3870148837de7034cc1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
