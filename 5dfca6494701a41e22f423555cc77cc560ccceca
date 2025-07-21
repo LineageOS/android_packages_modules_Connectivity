@@ -34,6 +34,24 @@
       "parentUuid": "72346150_9b0cdfe9",
       "revId": "5dfca6494701a41e22f423555cc77cc560ccceca",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a11e235a_8d82d02d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34512
+      },
+      "writtenOn": "2025-07-21T16:49:17Z",
+      "side": 1,
+      "message": "Okay, for reference, this is the kernel code which needs a \"spoof fix\".\nI think attr-\u003ekern_version is some metadata passed from userspace, can maybe be modified userspace side before it is passed on to the kernel.\n\n\tif (type \u003d\u003d BPF_PROG_TYPE_KPROBE \u0026\u0026\n\t    attr-\u003ekern_version !\u003d LINUX_VERSION_CODE)\n\t\treturn -EINVAL;",
+      "parentUuid": "8e5246f2_96466f70",
+      "revId": "5dfca6494701a41e22f423555cc77cc560ccceca",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
