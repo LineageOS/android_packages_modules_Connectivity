@@ -52,6 +52,24 @@
       "parentUuid": "8e5246f2_96466f70",
       "revId": "5dfca6494701a41e22f423555cc77cc560ccceca",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ec3ab32a_61d90d1f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34512
+      },
+      "writtenOn": "2025-07-22T15:08:59Z",
+      "side": 1,
+      "message": "nevermind:\n\nhttps://github.com/aosp-mirror/kernel_common/commit/6c4fc209fcf9d27efbaa48368773e4d2bfbd59aa",
+      "parentUuid": "a11e235a_8d82d02d",
+      "revId": "5dfca6494701a41e22f423555cc77cc560ccceca",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
