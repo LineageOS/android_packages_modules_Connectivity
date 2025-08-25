@@ -16,6 +16,23 @@
       "message": "Looks good after this change https://review.lineageos.org/c/LineageOS/android_frameworks_base/+/434605",
       "revId": "672b3632e1c7838e36e5875bd1f54028e36ed046",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3237bd29_7529e08f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34512
+      },
+      "writtenOn": "2025-08-25T09:53:17Z",
+      "side": 1,
+      "message": "This can be abandoned now as it was squashed into main commit.",
+      "revId": "672b3632e1c7838e36e5875bd1f54028e36ed046",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
