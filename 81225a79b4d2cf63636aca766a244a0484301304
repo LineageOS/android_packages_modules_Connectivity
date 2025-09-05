@@ -34,6 +34,24 @@
       "parentUuid": "57807220_6ff97bb8",
       "revId": "81225a79b4d2cf63636aca766a244a0484301304",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6c5a017b_181a1255",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34512
+      },
+      "writtenOn": "2025-09-05T14:52:46Z",
+      "side": 1,
+      "message": "I noticed a very minimal change to support 4.14 kernels, has anyone actually tested if that works still?",
+      "parentUuid": "0e33020c_a9f4951e",
+      "revId": "81225a79b4d2cf63636aca766a244a0484301304",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
