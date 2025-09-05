@@ -52,6 +52,24 @@
       "parentUuid": "0e33020c_a9f4951e",
       "revId": "81225a79b4d2cf63636aca766a244a0484301304",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "620add29_3162df16",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2025-09-05T21:01:41Z",
+      "side": 1,
+      "message": "with this chain, 4.14 does not boot alone, we need at least the bad back port chain to boot.",
+      "parentUuid": "6c5a017b_181a1255",
+      "revId": "81225a79b4d2cf63636aca766a244a0484301304",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
