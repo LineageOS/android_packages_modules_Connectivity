@@ -70,6 +70,24 @@
       "parentUuid": "6c5a017b_181a1255",
       "revId": "81225a79b4d2cf63636aca766a244a0484301304",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "bb9ff1a0_4a9a29e5",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34512
+      },
+      "writtenOn": "2025-09-05T22:49:50Z",
+      "side": 1,
+      "message": "How about we drop this commit from 23 onwards so the prop based BPF override can become more generally accepted?",
+      "parentUuid": "620add29_3162df16",
+      "revId": "81225a79b4d2cf63636aca766a244a0484301304",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
