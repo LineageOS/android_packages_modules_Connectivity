@@ -16,6 +16,24 @@
       "message": "If we are migrating to kernel based BPF fixes (backports) should we really relax the requirements for 4.4/4.9/4.14\n\n4.19/5.4 are understandable because they boot without patches.",
       "revId": "81225a79b4d2cf63636aca766a244a0484301304",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0e33020c_a9f4951e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2025-09-05T14:51:41Z",
+      "side": 1,
+      "message": "No, that\u0027s why this wasn\u0027t merged yet.",
+      "parentUuid": "57807220_6ff97bb8",
+      "revId": "81225a79b4d2cf63636aca766a244a0484301304",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
