@@ -474,8 +474,7 @@ public class BpfNetMaps {
      NetworkStackUtils.isAtLeast25Q2 when it is moved to a static lib.
      */
     public static boolean isAtLeast25Q2() {
-        return SdkLevel.isAtLeastB()  || (SdkLevel.isAtLeastV()
-                && "Baklava".equals(Build.VERSION.CODENAME));
+        return false;
     }
 
     private void removeRule(final int uid, final long match, final String caller) {
