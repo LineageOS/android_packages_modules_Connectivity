@@ -111,6 +111,8 @@ public final class ConnectivityCompatChanges {
      * {@link android.net.ConnectivityManager#getActiveNetwork()} always returns null.
      * {@link android.net.ConnectivityManager.NetworkCallback#onBlockedStatusChanged()} is always
      * called with blocked=true.
+     * {@link android.net.ConnectivityManager#requestNetwork} can not bring up metered network if
+     * the uid is restricted from using metered networks.
      * <p>
      * For backwards compatibility, apps running on older releases, or targeting older SDK levels,
      * network access from apps without {@link android.Manifest.permission#INTERNET} permission is

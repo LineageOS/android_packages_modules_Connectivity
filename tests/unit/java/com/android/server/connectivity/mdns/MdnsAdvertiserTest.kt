@@ -576,14 +576,14 @@ class MdnsAdvertiserTest {
     }
 
     @Test
-    fun testAddService_NoSubtypeForGoogleCastOffload() {
+    fun testAddService_NoSubtypeForOffloadWhenSkipAnnouncements() {
         val advertiser =
             MdnsAdvertiser(thread.looper, socketProvider, cb, mockDeps, sharedlog, flags, context)
         postSync {
             advertiser.addOrUpdateService(
                 SERVICE_ID_1,
                 GOOGLECAST_SERVICE,
-                DEFAULT_ADVERTISING_OPTION,
+                MdnsAdvertisingOptions.newBuilder().setSkipSubtypeAnnouncements(true).build(),
                 TEST_CLIENT_UID_1
             )
         }

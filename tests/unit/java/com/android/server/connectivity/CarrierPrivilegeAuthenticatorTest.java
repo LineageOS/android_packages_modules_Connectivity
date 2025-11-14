@@ -141,7 +141,7 @@ public class CarrierPrivilegeAuthenticatorTest {
         mHandlerThread = new HandlerThread(CarrierPrivilegeAuthenticatorTest.class.getSimpleName());
         mUseCallbacks = useCallbacks;
         final Dependencies deps = mock(Dependencies.class);
-        doReturn(useCallbacks).when(deps).isFeatureEnabled(any() /* context */,
+        doReturn(useCallbacks).when(deps).isFeatureNotChickenedOut(any() /* context */,
                 eq(CARRIER_SERVICE_CHANGED_USE_CALLBACK));
         doReturn(mHandlerThread).when(deps).makeHandlerThread();
         doReturn(SUBSCRIPTION_COUNT).when(mTelephonyManager).getActiveModemCount();

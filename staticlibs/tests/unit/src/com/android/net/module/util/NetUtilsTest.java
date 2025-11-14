@@ -16,8 +16,6 @@
 
 package com.android.net.module.util;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -27,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import android.net.InetAddresses;
 import android.net.IpPrefix;
 import android.net.RouteInfo;
+import android.os.Build;
 
 import androidx.test.runner.AndroidJUnit4;
 
@@ -115,7 +114,7 @@ public final class NetUtilsTest {
         assertNotEquals(V6_EXPECTED, route);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testSelectBestRouteWithExcludedRoutes() {
         final List<RouteInfo> routes = new ArrayList<>();
 
@@ -140,4 +139,3 @@ public final class NetUtilsTest {
         assertNull(route);
     }
 }
-

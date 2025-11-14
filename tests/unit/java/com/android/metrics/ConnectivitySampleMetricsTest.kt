@@ -35,6 +35,7 @@ import androidx.test.filters.SmallTest
 import com.android.net.module.util.BitUtils
 import com.android.server.CSTest
 import com.android.server.FromS
+import com.android.server.connectivity.ConnectivityFlags.CONSTRAINED_DATA_SATELLITE_METRICS
 import com.android.server.connectivity.FullScore
 import com.android.server.connectivity.FullScore.POLICY_IS_UNMETERED
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
@@ -46,6 +47,7 @@ import kotlin.test.fail
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.doReturn
 
 private fun <T> Handler.onHandler(f: () -> T): T {
     val future = CompletableFuture<T>()
@@ -215,13 +217,12 @@ class ConnectivitySampleMetricsTest : CSTest() {
         }
     }
 
-
     @Test
     fun testSampleConnectivityState_NetworkRequest() {
         val requestCount = 5
-        fileNetworkRequest(RT_APP, requestCount);
-        fileNetworkRequest(RT_SYSTEM, requestCount, SYSTEM_UID);
-        fileNetworkRequest(RT_SYSTEM_ON_BEHALF_OF_APP, requestCount, SYSTEM_UID);
+        fileNetworkRequest(RT_APP, requestCount)
+        fileNetworkRequest(RT_SYSTEM, requestCount, SYSTEM_UID)
+        fileNetworkRequest(RT_SYSTEM_ON_BEHALF_OF_APP, requestCount, SYSTEM_UID)
 
         val stats = csHandler.onHandler { service.sampleConnectivityState() }
 
@@ -245,5 +246,25 @@ class ConnectivitySampleMetricsTest : CSTest() {
         assertTrue("Unexpected RT_SYSTEM_ON_BEHALF_OF_APP count, expected >= $requestCount, " +
                 "found ${systemOnBehalfOfAppRequest.requestCount}",
                 systemOnBehalfOfAppRequest.requestCount >= requestCount)
+    }
+
+    @Test
+    fun testSampleConnectivityState_satelliteAccessInfo() {
+        doTestSampleConnectivityState_satelliteAccessInfo(true)
+    }
+
+    @FeatureFlags(flags = [Flag(CONSTRAINED_DATA_SATELLITE_METRICS, false)])
+    @Test
+    fun testSampleConnectivityState_satelliteAccessInfo_disabled() {
+        doTestSampleConnectivityState_satelliteAccessInfo(false)
+    }
+
+    private fun doTestSampleConnectivityState_satelliteAccessInfo(expectUpdated: Boolean) {
+        val statsBefore = csHandler.onHandler { service.sampleConnectivityState() }
+        assertEquals(0, statsBefore.satelliteAccessInfo.optinUidCount)
+
+        doReturn(3).`when`(satelliteAccessController).cachedOptInUidsCount
+        val statsAfter = csHandler.onHandler { service.sampleConnectivityState() }
+        assertEquals(if (expectUpdated) 3 else 0, statsAfter.satelliteAccessInfo.optinUidCount)
     }
 }

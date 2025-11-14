@@ -50,11 +50,11 @@ import org.mockito.Mockito.argThat
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.eq
+import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import org.mockito.Mockito.inOrder
 
 private const val LOG_TAG = "testlogtag"
 private const val TIMEOUT_MS = 10_000L
@@ -107,7 +107,8 @@ class MdnsInterfaceAdvertiserTest {
     private val announceCbCaptor = ArgumentCaptor.forClass(PacketRepeaterCallback::class.java)
             as ArgumentCaptor<PacketRepeaterCallback<BaseAnnouncementInfo>>
     private val packetHandlerCaptor = ArgumentCaptor.forClass(
-            MulticastPacketReader.PacketHandler::class.java)
+            MulticastPacketReader.PacketHandler::class.java
+    )
 
     private val probeCb get() = probeCbCaptor.value
     private val announceCb get() = announceCbCaptor.value
@@ -131,14 +132,19 @@ class MdnsInterfaceAdvertiserTest {
     fun setUp() {
         doReturn(repository).`when`(deps).makeRecordRepository(any(), eq(TEST_HOSTNAME), any())
         doReturn(replySender).`when`(deps).makeReplySender(
-                anyString(), any(), any(), any(), any(), any())
+            anyString(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
+        )
         doReturn(announcer).`when`(deps).makeMdnsAnnouncer(anyString(), any(), any(), any(), any())
         doReturn(prober).`when`(deps).makeMdnsProber(anyString(), any(), any(), any(), any())
 
         val knownServices = mutableSetOf<Int>()
         doAnswer { inv ->
             knownServices.add(inv.getArgument(0))
-
             -1
         }.`when`(repository).addService(anyInt(), any(), any())
         doAnswer { inv ->
@@ -169,8 +175,11 @@ class MdnsInterfaceAdvertiserTest {
     fun testAddRemoveService() {
         val testAnnouncementInfo = addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
-        verify(announcer).startSending(TEST_SERVICE_ID_1, testAnnouncementInfo,
-                0L /* initialDelayMs */)
+        verify(announcer).startSending(
+            TEST_SERVICE_ID_1,
+            testAnnouncementInfo,
+            0L /* initialDelayMs */
+        )
 
         thread.waitForIdle(TIMEOUT_MS)
         verify(cb).onServiceProbingSucceeded(advertiser, TEST_SERVICE_ID_1)
@@ -243,7 +252,9 @@ class MdnsInterfaceAdvertiserTest {
         inOrder.verify(prober).stop(TEST_SERVICE_ID_1)
         inOrder.verify(announcer).stop(TEST_SERVICE_ID_1)
         inOrder.verify(announcer).stop(TEST_SERVICE_ID_2)
-        inOrder.verify(announcer).startSending(TEST_SERVICE_ID_2, announcementInfo, 0L /* initialDelayMs */)
+        inOrder.verify(
+            announcer
+        ).startSending(TEST_SERVICE_ID_2, announcementInfo, 0L /* initialDelayMs */)
     }
 
     @Test
@@ -300,8 +311,14 @@ class MdnsInterfaceAdvertiserTest {
     fun testReplyToQuery() {
         addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
-        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 0, InetSocketAddress(0),
-                InetSocketAddress(0), emptyList())
+        val testReply = MdnsReplyInfo(
+            emptyList(),
+            emptyList(),
+            0,
+            InetSocketAddress(0),
+            InetSocketAddress(0),
+            emptyList()
+        )
         doReturn(testReply).`when`(repository).getReply(any(), any())
 
         // Query obtained with:
@@ -319,8 +336,12 @@ class MdnsInterfaceAdvertiserTest {
         verify(repository).getReply(packetCaptor.capture(), srcCaptor.capture())
 
         assertEquals(src, srcCaptor.value)
-        assertNotSame(src, srcCaptor.value, "src will be reused by the packetHandler, references " +
-                "to it should not be used outside of handlePacket.")
+        assertNotSame(
+            src,
+            srcCaptor.value,
+            "src will be reused by the packetHandler, references " +
+            "to it should not be used outside of handlePacket."
+        )
 
         packetCaptor.value.let {
             assertEquals(1, it.questions.size)
@@ -339,24 +360,45 @@ class MdnsInterfaceAdvertiserTest {
     fun testReplyToQuery_TruncatedBitSet() {
         addServiceAndFinishProbing(TEST_SERVICE_ID_1, TEST_SERVICE_1)
         val src = InetSocketAddress(parseNumericAddress("2001:db8::456"), MdnsConstants.MDNS_PORT)
-        val testReply = MdnsReplyInfo(emptyList(), emptyList(), 400L, InetSocketAddress(0), src,
-                emptyList())
-        val knownAnswersReply = MdnsReplyInfo(emptyList(), emptyList(), 400L, InetSocketAddress(0),
-                src, emptyList())
-        val knownAnswersReply2 = MdnsReplyInfo(emptyList(), emptyList(), 0L, InetSocketAddress(0),
-                src, emptyList())
+        val testReply = MdnsReplyInfo(
+            emptyList(),
+            emptyList(),
+            400L,
+            InetSocketAddress(0),
+            src,
+            emptyList()
+        )
+        val knownAnswersReply = MdnsReplyInfo(
+            emptyList(),
+            emptyList(),
+            400L,
+            InetSocketAddress(0),
+            src,
+            emptyList()
+        )
+        val knownAnswersReply2 = MdnsReplyInfo(
+            emptyList(),
+            emptyList(),
+            0L,
+            InetSocketAddress(0),
+            src,
+            emptyList()
+        )
         doReturn(testReply).`when`(repository).getReply(
                 argThat { pkg -> pkg.questions.size != 0 && pkg.answers.size == 0 &&
                         (pkg.flags and MdnsConstants.FLAG_TRUNCATED) != 0},
-                eq(src))
+                eq(src)
+        )
         doReturn(knownAnswersReply).`when`(repository).getReply(
                 argThat { pkg -> pkg.questions.size == 0 && pkg.answers.size != 0 &&
                         (pkg.flags and MdnsConstants.FLAG_TRUNCATED) != 0},
-                eq(src))
+                eq(src)
+        )
         doReturn(knownAnswersReply2).`when`(repository).getReply(
                 argThat { pkg -> pkg.questions.size == 0 && pkg.answers.size != 0 &&
                         (pkg.flags and MdnsConstants.FLAG_TRUNCATED) == 0},
-                eq(src))
+                eq(src)
+        )
 
         // Query obtained with:
         // scapy.raw(scapy.DNS(
@@ -452,8 +494,10 @@ class MdnsInterfaceAdvertiserTest {
         //    qd = None,
         //    an = scapy.DNSRR(type='TXT', rrname='_testservice._tcp.local'))
         // ).hex().upper()
-        val query = HexDump.hexStringToByteArray("0000010000000001000000000C5F7465737473657276696" +
-                "365045F746370056C6F63616C0000100001000000000000")
+        val query = HexDump.hexStringToByteArray(
+            "0000010000000001000000000C5F7465737473657276696" +
+                "365045F746370056C6F63616C0000100001000000000000"
+        )
         val src = InetSocketAddress(parseNumericAddress("2001:db8::456"), MdnsConstants.MDNS_PORT)
         packetHandler.handlePacket(query, query.size, src)
 
@@ -488,7 +532,9 @@ class MdnsInterfaceAdvertiserTest {
     fun testRenameServiceForConflict() {
         val mockProbingInfo = mock(ProbingInfo::class.java)
         doReturn(mockProbingInfo).`when`(repository).renameServiceForConflict(
-                TEST_SERVICE_ID_1, TEST_SERVICE_1)
+            TEST_SERVICE_ID_1,
+            TEST_SERVICE_1
+        )
 
         advertiser.renameServiceForConflict(TEST_SERVICE_ID_1, TEST_SERVICE_1)
 
@@ -499,11 +545,32 @@ class MdnsInterfaceAdvertiserTest {
     fun testReplaceExitingService() {
         doReturn(TEST_SERVICE_ID_DUPLICATE).`when`(repository)
                 .addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
-        advertiser.addService(TEST_SERVICE_ID_DUPLICATE, TEST_SERVICE_1_SUBTYPE,
-                MdnsAdvertisingOptions.getDefaultOptions())
+        advertiser.addService(
+            TEST_SERVICE_ID_DUPLICATE,
+            TEST_SERVICE_1_SUBTYPE,
+            MdnsAdvertisingOptions.getDefaultOptions()
+        )
         verify(repository).addService(eq(TEST_SERVICE_ID_DUPLICATE), any(), any())
         verify(announcer).stop(TEST_SERVICE_ID_DUPLICATE)
         verify(prober).startProbing(any())
+    }
+
+    @Test
+    fun testOffloadOnlyWillSkipProbing() {
+        val testProbingInfo = mock(ProbingInfo::class.java)
+        doReturn(TEST_SERVICE_ID_1).`when`(repository)
+            .addService(eq(TEST_SERVICE_ID_1), any(), any())
+        doReturn(TEST_SERVICE_ID_1).`when`(testProbingInfo).serviceId
+        doReturn(testProbingInfo).`when`(repository).setServiceProbing(TEST_SERVICE_ID_1)
+        advertiser.addService(
+            TEST_SERVICE_ID_1,
+            TEST_SERVICE_1_SUBTYPE,
+            MdnsAdvertisingOptions.newBuilder().setOffloadOnly(true).build()
+        )
+        verify(repository).addService(eq(TEST_SERVICE_ID_1), any(), any())
+        thread.waitForIdle(TIMEOUT_MS)
+        verify(prober, never()).startProbing(any())
+        verify(cb).onServiceProbingSucceeded(advertiser, TEST_SERVICE_ID_1)
     }
 
     @Test
@@ -517,14 +584,20 @@ class MdnsInterfaceAdvertiserTest {
         verify(prober, never()).startProbing(any())
     }
 
-    private fun addServiceAndStartProbing(serviceId: Int, serviceInfo: NsdServiceInfo):
-            ProbingInfo {
+    private fun addServiceAndStartProbing(
+        serviceId: Int,
+        serviceInfo: NsdServiceInfo
+    ): ProbingInfo {
         val testProbingInfo = mock(ProbingInfo::class.java)
         doReturn(serviceId).`when`(testProbingInfo).serviceId
         doReturn(testProbingInfo).`when`(repository).setServiceProbing(serviceId)
 
         advertiser.addService(serviceId, serviceInfo, MdnsAdvertisingOptions.getDefaultOptions())
-        verify(repository).addService(serviceId, serviceInfo, null /* ttl */)
+        verify(repository).addService(
+            serviceId,
+            serviceInfo,
+            MdnsAdvertisingOptions.newBuilder().build()
+        )
         verify(prober).startProbing(testProbingInfo)
 
         return testProbingInfo

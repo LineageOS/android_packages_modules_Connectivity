@@ -139,7 +139,7 @@ class DevSdkIgnoreRunner(private val klass: Class<*>) : Runner(), Filterable, So
         }
 
         val networkRestoreMonitor = if (restoreDefaultNetwork) {
-            DefaultNetworkRestoreMonitor(ctx, notifier).apply{
+            DefaultNetworkRestoreMonitor(ctx, notifier).apply {
                 init(ConnectUtil(ctx))
             }
         } else {

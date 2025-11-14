@@ -52,14 +52,9 @@ public class CertificateTransparencyService extends ICertificateTransparencyMana
 
     /** Creates a new {@link CertificateTransparencyService} object. */
     public CertificateTransparencyService(Context context) {
-        DataStore dataStore = new DataStore(Config.PREFERENCES_FILE);
         SignatureVerifier signatureVerifier = new SignatureVerifier(context);
         Collection<CompatibilityVersion> compatVersions =
                 Arrays.asList(
-                        new CompatibilityVersion(
-                                Config.COMPATIBILITY_VERSION_V1,
-                                Config.URL_SIGNATURE_V1,
-                                Config.URL_LOG_LIST_V1),
                         new CompatibilityVersion(
                                 Config.COMPATIBILITY_VERSION_V2,
                                 Config.URL_SIGNATURE_V2,
@@ -68,13 +63,11 @@ public class CertificateTransparencyService extends ICertificateTransparencyMana
         mCertificateTransparencyJob =
                 new CertificateTransparencyJob(
                         context,
-                        dataStore,
                         new CertificateTransparencyDownloader(
                                 context,
-                                dataStore,
                                 new DownloadHelper(context),
                                 signatureVerifier,
-                                new CertificateTransparencyLoggerImpl(dataStore),
+                                new CertificateTransparencyLoggerImpl(),
                                 compatVersions),
                         signatureVerifier,
                         compatVersions);

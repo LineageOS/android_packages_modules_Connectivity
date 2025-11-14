@@ -155,6 +155,10 @@ java_defaults {
         // if sdk_version="" this gets automatically included, but here we need to add manually.
         "framework-res",
     ],
+    // Tests must check a large number of deprecated methods and warning about it
+    // sends hundreds of warning lines flooding the useful warnings.
+    kotlincflags: ["-Xsuppress-warning=DEPRECATION"],
+    // TODO: add "-Xwarning-level=CheckResult:error" when Kotlin 2.2.0 is out
 }
 
 // defaults for tests that need to build against framework-connectivity's @hide APIs, but also
@@ -178,6 +182,10 @@ java_defaults {
         // if sdk_version="" this gets automatically included, but here we need to add manually.
         "framework-res",
     ],
+    // Tests must check a large number of deprecated methods and warning about it
+    // sends hundreds of warning lines flooding the useful warnings.
+    kotlincflags: ["-Xsuppress-warning=DEPRECATION"],
+    // TODO: add "-Xwarning-level=CheckResult:error" when Kotlin 2.2.0 is out
     defaults_visibility: ["//packages/modules/Connectivity/tests:__subpackages__"],
 }
 

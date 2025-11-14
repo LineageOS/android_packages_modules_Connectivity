@@ -24,11 +24,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from mobly import asserts
 from mobly import base_test
 from mobly import utils
 from mobly.controllers import android_device
+from net_tests_utils.host.python import adb_utils
 
-CONNECTIVITY_MULTI_DEVICES_SNIPPET_PACKAGE = "com.google.snippet.connectivity"
+CONNECTIVITY_MULTI_DEVICES_SNIPPET_PACKAGE = 'com.google.snippet.connectivity'
 
 
 class MultiDevicesTestBase(base_test.BaseTestClass):
@@ -39,9 +41,22 @@ class MultiDevicesTestBase(base_test.BaseTestClass):
         android_device, min_number=2
     )
 
+    if self.clientDevice.is_adb_root:
+      adb_utils.unroot(self.clientDevice)
+
+    if self.serverDevice.is_adb_root:
+      adb_utils.unroot(self.serverDevice)
+
+    asserts.assert_false(
+        self.clientDevice.is_adb_root, 'client device should be unroot'
+    )
+    asserts.assert_false(
+        self.serverDevice.is_adb_root, 'server device should be unroot'
+    )
+
     def setup_device(device):
       device.load_snippet(
-          "connectivity_multi_devices_snippet",
+          'connectivity_multi_devices_snippet',
           CONNECTIVITY_MULTI_DEVICES_SNIPPET_PACKAGE,
       )
 

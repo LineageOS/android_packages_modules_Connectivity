@@ -19,15 +19,16 @@ package com.android.net.module.util
 import android.util.SparseArray
 import androidx.test.filters.SmallTest
 import androidx.test.runner.AndroidJUnit4
+import com.android.net.module.util.CollectionUtils.intArrayToSet
 import kotlin.test.assertContentEquals
-import org.junit.Test
-import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
@@ -144,13 +145,19 @@ class CollectionUtilsTest {
         val listAE = listOf("A", "B", "C", "D", "E")
         val list15 = listOf(1, 2, 3, 4, 5)
         // Normal #zip returns kotlin.Pair, not android.util.Pair
-        assertEquals(list15.zip(listAE).map { android.util.Pair(it.first, it.second) },
-                CollectionUtils.zip(list15, listAE))
+        assertEquals(
+                list15.zip(listAE).map { android.util.Pair(it.first, it.second) },
+                CollectionUtils.zip(list15, listAE)
+        )
         val listNull = listOf("A", null, "B", "C", "D")
-        assertEquals(list15.zip(listNull).map { android.util.Pair(it.first, it.second) },
-                CollectionUtils.zip(list15, listNull))
-        assertEquals(emptyList<android.util.Pair<Int, Int>>(),
-                CollectionUtils.zip(emptyList<Int>(), emptyList<Int>()))
+        assertEquals(
+                list15.zip(listNull).map { android.util.Pair(it.first, it.second) },
+                CollectionUtils.zip(list15, listNull)
+        )
+        assertEquals(
+                emptyList<android.util.Pair<Int, Int>>(),
+                CollectionUtils.zip(emptyList<Int>(), emptyList<Int>())
+        )
         assertFailsWith<IllegalArgumentException> {
             // Different size
             CollectionUtils.zip(listOf(1, 2), list15)
@@ -279,5 +286,13 @@ class CollectionUtilsTest {
                 stringArrExpected,
                 CollectionUtils.appendArray(String::class.java, stringArr1, "4", "5", "6")
         )
+    }
+
+    @Test
+    fun intArrayToSet_arrayWithDuplicateElements_returnsSetWithUniqueElements() {
+        val inputArray = intArrayOf(1, 2, 2, 3, 4, 4, 4, 5, 1)
+        val expectedSet = setOf(1, 2, 3, 4, 5)
+        val result = intArrayToSet(inputArray)
+        assertEquals(expectedSet, result)
     }
 }

@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
+import static android.system.OsConstants.IFA_F_TEMPORARY;
+
 import static com.android.server.connectivity.mdns.MdnsConstants.IPV4_SOCKET_ADDR;
 import static com.android.server.connectivity.mdns.MdnsConstants.IPV6_SOCKET_ADDR;
 import static com.android.server.connectivity.mdns.MdnsConstants.NO_PACKET;
@@ -200,6 +202,8 @@ public class MdnsRecordRepository {
         public final List<RecordInfo<MdnsInetAddressRecord>> addressRecords;
         @NonNull
         public final NsdServiceInfo serviceInfo;
+        @NonNull
+        private final MdnsAdvertisingOptions mAdvertisingOptions;
 
         /**
          * Whether the service is sending exit announcements and will be destroyed soon.
@@ -221,9 +225,6 @@ public class MdnsRecordRepository {
          */
         private boolean isProbing;
 
-        @Nullable
-        private Duration ttl;
-
         /**
          * Create a ServiceRegistration with only update the subType.
          */
@@ -232,17 +233,38 @@ public class MdnsRecordRepository {
             NsdServiceInfo newServiceInfo = new NsdServiceInfo(serviceInfo);
             newServiceInfo.setSubtypes(newSubtypes);
             return new ServiceRegistration(srvRecord.record.getServiceHost(), newServiceInfo,
-                    repliedServiceCount, sentPacketCount, exiting, isProbing, ttl,
+                    repliedServiceCount, sentPacketCount, exiting, isProbing, mAdvertisingOptions,
                     featureFlags);
         }
+
+        /**
+         * Get filtered all records of the service registration.
+         */
+        List<RecordInfo<?>> getFilteredAllRecords() {
+            return CollectionUtils.filter(allRecords,
+                    info -> !mAdvertisingOptions.skipSubtypeAnnouncements() || !isSubtypePtrRecord(
+                            info));
+        }
+
+        /**
+         * Get filtered ptr records of the service registration.
+         */
+        List<RecordInfo<MdnsPointerRecord>> getFilteredPtrRecords() {
+            return CollectionUtils.filter(ptrRecords,
+                    info -> !mAdvertisingOptions.skipSubtypeAnnouncements() || !isSubtypePtrRecord(
+                            info));
+        }
+
 
         /**
          * Create a ServiceRegistration for dns-sd service registration (RFC6763).
          */
         ServiceRegistration(@NonNull String[] deviceHostname, @NonNull NsdServiceInfo serviceInfo,
                 int repliedServiceCount, int sentPacketCount, boolean exiting, boolean isProbing,
-                @Nullable Duration ttl, @NonNull MdnsFeatureFlags featureFlags) {
+                @NonNull MdnsAdvertisingOptions advertisingOptions,
+                @NonNull MdnsFeatureFlags featureFlags) {
             this.serviceInfo = serviceInfo;
+            this.mAdvertisingOptions = advertisingOptions;
 
             final long nonNameRecordsTtlMillis;
             final long nameRecordsTtlMillis;
@@ -251,6 +273,7 @@ public class MdnsRecordRepository {
             // This is typically useful for SRP (Service Registration Protocol:
             // https://datatracker.ietf.org/doc/html/draft-ietf-dnssd-srp-24) Advertising Proxy
             // where all records in a single SRP are required the same TTL.
+            final Duration ttl = advertisingOptions.getTtl();
             if (ttl != null) {
                 nonNameRecordsTtlMillis = ttl.toMillis();
                 nameRecordsTtlMillis = ttl.toMillis();
@@ -396,16 +419,20 @@ public class MdnsRecordRepository {
          * @param serviceInfo Service to advertise
          */
         ServiceRegistration(@NonNull String[] deviceHostname, @NonNull NsdServiceInfo serviceInfo,
-                int repliedServiceCount, int sentPacketCount, @Nullable Duration ttl,
+                int repliedServiceCount, int sentPacketCount,
+                @NonNull MdnsAdvertisingOptions advertisingOptions,
                 @NonNull MdnsFeatureFlags featureFlags) {
             this(deviceHostname, serviceInfo,repliedServiceCount, sentPacketCount,
-                    false /* exiting */, true /* isProbing */, ttl, featureFlags);
+                    false /* exiting */, true /* isProbing */, advertisingOptions, featureFlags);
         }
 
         void setProbing(boolean probing) {
             this.isProbing = probing;
         }
 
+        boolean isActive() {
+            return !exiting && !mAdvertisingOptions.isOffloadOnly();
+        }
     }
 
     /**
@@ -414,6 +441,11 @@ public class MdnsRecordRepository {
     public void updateAddresses(@NonNull List<LinkAddress> newAddresses) {
         mGeneralRecords.clear();
         for (LinkAddress addr : newAddresses) {
+            if (mMdnsFeatureFlags.mIsIgnoreTemporaryIPv6AddressesEnabled && addr.isIpv6()
+                    && (addr.getFlags() & IFA_F_TEMPORARY) != 0) {
+                // Ignore temporary IPv6 addresses
+                continue;
+            }
             final String[] revDnsAddr = getReverseDnsAddress(addr.getAddress());
             mGeneralRecords.add(new RecordInfo<>(
                     null /* serviceInfo */,
@@ -460,12 +492,13 @@ public class MdnsRecordRepository {
      * This may remove/replace any existing service that used the name added but is exiting.
      * @param serviceId A unique service ID.
      * @param serviceInfo Service info to add.
-     * @param ttl the TTL duration for all records of {@code serviceInfo} or {@code null}
+     * @param advertisingOptions the advertiser options for this service.
      * @return If the added service replaced another with a matching name (which was exiting), the
      *         ID of the replaced service.
      * @throws NameConflictException There is already a (non-exiting) service using the name.
      */
-    public int addService(int serviceId, NsdServiceInfo serviceInfo, @Nullable Duration ttl)
+    public int addService(int serviceId, NsdServiceInfo serviceInfo,
+            @NonNull MdnsAdvertisingOptions advertisingOptions)
             throws NameConflictException {
         if (mServices.contains(serviceId)) {
             throw new IllegalArgumentException(
@@ -481,7 +514,7 @@ public class MdnsRecordRepository {
 
         final ServiceRegistration registration = new ServiceRegistration(
                 mDeviceHostname, serviceInfo, NO_PACKET /* repliedServiceCount */,
-                NO_PACKET /* sentPacketCount */, ttl,
+                NO_PACKET /* sentPacketCount */, advertisingOptions,
                 mMdnsFeatureFlags);
         mServices.put(serviceId, registration);
 
@@ -579,16 +612,16 @@ public class MdnsRecordRepository {
     public MdnsAnnouncer.ExitAnnouncementInfo exitService(int id) {
         final ServiceRegistration registration = mServices.get(id);
         if (registration == null) return null;
-        if (registration.exiting) return null;
-
-        // Send exit (TTL 0) for the PTR records, if at least one was sent (in particular don't send
-        // if still probing)
-        if (CollectionUtils.all(registration.ptrRecords, r -> r.lastSentTimeMs == 0L)) {
-            return null;
-        }
+        if (!registration.isActive()) return null;
 
         registration.exiting = true;
-        final List<MdnsRecord> expiredRecords = CollectionUtils.map(registration.ptrRecords,
+        final List<RecordInfo<MdnsPointerRecord>> filteredRecords = CollectionUtils.filter(
+                registration.getFilteredPtrRecords(), r -> r.lastSentTimeMs != 0L);
+        if (filteredRecords.isEmpty()) {
+            return null;
+        }
+        final List<MdnsRecord> expiredRecords = CollectionUtils.map(
+                filteredRecords,
                 r -> new MdnsPointerRecord(
                         r.record.getName(),
                         0L /* receiptTimeMillis */,
@@ -691,7 +724,9 @@ public class MdnsRecordRepository {
             // Add answers from each service
             for (int i = 0; i < mServices.size(); i++) {
                 final ServiceRegistration registration = mServices.valueAt(i);
-                if (registration.exiting || registration.isProbing) continue;
+                if (!registration.isActive() || registration.isProbing) {
+                    continue;
+                }
                 if (addReplyFromService(question, registration.allRecords, registration.ptrRecords,
                         registration.srvRecord, registration.txtRecord,
                         registration.serviceInfo.getHostname(),
@@ -1093,6 +1128,14 @@ public class MdnsRecordRepository {
         return makeAnnouncementInfo(serviceId, registration);
     }
 
+    private static boolean isSubtypePtrRecord(@NonNull RecordInfo<?> info) {
+        if (!(info.record instanceof MdnsPointerRecord)) {
+            return false;
+        }
+        final String[] recordName = info.record.getName();
+        return recordName.length > 4;
+    }
+
     /**
      * Make the announcement info of the given service ID.
      *
@@ -1125,13 +1168,15 @@ public class MdnsRecordRepository {
                     });
         }
 
+        final List<RecordInfo<?>> filteredAllRecords = registration.getFilteredAllRecords();
         // All service records
-        for (RecordInfo<?> info : registration.allRecords) {
+        for (RecordInfo<?> info : filteredAllRecords) {
             answersSet.add(info.record);
         }
 
+        // ignore all the PTR query with subtype
         addNsecRecordsForUniqueNames(additionalAnswers,
-                mGeneralRecords.iterator(), registration.allRecords.iterator());
+                mGeneralRecords.iterator(), filteredAllRecords.iterator());
 
         return new MdnsAnnouncer.AnnouncementInfo(serviceId,
                 new ArrayList<>(answersSet), additionalAnswers);
@@ -1151,6 +1196,10 @@ public class MdnsRecordRepository {
 
         // Adds all PTR, SRV, TXT, A/AAAA records.
         for (RecordInfo<MdnsPointerRecord> ptrRecord : registration.ptrRecords) {
+            if (registration.mAdvertisingOptions.skipSubtypeAnnouncements() && isSubtypePtrRecord(
+                    ptrRecord)) {
+                continue;
+            }
             answers.add(ptrRecord.record);
         }
         if (registration.srvRecord != null) {
@@ -1199,7 +1248,7 @@ public class MdnsRecordRepository {
             SparseIntArray conflictingWithRecord = new SparseIntArray();
             for (int i = 0; i < mServices.size(); i++) {
                 final ServiceRegistration registration = mServices.valueAt(i);
-                if (registration.exiting) continue;
+                if (!registration.isActive()) continue;
 
                 final RecordConflictType conflictForService =
                         conflictForService(record, registration);
@@ -1365,7 +1414,7 @@ public class MdnsRecordRepository {
         for (int i = 0; i < mServices.size(); ++i) {
             int id = mServices.keyAt(i);
             ServiceRegistration service = mServices.valueAt(i);
-            if (service.exiting) continue;
+            if (!service.isActive()) continue;
             if (DnsUtils.equalsIgnoreDnsCase(service.serviceInfo.getHostname(), hostname)) {
                 consumer.accept(id, service);
             }
@@ -1417,8 +1466,8 @@ public class MdnsRecordRepository {
         if (existing == null) return null;
 
         final ServiceRegistration newService = new ServiceRegistration(mDeviceHostname, newInfo,
-                existing.repliedServiceCount, existing.sentPacketCount, existing.ttl,
-                mMdnsFeatureFlags);
+                existing.repliedServiceCount, existing.sentPacketCount,
+                existing.mAdvertisingOptions, mMdnsFeatureFlags);
         mServices.put(serviceId, newService);
         return makeProbingInfo(serviceId, newService);
     }
@@ -1431,7 +1480,7 @@ public class MdnsRecordRepository {
         if (registration == null) return;
 
         final long now = mDeps.elapsedRealTime();
-        for (RecordInfo<?> record : registration.allRecords) {
+        for (RecordInfo<?> record : registration.getFilteredAllRecords()) {
             record.lastSentTimeMs = now;
             record.lastAdvertisedOnIpv4TimeMs = now;
             record.lastAdvertisedOnIpv6TimeMs = now;

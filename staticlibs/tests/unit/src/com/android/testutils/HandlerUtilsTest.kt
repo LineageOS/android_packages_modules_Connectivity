@@ -19,46 +19,51 @@ package com.android.testutils
 import android.os.Handler
 import android.os.HandlerThread
 import com.android.testutils.FunctionalUtils.ThrowingSupplier
+import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
 
 private const val ATTEMPTS = 50 // Causes testWaitForIdle to take about 150ms on aosp_crosshatch-eng
 private const val TIMEOUT_MS = 1000
 
-@RunWith(JUnit4::class)
+@DevSdkIgnoreRunner.MonitorThreadLeak
+@RunWith(DevSdkIgnoreRunner::class)
 class HandlerUtilsTest {
     @Test
     fun testWaitForIdle() {
         val handlerThread = HandlerThread("testHandler").apply { start() }
-
-        // Tests that waitForIdle can be called many times without ill impact if the service is
-        // already idle.
-        repeat(ATTEMPTS) {
-            handlerThread.waitForIdle(TIMEOUT_MS)
-        }
-
-        // Tests that calling waitForIdle waits for messages to be processed. Use both an
-        // inline runnable that's instantiated at each loop run and a runnable that's instantiated
-        // once for all.
-        val tempRunnable = object : Runnable {
-            // Use StringBuilder preferentially to StringBuffer because StringBuilder is NOT
-            // thread-safe. It's part of the point that both runnables run on the same thread
-            // so if anything is wrong in that space it's better to opportunistically use a class
-            // where things might go wrong, even if there is no guarantee of failure.
-            var memory = StringBuilder()
-            override fun run() {
-                memory.append("b")
+        tryTest {
+            // Tests that waitForIdle can be called many times without ill impact if the service is
+            // already idle.
+            repeat(ATTEMPTS) {
+                handlerThread.waitForIdle(TIMEOUT_MS)
             }
-        }
-        repeat(ATTEMPTS) { i ->
-            handlerThread.threadHandler.post { tempRunnable.memory.append("a"); }
-            handlerThread.threadHandler.post(tempRunnable)
-            handlerThread.waitForIdle(TIMEOUT_MS)
-            assertEquals(tempRunnable.memory.toString(), "ab".repeat(i + 1))
+
+            // Tests that calling waitForIdle waits for messages to be processed. Use both an
+            // inline runnable that's instantiated at each loop run and a runnable that's
+            // instantiated once for all.
+            val tempRunnable = object : Runnable {
+                // Use StringBuilder preferentially to StringBuffer because StringBuilder is NOT
+                // thread-safe. It's part of the point that both runnables run on the same thread
+                // so if anything is wrong in that space it's better to opportunistically use a
+                // class where things might go wrong, even if there is no guarantee of failure.
+                var memory = StringBuilder()
+                override fun run() {
+                    memory.append("b")
+                }
+            }
+            repeat(ATTEMPTS) { i ->
+                handlerThread.threadHandler.post { tempRunnable.memory.append("a"); }
+                handlerThread.threadHandler.post(tempRunnable)
+                handlerThread.waitForIdle(TIMEOUT_MS)
+                assertEquals(tempRunnable.memory.toString(), "ab".repeat(i + 1))
+            }
+        } cleanup {
+            handlerThread.quitSafely()
+            handlerThread.join()
         }
     }
 
@@ -67,22 +72,49 @@ class HandlerUtilsTest {
     @Test
     fun testVisibleOnHandlerThread() {
         val handlerThread = HandlerThread("testHandler").apply { start() }
-        val handler = Handler(handlerThread.looper)
+        tryTest {
+            val handler = Handler(handlerThread.looper)
 
-        repeat(ATTEMPTS) { attempt ->
-            var x = -10
-            var y = -11
-            y = visibleOnHandlerThread(handler, ThrowingSupplier<Int> { x = attempt; attempt })
-            assertEquals(attempt, x)
-            assertEquals(attempt, y)
-            handler.post { assertEquals(attempt, x) }
+            repeat(ATTEMPTS) { attempt ->
+                var x = -10
+                var y = -11
+                y = visibleOnHandlerThread(handler, ThrowingSupplier<Int> { x = attempt; attempt })
+                assertEquals(attempt, x)
+                assertEquals(attempt, y)
+                handler.post { assertEquals(attempt, x) }
+            }
+
+            assertFailsWith<IllegalArgumentException> {
+                visibleOnHandlerThread(handler) { throw IllegalArgumentException() }
+            }
+
+            // Null values may be returned by the supplier
+            assertNull(visibleOnHandlerThread(handler, ThrowingSupplier<Nothing?> { null }))
+        } cleanup {
+            handlerThread.quitSafely()
+            handlerThread.join()
         }
+    }
 
-        assertFailsWith<IllegalArgumentException> {
-            visibleOnHandlerThread(handler) { throw IllegalArgumentException() }
+    @Test
+    fun testPostAndWait() {
+        val handlerThread = HandlerThread("testHandler").apply { start() }
+        tryTest {
+            val handler = Handler(handlerThread.looper)
+
+            assertFailsWith<RuntimeException> {
+                handler.postAndWait { throw RuntimeException() }
+            }
+
+            val result1 = Random.nextInt()
+            val result = handler.postAndWait {
+                assertEquals(handlerThread, Thread.currentThread())
+                result1
+            }
+            assertEquals(result, result1)
+        } cleanup {
+            handlerThread.quitSafely()
+            handlerThread.join()
         }
-
-        // Null values may be returned by the supplier
-        assertNull(visibleOnHandlerThread(handler, ThrowingSupplier<Nothing?> { null }))
     }
 }

@@ -16,7 +16,6 @@
 
 package android.net.cts;
 
-import static android.app.AppOpsManager.OP_MANAGE_IPSEC_TUNNELS;
 import static android.net.IpSecManager.UdpEncapsulationSocket;
 import static android.net.cts.IpSecManagerTest.assumeExperimentalIpv6UdpEncapSupported;
 import static android.net.cts.IpSecManagerTest.assumeRequestIpSecTransformStateSupported;
@@ -86,6 +85,9 @@ import java.net.NetworkInterface;
 @AppModeFull(reason = "MANAGE_TEST_NETWORKS permission can't be granted to instant apps")
 public class IpSecManagerTunnelTest extends IpSecBaseTest {
     @Rule public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
+
+    // TODO: make AppOpsManager.OP_MANAGE_IPSEC_TUNNELS API
+    private static final int OP_MANAGE_IPSEC_TUNNELS = 75;
 
     private static final String TAG = IpSecManagerTunnelTest.class.getSimpleName();
 

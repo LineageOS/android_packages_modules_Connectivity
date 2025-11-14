@@ -16,6 +16,7 @@
 
 package android.net
 
+import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.ConnectivityManager.MAX_NETWORK_TYPE
 import android.net.ConnectivityManager.TYPE_ETHERNET
@@ -23,22 +24,26 @@ import android.net.ConnectivityManager.TYPE_MOBILE
 import android.net.ConnectivityManager.TYPE_NONE
 import android.net.ConnectivityManager.TYPE_WIFI
 import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
+import android.net.NetworkCapabilities.TRANSPORT_SATELLITE
+import android.net.NetworkCapabilities.TRANSPORT_VPN
+import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkIdentity.OEM_NONE
 import android.net.NetworkIdentity.OEM_PAID
 import android.net.NetworkIdentity.OEM_PRIVATE
 import android.net.NetworkIdentity.getOemBitfield
-import android.app.usage.NetworkStatsManager
-import android.telephony.TelephonyManager
 import android.os.Build
+import android.telephony.TelephonyManager
+import com.android.net.module.util.BitUtils
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
 
 private const val TEST_WIFI_KEY = "testwifikey"
 private const val TEST_IMSI1 = "testimsi1"
@@ -52,11 +57,16 @@ class NetworkIdentityTest {
     private val mockContext = mock(Context::class.java)
 
     private fun buildMobileNetworkStateSnapshot(
-        caps: NetworkCapabilities,
-        subscriberId: String
+            caps: NetworkCapabilities,
+            subscriberId: String
     ): NetworkStateSnapshot {
-        return NetworkStateSnapshot(mock(Network::class.java), caps,
-                LinkProperties(), subscriberId, TYPE_MOBILE)
+        return NetworkStateSnapshot(
+                mock(Network::class.java),
+                caps,
+                LinkProperties(),
+                subscriberId,
+                TYPE_MOBILE
+        )
     }
 
     @Test
@@ -87,18 +97,24 @@ class NetworkIdentityTest {
     @Test
     fun testIsMetered() {
         // Verify network is metered.
-        val netIdent1 = NetworkIdentity.buildNetworkIdentity(mockContext,
+        val netIdent1 = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
                 buildMobileNetworkStateSnapshot(NetworkCapabilities(), TEST_IMSI1),
-                false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
+                false /* defaultNetwork */,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
         assertTrue(netIdent1.isMetered())
 
         // Verify network is not metered because it has NET_CAPABILITY_NOT_METERED capability.
         val capsNotMetered = NetworkCapabilities.Builder().apply {
             addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         }.build()
-        val netIdent2 = NetworkIdentity.buildNetworkIdentity(mockContext,
+        val netIdent2 = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
                 buildMobileNetworkStateSnapshot(capsNotMetered, TEST_IMSI1),
-                false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
+                false /* defaultNetwork */,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
         assertFalse(netIdent2.isMetered())
 
         // In current design, a network that has NET_CAPABILITY_TEMPORARILY_NOT_METERED
@@ -106,9 +122,12 @@ class NetworkIdentityTest {
         val capsTempNotMetered = NetworkCapabilities().apply {
             setCapability(NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED, true)
         }
-        val netIdent3 = NetworkIdentity.buildNetworkIdentity(mockContext,
+        val netIdent3 = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
                 buildMobileNetworkStateSnapshot(capsTempNotMetered, TEST_IMSI1),
-                false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
+                false /* defaultNetwork */,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
         assertTrue(netIdent3.isMetered())
     }
 
@@ -122,15 +141,20 @@ class NetworkIdentityTest {
             setNetworkSpecifier(specifier1)
         }
         val identFromSnapshot = NetworkIdentity.Builder().setNetworkStateSnapshot(
-                buildMobileNetworkStateSnapshot(oemPrivateRoamingNotMeteredCap, TEST_IMSI1))
+                buildMobileNetworkStateSnapshot(oemPrivateRoamingNotMeteredCap, TEST_IMSI1)
+        )
                 .setDefaultNetwork(true)
                 .setRatType(TelephonyManager.NETWORK_TYPE_UMTS)
                 .setSubId(TEST_SUBID1)
                 .build()
-        val identFromLegacyBuild = NetworkIdentity.buildNetworkIdentity(mockContext,
+        val identFromLegacyBuild = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
                 buildMobileNetworkStateSnapshot(oemPrivateRoamingNotMeteredCap, TEST_IMSI1),
-                true /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
-        val identFromConstructor = NetworkIdentity(TYPE_MOBILE,
+                true /* defaultNetwork */,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
+        val identFromConstructor = NetworkIdentity(
+                TYPE_MOBILE,
                 TelephonyManager.NETWORK_TYPE_UMTS,
                 TEST_IMSI1,
                 null /* wifiNetworkKey */,
@@ -138,7 +162,9 @@ class NetworkIdentityTest {
                 false /* metered */,
                 true /* defaultNetwork */,
                 NetworkTemplate.OEM_MANAGED_PRIVATE,
-                TEST_SUBID1)
+                TEST_SUBID1,
+                BitUtils.packBits(intArrayOf(TRANSPORT_CELLULAR))
+        )
         assertEquals(identFromLegacyBuild, identFromSnapshot)
         assertEquals(identFromConstructor, identFromSnapshot)
 
@@ -180,8 +206,12 @@ class NetworkIdentityTest {
     @Test
     fun testBuilder_ratType() {
         // Assert illegal ratTypes cannot make an identity.
-        listOf(Integer.MIN_VALUE, NetworkTemplate.NETWORK_TYPE_ALL,
-                NetworkStatsManager.NETWORK_TYPE_5G_NSA - 1, Integer.MAX_VALUE)
+        listOf(
+                Integer.MIN_VALUE,
+                NetworkTemplate.NETWORK_TYPE_ALL,
+                NetworkStatsManager.NETWORK_TYPE_5G_NSA - 1,
+                Integer.MAX_VALUE
+        )
                 .forEach {
                     assertFailsWith<IllegalArgumentException> {
                         NetworkIdentity.Builder()
@@ -208,8 +238,12 @@ class NetworkIdentityTest {
     @Test
     fun testBuilder_oemManaged() {
         // Assert illegal oemManage values cannot make an identity.
-        listOf(Integer.MIN_VALUE, NetworkTemplate.OEM_MANAGED_ALL, NetworkTemplate.OEM_MANAGED_YES,
-                Integer.MAX_VALUE)
+        listOf(
+                Integer.MIN_VALUE,
+                NetworkTemplate.OEM_MANAGED_ALL,
+                NetworkTemplate.OEM_MANAGED_YES,
+                Integer.MAX_VALUE
+        )
                 .forEach { oemManaged ->
                     assertFailsWith<IllegalArgumentException> {
                         NetworkIdentity.Builder()
@@ -220,9 +254,13 @@ class NetworkIdentityTest {
                 }
 
         // Verify legitimate oem managed values can make an identity.
-        listOf(NetworkTemplate.OEM_MANAGED_NO, NetworkTemplate.OEM_MANAGED_PAID,
-                NetworkTemplate.OEM_MANAGED_PRIVATE, NetworkTemplate.OEM_MANAGED_PAID or
-                NetworkTemplate.OEM_MANAGED_PRIVATE)
+        listOf(
+                NetworkTemplate.OEM_MANAGED_NO,
+                NetworkTemplate.OEM_MANAGED_PAID,
+                NetworkTemplate.OEM_MANAGED_PRIVATE,
+                NetworkTemplate.OEM_MANAGED_PAID or
+                NetworkTemplate.OEM_MANAGED_PRIVATE
+        )
                 .forEach { oemManaged ->
                     NetworkIdentity.Builder()
                             .setOemManaged(oemManaged)
@@ -245,14 +283,54 @@ class NetworkIdentityTest {
             setNetworkSpecifier(specifier2)
         }
 
-        val netIdent1 = NetworkIdentity.buildNetworkIdentity(mockContext,
+        val netIdent1 = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
                 buildMobileNetworkStateSnapshot(capSUBID1, TEST_IMSI1),
-                false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
+                false,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
         assertEquals(TEST_SUBID1, netIdent1.getSubId())
 
-        val netIdent2 = NetworkIdentity.buildNetworkIdentity(mockContext,
+        val netIdent2 = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
                 buildMobileNetworkStateSnapshot(capSUBID2, TEST_IMSI2),
-                false /* defaultNetwork */, TelephonyManager.NETWORK_TYPE_UMTS)
+                false,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
         assertEquals(TEST_SUBID2, netIdent2.getSubId())
+    }
+
+    @Test
+    fun testSetTransportTypes() {
+        doTestSetTransportTypes(setOf())
+        doTestSetTransportTypes(setOf(TRANSPORT_WIFI))
+        doTestSetTransportTypes(setOf(TRANSPORT_CELLULAR, TRANSPORT_VPN, TRANSPORT_ETHERNET))
+    }
+
+    private fun doTestSetTransportTypes(transportTypes: Set<Int>) {
+        val identity = NetworkIdentity.Builder()
+                .setType(TYPE_MOBILE) // legacy type, for builder compatibility
+                .setTransportTypes(transportTypes)
+                .build()
+        assertEquals(transportTypes.toSet(), identity.transportTypes)
+    }
+
+    @Test
+    fun testTransportTypes_fromNetworkStateSnapshot() {
+        val caps = NetworkCapabilities().apply {
+            addTransportType(TRANSPORT_SATELLITE)
+            addTransportType(TRANSPORT_VPN)
+            addTransportType(TRANSPORT_WIFI)
+        }
+        val identity = NetworkIdentity.buildNetworkIdentity(
+                mockContext,
+                buildMobileNetworkStateSnapshot(caps, TEST_IMSI1),
+                false,
+                TelephonyManager.NETWORK_TYPE_UMTS
+        )
+        assertEquals(
+                setOf(TRANSPORT_SATELLITE, TRANSPORT_VPN, TRANSPORT_WIFI),
+                identity.transportTypes
+        )
     }
 }

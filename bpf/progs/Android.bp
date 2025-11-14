@@ -64,33 +64,31 @@ cc_library_headers {
 // bpf kernel programs
 //
 bpf {
+    name: "clatd.o",
+    srcs: ["clatd.c"],
+    sub_dir: "mainline",
+}
+
+bpf {
     name: "dscpPolicy.o",
     srcs: ["dscpPolicy.c"],
-    sub_dir: "net_shared",
+    sub_dir: "mainline",
+}
+
+bpf {
+    name: "netd.o",
+    srcs: ["netd.c"],
+    sub_dir: "mainline",
 }
 
 bpf {
     name: "offload.o",
     srcs: ["offload.c"],
-    sub_dir: "tethering",
+    sub_dir: "mainline",
 }
 
 bpf {
     name: "test.o",
     srcs: ["test.c"],
-    sub_dir: "tethering",
-}
-
-bpf {
-    name: "clatd.o",
-    srcs: ["clatd.c"],
-    sub_dir: "net_shared",
-}
-
-bpf {
-    // WARNING: Android T's non-updatable netd depends on 'netd' string for xt_bpf programs it loads
-    name: "netd.o",
-    srcs: ["netd.c"],
-    // WARNING: Android T's non-updatable netd depends on 'netd_shared' string for xt_bpf programs
-    sub_dir: "netd_shared",
+    sub_dir: "mainline",
 }

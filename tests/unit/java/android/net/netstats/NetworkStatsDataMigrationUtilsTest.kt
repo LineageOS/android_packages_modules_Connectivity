@@ -17,12 +17,12 @@
 package android.net.netstats
 
 import android.net.NetworkStatsCollection
+import android.os.Build
 import androidx.test.InstrumentationRegistry
 import androidx.test.filters.SmallTest
 import com.android.frameworks.tests.net.R
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.SC_V2
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,7 +37,7 @@ private const val BUCKET_DURATION_MS = 2 * 60 * 60 * 1000L
 
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class NetworkStatsDataMigrationUtilsTest {
     @Before
     fun setup() {

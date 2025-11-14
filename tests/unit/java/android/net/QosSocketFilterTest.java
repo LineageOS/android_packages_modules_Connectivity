@@ -52,50 +52,95 @@ public class QosSocketFilterTest {
     public void testPortExactMatch() {
         final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.4");
         final InetAddress addressB = InetAddresses.parseNumericAddress("1.2.3.4");
-        assertTrue(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressA, 10), addressB, 10, 10));
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 10), new IpPrefix(addressB, 32), 10, 10));
     }
 
     @Test
     public void testPortLessThanStart() {
         final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.4");
         final InetAddress addressB = InetAddresses.parseNumericAddress("1.2.3.4");
-        assertFalse(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressA, 8), addressB, 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 8), new IpPrefix(addressB, 32), 10, 10));
     }
 
     @Test
     public void testPortGreaterThanEnd() {
         final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.4");
         final InetAddress addressB = InetAddresses.parseNumericAddress("1.2.3.4");
-        assertFalse(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressA, 18), addressB, 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 18), new IpPrefix(addressB, 32), 10, 10));
     }
 
     @Test
     public void testPortBetweenStartAndEnd() {
         final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.4");
         final InetAddress addressB = InetAddresses.parseNumericAddress("1.2.3.4");
-        assertTrue(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressA, 10), addressB, 8, 18));
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 10), new IpPrefix(addressB, 32), 8, 18));
     }
 
     @Test
     public void testAddressesDontMatch() {
         final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.4");
         final InetAddress addressB = InetAddresses.parseNumericAddress("1.2.3.5");
-        assertFalse(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressA, 10), addressB, 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 10), new IpPrefix(addressB, 32), 10, 10));
     }
 
     @Test
     public void testAddressMatchWithAnyLocalAddresses() {
         final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.4");
         final InetAddress addressB = InetAddresses.parseNumericAddress("0.0.0.0");
-        assertTrue(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressA, 10), addressB, 10, 10));
-        assertFalse(QosSocketFilter.matchesAddress(
-                new InetSocketAddress(addressB, 10), addressA, 10, 10));
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 10), new IpPrefix(addressB, 32), 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressB, 10), new IpPrefix(addressA, 32), 10, 10));
+    }
+
+    @Test
+    public void testAddressMatchWithPrefixLength() {
+        final InetAddress addressA = InetAddresses.parseNumericAddress("1.2.3.100");
+        final InetAddress addressB = InetAddresses.parseNumericAddress("1.2.3.132");
+        final InetAddress addressC = InetAddresses.parseNumericAddress("1.2.3.96");
+        final InetAddress addressD = InetAddresses.parseNumericAddress("2001:2:3:5::13:D17");
+        final InetAddress addressE = InetAddresses.parseNumericAddress("2001:2:3:4::13:D17");
+        final InetAddress addressF = InetAddresses.parseNumericAddress("2001:2:3:5::");
+        final InetAddress addressG = InetAddresses.parseNumericAddress("135.23.185.35");
+        final InetAddress addressH = InetAddresses.parseNumericAddress("135.23.186.127");
+        final InetAddress addressI = InetAddresses.parseNumericAddress("135.23.183.127");
+
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 10), new IpPrefix(addressC, 27), 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressB, 10), new IpPrefix(addressC, 27), 10, 10));
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressG, 10), new IpPrefix(addressH, 22), 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressI, 10), new IpPrefix(addressH, 22), 10, 10));
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressD, 10), new IpPrefix(addressF, 64), 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressE, 10), new IpPrefix(addressF, 64), 10, 10));
+        assertFalse(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressA, 10), new IpPrefix(addressF, 64), 10, 10));
+        assertTrue(
+                QosSocketFilter.matchesAddress(
+                        new InetSocketAddress(addressD, 10), new IpPrefix(addressD, 128), 10, 10));
     }
 
     @Test

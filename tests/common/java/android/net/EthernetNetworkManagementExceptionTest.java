@@ -16,10 +16,11 @@
 
 package android.net;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
 
 import static org.junit.Assert.assertEquals;
+
+import android.os.Build;
 
 import androidx.test.filters.SmallTest;
 
@@ -29,7 +30,7 @@ import com.android.testutils.DevSdkIgnoreRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 public class EthernetNetworkManagementExceptionTest {

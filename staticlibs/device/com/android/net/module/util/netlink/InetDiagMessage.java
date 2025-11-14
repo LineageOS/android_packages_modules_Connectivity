@@ -24,9 +24,9 @@ import static android.system.OsConstants.IPPROTO_TCP;
 import static android.system.OsConstants.IPPROTO_UDP;
 import static android.system.OsConstants.NETLINK_INET_DIAG;
 
+import static com.android.net.module.util.netlink.NetlinkConstants.SOCKDIAG_MSG_HEADER_SIZE;
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DESTROY;
 import static com.android.net.module.util.netlink.NetlinkConstants.SOCK_DIAG_BY_FAMILY;
-import static com.android.net.module.util.netlink.NetlinkConstants.SOCKDIAG_MSG_HEADER_SIZE;
 import static com.android.net.module.util.netlink.NetlinkConstants.stringForAddressFamily;
 import static com.android.net.module.util.netlink.NetlinkConstants.stringForProtocol;
 import static com.android.net.module.util.netlink.NetlinkUtils.DEFAULT_RECV_BUFSIZE;
@@ -37,6 +37,7 @@ import static com.android.net.module.util.netlink.NetlinkUtils.connectToKernel;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_DUMP;
 import static com.android.net.module.util.netlink.StructNlMsgHdr.NLM_F_REQUEST;
 
+import android.net.INetd;
 import android.net.util.SocketUtils;
 import android.os.Process;
 import android.os.SystemClock;
@@ -47,6 +48,9 @@ import android.util.Range;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+
+import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.InetAddressUtils;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -61,6 +65,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -76,6 +81,13 @@ import java.util.function.Predicate;
 public class InetDiagMessage extends NetlinkMessage {
     public static final String TAG = "InetDiagMessage";
     private static final int TIMEOUT_MS = 500;
+    /** Bitmask position for 'explicitlySelected' in Fwmark.h */
+    public static final int EXPLICITLY_SELECTED_BIT_SHIFT = 16;
+    /** Bitmask position for 'Permission' in Fwmark.h */
+    public static final int PERMISSION_SHIFT = 18;
+
+    /** FWMARK_NET_ID_MASK in Fwmark.h */
+    public static final int FWMARK_NET_ID_MASK = 0xFFFF;
 
     /**
      * Construct an inet_diag_req_v2 message. This method will throw
@@ -342,20 +354,27 @@ public class InetDiagMessage extends NetlinkMessage {
             FileDescriptor destroyFd, int proto, Predicate<InetDiagMessage> filter)
             throws SocketException, InterruptedIOException, ErrnoException {
         AtomicInteger destroyedSockets = new AtomicInteger(0);
-        Consumer<InetDiagMessage> handleNlDumpMsg = (diagMsg) -> {
-            if (filter.test(diagMsg)) {
-                try {
-                    sendNetlinkDestroyRequest(destroyFd, proto, diagMsg.inetDiagMsg.id,
-                            diagMsg.inetDiagMsg.idiag_family, 1 << diagMsg.inetDiagMsg.idiag_state);
-                    destroyedSockets.getAndIncrement();
-                } catch (InterruptedIOException | ErrnoException e) {
-                    if (!(e instanceof ErrnoException
-                            && ((ErrnoException) e).errno == ENOENT)) {
-                        Log.e(TAG, "Failed to destroy socket: diagMsg=" + diagMsg + ", " + e);
+        Consumer<InetDiagMessage> handleNlDumpMsg =
+                diagMsg -> {
+                    if (filter.test(diagMsg)) {
+                        try {
+                            sendNetlinkDestroyRequest(
+                                    destroyFd,
+                                    proto,
+                                    diagMsg.inetDiagMsg.id,
+                                    diagMsg.inetDiagMsg.idiag_family,
+                                    1 << diagMsg.inetDiagMsg.idiag_state);
+                            destroyedSockets.getAndIncrement();
+                        } catch (InterruptedIOException | ErrnoException e) {
+                            if (!(e instanceof ErrnoException
+                                    && ((ErrnoException) e).errno == ENOENT)) {
+                                Log.e(
+                                        TAG,
+                                        "Failed to destroy socket: diagMsg=" + diagMsg + ", " + e);
+                            }
+                        }
                     }
-                }
-            }
-        };
+                };
 
         NetlinkUtils.<InetDiagMessage>getAndProcessNetlinkDumpMessages(dumpReq,
                 NETLINK_INET_DIAG, InetDiagMessage.class, handleNlDumpMsg);
@@ -388,6 +407,26 @@ public class InetDiagMessage extends NetlinkMessage {
         return false;
     }
 
+    private static boolean containsMarkMatchedToNetId(
+            InetDiagMessage msg, @NonNull Set<Range<Integer>> netIdRanges) {
+        final StructNlAttr attr = findInetDiagMarkAttr(msg);
+        if (attr == null) return false;
+
+        final Integer fwMark = attr.getValueAsInteger();
+        if (fwMark == null) return false;
+        return CollectionUtils.any(
+                netIdRanges, range -> range.contains(fwMark & FWMARK_NET_ID_MASK));
+    }
+
+    private static StructNlAttr findInetDiagMarkAttr(InetDiagMessage msg) {
+        for (StructNlAttr attr : msg.nlAttrs) {
+            if (attr.nla_type == NetlinkUtils.INET_DIAG_MARK) {
+                return attr;
+            }
+        }
+        return null;
+    }
+
     private static boolean isLoopbackAddress(InetAddress addr) {
         if (addr.isLoopbackAddress()) return true;
         if (!(addr instanceof Inet6Address)) return false;
@@ -415,6 +454,17 @@ public class InetDiagMessage extends NetlinkMessage {
                 || srcAddr.equals(dstAddr);
     }
 
+    /** This returns the time taken to perform socket destruction including time spent in sleep. */
+    private static long destroyLiveTcpSockets(Predicate<InetDiagMessage> filter)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        final long startTimeMs = SystemClock.elapsedRealtime();
+        destroySockets(
+                IPPROTO_TCP,
+                TCP_ALIVE_STATE_FILTER,
+                diagMsg -> filter.test(diagMsg) && !isLoopback(diagMsg) && !isAdbSocket(diagMsg));
+        return SystemClock.elapsedRealtime() - startTimeMs;
+    }
+
     private static void destroySockets(int proto, int states, Predicate<InetDiagMessage> filter)
             throws ErrnoException, SocketException, InterruptedIOException {
         FileDescriptor destroyFd = null;
@@ -425,7 +475,6 @@ public class InetDiagMessage extends NetlinkMessage {
 
             for (int family : List.of(AF_INET, AF_INET6)) {
                 byte[] req = makeNetlinkDumpRequest(proto, states, family);
-
                 try {
                     final int destroyedSockets = processNetlinkDumpAndDestroySockets(
                             req, destroyFd, proto, filter);
@@ -456,34 +505,27 @@ public class InetDiagMessage extends NetlinkMessage {
      */
     public static void destroyLiveTcpSockets(Set<Range<Integer>> ranges, Set<Integer> exemptUids)
             throws SocketException, InterruptedIOException, ErrnoException {
-        final long startTimeMs = SystemClock.elapsedRealtime();
-        destroySockets(IPPROTO_TCP, TCP_ALIVE_STATE_FILTER,
-                (diagMsg) -> !exemptUids.contains(diagMsg.inetDiagMsg.idiag_uid)
-                        && containsUid(diagMsg, ranges)
-                        && !isLoopback(diagMsg)
-                        && !isAdbSocket(diagMsg));
-        final long durationMs = SystemClock.elapsedRealtime() - startTimeMs;
+        final long durationMs =
+                destroyLiveTcpSockets(
+                        diagMsg ->
+                                !exemptUids.contains(diagMsg.inetDiagMsg.idiag_uid)
+                                        && containsUid(diagMsg, ranges));
         Log.d(TAG, "Destroyed live tcp sockets for uids=" + ranges + " exemptUids=" + exemptUids
                 + " in " + durationMs + "ms");
     }
 
     /**
-     * Close tcp sockets that match the following condition
-     *  1. TCP status is one of TCP_ESTABLISHED, TCP_SYN_SENT, and TCP_SYN_RECV
-     *  2. Owner uid of socket is in the targetUids
-     *  3. Socket is not loopback
-     *  4. Socket is not adb socket
+     * Close tcp sockets that match the following condition 1. TCP status is one of TCP_ESTABLISHED,
+     * TCP_SYN_SENT, and TCP_SYN_RECV 2. Owner uid of socket is in the targetUids 3. Socket is not
+     * loopback 4. Socket is not adb socket
      *
      * @param ownerUids target uids to close sockets
      */
-    public static void destroyLiveTcpSocketsByOwnerUids(Set<Integer> ownerUids)
+    public static void destroyLiveTcpSocketsByOwnerUids(@NonNull Set<Integer> ownerUids)
             throws SocketException, InterruptedIOException, ErrnoException {
-        final long startTimeMs = SystemClock.elapsedRealtime();
-        destroySockets(IPPROTO_TCP, TCP_ALIVE_STATE_FILTER,
-                (diagMsg) -> ownerUids.contains(diagMsg.inetDiagMsg.idiag_uid)
-                        && !isLoopback(diagMsg)
-                        && !isAdbSocket(diagMsg));
-        final long durationMs = SystemClock.elapsedRealtime() - startTimeMs;
+        Objects.requireNonNull(ownerUids);
+        final long durationMs =
+                destroyLiveTcpSockets(diagMsg -> ownerUids.contains(diagMsg.inetDiagMsg.idiag_uid));
         Log.d(TAG, "Destroyed live tcp sockets for uids=" + ownerUids + " in " + durationMs + "ms");
     }
 
@@ -491,7 +533,7 @@ public class InetDiagMessage extends NetlinkMessage {
      * Close the udp socket which can be uniquely identified with the cookie and other information.
      */
     public static void destroyUdpSocket(final InetSocketAddress src, final InetSocketAddress dst,
-            final int ifIndex, final long cookie)
+            final long cookie)
             throws ErrnoException, SocketException, InterruptedIOException {
         FileDescriptor fd = null;
 
@@ -502,13 +544,192 @@ public class InetDiagMessage extends NetlinkMessage {
             final StructInetDiagSockId id = new StructInetDiagSockId(
                     src,
                     dst,
-                    ifIndex,
+                    0 /* ifIndex */,
                     cookie
             );
             sendNetlinkDestroyRequest(fd, IPPROTO_UDP, id, (short) family, 0 /* state */);
         } finally {
             closeSocketQuietly(fd);
         }
+    }
+
+    /**
+     * Close tcp sockets that match the following condition 1. TCP status is one of TCP_ESTABLISHED,
+     * TCP_SYN_SENT, and TCP_SYN_RECV 2. Local address of socket is equal to the given address 3.
+     * Socket is not loopback 4. Socket is not adb socket 5. Sockets satisfying given
+     * conditions(netId ranges, UID ranges).
+     *
+     * @param address a local address to destroy sockets
+     * @param netIdRanges ranges of net IDs need to be matched
+     * @param uidRanges ranges of UIDs to destroy sockets
+     */
+    public static void destroyLiveTcpSocketsByLocalAddress(
+            @NonNull InetAddress address,
+            @Nullable Set<Range<Integer>> netIdRanges,
+            @Nullable Set<Range<Integer>> uidRanges)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        final long durationMs =
+                destroyLiveTcpSockets(
+                        diagMsg -> matchesLocalAddressWithNetworkAndUser(
+                                address, netIdRanges, uidRanges, diagMsg));
+        Log.d(
+                TAG,
+                "Destroyed live tcp sockets for local address "
+                        + address
+                        + ", netIdRanges"
+                        + netIdRanges
+                        + ", uidRanges:"
+                        + uidRanges
+                        + " in "
+                        + durationMs
+                        + "ms");
+    }
+
+    /**
+     * Close tcp sockets that match the following condition 1. TCP status is one of TCP_ESTABLISHED,
+     * TCP_SYN_SENT, and TCP_SYN_RECV 2. Local address of socket is equal to the given address 3.
+     * Socket is not loopback 4. Socket is not adb socket 5. Sockets satisfying given
+     * conditions(interface ID).
+     *
+     * @param address a local address to destroy sockets
+     * @param interfaceId interface id needs to be referred for destroying sockets.
+     */
+    public static void destroyLiveTcpSocketsByLocalAddress(
+            @NonNull InetAddress address, int interfaceId)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        final long durationMs =
+                destroyLiveTcpSockets(
+                        diagMsg ->
+                                matchesLocalAddressWithInterfaceId(address, interfaceId, diagMsg));
+        Log.d(
+                TAG,
+                "Destroyed live tcp sockets for local address "
+                        + address
+                        + ", interfaceId:"
+                        + interfaceId
+                        + " in "
+                        + durationMs
+                        + "ms");
+    }
+
+    /**
+     * Returns whether the |diagMsg| matches the following conditions : - is for a socket with the
+     * passed address - is on one of the passed netIds - belongs to an app with one of the passed
+     * UIDs
+     *
+     * @param address local address to compare
+     * @param netIdRanges a range of net IDs that needs to be matched. If null, netId is not
+     *     considered in this match result.
+     * @param uidRanges ranges of UIDs to destroy sockets, If null, netId is not considered in this
+     *     match result.
+     * @param diagMsg {@link InetDiagMessage} retrieved from kernel.
+     */
+    @VisibleForTesting
+    public static boolean matchesLocalAddressWithNetworkAndUser(
+            @NonNull InetAddress address,
+            @Nullable Set<Range<Integer>> netIdRanges,
+            @Nullable Set<Range<Integer>> uidRanges,
+            @NonNull InetDiagMessage diagMsg) {
+        if (!matchesLocalAddress(address, diagMsg)) {
+            // Socket's local address should be matched to the given address.
+            return false;
+        }
+        if (netIdRanges != null && !containsMarkMatchedToNetId(diagMsg, netIdRanges)) {
+            return false;
+        }
+        return uidRanges == null || containsUid(diagMsg, uidRanges);
+    }
+
+    /**
+     * Returns whether the address of InetDiagMessage matches the given address.
+     *
+     * @param address local address to compare
+     * @param interfaceId interface id to be referred. If it's 0, interface id is not considered in
+     *     this match result.
+     * @param diagMsg {@link InetDiagMessage} retrieved from kernel.
+     */
+    @VisibleForTesting
+    public static boolean matchesLocalAddressWithInterfaceId(
+            @NonNull InetAddress address, int interfaceId, @NonNull InetDiagMessage diagMsg) {
+        return (interfaceId == 0 || interfaceId == diagMsg.inetDiagMsg.id.ifIndex)
+                && matchesLocalAddress(address, diagMsg);
+    }
+
+    private static boolean matchesLocalAddress(
+            @NonNull InetAddress address, @NonNull InetDiagMessage diagMsg) {
+        final InetAddress addressDiag = diagMsg.inetDiagMsg.id.locSocketAddress.getAddress();
+        return address.equals(addressDiag)
+                || (address instanceof Inet4Address
+                        && addressDiag instanceof Inet6Address
+                        && addressDiag.equals(
+                                // TODO: Improve performance for computing this. b/418877261
+                                InetAddressUtils.v4MappedV6Address((Inet4Address) address)));
+    }
+
+    /**
+     * Close tcp sockets that match the following condition 1. TCP status is one of TCP_ESTABLISHED,
+     * TCP_SYN_SENT, and TCP_SYN_RECV 2. Socket is not loopback 3. Socket is not adb socket 4.
+     * Sockets on the specified netId where: - The opening app no longer has permission to use this
+     * network, or: - The opening app does have permission, but did not explicitly select this
+     * network.
+     *
+     * @param netId a network identifier needs to be referred for destroying sockets.
+     * @param permission network permission, available values are INetd.PERMISSION_NETWORK or
+     *     INetd.PERMISSION_SYSTEM.
+     */
+    public static void destroyLiveTcpSocketsLackingPermission(int netId, int permission)
+            throws SocketException, InterruptedIOException, ErrnoException {
+        if (permission != INetd.PERMISSION_NETWORK && permission != INetd.PERMISSION_SYSTEM) {
+            throw new IllegalArgumentException("Invalid permission");
+        }
+        final long durationMs =
+                destroyLiveTcpSockets(diagMsg -> isLackingPermission(netId, permission, diagMsg));
+        Log.d(
+                TAG,
+                "Destroyed live tcp sockets for lacking permission for netId:"
+                        + netId
+                        + " and permission:"
+                        + permission
+                        + " in "
+                        + durationMs
+                        + "ms");
+    }
+
+    /**
+     * Returns whether the opening app lacking permission or not. "isLacking" because an app is not
+     * lacking a permission on a mismatched netId, while it's not true that it would
+     * "holdPermission"
+     *
+     * @param netId network ID to compare
+     * @param permission network permission defined in INetd.aidl
+     * @param diagMsg {@link InetDiagMessage} retrieved from kernel.
+     */
+    @VisibleForTesting
+    public static boolean isLackingPermission(
+            int netId, int permission, @NonNull InetDiagMessage diagMsg) {
+        final int netdPermission = convertToNetdPermission(permission);
+        StructNlAttr attr = findInetDiagMarkAttr(diagMsg);
+        if (attr == null) return false;
+        final Integer fwMark = attr.getValueAsInteger();
+        if (fwMark == null) return false;
+        if ((fwMark & FWMARK_NET_ID_MASK) != netId) return false;
+        // Makes a mask to find matching sockets where:
+        // 1. The opening app no longer has permission to use this network, or:
+        // 2. The opening app does have permission, but did not explicitly select this network.
+        final int mask =
+                netdPermission << PERMISSION_SHIFT | 1 << EXPLICITLY_SELECTED_BIT_SHIFT;
+        return (fwMark & mask) != mask;
+    }
+
+    private static int convertToNetdPermission(int permission) {
+        // CS will destroy sockets lacking permission instead of Netd, and it follows permission
+        // value defined in INetd. However socket's Fwmark value follows Permission.h, thus we need
+        // conversion.
+        return switch (permission) {
+            case INetd.PERMISSION_NETWORK -> INetd.PERMISSION_NETWORK;
+            case INetd.PERMISSION_SYSTEM -> INetd.PERMISSION_SYSTEM | INetd.PERMISSION_NETWORK;
+            default -> INetd.PERMISSION_NONE;
+        };
     }
 
     @Override

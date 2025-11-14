@@ -43,4 +43,3 @@ DEFINE_BPF_PROG_KVER("skfilter/match", AID_ROOT, AID_ROOT, match, KVER_INF)
 }
 
 LICENSE("Apache 2.0");
-CRITICAL("Networking xTS tests");

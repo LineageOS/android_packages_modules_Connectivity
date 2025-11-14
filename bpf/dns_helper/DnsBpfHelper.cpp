@@ -42,9 +42,15 @@ static inline void waitForNetProgsLoaded() {
   // infinite loop until success with 5/10/20/40/60/60/60... delay
   for (int delay = 5;; delay *= 2) {
     if (delay > 60) delay = 60;
-    if (base::WaitForProperty("init.svc.mdnsd_netbpfload", "stopped", std::chrono::seconds(delay))
-      && mainlineNetBpfLoadDone()) return;
+    if (base::WaitForProperty("init.svc.mdnsd_netbpfload", "stopped", std::chrono::seconds(delay)))
+      break;
     LOG(WARNING) << "Waited " << delay << "s for init.svc.mdnsd_netbpfload=stopped, still waiting.";
+  }
+  if (!mainlineNetBpfLoadDone()) {
+    LOG(ERROR) << "FATAL: init.svc.mdnsd_netbpfload=stopped, yet !mainlineNetBpfLoadDone";
+    // mdnsd_netbpfload is marked 'reboot_on_failure', init should start a reboot very soon now,
+    // spamming logs with an abort is pointless
+    for (;;);
   }
 }
 

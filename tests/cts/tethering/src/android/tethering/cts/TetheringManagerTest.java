@@ -15,10 +15,14 @@
  */
 package android.tethering.test;
 
+import static android.Manifest.permission.CREATE_USERS;
+import static android.Manifest.permission.INTERACT_ACROSS_USERS;
 import static android.Manifest.permission.MODIFY_PHONE_STATE;
 import static android.Manifest.permission.TETHER_PRIVILEGED;
 import static android.Manifest.permission.WRITE_SETTINGS;
+import static android.app.ActivityManager.getCurrentUser;
 import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
+import static android.content.pm.PackageManager.MATCH_SYSTEM_ONLY;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
@@ -37,6 +41,7 @@ import static android.net.TetheringManager.TETHER_ERROR_ENTITLEMENT_UNKNOWN;
 import static android.net.TetheringManager.TETHER_ERROR_NO_CHANGE_TETHERING_PERMISSION;
 import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_REQUEST;
+import static android.net.TetheringManager.TETHER_ERROR_UNSUPPORTED;
 import static android.net.cts.util.CtsTetheringUtils.isAnyIfaceMatch;
 import static android.os.Process.INVALID_UID;
 
@@ -58,6 +63,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.Network;
@@ -75,23 +81,30 @@ import android.net.cts.util.CtsTetheringUtils.TestTetheringEventCallback;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiSsid;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.os.ResultReceiver;
+import android.os.UserHandle;
 import android.telephony.CarrierConfigManager;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 
 import androidx.annotation.NonNull;
 import androidx.test.InstrumentationRegistry;
-import androidx.test.runner.AndroidJUnit4;
 
+import com.android.bedstead.harrier.BedsteadJUnit4;
+import com.android.bedstead.harrier.DeviceState;
+import com.android.bedstead.harrier.UserType;
+import com.android.bedstead.harrier.annotations.UserTest;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.testutils.ConnectivityDiagnosticsCollector;
 import com.android.testutils.ParcelUtils;
 import com.android.testutils.com.android.testutils.CarrierConfigRule;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -100,15 +113,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@RunWith(AndroidJUnit4.class)
+@RunWith(BedsteadJUnit4.class)
 public class TetheringManagerTest {
     @Rule
     public final CarrierConfigRule mCarrierConfigRule = new CarrierConfigRule();
+    @ClassRule
+    @Rule
+    public static final DeviceState sDeviceState = new DeviceState();
 
     private Context mContext;
 
@@ -122,6 +139,11 @@ public class TetheringManagerTest {
     private CtsTetheringUtils mCtsTetheringUtils;
 
     private static final int DEFAULT_TIMEOUT_MS = 60_000;
+    private static final String TETHERING_CONNECTOR_CLASS = "android.net.ITetheringConnector";
+    // String replacement is needed to prevent the class name from being modified
+    // by NetworkStack JarJar rules.
+    private static final String NETWORKSTACK_CONNECTOR_CLASS =
+            "android$net$INetworkStackConnector".replace('$', '.');
 
     @Before
     public void setUp() throws Exception {
@@ -411,28 +433,20 @@ public class TetheringManagerTest {
                     mCtsTetheringUtils.startWifiTethering(tetherEventCallback, softApConfig);
 
             assertNotNull(tetheredIface);
+            final String wifiTetheringIface = tetheredIface.getInterface();
             if  (SdkLevel.isAtLeastB()) {
                 assertEquals(softApConfig, tetheredIface.getSoftApConfiguration());
             }
 
             mCtsTetheringUtils.stopWifiTethering(tetherEventCallback);
 
-            if (!SdkLevel.isAtLeastB()) {
-                final String wifiTetheringIface = tetheredIface.getInterface();
-                try {
-                    final int ret = runAsShell(TETHER_PRIVILEGED,
-                            () -> mTM.tether(wifiTetheringIface));
-                    // There is no guarantee that the wifi interface will be available after
-                    // disabling the hotspot, so don't fail the test if the call to tether() fails.
-                    if (ret == TETHER_ERROR_NO_ERROR) {
-                        // If calling #tether successful, there is a callback to tell the result of
-                        // tethering setup.
-                        tetherEventCallback.expectErrorOrTethered(
-                                new TetheringInterface(TETHERING_WIFI, wifiTetheringIface));
-                    }
-                } finally {
-                    runAsShell(TETHER_PRIVILEGED, () -> mTM.untether(wifiTetheringIface));
-                }
+            if (SdkLevel.isAtLeastB()) {
+                assertThrows(UnsupportedOperationException.class,
+                        () -> runAsShell(TETHER_PRIVILEGED,
+                                () -> mTM.tether(wifiTetheringIface)));
+            } else {
+                final int ret = runAsShell(TETHER_PRIVILEGED, () -> mTM.tether(wifiTetheringIface));
+                assertEquals(TETHER_ERROR_UNSUPPORTED, ret);
             }
         } finally {
             mCtsTetheringUtils.unregisterTetheringEventCallback(tetherEventCallback);
@@ -477,6 +491,18 @@ public class TetheringManagerTest {
 
             mCtsTetheringUtils.stopAllTethering();
             tetherEventCallback.expectNoTetheringActive();
+        } catch (Throwable e) {
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.TIRAMISU) {
+                // This test fails on T devices in rare cases due to hostapd hanging. Log the
+                // hostapd callstack to help analyze the failure the next time it happens.
+                final ConnectivityDiagnosticsCollector collector =
+                        ConnectivityDiagnosticsCollector.getInstance();
+                if (collector != null) {
+                    collector.collectCommandOutput(
+                            "getprop init.svc_debug_pid.hostapd | xargs debuggerd -b", "sh", e);
+                }
+            }
+            throw e;
         } finally {
             mCtsTetheringUtils.unregisterTetheringEventCallback(tetherEventCallback);
         }
@@ -895,5 +921,31 @@ public class TetheringManagerTest {
         } finally {
             mCtsTetheringUtils.unregisterTetheringEventCallback(tetherEventCallback);
         }
+    }
+
+    // Verify the existence of the Tethering/NetworkStack package for the current user.
+    // This test will be executed on both SYSTEM and FULL users.
+    @Test
+    @UserTest({UserType.INITIAL_USER, UserType.SECONDARY_USER})
+    public void testCreatePackageContextAsUser() throws PackageManager.NameNotFoundException {
+        final List<String> packageNames = List.of(
+                resolvePackageName(TETHERING_CONNECTOR_CLASS),
+                resolvePackageName(NETWORKSTACK_CONNECTOR_CLASS));
+        // Permission CREATE_USERS is required for Android R or below.
+        final int currentUserId = runAsShell(CREATE_USERS, INTERACT_ACROSS_USERS,
+                () -> getCurrentUser());
+        final UserHandle currentUser = UserHandle.of(currentUserId);
+        for (String packageName : packageNames) {
+            mContext.createPackageContextAsUser(packageName, 0 /* flags */, currentUser);
+        }
+    }
+
+    @NonNull
+    private String resolvePackageName(@NonNull String action) {
+        final Intent intent = new Intent(action);
+        final List<ResolveInfo> resolveInfoList = mContext.getPackageManager()
+                .queryIntentServices(intent, MATCH_SYSTEM_ONLY);
+        assertFalse("Failed to resolve package for " + action, resolveInfoList.isEmpty());
+        return Objects.requireNonNull(resolveInfoList.get(0).getComponentInfo().packageName);
     }
 }

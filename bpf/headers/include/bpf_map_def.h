@@ -117,25 +117,22 @@ _Static_assert(_Alignof(unsigned long long) == 8, "_Alignof unsigned long long !
 // for maps:
 struct shared_bool { bool shared; };
 #define PRIVATE ((struct shared_bool){ .shared = false })
-#define SHARED ((struct shared_bool){ .shared = true })
+//#define SHARED ((struct shared_bool){ .shared = true })
 
 // for programs:
 struct optional_bool { bool optional; };
 #define MANDATORY ((struct optional_bool){ .optional = false })
 #define OPTIONAL ((struct optional_bool){ .optional = true })
 
-// for both maps and programs:
-struct ignore_on_eng_bool { bool ignore_on_eng; };
-#define LOAD_ON_ENG ((struct ignore_on_eng_bool){ .ignore_on_eng = false })
-#define IGNORE_ON_ENG ((struct ignore_on_eng_bool){ .ignore_on_eng = true })
+// (deprecated) for both maps and programs:
+struct ignore_on_eng_bool { };
+#define LOAD_ON_ENG ((struct ignore_on_eng_bool){ })
 
-struct ignore_on_user_bool { bool ignore_on_user; };
-#define LOAD_ON_USER ((struct ignore_on_user_bool){ .ignore_on_user = false })
-#define IGNORE_ON_USER ((struct ignore_on_user_bool){ .ignore_on_user = true })
+struct ignore_on_user_bool { };
+#define LOAD_ON_USER ((struct ignore_on_user_bool){ })
 
-struct ignore_on_userdebug_bool { bool ignore_on_userdebug; };
-#define LOAD_ON_USERDEBUG ((struct ignore_on_userdebug_bool){ .ignore_on_userdebug = false })
-#define IGNORE_ON_USERDEBUG ((struct ignore_on_userdebug_bool){ .ignore_on_userdebug = true })
+struct ignore_on_userdebug_bool { };
+#define LOAD_ON_USERDEBUG ((struct ignore_on_userdebug_bool){ })
 
 
 // Length of strings (incl. selinux_context and pin_subdir)
@@ -198,21 +195,7 @@ struct bpf_map_def {
 
     bool shared;  // use empty string as 'file' component of pin path - allows cross .o map sharing
 
-    // The following 3 ignore_on_* fields were added in version 0.32 (U). These are ignored in
-    // older bpfloader versions, and zero in programs compiled before 0.32.
-    bool ignore_on_eng:1;
-    bool ignore_on_user:1;
-    bool ignore_on_userdebug:1;
-    // The following 5 ignore_on_* fields were added in version 0.38 (U). These are ignored in
-    // older bpfloader versions, and zero in programs compiled before 0.38.
-    // These are tests on the kernel architecture, ie. they ignore userspace bit-ness.
-    bool ignore_on_arm32:1;
-    bool ignore_on_aarch64:1;
-    bool ignore_on_x86_32:1;
-    bool ignore_on_x86_64:1;
-    bool ignore_on_riscv64:1;
-
-    char pad0[2];  // manually pad up to 4 byte alignment, may be used for extensions in the future
+    char pad0[3];  // manually pad up to 4 byte alignment, may be used for extensions in the future
 
     unsigned int uid;   // uid_t
 };
@@ -235,21 +218,7 @@ struct bpf_prog_def {
 
     bool optional;  // program section (ie. function) may fail to load, continue onto next func.
 
-    // The following 3 ignore_on_* fields were added in version 0.33 (U). These are ignored in
-    // older bpfloader versions, and zero in programs compiled before 0.33.
-    bool ignore_on_eng:1;
-    bool ignore_on_user:1;
-    bool ignore_on_userdebug:1;
-    // The following 5 ignore_on_* fields were added in version 0.38 (U). These are ignored in
-    // older bpfloader versions, and zero in programs compiled before 0.38.
-    // These are tests on the kernel architecture, ie. they ignore userspace bit-ness.
-    bool ignore_on_arm32:1;
-    bool ignore_on_aarch64:1;
-    bool ignore_on_x86_32:1;
-    bool ignore_on_x86_64:1;
-    bool ignore_on_riscv64:1;
-
-    char pad0[2];  // manually pad up to 4 byte alignment, may be used for extensions in the future
+    char pad0[3];  // manually pad up to 4 byte alignment, may be used for extensions in the future
 
     // The following fields were added in version 0.1
     unsigned int bpfloader_min_ver;  // if missing, defaults to 0, ie. v0.0

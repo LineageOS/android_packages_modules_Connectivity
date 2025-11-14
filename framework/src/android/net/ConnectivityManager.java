@@ -6856,4 +6856,68 @@ public class ConnectivityManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /**
+     * Register QUIC UDP socket and UDP payload that can close QUIC connection.
+     *
+     * When the app loses network access (e.g. due to freezer or firewall chain),
+     * ConnectivityService 1)destroys the registered UDP socket by sending a SOCK_DESTROY netlink
+     * message and 2)sends the registered UDP payload to the server.
+     * This prevents unnecessary modem wakeups caused by packets from the server after the apps
+     * lose network access.
+     *
+     * Additionally, to close QUIC connection for apps that crash or are killed, ConnectivityService
+     * sends the registered UDP payload when it receives a socket destroy diag message for the
+     * registered socket.
+     *
+     * If apps call this method, they must call {@link #unregisterQuicConnectionClosePayload} before
+     * they close the QUIC connection and the socket.
+     * Otherwise, the registered UDP payload will be sent to the server, even if the QUIC connection
+     * was already properly closed. This is because ConnectivityService cannot distinguish whether
+     * the socket was closed due to the app being killed or because the app forgets to call
+     * {@link #unregisterQuicConnectionClosePayload}.
+     *
+     * The registered payload will be sent using the source and destination addresses and ports of
+     * the connected UDP socket provided. So, the app must not reuse the same socket to reconnect
+     * to a different server, even if first calls unregisterQuicConnectionClosePayload. This is
+     * because this method operates asynchronously.
+     *
+     * If the number of registered socket and payload hits the limit, ConnectivityService silently
+     * ignores new registration. ConnectivityService cannot know about this synchronously, but the
+     * caller couldn't really do anything with this information anyway.
+     * TODO: Consider adding a result listener if this API becomes public.
+     *
+     * @param pfd The {@link ParcelFileDescriptor} for the connected UDP socket.
+     *            The registered payload will be sent using the source and destination addresses and
+     *            ports of this connected UDP socket.
+     * @param payload The UDP payload that can close QUIC connection.
+     *
+     * @hide
+     */
+    public void registerQuicConnectionClosePayload(final ParcelFileDescriptor pfd,
+            final byte[] payload) {
+        try {
+            mService.registerQuicConnectionClosePayload(pfd, payload);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Unregister the QUIC socket previously registered by
+     * {@link #registerQuicConnectionClosePayload}
+     *
+     * This method is a no-op if the provided UDP socket is not registered.
+     *
+     * @param pfd The {@link ParcelFileDescriptor} for the UDP socket.
+     *
+     * @hide
+     */
+    public void unregisterQuicConnectionClosePayload(final ParcelFileDescriptor pfd) {
+        try {
+            mService.unregisterQuicConnectionClosePayload(pfd);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }

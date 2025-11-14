@@ -16,8 +16,10 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
+import static android.net.InetAddresses.parseNumericAddress;
+import static android.net.RouteInfo.RTN_UNICAST;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
@@ -28,8 +30,12 @@ import static org.mockito.Mockito.verify;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
+import android.net.IpPrefix;
+import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkRequest;
+import android.net.RouteInfo;
+import android.os.Build;
 
 import com.android.net.module.util.SharedLog;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -43,9 +49,12 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.net.NetworkInterface;
+import java.util.List;
+
 /** Tests for {@link ConnectivityMonitor}. */
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class ConnectivityMonitorWithConnectivityManagerTests {
     @Mock private Context mContext;
     @Mock private ConnectivityMonitor.Listener mockListener;
@@ -106,18 +115,11 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
     @Test
     public void testIntentFired_shouldNotifyListener() {
         InOrder inOrder = inOrder(mockListener);
-        monitor.startWatchingConnectivityChanges();
-
-        final ArgumentCaptor<NetworkCallback> callbackCaptor =
-                ArgumentCaptor.forClass(NetworkCallback.class);
-        verify(mConnectivityManager, times(1)).registerNetworkCallback(
-                any(NetworkRequest.class), callbackCaptor.capture());
-
-        final NetworkCallback callback = callbackCaptor.getValue();
+        final NetworkCallback callback = setupCallback();
         final Network testNetwork = mock(Network.class);
 
         // Simulate network available.
-        callback.onAvailable(testNetwork);
+        callback.onLinkPropertiesChanged(testNetwork, new LinkProperties());
         inOrder.verify(mockListener).onConnectivityChanged();
 
         // Simulate network lost.
@@ -127,6 +129,107 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
         // Simulate network unavailable.
         callback.onUnavailable();
         inOrder.verify(mockListener).onConnectivityChanged();
+    }
+
+    private NetworkCallback setupCallback() {
+        monitor.startWatchingConnectivityChanges();
+        final ArgumentCaptor<NetworkCallback> callbackCaptor =
+                ArgumentCaptor.forClass(NetworkCallback.class);
+        verify(mConnectivityManager, times(1)).registerNetworkCallback(
+                any(NetworkRequest.class), callbackCaptor.capture());
+
+        return callbackCaptor.getValue();
+    }
+
+    @Test
+    public void testGuessNetworkOfRemoteHost_ipv4Address() {
+        final NetworkCallback callback = setupCallback();
+
+        final Network testNetwork1 = mock(Network.class);
+        final Network testNetwork2 = mock(Network.class);
+        final int ifIndex1 = 1;
+        final NetworkInterfaceWrapper iface1 = getTestInterface("iface1", ifIndex1);
+        final NetworkInterfaceWrapper iface2 = getTestInterface("iface2", 2);
+
+        final LinkProperties lp1 = new LinkProperties();
+        lp1.setInterfaceName("iface1");
+        lp1.addRoute(new RouteInfo(
+                new IpPrefix("192.0.1.123/24"), null, lp1.getInterfaceName(), RTN_UNICAST));
+        lp1.addRoute(new RouteInfo(
+                new IpPrefix("0.0.0.0/0"), parseNumericAddress("192.0.1.1"),
+                lp1.getInterfaceName(), RTN_UNICAST));
+        final LinkProperties lp2 = new LinkProperties();
+        lp2.setInterfaceName("iface2");
+        lp2.addRoute(new RouteInfo(
+                new IpPrefix("192.0.2.123/24"), null, lp2.getInterfaceName(), RTN_UNICAST));
+        lp2.addRoute(new RouteInfo(
+                new IpPrefix("0.0.0.0/0"), parseNumericAddress("192.0.2.1"),
+                lp2.getInterfaceName(), RTN_UNICAST));
+
+        callback.onLinkPropertiesChanged(testNetwork1, lp1);
+        callback.onLinkPropertiesChanged(testNetwork2, lp2);
+
+        assertEquals(new SocketKey(testNetwork1, ifIndex1), monitor.guessNetworkOfRemoteHost(
+                List.of(iface1, iface2), parseNumericAddress("192.0.1.124")));
+    }
+
+    @Test
+    public void testGuessNetworkOfRemoteHost_ipv4LinkLocalAddress() {
+        final NetworkCallback callback = setupCallback();
+
+        final Network testNetwork = mock(Network.class);
+        final int ifIndex = 1;
+        final NetworkInterfaceWrapper iface = getTestInterface("iface1", ifIndex);
+
+        final LinkProperties lp = new LinkProperties();
+        lp.setInterfaceName("iface1");
+        lp.addRoute(new RouteInfo(
+                new IpPrefix("0.0.0.0/0"), parseNumericAddress("192.0.1.1"), lp.getInterfaceName(),
+                RTN_UNICAST));
+        lp.addRoute(new RouteInfo(
+                new IpPrefix("169.254.0.0/16"), null, lp.getInterfaceName(), RTN_UNICAST));
+
+        callback.onLinkPropertiesChanged(testNetwork, lp);
+
+        assertEquals(new SocketKey(testNetwork, ifIndex), monitor.guessNetworkOfRemoteHost(
+                List.of(iface), parseNumericAddress("169.254.1.2")));
+    }
+
+    @Test
+    public void testGuessNetworkOfRemoteHost_inet6LinkLocalAddress() throws Exception {
+        final NetworkCallback callback = setupCallback();
+
+        final Network testNetwork1 = mock(Network.class);
+        final Network testNetwork2 = mock(Network.class);
+        final NetworkInterfaceWrapper loIface = new NetworkInterfaceWrapper(
+                NetworkInterface.getByName("lo"));
+        final NetworkInterfaceWrapper wrongIface = getTestInterface(
+                "wrongiface", loIface.getIndex() + 1);
+
+        final LinkProperties lp1 = new LinkProperties();
+        lp1.setInterfaceName("wrongiface");
+        lp1.addRoute(new RouteInfo(
+                new IpPrefix("fe80::123/64"), null, lp1.getInterfaceName(), RTN_UNICAST));
+        lp1.addRoute(new RouteInfo(
+                new IpPrefix("::/0"), parseNumericAddress("fe80::111"), lp1.getInterfaceName(),
+                RTN_UNICAST));
+        final LinkProperties lp2 = new LinkProperties();
+        // Use an interface that is known to exist so the link-local address scope can be parsed
+        lp2.setInterfaceName("lo");
+
+        callback.onLinkPropertiesChanged(testNetwork1, lp1);
+        callback.onLinkPropertiesChanged(testNetwork2, lp2);
+
+        assertEquals(new SocketKey(testNetwork2, loIface.getIndex()),
+                monitor.guessNetworkOfRemoteHost(List.of(wrongIface, loIface),
+                        parseNumericAddress("fe80::124%lo")));
+    }
+
+    private NetworkInterfaceWrapper getTestInterface(String name, int index) {
+        NetworkInterface iface = mock(NetworkInterface.class);
+        doReturn(name).when(iface).getName();
+        doReturn(index).when(iface).getIndex();
+        return new NetworkInterfaceWrapper(iface);
     }
 
     private void verifyNetworkCallbackRegistered(int time) {

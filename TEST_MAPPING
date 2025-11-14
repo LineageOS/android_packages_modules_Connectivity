@@ -435,6 +435,23 @@
       "name": "CtsNetTestCasesUpdateStatsPermission"
     }
   ],
+  "tv-presubmit": [
+    {
+      "name": "CtsNetTestCases"
+    },
+    {
+      "name": "CtsNativeNetTestCases"
+    },
+    {
+      "name": "CtsNativeNetDnsTestCases"
+    },
+    {
+      "name": "CtsNetTestCasesInternetPermission"
+    },
+    {
+      "name": "CtsNetTestCasesUpdateStatsPermission"
+    }
+  ],
   "imports": [
     {
       "path": "frameworks/base/core/java/android/net"

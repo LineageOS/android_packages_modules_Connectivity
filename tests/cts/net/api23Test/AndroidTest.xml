@@ -25,6 +25,10 @@
         <option name="test-file-name" value="CtsNetApi23TestCases.apk" />
         <option name="test-file-name" value="CtsNetTestAppForApi23.apk" />
     </target_preparer>
+    <target_preparer class="com.android.testutils.ConnectivityTestTargetPreparer">
+        <!-- The tests require a working Wi-Fi network only -->
+        <option name="ignore-mobile-data-check" value="true" />
+    </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="android.net.cts.api23test" />
         <option name="hidden-api-checks" value="false" />

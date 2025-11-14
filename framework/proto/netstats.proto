@@ -64,6 +64,8 @@ message NetworkIdentityProto {
   optional bool default_network = 6;
 
   optional int32 oem_managed_network = 7;
+
+  optional int64 transport_types = 8;
 }
 
 // Corresponds to NetworkStatsRecorder.

@@ -643,7 +643,7 @@ public class MdnsAdvertiser {
         public final @NonNull OffloadServiceInfo mOffloadServiceInfo;
         public final int mServiceId;
 
-        OffloadServiceInfoWrapper(int serviceId, OffloadServiceInfo offloadServiceInfo) {
+        public OffloadServiceInfoWrapper(int serviceId, OffloadServiceInfo offloadServiceInfo) {
             mOffloadServiceInfo = offloadServiceInfo;
             mServiceId = serviceId;
         }
@@ -1027,17 +1027,13 @@ public class MdnsAdvertiser {
         });
     }
 
-    private List<String> getOffloadSubtype(@NonNull NsdServiceInfo nsdServiceInfo) {
-        // Workaround: Google Cast doesn't announce subtypes per DNS-SD/mDNS spec.
-        // Thus, subtypes aren't offloaded; only "_googlecast._tcp" is.
-        // Subtype responses occur when hardware offload is off.
-        // This solution works because Google Cast doesn't follow the intended usage of subtypes in
-        // the spec, as it always discovers for both the subtype+base type, and only uses the mDNS
-        // subtype as an optimization.
-        if (nsdServiceInfo.getServiceType().equals("_googlecast._tcp")) {
+    private List<String> getOffloadSubtype(@NonNull Registration registration) {
+        final NsdServiceInfo serviceInfo = registration.getServiceInfo();
+        // If skipSubtypeAnnouncements is set, we should not offload subtypes.
+        if (registration.mAdvertisingOptions.skipSubtypeAnnouncements()) {
             return new ArrayList<>();
         }
-        return new ArrayList<>(nsdServiceInfo.getSubtypes());
+        return new ArrayList<>(serviceInfo.getSubtypes());
     }
 
     private OffloadServiceInfoWrapper createOffloadService(int serviceId,
@@ -1050,7 +1046,7 @@ public class MdnsAdvertiser {
         final OffloadServiceInfo offloadServiceInfo = new OffloadServiceInfo(
                 new OffloadServiceInfo.Key(nsdServiceInfo.getServiceName(),
                         nsdServiceInfo.getServiceType()),
-                getOffloadSubtype(nsdServiceInfo),
+                getOffloadSubtype(registration),
                 String.join(".", mDeviceHostName),
                 rawOffloadPacket,
                 priority,

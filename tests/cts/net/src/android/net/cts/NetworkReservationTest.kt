@@ -47,9 +47,9 @@ import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry.Reserved
-import com.android.testutils.RecorderCallback.CallbackEntry.Unavailable
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.Reserved
+import com.android.testutils.TestableNetworkCallback.Event.Unavailable
 import com.android.testutils.TestableNetworkOfferCallback
 import com.android.testutils.pollingCheck
 import com.android.testutils.runAsShell
@@ -83,7 +83,7 @@ private val ETHERNET_REQUEST = NetworkRequest.Builder()
         .addTransportType(TRANSPORT_TEST)
         .removeCapability(NET_CAPABILITY_TRUSTED)
         .build()
-private const val TIMEOUT_MS = 5_000L
+private const val TIMEOUT_MS = 30_000L
 private const val NO_CB_TIMEOUT_MS = 200L
 
 // TODO: integrate with CSNetworkReservationTest and move to common tests.

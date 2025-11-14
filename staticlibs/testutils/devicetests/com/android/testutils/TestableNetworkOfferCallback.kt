@@ -23,14 +23,20 @@ import android.util.Log
 import com.android.net.module.util.ArrayTrackRecord
 import kotlin.test.fail
 
-class TestableNetworkOfferCallback(val timeoutMs: Long, private val noCallbackTimeoutMs: Long)
-            : NetworkProvider.NetworkOfferCallback {
-    private val TAG = this::class.simpleName
-    val history = ArrayTrackRecord<CallbackEntry>().newReadHead()
+private const val DEFAULT_TIMEOUT = 30_000L // ms
+private const val DEFAULT_NO_CALLBACK_TIMEOUT = 200L // ms
 
-    sealed class CallbackEntry {
-        data class OnNetworkNeeded(val request: NetworkRequest) : CallbackEntry()
-        data class OnNetworkUnneeded(val request: NetworkRequest) : CallbackEntry()
+class TestableNetworkOfferCallback(
+    val timeoutMs: Long = DEFAULT_TIMEOUT,
+    private val noCallbackTimeoutMs: Long = DEFAULT_NO_CALLBACK_TIMEOUT,
+) : NetworkProvider.NetworkOfferCallback {
+    private val TAG = this::class.simpleName
+    val history = ArrayTrackRecord<Event>().newReadHead()
+    val mark get() = history.mark
+
+    sealed class Event {
+        data class Needed(val request: NetworkRequest) : Event()
+        data class Unneeded(val request: NetworkRequest) : Event()
     }
 
     /**
@@ -39,7 +45,7 @@ class TestableNetworkOfferCallback(val timeoutMs: Long, private val noCallbackTi
      */
     override fun onNetworkNeeded(request: NetworkRequest) {
         Log.d(TAG, "onNetworkNeeded $request")
-        history.add(CallbackEntry.OnNetworkNeeded(request))
+        history.add(Event.Needed(request))
     }
 
     /**
@@ -47,25 +53,53 @@ class TestableNetworkOfferCallback(val timeoutMs: Long, private val noCallbackTi
      */
     override fun onNetworkUnneeded(request: NetworkRequest) {
         Log.d(TAG, "onNetworkUnneeded $request")
-        history.add(CallbackEntry.OnNetworkUnneeded(request))
+        history.add(Event.Unneeded(request))
     }
 
-    inline fun <reified T : CallbackEntry> expectCallbackThat(
-        crossinline predicate: (T) -> Boolean
+    inline fun <reified T : Event> expect(
+        errorMsg: String? = null,
+        predicate: (T) -> Boolean = { true }
     ): T {
-        val event = history.poll(timeoutMs)
-                ?: fail("Did not receive callback after ${timeoutMs}ms")
-        if (event !is T || !predicate(event)) fail("Received unexpected callback $event")
-        return event
+        val nextEntry = history.poll(timeoutMs) ?: failWithErrorReason(errorMsg,
+            "Did not receive ${T::class.simpleName} after ${timeoutMs}ms")
+        if (nextEntry !is T) {
+            failWithErrorReason(
+                errorMsg,
+                "Expected callback ${T::class.simpleName}, got $nextEntry"
+            )
+        }
+        if (!predicate(nextEntry)) {
+            failWithErrorReason(errorMsg, "Callback doesn't match predicate: $nextEntry")
+        }
+        return nextEntry
     }
+
+    // TODO : remove when there are no callers
+    @Deprecated("Use expect instead of expectCallbackThat")
+    inline fun <reified T : Event> expectCallbackThat(
+        crossinline predicate: (T) -> Boolean
+    ): T = expect<T>(null, predicate)
+
+    inline fun <reified T : Event> eventuallyExpect(
+        errorMsg: String? = null,
+        from: Int = mark,
+        crossinline predicate: (T) -> Boolean = { true }
+    ) = history.poll(timeoutMs, from) { it is T && predicate(it) }.also {
+        if (null == it) {
+            failWithErrorReason(
+                errorMsg,
+                "Callback ${T::class} not received within ${timeoutMs}ms."
+            )
+        }
+    } as T
 
     fun expectOnNetworkNeeded(capabilities: NetworkCapabilities) =
-            expectCallbackThat<CallbackEntry.OnNetworkNeeded> {
+            expectCallbackThat<Event.Needed> {
                 it.request.canBeSatisfiedBy(capabilities)
             }
 
     fun expectOnNetworkUnneeded(capabilities: NetworkCapabilities) =
-            expectCallbackThat<CallbackEntry.OnNetworkUnneeded> {
+            expectCallbackThat<Event.Unneeded> {
                 it.request.canBeSatisfiedBy(capabilities)
             }
 

@@ -17,6 +17,7 @@
 package com.android.server.connectivity.mdns;
 
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_THREAD;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 
@@ -561,8 +562,9 @@ public class MdnsSocketProvider {
     private boolean isMdnsCapableInterface(
             @NonNull NetworkInterfaceWrapper iface, @NonNull int[] transports) {
         try {
-            // Never try mDNS on cellular, or on interfaces with incompatible flags
+            // Never try mDNS on cellular, on Thread, or on interfaces with incompatible flags
             if (CollectionUtils.contains(transports, TRANSPORT_CELLULAR)
+                    || CollectionUtils.contains(transports, TRANSPORT_THREAD)
                     || iface.isLoopback()
                     || iface.isVirtual()
                     || !iface.isUp()) {

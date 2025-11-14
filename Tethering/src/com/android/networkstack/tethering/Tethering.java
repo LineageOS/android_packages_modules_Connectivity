@@ -53,6 +53,7 @@ import static android.net.TetheringManager.TETHER_ERROR_UNAVAIL_IFACE;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_IFACE;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_REQUEST;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_TYPE;
+import static android.net.TetheringManager.TETHER_ERROR_UNSUPPORTED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_FAILED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STARTED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STOPPED;
@@ -76,10 +77,6 @@ import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_F
 import static com.android.networkstack.tethering.TetheringNotificationUpdater.DOWNSTREAM_NONE;
 import static com.android.networkstack.tethering.UpstreamNetworkMonitor.isCellular;
 import static com.android.networkstack.tethering.metrics.TetheringStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED;
-import static com.android.networkstack.tethering.metrics.TetheringStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI;
-import static com.android.networkstack.tethering.metrics.TetheringStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI_P2P;
-import static com.android.networkstack.tethering.metrics.TetheringStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI_P2P_SUCCESS;
-import static com.android.networkstack.tethering.metrics.TetheringStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI_SUCCESS;
 import static com.android.networkstack.tethering.metrics.TetheringStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_TETHER_WITH_PLACEHOLDER_REQUEST;
 import static com.android.networkstack.tethering.util.TetheringMessageBase.BASE_MAIN_SM;
 import static com.android.networkstack.tethering.util.TetheringUtils.createImplicitLocalOnlyTetheringRequest;
@@ -153,11 +150,11 @@ import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.BaseNetdUnsolicitedEventListener;
 import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.FrameworkConnectivityStatsLog;
 import com.android.net.module.util.HandlerUtils;
 import com.android.net.module.util.NetdUtils;
 import com.android.net.module.util.RoutingCoordinatorManager;
 import com.android.net.module.util.SharedLog;
-import com.android.net.module.util.TerribleErrorLog;
 import com.android.networkstack.apishim.common.BluetoothPanShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceCallbackShim;
 import com.android.networkstack.apishim.common.BluetoothPanShim.TetheredInterfaceRequestShim;
@@ -633,33 +630,40 @@ public class Tethering {
         if (type == TETHERING_BLUETOOTH && SdkLevel.isAtLeastT()) return;
 
         // Cannot happen: on S+, tetherableWigigRegexps is always empty.
-        if (type == TETHERING_WIGIG && SdkLevel.isAtLeastS()) return;
-
-        // After V, disallow this legacy codepath from starting tethering of any type:
-        // everything must call ensureIpServerStarted directly.
-        //
-        // Don't touch the teardown path for now. It's more complicated because:
-        // - ensureIpServerStarted and ensureIpServerStopped act on different
-        //   tethering types.
-        // - Depending on the type, ensureIpServerStopped is either called twice (once
-        //   on interface down and once on interface removed) or just once (on
-        //   interface removed).
-        //
-        // Note that this only affects WIFI and WIFI_P2P. The other types are either
-        // ignored above, or ignored by ensureIpServerStarted. Note that even for WIFI
-        // and WIFI_P2P, this code should not ever run in normal use, because the
-        // hotspot and p2p code do not call tether(). It's possible that this could
-        // happen in the field due to unforeseen OEM modifications. If it does happen,
-        // a terrible error is logged in tether().
-        // TODO: fix the teardown path to stop depending on interface state notifications.
-        // These are not necessary since most/all link layers have their own teardown
-        // notifications, and can race with those notifications.
-        if (enabled && SdkLevel.isAtLeastB()) {
+        if (type == TETHERING_WIGIG
+                && (SdkLevel.isAtLeastS() || !hasSystemFeature(PackageManager.FEATURE_WIFI))) {
             return;
         }
 
+        // After V, don't allow this legacy codepath to create IpServers for any tethering type:
+        // everything must call ensureIpServerStarted directly. Also, on any release, don't create
+        // IpServers for WIFI or WIFI_P2P. These types always use the enableIpServing path.
+        //
+        // Don't touch the teardown path for now. It's more complicated because:
+        // - ensureIpServerStarted and ensureIpServerStopped act on different
+        //   tethering types, and ensureIpServerStopped doesn't look at the type at all.
+        // - Depending on the type, ensureIpServerStopped is either called twice (once
+        //   on interface down and once on interface removed) or just once (on
+        //   interface removed). It's not clear whether it's possible to remove one of
+        //   these two calls without causing breakage in the field - for example, it's
+        //   possible that if the code did not call ensureIpServerStopped on wifi, then
+        //   when wifi tethering is disabled and wifi goes into client mode, tethering
+        //   has not brought down the IpServer because the WIFI_AP_STATE_CHANGED_ACTION
+        //   was delayed.
+        //
+        // TODO: fix the teardown path to stop depending on interface state notifications.
+        // These are not necessary since most/all link layers have their own teardown
+        // notifications, and can race with those notifications.
+        if (enabled && SdkLevel.isAtLeastB()) return;
+
+        if (enabled && (type == TETHERING_WIFI || type == TETHERING_WIFI_P2P))  return;
+
+        // In this method, INVALID includes ETHERNET and VIRTUAL, because ifaceNameToType never
+        // returns these. The legacy codepath does not support these.
+        if (enabled && type == TETHERING_INVALID) return;
+
         if (enabled) {
-            ensureIpServerStartedForInterface(iface);
+            ensureIpServerStarted(iface, type, false /* isNcm */);
         } else {
             ensureIpServerStopped(iface);
         }
@@ -719,6 +723,7 @@ public class Tethering {
     void startTethering(final TetheringRequest request, final String callerPkg,
             final IIntResultListener listener) {
         mHandler.post(() -> {
+            mLog.i("startTethering: " + request);
             final int type = request.getTetheringType();
             RequestTracker.AddResult result = mRequestTracker.addPendingRequest(request);
             // If tethering is already pending with a conflicting request, stop tethering before
@@ -748,6 +753,7 @@ public class Tethering {
 
     void stopTethering(int type) {
         mHandler.post(() -> {
+            mLog.i("stopTethering: " + type);
             stopTetheringInternal(type);
         });
     }
@@ -757,6 +763,7 @@ public class Tethering {
         if (!isTetheringWithSoftApConfigEnabled()) return;
         final boolean hasNetworkSettings = hasCallingPermission(NETWORK_SETTINGS);
         mHandler.post(() -> {
+            mLog.i("stopTetheringRequest: " + request);
             if (mRequestTracker.findFuzzyMatchedRequest(request, !hasNetworkSettings) != null) {
                 final int type = request.getTetheringType();
                 stopTetheringInternal(type);
@@ -1149,43 +1156,20 @@ public class Tethering {
         if (type == TETHERING_INVALID) {
             Log.e(TAG, "Ignoring call to legacy tether for unknown iface " + iface);
             sendTetherResult(listener, TETHER_ERROR_UNKNOWN_IFACE);
+            return;
+        }
+
+        if (type == TETHERING_WIFI || type == TETHERING_WIFI_P2P) {
+            // Metrics show no usage of this legacy codepath. Stop supporing it.
+            sendTetherResult(listener, TETHER_ERROR_UNSUPPORTED);
+            return;
         }
 
         TetheringRequest request = mRequestTracker.getNextPendingRequest(type);
         if (request == null) {
             request = createLegacyGlobalScopeTetheringRequest(type);
         }
-        int result = tetherInternal(request, iface);
-        switch (type) {
-            case TETHERING_WIFI:
-                TerribleErrorLog.logTerribleError(TetheringStatsLog::write,
-                        "Legacy tether API called on Wifi iface " + iface,
-                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
-                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI);
-                if (result == TETHER_ERROR_NO_ERROR) {
-                    TerribleErrorLog.logTerribleError(TetheringStatsLog::write,
-                            "Legacy tether API succeeded on Wifi iface " + iface,
-                            CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
-                            CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI_SUCCESS);
-                }
-                break;
-            case TETHERING_WIFI_P2P:
-                TerribleErrorLog.logTerribleError(TetheringStatsLog::write,
-                        "Legacy tether API called on Wifi P2P iface " + iface,
-                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
-                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI_P2P);
-                if (result == TETHER_ERROR_NO_ERROR) {
-                    TerribleErrorLog.logTerribleError(TetheringStatsLog::write,
-                            "Legacy tether API succeeded on Wifi P2P iface " + iface,
-                            CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
-                            CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_LEGACY_TETHER_WITH_TYPE_WIFI_P2P_SUCCESS);
-                }
-                break;
-            default:
-                // Do nothing
-                break;
-        }
-        sendTetherResult(listener, result);
+        sendTetherResult(listener, tetherInternal(request, iface));
     }
 
     /**
@@ -1195,11 +1179,12 @@ public class Tethering {
      * processInterfaceStateChanged beforehand, which is only possible for
      *     - WIGIG Pre-S
      *     - BLUETOOTH Pre-T
+     * It was previously supported but no longer allowed for:
      *     - WIFI
      *     - WIFI_P2P.
-     * Note that WIFI and WIFI_P2P already start tethering on their respective ifaces via
-     * WIFI_(AP/P2P_STATE_CHANGED broadcasts, which makes this API redundant for those types unless
-     * those broadcasts are disabled by OEM.
+     * because metrics show that there is no usage of this method for these types in production.
+     * These types start tethering on their respective ifaces via WIFI_(AP/P2P_STATE_CHANGED
+     * broadcasts instead.
      */
     void legacyTether(String iface, final IIntResultListener listener) {
         mHandler.post(() -> handleLegacyTether(iface, listener));
@@ -1223,8 +1208,8 @@ public class Tethering {
         // processed, this will be a no-op and it will not return an error.
         tetherState.ipServer.enable(request);
         if (request.getRequestType() == REQUEST_TYPE_PLACEHOLDER) {
-            TerribleErrorLog.logTerribleError(TetheringStatsLog::write,
-                    "Started tethering with placeholder request: " + request,
+            Log.i(TAG, "Started tethering with placeholder request: " + request);
+            TetheringStatsLog.write(
                     CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
                     CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_TETHER_WITH_PLACEHOLDER_REQUEST);
         }
@@ -1281,13 +1266,6 @@ public class Tethering {
     boolean isTetherProvisioningRequired() {
         final TetheringConfiguration cfg = mConfig;
         return mEntitlementMgr.isTetherProvisioningRequired(cfg);
-    }
-
-    private int getServedUsbType(boolean forNcmFunction) {
-        // TETHERING_NCM is only used if the device does not use NCM for regular USB tethering.
-        if (forNcmFunction && !mConfig.isUsingNcm()) return TETHERING_NCM;
-
-        return TETHERING_USB;
     }
 
     // TODO: Figure out how to update for local hotspot mode interfaces.
@@ -1709,7 +1687,7 @@ public class Tethering {
     }
 
     private void enableIpServing(@NonNull TetheringRequest request, String ifname, boolean isNcm) {
-        ensureIpServerStartedForType(ifname, request.getTetheringType(), isNcm);
+        ensureIpServerStarted(ifname, request.getTetheringType(), isNcm);
         if (tetherInternal(request, ifname) != TETHER_ERROR_NO_ERROR) {
             Log.e(TAG, "unable start tethering on iface " + ifname);
         }
@@ -1758,6 +1736,12 @@ public class Tethering {
         // After T, tethering always trust the iface pass by state change intent. This allow
         // tethering to deprecate tetherable p2p regexs after T.
         final int type = SdkLevel.isAtLeastT() ? TETHERING_WIFI_P2P : ifaceNameToType(ifname);
+        if (type != TETHERING_WIFI_P2P) {
+            FrameworkConnectivityStatsLog.write(
+                    FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+                    FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_TETHER_WIFIP2P_TYPE_MISMATCH);
+        }
+
         if (!checkTetherableType(type)) {
             mLog.e(ifname + " is not a tetherable iface, ignoring");
             return;
@@ -1808,6 +1792,11 @@ public class Tethering {
                 mLog.e("Cannot enable IP serving in unknown WiFi mode: " + wifiIpMode);
                 return;
         }
+        if (type != TETHERING_WIFI) {
+            FrameworkConnectivityStatsLog.write(
+                    FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+                    FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_TETHER_WIFI_TYPE_MISMATCH);
+        }
 
         // After T, tethering always trust the iface pass by state change intent. This allow
         // tethering to deprecate tetherable wifi regexs after T.
@@ -1830,14 +1819,7 @@ public class Tethering {
     //     - allows requesting either tethering or local hotspot serving states
     //     - only tethers the first matching interface in listInterfaces()
     //       order of a given type
-    private void enableUsbIpServing(boolean forNcmFunction) {
-        // Note: TetheringConfiguration#isUsingNcm can change between the call to
-        // startTethering(TETHERING_USB) and the ACTION_USB_STATE broadcast. If the USB tethering
-        // function changes from NCM to RNDIS, this can lead to Tethering starting NCM tethering
-        // as local-only. But if this happens, the SettingsObserver will call stopTetheringInternal
-        // for both TETHERING_USB and TETHERING_NCM, so the local-only NCM interface will be
-        // stopped immediately.
-        final int tetheringType = getServedUsbType(forNcmFunction);
+    private void enableUsbIpServing(boolean isNcm) {
         String[] ifaces = null;
         try {
             ifaces = mNetd.interfaceGetList();
@@ -1846,17 +1828,24 @@ public class Tethering {
             return;
         }
 
+        // Note: TetheringConfiguration#isUsingNcm can change between the call to
+        // startTethering(TETHERING_USB) and the ACTION_USB_STATE broadcast. If the USB tethering
+        // function changes from NCM to RNDIS, this can lead to Tethering starting NCM tethering
+        // as local-only. But if this happens, the SettingsObserver will call stopTetheringInternal
+        // for both TETHERING_USB and TETHERING_NCM, so the local-only NCM interface will be
+        // stopped immediately.
+        final int tetheringType = (isNcm && !mConfig.isUsingNcm()) ? TETHERING_NCM : TETHERING_USB;
         final TetheringRequest request = mRequestTracker.getOrCreatePendingRequest(tetheringType);
         if (ifaces != null) {
             for (String iface : ifaces) {
                 if (ifaceNameToType(iface) == tetheringType) {
-                    enableIpServing(request, iface, forNcmFunction);
+                    enableIpServing(request, iface, isNcm);
                     return;
                 }
             }
         }
 
-        mLog.e("could not enable IpServer for function " + (forNcmFunction ? "NCM" : "RNDIS"));
+        mLog.e("could not enable IpServer for function " + (isNcm ? "NCM" : "RNDIS"));
     }
 
     private void disableUsbIpServing(boolean forNcmFunction) {
@@ -3106,20 +3095,7 @@ public class Tethering {
         return type != TETHERING_INVALID;
     }
 
-    private void ensureIpServerStartedForInterface(final String iface) {
-        // If we don't care about this type of interface, ignore.
-        final int interfaceType = ifaceNameToType(iface);
-        if (!checkTetherableType(interfaceType)) {
-            mLog.log(iface + " is used for " + interfaceType + " which is not tetherable"
-                     + " (-1 == INVALID is expected on upstream interface)");
-            return;
-        }
-
-        ensureIpServerStartedForType(iface, interfaceType, false /* isNcm */);
-    }
-
-    private void ensureIpServerStartedForType(final String iface, int interfaceType,
-            boolean isNcm) {
+    private void ensureIpServerStarted(final String iface, int interfaceType, boolean isNcm) {
         // If we have already started a TISM for this interface, skip.
         if (mTetherStates.containsKey(iface)) {
             mLog.log("active iface (" + iface + ") reported as added, ignoring");

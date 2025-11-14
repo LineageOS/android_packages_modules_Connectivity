@@ -16,25 +16,20 @@
 
 package com.google.snippet.connectivity
 
-import android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager.FEATURE_WIFI_DIRECT
-import android.net.MacAddress
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
-import android.net.wifi.p2p.WifiP2pDeviceList
 import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pManager
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.net.module.util.ArrayTrackRecord
-import com.android.testutils.runAsShell
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.Rpc
 import com.google.snippet.connectivity.Wifip2pMultiDevicesSnippet.Wifip2pIntentReceiver.IntentReceivedEvent.ConnectionChanged
-import com.google.snippet.connectivity.Wifip2pMultiDevicesSnippet.Wifip2pIntentReceiver.IntentReceivedEvent.PeersChanged
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertNotNull
@@ -57,16 +52,12 @@ class Wifip2pMultiDevicesSnippet : Snippet {
         sealed class IntentReceivedEvent {
             abstract val intent: Intent
             data class ConnectionChanged(override val intent: Intent) : IntentReceivedEvent()
-            data class PeersChanged(override val intent: Intent) : IntentReceivedEvent()
         }
 
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
                     history.add(ConnectionChanged(intent))
-                }
-                WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                    history.add(PeersChanged(intent))
                 }
             }
         }
@@ -126,12 +117,12 @@ class Wifip2pMultiDevicesSnippet : Snippet {
 
     @Rpc(description = "Wait for a p2p connection changed intent and check the group")
     @Suppress("DEPRECATION")
-    fun waitForP2pConnectionChanged(ignoreGroupCheck: Boolean, groupName: String) {
+    fun waitForP2pConnectionChanged(groupName: String) {
         wifip2pIntentReceiver.eventuallyExpectedIntent<ConnectionChanged>() {
             val p2pGroup: WifiP2pGroup? =
                     it.intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP)
             val groupMatched = p2pGroup?.networkName == groupName
-            return@eventuallyExpectedIntent ignoreGroupCheck || groupMatched
+            return@eventuallyExpectedIntent groupMatched
         }
     }
 
@@ -154,61 +145,15 @@ class Wifip2pMultiDevicesSnippet : Snippet {
         createGroupFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
 
         // Ensure the Wi-Fi P2P group is created.
-        waitForP2pConnectionChanged(false, groupName)
+        waitForP2pConnectionChanged(groupName)
     }
 
-    @Rpc(description = "Start Wi-Fi P2P peers discovery")
-    fun startPeersDiscovery() {
-        // Start discovery Wi-Fi P2P peers
-        wifip2pManager.discoverPeers(wifip2pChannel, null)
-
-        // Ensure the discovery is started
-        val p2pDiscoveryStartedFuture = CompletableFuture<Boolean>()
-        wifip2pManager.requestDiscoveryState(wifip2pChannel) { state ->
-            if (state == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED) {
-                p2pDiscoveryStartedFuture.complete(true)
-            }
-        }
-        p2pDiscoveryStartedFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-    }
-
-    /**
-     * Get the device address from the given intent that matches the given device name.
-     *
-     * @param peersChangedIntent the intent to get the device address from
-     * @param deviceName the target device name
-     * @return the address of the target device or null if no devices match.
-     */
-    @Suppress("DEPRECATION")
-    private fun getDeviceAddress(peersChangedIntent: Intent, deviceName: String): String? {
-        val peers: WifiP2pDeviceList? =
-                peersChangedIntent.getParcelableExtra(WifiP2pManager.EXTRA_P2P_DEVICE_LIST)
-        return peers?.deviceList?.firstOrNull { it.deviceName == deviceName }?.deviceAddress
-    }
-
-    /**
-     * Ensure the given device has been discovered and returns the associated device address for
-     * connection.
-     *
-     * @param deviceName the target device name
-     * @return the address of the target device.
-     */
-    @Rpc(description = "Ensure the target Wi-Fi P2P device is discovered")
-    fun ensureDeviceDiscovered(deviceName: String): String {
-        val changedEvent = wifip2pIntentReceiver.eventuallyExpectedIntent<PeersChanged>() {
-            return@eventuallyExpectedIntent getDeviceAddress(it.intent, deviceName) != null
-        }
-        return getDeviceAddress(changedEvent.intent, deviceName)
-                ?: fail("Missing device in filtered intent")
-    }
-
-    @Rpc(description = "Invite a Wi-Fi P2P device to the group")
-    fun inviteDeviceToGroup(groupName: String, groupPassphrase: String, deviceAddress: String) {
-        // Connect to the device to send invitation
+    @Rpc(description = "Connect to the group")
+    fun connectToGroup(groupName: String, groupPassphrase: String) {
+        // Connect to the p2p group with config
         val wifip2pConfig = WifiP2pConfig.Builder()
                 .setNetworkName(groupName)
                 .setPassphrase(groupPassphrase)
-                .setDeviceAddress(MacAddress.fromString(deviceAddress))
                 .build()
         val connectedFuture = CompletableFuture<Boolean>()
         wifip2pManager.connect(
@@ -222,76 +167,6 @@ class Wifip2pMultiDevicesSnippet : Snippet {
                 }
         )
         connectedFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-    }
-
-    private fun runExternalApproverForGroupProcess(
-            deviceAddress: String,
-            isGroupInvitation: Boolean
-    ) {
-        val peer = MacAddress.fromString(deviceAddress)
-        runAsShell(MANAGE_WIFI_NETWORK_SELECTION) {
-            val connectionRequestFuture = CompletableFuture<Boolean>()
-            val attachedFuture = CompletableFuture<Boolean>()
-            wifip2pManager.addExternalApprover(
-                    wifip2pChannel,
-                    peer,
-                    object : WifiP2pManager.ExternalApproverRequestListener {
-                        override fun onAttached(deviceAddress: MacAddress) {
-                            attachedFuture.complete(true)
-                        }
-                        override fun onDetached(deviceAddress: MacAddress, reason: Int) = Unit
-                        override fun onConnectionRequested(
-                                requestType: Int,
-                                config: WifiP2pConfig,
-                                device: WifiP2pDevice
-                        ) {
-                            connectionRequestFuture.complete(true)
-                        }
-                        override fun onPinGenerated(deviceAddress: MacAddress, pin: String) = Unit
-                    }
-            )
-            if (isGroupInvitation) attachedFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS) else
-                connectionRequestFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-
-            val resultFuture = CompletableFuture<Boolean>()
-            wifip2pManager.setConnectionRequestResult(
-                    wifip2pChannel,
-                    peer,
-                    WifiP2pManager.CONNECTION_REQUEST_ACCEPT,
-                    object : WifiP2pManager.ActionListener {
-                        override fun onFailure(reason: Int) = Unit
-                        override fun onSuccess() {
-                            resultFuture.complete(true)
-                        }
-                    }
-            )
-            resultFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-
-            val removeFuture = CompletableFuture<Boolean>()
-            wifip2pManager.removeExternalApprover(
-                    wifip2pChannel,
-                    peer,
-                    object : WifiP2pManager.ActionListener {
-                        override fun onFailure(reason: Int) = Unit
-                        override fun onSuccess() {
-                            removeFuture.complete(true)
-                        }
-                    }
-            )
-            removeFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
-        }
-    }
-
-    @Rpc(description = "Accept P2P group invitation from device")
-    fun acceptGroupInvitation(deviceAddress: String) {
-        // Accept the Wi-Fi P2P group invitation
-        runExternalApproverForGroupProcess(deviceAddress, true /* isGroupInvitation */)
-    }
-
-    @Rpc(description = "Wait for connection request from the peer and accept joining")
-    fun waitForPeerConnectionRequestAndAcceptJoining(deviceAddress: String) {
-        // Wait for connection request from the peer and accept joining
-        runExternalApproverForGroupProcess(deviceAddress, false /* isGroupInvitation */)
     }
 
     @Rpc(description = "Ensure the target device is connected")

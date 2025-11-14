@@ -24,18 +24,18 @@ import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED
 import android.util.Log
 import com.android.net.module.util.ArrayTrackRecord
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
-import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
-import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatusInt
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.LocalInfoChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.Losing
-import com.android.testutils.RecorderCallback.CallbackEntry.Lost
-import com.android.testutils.RecorderCallback.CallbackEntry.Reserved
-import com.android.testutils.RecorderCallback.CallbackEntry.Resumed
-import com.android.testutils.RecorderCallback.CallbackEntry.Suspended
-import com.android.testutils.RecorderCallback.CallbackEntry.Unavailable
+import com.android.testutils.TestableNetworkCallback.Event.Available
+import com.android.testutils.TestableNetworkCallback.Event.BlockedStatus
+import com.android.testutils.TestableNetworkCallback.Event.BlockedStatusInt
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.LocalInfoChanged
+import com.android.testutils.TestableNetworkCallback.Event.Losing
+import com.android.testutils.TestableNetworkCallback.Event.Lost
+import com.android.testutils.TestableNetworkCallback.Event.Reserved
+import com.android.testutils.TestableNetworkCallback.Event.Resumed
+import com.android.testutils.TestableNetworkCallback.Event.Suspended
+import com.android.testutils.TestableNetworkCallback.Event.Unavailable
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -45,64 +45,73 @@ object NULL_NETWORK : Network(-1)
 object ANY_NETWORK : Network(-2)
 fun anyNetwork() = ANY_NETWORK
 
-private val DEFAULT_TAG = RecorderCallback::class.simpleName
+private val DEFAULT_TAG = TestableNetworkCallback::class.simpleName
     ?: fail("Could not determine class name")
 
-open class RecorderCallback private constructor(
-    private val backingRecord: ArrayTrackRecord<CallbackEntry>,
-    val logTag: String
-) : NetworkCallback() {
-    public constructor(logTag: String = DEFAULT_TAG) : this(ArrayTrackRecord(), logTag)
-    protected constructor(src: RecorderCallback?, logTag: String) : this(
-        src?.backingRecord ?: ArrayTrackRecord(),
-        logTag
-    )
+private const val DEFAULT_TIMEOUT = 30_000L // ms
+private const val DEFAULT_NO_CALLBACK_TIMEOUT = 200L // ms
+private val NOOP = Runnable {}
 
-    sealed class CallbackEntry {
+/**
+ * See comments on the public constructor below for a description of the arguments.
+ */
+open class TestableNetworkCallback private constructor(
+    src: TestableNetworkCallback?,
+    val defaultTimeoutMs: Long,
+    private val defaultNoCallbackTimeoutMs: Long,
+    private val waiterFunc: Runnable,
+    private val logTag: String
+) : NetworkCallback() {
+    private val backingRecord: ArrayTrackRecord<Event> =
+        src?.backingRecord ?: ArrayTrackRecord()
+    val history: ArrayTrackRecord<Event>.ReadHead = backingRecord.newReadHead()
+    val mark get() = history.mark
+
+    sealed class Event {
         // To get equals(), hashcode(), componentN() etc for free, the child classes of
         // this class are data classes. But while data classes can inherit from other classes,
         // they may only have visible members in the constructors, so they couldn't declare
-        // a constructor with a non-val arg to pass to CallbackEntry. Instead, force all
+        // a constructor with a non-val arg to pass to Event. Instead, force all
         // subclasses to implement a `network' property, which can be done in a data class
         // constructor by specifying override.
         abstract val network: Network
 
-        data class Reserved private constructor(
-                override val network: Network,
-                val caps: NetworkCapabilities
-        ): CallbackEntry() {
+        data class Reserved(
+            override val network: Network,
+            val caps: NetworkCapabilities
+        ) : Event() {
             constructor(caps: NetworkCapabilities) : this(NULL_NETWORK, caps)
         }
-        data class Available(override val network: Network) : CallbackEntry()
+        data class Available(override val network: Network) : Event()
         data class CapabilitiesChanged(
             override val network: Network,
             val caps: NetworkCapabilities
-        ) : CallbackEntry()
+        ) : Event()
         data class LinkPropertiesChanged(
             override val network: Network,
             val lp: LinkProperties
-        ) : CallbackEntry()
+        ) : Event()
         data class LocalInfoChanged(
             override val network: Network,
             val info: LocalNetworkInfo
-        ) : CallbackEntry()
-        data class Suspended(override val network: Network) : CallbackEntry()
-        data class Resumed(override val network: Network) : CallbackEntry()
-        data class Losing(override val network: Network, val maxMsToLive: Int) : CallbackEntry()
-        data class Lost(override val network: Network) : CallbackEntry()
-        data class Unavailable private constructor(
+        ) : Event()
+        data class Suspended(override val network: Network) : Event()
+        data class Resumed(override val network: Network) : Event()
+        data class Losing(override val network: Network, val maxMsToLive: Int) : Event()
+        data class Lost(override val network: Network) : Event()
+        data class Unavailable(
             override val network: Network
-        ) : CallbackEntry() {
+        ) : Event() {
             constructor() : this(NULL_NETWORK)
         }
         data class BlockedStatus(
             override val network: Network,
             val blocked: Boolean
-        ) : CallbackEntry()
+        ) : Event()
         data class BlockedStatusInt(
             override val network: Network,
             val reason: Int
-        ) : CallbackEntry()
+        ) : Event()
 
         // Convenience constants for expecting a type
         companion object {
@@ -132,9 +141,6 @@ open class RecorderCallback private constructor(
             val BLOCKED_STATUS_INT = BlockedStatusInt::class
         }
     }
-
-    val history = backingRecord.newReadHead()
-    val mark get() = history.mark
 
     override fun onReserved(caps: NetworkCapabilities) {
         Log.d(logTag, "onReserved $caps")
@@ -196,22 +202,7 @@ open class RecorderCallback private constructor(
         Log.d(logTag, "onUnavailable")
         history.add(Unavailable())
     }
-}
 
-private const val DEFAULT_TIMEOUT = 30_000L // ms
-private const val DEFAULT_NO_CALLBACK_TIMEOUT = 200L // ms
-private val NOOP = Runnable {}
-
-/**
- * See comments on the public constructor below for a description of the arguments.
- */
-open class TestableNetworkCallback private constructor(
-    src: TestableNetworkCallback?,
-    val defaultTimeoutMs: Long,
-    val defaultNoCallbackTimeoutMs: Long,
-    val waiterFunc: Runnable,
-    logTag: String
-) : RecorderCallback(src, logTag) {
     /**
      * Construct a testable network callback.
      * @param timeoutMs the default timeout for expecting a callback. Default 30 seconds. This
@@ -260,7 +251,7 @@ open class TestableNetworkCallback private constructor(
      * Long.MAX_VALUE.
      */
     @JvmOverloads
-    fun poll(timeoutMs: Long = defaultTimeoutMs, predicate: (CallbackEntry) -> Boolean = { true }) =
+    fun poll(timeoutMs: Long = defaultTimeoutMs, predicate: (Event) -> Boolean = { true }) =
             history.poll(timeoutMs, predicate)
 
     /*****
@@ -269,13 +260,13 @@ open class TestableNetworkCallback private constructor(
      * passed predicate. If no callback is received within the timeout, these methods fail.
      */
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: Network = ANY_NETWORK,
         timeoutMs: Long = defaultTimeoutMs,
         errorMsg: String? = null,
         test: (T) -> Boolean = { true }
-    ) = expect<CallbackEntry>(network, timeoutMs, errorMsg) {
+    ) = expect<Event>(network, timeoutMs, errorMsg) {
         if (type.isInstance(it)) {
             test(it as T) // Cast can't fail since type.isInstance(it) and type: KClass<T>
         } else {
@@ -284,7 +275,7 @@ open class TestableNetworkCallback private constructor(
     } as T
 
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: HasNetwork,
         timeoutMs: Long = defaultTimeoutMs,
@@ -297,7 +288,7 @@ open class TestableNetworkCallback private constructor(
     // there is no need to explicitly define versions without the test predicate.
     // Without |network|
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         timeoutMs: Long,
         errorMsg: String?,
@@ -306,7 +297,7 @@ open class TestableNetworkCallback private constructor(
 
     // Without |timeout|, in Network and HasNetwork versions
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: Network,
         errorMsg: String?,
@@ -314,7 +305,7 @@ open class TestableNetworkCallback private constructor(
     ) = expect(type, network, defaultTimeoutMs, errorMsg, test)
 
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: HasNetwork,
         errorMsg: String?,
@@ -322,16 +313,14 @@ open class TestableNetworkCallback private constructor(
     ) = expect(type, network.network, defaultTimeoutMs, errorMsg, test)
 
     // Without |errorMsg|, in Network and HasNetwork versions
-    @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: Network,
         timeoutMs: Long,
         test: (T) -> Boolean
     ) = expect(type, network, timeoutMs, null, test)
 
-    @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: HasNetwork,
         timeoutMs: Long,
@@ -340,7 +329,7 @@ open class TestableNetworkCallback private constructor(
 
     // Without |network| or |timeout|
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         errorMsg: String?,
         test: (T) -> Boolean = { true }
@@ -348,36 +337,33 @@ open class TestableNetworkCallback private constructor(
 
     // Without |network| or |errorMsg|
     @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         timeoutMs: Long,
         test: (T) -> Boolean = { true }
     ) = expect(type, ANY_NETWORK, timeoutMs, null, test)
 
     // Without |timeout| or |errorMsg|, in Network and HasNetwork versions
-    @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: Network,
         test: (T) -> Boolean
     ) = expect(type, network, defaultTimeoutMs, null, test)
 
-    @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         network: HasNetwork,
         test: (T) -> Boolean
     ) = expect(type, network.network, defaultTimeoutMs, null, test)
 
     // Without |network| or |timeout| or |errorMsg|
-    @JvmOverloads
-    fun <T : CallbackEntry> expect(
+    fun <T : Event> expect(
         type: KClass<T>,
         test: (T) -> Boolean
     ) = expect(type, ANY_NETWORK, defaultTimeoutMs, null, test)
 
     // Kotlin reified versions. Don't call methods above, or the predicate would need to be noinline
-    inline fun <reified T : CallbackEntry> expect(
+    inline fun <reified T : Event> expect(
         network: Network = ANY_NETWORK,
         timeoutMs: Long = defaultTimeoutMs,
         errorMsg: String? = null,
@@ -399,13 +385,7 @@ open class TestableNetworkCallback private constructor(
                 }
             } as T
 
-    // "Nothing" is the return type to declare a function never returns a value.
-    fun failWithErrorReason(errorMsg: String?, errorReason: String): Nothing {
-        val message = if (errorMsg != null) "$errorMsg : $errorReason" else errorReason
-        fail(message)
-    }
-
-    inline fun <reified T : CallbackEntry> expect(
+    inline fun <reified T : Event> expect(
         network: HasNetwork,
         timeoutMs: Long = defaultTimeoutMs,
         errorMsg: String? = null,
@@ -421,13 +401,13 @@ open class TestableNetworkCallback private constructor(
     @JvmOverloads
     fun assertNoCallback(
         timeoutMs: Long = defaultNoCallbackTimeoutMs,
-        valid: (CallbackEntry) -> Boolean = { true }
+        valid: (Event) -> Boolean = { true }
     ) {
         waiterFunc.run()
         history.poll(timeoutMs) { valid(it) }?.let { fail("Expected no callback but got $it") }
     }
 
-    fun assertNoCallback(valid: (CallbackEntry) -> Boolean) =
+    fun assertNoCallback(valid: (Event) -> Boolean) =
             assertNoCallback(defaultNoCallbackTimeoutMs, valid)
 
     /*****
@@ -436,7 +416,7 @@ open class TestableNetworkCallback private constructor(
      * Any callback of the wrong type, or doesn't match the optional predicate, is ignored.
      * They fail if no callback matching the predicate is received within the timeout.
      */
-    inline fun <reified T : CallbackEntry> eventuallyExpect(
+    inline fun <reified T : Event> eventuallyExpect(
         timeoutMs: Long = defaultTimeoutMs,
         from: Int = mark,
         crossinline predicate: (T) -> Boolean = { true }
@@ -449,7 +429,7 @@ open class TestableNetworkCallback private constructor(
     } as T
 
     @JvmOverloads
-    fun <T : CallbackEntry> eventuallyExpect(
+    fun <T : Event> eventuallyExpect(
         type: KClass<T>,
         timeoutMs: Long = defaultTimeoutMs,
         predicate: (cb: T) -> Boolean = { true }
@@ -461,7 +441,7 @@ open class TestableNetworkCallback private constructor(
         )
     } as T
 
-    fun <T : CallbackEntry> eventuallyExpect(
+    fun <T : Event> eventuallyExpect(
         type: KClass<T>,
         timeoutMs: Long = defaultTimeoutMs,
         from: Int = mark,

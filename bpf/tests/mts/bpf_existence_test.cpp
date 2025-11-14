@@ -37,6 +37,7 @@ using android::bpf::isAtLeastT;
 using android::bpf::isAtLeastU;
 using android::bpf::isAtLeastV;
 using android::bpf::isAtLeast25Q2;
+using android::bpf::isAtLeast25Q4;
 
 #define PLATFORM "/sys/fs/bpf/"
 #define TETHERING "/sys/fs/bpf/tethering/"
@@ -224,6 +225,8 @@ TEST_F(BpfExistenceTest, TestPrograms) {
 
     if (isAtLeast25Q2) ASSERT_TRUE(isAtLeastKernelVersion(5, 4, 0));
     DO_EXPECT(isAtLeast25Q2, MAINLINE_FOR_25Q2_PLUS);
+
+    if (isAtLeast25Q4) ASSERT_TRUE(isAtLeastKernelVersion(5, 10, 0));
 
     for (const auto& file : mustExist) {
         EXPECT_EQ(0, access(file.c_str(), R_OK)) << file << " does not exist";

@@ -24,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 
 import android.net.MacAddress;
 import android.system.OsConstants;
@@ -35,7 +34,6 @@ import com.android.net.module.util.HexDump;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
@@ -44,9 +42,6 @@ import java.nio.ByteOrder;
 @RunWith(MockitoJUnitRunner.class)
 @SmallTest
 public class RtNetlinkLinkMessageTest {
-    @Mock
-    private OsAccess mOsAccess;
-
     // An example of the full RTM_NEWLINK message.
     private static final String RTM_NEWLINK_HEX =
             "64000000100000000000000000000000"   // struct nlmsghr
@@ -194,15 +189,12 @@ public class RtNetlinkLinkMessageTest {
         final String expectedHexBytes =
                 "20000000100005006824000000000000"     // struct nlmsghdr
                 + "00000000080000000100000001000000";  // struct ifinfomsg
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
         final boolean isUp = true;
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createSetLinkStateMessage(
-                interfaceName, sequenceNumber, isUp, mOsAccess);
+                interfaceIndex, sequenceNumber, isUp);
         assertNotNull(msg);
         final byte[] bytes = msg.pack(ByteOrder.LITTLE_ENDIAN);  // For testing.
         assertEquals(expectedHexBytes, HexDump.toHexString(bytes));
@@ -213,15 +205,12 @@ public class RtNetlinkLinkMessageTest {
         final String expectedHexBytes =
                 "20000000100005006824000000000000"     // struct nlmsghdr
                         + "00000000080000000000000001000000";  // struct ifinfomsg
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
         final boolean isUp = false;
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createSetLinkStateMessage(
-                interfaceName, sequenceNumber, isUp, mOsAccess);
+                interfaceIndex, sequenceNumber, isUp);
         assertNotNull(msg);
         final byte[] bytes = msg.pack(ByteOrder.LITTLE_ENDIAN);  // For testing.
         assertEquals(expectedHexBytes, HexDump.toHexString(bytes));
@@ -229,14 +218,12 @@ public class RtNetlinkLinkMessageTest {
 
     @Test
     public void testCreateSetLinkStateMessage_InvalidInterface() {
-        final String interfaceName = "wlan0";
+        final int interfaceIndex = OsAccess.INVALID_INTERFACE_INDEX;
         final int sequenceNumber = 0x2468;
         final boolean isUp = false;
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(OsAccess.INVALID_INTERFACE_INDEX);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createSetLinkStateMessage(
-                interfaceName, sequenceNumber, isUp, mOsAccess);
+                interfaceIndex, sequenceNumber, isUp);
         assertNull(msg);
     }
 
@@ -246,15 +233,12 @@ public class RtNetlinkLinkMessageTest {
                 "2C000000100005006824000000000000"   // struct nlmsghdr
                 + "00000000080000000000000000000000" // struct ifinfomsg
                 + "0A000300776C616E31000000";        // IFLA_IFNAME(wlan1)
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
         final String newName = "wlan1";
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createSetLinkNameMessage(
-                interfaceName, sequenceNumber, newName, mOsAccess);
+                interfaceIndex, sequenceNumber, newName);
         assertNotNull(msg);
         final byte[] bytes = msg.pack(ByteOrder.LITTLE_ENDIAN);  // For testing.
         assertEquals(expectedHexBytes, HexDump.toHexString(bytes));
@@ -262,28 +246,23 @@ public class RtNetlinkLinkMessageTest {
 
     @Test
     public void testCreateSetLinkNameMessage_InterfaceNotFound() {
-        final String interfaceName = "wlan0";
+        final int interfaceIndex = OsAccess.INVALID_INTERFACE_INDEX;
         final int sequenceNumber = 0x2468;
         final String newName = "wlan1";
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(OsAccess.INVALID_INTERFACE_INDEX);
-
         assertNull(RtNetlinkLinkMessage.createSetLinkNameMessage(
-                interfaceName, sequenceNumber, newName, mOsAccess));
+                interfaceIndex, sequenceNumber, newName));
     }
 
     @Test
     public void testCreateSetLinkNameMessage_InvalidNewName() {
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
-
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
 
         final String[] invalidNames = {"", "interface_name_longer_than_limit"};
         for (String invalidName : invalidNames) {
             assertNull(RtNetlinkLinkMessage.createSetLinkNameMessage(
-                    interfaceName, sequenceNumber, invalidName, mOsAccess));
+                    interfaceIndex, sequenceNumber, invalidName));
         }
     }
 
@@ -292,14 +271,11 @@ public class RtNetlinkLinkMessageTest {
         final String expectedHexBytes =
                 "20000000120005006824000000000000"    // struct nlmsghdr
                 + "00000000080000000000000000000000"; // struct ifinfomsg
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createGetLinkMessage(
-                interfaceName, sequenceNumber, mOsAccess);
+                interfaceIndex, sequenceNumber);
         assertNotNull(msg);
         final byte[] bytes = msg.pack(ByteOrder.LITTLE_ENDIAN);  // For testing.
         assertEquals(expectedHexBytes, HexDump.toHexString(bytes));
@@ -310,16 +286,12 @@ public class RtNetlinkLinkMessageTest {
         final String expectedHexBytes =
                 "20000000100005006824000000000000"    // struct nlmsghdr
                         + "00000000080000000100000001000100"; // struct ifinfomsg
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createSetFlagsMessage(
-                interfaceName,
+                interfaceIndex,
                 sequenceNumber,
-                mOsAccess,
                 NetlinkConstants.IFF_UP,
                 ~NetlinkConstants.IFF_LOWER_UP);
         assertNotNull(msg);
@@ -332,18 +304,14 @@ public class RtNetlinkLinkMessageTest {
         final String expectedHexBytes =
                 "280000001000050068240000000000000000000008000000"   // struct nlmsghdr
                         + "000000000000000008000400DC050000"; // struct ifinfomsg
-        final String interfaceName = "wlan0";
         final int interfaceIndex = 8;
         final int sequenceNumber = 0x2468;
         final int mtu = 1500;
 
-        when(mOsAccess.if_nametoindex(interfaceName)).thenReturn(interfaceIndex);
-
         final RtNetlinkLinkMessage msg = RtNetlinkLinkMessage.createSetMtuMessage(
-                interfaceName,
+                interfaceIndex,
                 sequenceNumber,
-                mtu,
-                mOsAccess);
+                mtu);
         assertNotNull(msg);
         final byte[] bytes = msg.pack(ByteOrder.LITTLE_ENDIAN);  // For testing.
         assertEquals(expectedHexBytes, HexDump.toHexString(bytes));

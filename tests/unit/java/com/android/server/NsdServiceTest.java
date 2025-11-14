@@ -23,6 +23,7 @@ import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHE
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_GONE;
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE;
+import static android.content.pm.PackageManager.FEATURE_LEANBACK;
 import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.InetAddresses.parseNumericAddress;
@@ -55,10 +56,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
@@ -96,6 +99,7 @@ import android.net.nsd.NsdManager.ResolveListener;
 import android.net.nsd.NsdManager.ServiceInfoCallback;
 import android.net.nsd.NsdServiceInfo;
 import android.net.nsd.OffloadEngine;
+import android.net.nsd.OffloadServiceInfo;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
@@ -203,6 +207,7 @@ public class NsdServiceTest {
     HandlerThread mThread;
     TestHandler mHandler;
     NsdService mService;
+    MdnsAdvertiser.AdvertiserCallback mAdvertiserCallback;
 
     private static class LinkToDeathRecorder extends Binder {
         IBinder.DeathRecipient mDr;
@@ -244,8 +249,10 @@ public class NsdServiceTest {
         doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any(), any());
         doReturn(DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF).when(mDeps).getDeviceConfigInt(
                 eq(NsdService.MDNS_CONFIG_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF), anyInt());
-        doReturn(mAdvertiser).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any(),
-                any());
+        doAnswer(inv -> {
+            mAdvertiserCallback = (MdnsAdvertiser.AdvertiserCallback) inv.getArguments()[2];
+            return mAdvertiser;
+        }).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any(), any());
         doReturn(mMetrics).when(mDeps).makeNetworkNsdReportedMetrics(anyInt());
         doReturn(mClock).when(mDeps).makeClock();
         doReturn(TEST_TIME_MS).when(mClock).elapsedRealtime();
@@ -546,7 +553,6 @@ public class NsdServiceTest {
                 12345, /* port */
                 List.of(IPV4_ADDRESS),
                 List.of(IPV6_ADDRESS),
-                List.of(), /* textStrings */
                 List.of(), /* textEntries */
                 interfaceIdx, /* interfaceIndex */
                 null /* network */,
@@ -1025,7 +1031,6 @@ public class NsdServiceTest {
                 PORT,
                 List.of(IPV4_ADDRESS),
                 List.of(IPV6_ADDRESS),
-                List.of() /* textStrings */,
                 List.of() /* textEntries */,
                 1234,
                 network,
@@ -1056,7 +1061,6 @@ public class NsdServiceTest {
                 PORT,
                 List.of(v4Address),
                 List.of(v6Address),
-                List.of() /* textStrings */,
                 List.of() /* textEntries */,
                 1234,
                 network,
@@ -1189,7 +1193,6 @@ public class NsdServiceTest {
                 12345, /* port */
                 List.of(IPV4_ADDRESS),
                 List.of(IPV6_ADDRESS),
-                List.of(), /* textStrings */
                 List.of(), /* textEntries */
                 1234, /* interfaceIndex */
                 network,
@@ -1211,7 +1214,6 @@ public class NsdServiceTest {
                 0, /* port */
                 List.of(), /* ipv4Address */
                 List.of(), /* ipv6Address */
-                null, /* textStrings */
                 null, /* textEntries */
                 1234, /* interfaceIndex */
                 network,
@@ -1333,7 +1335,6 @@ public class NsdServiceTest {
                 PORT,
                 List.of(IPV4_ADDRESS),
                 List.of("2001:db8::1", "2001:db8::2"),
-                List.of() /* textStrings */,
                 List.of(MdnsServiceInfo.TextEntry.fromBytes(new byte[]{
                         'k', 'e', 'y', '=', (byte) 0xFF, (byte) 0xFE})) /* textEntries */,
                 1234,
@@ -1654,6 +1655,54 @@ public class NsdServiceTest {
 
         verify(regListener, timeout(TIMEOUT_MS))
                 .onRegistrationFailed(any(), eq(FAILURE_BAD_PARAMETERS));
+    }
+
+    @Test
+    public void testAdvertiseOffloadOnly_FailsForNonTv() {
+        setMdnsAdvertiserEnabled();
+        doReturn(false).when(mPackageManager).hasSystemFeature(FEATURE_LEANBACK);
+        final NsdManager client = connectClient(mService);
+        final RegistrationListener regListener = mock(RegistrationListener.class);
+        final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
+                ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+
+        final NsdServiceInfo regInfo = new NsdServiceInfo("Service custom TTL", SERVICE_TYPE);
+        regInfo.setPort(1234);
+        final AdvertisingRequest request =
+                new AdvertisingRequest.Builder(regInfo, NsdManager.PROTOCOL_DNS_SD)
+                        .setFlags(AdvertisingRequest.FLAG_OFFLOAD_ONLY).build();
+        client.registerService(request, Runnable::run, regListener);
+        waitForIdle();
+
+        verify(regListener, timeout(TIMEOUT_MS))
+                .onRegistrationFailed(any(), eq(FAILURE_BAD_PARAMETERS));
+    }
+
+    @Test
+    public void testAdvertiseOffloadOnly_SupportForTvRunningAndroidB() {
+        assumeTrue(Build.VERSION_CODES.BAKLAVA == Build.VERSION.SDK_INT);
+        setMdnsAdvertiserEnabled();
+        doReturn(true).when(mPackageManager).hasSystemFeature(FEATURE_LEANBACK);
+        final NsdManager client = connectClient(mService);
+        final RegistrationListener regListener = mock(RegistrationListener.class);
+        final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
+                ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
+        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+
+        final NsdServiceInfo regInfo = new NsdServiceInfo("Service custom TTL", SERVICE_TYPE);
+        regInfo.setPort(1234);
+        final AdvertisingRequest request =
+                new AdvertisingRequest.Builder(regInfo, NsdManager.PROTOCOL_DNS_SD)
+                        .setFlags(AdvertisingRequest.FLAG_OFFLOAD_ONLY).build();
+        client.registerService(request, Runnable::run, regListener);
+        waitForIdle();
+
+        final ArgumentCaptor<MdnsAdvertisingOptions> optionsCaptor =
+                ArgumentCaptor.forClass(MdnsAdvertisingOptions.class);
+        verify(mAdvertiser).addOrUpdateService(anyInt(), any(),
+                optionsCaptor.capture(), anyInt());
+        assertTrue(optionsCaptor.getValue().isOffloadOnly());
     }
 
     @Test
@@ -2040,6 +2089,61 @@ public class NsdServiceTest {
         client.unregisterOffloadEngine(offloadEngine);
     }
 
+    private OffloadEngine registerOffloadEngine(String interfaceName) {
+        final NsdManager client = connectClient(mService);
+        final OffloadEngine offloadEngine = mock(OffloadEngine.class);
+        doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(
+                REGISTER_NSD_OFFLOAD_ENGINE);
+        client.registerOffloadEngine(interfaceName, OffloadEngine.OFFLOAD_TYPE_REPLY,
+                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+                offloadEngine);
+        waitForIdle();
+        return offloadEngine;
+    }
+
+    @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public void testRegisterOffloadEngine_sendAllOffloadServiceInfos() {
+        final String interfaceName = "iface";
+        final OffloadServiceInfo info = new OffloadServiceInfo(
+                new OffloadServiceInfo.Key("_testService", "_testType"), List.of("_sub1", "_sub2"),
+                "Android.local", new byte[] { 0x1, 0x2, 0x3 }, 1 /* priority */,
+                OffloadEngine.OFFLOAD_TYPE_REPLY);
+        doReturn(List.of(new MdnsAdvertiser.OffloadServiceInfoWrapper(123, info)))
+                .when(mAdvertiser).getAllInterfaceOffloadServiceInfos(interfaceName);
+        final OffloadEngine offloadEngine = registerOffloadEngine(interfaceName);
+        // Verify that the OffloadServiceInfo retrieves from the advertiser and then sends it to
+        // the OffloadEngine.
+        verify(mAdvertiser).getAllInterfaceOffloadServiceInfos(interfaceName);
+        verify(offloadEngine).onOffloadServiceUpdated(info);
+    }
+
+    @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public void testRegisterOffloadEngine_OffloadServiceUpdatedAndRemoved() {
+        final String interfaceName = "iface";
+        final OffloadServiceInfo info = new OffloadServiceInfo(
+                new OffloadServiceInfo.Key("_testService", "_testType"), List.of("_sub1", "_sub2"),
+                "Android.local", new byte[] { 0x1, 0x2, 0x3 }, 1 /* priority */,
+                OffloadEngine.OFFLOAD_TYPE_REPLY);
+        doReturn(Collections.emptyList()).when(mAdvertiser)
+                .getAllInterfaceOffloadServiceInfos(anyString());
+        final OffloadEngine offloadEngine = registerOffloadEngine(interfaceName);
+        // Verify that the OffloadServiceInfo retrieves from the advertiser and that no info is
+        // sent to the OffloadEngine.
+        verify(mAdvertiser).getAllInterfaceOffloadServiceInfos(interfaceName);
+        verify(offloadEngine, never()).onOffloadServiceUpdated(any());
+        // onOffloadStartOrUpdate callback triggered. The OffloadServiceInfo update should be sent
+        // to the OffloadEngine.
+        mAdvertiserCallback.onOffloadStartOrUpdate(interfaceName, info);
+        verify(offloadEngine).onOffloadServiceUpdated(info);
+        // onOffloadStop callback triggered. The OffloadServiceInfo removal should be sent to the
+        // OffloadEngine.
+        mAdvertiserCallback.onOffloadStop(interfaceName, info);
+        verify(offloadEngine).onOffloadServiceRemoved(info);
+    }
 
     private void waitForIdle() {
         HandlerUtils.waitForIdle(mHandler, TIMEOUT_MS);

@@ -32,7 +32,7 @@ def generate_uuid32_base64() -> str:
       str: The Base64-encoded UUID32 string. Which is 22 characters.
   """
   # Strip padding characters to make it safer for hotspot name length limit.
-  return base64.b64encode(uuid.uuid1().bytes).decode("utf-8").strip("=")
+  return base64.b64encode(uuid.uuid1().bytes).decode('utf-8').strip('=')
 
 
 def assume_hotspot_test_preconditions(
@@ -44,23 +44,23 @@ def assume_hotspot_test_preconditions(
   client = client_device.connectivity_multi_devices_snippet
 
   # Assert pre-conditions specific to each upstream type.
-  asserts.skip_if(not client.hasWifiFeature(), "Client requires Wifi feature")
+  asserts.skip_if(not client.hasWifiFeature(), 'Client requires Wifi feature')
   asserts.skip_if(
-      not server.hasHotspotFeature(), "Server requires hotspot feature"
+      not server.hasHotspotFeature(), 'Server requires hotspot feature'
   )
   if upstream_type == UpstreamType.CELLULAR:
     asserts.skip_if(
-        not server.hasTelephonyFeature(), "Server requires Telephony feature"
+        not server.hasTelephonyFeature(), 'Server requires Telephony feature'
     )
   elif upstream_type == UpstreamType.WIFI:
     asserts.skip_if(
         not server.isStaApConcurrencySupported(),
-        "Server requires Wifi AP + STA concurrency",
+        'Server requires Wifi AP + STA concurrency',
     )
   elif upstream_type == UpstreamType.NONE:
     pass
   else:
-    raise ValueError(f"Invalid upstream type: {upstream_type}")
+    raise ValueError(f'Invalid upstream type: {upstream_type}')
 
 
 def setup_hotspot_and_client_for_upstream_type(
@@ -84,11 +84,11 @@ def setup_hotspot_and_client_for_upstream_type(
   elif upstream_type == UpstreamType.NONE:
     pass
   else:
-    raise ValueError(f"Invalid upstream type: {upstream_type}")
+    raise ValueError(f'Invalid upstream type: {upstream_type}')
 
   # Generate ssid/passphrase with random characters to make sure nearby devices won't
   # connect unexpectedly. Note that total length of ssid cannot go over 32.
-  test_ssid = "HOTSPOT-" + generate_uuid32_base64()
+  test_ssid = 'HOTSPOT-' + generate_uuid32_base64()
   test_passphrase = generate_uuid32_base64()
 
   # Create a hotspot with fixed SSID and password.

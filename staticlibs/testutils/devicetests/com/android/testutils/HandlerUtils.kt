@@ -21,7 +21,6 @@ package com.android.testutils
 import android.os.ConditionVariable
 import android.os.Handler
 import android.os.HandlerThread
-import android.util.Log
 import com.android.testutils.FunctionalUtils.ThrowingRunnable
 import com.android.testutils.FunctionalUtils.ThrowingSupplier
 import java.lang.Exception
@@ -64,15 +63,27 @@ fun waitForIdleSerialExecutor(executor: Executor, timeoutMs: Long) {
  * To achieve this, this method runs the passed block on the handler and blocks this thread
  * until it's executed, so keep in mind this method will block, (including, if the handler isn't
  * running, blocking forever).
+ *
+ * This method is not guaranteed to run the passed supplier on the handler thread.
  */
-fun <T> visibleOnHandlerThread(handler: Handler, supplier: ThrowingSupplier<T>): T {
+fun <T> visibleOnHandlerThread(handler: Handler, supplier: ThrowingSupplier<T>): T =
+    handler.postAndWait(supplier::get)
+
+/** Overload of visibleOnHandlerThread but executes a block of code that does not return a value. */
+inline fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable) {
+    visibleOnHandlerThread(handler, ThrowingSupplier { r.run() })
+}
+
+/**
+ * Run a block on a handler and wait for the result.
+ */
+inline fun <T> Handler.postAndWait(crossinline what: () -> T): T {
     val cv = ConditionVariable()
     var rv: Result<T> = Result.failure(RuntimeException("Not run"))
-    handler.post {
+    post {
         try {
-            rv = Result.success(supplier.get())
+            rv = Result.success(what())
         } catch (exception: Exception) {
-            Log.e(TAG, "visibleOnHandlerThread caught exception", exception)
             rv = Result.failure(exception)
         }
         cv.open()
@@ -82,9 +93,4 @@ fun <T> visibleOnHandlerThread(handler: Handler, supplier: ThrowingSupplier<T>):
     // returns).
     cv.block()
     return rv.getOrThrow()
-}
-
-/** Overload of visibleOnHandlerThread but executes a block of code that does not return a value. */
-inline fun visibleOnHandlerThread(handler: Handler, r: ThrowingRunnable){
-    visibleOnHandlerThread(handler, ThrowingSupplier<Unit> { r.run() })
 }

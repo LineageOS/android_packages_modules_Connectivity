@@ -44,7 +44,7 @@ import com.android.server.net.integrationtests.NetworkStatsIntegrationTest.Direc
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.PacketBridge
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import com.android.testutils.TestDnsServer
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestableNetworkCallback

@@ -30,9 +30,12 @@ java_defaults {
 
     srcs: [
         "src/**/*.java",
+        "src/**/*.kt",
     ],
 
     static_libs: [
+        "ConnectivityWifiP2pMultiDevicesSnippetLib",
+        "Harrier",
         "TetheringCommonTests",
         "com.android.net.flags-aconfig-java",
         "compatibility-device-util-axt",
@@ -53,6 +56,7 @@ java_defaults {
     platform_apis: true,
     min_sdk_version: "30",
     host_required: ["net-tests-utils-host-common"],
+    host_common_data: [":net-tests-utils-host-common"],
 }
 
 // Tethering CTS tests for development and release. These tests always target the platform SDK

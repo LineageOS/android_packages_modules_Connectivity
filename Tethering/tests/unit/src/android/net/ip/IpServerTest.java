@@ -40,7 +40,8 @@ import static android.net.ip.IpServer.getTetherableIpv6Prefixes;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastV;
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
-import static com.android.networkstack.tethering.TetheringConfiguration.TETHERING_LOCAL_NETWORK_AGENT;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHERING_LOCAL_NETWORK_AGENT;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.WIFIP2PGO_LOCAL_NETWORK_AGENT;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1123,18 +1124,31 @@ public class IpServerTest {
 
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @SetFeatureFlagsRule.FeatureFlag(name = TETHERING_LOCAL_NETWORK_AGENT, enabled = false)
+    @SetFeatureFlagsRule.FeatureFlag(name = WIFIP2PGO_LOCAL_NETWORK_AGENT)
     @Test
     public void testTetheringNetworkAgent_tetheringAgentDisabled() throws Exception {
         doTestTetheringNetworkAgent(CONNECTIVITY_SCOPE_GLOBAL, false);
+        // Even if the flag is enabled, no wifip2p network agent if the tethering network
+        // agent feature is not supported.
+        doTestTetheringNetworkAgent(CONNECTIVITY_SCOPE_LOCAL, false);
     }
 
     // Verify Tethering Network Agent feature doesn't affect Wi-fi P2P Group Owner although
     // the code is mostly shared.
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @SetFeatureFlagsRule.FeatureFlag(name = TETHERING_LOCAL_NETWORK_AGENT)
+    @SetFeatureFlagsRule.FeatureFlag(name = WIFIP2PGO_LOCAL_NETWORK_AGENT, enabled = false)
     @Test
     public void testTetheringNetworkAgent_p2pGroupOwnerAgentDisabled() throws Exception {
         doTestTetheringNetworkAgent(CONNECTIVITY_SCOPE_LOCAL, false);
+    }
+
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @SetFeatureFlagsRule.FeatureFlag(name = TETHERING_LOCAL_NETWORK_AGENT)
+    @SetFeatureFlagsRule.FeatureFlag(name = WIFIP2PGO_LOCAL_NETWORK_AGENT)
+    @Test
+    public void testTetheringNetworkAgent_p2pGroupOwnerAgentEnabled() throws Exception {
+        doTestTetheringNetworkAgent(CONNECTIVITY_SCOPE_LOCAL, true);
     }
 
     private void doTestTetheringNetworkAgent(int scope, boolean expectAgentEnabled)

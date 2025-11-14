@@ -47,18 +47,10 @@
         <option name="hidden-api-checks" value="false" />
         <option name="isolated-storage" value="false" />
         <option name="instrumentation-arg" key="test-module-name" value="{MODULE}" />
-        <!-- Test filter that allows test APKs to select which tests they want to run by annotating
-             those tests with an annotation matching the name of the APK.
-
-             This allows us to maintain one AndroidTestTemplate.xml for all CtsNetTestCases*.apk,
-             and have CtsNetTestCases run all tests, but have CtsNetTestCasesMaxTargetSdk31 run only
-             tests that require target SDK 31.
-
-             This relies on the fact that if the class specified in include-annotation exists, then
-             the runner will only run the tests annotated with that annotation, but if it does not,
-             the runner will run all the tests. -->
-        <option name="include-annotation" value="com.android.testutils.filters.{MODULE}" />
         <option name="device-listeners" value="com.android.testutils.ConnectivityDiagnosticsCollector" />
+        <!-- Extra configuration specified in the build rules (.bp). In particular, they may specify
+         include-annotation filters to only run a subset of the test cases. -->
+        {EXTRA_TEST_RUNNER_CONFIGS}
     </test>
     <metrics_collector class="com.android.tradefed.device.metric.FilePullerLogCollector">
         <!-- Pattern matching the fileKey used by ConnectivityDiagnosticsCollector when calling addFileMetric -->

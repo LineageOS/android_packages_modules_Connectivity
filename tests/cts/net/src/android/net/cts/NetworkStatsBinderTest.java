@@ -36,7 +36,7 @@ import android.os.RemoteException;
 
 import androidx.test.InstrumentationRegistry;
 
-import com.android.internal.util.CollectionUtils;
+import com.android.net.module.util.CollectionUtils;
 import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -67,7 +67,7 @@ public class NetworkStatsBinderTest {
     private int getFirstAppUidThat(@NonNull Predicate<Integer> predicate) {
         PackageManager pm = InstrumentationRegistry.getContext().getPackageManager();
         List<PackageInfo> apps = pm.getInstalledPackages(0 /* flags */);
-        final PackageInfo match = CollectionUtils.find(apps,
+        final PackageInfo match = CollectionUtils.findFirst(apps,
                 it -> it.applicationInfo != null && predicate.test(it.applicationInfo.uid));
         if (match != null) return match.applicationInfo.uid;
         return INVALID_UID;

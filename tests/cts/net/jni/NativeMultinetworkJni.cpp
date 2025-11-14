@@ -33,9 +33,14 @@
 
 #include <string>
 
+#include <android-base/scopeguard.h>
+#include <android-base/unique_fd.h>
 #include <android/log.h>
 #include <android/multinetwork.h>
 #include <nativehelper/JNIHelp.h>
+
+using android::base::make_scope_guard;
+using android::base::unique_fd;
 
 #define LOGD(fmt, ...) \
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##__VA_ARGS__)
@@ -437,28 +442,25 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
 
     static const char kPort[] = "443";
     int rval = android_getaddrinfofornetwork(handle, kHostname, kPort, &kHints, &res);
+    auto res_guard = make_scope_guard([res] { freeaddrinfo(res); });
     if (rval != 0) {
         LOGD("android_getaddrinfofornetwork(%llu, %s) returned rval=%d errno=%d",
               handle, kHostname, rval, errno);
-        freeaddrinfo(res);
         return create_query_test_result(env, 0, 0, errno);
     }
 
     // Rely upon getaddrinfo sorting the best destination to the front.
-    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (fd < 0) {
+    auto fd = unique_fd(socket(res->ai_family, res->ai_socktype, res->ai_protocol));
+    if (!fd.ok()) {
         LOGD("socket(%d, %d, %d) failed, errno=%d",
               res->ai_family, res->ai_socktype, res->ai_protocol, errno);
-        freeaddrinfo(res);
         return create_query_test_result(env, 0, 0, errno);
     }
 
-    rval = android_setsocknetwork(handle, fd);
+    rval = android_setsocknetwork(handle, fd.get());
     LOGD("android_setprocnetwork(%llu, %d) returned rval=%d errno=%d",
-          handle, fd, rval, errno);
+          handle, fd.get(), rval, errno);
     if (rval != 0) {
-        close(fd);
-        freeaddrinfo(res);
         return create_query_test_result(env, 0, 0, errno);
     }
 
@@ -478,10 +480,8 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
                 .sin_addr = { .s_addr = INADDR_ANY },
             };
         }
-        if (bind(fd, (sockaddr *)&src_addr, src_addrlen) != 0) {
+        if (bind(fd.get(), (sockaddr *)&src_addr, src_addrlen) != 0) {
             LOGD("Error binding to port %d", src_port);
-            close(fd);
-            freeaddrinfo(res);
             return create_query_test_result(env, 0, 0, errno);
         }
     }
@@ -490,16 +490,12 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
     sockaddr_ntop(res->ai_addr, res->ai_addrlen, addrstr, sizeof(addrstr));
     LOGD("Attempting connect() to %s ...", addrstr);
 
-    rval = connect(fd, res->ai_addr, res->ai_addrlen);
+    rval = connect(fd.get(), res->ai_addr, res->ai_addrlen);
     if (rval != 0) {
-        close(fd);
-        freeaddrinfo(res);
         return create_query_test_result(env, 0, 0, errno);
     }
-    freeaddrinfo(res);
 
-    if (getsockname(fd, (struct sockaddr *)&src_addr, &src_addrlen) != 0) {
-        close(fd);
+    if (getsockname(fd.get(), (struct sockaddr *)&src_addr, &src_addrlen) != 0) {
         return create_query_test_result(env, 0, 0, errno);
     }
     sockaddr_ntop((const struct sockaddr *)&src_addr, sizeof(src_addr), addrstr, sizeof(addrstr));
@@ -512,14 +508,13 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
         socket_src_port = ntohs(reinterpret_cast<sockaddr_in*>(&src_addr)->sin_port);
     } else {
         LOGD("Invalid source address family %d", src_addr.ss_family);
-        close(fd);
         return create_query_test_result(env, 0, 0, EAFNOSUPPORT);
     }
 
     // Don't let reads or writes block indefinitely.
     const struct timeval timeo = { 2, 0 };  // 2 seconds
-    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeo, sizeof(timeo));
-    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeo, sizeof(timeo));
+    setsockopt(fd.get(), SOL_SOCKET, SO_RCVTIMEO, &timeo, sizeof(timeo));
+    setsockopt(fd.get(), SOL_SOCKET, SO_SNDTIMEO, &timeo, sizeof(timeo));
 
     // For reference see:
     //     https://datatracker.ietf.org/doc/html/draft-ietf-quic-invariants
@@ -539,15 +534,14 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
     int i, errnum = 0;
 
     for (i = 0; i < MAX_RETRIES; i++) {
-        sent = send(fd, quic_packet, sizeof(quic_packet), 0);
+        sent = send(fd.get(), quic_packet, sizeof(quic_packet), 0);
         if (sent < (ssize_t)sizeof(quic_packet)) {
             errnum = errno;
             LOGD("send(QUIC packet) returned sent=%zd, errno=%d", sent, errnum);
-            close(fd);
             return create_query_test_result(env, socket_src_port, i + 1, errnum);
         }
 
-        rcvd = recv(fd, response, sizeof(response), 0);
+        rcvd = recv(fd.get(), response, sizeof(response), 0);
         if (rcvd > 0) {
             break;
         } else {
@@ -561,7 +555,6 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
         if (rcvd <= 0) {
             LOGD("Does this network block UDP port %s?", kPort);
         }
-        close(fd);
         return create_query_test_result(env, socket_src_port, i + 1,
                 rcvd <= 0 ? errnum : EPROTO);
     }
@@ -569,12 +562,9 @@ JNIEXPORT jobject Java_android_net_cts_MultinetworkApiTest_runDatagramCheck(
     int conn_id_cmp = memcmp(quic_packet + 6, response + 7, 8);
     if (conn_id_cmp != 0) {
         LOGD("sent and received connection IDs do not match");
-        close(fd);
         return create_query_test_result(env, socket_src_port, i + 1, EPROTO);
     }
 
     // TODO: Replace this quick 'n' dirty test with proper QUIC-capable code.
-
-    close(fd);
     return create_query_test_result(env, socket_src_port, i + 1, 0);
 }

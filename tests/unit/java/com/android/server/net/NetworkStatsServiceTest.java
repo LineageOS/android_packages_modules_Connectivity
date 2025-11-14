@@ -27,6 +27,8 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.net.ConnectivityManager.TYPE_MOBILE;
 import static android.net.ConnectivityManager.TYPE_TEST;
 import static android.net.ConnectivityManager.TYPE_WIFI;
+import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_SATELLITE;
 import static android.net.NetworkIdentity.OEM_PAID;
 import static android.net.NetworkIdentity.OEM_PRIVATE;
 import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
@@ -79,7 +81,6 @@ import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_FALLBAC
 import static com.android.server.net.NetworkStatsService.NETSTATS_IMPORT_SUCCESSES_COUNTER_NAME;
 import static com.android.server.net.NetworkStatsService.TRAFFICSTATS_CLIENT_RATE_LIMIT_CACHE_ENABLED_FLAG;
 import static com.android.server.net.NetworkStatsService.TRAFFICSTATS_SERVICE_RATE_LIMIT_CACHE_ENABLED_FLAG;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -224,7 +225,7 @@ import java.util.function.Consumer;
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
 // NetworkStatsService is not updatable before T, so tests do not need to be backwards compatible
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
@@ -604,7 +605,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         @Override
         public boolean isDebuggable() {
-            return mIsDebuggable == Boolean.TRUE;
+            return Objects.equals(mIsDebuggable, Boolean.TRUE);
         }
 
         @Override
@@ -1139,7 +1140,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // Pretend that 5g mobile network comes online
         final NetworkStateSnapshot[] mobileStates =
                 new NetworkStateSnapshot[] {buildMobileState(IMSI_1), buildStateOfTransport(
-                        NetworkCapabilities.TRANSPORT_CELLULAR, TYPE_MOBILE,
+                        TRANSPORT_CELLULAR, TYPE_MOBILE,
                         TEST_IFACE2, IMSI_1, null /* wifiNetworkKey */,
                         true /* isTemporarilyNotMetered */, false /* isRoaming */)};
         setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_NR);
@@ -1414,7 +1415,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mockNetworkStatsUidDetail(buildEmptyStats());
 
         final NetworkStateSnapshot mobileState = buildStateOfTransport(
-                NetworkCapabilities.TRANSPORT_CELLULAR, TYPE_MOBILE,
+                TRANSPORT_CELLULAR, TYPE_MOBILE,
                 TEST_IFACE2, IMSI_1, null /* wifiNetworkKey */,
                 false /* isTemporarilyNotMetered */, false /* isRoaming */);
 
@@ -1473,7 +1474,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         final String[] mobileIfaces = {TEST_IFACE2};
         mockNetworkStatsUidDetail(buildEmptyStats(), emptyTetherStats, mobileIfaces);
         final NetworkStats mobileStats = mService.getUidStatsForTransport(
-                NetworkCapabilities.TRANSPORT_CELLULAR);
+                TRANSPORT_CELLULAR);
 
         assertEquals(2, mobileStats.size());
         // Verify the operation count stats that caused by incrementOperationCount only appears
@@ -1492,7 +1493,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mockNetworkStatsUidDetail(buildEmptyStats());
 
         final NetworkStateSnapshot mobileState = buildStateOfTransport(
-                NetworkCapabilities.TRANSPORT_CELLULAR, TYPE_MOBILE,
+                TRANSPORT_CELLULAR, TYPE_MOBILE,
                 TEST_IFACE2, IMSI_1, null /* wifiNetworkKey */,
                 false /* isTemporarilyNotMetered */, false /* isRoaming */);
 
@@ -1523,7 +1524,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         // with getUidStatsForTransport(TRANSPORT_CELLULAR) return stats of both cellular
         // and satellite
         final NetworkStats mobileStats = mService.getUidStatsForTransport(
-                NetworkCapabilities.TRANSPORT_CELLULAR);
+                TRANSPORT_CELLULAR);
 
         // The iface field of the returned stats should be null because getUidStatsForTransport
         // clears the interface field before it returns the result.
@@ -1532,8 +1533,80 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
 
         // getUidStatsForTransport(TRANSPORT_SATELLITE) is not supported
         assertThrows(IllegalArgumentException.class,
-                () -> mService.getUidStatsForTransport(NetworkCapabilities.TRANSPORT_SATELLITE));
+                () -> mService.getUidStatsForTransport(TRANSPORT_SATELLITE));
 
+    }
+
+    // This test demonstrates that a network identity with legacy type TYPE_MOBILE
+    // can represent different underlying physical transports (e.g., satellite or cellular).
+    // NetworkTemplate, using MATCH_MOBILE, can then differentiate these further
+    // by applying a transportTypes filter.
+    @Test
+    public void testGetSatelliteStats() throws Exception {
+        mockDefaultSettings();
+        final NetworkTemplate templateSatellite =
+                new NetworkTemplate.Builder()
+                        .setMeteredness(METERED_YES)
+                        .setSubscriberIds(Set.of(IMSI_1))
+                        .setTransportType(TRANSPORT_SATELLITE)
+                        .build();
+
+        final NetworkTemplate templateCellularOnly =
+                new NetworkTemplate.Builder()
+                        .setMeteredness(METERED_YES)
+                        .setSubscriberIds(Set.of(IMSI_1))
+                        .setTransportType(TRANSPORT_CELLULAR)
+                        .build();
+
+        // Initial state: Assert all relevant templates are empty
+        assertUidTotal(sTemplateImsi1, UID_RED, 0L, 0L, 0L, 0L, 0);
+        assertUidTotal(templateSatellite, UID_RED, 0L, 0L, 0L, 0L, 0);
+        assertUidTotal(templateCellularOnly, UID_RED, 0L, 0L, 0L, 0L, 0);
+
+        // 1. Bring up SATELLITE mobile network for IMSI_1
+        NetworkStateSnapshot satelliteState = buildSatelliteMobileState(IMSI_1);
+
+        mService.notifyNetworkStatus(NETWORKS_MOBILE, new NetworkStateSnapshot[]{satelliteState},
+                getActiveIface(satelliteState), new UnderlyingNetworkInfo[0]);
+        setMobileRatTypeAndWaitForIdle(TelephonyManager.NETWORK_TYPE_LTE);
+
+        // Record 100 bytes of data on the satellite network for UID_RED
+        incrementCurrentTime(HOUR_IN_MILLIS);
+        mockNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
+                .insertEntry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, METERED_YES, ROAMING_NO,
+                        DEFAULT_NETWORK_YES, 100L, 10L, 100L, 10L, 0L));
+        forcePollAndWaitForIdle();
+
+        // Verify data attribution for SATELLITE
+        // sTemplateImsi1 (general mobile) should count satellite data.
+        assertUidTotal(sTemplateImsi1, UID_RED, 100L, 10L, 100L, 10L, 0);
+        // sTemplateMobileSatelliteImsi1 (satellite specific) should count satellite data.
+        assertUidTotal(templateSatellite, UID_RED, 100L, 10L, 100L, 10L, 0);
+        // templateCellularOnly (cellular specific) should NOT count satellite data.
+        assertUidTotal(templateCellularOnly, UID_RED, 0L, 0L, 0L, 0L, 0);
+
+        // 2. Switch to CELLULAR mobile network for IMSI_1 on the same interface
+        NetworkStateSnapshot cellularState = buildMobileState(IMSI_1);
+
+        mService.notifyNetworkStatus(NETWORKS_MOBILE, new NetworkStateSnapshot[]{cellularState},
+                getActiveIface(cellularState), new UnderlyingNetworkInfo[0]);
+        // Mocking UID details to reflect total traffic on the interface since boot/last poll.
+        // Previous satellite data (100B) + new cellular data (200B) = 300B total on iface.
+        incrementCurrentTime(HOUR_IN_MILLIS);
+        mockNetworkStatsUidDetail(new NetworkStats(getElapsedRealtime(), 1)
+                .insertEntry(TEST_IFACE, UID_RED, SET_DEFAULT, TAG_NONE, METERED_YES, ROAMING_NO,
+                        DEFAULT_NETWORK_YES, 300L, 30L, 300L, 30L, 0L)); // 100sat + 200cell
+        forcePollAndWaitForIdle();
+
+        // Verify data attribution after CELLULAR usage
+        // sTemplateImsi1 (general mobile) should count cumulative data (satellite + cellular).
+        // (100 previous + 200 new = 300 total)
+        assertUidTotal(sTemplateImsi1, UID_RED, 300L, 30L, 300L, 30L, 0);
+        // sTemplateMobileSatelliteImsi1 should still only have the satellite data.
+        assertUidTotal(templateSatellite, UID_RED, 100L, 10L, 100L, 10L, 0);
+        // templateCellularOnly should now have the new cellular data (200B).
+        // (Current total on iface 300B - previous total on iface before this poll 100B = 200B)
+        assertUidTotal(templateCellularOnly, UID_RED, 200L, 20L, 200L, 20L, 0);
     }
 
     @Test
@@ -1641,7 +1714,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         mockDefaultSettings();
         NetworkStateSnapshot[] states =
             new NetworkStateSnapshot[] {buildStateOfTransport(
-                    NetworkCapabilities.TRANSPORT_CELLULAR, TYPE_MOBILE,
+                    TRANSPORT_CELLULAR, TYPE_MOBILE,
                     TEST_IFACE,  IMSI_1, null /* wifiNetworkKey */,
                     false /* isTemporarilyNotMetered */, true /* isRoaming */)};
         mockNetworkStatsSummary(buildEmptyStats());
@@ -2821,13 +2894,13 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
     }
 
     private static NetworkStateSnapshot buildMobileState(String subscriberId) {
-        return buildStateOfTransport(NetworkCapabilities.TRANSPORT_CELLULAR, TYPE_MOBILE,
+        return buildStateOfTransport(TRANSPORT_CELLULAR, TYPE_MOBILE,
                 TEST_IFACE, subscriberId, null /* wifiNetworkKey */,
                 false /* isTemporarilyNotMetered */, false /* isRoaming */);
     }
 
     private static NetworkStateSnapshot buildSatelliteMobileState(String subscriberId) {
-        return buildStateOfTransport(NetworkCapabilities.TRANSPORT_SATELLITE, TYPE_MOBILE,
+        return buildStateOfTransport(TRANSPORT_SATELLITE, TYPE_MOBILE,
                 TEST_IFACE, subscriberId, null /* wifiNetworkKey */,
                 false /* isTemporarilyNotMetered */, false /* isRoaming */);
     }
@@ -2871,7 +2944,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         for (int nc : oemNetCapabilities) {
             capabilities.setCapability(nc, true);
         }
-        capabilities.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
+        capabilities.addTransportType(TRANSPORT_CELLULAR);
         return new NetworkStateSnapshot(MOBILE_NETWORK, capabilities, prop, subscriberId,
                 TYPE_MOBILE);
     }
@@ -2884,7 +2957,7 @@ public class NetworkStatsServiceTest extends NetworkStatsBaseTest {
         capabilities.setCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED, true);
         capabilities.setCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING, true);
         capabilities.setCapability(NetworkCapabilities.NET_CAPABILITY_IMS, true);
-        capabilities.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
+        capabilities.addTransportType(TRANSPORT_CELLULAR);
         capabilities.setNetworkSpecifier(new TelephonyNetworkSpecifier(subId));
         return new NetworkStateSnapshot(
                 MOBILE_NETWORK, capabilities, prop, subscriberId, TYPE_MOBILE);

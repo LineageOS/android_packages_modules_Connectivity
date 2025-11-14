@@ -16,10 +16,10 @@
 
 package com.android.server.net
 
+import android.os.Build
 import android.util.SystemConfigFileCommitEventLogger
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.SC_V2
 import com.android.testutils.assertThrows
 import org.junit.After
 import org.junit.Before
@@ -37,7 +37,7 @@ import java.util.Random
 import kotlin.test.assertEquals
 
 @RunWith(DevSdkIgnoreRunner::class)
-@IgnoreUpTo(SC_V2)
+@IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class PersistentIntTest {
     val tempFilesCreated = mutableSetOf<Path>()
     lateinit var tempDir: Path

@@ -143,3 +143,11 @@ fun assertEventuallyTrue(
         Thread.sleep(pollIntervalMs)
     }
 }
+
+// "Nothing" is the return type to declare a function never returns a value. This is useful
+// because the compiler will know the branch of the code calling this does not return, which
+// lets check exhaustivity, infer return types, nullability and smart casts.
+fun failWithErrorReason(errorMsg: String?, errorReason: String): Nothing {
+    val message = if (errorMsg != null) "$errorMsg : $errorReason" else errorReason
+    fail(message)
+}

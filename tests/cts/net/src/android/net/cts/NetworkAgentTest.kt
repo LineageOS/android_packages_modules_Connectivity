@@ -75,9 +75,9 @@ import android.net.TransportInfo
 import android.net.Uri
 import android.net.VpnManager
 import android.net.VpnTransportInfo
-import android.net.cts.NetworkAgentTest.TestableQosCallback.CallbackEntry.OnError
-import android.net.cts.NetworkAgentTest.TestableQosCallback.CallbackEntry.OnQosSessionAvailable
-import android.net.cts.NetworkAgentTest.TestableQosCallback.CallbackEntry.OnQosSessionLost
+import android.net.cts.NetworkAgentTest.TestableQosCallback.Event.OnError
+import android.net.cts.NetworkAgentTest.TestableQosCallback.Event.OnQosSessionAvailable
+import android.net.cts.NetworkAgentTest.TestableQosCallback.Event.OnQosSessionLost
 import android.net.wifi.WifiInfo
 import android.os.Build
 import android.os.Handler
@@ -96,7 +96,6 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.telephony.data.EpsBearerQosSessionAttributes
 import android.util.ArraySet
-import android.util.DebugUtils.valueToString
 import androidx.test.InstrumentationRegistry
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity
@@ -112,27 +111,27 @@ import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.PollPacketReader
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
-import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.Losing
-import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkAgent
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnAddKeepalivePacketFilter
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnAutomaticReconnectDisabled
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnBandwidthUpdateRequested
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkDestroyed
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkUnwanted
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnRegisterQosCallback
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnRemoveKeepalivePacketFilter
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnSaveAcceptUnvalidated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnStartSocketKeepalive
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnStopSocketKeepalive
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnUnregisterQosCallback
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnValidationStatus
+import com.android.testutils.TestableNetworkAgent.Event.OnAddKeepalivePacketFilter
+import com.android.testutils.TestableNetworkAgent.Event.OnAutomaticReconnectDisabled
+import com.android.testutils.TestableNetworkAgent.Event.OnBandwidthUpdateRequested
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkCreated
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkDestroyed
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkUnwanted
+import com.android.testutils.TestableNetworkAgent.Event.OnRegisterQosCallback
+import com.android.testutils.TestableNetworkAgent.Event.OnRemoveKeepalivePacketFilter
+import com.android.testutils.TestableNetworkAgent.Event.OnSaveAcceptUnvalidated
+import com.android.testutils.TestableNetworkAgent.Event.OnStartSocketKeepalive
+import com.android.testutils.TestableNetworkAgent.Event.OnStopSocketKeepalive
+import com.android.testutils.TestableNetworkAgent.Event.OnUnregisterQosCallback
+import com.android.testutils.TestableNetworkAgent.Event.OnValidationStatus
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.Available
+import com.android.testutils.TestableNetworkCallback.Event.BlockedStatus
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.Losing
+import com.android.testutils.TestableNetworkCallback.Event.Lost
 import com.android.testutils.assertThrows
 import com.android.testutils.com.android.testutils.CarrierConfigRule
 import com.android.testutils.runAsShell
@@ -182,7 +181,6 @@ private const val DEFAULT_TIMEOUT_MS = 5000L
 
 private const val QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER =
     "queue_network_agent_events_in_system_server"
-
 
 // When waiting for a NetworkCallback to determine there was no timeout, waiting is the
 // only possible thing (the relevant handler is the one in the real ConnectivityService,
@@ -243,7 +241,6 @@ class NetworkAgentTest {
         get() = mCM.isConnectivityServiceFeatureEnabledForTesting(
             QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER
         )
-
 
     @Before
     fun setUp() {
@@ -706,7 +703,9 @@ class NetworkAgentTest {
         val specifier = when {
             transports.size != 1 -> null
             TRANSPORT_ETHERNET in transports -> EthernetNetworkSpecifier("testInterface")
-            TRANSPORT_CELLULAR in transports -> TelephonyNetworkSpecifier(subId)
+            TRANSPORT_CELLULAR in transports -> {
+                TelephonyNetworkSpecifier.Builder().setSubscriptionId(subId).build()
+            }
             else -> null
         }
         val transportInfo = if (TRANSPORT_WIFI in transports && SdkLevel.isAtLeastV()) {
@@ -777,9 +776,9 @@ class NetworkAgentTest {
                     expectUidsPresent = false
             )
 
-            // The tools to set the carrier service package override do not exist before U,
+            // The tools to set the carrier service package override do not exist before U QPR1,
             // so there is no way to test the rest of this test on < U.
-            if (!SdkLevel.isAtLeastU()) return@tryTest
+            if (!carrierConfigRule.isSettingCarrierServicePackageSupported()) return@tryTest
             // Acquiring carrier privilege is necessary to override the carrier service package.
             val defaultSlotIndex = SubscriptionManager.getSlotIndex(defaultSubId)
             carrierConfigRule.acquireCarrierPrivilege(defaultSubId)
@@ -973,12 +972,11 @@ class NetworkAgentTest {
         // underlying networks, and because not congested, not roaming, and not suspended are the
         // default anyway. It's still useful as an extra check though.
         vpnNc = mCM.getNetworkCapabilities(agent.network!!)!!
-        for (cap in listOf(
-            NET_CAPABILITY_NOT_CONGESTED,
-            NET_CAPABILITY_NOT_ROAMING,
-            NET_CAPABILITY_NOT_SUSPENDED
+        for ((cap, capStr) in listOf(
+            NET_CAPABILITY_NOT_CONGESTED to "NET_CAPABILITY_NOT_CONGESTED",
+            NET_CAPABILITY_NOT_ROAMING to "NET_CAPABILITY_NOT_ROAMING",
+            NET_CAPABILITY_NOT_SUSPENDED to "NET_CAPABILITY_NOT_SUSPENDED"
         )) {
-            val capStr = valueToString(NetworkCapabilities::class.java, "NET_CAPABILITY_", cap)
             if (defaultNetworkCapabilities.hasCapability(cap) && !vpnNc.hasCapability(cap)) {
                 fail("$capStr not propagated from underlying: $defaultNetworkCapabilities")
             }
@@ -1267,7 +1265,7 @@ class NetworkAgentTest {
                 .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
                 .build(),
             bestMatchingCb,
-            mHandlerThread.threadHandler
+            Handler(mHandlerThread.looper)
         )
 
         val (agent1, _) = createConnectedNetworkAgent(specifier = "AGENT-1")
@@ -1312,13 +1310,13 @@ class NetworkAgentTest {
     }
 
     private class TestableQosCallback : QosCallback() {
-        val history = ArrayTrackRecord<CallbackEntry>().newReadHead()
+        val history = ArrayTrackRecord<Event>().newReadHead()
 
-        sealed class CallbackEntry {
+        sealed class Event {
             data class OnQosSessionAvailable(val sess: QosSession, val attr: QosSessionAttributes) :
-                CallbackEntry()
-            data class OnQosSessionLost(val sess: QosSession) : CallbackEntry()
-            data class OnError(val ex: QosCallbackException) : CallbackEntry()
+                Event()
+            data class OnQosSessionLost(val sess: QosSession) : Event()
+            data class OnError(val ex: QosCallbackException) : Event()
         }
 
         override fun onQosSessionAvailable(sess: QosSession, attr: QosSessionAttributes) {
@@ -1333,13 +1331,13 @@ class NetworkAgentTest {
             history.add(OnError(ex))
         }
 
-        inline fun <reified T : CallbackEntry> expectCallback(): T {
+        inline fun <reified T : Event> expectCallback(): T {
             val foundCallback = history.poll(DEFAULT_TIMEOUT_MS)
             assertTrue(foundCallback is T, "Expected ${T::class} but found $foundCallback")
             return foundCallback
         }
 
-        inline fun <reified T : CallbackEntry> expectCallback(valid: (T) -> Boolean) {
+        inline fun <reified T : Event> expectCallback(valid: (T) -> Boolean) {
             val foundCallback = history.poll(DEFAULT_TIMEOUT_MS)
             assertTrue(foundCallback is T, "Expected ${T::class} but found $foundCallback")
             assertTrue(valid(foundCallback), "Unexpected callback : $foundCallback")
@@ -1394,6 +1392,25 @@ class NetworkAgentTest {
                 agent.expectCallback<OnRegisterQosCallback>().let {
                     callbackId = it.callbackId
                     assertTrue(it.filter.matchesProtocol(proto))
+                    if (Build.VERSION.SDK_INT_FULL > Build.VERSION_CODES_FULL.BAKLAVA) {
+                        // Available from SDK version 36.1 (25Q4)
+                        // This test is only validating QosFilter address match APIs can be called.
+                        // Detail functionality checks are executed on QosSocketFilterTest.
+                        // Verify the match of test socket's Local address, currently the test
+                        // socket binds to the loopback address.
+                        assertTrue(it.filter.matchesLocalPrefix(
+                            IpPrefix(InetAddress.getLoopbackAddress(), 128),
+                            0,
+                            65535
+                        ))
+                        // Since the test socket doesn't connect to the remote address, we expect
+                        // unmatched result.
+                        assertFalse(it.filter.matchesRemotePrefix(
+                            IpPrefix(InetAddress.getLoopbackAddress(), 128),
+                            0,
+                            65535
+                        ))
+                    }
                 }
 
                 assertFailsWith<QosCallbackRegistrationException>(
@@ -1589,14 +1606,22 @@ class NetworkAgentTest {
     private fun createEpsAttributes(qci: Int = 1): EpsBearerQosSessionAttributes {
         val remoteAddresses = ArrayList<InetSocketAddress>()
         remoteAddresses.add(InetSocketAddress(REMOTE_ADDRESS, 80))
-        return EpsBearerQosSessionAttributes(
-            qci,
-            2,
-            3,
-            4,
-            5,
-            remoteAddresses
-        )
+        return EpsBearerQosSessionAttributes::class.java
+            .getConstructor(
+                Int::class.java,
+                Long::class.java,
+                Long::class.java,
+                Long::class.java,
+                Long::class.java,
+                List::class.java
+            ).newInstance(
+                qci,
+                2,
+                3,
+                4,
+                5,
+                remoteAddresses
+            )
     }
 
     fun sendAndExpectUdpPacket(
@@ -2015,5 +2040,43 @@ class NetworkAgentTest {
         // For backward compatibility, this shouldn't crash.
         val agent = createNetworkAgent()
         agent.unregister()
+    }
+
+    fun getBinderProxyCount(): Int {
+        // Call gc before checking binder proxy count.
+        System.gc()
+        System.runFinalization()
+        System.gc()
+
+        // Extracts the number of binder proxy objects from the `dumpsys meminfo` output.
+        // Expects a line in the format: "Local Binders: 13 Proxy Binders: 30".
+        val dumpOutput = ("dumpsys meminfo " + Process.myPid()).execute()
+        val line = dumpOutput.split("\n").firstOrNull { it.contains("Proxy Binders:") }
+        assertNotNull(line, "Dumpsys does not contain \"Proxy Binders:\", output: $dumpOutput")
+
+        val matched = Regex("Proxy Binders:\\s*(\\d+)").find(line)
+        assertNotNull(matched, "Failed to parse, line: $line")
+
+        return matched.groupValues[1].toInt()
+    }
+
+    @Test
+    fun testRegisterUnregisterDoesNotLeakBinderProxy() {
+        val startCount = getBinderProxyCount()
+
+        for (i in 1..30) {
+            val agent = createNetworkAgent(realContext)
+            agent.register()
+            agent.unregister()
+        }
+
+        val deadline = SystemClock.elapsedRealtime() + DEFAULT_TIMEOUT_MS
+        var endCount: Int
+        do {
+            endCount = getBinderProxyCount()
+            if (endCount - startCount < 10) return
+            SystemClock.sleep(50 /* ms */)
+        } while (SystemClock.elapsedRealtime() < deadline)
+        fail("Binder Proxy is leaked: $startCount -> $endCount")
     }
 }

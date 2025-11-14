@@ -33,7 +33,6 @@ import static android.net.NetworkStats.UID_ALL;
 import static com.android.server.net.NetworkStatsFactory.CONFIG_PER_UID_TAG_THROTTLING;
 import static com.android.server.net.NetworkStatsFactory.CONFIG_PER_UID_TAG_THROTTLING_THRESHOLD;
 import static com.android.server.net.NetworkStatsFactory.kernelToTag;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -48,6 +47,7 @@ import android.content.Context;
 import android.net.NetworkStats;
 import android.net.TrafficStats;
 import android.net.UnderlyingNetworkInfo;
+import android.os.Build;
 import android.os.SystemClock;
 
 import androidx.test.InstrumentationRegistry;
@@ -80,7 +80,7 @@ import java.util.HashMap;
 /** Tests for {@link NetworkStatsFactory}. */
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class NetworkStatsFactoryTest extends NetworkStatsBaseTest {
     private static final String CLAT_PREFIX = "v4-";
     private static final int TEST_TAGS_PER_UID_THRESHOLD = 10;

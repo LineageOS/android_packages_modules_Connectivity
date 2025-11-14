@@ -147,6 +147,23 @@ public final class LinkPropertiesUtils {
     }
 
     /**
+     * Compares the all addresses including stacked addresses in {@code left} LinkProperties with
+     * {@code right} LinkProperties, examining only addresses on the base link.
+     *
+     * @param left A LinkProperties with the old list of all addresses.
+     * @param right A LinkProperties with the new list of all addresses.
+     * @return the differences between the addresses.
+     */
+    public static @NonNull CompareResult<LinkAddress> compareAllAddresses(
+            @Nullable LinkProperties left, @Nullable LinkProperties right) {
+        /*
+         * Same logic as compareAddresses()
+         */
+        return new CompareResult<>(left != null ? left.getAllLinkAddresses() : null,
+                right != null ? right.getAllLinkAddresses() : null);
+    }
+
+    /**
      * Compares {@code left} {@code LinkProperties} allLinkAddresses against the {@code right}.
      *
      * @param left A LinkProperties or null

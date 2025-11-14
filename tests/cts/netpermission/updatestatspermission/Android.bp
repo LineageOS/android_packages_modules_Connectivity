@@ -39,4 +39,5 @@ android_test {
     ],
     data: [":ConnectivityTestPreparer"],
     host_required: ["net-tests-utils-host-common"],
+    host_common_data: [":net-tests-utils-host-common"],
 }

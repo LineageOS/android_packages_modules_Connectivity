@@ -19,6 +19,7 @@ package com.android.net.module.util;
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_ERROR;
 import static android.os.MessageQueue.OnFileDescriptorEventListener.EVENT_INPUT;
 
+import android.annotation.Nullable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -218,12 +219,16 @@ public class RealtimeScheduler {
      *
      * If delayMs is less than or equal to 0, the message will be sent immediately.
      *
-     * @param msg the message to be sent
+     * @param what Value to assign to the returned Message.what field.
+     * @param arg1 Value to assign to the returned Message.arg1 field.
+     * @param arg2 Value to assign to the returned Message.arg2 field.
+     * @param obj Value to assign to the returned Message.obj field.
      * @param delayMs the delay time in milliseconds
      * @return true if the message is scheduled successfully, false otherwise.
      */
-    public boolean sendDelayedMessage(Message msg, long delayMs) {
-
+    public boolean sendDelayedMessage(int what, int arg1, int arg2, @Nullable Object obj,
+            long delayMs) {
+        final Message msg = mHandler.obtainMessage(what, arg1, arg2, obj);
         return enqueueTask(new MessageTask(msg, SystemClock.elapsedRealtime() + delayMs), delayMs);
     }
 

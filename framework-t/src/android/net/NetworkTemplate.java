@@ -37,6 +37,10 @@ import static android.net.NetworkStats.ROAMING_ALL;
 import static android.net.NetworkStats.ROAMING_NO;
 import static android.net.NetworkStats.ROAMING_YES;
 
+import static com.android.net.module.util.NetworkCapabilitiesUtils.TYPE_TEST;
+
+import static java.util.Objects.requireNonNull;
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -53,6 +57,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.BitUtils;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.NetworkIdentityUtils;
 
@@ -87,6 +92,8 @@ public final class NetworkTemplate implements Parcelable {
             MATCH_BLUETOOTH,
             MATCH_PROXY,
             MATCH_CARRIER,
+            MATCH_TEST,
+            MATCH_ALL,
     })
     public @interface TemplateMatchRule{}
 
@@ -116,6 +123,13 @@ public final class NetworkTemplate implements Parcelable {
      */
     @VisibleForTesting
     public static final int MATCH_TEST = 11;
+    /**
+     * Match rule to match networks with other filters inside the template.
+     *
+     * Note that exactly one transport type is needed to build the template with this match rule.
+     * @hide
+     */
+    public static final int MATCH_ALL = 12;
 
     // TODO: Remove this and replace all callers with WIFI_NETWORK_KEY_ALL.
     /** @hide */
@@ -135,6 +149,10 @@ public final class NetworkTemplate implements Parcelable {
      * {@code TelephonyManager.NETWORK_TYPE_*} constants, and thus needs to stay in sync.
      */
     public static final int NETWORK_TYPE_ALL = -1;
+
+    /** @hide */
+    @VisibleForTesting
+    public static final long TRANSPORT_TYPES_ALL = 0L;
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -177,6 +195,7 @@ public final class NetworkTemplate implements Parcelable {
             case MATCH_PROXY:
             case MATCH_CARRIER:
             case MATCH_TEST:
+            case MATCH_ALL:
                 return true;
 
             default:
@@ -408,6 +427,8 @@ public final class NetworkTemplate implements Parcelable {
     // Bitfield containing OEM network properties{@code NetworkIdentity#OEM_*}.
     private final int mOemManaged;
 
+    private final long mTransportTypesBits;
+
     private static void checkValidMatchSubscriberIds(int matchRule, String[] matchSubscriberIds) {
         switch (matchRule) {
             // CARRIER templates must always specify a valid subscriber ID.
@@ -457,7 +478,7 @@ public final class NetworkTemplate implements Parcelable {
                 subscriberId != null ? new String[] { subscriberId } : new String[0],
                 wifiNetworkKey != null ? new String[] { wifiNetworkKey } : new String[0],
                 getMeterednessForBackwardsCompatibility(matchRule), ROAMING_ALL,
-                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL);
+                DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL, TRANSPORT_TYPES_ALL);
         if (matchRule == 6 || matchRule == 7) {
             Log.e(TAG, "Use MATCH_MOBILE with empty subscriberIds or MATCH_WIFI with empty "
                     + "wifiNetworkKeys instead of template with matchRule=" + matchRule);
@@ -493,7 +514,7 @@ public final class NetworkTemplate implements Parcelable {
                 wifiNetworkKey != null ? new String[] { wifiNetworkKey } : new String[0],
                 getMeterednessForBackwardsCompatibility(matchRule),
                 ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL,
-                OEM_MANAGED_ALL);
+                OEM_MANAGED_ALL, TRANSPORT_TYPES_ALL);
         // TODO : this is part of hidden-o txt, does that mean it should be annotated with
         // @UnsupportedAppUsage(maxTargetSdk = O) ? If yes, can't throwAtLeastU() lest apps
         // targeting O- crash on those devices.
@@ -510,16 +531,17 @@ public final class NetworkTemplate implements Parcelable {
         // subscriberIds.
         this(getBackwardsCompatibleMatchRule(matchRule),
                 matchSubscriberIds == null ? new String[]{} : matchSubscriberIds,
-                matchWifiNetworkKeys, metered, roaming, defaultNetwork, ratType, oemManaged);
+                matchWifiNetworkKeys, metered, roaming, defaultNetwork, ratType, oemManaged,
+                TRANSPORT_TYPES_ALL);
         throwAtLeastU();
     }
 
     /** @hide */
     public NetworkTemplate(int matchRule, String[] matchSubscriberIds,
             String[] matchWifiNetworkKeys, int metered, int roaming, int defaultNetwork,
-            int ratType, int oemManaged) {
-        Objects.requireNonNull(matchWifiNetworkKeys);
-        Objects.requireNonNull(matchSubscriberIds);
+            int ratType, int oemManaged, long transportTypesBits) {
+        requireNonNull(matchWifiNetworkKeys);
+        requireNonNull(matchSubscriberIds);
         mMatchRule = matchRule;
         mMatchSubscriberIds = matchSubscriberIds;
         mMatchWifiNetworkKeys = matchWifiNetworkKeys;
@@ -528,6 +550,7 @@ public final class NetworkTemplate implements Parcelable {
         mDefaultNetwork = defaultNetwork;
         mRatType = ratType;
         mOemManaged = oemManaged;
+        mTransportTypesBits = transportTypesBits;
         checkValidMatchSubscriberIds(matchRule, matchSubscriberIds);
         if (!isKnownMatchRule(matchRule)) {
             throw new IllegalArgumentException("Unknown network template rule " + matchRule
@@ -544,6 +567,7 @@ public final class NetworkTemplate implements Parcelable {
         mDefaultNetwork = in.readInt();
         mRatType = in.readInt();
         mOemManaged = in.readInt();
+        mTransportTypesBits = in.readLong();
     }
 
     @Override
@@ -556,6 +580,7 @@ public final class NetworkTemplate implements Parcelable {
         dest.writeInt(mDefaultNetwork);
         dest.writeInt(mRatType);
         dest.writeInt(mOemManaged);
+        dest.writeLong(mTransportTypesBits);
     }
 
     @Override
@@ -588,6 +613,9 @@ public final class NetworkTemplate implements Parcelable {
         if (mOemManaged != OEM_MANAGED_ALL) {
             builder.append(", oemManaged=").append(getOemManagedNames(mOemManaged));
         }
+        if (mTransportTypesBits != TRANSPORT_TYPES_ALL) {
+            builder.append(", transportTypes=").append(Arrays.toString(getTransportTypes()));
+        }
         return builder.toString();
     }
 
@@ -595,7 +623,7 @@ public final class NetworkTemplate implements Parcelable {
     public int hashCode() {
         return Objects.hash(mMatchRule, Arrays.hashCode(mMatchSubscriberIds),
                 Arrays.hashCode(mMatchWifiNetworkKeys), mMetered, mRoaming, mDefaultNetwork,
-                mRatType, mOemManaged);
+                mRatType, mOemManaged, mTransportTypesBits);
     }
 
     @Override
@@ -609,7 +637,8 @@ public final class NetworkTemplate implements Parcelable {
                     && mRatType == other.mRatType
                     && mOemManaged == other.mOemManaged
                     && Arrays.equals(mMatchSubscriberIds, other.mMatchSubscriberIds)
-                    && Arrays.equals(mMatchWifiNetworkKeys, other.mMatchWifiNetworkKeys);
+                    && Arrays.equals(mMatchWifiNetworkKeys, other.mMatchWifiNetworkKeys)
+                    && mTransportTypesBits == other.mTransportTypesBits;
         }
         return false;
     }
@@ -633,8 +662,15 @@ public final class NetworkTemplate implements Parcelable {
 
     /**
      * Get match rule of the template. See {@code MATCH_*}.
+     *
+     * @throws IllegalStateException if the template is not built from constructors with
+     * match rule, which can occur if the template was created with the
+     * {@link Builder#Builder()} constructor.
      */
     public int getMatchRule() {
+        if (MATCH_ALL == mMatchRule) {
+            throw new IllegalStateException("Match rule is not set");
+        }
         return mMatchRule;
     }
 
@@ -708,6 +744,30 @@ public final class NetworkTemplate implements Parcelable {
     }
 
     /**
+     * Get the transport type filter of the template.
+     *
+     * This is only valid when the template is constructed by using
+     * {@link NetworkTemplate.Builder}.
+     * @hide
+     */
+    public int getTransportType() {
+        if (mTransportTypesBits == TRANSPORT_TYPES_ALL) {
+            throw new IllegalStateException("Transport was not set");
+        }
+        return getTransportTypes()[0];
+    }
+
+    /**
+     * Get the transport types filter of the template.
+     *
+     * @hide
+     */
+    @NonNull
+    public int[] getTransportTypes() {
+        return BitUtils.unpackBits(mTransportTypesBits);
+    }
+
+    /**
      * Get the OEM managed filter of the template. See {@code OEM_MANAGED_*} or
      * {@code android.net.NetworkIdentity#OEM_*}.
      */
@@ -723,12 +783,14 @@ public final class NetworkTemplate implements Parcelable {
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public boolean matches(@NonNull NetworkIdentity ident) {
-        Objects.requireNonNull(ident);
+        requireNonNull(ident);
         if (!matchesMetered(ident)) return false;
         if (!matchesRoaming(ident)) return false;
         if (!matchesDefaultNetwork(ident)) return false;
         if (!matchesOemNetwork(ident)) return false;
 
+        // TODO: Convert match rule handling into transport type matches and
+        //  eliminate the need of legacy network types.
         switch (mMatchRule) {
             case MATCH_MOBILE:
                 return matchesMobile(ident);
@@ -744,6 +806,8 @@ public final class NetworkTemplate implements Parcelable {
                 return matchesCarrier(ident);
             case MATCH_TEST:
                 return matchesTest(ident);
+            case MATCH_ALL:
+                return matchesTransportTypes(ident);
             default:
                 // We have no idea what kind of network template we are, so we
                 // just claim not to match anything.
@@ -774,6 +838,13 @@ public final class NetworkTemplate implements Parcelable {
             || (mOemManaged == OEM_MANAGED_YES
                     && ident.mOemManaged != OEM_NONE)
             || (mOemManaged == ident.mOemManaged);
+    }
+
+    private boolean matchesTransportTypes(NetworkIdentity ident) {
+        if (this.mTransportTypesBits == TRANSPORT_TYPES_ALL) return true;
+        // Otherwise, for a match, the identity must possess ALL transport types
+        // specified in the template.
+        return (this.mTransportTypesBits & ident.mTransportTypesBits) == this.mTransportTypesBits;
     }
 
     private boolean matchesCollapsedRatType(NetworkIdentity ident) {
@@ -870,7 +941,7 @@ public final class NetworkTemplate implements Parcelable {
      * all test networks would be matched.
      */
     private boolean matchesTest(NetworkIdentity ident) {
-        return ident.mType == NetworkIdentity.TYPE_TEST
+        return ident.mType == TYPE_TEST
                 && ((CollectionUtils.isEmpty(mMatchWifiNetworkKeys)
                 || CollectionUtils.contains(mMatchWifiNetworkKeys, ident.mWifiNetworkKey)));
     }
@@ -908,6 +979,8 @@ public final class NetworkTemplate implements Parcelable {
                 return "CARRIER";
             case MATCH_TEST:
                 return "TEST";
+            case MATCH_ALL:
+                return "ALL";
             default:
                 return "UNKNOWN(" + matchRule + ")";
         }
@@ -1002,7 +1075,8 @@ public final class NetworkTemplate implements Parcelable {
                         (template.mMatchRule == MATCH_MOBILE
                                 || template.mMatchRule == MATCH_CARRIER)
                                 ? METERED_YES : METERED_ALL,
-                        ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL);
+                        ROAMING_ALL, DEFAULT_NETWORK_ALL, NETWORK_TYPE_ALL, OEM_MANAGED_ALL,
+                        TRANSPORT_TYPES_ALL);
             }
         }
 
@@ -1039,6 +1113,7 @@ public final class NetworkTemplate implements Parcelable {
         private int mRoaming;
         private int mDefaultNetwork;
         private int mRatType;
+        private long mTransportTypesBits;
 
         // Bitfield containing OEM network properties {@code NetworkIdentity#OEM_*}.
         private int mOemManaged;
@@ -1057,6 +1132,18 @@ public final class NetworkTemplate implements Parcelable {
             mDefaultNetwork = DEFAULT_NETWORK_ALL;
             mRatType = NETWORK_TYPE_ALL;
             mOemManaged = OEM_MANAGED_ALL;
+            mTransportTypesBits = TRANSPORT_TYPES_ALL;
+        }
+
+        /**
+         * Creates a new Builder to construct NetworkTemplate objects.
+         *
+         * Note that {@link #setTransportType} MUST be called to specify
+         * the transport type filter.
+         * @hide
+         */
+        public Builder() {
+            this(MATCH_ALL);
         }
 
         /**
@@ -1068,7 +1155,7 @@ public final class NetworkTemplate implements Parcelable {
          */
         @NonNull
         public Builder setSubscriberIds(@NonNull Set<String> subscriberIds) {
-            Objects.requireNonNull(subscriberIds);
+            requireNonNull(subscriberIds);
             mMatchSubscriberIds.clear();
             mMatchSubscriberIds.addAll(subscriberIds);
             return this;
@@ -1089,7 +1176,7 @@ public final class NetworkTemplate implements Parcelable {
          */
         @NonNull
         public Builder setWifiNetworkKeys(@NonNull Set<String> wifiNetworkKeys) {
-            Objects.requireNonNull(wifiNetworkKeys);
+            requireNonNull(wifiNetworkKeys);
             for (String key : wifiNetworkKeys) {
                 if (key == null) {
                     throw new IllegalArgumentException("Null is not a valid key");
@@ -1152,6 +1239,44 @@ public final class NetworkTemplate implements Parcelable {
         }
 
         /**
+         * Sets the transport type filter for this template.
+         *
+         * This is only valid when the template is constructed by using
+         * {@link NetworkTemplate.Builder}.
+         *
+         * @param transportType {@code NetworkCapabilities#TRANSPORT_*} constant.
+         * @return This {@code Builder} for chaining.
+           @hide
+         */
+        @NonNull
+        public Builder setTransportType(int transportType) {
+            if (mMatchRule != MATCH_ALL) {
+                throw new IllegalArgumentException("setTransportType is only supported for builder"
+                        + " built by default constructor.");
+            }
+            return setTransportTypes(new int[] {transportType});
+        }
+
+        /**
+         * Sets the transport types filter for this template.
+         *
+         * - If the array is empty, matches any transport type (wildcard).
+         * - If not empty, matches networks possessing ALL specified transport types.
+         * For example, a set with {@code TRANSPORT_WIFI} and {@code TRANSPORT_VPN}
+         * requires a network to have both.
+         *
+         * @param transportTypes The array of {@code NetworkCapabilities#TRANSPORT_*} constants.
+         *                       An empty array acts as a wildcard for all transports.
+         * @return This {@code Builder} for chaining.
+         * @hide
+         */
+        @NonNull
+        private Builder setTransportTypes(int[] transportTypes) {
+            mTransportTypesBits = BitUtils.packBits(transportTypes);
+            return this;
+        }
+
+        /**
          * Set the OEM managed filter.
          *
          * @param oemManaged the match rule to match different type of OEM managed network or
@@ -1178,6 +1303,7 @@ public final class NetworkTemplate implements Parcelable {
 
         private void assertRequestableParameters() {
             validateWifiNetworkKeys();
+            validateTransportTypes();
             // TODO: Check all the input are legitimate.
         }
 
@@ -1187,6 +1313,22 @@ public final class NetworkTemplate implements Parcelable {
                     && !mMatchWifiNetworkKeys.isEmpty()) {
                 throw new IllegalArgumentException("Trying to build non wifi match rule: "
                         + mMatchRule + " with wifi network keys");
+            }
+        }
+
+        /**
+         * Validates that:
+         * 1. For MATCH_ALL, exactly one transport type is specified.
+         * 2. For all other match rules, no transport type should be specified.
+         */
+        private void validateTransportTypes() {
+            final int transportCount = Long.bitCount(mTransportTypesBits);
+            if (mMatchRule != MATCH_ALL && transportCount != 0) {
+                throw new IllegalArgumentException(
+                        "Transports type can't be set with a match rule.");
+            } else if (mMatchRule == MATCH_ALL && transportCount != 1) {
+                throw new IllegalArgumentException(
+                        "Transport type not set (use Builder#setTransportType).");
             }
         }
 
@@ -1201,7 +1343,7 @@ public final class NetworkTemplate implements Parcelable {
             return new NetworkTemplate(mMatchRule,
                     mMatchSubscriberIds.toArray(new String[0]),
                     mMatchWifiNetworkKeys.toArray(new String[0]), mMetered, mRoaming,
-                    mDefaultNetwork, mRatType, mOemManaged);
+                    mDefaultNetwork, mRatType, mOemManaged, mTransportTypesBits);
         }
     }
 }

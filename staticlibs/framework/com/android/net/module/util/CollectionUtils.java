@@ -19,6 +19,7 @@ package com.android.net.module.util;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.util.ArrayMap;
+import android.util.ArraySet;
 import android.util.Pair;
 import android.util.SparseArray;
 
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -49,6 +51,18 @@ public final class CollectionUtils {
      */
     public static <T> boolean isEmpty(@Nullable Collection<T> collection) {
         return collection == null || collection.isEmpty();
+    }
+
+    /**
+     * Convert an int array to a Integer set.
+     */
+    @NonNull
+    public static Set<Integer> intArrayToSet(@NonNull int[] array) {
+        final Set<Integer> set = new ArraySet<>();
+        for (int item : array) {
+            set.add(item);
+        }
+        return set;
     }
 
     /**

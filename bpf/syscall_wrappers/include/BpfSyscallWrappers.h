@@ -235,15 +235,32 @@ inline int detachSingleProgram(bpf_attach_type type, const borrowed_fd& prog_fd,
 }
 
 // Available in 4.12 and later kernels.
-inline int runProgram(const borrowed_fd& prog_fd, const void* data,
-                      const uint32_t data_size) {
-    return bpf(BPF_PROG_RUN, {
-                                     .test = {
-                                             .prog_fd = static_cast<__u32>(prog_fd.get()),
-                                             .data_size_in = data_size,
-                                             .data_in = ptr_to_u64(data),
-                                     },
-                             });
+inline int runProgram(const borrowed_fd &prog_fd, const void *data,
+                      const uint32_t data_size, const void *ctx = nullptr,
+                      const uint32_t ctx_size = 0) {
+    return bpf(BPF_PROG_RUN,
+               {
+                   .test =
+                       {
+                           .prog_fd = static_cast<__u32>(prog_fd.get()),
+                           .data_size_in = data_size,
+                           .data_in = ptr_to_u64(data),
+                           .ctx_size_in = ctx_size,
+                           .ctx_in = ptr_to_u64(ctx),
+                       },
+               });
+}
+
+// 4.14+: returns next id > prog_id, or 0 (and sets errno)
+inline uint32_t bpfGetNextProgId(const uint32_t prog_id) {
+    bpf_attr arg = { .start_id = prog_id };
+    return bpf(BPF_PROG_GET_NEXT_ID, &arg) ? 0 : arg.next_id;
+}
+
+// 4.14+: returns next id > map_id, or 0 (and sets errno)
+inline uint32_t bpfGetNextMapId(const uint32_t map_id) {
+    bpf_attr arg = { .start_id = map_id };
+    return bpf(BPF_MAP_GET_NEXT_ID, &arg) ? 0 : arg.next_id;
 }
 
 // BPF_OBJ_GET_INFO_BY_FD requires 4.14+ kernel
@@ -260,7 +277,7 @@ inline int bpfGetFd ## NAME(const borrowed_fd& fd) { \
         .info_len = sizeof(info), \
         .info = ptr_to_u64(&info), \
     }}; \
-    int rv = bpf(BPF_OBJ_GET_INFO_BY_FD, attr); \
+    int rv = bpf(BPF_OBJ_GET_INFO_BY_FD, &attr); \
     if (rv) return rv; \
     if (attr.info.info_len < offsetof(bpf_ ## TYPE ## _info, FIELD) + sizeof(info.FIELD)) { \
         errno = EOPNOTSUPP; \

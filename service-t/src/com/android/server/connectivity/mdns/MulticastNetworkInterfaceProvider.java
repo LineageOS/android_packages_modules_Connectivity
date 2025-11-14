@@ -21,12 +21,15 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.net.Network;
 
+import androidx.annotation.GuardedBy;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.SharedLog;
 
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -44,10 +47,11 @@ public class MulticastNetworkInterfaceProvider {
     private final SharedLog sharedLog;
     private static final boolean PREFER_IPV6 = MdnsConfigs.preferIpv6();
 
+    @GuardedBy("this")
     private final List<NetworkInterfaceWrapper> multicastNetworkInterfaces = new ArrayList<>();
     // Only modifiable from tests.
     @VisibleForTesting
-    ConnectivityMonitor connectivityMonitor;
+    ConnectivityMonitorWithConnectivityManager connectivityMonitor;
     private volatile boolean connectivityChanged = true;
 
     @SuppressWarnings("nullness:methodref.receiver.bound")
@@ -91,6 +95,7 @@ public class MulticastNetworkInterfaceProvider {
         return new ArrayList<>(multicastNetworkInterfaces);
     }
 
+    @GuardedBy("this")
     private void updateMulticastNetworkInterfaces() {
         multicastNetworkInterfaces.clear();
         List<NetworkInterfaceWrapper> networkInterfaceWrappers = getNetworkInterfaces();
@@ -147,6 +152,15 @@ public class MulticastNetworkInterfaceProvider {
     @Nullable
     public Network getAvailableNetwork() {
         return connectivityMonitor.getAvailableNetwork();
+    }
+
+    /**
+     * @see ConnectivityMonitorWithConnectivityManager#guessNetworkOfRemoteHost(List, InetAddress)
+     */
+    @Nullable
+    public synchronized SocketKey guessNetworkOfRemoteHost(@NonNull InetAddress address) {
+        return connectivityMonitor.guessNetworkOfRemoteHost(
+                getMulticastNetworkInterfaces(), address);
     }
 
     /*** Check whether given network interface can support mdns */

@@ -67,12 +67,11 @@ import com.android.server.connectivity.ProxyTracker
 import com.android.server.connectivity.SatelliteAccessController
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.DeviceInfoUtils
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
 import java.util.function.BiConsumer
-import java.util.function.Consumer
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -303,7 +302,7 @@ class ConnectivityServiceIntegrationTest {
 
         override fun makeSatelliteAccessController(
             context: Context,
-            updateSatellitePreferredUid: Consumer<MutableSet<Int>>?,
+            updateSatellitePreferredUid: BiConsumer<Set<Int>, Set<Int>>,
             connectivityServiceInternalHandler: Handler
         ): SatelliteAccessController? = mock(
             SatelliteAccessController::class.java

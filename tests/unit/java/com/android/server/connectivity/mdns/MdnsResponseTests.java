@@ -18,8 +18,6 @@ package com.android.server.connectivity.mdns;
 
 import static android.net.InetAddresses.parseNumericAddress;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -30,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static java.util.Collections.emptyList;
 
 import android.net.Network;
+import android.os.Build;
 
 import com.android.net.module.util.HexDump;
 import com.android.testutils.DevSdkIgnoreRule;
@@ -45,7 +44,7 @@ import java.util.List;
 // The record test data does not use compressed names (label pointers), since that would require
 // additional data to populate the label dictionary accordingly.
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class MdnsResponseTests {
     private static final String TAG = "MdnsResponseTests";
     // MDNS response packet for name "test" with an IPv4 address of 10.1.2.3

@@ -54,6 +54,8 @@ public class FeatureVersions {
     // The flag that enables this feature is in NetworkStack.
     public static final long FEATURE_DDR_IN_CONNECTIVITY =
             CONNECTIVITY_MODULE_ID + 35_11_00_000L;
+    // DnsResolver needs to support RESOLV_TRY_ALL_SERVERS when querying the SVCB record for
+    // the feature to behave properly.
     public static final long FEATURE_DDR_IN_DNSRESOLVER =
-            DNS_RESOLVER_MODULE_ID + 35_11_00_000L;
+            DNS_RESOLVER_MODULE_ID + 36_07_00_000L;
 }

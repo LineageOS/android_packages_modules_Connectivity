@@ -19,10 +19,10 @@ package android.net.netstats
 import android.net.NetworkIdentity
 import android.net.NetworkStatsCollection
 import android.net.NetworkStatsHistory
+import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.SC_V2
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,7 +36,7 @@ import kotlin.test.fail
 class NetworkStatsCollectionTest {
     @Rule
     @JvmField
-    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = SC_V2)
+    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = Build.VERSION_CODES.S_V2)
 
     @Test
     fun testBuilder() {

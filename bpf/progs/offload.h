@@ -39,7 +39,12 @@
     ERR(NO_STATS_ENTRY)       \
     ERR(NO_LIMIT_ENTRY)       \
     ERR(BELOW_IPV4_MTU)       \
+    ERR(ABOVE_IPV4_PMTU)      \
+    ERR(ABOVE_IPV4_PMTU_GSO)  \
     ERR(BELOW_IPV6_MTU)       \
+    ERR(ABOVE_IPV6_PMTU)      \
+    ERR(ABOVE_IPV6_PMTU_GSO)  \
+    ERR(UNKNOWN_IPV6_GSO)     \
     ERR(LIMIT_REACHED)        \
     ERR(CHANGE_HEAD_FAILED)   \
     ERR(TOO_SHORT)            \

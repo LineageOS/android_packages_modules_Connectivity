@@ -41,8 +41,9 @@ import static android.system.OsConstants.RT_SCOPE_UNIVERSE;
 
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTH;
 import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
-import static com.android.networkstack.tethering.TetheringConfiguration.TETHERING_LOCAL_NETWORK_AGENT;
 import static com.android.networkstack.tethering.TetheringConfiguration.USE_SYNC_SM;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHERING_LOCAL_NETWORK_AGENT;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.WIFIP2PGO_LOCAL_NETWORK_AGENT;
 import static com.android.networkstack.tethering.util.PrefixUtils.asIpPrefix;
 import static com.android.networkstack.tethering.util.TetheringMessageBase.BASE_IPSERVER;
 import static com.android.networkstack.tethering.util.TetheringUtils.getTransportTypeForTetherableType;
@@ -334,7 +335,8 @@ public class IpServer extends StateMachineShim {
     private final Handler mHandler;
     private final Context mContext;
 
-    private final boolean mSupportLocalAgent;
+    private final boolean mSupportTetheringLocalAgent;
+    private final boolean mSupportWifiP2pGroupOwnerLocalAgent;
 
     // This will be null if the TetheredState is not entered or feature not supported.
     // This will be only accessed from the IpServer handler thread.
@@ -380,8 +382,10 @@ public class IpServer extends StateMachineShim {
         mServingMode = STATE_AVAILABLE;
 
         // Tethering network agent is supported on V+, and will be rolled out gradually.
-        mSupportLocalAgent = SdkLevel.isAtLeastV()
+        mSupportTetheringLocalAgent = SdkLevel.isAtLeastV()
                 && mDeps.isFeatureEnabled(mContext, TETHERING_LOCAL_NETWORK_AGENT);
+        mSupportWifiP2pGroupOwnerLocalAgent = mSupportTetheringLocalAgent
+                && mDeps.isFeatureEnabled(mContext, WIFIP2PGO_LOCAL_NETWORK_AGENT);
 
         mInitialState = new InitialState();
         mLocalHotspotState = new LocalHotspotState();
@@ -1162,9 +1166,8 @@ public class IpServer extends StateMachineShim {
 
         @SuppressLint("NewApi")
         private void startServingInterface() {
-            // TODO: Enable Network Agent for Wifi P2P Group Owner mode when Network Agent
-            //  for Group Client mode is supported.
-            if (mSupportLocalAgent && getScope() == CONNECTIVITY_SCOPE_GLOBAL) {
+            if (mSupportTetheringLocalAgent && (mSupportWifiP2pGroupOwnerLocalAgent
+                    || getScope() != CONNECTIVITY_SCOPE_LOCAL)) {
                 try {
                     mTetheringAgent = mDeps.makeNetworkAgent(mContext, Looper.myLooper(), TAG,
                             mInterfaceType, mLinkProperties);

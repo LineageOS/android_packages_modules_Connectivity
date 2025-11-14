@@ -17,9 +17,9 @@
 package com.android.server.connectivity.mdns.internal;
 
 import android.os.Handler;
-import android.os.Message;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.net.module.util.RealtimeScheduler;
 import com.android.server.connectivity.mdns.Scheduler;
@@ -35,8 +35,9 @@ public class MdnsRealtimeScheduler extends RealtimeScheduler implements
         super(handler);
     }
 
-    public boolean sendDelayedMessage(@NonNull Message message, long delayMs) {
-        return super.sendDelayedMessage(message, delayMs);
+    public boolean sendDelayedMessage(int what, int arg1, int arg2, @Nullable Object obj,
+            long delayMs) {
+        return super.sendDelayedMessage(what, arg1, arg2, obj, delayMs);
     }
 
     public void removeDelayedMessage(int what) {

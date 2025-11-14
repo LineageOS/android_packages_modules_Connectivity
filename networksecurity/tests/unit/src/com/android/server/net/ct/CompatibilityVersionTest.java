@@ -120,7 +120,7 @@ public class CompatibilityVersionTest {
 
         try (InputStream inputStream = asStream(logList)) {
             assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
-                    .isEqualTo(getSuccessfulUpdateStatus());
+                    .isEqualTo(getSuccessfulUpdateStatus(LOG_LIST_TIMESTAMP));
         }
 
         File logListFile = mCompatVersion.getLogsFile();
@@ -147,9 +147,9 @@ public class CompatibilityVersionTest {
 
     @Test
     public void testCompatibilityVersion_deleteSuccessfully() throws Exception {
-        try (InputStream inputStream = asStream(makeLogList(/* version= */ "123"))) {
+        try (InputStream inputStream = asStream(makeLogList(/* version= */ "123", "any_content"))) {
             assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
-                    .isEqualTo(getSuccessfulUpdateStatus());
+                    .isEqualTo(getSuccessfulUpdateStatus(LOG_LIST_TIMESTAMP));
         }
 
         mCompatVersion.delete();
@@ -182,27 +182,35 @@ public class CompatibilityVersionTest {
         JSONObject newLogList = makeLogList(existingVersion, "i_am_the_real_content");
         try (InputStream inputStream = asStream(newLogList)) {
             assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
-                    .isEqualTo(getSuccessfulUpdateStatus());
+                    .isEqualTo(getSuccessfulUpdateStatus(LOG_LIST_TIMESTAMP));
         }
 
         assertThat(readAsString(logsListFile)).isEqualTo(newLogList.toString());
     }
 
     @Test
-    public void testCompatibilityVersion_versionAlreadyExists_installFails() throws Exception {
+    public void testCompatibilityVersion_versionAlreadyExists_earlierTimestamp_installFails()
+            throws Exception {
         String existingVersion = "666";
-        JSONObject existingLogList = makeLogList(existingVersion, "i_was_installed_successfully");
+        long existingTimestamp = 123456;
+        JSONObject existingLogList =
+                makeLogList(existingVersion, "i_was_installed_successfully", existingTimestamp);
         try (InputStream inputStream = asStream(existingLogList)) {
             assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
-                    .isEqualTo(getSuccessfulUpdateStatus());
+                    .isEqualTo(getSuccessfulUpdateStatus(existingTimestamp));
         }
 
-        try (InputStream inputStream = asStream(makeLogList(existingVersion, "i_am_ignored"))) {
+        try (InputStream inputStream =
+                asStream(
+                        makeLogList(
+                                existingVersion,
+                                "i_am_same_version_but_older",
+                                existingTimestamp - 1))) {
             assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
                     .isEqualTo(
                             LogListUpdateStatus.builder()
                                     .setState(VERSION_ALREADY_EXISTS)
-                                    .setLogListTimestamp(LOG_LIST_TIMESTAMP)
+                                    .setLogListTimestamp(existingTimestamp - 1)
                                     .build());
         }
 
@@ -210,24 +218,48 @@ public class CompatibilityVersionTest {
                 .isEqualTo(existingLogList.toString());
     }
 
+    @Test
+    public void testCompatibilityVersion_versionAlreadyExists_laterTimestamp_installSucceeds()
+            throws Exception {
+        String existingVersion = "666";
+        long existingTimestamp = 123456L;
+        JSONObject existingLogList =
+                makeLogList(existingVersion, "i_was_installed_successfully", existingTimestamp);
+        try (InputStream inputStream = asStream(existingLogList)) {
+            assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
+                    .isEqualTo(getSuccessfulUpdateStatus(existingTimestamp));
+        }
+
+        JSONObject newLogList =
+                makeLogList(existingVersion, "i_am_same_version_but_newer", existingTimestamp + 1);
+        try (InputStream inputStream = asStream(newLogList)) {
+            assertThat(mCompatVersion.install(inputStream, LogListUpdateStatus.builder()))
+                    .isEqualTo(getSuccessfulUpdateStatus(existingTimestamp + 1));
+        }
+
+        assertThat(readAsString(mCompatVersion.getLogsFile())).isEqualTo(newLogList.toString());
+    }
+
     private static InputStream asStream(JSONObject logList) throws IOException {
         return new ByteArrayInputStream(logList.toString().getBytes());
     }
 
-    private static JSONObject makeLogList(String version) throws JSONException {
+    private static JSONObject makeLogList(String version, String content) throws JSONException {
+        return makeLogList(version, content, LOG_LIST_TIMESTAMP);
+    }
+
+    private static JSONObject makeLogList(String version, String content, long timestamp)
+            throws JSONException {
         return new JSONObject()
                 .put("version", version)
-                .put("log_list_timestamp", LOG_LIST_TIMESTAMP);
+                .put("log_list_timestamp", timestamp)
+                .put("content", content);
     }
 
-    private static JSONObject makeLogList(String version, String content) throws JSONException {
-        return makeLogList(version).put("content", content);
-    }
-
-    private static LogListUpdateStatus getSuccessfulUpdateStatus() {
+    private static LogListUpdateStatus getSuccessfulUpdateStatus(long timestamp) {
         return LogListUpdateStatus.builder()
                 .setState(SUCCESS)
-                .setLogListTimestamp(LOG_LIST_TIMESTAMP)
+                .setLogListTimestamp(timestamp)
                 .build();
     }
 

@@ -35,8 +35,8 @@ import androidx.test.InstrumentationRegistry
 import com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event
 import com.android.testutils.TestableNetworkCallback.HasNetwork
 import org.junit.After
 import org.junit.Before
@@ -91,7 +91,7 @@ class NetworkScoreTest {
         agentsToCleanUp.forEach {
             Log.i(TAG, "Unregister agent for net ${it.network}")
             it.unregister()
-            agentCleanUpCb.eventuallyExpect<CallbackEntry.Lost> { cb -> cb.network == it.network }
+            agentCleanUpCb.eventuallyExpect<Event.Lost> { cb -> cb.network == it.network }
         }
         mCm.unregisterNetworkCallback(agentCleanUpCb)
 

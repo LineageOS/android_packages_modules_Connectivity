@@ -18,6 +18,7 @@ package com.android.server.connectivity.mdns.util
 
 import android.net.InetAddresses
 import android.os.Build
+import com.android.net.module.util.CollectionUtils
 import com.android.server.connectivity.mdns.MdnsConstants
 import com.android.server.connectivity.mdns.MdnsConstants.FLAG_TRUNCATED
 import com.android.server.connectivity.mdns.MdnsConstants.IPV4_SOCKET_ADDR
@@ -32,17 +33,18 @@ import com.android.server.connectivity.mdns.MdnsServiceInfo
 import com.android.server.connectivity.mdns.MdnsServiceRecord
 import com.android.server.connectivity.mdns.MdnsTextRecord
 import com.android.server.connectivity.mdns.util.MdnsUtils.createQueryDatagramPackets
+import com.android.server.connectivity.mdns.util.MdnsUtils.responseMatchesInstanceNameAndSubtypes
 import com.android.server.connectivity.mdns.util.MdnsUtils.truncateServiceName
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import java.net.DatagramPacket
+import kotlin.test.assertContentEquals
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.DatagramPacket
-import kotlin.test.assertContentEquals
 
 @RunWith(DevSdkIgnoreRunner::class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
@@ -178,8 +180,13 @@ class MdnsUtilsTest {
         val interfaceIndex = 99
         val response = MdnsResponse(0 /* now */, serviceName, interfaceIndex, null /* network */)
         // Set PTR record
-        response.addPointerRecord(MdnsPointerRecord(serviceType.split(".").toTypedArray(),
-                testElapsedRealtime, false /* cacheFlush */, ttlTime, serviceName))
+        response.addPointerRecord(MdnsPointerRecord(
+                serviceType.split(".").toTypedArray(),
+                testElapsedRealtime,
+                false /* cacheFlush */,
+                ttlTime,
+                serviceName
+        ))
         // Set SRV record.
         response.serviceRecord = MdnsServiceRecord(serviceName, testElapsedRealtime,
                 false /* cacheFlush */, ttlTime, 0 /* servicePriority */, 0 /* serviceWeight */,
@@ -189,16 +196,27 @@ class MdnsUtilsTest {
                 testElapsedRealtime, true /* cacheFlush */, 0L /* ttlMillis */,
                 listOf(MdnsServiceInfo.TextEntry.fromString("somedifferent=entry")))
         // Set InetAddress record.
-        response.addInet4AddressRecord(MdnsInetAddressRecord(hostName.split(".").toTypedArray(),
-                testElapsedRealtime, true /* cacheFlush */,
-                0L /* ttlMillis */, InetAddresses.parseNumericAddress(v4Address)))
-        response.addInet6AddressRecord(MdnsInetAddressRecord(hostName.split(".").toTypedArray(),
-                testElapsedRealtime, true /* cacheFlush */,
-                0L /* ttlMillis */, InetAddresses.parseNumericAddress(v6Address)))
+        response.addInet4AddressRecord(MdnsInetAddressRecord(
+                hostName.split(".").toTypedArray(),
+                testElapsedRealtime,
+                true /* cacheFlush */,
+                0L /* ttlMillis */,
+                InetAddresses.parseNumericAddress(v4Address)
+        ))
+        response.addInet6AddressRecord(MdnsInetAddressRecord(
+                hostName.split(".").toTypedArray(),
+                testElapsedRealtime,
+                true /* cacheFlush */,
+                0L /* ttlMillis */,
+                InetAddresses.parseNumericAddress(v6Address)
+        ))
 
         // Convert a MdnsResponse to a MdnsServiceInfo
         val serviceInfo = MdnsUtils.buildMdnsServiceInfoFromResponse(
-                response, serviceType.split(".").toTypedArray(), testElapsedRealtime)
+                response,
+                serviceType.split(".").toTypedArray(),
+                testElapsedRealtime
+        )
 
         assertEquals(serviceInstanceName, serviceInfo.serviceInstanceName)
         assertArrayEquals(serviceType.split(".").toTypedArray(), serviceInfo.serviceType)
@@ -210,7 +228,112 @@ class MdnsUtilsTest {
         assertEquals(v6Address, serviceInfo.ipv6Addresses[0])
         assertEquals(interfaceIndex, serviceInfo.interfaceIndex)
         assertEquals(null, serviceInfo.network)
-        assertEquals(mapOf("somedifferent" to "entry"),
-                serviceInfo.attributes)
+        assertEquals(mapOf("somedifferent" to "entry"), serviceInfo.attributes)
+    }
+
+    private fun createResponse(
+            serviceInstanceName: String,
+            serviceType: String,
+            subType: String? = null
+    ): MdnsResponse {
+        val serviceTypeArray = if (subType != null) {
+            MdnsUtils.constructFullSubtype(
+                serviceType.split(".").toTypedArray(),
+                "_$subType"
+            )
+        } else {
+            serviceType.split(".").toTypedArray()
+        }
+        val serviceNameArray = CollectionUtils.prependArray(
+                String::class.java,
+                serviceTypeArray,
+                serviceInstanceName
+        )
+        val response =
+            MdnsResponse(0 /* now */, serviceNameArray, 99 /* interfaceIndex */, null /* network */)
+        response.addPointerRecord(MdnsPointerRecord(
+                serviceTypeArray,
+                120000L /* receiptTimeMillis */,
+                false /* cacheFlush */,
+                0L /* ttlTime */,
+                serviceNameArray
+        ))
+        return response
+    }
+
+    @Test
+    fun testResponseMatchesInstanceNameAndSubtypes() {
+        val serviceInstanceName = "MyTestService"
+        val serviceType = "_testservice._tcp.local"
+        val subType = "subtype"
+        val response = createResponse(serviceInstanceName, serviceType)
+        val responseWithSubType = createResponse(serviceInstanceName, serviceType, subType)
+
+        // No instance name and subtypes
+        assertTrue(responseMatchesInstanceNameAndSubtypes(
+                response,
+                null /* instanceName */,
+                emptyList() /* subTypes */
+        ))
+        assertTrue(responseMatchesInstanceNameAndSubtypes(
+                responseWithSubType,
+                null /* instanceName */,
+                emptyList() /* subTypes */
+        ))
+        // Has instance name but no subtypes
+        assertTrue(responseMatchesInstanceNameAndSubtypes(
+                response,
+                serviceInstanceName,
+                emptyList() /* subTypes */
+        ))
+        assertTrue(responseMatchesInstanceNameAndSubtypes(
+                responseWithSubType,
+                serviceInstanceName,
+                emptyList() /* subTypes */
+        ))
+        // Has subtypes but no instance name
+        assertFalse(responseMatchesInstanceNameAndSubtypes(
+                response,
+                null /* instanceName */,
+                listOf(subType)
+        ))
+        assertTrue(responseMatchesInstanceNameAndSubtypes(
+                responseWithSubType,
+                null /* instanceName */,
+                listOf(subType)
+        ))
+        // Has both instance name and subtypes
+        assertFalse(responseMatchesInstanceNameAndSubtypes(
+                response,
+                serviceInstanceName,
+                listOf(subType)
+        ))
+        assertTrue(responseMatchesInstanceNameAndSubtypes(
+                responseWithSubType,
+                serviceInstanceName,
+                listOf(subType)
+        ))
+        // Has other instance name
+        assertFalse(responseMatchesInstanceNameAndSubtypes(
+                response,
+                "OtherTestService",
+                emptyList() /* subTypes */
+        ))
+        assertFalse(responseMatchesInstanceNameAndSubtypes(
+                responseWithSubType,
+                "OtherTestService",
+                emptyList() /* subTypes */
+        ))
+        // Has other subtypes
+        assertFalse(responseMatchesInstanceNameAndSubtypes(
+                response,
+                null /* instanceName */,
+                listOf("othersubtype")
+        ))
+        assertFalse(responseMatchesInstanceNameAndSubtypes(
+                responseWithSubType,
+                null /* instanceName */,
+                listOf("othersubtype")
+        ))
     }
 }

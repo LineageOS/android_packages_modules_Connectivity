@@ -116,6 +116,10 @@ apex {
     compat_configs: [
         "connectivity-platform-compat-config",
     ],
+    licenses: [
+        "Android-Apache-2.0",
+        "opensourcerequest",
+    ],
 }
 
 apex_key {
@@ -217,4 +221,22 @@ systemserverclasspath_fragment {
     name: "com.android.tethering-systemserverclasspath-fragment",
     standalone_contents: ["service-connectivity"],
     apex_available: ["com.android.tethering"],
+}
+
+// Extract the version number of the module from the manifest.json, and zip it as a raw resource for
+// usage in android_test "resource_zips" build rules.
+// The manifest.json is updated with new module versions in release branches when versions are cut.
+java_genrule {
+    name: "connectivity-module-version-as-resource-zip",
+    srcs: [
+        "manifest.json",
+    ],
+    out: ["connectivity-module-version-as-resource.zip"],
+    tools: ["soong_zip"],
+
+    cmd: "mkdir -p $(genDir)/res/raw && " +
+        // The manifest has a line with '"version": 361099999'. Grep for the line, then for the int.
+        "grep -Eo '\"version\": *[0-9]+' $(in) | grep -Eo '[0-9]+' > " +
+        "$(genDir)/res/raw/target_module_version && " +
+        "$(location soong_zip) -o $(out) -C $(genDir)/res -D $(genDir)/res",
 }

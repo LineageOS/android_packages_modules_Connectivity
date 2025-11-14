@@ -36,6 +36,7 @@ import android.util.Log;
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.FileDescriptor;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -179,10 +180,11 @@ public class QosSocketFilter extends QosFilter {
     @Override
     public boolean matchesLocalAddress(@NonNull final InetAddress address, final int startPort,
             final int endPort) {
-        if (mQosSocketInfo.getLocalSocketAddress() == null) {
-            return false;
-        }
-        return matchesAddress(mQosSocketInfo.getLocalSocketAddress(), address, startPort,
+        return matchesLocalPrefix(
+                address instanceof Inet4Address
+                        ? new IpPrefix(address, 32)
+                        : new IpPrefix(address, 128),
+                startPort,
                 endPort);
     }
 
@@ -192,11 +194,33 @@ public class QosSocketFilter extends QosFilter {
     @Override
     public boolean matchesRemoteAddress(@NonNull final InetAddress address, final int startPort,
             final int endPort) {
+        return matchesRemotePrefix(
+                address instanceof Inet4Address
+                        ? new IpPrefix(address, 32)
+                        : new IpPrefix(address, 128),
+                startPort,
+                endPort);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean matchesLocalPrefix(
+            @NonNull final IpPrefix ipPrefix, final int startPort, final int endPort) {
+        if (mQosSocketInfo.getLocalSocketAddress() == null) {
+            return false;
+        }
+        return matchesAddress(mQosSocketInfo.getLocalSocketAddress(), ipPrefix, startPort, endPort);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean matchesRemotePrefix(
+            @NonNull final IpPrefix ipPrefix, final int startPort, final int endPort) {
         if (mQosSocketInfo.getRemoteSocketAddress() == null) {
             return false;
         }
-        return matchesAddress(mQosSocketInfo.getRemoteSocketAddress(), address, startPort,
-                endPort);
+        return matchesAddress(
+                mQosSocketInfo.getRemoteSocketAddress(), ipPrefix, startPort, endPort);
     }
 
     /**
@@ -212,25 +236,27 @@ public class QosSocketFilter extends QosFilter {
     }
 
     /**
-     * Called from {@link QosSocketFilter#matchesLocalAddress(InetAddress, int, int)}
-     * and {@link QosSocketFilter#matchesRemoteAddress(InetAddress, int, int)} with the
-     * filterSocketAddress coming from {@link QosSocketInfo#getLocalSocketAddress()}.
-     * <p>
-     * This method exists for testing purposes since {@link QosSocketInfo} couldn't be mocked
-     * due to being final.
+     * Called from {@link QosSocketFilter#matchesLocalPrefix(IpPrefix, int, int)} and {@link
+     * QosSocketFilter#matchesRemotePrefix(IpPrefix, int, int)} with the filterSocketAddress coming
+     * from {@link QosSocketInfo#getLocalSocketAddress()}.
+     *
+     * <p>This method exists for testing purposes since {@link QosSocketInfo} couldn't be mocked due
+     * to being final.
      *
      * @param filterSocketAddress the socket address of the filter
-     * @param address the address to compare the filterSocketAddressWith
+     * @param ipPrefix the IP address with prefix length to compare the filterSocketAddressWith
      * @param startPort the start of the port range to check
      * @param endPort the end of the port range to check
      */
     @VisibleForTesting
-    public static boolean matchesAddress(@NonNull final InetSocketAddress filterSocketAddress,
-            @NonNull final InetAddress address,
-            final int startPort, final int endPort) {
+    public static boolean matchesAddress(
+            @NonNull final InetSocketAddress filterSocketAddress,
+            @NonNull final IpPrefix ipPrefix,
+            final int startPort,
+            final int endPort) {
         return startPort <= filterSocketAddress.getPort()
                 && endPort >= filterSocketAddress.getPort()
-                && (address.isAnyLocalAddress()
-                        || filterSocketAddress.getAddress().equals(address));
+                && (ipPrefix.getAddress().isAnyLocalAddress()
+                        || ipPrefix.contains(filterSocketAddress.getAddress()));
     }
 }

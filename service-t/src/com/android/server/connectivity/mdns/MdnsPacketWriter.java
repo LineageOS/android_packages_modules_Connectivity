@@ -19,6 +19,7 @@ package com.android.server.connectivity.mdns;
 import com.android.net.module.util.DnsUtils;
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketAddress;
@@ -241,9 +242,9 @@ public class MdnsPacketWriter {
     }
 
     // Checks if the remaining space in the packet is at least |count|.
-    private void checkRemaining(int count) throws IOException {
+    private void checkRemaining(int count) throws EOFException {
         if (getRemaining() < count) {
-            throw new IOException();
+            throw new EOFException();
         }
     }
 

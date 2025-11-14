@@ -52,6 +52,6 @@ public class SdkUtil {
 
     /** Checks if the device is running on a release version of Android Baklava or newer */
     public static boolean isAtLeast25Q2() {
-        return SDK_INT >= 36  || (SDK_INT == 35 && "Baklava".equals(Build.VERSION.CODENAME));
+        return SDK_INT >= 36 || (SDK_INT == 35 && "Baklava".equals(Build.VERSION.CODENAME));
     }
 }

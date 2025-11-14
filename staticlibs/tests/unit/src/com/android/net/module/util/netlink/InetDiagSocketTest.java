@@ -36,10 +36,13 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.annotation.NonNull;
+import android.net.INetd;
 import android.net.InetAddresses;
 import android.util.ArraySet;
 import android.util.Range;
 
+import androidx.annotation.Nullable;
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
@@ -56,6 +59,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
@@ -799,5 +803,202 @@ public class InetDiagSocketTest {
         doTestIsAdbSocket(SHELL_UID,  true /* expected */);
         doTestIsAdbSocket(ROOT_UID, false /* expected */);
         doTestIsAdbSocket(appUid, false /* expected */);
+    }
+
+    private static final String INET_DIAG_MSG_MAPPED6 =
+            // struct nlmsghdr
+            "6C000000" // length = 108
+                    + "1400" // type = SOCK_DIAG_BY_FAMILY
+                    + "0000" // flags
+                    + "00000000" // seqno
+                    + "f5220000" // pid
+                    // struct inet_diag_msg
+                    + "0a" // family = AF_INET6
+                    + "02" // idiag_state = 2
+                    + "10" // idiag_timer = 16
+                    + "20" // idiag_retrans = 32
+                    // inet_diag_sockid
+                    + "a845" // idiag_sport = 43077
+                    + "01bb" // idiag_dport = 443
+                    + "00000000000000000000ffffc0000201" // idiag_src = ::FFFF:192.0.2.1
+                    + "00000000000000000000ffffc0000202" // idiag_dst = ::FFFF:192.0.2.2
+                    + "08000000" // idiag_if = 8
+                    + "6300000000000000" // idiag_cookie = 99
+                    + "30000000" // idiag_expires = 48
+                    + "40000000" // idiag_rqueue = 64
+                    + "50000000" // idiag_wqueue = 80
+                    + "39300000" // idiag_uid = 12345
+                    + "851a0000" // idiag_inode = 6789
+                    + "0500" // len = 5
+                    + "0800" // type = 8
+                    + "00000000" // data
+                    + "0800" // len = 8
+                    + "0F00" // type = 15(INET_DIAG_MARK)
+                    + "65000500" // Fwmark netId:101, explicitlySelected: true, permission: network
+                    + "0400" // len = 4
+                    + "0200"; // type = 2
+
+    private static final String INET_DIAG_MSG_MAPPED6_OEM_NET_ID =
+            // struct nlmsghdr
+            "6C000000" // length = 108
+                    + "1400" // type = SOCK_DIAG_BY_FAMILY
+                    + "0000" // flags
+                    + "00000000" // seqno
+                    + "f5220000" // pid
+                    // struct inet_diag_msg
+                    + "0a" // family = AF_INET6
+                    + "02" // idiag_state = 2
+                    + "10" // idiag_timer = 16
+                    + "20" // idiag_retrans = 32
+                    // inet_diag_sockid
+                    + "a845" // idiag_sport = 43077
+                    + "01bb" // idiag_dport = 443
+                    + "00000000000000000000ffffc0000201" // idiag_src = ::FFFF:192.0.2.1
+                    + "00000000000000000000ffffc0000202" // idiag_dst = ::FFFF:192.0.2.2
+                    + "08000000" // idiag_if = 8
+                    + "6300000000000000" // idiag_cookie = 99
+                    + "30000000" // idiag_expires = 48
+                    + "40000000" // idiag_rqueue = 64
+                    + "50000000" // idiag_wqueue = 80
+                    + "39300000" // idiag_uid = 12345
+                    + "851a0000" // idiag_inode = 6789
+                    + "0500" // len = 5
+                    + "0800" // type = 8
+                    + "00000000" // data
+                    + "0800" // len = 8
+                    + "0F00" // type = 15(INET_DIAG_MARK)
+                    + "23000500" // Fwmark netId:35, explicitlySelected: true, permission: network
+                    + "0400" // len = 4
+                    + "0200"; // type = 2
+
+    private boolean matchesDestroyCondition(
+            @NonNull String nlmsg, @NonNull Predicate<InetDiagMessage> condition) {
+        final byte[] nlMsgByte = HexEncoding.decode(nlmsg.toCharArray(), false);
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(nlMsgByte);
+        byteBuffer.order(ByteOrder.nativeOrder());
+        final NetlinkMessage msg = NetlinkMessage.parse(byteBuffer, NETLINK_INET_DIAG);
+        final InetDiagMessage inetDiagMsg = (InetDiagMessage) msg;
+        return condition.test(inetDiagMsg);
+    }
+
+    private void doTestMatchingLocalAddress(
+            boolean expected,
+            @NonNull InetAddress address,
+            @Nullable Set<Range<Integer>> netIdRanges,
+            @Nullable Set<Range<Integer>> uidRanges,
+            @NonNull String nlmsg) {
+        assertEquals(
+                expected,
+                matchesDestroyCondition(
+                        nlmsg,
+                        diagMsg ->
+                                InetDiagMessage.matchesLocalAddressWithNetworkAndUser(
+                                        address, netIdRanges, uidRanges, diagMsg)));
+    }
+
+    private void doTestMatchingLocalAddress(
+            boolean expected,
+            @NonNull InetAddress address,
+            int interfaceId,
+            @NonNull String nlmsg) {
+        assertEquals(
+                expected,
+                matchesDestroyCondition(
+                        nlmsg,
+                        diagMsg ->
+                                InetDiagMessage.matchesLocalAddressWithInterfaceId(
+                                        address, interfaceId, diagMsg)));
+    }
+
+    private void doTestIsLackingPermission(
+            boolean expected, int netId, int permission, @NonNull String nlmsg) {
+        assertEquals(
+                expected,
+                matchesDestroyCondition(
+                        nlmsg,
+                        diagMsg ->
+                                InetDiagMessage.isLackingPermission(netId, permission, diagMsg)));
+    }
+
+    @Test
+    public void testMatchingDestroyConditionAddressOnly() {
+        doTestMatchingLocalAddress(
+                true, /* expected */
+                InetAddresses.parseNumericAddress("2001:db8::3"),
+                null, /* netIdRange */
+                null, /* uidRanges */
+                INET_DIAG_MSG_HEX2);
+        doTestMatchingLocalAddress(
+                true, /* expected */
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                Set.of(new Range<>(100, 65535)),
+                null, /* uidRanges */
+                INET_DIAG_MSG_MAPPED6);
+    }
+
+    @Test
+    public void testMatchingDestroyConditionForInterfaceId() {
+        doTestMatchingLocalAddress(
+                false /* expected */,
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                7 /* interfaceId */,
+                INET_DIAG_MSG_MAPPED6);
+        doTestMatchingLocalAddress(
+                true /* expected */,
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                8 /* interfaceId */,
+                INET_DIAG_MSG_MAPPED6);
+    }
+
+    @Test
+    public void testMatchingDestroyConditionForNetIdRange() {
+        doTestMatchingLocalAddress(
+                false /* expected */,
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                Set.of(new Range<>(0, 99)),
+                null /* uidRanges */,
+                INET_DIAG_MSG_MAPPED6);
+        doTestMatchingLocalAddress(
+                true /* expected */,
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                Set.of(new Range<>(0, 99)),
+                null /* uidRanges */,
+                INET_DIAG_MSG_MAPPED6_OEM_NET_ID);
+        doTestMatchingLocalAddress(
+                false /* expected */,
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                Set.of(new Range<>(100, 100), new Range<>(102, 65535)),
+                null /* uidRanges */,
+                INET_DIAG_MSG_MAPPED6);
+        doTestMatchingLocalAddress(
+                true /* expected */,
+                InetAddresses.parseNumericAddress("192.0.2.1"),
+                Set.of(new Range<>(0, 20), new Range<>(100, 65535)),
+                null /* uidRanges */,
+                INET_DIAG_MSG_MAPPED6);
+    }
+
+    @Test
+    public void testMatchingDestroyConditionForUidRanges() {
+        doTestMatchingLocalAddress(
+                true /* expected */,
+                InetAddresses.parseNumericAddress("2001:db8::3"),
+                Set.of(new Range<>(100, 65535)),
+                Set.of(new Range<>(12000, 12346)),
+                INET_DIAG_MSG_HEX2);
+    }
+
+    @Test
+    public void testIsLackingPermission() {
+        int systemPermission = INetd.PERMISSION_SYSTEM;
+        int netPermission = INetd.PERMISSION_NETWORK;
+        doTestIsLackingPermission(
+                true /* expected */, 101 /* netId */, systemPermission, INET_DIAG_MSG_MAPPED6);
+        doTestIsLackingPermission(
+                false /* expected */, 100 /* netId */, systemPermission, INET_DIAG_MSG_MAPPED6);
+        doTestIsLackingPermission(
+                false /* expected */, 101 /* netId */, netPermission, INET_DIAG_MSG_MAPPED6);
+        doTestIsLackingPermission(
+                true /* expected */, 2693 /* netId */, systemPermission, INET_DIAG_MSG_HEX2);
     }
 }

@@ -35,8 +35,8 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
-import com.android.testutils.RecorderCallback.CallbackEntry
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
+import com.android.testutils.TestableNetworkCallback.Event
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertNotNull
@@ -242,7 +242,7 @@ class ConnectUtil(private val context: Context) {
     }
 }
 
-private inline fun <reified T : CallbackEntry> TestableNetworkCallback.eventuallyExpect(
+private inline fun <reified T : Event> TestableNetworkCallback.eventuallyExpect(
     errorMsg: String,
     crossinline predicate: (T) -> Boolean = { true }
 ): T = history.poll(defaultTimeoutMs, mark) { it is T && predicate(it) }.also {

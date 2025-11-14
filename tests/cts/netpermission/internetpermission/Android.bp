@@ -31,6 +31,7 @@ android_test {
         "general-tests",
     ],
     host_required: ["net-tests-utils-host-common"],
+    host_common_data: [":net-tests-utils-host-common"],
     sdk_version: "test_current",
     data: [
         ":ConnectivityTestPreparer",

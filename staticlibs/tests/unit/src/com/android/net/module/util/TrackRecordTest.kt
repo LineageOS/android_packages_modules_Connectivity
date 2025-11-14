@@ -185,6 +185,25 @@ class TrackRecordTest {
     }
 
     @Test
+    fun testPollFrom() {
+        val readHead = ArrayTrackRecord<Int>().newReadHead()
+        readHead.add(3)
+        readHead.add(6)
+        readHead.add(7)
+        readHead.add(10)
+        assertEquals(0, readHead.mark)
+        assertEquals(3, readHead.poll(timeoutMs = 1, pos = 0) { it == 3 })
+        assertEquals(1, readHead.mark)
+        assertEquals(7, readHead.poll(timeoutMs = 1, pos = 0) { it == 7 })
+        assertEquals(3, readHead.mark)
+        // Do not advance the read head since the found element is after the current head
+        assertEquals(6, readHead.poll(timeoutMs = 1, pos = 0) { it == 6 })
+        assertEquals(3, readHead.mark)
+        assertNull(readHead.poll(timeoutMs = 1, pos = 1) { it == 3 })
+        assertEquals(4, readHead.mark)
+    }
+
+    @Test
     fun testConcurrentPollDisallowed() {
         val failures = AtomicInteger(0)
         val readHead = ArrayTrackRecord<Int>().newReadHead()

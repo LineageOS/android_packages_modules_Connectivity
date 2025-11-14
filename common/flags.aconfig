@@ -1,8 +1,9 @@
 package: "com.android.net.flags"
 container: "com.android.tethering"
 
-# This file contains aconfig flags for FlaggedAPI annotations
-# Flags used from platform code must be in under frameworks
+# This file contains aconfig flags for toggling features entirely implemented within the tethering
+# module. Flags used from platform code must be in the android.net.platform.flags package in
+# frameworks/base.
 
 flag {
   name: "set_data_saver_via_cm"
@@ -172,5 +173,29 @@ flag {
   namespace: "android_core_networking"
   description: "Flag for controlling access to the local network behind a new runtime permission. Requires ConnectivityCompatChanges.RESTRICT_LOCAL_NETWORK to enable feature."
   bug: "388774939"
+  is_fixed_read_only: true
+}
+
+flag {
+  name: "mdns_advertising_improvement"
+  is_exported: true
+  namespace: "android_core_networking"
+  description: "Flag for MDNS advertising quality, reliability and performance improvement"
+  bug: "373270045"
+}
+
+flag {
+  name: "ethernet_desktop_config"
+  namespace: "android_core_networking"
+  description: "The flag controls support for ethernet configuration tracking and store by MAC address."
+  bug: "397536853"
+  is_fixed_read_only: true
+}
+
+flag {
+  name: "qos_filter_ip_range_matching"
+  namespace: "android_core_networking"
+  description: "Flag for API to provide IP address range based QoS socket matching."
+  bug: "406146808"
   is_fixed_read_only: true
 }

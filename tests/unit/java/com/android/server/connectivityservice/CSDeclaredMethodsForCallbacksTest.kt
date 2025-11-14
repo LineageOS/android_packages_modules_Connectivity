@@ -35,8 +35,8 @@ import com.android.server.defaultLp
 import com.android.server.defaultNc
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event
 import com.android.testutils.tryTest
 import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicInteger
@@ -127,11 +127,11 @@ class CSDeclaredMethodsForCallbacksTest : CSTest() {
         waitForIdle()
 
         // Only callbacks for the corresponding flags are called
-        requestCb.expect<CallbackEntry.LinkPropertiesChanged>()
-        requestCb.expect<CallbackEntry.Lost>()
+        requestCb.expect<Event.LinkPropertiesChanged>()
+        requestCb.expect<Event.Lost>()
         requestCb.assertNoCallback(timeoutMs = 0L)
 
-        listenCb.expect<CallbackEntry.CapabilitiesChanged>()
+        listenCb.expect<Event.CapabilitiesChanged>()
         listenCb.assertNoCallback(timeoutMs = 0L)
     }
 

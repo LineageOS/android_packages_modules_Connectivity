@@ -33,14 +33,13 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.os.Build;
 import android.os.RemoteException;
+import android.provider.DeviceConfig;
 import android.util.ArrayMap;
 
 import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.modules.utils.build.SdkLevel;
 
 import java.io.PrintWriter;
 import java.net.Inet4Address;
@@ -68,6 +67,9 @@ import java.util.function.Supplier;
 public class PrivateAddressCoordinator {
     // WARNING: Keep in sync with chooseDownstreamAddress
     public static final int PREFIX_LENGTH = 24;
+
+    public static final String TETHER_FORCE_RANDOM_PREFIX_BASE_SELECTION =
+            "tether_force_random_prefix_base_selection";
 
     // Upstream monitor would be stopped when tethering is down. When tethering restart, downstream
     // address may be requested before coordinator get current upstream notification. To ensure
@@ -97,14 +99,14 @@ public class PrivateAddressCoordinator {
         }
 
         /**
-         * Check whether or not one specific experimental feature is enabled according to {@link
-         * DeviceConfigUtils}.
+         * Check whether one specific experimental feature in Tethering module
+         * from {@link DeviceConfig} is not disabled.
          *
          * @param featureName The feature's name to look up.
          * @return true if this feature is enabled, or false if disabled.
          */
-        public boolean isFeatureEnabled(String featureName) {
-            return DeviceConfigUtils.isTetheringFeatureEnabled(mContext, featureName);
+        public boolean isFeatureNotChickenedOut(String featureName) {
+            return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(mContext, featureName);
         }
     }
 
@@ -257,15 +259,8 @@ public class PrivateAddressCoordinator {
         return null;
     }
 
-    // TODO: Remove this method when SdkLevel.isAtLeastB() is fixed, aosp is at sdk level 36 or use
-    //  NetworkStackUtils.isAtLeast25Q2 when it is moved to a static lib.
-    public static boolean isAtLeast25Q2() {
-        return SdkLevel.isAtLeastB()  || (SdkLevel.isAtLeastV()
-                && "Baklava".equals(Build.VERSION.CODENAME));
-    }
-
     private int getRandomPrefixIndex() {
-        if (!isAtLeast25Q2()) return 0;
+        if (!mDeps.isFeatureNotChickenedOut(TETHER_FORCE_RANDOM_PREFIX_BASE_SELECTION)) return 0;
 
         final int random = getRandomInt() & 0xffffff;
         // This is to select the starting prefix range (/8, /12, or /16) instead of the actual

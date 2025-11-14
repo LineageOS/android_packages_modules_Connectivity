@@ -32,6 +32,7 @@ import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
+import com.android.testutils.ParcelUtils;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -199,5 +200,38 @@ public class NetworkTest {
         assertEquals(mNetwork.netId, copy.netId);
         assertNotEquals(copy.netId, copy.getNetIdForResolv());
         assertNotEquals(mNetwork.getNetIdForResolv(), copy.getNetIdForResolv());
+    }
+
+    // Connectivity module was not supported until S
+    @Test @IgnoreUpTo(Build.VERSION_CODES.R)
+    @ConnectivityModuleTest
+    public void testGetNonPrivateDnsBypassingCopy() {
+        final Network bypass = mNetwork.getPrivateDnsBypassingCopy();
+        final Network nonBypass = bypass.getPrivateDnsNonBypassingCopy();
+        assertEquals(mNetwork.netId, nonBypass.netId);
+        assertEquals(nonBypass.netId, nonBypass.getNetIdForResolv());
+        assertEquals(mNetwork.getNetIdForResolv(), nonBypass.getNetIdForResolv());
+        assertNotEquals(mNetwork.getNetIdForResolv(), bypass.getNetIdForResolv());
+    }
+
+    // Only run this test on V and below
+    @Test @IgnoreAfter(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @ConnectivityModuleTest
+    public void testParcelingRoundTripBeforeB() {
+        // Before B, the netID for resolv is not parceled.
+        final Network bypass =
+                ParcelUtils.parcelingRoundTrip(mNetwork.getPrivateDnsBypassingCopy());
+        assertEquals(mNetwork.netId, bypass.netId);
+        assertEquals(mNetwork.getNetIdForResolv(), bypass.getNetIdForResolv());
+    }
+
+    // Only run this test on B and after
+    @Test @IgnoreUpTo(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @ConnectivityModuleTest
+    public void testParcelingRoundTripFromB() {
+        final Network bypass =
+                ParcelUtils.parcelingRoundTrip(mNetwork.getPrivateDnsBypassingCopy());
+        assertEquals(mNetwork.netId, bypass.netId);
+        assertNotEquals(mNetwork.getNetIdForResolv(), bypass.getNetIdForResolv());
     }
 }

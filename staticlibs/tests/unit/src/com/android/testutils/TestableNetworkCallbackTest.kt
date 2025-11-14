@@ -21,20 +21,20 @@ import android.net.LinkAddress
 import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
-import com.android.testutils.RecorderCallback.CallbackEntry
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
-import com.android.testutils.RecorderCallback.CallbackEntry.BlockedStatus
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.AVAILABLE
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.BLOCKED_STATUS
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.LINK_PROPERTIES_CHANGED
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.LOSING
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.LOST
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.NETWORK_CAPS_UPDATED
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.RESUMED
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.SUSPENDED
-import com.android.testutils.RecorderCallback.CallbackEntry.Companion.UNAVAILABLE
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
+import com.android.testutils.TestableNetworkCallback.Event
+import com.android.testutils.TestableNetworkCallback.Event.Available
+import com.android.testutils.TestableNetworkCallback.Event.BlockedStatus
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.Companion.AVAILABLE
+import com.android.testutils.TestableNetworkCallback.Event.Companion.BLOCKED_STATUS
+import com.android.testutils.TestableNetworkCallback.Event.Companion.LINK_PROPERTIES_CHANGED
+import com.android.testutils.TestableNetworkCallback.Event.Companion.LOSING
+import com.android.testutils.TestableNetworkCallback.Event.Companion.LOST
+import com.android.testutils.TestableNetworkCallback.Event.Companion.NETWORK_CAPS_UPDATED
+import com.android.testutils.TestableNetworkCallback.Event.Companion.RESUMED
+import com.android.testutils.TestableNetworkCallback.Event.Companion.SUSPENDED
+import com.android.testutils.TestableNetworkCallback.Event.Companion.UNAVAILABLE
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -170,19 +170,19 @@ class TestableNetworkCallbackTest {
         val net = Network(193)
         val netCaps = NetworkCapabilities().addTransportType(CELLULAR)
         // Check that expecting callbackThat anything fails when no callback has been received.
-        assertFails { mCallback.expect<CallbackEntry>(timeoutMs = SHORT_TIMEOUT_MS) { true } }
+        assertFails { mCallback.expect<Event>(timeoutMs = SHORT_TIMEOUT_MS) { true } }
 
         // Basic test for true and false
         mCallback.onAvailable(net)
         mCallback.expect<Available> { true }
         mCallback.onAvailable(net)
-        assertFails { mCallback.expect<CallbackEntry>(timeoutMs = SHORT_TIMEOUT_MS) { false } }
+        assertFails { mCallback.expect<Event>(timeoutMs = SHORT_TIMEOUT_MS) { false } }
 
         // Try a positive and a negative case
         mCallback.onBlockedStatusChanged(net, true)
-        mCallback.expect<CallbackEntry> { cb -> cb is BlockedStatus && cb.blocked }
+        mCallback.expect<Event> { cb -> cb is BlockedStatus && cb.blocked }
         mCallback.onCapabilitiesChanged(net, netCaps)
-        assertFails { mCallback.expect<CallbackEntry>(timeoutMs = SHORT_TIMEOUT_MS) { cb ->
+        assertFails { mCallback.expect<Event>(timeoutMs = SHORT_TIMEOUT_MS) { cb ->
             cb is CapabilitiesChanged && cb.caps.hasTransport(WIFI)
         } }
     }
@@ -410,24 +410,24 @@ class TestableNetworkCallbackTest {
 
 private object TNCInterpreter : ConcurrentInterpreter<TestableNetworkCallback>(interpretTable)
 
-val EntryList = CallbackEntry::class.sealedSubclasses.map { it.simpleName }.joinToString("|")
-private fun callbackEntryFromString(name: String): KClass<out CallbackEntry> {
-    return CallbackEntry::class.sealedSubclasses.first { it.simpleName == name }
+val EntryList = Event::class.sealedSubclasses.map { it.simpleName }.joinToString("|")
+private fun callbackEntryFromString(name: String): KClass<out Event> {
+    return Event::class.sealedSubclasses.first { it.simpleName == name }
 }
 
 @SuppressLint("NewApi") // Uses hidden APIs, which the linter would identify as missing APIs.
 private val interpretTable = listOf<InterpretMatcher<TestableNetworkCallback>>(
     // Interpret "Available(xx)" as "call to onAvailable with netId xx", and likewise for
     // all callback types. This is implemented above by enumerating the subclasses of
-    // CallbackEntry and reading their simpleName.
+    // Event and reading their simpleName.
     Regex("""(.*)\s+=\s+($EntryList)\((\d+)\)""") to { i, cb, t ->
         val record = i.interpret(t.strArg(1), cb)
         assertTrue(callbackEntryFromString(t.strArg(2)).isInstance(record))
-        // Strictly speaking testing for is CallbackEntry is useless as it's been tested above
+        // Strictly speaking testing for is Event is useless as it's been tested above
         // but the compiler can't figure things out from the isInstance call. It does understand
-        // from the assertTrue(is CallbackEntry) that this is true, which allows to access
+        // from the assertTrue(is Event) that this is true, which allows to access
         // the 'network' member below.
-        assertTrue(record is CallbackEntry)
+        assertTrue(record is Event)
         assertEquals(record.network.netId, t.intArg(3))
     },
     // Interpret "onAvailable(xx)" as calling "onAvailable" with a netId of xx, and likewise for
@@ -451,7 +451,7 @@ private val interpretTable = listOf<InterpretMatcher<TestableNetworkCallback>>(
     },
     Regex("""poll\((\d+)\)""") to { i, cb, t -> cb.poll(t.timeArg(1)) },
     // Interpret "eventually(Available(xx), timeout)" as calling eventuallyExpect that expects
-    // CallbackEntry.AVAILABLE with netId of xx within timeout*INTERPRET_TIME_UNIT timeout, and
+    // Event.AVAILABLE with netId of xx within timeout*INTERPRET_TIME_UNIT timeout, and
     // likewise for all callback types.
     Regex("""eventually\(($EntryList)\((\d+)\),\s+(\d+)\)""") to { i, cb, t ->
         val net = Network(t.intArg(2))

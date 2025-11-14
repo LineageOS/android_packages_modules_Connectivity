@@ -25,13 +25,13 @@ def assume_wifi_p2p_test_preconditions(
   client = client_device.connectivity_multi_devices_snippet
 
   # Assert pre-conditions
-  asserts.skip_if(not server.hasWifiFeature(), "Server requires Wifi feature")
-  asserts.skip_if(not client.hasWifiFeature(), "Client requires Wifi feature")
+  asserts.skip_if(not server.hasWifiFeature(), 'Server requires Wifi feature')
+  asserts.skip_if(not client.hasWifiFeature(), 'Client requires Wifi feature')
   asserts.skip_if(
-      not server.isP2pSupported(), "Server requires Wi-fi P2P feature"
+      not server.isP2pSupported(), 'Server requires Wi-fi P2P feature'
   )
   asserts.skip_if(
-      not client.isP2pSupported(), "Client requires Wi-fi P2P feature"
+      not client.isP2pSupported(), 'Client requires Wi-fi P2P feature'
   )
 
 
@@ -51,34 +51,20 @@ def setup_wifi_p2p_server_and_client(
   client_name = client.getDeviceName()
 
   # Generate Wi-Fi P2P group passphrase with random characters.
-  group_name = "DIRECT-" + tether_utils.generate_uuid32_base64()
+  # network name must starts with prefix "DIRECT-", followed by any two
+  # random chars from the set ('A' - 'Z', 'a' - 'z', '0' - '9')
+  # This follows the documentation on WifiP2pConfig.Builder#setNetworkName.
+  group_name = 'DIRECT-XY' + tether_utils.generate_uuid32_base64()
   group_passphrase = tether_utils.generate_uuid32_base64()
 
   # Server creates a Wi-Fi P2P group
   server.createGroup(group_name, group_passphrase)
 
-  # Start Wi-Fi P2p peers discovery on both devices
-  server.startPeersDiscovery()
-  client.startPeersDiscovery()
-
-  # Ensure the target device has been discovered
-  server_address = client.ensureDeviceDiscovered(server_name)
-  client_address = server.ensureDeviceDiscovered(client_name)
-
-  # Server invites the device to the group
-  server.inviteDeviceToGroup(group_name, group_passphrase, client_address)
-
-  # Wait for a p2p connection changed intent to ensure the invitation has been
-  # received.
-  client.waitForP2pConnectionChanged(True, group_name)
-  # Accept the group invitation
-  client.acceptGroupInvitation(server_address)
-
-  # Server waits for connection request from client and accept joining
-  server.waitForPeerConnectionRequestAndAcceptJoining(client_address)
+  # Client connects to the group
+  client.connectToGroup(group_name, group_passphrase)
 
   # Wait for a p2p connection changed intent to ensure joining the group
-  client.waitForP2pConnectionChanged(False, group_name)
+  client.waitForP2pConnectionChanged(group_name)
 
   # Ensure Wi-Fi P2P connected on both devices
   client.ensureDeviceConnected(server_name)

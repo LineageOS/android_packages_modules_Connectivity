@@ -17,7 +17,7 @@ package android.net.thread.utils;
 
 import static android.Manifest.permission.MANAGE_TEST_NETWORKS;
 
-import static com.android.testutils.RecorderCallback.CallbackEntry.LINK_PROPERTIES_CHANGED;
+import static com.android.testutils.TestableNetworkCallback.Event.LINK_PROPERTIES_CHANGED;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import android.content.Context;

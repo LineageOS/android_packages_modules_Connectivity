@@ -28,11 +28,13 @@ import com.android.server.connectivity.mdns.MdnsConstants.IPV6_SOCKET_ADDR
 import com.android.server.connectivity.mdns.MdnsReplySender.getReplyDestination
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
+import java.io.IOException
 import java.net.DatagramPacket
 import java.net.InetSocketAddress
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -41,9 +43,12 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyLong
 import org.mockito.Mockito.argThat
+import org.mockito.Mockito.doCallRealMethod
 import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -107,6 +112,23 @@ class MdnsReplySenderTest {
             MdnsNsecRecord(otherHostname, 0L /* receiptTimeMillis */, true /* cacheFlush */,
                     SHORT_TTL, otherHostname /* nextDomain */,
                     intArrayOf(MdnsRecord.TYPE_A, MdnsRecord.TYPE_AAAA)))
+    private val manyServiceNames = (1..30).map {
+        arrayOf("MyTestService", "_testservice", "_tcp", "local")
+    }
+    private val manyAnswers = manyServiceNames.map {
+        MdnsPointerRecord(it, 0L /* receiptTimeMillis */, false /* cacheFlush */, LONG_TTL, it)
+    }
+    private val manyAdditionalAnswers = manyServiceNames.flatMap {
+        listOf(
+            MdnsTextRecord(it, 0L /* receiptTimeMillis */, true /* cacheFlush */, LONG_TTL,
+                    emptyList()),
+            MdnsServiceRecord(it, 0L /* receiptTimeMillis */, true /* cacheFlush */, SHORT_TTL,
+                    0 /* servicePriority */, 0 /* serviceWeight */, TEST_PORT, it),
+            MdnsNsecRecord(it, 0L /* receiptTimeMillis */, true /* cacheFlush */, LONG_TTL,
+                    it /* nextDomain */,
+                    intArrayOf(MdnsRecord.TYPE_TXT, MdnsRecord.TYPE_SRV))
+        )
+    }
     private val thread = HandlerThread(MdnsReplySenderTest::class.simpleName)
     private val socket = mock(MdnsInterfaceSocket::class.java)
     private val buffer = ByteArray(1500)
@@ -119,6 +141,7 @@ class MdnsReplySenderTest {
         thread.start()
         doReturn(true).`when`(socket).hasJoinedIpv4()
         doReturn(true).`when`(socket).hasJoinedIpv6()
+        doCallRealMethod().`when`(deps).createRawDnsPacket(any(), any())
     }
 
     @After
@@ -160,6 +183,47 @@ class MdnsReplySenderTest {
                 additionalAnswers)
         sendNow(replySender, packet, IPV4_SOCKET_ADDR)
         verify(socket).send(argThat{ it.socketAddress.equals(IPV4_SOCKET_ADDR) })
+    }
+
+    @Test
+    fun testSendNow_CreateRawDnsPacketThrowsGeneralIOException_PacketIsNotSent() {
+        val replySender = createSender(enableKAS = false)
+        val packet = MdnsPacket(0x8400,
+                emptyList() /* questions */,
+                answers,
+                emptyList() /* authorityRecords */,
+                additionalAnswers)
+        doThrow(IOException()).`when`(deps).createRawDnsPacket(any(), any())
+        val future = CompletableFuture<Unit>()
+        handler.post {
+            assertFailsWith<IOException> {
+                replySender.sendNow(packet, IPV4_SOCKET_ADDR)
+            }
+            future.complete(null)
+        }
+        future.get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        verify(socket, never()).send(any())
+    }
+
+    @Test
+    fun testSendNow_PacketIsTooLarge_AdditionalRecordsAreTruncated() {
+        val replySender = createSender(enableKAS = false)
+        // The datagram is 2059 bytes which exceeds the 1500 byte limit.
+        val packet = MdnsPacket(0x8400,
+                emptyList() /* questions */,
+                manyAnswers,
+                emptyList() /* authorityRecords */,
+                manyAdditionalAnswers)
+        sendNow(replySender, packet, IPV4_SOCKET_ADDR)
+        verify(socket).send(argThat{
+            val packet = MdnsPacket.parse(MdnsPacketReader(it))
+
+            packet.questions.isEmpty() &&
+            packet.answers.equals(manyAnswers) &&
+            packet.authorityRecords.isEmpty() &&
+            packet.additionalRecords.isEmpty() &&
+            it.socketAddress.equals(IPV4_SOCKET_ADDR)
+        })
     }
 
     private fun verifyMessageQueued(

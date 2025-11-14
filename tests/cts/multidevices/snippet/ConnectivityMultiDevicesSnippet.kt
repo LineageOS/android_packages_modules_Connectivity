@@ -18,6 +18,7 @@ package com.google.snippet.connectivity
 
 import android.Manifest.permission.NETWORK_SETTINGS
 import android.Manifest.permission.OVERRIDE_WIFI_CONFIG
+import android.content.pm.PackageManager.FEATURE_AUTOMOTIVE
 import android.content.pm.PackageManager.FEATURE_TELEPHONY
 import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
@@ -41,11 +42,15 @@ import com.android.modules.utils.build.SdkLevel
 import com.android.testutils.AutoReleaseNetworkCallbackRule
 import com.android.testutils.ConnectUtil
 import com.android.testutils.NetworkCallbackHelper
-import com.android.testutils.RecorderCallback.CallbackEntry.CapabilitiesChanged
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
 import com.android.testutils.runAsShell
 import com.google.android.mobly.snippet.Snippet
 import com.google.android.mobly.snippet.rpc.Rpc
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.MulticastSocket
+import java.net.NetworkInterface
 import org.junit.Rule
 
 class ConnectivityMultiDevicesSnippet : Snippet {
@@ -59,6 +64,7 @@ class ConnectivityMultiDevicesSnippet : Snippet {
     private val cbHelper = NetworkCallbackHelper()
     private val ctsTetheringUtils = CtsTetheringUtils(context)
     private var oldSoftApConfig: SoftApConfiguration? = null
+    private var multicastSocket: MulticastSocket? = null
 
     override fun shutdown() {
         cbHelper.unregisterAll()
@@ -80,6 +86,9 @@ class ConnectivityMultiDevicesSnippet : Snippet {
 
     @Rpc(description = "Check whether the device has telephony feature.")
     fun hasTelephonyFeature() = pm.hasSystemFeature(FEATURE_TELEPHONY)
+
+    @Rpc(description = "Check whether the device has automotive feature.")
+    fun hasAutomotiveFeature() = pm.hasSystemFeature(FEATURE_AUTOMOTIVE)
 
     @Rpc(description = "Check whether the device supporters AP + STA concurrency.")
     fun isStaApConcurrencySupported() = wifiManager.isStaApConcurrencySupported()
@@ -210,5 +219,51 @@ class ConnectivityMultiDevicesSnippet : Snippet {
                 wifiManager.setSoftApConfiguration(it)
             }
         }
+    }
+
+    @Rpc(description = "Create multicast socket")
+    fun createMulticastSocket(ifname: String) {
+        if (multicastSocket != null) {
+            throw IllegalStateException("multicast socket is not null")
+        }
+
+        multicastSocket = MulticastSocket()
+        multicastSocket?.networkInterface = NetworkInterface.getByName(ifname)
+    }
+
+    @Rpc(description = "Destroy multicast socket")
+    fun destroyMulticastSocket() {
+        if (multicastSocket == null) {
+            throw IllegalStateException("multicast socket is null")
+        }
+
+        multicastSocket?.close()
+        multicastSocket = null
+    }
+
+    @Rpc(description = "Join multicast group")
+    fun joinMulticastGroup(multicastGroup: String) {
+        if (multicastSocket == null) {
+            throw IllegalStateException("multicast socket is null")
+        }
+
+        val groupToJoin = InetAddress.getByName(multicastGroup)
+        multicastSocket?.joinGroup(
+            InetSocketAddress(groupToJoin, 0),
+            multicastSocket?.networkInterface
+        )
+    }
+
+    @Rpc(description = "Leave multicast group")
+    fun leaveMulticastGroup(multicastGroup: String) {
+        if (multicastSocket == null) {
+            throw IllegalStateException("multicast socket is null")
+        }
+
+        val groupToLeave = InetAddress.getByName(multicastGroup)
+        multicastSocket?.leaveGroup(
+            InetSocketAddress(groupToLeave, 0),
+            multicastSocket?.networkInterface
+        )
     }
 }

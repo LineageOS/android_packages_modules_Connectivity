@@ -21,9 +21,9 @@ import android.content.Context
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED
 import android.net.NetworkCapabilities.TRANSPORT_TEST
-import android.net.NetworkProviderTest.TestNetworkCallback.CallbackEntry.OnUnavailable
-import android.net.NetworkProviderTest.TestNetworkProvider.CallbackEntry.OnNetworkRequestWithdrawn
-import android.net.NetworkProviderTest.TestNetworkProvider.CallbackEntry.OnNetworkRequested
+import android.net.NetworkProviderTest.TestNetworkCallback.Event.OnUnavailable
+import android.net.NetworkProviderTest.TestNetworkProvider.Event.OnNetworkRequestWithdrawn
+import android.net.NetworkProviderTest.TestNetworkProvider.Event.OnNetworkRequested
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -85,15 +85,15 @@ class NetworkProviderTest {
     private class TestNetworkProvider(context: Context, looper: Looper) :
             NetworkProvider(context, looper, PROVIDER_NAME) {
         private val TAG = this::class.simpleName
-        private val seenEvents = ArrayTrackRecord<CallbackEntry>().newReadHead()
+        private val seenEvents = ArrayTrackRecord<Event>().newReadHead()
 
-        sealed class CallbackEntry {
+        sealed class Event {
             data class OnNetworkRequested(
                 val request: NetworkRequest,
                 val score: Int,
                 val id: Int
-            ) : CallbackEntry()
-            data class OnNetworkRequestWithdrawn(val request: NetworkRequest) : CallbackEntry()
+            ) : Event()
+            data class OnNetworkRequestWithdrawn(val request: NetworkRequest) : Event()
         }
 
         override fun onNetworkRequested(request: NetworkRequest, score: Int, id: Int) {
@@ -106,7 +106,7 @@ class NetworkProviderTest {
             seenEvents.add(OnNetworkRequestWithdrawn(request))
         }
 
-        inline fun <reified T : CallbackEntry> eventuallyExpectCallbackThat(
+        inline fun <reified T : Event> eventuallyExpectCallbackThat(
             crossinline predicate: (T) -> Boolean
         ) = seenEvents.poll(DEFAULT_TIMEOUT_MS) { it is T && predicate(it) }
                 ?: fail("Did not receive callback after ${DEFAULT_TIMEOUT_MS}ms")
@@ -356,16 +356,16 @@ class NetworkProviderTest {
     }
 
     private class TestNetworkCallback : ConnectivityManager.NetworkCallback() {
-        private val seenEvents = ArrayTrackRecord<CallbackEntry>().newReadHead()
-        sealed class CallbackEntry {
-            object OnUnavailable : CallbackEntry()
+        private val seenEvents = ArrayTrackRecord<Event>().newReadHead()
+        sealed class Event {
+            object OnUnavailable : Event()
         }
 
         override fun onUnavailable() {
             seenEvents.add(OnUnavailable)
         }
 
-        inline fun <reified T : CallbackEntry> expectCallback(
+        inline fun <reified T : Event> expectCallback(
             crossinline predicate: (T) -> Boolean
         ) = seenEvents.poll(DEFAULT_TIMEOUT_MS) { it is T && predicate(it) }
     }

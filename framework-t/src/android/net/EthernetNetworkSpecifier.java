@@ -25,57 +25,107 @@ import android.text.TextUtils;
 import java.util.Objects;
 
 /**
- * A {@link NetworkSpecifier} used to identify ethernet interfaces.
+ * A {@link NetworkSpecifier} used to identify ethernet interfaces. Interfaces can be identified
+ * by matching either interface name and/or MAC address.
  */
 public final class EthernetNetworkSpecifier extends NetworkSpecifier implements Parcelable {
-
     /**
-     * Name of the network interface.
+     * Name of the network interface, or null.
      */
-    @NonNull
+    @Nullable
     private final String mInterfaceName;
 
     /**
-     * Create a new EthernetNetworkSpecifier.
+     * MAC address of the network interface, or null.
+     */
+    @Nullable
+    private final MacAddress mMacAddress;
+
+    /**
+     * Create a new EthernetNetworkSpecifier with an interface name.
      * @param interfaceName Name of the ethernet interface the specifier refers to.
      */
     public EthernetNetworkSpecifier(@NonNull String interfaceName) {
         if (TextUtils.isEmpty(interfaceName)) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Interface name cannot be null");
         }
         mInterfaceName = interfaceName;
+        mMacAddress = null;
     }
 
     /**
-     * Get the name of the ethernet interface the specifier refers to.
+     * Create a new EthernetNetworkSpecifier. Either interface name or MAC address needs to be
+     * valid.
+     * @param interfaceName Name of the ethernet interface the specifier refers to, or null.
+     * @param macAddress MAC address of the ethernet interface the specifier refers to, or null.
+     * @hide
+     */
+    public EthernetNetworkSpecifier(@Nullable String interfaceName,
+            @Nullable MacAddress macAddress) {
+        if (TextUtils.isEmpty(interfaceName) && macAddress == null) {
+            throw new IllegalArgumentException("Either interface name or MAC address needs to be"
+                    + " valid.");
+        }
+        mInterfaceName = interfaceName;
+        mMacAddress = macAddress;
+    }
+
+    /**
+     * Get the name of the ethernet interface the specifier refers to, or null.
      */
     @Nullable
     public String getInterfaceName() {
-        // This may be null in the future to support specifiers based on data other than the
-        // interface name.
         return mInterfaceName;
     }
 
-    /** @hide */
+    /**
+     * Get the MAC address of the ethernet interface the specifier refers to, or null.
+     * @hide
+     */
+    @Nullable
+    public MacAddress getMacAddress() {
+        return mMacAddress;
+    }
+
+    /**
+     * Check if this specifier can be satisfied by another specifier by interface name or/and MAC
+     * address.
+     * Note that because ethernet Networks always set an EthernetNetworkSpecifier that includes both
+     * interface name and MAC address, the match is asymmetrical.
+     * @hide
+     */
     @Override
     public boolean canBeSatisfiedBy(@Nullable NetworkSpecifier other) {
-        return equals(other);
+        if (!(other instanceof EthernetNetworkSpecifier)) return false;
+        final EthernetNetworkSpecifier rhs = (EthernetNetworkSpecifier) other;
+        // If interface name is specified, match interface name.
+        if (mInterfaceName != null && !mInterfaceName.equals(rhs.mInterfaceName)) {
+            return false;
+        }
+        // If MAC address is specified, match MAC address.
+        if (mMacAddress != null && !mMacAddress.equals(rhs.mMacAddress)) {
+            return false;
+        }
+        return true;
     }
 
     @Override
     public boolean equals(@Nullable Object o) {
         if (!(o instanceof EthernetNetworkSpecifier)) return false;
-        return TextUtils.equals(mInterfaceName, ((EthernetNetworkSpecifier) o).mInterfaceName);
+        EthernetNetworkSpecifier rhs = (EthernetNetworkSpecifier) o;
+        return TextUtils.equals(mInterfaceName, rhs.mInterfaceName)
+                && Objects.equals(mMacAddress, rhs.mMacAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(mInterfaceName);
+        return Objects.hash(mMacAddress, mInterfaceName);
     }
 
     @Override
     public String toString() {
-        return "EthernetNetworkSpecifier (" + mInterfaceName + ")";
+        return "EthernetNetworkSpecifier ( interface name: " + mInterfaceName
+                + ", MAC address: " + Objects.toString(mMacAddress) + ")";
     }
 
     @Override
@@ -86,12 +136,15 @@ public final class EthernetNetworkSpecifier extends NetworkSpecifier implements 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeString(mInterfaceName);
+        dest.writeParcelable(mMacAddress, flags);
     }
 
     public static final @NonNull Parcelable.Creator<EthernetNetworkSpecifier> CREATOR =
             new Parcelable.Creator<EthernetNetworkSpecifier>() {
         public EthernetNetworkSpecifier createFromParcel(Parcel in) {
-            return new EthernetNetworkSpecifier(in.readString());
+                    final String ifname = in.readString();
+                    final MacAddress addr = in.readParcelable(MacAddress.class.getClassLoader());
+                    return new EthernetNetworkSpecifier(ifname, addr);
         }
         public EthernetNetworkSpecifier[] newArray(int size) {
             return new EthernetNetworkSpecifier[size];

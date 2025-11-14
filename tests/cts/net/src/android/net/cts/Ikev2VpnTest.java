@@ -22,9 +22,8 @@ import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.cts.util.CtsNetUtils.TestNetworkCallback;
 
 import static com.android.compatibility.common.util.SystemUtil.runWithShellPermissionIdentity;
-import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
+import static com.android.modules.utils.build.SdkLevel.isAtLeastU;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -34,12 +33,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 import android.Manifest;
 import android.annotation.NonNull;
-import android.app.AppOpsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -61,7 +59,7 @@ import android.text.TextUtils;
 
 import androidx.test.InstrumentationRegistry;
 
-import com.android.internal.util.HexDump;
+import com.android.net.module.util.HexDump;
 import com.android.networkstack.apishim.ConstantsShim;
 import com.android.networkstack.apishim.VpnManagerShimImpl;
 import com.android.networkstack.apishim.common.VpnManagerShim;
@@ -69,8 +67,8 @@ import com.android.networkstack.apishim.common.VpnProfileStateShim;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
-import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestableNetworkCallback;
+import com.android.testutils.TestableNetworkCallback.Event;
 
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 import org.junit.After;
@@ -98,6 +96,10 @@ import javax.security.auth.x500.X500Principal;
 @AppModeFull(reason = "Appops state changes disallowed for instant apps (OP_ACTIVATE_PLATFORM_VPN)")
 public class Ikev2VpnTest {
     private static final String TAG = Ikev2VpnTest.class.getSimpleName();
+
+    // TODO: make AppOpsManager.OP_ACTIVATE_VPN API
+    private static final int OP_ACTIVATE_VPN = 47;
+    private static final int OP_ACTIVATE_PLATFORM_VPN = 94;
 
     @Rule
     public final DevSdkIgnoreRule ignoreRule = new DevSdkIgnoreRule();
@@ -219,8 +221,8 @@ public class Ikev2VpnTest {
         for (TestableNetworkCallback callback : mCallbacksToUnregister) {
             sCM.unregisterNetworkCallback(callback);
         }
-        setAppop(AppOpsManager.OP_ACTIVATE_VPN, false);
-        setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, false);
+        setAppop(OP_ACTIVATE_VPN, false);
+        setAppop(OP_ACTIVATE_PLATFORM_VPN, false);
 
         // Make sure the VpnProfile is not provisioned already.
         sVpnMgr.stopProvisionedVpnProfile();
@@ -265,12 +267,20 @@ public class Ikev2VpnTest {
             builder.setAutomaticNattKeepaliveTimerEnabled(automaticNattKeepaliveTimerEnabled);
         }
 
-        // TODO: replace it in alternative way to remove the hidden method usage
         if (isRestrictedToTestNetworks) {
-            builder.restrictToTestNetworks();
+            restrictToTestNetworks(builder);
         }
 
         return builder.build();
+    }
+
+    private void restrictToTestNetworks(@NonNull Ikev2VpnProfile.Builder builder) {
+        try {
+            // TODO: replace it in alternative way to remove the hidden method usage
+            builder.getClass().getMethod("restrictToTestNetworks").invoke(builder);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private Ikev2VpnProfile buildIkev2VpnProfileIkeTunConnParams(
@@ -288,9 +298,8 @@ public class Ikev2VpnTest {
                         .setMaxMtu(TEST_MTU)
                         .setMetered(false);
 
-        // TODO: replace it in alternative way to remove the hidden method usage
         if (isRestrictedToTestNetworks) {
-            builder.restrictToTestNetworks();
+            restrictToTestNetworks(builder);
         }
         return builder.build();
     }
@@ -335,7 +344,8 @@ public class Ikev2VpnTest {
         assertTrue(profile.isBypassable());
         assertFalse(profile.isMetered());
         assertEquals(TEST_MTU, profile.getMaxMtu());
-        assertFalse(profile.isRestrictedToTestNetworks());
+        assertFalse((boolean) profile.getClass().getMethod("isRestrictedToTestNetworks")
+                .invoke(profile));
     }
 
     public void doTestBuildIkev2VpnProfilePsk(final boolean requiresValidation) throws Exception {
@@ -358,7 +368,7 @@ public class Ikev2VpnTest {
         }
     }
 
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @Test
     public void testBuildIkev2VpnProfileWithIkeTunnelConnectionParams() throws Exception {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
@@ -427,8 +437,8 @@ public class Ikev2VpnTest {
             throws Exception {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
 
-        setAppop(AppOpsManager.OP_ACTIVATE_VPN, hasActivateVpn);
-        setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, hasActivatePlatformVpn);
+        setAppop(OP_ACTIVATE_VPN, hasActivateVpn);
+        setAppop(OP_ACTIVATE_PLATFORM_VPN, hasActivatePlatformVpn);
 
         final Ikev2VpnProfile profile = buildIkev2VpnProfilePsk(TEST_SERVER_ADDR_V6,
                 false /* isRestrictedToTestNetworks */, false /* requiresValidation */);
@@ -472,19 +482,19 @@ public class Ikev2VpnTest {
     public void testDeleteVpnProfile() throws Exception {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
 
-        setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, true);
+        setAppop(OP_ACTIVATE_PLATFORM_VPN, true);
 
         final Ikev2VpnProfile profile = buildIkev2VpnProfilePsk(TEST_SERVER_ADDR_V6,
                 false /* isRestrictedToTestNetworks */, false /* requiresValidation */);
         assertNull(sVpnMgr.provisionVpnProfile(profile));
 
         // Verify that deleting the profile works (even without the appop)
-        setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, false);
+        setAppop(OP_ACTIVATE_PLATFORM_VPN, false);
         sVpnMgr.deleteProvisionedVpnProfile();
 
         // Test that the profile was deleted - starting it should throw an IAE.
         try {
-            setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, true);
+            setAppop(OP_ACTIVATE_PLATFORM_VPN, true);
             sVpnMgr.startProvisionedVpnProfile();
             fail("Expected IllegalArgumentException due to missing profile");
         } catch (IllegalArgumentException expected) {
@@ -495,8 +505,8 @@ public class Ikev2VpnTest {
     public void testStartVpnProfileNoPreviousConsent() throws Exception {
         assumeTrue(mCtsNetUtils.hasIpsecTunnelsFeature());
 
-        setAppop(AppOpsManager.OP_ACTIVATE_VPN, false);
-        setAppop(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, false);
+        setAppop(OP_ACTIVATE_VPN, false);
+        setAppop(OP_ACTIVATE_PLATFORM_VPN, false);
 
         // Make sure the VpnProfile is not provisioned already.
         sVpnMgr.stopProvisionedVpnProfile();
@@ -518,7 +528,7 @@ public class Ikev2VpnTest {
         boolean hasNat = !testIpv6;
 
         // Requires MANAGE_TEST_NETWORKS to provision a test-mode profile.
-        mCtsNetUtils.setAppopPrivileged(AppOpsManager.OP_ACTIVATE_PLATFORM_VPN, true);
+        mCtsNetUtils.setAppopPrivileged(OP_ACTIVATE_PLATFORM_VPN, true);
 
         final Ikev2VpnProfile profile = testIkeTunConnParams
                 ? buildIkev2VpnProfileIkeTunConnParams(true /* isRestrictedToTestNetworks */,
@@ -555,7 +565,7 @@ public class Ikev2VpnTest {
                 HexDump.hexStringToByteArray(authResp));
 
         // Verify the VPN network came up
-        final Network vpnNetwork = cb.expect(CallbackEntry.AVAILABLE).getNetwork();
+        final Network vpnNetwork = cb.expect(Event.AVAILABLE).getNetwork();
 
         if (testSessionKey) {
             final VpnProfileStateShim profileState = mVmShim.getProvisionedVpnProfileState();
@@ -569,8 +579,8 @@ public class Ikev2VpnTest {
                 && c.hasCapability(NET_CAPABILITY_INTERNET)
                 && !c.hasCapability(NET_CAPABILITY_VALIDATED)
                 && Process.myUid() == c.getOwnerUid());
-        cb.expect(CallbackEntry.LINK_PROPERTIES_CHANGED, vpnNetwork);
-        cb.expect(CallbackEntry.BLOCKED_STATUS, vpnNetwork);
+        cb.expect(Event.LINK_PROPERTIES_CHANGED, vpnNetwork);
+        cb.expect(Event.BLOCKED_STATUS, vpnNetwork);
 
         // A VPN that requires validation is initially not validated, while one that doesn't
         // immediately validate automatically. Because this VPN can't actually access Internet,
@@ -582,15 +592,15 @@ public class Ikev2VpnTest {
         // misuse VPN network itself as the underlying network. The fix is not available without
         // SDK > T platform. Thus, verify this only on T+ platform.
         if (!requiresValidation && isAtLeastT()) {
-            cb.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED, TIMEOUT_MS,
-                    entry -> ((CallbackEntry.CapabilitiesChanged) entry).getCaps()
+            cb.eventuallyExpect(Event.NETWORK_CAPS_UPDATED, TIMEOUT_MS,
+                    entry -> ((Event.CapabilitiesChanged) entry).getCaps()
                             .hasCapability(NET_CAPABILITY_VALIDATED));
         }
 
         sVpnMgr.stopProvisionedVpnProfile();
         // Using expectCallback may cause the test to be flaky since test may receive other
         // callbacks such as linkproperties change.
-        cb.eventuallyExpect(CallbackEntry.LOST, TIMEOUT_MS,
+        cb.eventuallyExpect(Event.LOST, TIMEOUT_MS,
                 lost -> vpnNetwork.equals(lost.getNetwork()));
     }
 
@@ -653,62 +663,62 @@ public class Ikev2VpnTest {
                         testIpv6Only, requiresValidation, testSessionKey , testIkeTunConnParams)));
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileV4() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileV4WithValidation() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, true /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileV6() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileV6WithValidation() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, true /* requiresValidation */,
                 false /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileIkeTunConnParamsV4() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, true /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileIkeTunConnParamsV4WithValidation() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, true /* requiresValidation */,
                 false /* testSessionKey */, true /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileIkeTunConnParamsV6() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, false /* requiresValidation */,
                 false /* testSessionKey */, true /* testIkeTunConnParams */);
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testStartStopVpnProfileIkeTunConnParamsV6WithValidation() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, true /* requiresValidation */,
                 false /* testSessionKey */, true /* testIkeTunConnParams */);
     }
 
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @Test
     public void testStartProvisionedVpnV4ProfileSession() throws Exception {
         doTestStartStopVpnProfile(false /* testIpv6Only */, false /* requiresValidation */,
                 true /* testSessionKey */, false /* testIkeTunConnParams */);
     }
 
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @Test
     public void testStartProvisionedVpnV6ProfileSession() throws Exception {
         doTestStartStopVpnProfile(true /* testIpv6Only */, false /* requiresValidation */,

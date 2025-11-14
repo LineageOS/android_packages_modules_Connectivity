@@ -25,6 +25,7 @@
     <option name="config-descriptor:metadata" key="mainline-param" value="com.google.android.tethering.apex" />
 
     <target_preparer class="com.android.compatibility.common.tradefed.targetprep.LocationCheck" />
+    <target_preparer class="com.android.testutils.ConnectivityTestTargetPreparer" />
 
     <!-- Enabling change id ALLOW_TEST_API_ACCESS allows that package to access @TestApi methods -->
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">

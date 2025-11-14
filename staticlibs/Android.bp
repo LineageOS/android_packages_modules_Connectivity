@@ -81,6 +81,30 @@ java_library {
     },
 }
 
+// Contains staticlibs classes for use by NetworkStack
+java_library {
+    name: "net-utils-networkstack",
+    srcs: [
+        "device/com/android/net/module/util/ProcfsParsingUtils.java",
+        "device/com/android/net/module/util/dhcp6/*.java",
+        "framework/com/android/net/module/util/HexDump.java",
+    ],
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+    target_sdk_version: "30",
+    visibility: [
+        "//packages/modules/Connectivity/tests:__subpackages__",
+        "//packages/modules/NetworkStack:__subpackages__",
+    ],
+    libs: [
+        "androidx.annotation_annotation",
+        "framework-annotations-lib",
+        "framework-connectivity.stubs.module_lib",
+        "net-utils-device-common-struct",
+        "net-utils-device-common-struct-base",
+    ],
+}
+
 java_library {
     name: "net-utils-dnspacket-common",
     srcs: [
@@ -228,6 +252,9 @@ java_library {
         // version linked.
         "net-utils-device-common-struct",
         "net-utils-device-common-struct-base",
+    ],
+    static_libs: [
+        "netd_aidl_interface-lateststable-java",
     ],
     apex_available: [
         "com.android.tethering",
@@ -462,6 +489,9 @@ java_library {
         "framework-annotations-lib",
         "framework-configinfrastructure.stubs.module_lib",
         "framework-connectivity.stubs.module_lib",
+    ],
+    static_libs: [
+        "net-utils-framework-common",
     ],
     lint: {
         strict_updatability_linting: true,

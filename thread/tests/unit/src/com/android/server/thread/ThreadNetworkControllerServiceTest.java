@@ -652,6 +652,43 @@ public final class ThreadNetworkControllerServiceTest {
         assertThat(failure.getErrorCode()).isEqualTo(ERROR_FAILED_PRECONDITION);
     }
 
+    @Test
+    public void setEnabled_success_threadNetworkEnabled() throws Exception {
+        mService.initialize();
+
+        CompletableFuture<Void> setEnabledFuture = new CompletableFuture<>();
+        mService.setEnabled(true, newOperationReceiver(setEnabledFuture));
+        mTestLooper.dispatchAll();
+
+        assertThat(mFakeOtDaemon.getEnabledState()).isEqualTo(STATE_ENABLED);
+    }
+
+    @Test
+    public void setDisabled_success_threadNetworkDisabled() throws Exception {
+        mService.initialize();
+
+        CompletableFuture<Void> setEnabledFuture = new CompletableFuture<>();
+        mService.setEnabled(false, newOperationReceiver(setEnabledFuture));
+        mTestLooper.dispatchAll();
+
+        assertThat(mFakeOtDaemon.getEnabledState()).isEqualTo(STATE_DISABLED);
+    }
+
+    @Test
+    public void setEnabled_otDaemonRemoteFailure_returnsInternalError() throws Exception {
+        mService.initialize();
+        CompletableFuture<Void> setEnabledFuture = new CompletableFuture<>();
+        mFakeOtDaemon.setSetEnabledException(
+                new RemoteException("ot-daemon setThreadEnabled() throws"));
+
+        mService.setEnabled(true, newOperationReceiver(setEnabledFuture));
+        mTestLooper.dispatchAll();
+
+        var thrown = assertThrows(ExecutionException.class, () -> setEnabledFuture.get());
+        ThreadNetworkException failure = (ThreadNetworkException) thrown.getCause();
+        assertThat(failure.getErrorCode()).isEqualTo(ERROR_INTERNAL_ERROR);
+    }
+
     private AtomicReference<BroadcastReceiver> captureBroadcastReceiver(String action) {
         AtomicReference<BroadcastReceiver> receiverRef = new AtomicReference<>();
 

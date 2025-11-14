@@ -17,10 +17,10 @@
 package android.net.cts
 
 import android.net.DhcpOption
+import android.os.Build
 import androidx.test.filters.SmallTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.SC_V2
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,7 +28,7 @@ import org.junit.runner.RunWith
 import org.junit.Test
 
 @SmallTest
-@IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+@IgnoreUpTo(Build.VERSION_CODES.S_V2)
 @RunWith(DevSdkIgnoreRunner::class)
 class DhcpOptionTest {
     private val DHCP_OPTION_TYPE: Byte = 2

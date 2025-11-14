@@ -37,7 +37,6 @@ public class CertificateTransparencyJob extends BroadcastReceiver {
     private static final String TAG = "CertificateTransparencyJob";
 
     private final Context mContext;
-    private final DataStore mDataStore;
     private final CertificateTransparencyDownloader mCertificateTransparencyDownloader;
     private final SignatureVerifier mSignatureVerifier;
     private final Collection<CompatibilityVersion> mCompatVersions;
@@ -50,12 +49,10 @@ public class CertificateTransparencyJob extends BroadcastReceiver {
     /** Creates a new {@link CertificateTransparencyJob} object. */
     public CertificateTransparencyJob(
             Context context,
-            DataStore dataStore,
             CertificateTransparencyDownloader certificateTransparencyDownloader,
             SignatureVerifier signatureVerifier,
             Collection<CompatibilityVersion> compatVersions) {
         mContext = context;
-        mDataStore = dataStore;
         mCertificateTransparencyDownloader = certificateTransparencyDownloader;
         mSignatureVerifier = signatureVerifier;
         mCompatVersions = compatVersions;
@@ -132,7 +129,6 @@ public class CertificateTransparencyJob extends BroadcastReceiver {
     }
 
     private void startDependencies() {
-        mDataStore.load();
         mSignatureVerifier.loadAllowedKeys();
         mContext.registerReceiver(
                 mCertificateTransparencyDownloader,
@@ -147,7 +143,6 @@ public class CertificateTransparencyJob extends BroadcastReceiver {
     private void stopDependencies() {
         mContext.unregisterReceiver(mCertificateTransparencyDownloader);
         mSignatureVerifier.clearAllowedKeys();
-        mDataStore.delete();
 
         if (Config.DEBUG) {
             Log.d(TAG, "CertificateTransparencyJob dependencies stopped.");

@@ -16,9 +16,8 @@
 
 package com.android.server.connectivity.mdns;
 
-import android.os.Message;
-
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * The interface for scheduler.
@@ -27,7 +26,8 @@ public interface Scheduler {
     /**
      * Set a message to be sent after a specified delay.
      */
-    boolean sendDelayedMessage(@NonNull Message message, long delayMs);
+    boolean sendDelayedMessage(int what, int arg1, int arg2, @Nullable Object obj,
+            long delayMs);
 
     /**
      * Remove a scheduled message.

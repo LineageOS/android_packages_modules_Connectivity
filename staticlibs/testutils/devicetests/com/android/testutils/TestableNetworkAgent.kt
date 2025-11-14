@@ -45,21 +45,21 @@ import android.system.OsConstants.SOCK_DGRAM
 import com.android.modules.utils.build.SdkLevel.isAtLeastS
 import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.CompatUtil.makeTestNetworkSpecifier
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnAddKeepalivePacketFilter
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnAutomaticReconnectDisabled
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnBandwidthUpdateRequested
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnDscpPolicyStatusUpdated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkDestroyed
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkUnwanted
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnRegisterQosCallback
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnRemoveKeepalivePacketFilter
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnSaveAcceptUnvalidated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnSignalStrengthThresholdsUpdated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnStartSocketKeepalive
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnStopSocketKeepalive
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnUnregisterQosCallback
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnValidationStatus
+import com.android.testutils.TestableNetworkAgent.Event.OnAddKeepalivePacketFilter
+import com.android.testutils.TestableNetworkAgent.Event.OnAutomaticReconnectDisabled
+import com.android.testutils.TestableNetworkAgent.Event.OnBandwidthUpdateRequested
+import com.android.testutils.TestableNetworkAgent.Event.OnDscpPolicyStatusUpdated
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkCreated
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkDestroyed
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkUnwanted
+import com.android.testutils.TestableNetworkAgent.Event.OnRegisterQosCallback
+import com.android.testutils.TestableNetworkAgent.Event.OnRemoveKeepalivePacketFilter
+import com.android.testutils.TestableNetworkAgent.Event.OnSaveAcceptUnvalidated
+import com.android.testutils.TestableNetworkAgent.Event.OnSignalStrengthThresholdsUpdated
+import com.android.testutils.TestableNetworkAgent.Event.OnStartSocketKeepalive
+import com.android.testutils.TestableNetworkAgent.Event.OnStopSocketKeepalive
+import com.android.testutils.TestableNetworkAgent.Event.OnUnregisterQosCallback
+import com.android.testutils.TestableNetworkAgent.Event.OnValidationStatus
 import java.net.NetworkInterface
 import java.net.SocketException
 import java.time.Duration
@@ -193,34 +193,34 @@ public open class TestableNetworkAgent(
 
     val DEFAULT_TIMEOUT_MS = 5000L
 
-    val history = ArrayTrackRecord<CallbackEntry>().newReadHead()
+    val history = ArrayTrackRecord<Event>().newReadHead()
 
-    sealed class CallbackEntry {
-        object OnBandwidthUpdateRequested : CallbackEntry()
-        object OnNetworkUnwanted : CallbackEntry()
+    sealed class Event {
+        object OnBandwidthUpdateRequested : Event()
+        object OnNetworkUnwanted : Event()
         data class OnAddKeepalivePacketFilter(
             val slot: Int,
             val packet: KeepalivePacketData
-        ) : CallbackEntry()
-        data class OnRemoveKeepalivePacketFilter(val slot: Int) : CallbackEntry()
+        ) : Event()
+        data class OnRemoveKeepalivePacketFilter(val slot: Int) : Event()
         data class OnStartSocketKeepalive(
             val slot: Int,
             val interval: Int,
             val packet: KeepalivePacketData
-        ) : CallbackEntry()
-        data class OnStopSocketKeepalive(val slot: Int) : CallbackEntry()
-        data class OnSaveAcceptUnvalidated(val accept: Boolean) : CallbackEntry()
-        object OnAutomaticReconnectDisabled : CallbackEntry()
-        data class OnValidationStatus(val status: Int, val uri: Uri?) : CallbackEntry()
-        data class OnSignalStrengthThresholdsUpdated(val thresholds: IntArray) : CallbackEntry()
-        object OnNetworkCreated : CallbackEntry()
-        object OnNetworkDestroyed : CallbackEntry()
-        data class OnDscpPolicyStatusUpdated(val policyId: Int, val status: Int) : CallbackEntry()
+        ) : Event()
+        data class OnStopSocketKeepalive(val slot: Int) : Event()
+        data class OnSaveAcceptUnvalidated(val accept: Boolean) : Event()
+        object OnAutomaticReconnectDisabled : Event()
+        data class OnValidationStatus(val status: Int, val uri: Uri?) : Event()
+        data class OnSignalStrengthThresholdsUpdated(val thresholds: IntArray) : Event()
+        object OnNetworkCreated : Event()
+        object OnNetworkDestroyed : Event()
+        data class OnDscpPolicyStatusUpdated(val policyId: Int, val status: Int) : Event()
         data class OnRegisterQosCallback(
             val callbackId: Int,
             val filter: QosFilter
-        ) : CallbackEntry()
-        data class OnUnregisterQosCallback(val callbackId: Int) : CallbackEntry()
+        ) : Event()
+        data class OnUnregisterQosCallback(val callbackId: Int) : Event()
     }
 
     override fun onBandwidthUpdateRequested() {
@@ -306,19 +306,19 @@ public open class TestableNetworkAgent(
         assertEquals("", it.uri.toString())
     }
 
-    inline fun <reified T : CallbackEntry> expectCallback(): T {
+    inline fun <reified T : Event> expectCallback(): T {
         val foundCallback = history.poll(DEFAULT_TIMEOUT_MS)
         assertTrue(foundCallback is T, "Expected ${T::class} but found $foundCallback")
         return foundCallback
     }
 
-    inline fun <reified T : CallbackEntry> expectCallback(valid: (T) -> Boolean) {
+    inline fun <reified T : Event> expectCallback(valid: (T) -> Boolean) {
         val foundCallback = history.poll(DEFAULT_TIMEOUT_MS)
         assertTrue(foundCallback is T, "Expected ${T::class} but found $foundCallback")
         assertTrue(valid(foundCallback), "Unexpected callback : $foundCallback")
     }
 
-    inline fun <reified T : CallbackEntry> eventuallyExpect() =
+    inline fun <reified T : Event> eventuallyExpect() =
             history.poll(DEFAULT_TIMEOUT_MS) { it is T }.also {
                 assertNotNull(it, "Callback ${T::class} not received")
     } as T

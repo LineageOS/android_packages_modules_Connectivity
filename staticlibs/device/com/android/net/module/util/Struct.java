@@ -123,6 +123,9 @@ public class Struct {
         EUI48,       // IEEE Extended Unique Identifier, a 48-bits long MAC address in network order
         Ipv4Address, // IPv4 address in network order
         Ipv6Address, // IPv6 address in network order
+        IpAddress,   // IP address in network order. IPv4 address is written to byte format as 
+                     // v4-mapped-v6 address. IpAddress should be used over Ipv6Address when 
+                     // the field wants to contain both v4 and v6 addresses.
     }
 
     /**
@@ -212,6 +215,9 @@ public class Struct {
             case Ipv6Address:
                 if (fieldType == Inet6Address.class) return;
                 break;
+            case IpAddress:
+                if (fieldType == InetAddress.class) return;
+                break;
             default:
                 throw new IllegalArgumentException("Unknown type" + annotation.type());
         }
@@ -254,6 +260,7 @@ public class Struct {
                 length = 4;
                 break;
             case Ipv6Address:
+            case IpAddress:
                 length = 16;
                 break;
             default:
@@ -442,6 +449,17 @@ public class Struct {
                     throw new IllegalArgumentException("illegal length of IP address", e);
                 }
                 break;
+            case IpAddress:
+                final byte[] ipAddress = new byte[16];
+                buf.get(ipAddress);
+                try {
+                    // InetAddress.getByAddress converts v4-mapped-v6 address to v4 address
+                    // internally and returns Inet4Address, otherwise returns Inet6Address.
+                    value = InetAddress.getByAddress(null /* host */, ipAddress);
+                } catch (UnknownHostException e) {
+                    throw new IllegalArgumentException("illegal length of IP address", e);
+                }
+                break;
             default:
                 throw new IllegalArgumentException("Unknown type:" + fieldInfo.annotation.type());
         }
@@ -532,6 +550,13 @@ public class Struct {
             case Ipv6Address:
                 final byte[] address = ((InetAddress) value).getAddress();
                 output.put(address);
+                break;
+            case IpAddress:
+                InetAddress inetAddress = (InetAddress) value;
+                if (inetAddress instanceof Inet4Address) {
+                    inetAddress = InetAddressUtils.v4MappedV6Address((Inet4Address) value);
+                }
+                output.put(inetAddress.getAddress());
                 break;
             default:
                 throw new IllegalArgumentException("Unknown type:" + fieldInfo.annotation.type());
@@ -749,7 +774,8 @@ public class Struct {
             } else if (fieldInfos[i].annotation.type() == Type.ByteArray) {
                 sb.append("0x").append(HexDump.toHexString((byte[]) value));
             } else if (fieldInfos[i].annotation.type() == Type.Ipv4Address
-                    || fieldInfos[i].annotation.type() == Type.Ipv6Address) {
+                    || fieldInfos[i].annotation.type() == Type.Ipv6Address
+                    || fieldInfos[i].annotation.type() == Type.IpAddress) {
                 sb.append(((InetAddress) value).getHostAddress());
             } else {
                 sb.append(value.toString());

@@ -288,8 +288,8 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
     // We cannot handle IP options, just standard 20 byte == 5 dword minimal IPv4 header
     if (ip4->ihl != 5) return TC_ACT_PIPE;
 
-    // Packet must not be multicast
-    if ((ip4->daddr & htonl(0xf0000000)) == htonl(0xe0000000)) return TC_ACT_PIPE;
+    // Packet must not be multicast, if it is just outright drop it.
+    if ((ip4->daddr & htonl(0xf0000000)) == htonl(0xe0000000)) return TC_ACT_SHOT;
 
     // Calculate the IPv4 one's complement checksum of the IPv4 header.
     __wsum sum4 = 0;
@@ -401,4 +401,3 @@ DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_e
 }
 
 LICENSE("Apache 2.0");
-CRITICAL("Connectivity");

@@ -17,7 +17,6 @@
 package com.android.server.connectivity.mdns;
 
 import static com.android.server.connectivity.mdns.MdnsSocket.INTERFACE_INDEX_UNSPECIFIED;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -26,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import android.net.Network;
+import android.os.Build;
 import android.os.Parcel;
 
 import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
@@ -37,13 +37,12 @@ import org.junit.runner.RunWith;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class MdnsServiceInfoTest {
     @Test
-    public void constructor_createWithOnlyTextStrings_correctAttributes() {
+    public void constructor_createWithTextEntries_correctAttributes() {
         MdnsServiceInfo info =
                 new MdnsServiceInfo(
                         "my-mdns-service",
@@ -53,74 +52,12 @@ public class MdnsServiceInfoTest {
                         12345,
                         "192.168.1.1",
                         "2001::1",
-                        List.of("vn=Google Inc.", "mn=Google Nest Hub Max"),
-                        /* textEntries= */ null,
-                        INTERFACE_INDEX_UNSPECIFIED);
-
-        assertTrue(info.getAttributeByKey("vn").equals("Google Inc."));
-        assertTrue(info.getAttributeByKey("mn").equals("Google Nest Hub Max"));
-    }
-
-    @Test
-    public void constructor_createWithOnlyTextEntries_correctAttributes() {
-        MdnsServiceInfo info =
-                new MdnsServiceInfo(
-                        "my-mdns-service",
-                        new String[] {"_googlecast", "_tcp"},
-                        List.of(),
-                        new String[] {"my-host", "local"},
-                        12345,
-                        "192.168.1.1",
-                        "2001::1",
-                        /* textStrings= */ null,
                         List.of(MdnsServiceInfo.TextEntry.fromString("vn=Google Inc."),
                                 MdnsServiceInfo.TextEntry.fromString("mn=Google Nest Hub Max")),
                         INTERFACE_INDEX_UNSPECIFIED);
 
         assertTrue(info.getAttributeByKey("vn").equals("Google Inc."));
         assertTrue(info.getAttributeByKey("mn").equals("Google Nest Hub Max"));
-    }
-
-    @Test
-    public void constructor_createWithBothTextStringsAndTextEntries_acceptsOnlyTextEntries() {
-        MdnsServiceInfo info =
-                new MdnsServiceInfo(
-                        "my-mdns-service",
-                        new String[] {"_googlecast", "_tcp"},
-                        List.of(),
-                        new String[] {"my-host", "local"},
-                        12345,
-                        "192.168.1.1",
-                        "2001::1",
-                        List.of("vn=Alphabet Inc.", "mn=Google Nest Hub Max", "id=12345"),
-                        List.of(
-                                MdnsServiceInfo.TextEntry.fromString("vn=Google Inc."),
-                                MdnsServiceInfo.TextEntry.fromString("mn=Google Nest Hub Max")),
-                        INTERFACE_INDEX_UNSPECIFIED);
-
-        assertEquals(Map.of("vn", "Google Inc.", "mn", "Google Nest Hub Max"),
-                info.getAttributes());
-    }
-
-    @Test
-    public void constructor_createWithDuplicateKeys_acceptsTheFirstOne() {
-        MdnsServiceInfo info =
-                new MdnsServiceInfo(
-                        "my-mdns-service",
-                        new String[] {"_googlecast", "_tcp"},
-                        List.of(),
-                        new String[] {"my-host", "local"},
-                        12345,
-                        "192.168.1.1",
-                        "2001::1",
-                        List.of("vn=Alphabet Inc.", "mn=Google Nest Hub Max", "id=12345"),
-                        List.of(MdnsServiceInfo.TextEntry.fromString("vn=Google Inc."),
-                                MdnsServiceInfo.TextEntry.fromString("mn=Google Nest Hub Max"),
-                                MdnsServiceInfo.TextEntry.fromString("mn=Google WiFi Router")),
-                        INTERFACE_INDEX_UNSPECIFIED);
-
-        assertEquals(Map.of("vn", "Google Inc.", "mn", "Google Nest Hub Max"),
-                info.getAttributes());
     }
 
     @Test
@@ -134,8 +71,7 @@ public class MdnsServiceInfoTest {
                         12345,
                         "192.168.1.1",
                         "2001::1",
-                        List.of("KEY=Value"),
-                        /* textEntries= */ null,
+                        List.of(MdnsServiceInfo.TextEntry.fromString("KEY=Value")),
                         INTERFACE_INDEX_UNSPECIFIED);
 
         assertEquals("Value", info.getAttributeByKey("key"));
@@ -155,7 +91,6 @@ public class MdnsServiceInfoTest {
                         12345,
                         "192.168.1.1",
                         "2001::1",
-                        List.of(),
                         /* textEntries= */ null,
                         INTERFACE_INDEX_UNSPECIFIED);
 
@@ -173,7 +108,6 @@ public class MdnsServiceInfoTest {
                         12345,
                         "192.168.1.1",
                         "2001::1",
-                        List.of(),
                         /* textEntries= */ null,
                         /* interfaceIndex= */ 20);
 
@@ -191,7 +125,6 @@ public class MdnsServiceInfoTest {
                         12345,
                         "192.168.1.1",
                         "2001::1",
-                        List.of(),
                         /* textEntries= */ null,
                         /* interfaceIndex= */ 20);
 
@@ -207,7 +140,6 @@ public class MdnsServiceInfoTest {
                         12345,
                         List.of("192.168.1.1"),
                         List.of("2001::1"),
-                        List.of(),
                         /* textEntries= */ null,
                         /* interfaceIndex= */ 20,
                         network,
@@ -228,7 +160,6 @@ public class MdnsServiceInfoTest {
                         12345,
                         List.of("192.168.1.1", "192.168.1.2"),
                         List.of("2001::1", "2001::2"),
-                        List.of("vn=Alphabet Inc.", "mn=Google Nest Hub Max", "id=12345"),
                         List.of(
                                 MdnsServiceInfo.TextEntry.fromString("vn=Google Inc."),
                                 MdnsServiceInfo.TextEntry.fromString("mn=Google Nest Hub Max"),

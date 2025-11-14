@@ -57,6 +57,12 @@ public class NetworkInterfaceWrapper {
         return networkInterface.getInterfaceAddresses();
     }
 
+    /** @see java.net.NetworkInterface#getName() */
+    public String getName() {
+        return networkInterface.getName();
+    }
+
+    /** @see java.net.NetworkInterface#getIndex() */
     public int getIndex() {
         return networkInterface.getIndex();
     }

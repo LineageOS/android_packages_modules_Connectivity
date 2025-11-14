@@ -42,6 +42,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.os.Build;
 import android.os.Process;
+import android.os.Trace;
 import android.util.ArrayMap;
 
 import androidx.test.filters.SmallTest;
@@ -842,6 +843,66 @@ public class NetworkStatsTest {
         assertEquals(2, stats.size());
         assertEquals(entry2, stats.getValues(0, null));
         assertEquals(entry3, stats.getValues(1, null));
+    }
+
+    @Test
+    public void testFilteredClone() {
+        final int testUid = 10101;
+        NetworkStats.Entry entry1 = new NetworkStats.Entry(
+                "test1", 10100, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L);
+
+        NetworkStats.Entry entry2 = new NetworkStats.Entry(
+                "test2", testUid, SET_DEFAULT, TAG_NONE, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L);
+
+        NetworkStats.Entry entry3 = new NetworkStats.Entry(
+                "test3", testUid, SET_DEFAULT, 123, METERED_NO, ROAMING_NO,
+                DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L);
+
+        NetworkStats stats = new NetworkStats(TEST_START, 3)
+                .insertEntry(entry1)
+                .insertEntry(entry2)
+                .insertEntry(entry3);
+
+        NetworkStats filtered = stats.filteredClone(testUid, INTERFACES_ALL, TAG_ALL);
+
+        assertEquals(3, stats.size());
+        assertEquals(entry1, stats.getValues(0, null));
+        assertEquals(entry2, stats.getValues(1, null));
+        assertEquals(entry3, stats.getValues(2, null));
+
+        assertEquals(2, filtered.size());
+        assertEquals(entry2, filtered.getValues(0, null));
+        assertEquals(entry3, filtered.getValues(1, null));
+    }
+
+    @Test
+    public void testFilteredPerformance() {
+        final int size = 100000;
+        NetworkStats stats = new NetworkStats(TEST_START, size);
+        for (int i = 0; i < size; ++i) {
+          NetworkStats.Entry entry = new NetworkStats.Entry(
+              "test", 10100 + i % 100, SET_DEFAULT, i % 2, METERED_NO, ROAMING_NO,
+              DEFAULT_NETWORK_NO, 50000L, 25L, 100000L, 50L, 0L);
+          stats.insertEntry(entry);
+        }
+
+        final int iterations = 1000;
+        final int filterTag = 0;
+        final int filterUid = 10100;
+
+        Trace.beginSection("MajorityFilter");
+        for (int i = 0; i < iterations; ++i) {
+          stats.filteredClone(UID_ALL, INTERFACES_ALL, filterTag);
+        }
+        Trace.endSection();
+
+        Trace.beginSection("MinorityFilter");
+        for (int i = 0; i < iterations; ++i) {
+          stats.filteredClone(filterUid, INTERFACES_ALL, TAG_ALL);
+        }
+        Trace.endSection();
     }
 
     @Test

@@ -40,8 +40,8 @@ import com.android.net.module.util.BaseNetdUnsolicitedEventListener
 import com.android.server.CSTest.CSContext
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.Lost
 import java.time.Duration
 import kotlin.test.assertNotNull
 import org.junit.Assert.assertFalse

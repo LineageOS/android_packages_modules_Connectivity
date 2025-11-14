@@ -16,7 +16,7 @@
 
 package com.android.testutils;
 
-import static com.android.testutils.RecorderCallback.CallbackEntry.AVAILABLE;
+import static com.android.testutils.TestableNetworkCallback.Event.AVAILABLE;
 import static com.android.testutils.TestableNetworkCallbackKt.anyNetwork;
 
 import static org.junit.Assume.assumeTrue;

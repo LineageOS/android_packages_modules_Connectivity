@@ -251,7 +251,6 @@ public class L2capNetworkProvider {
         private final Set<L2capNetwork> mL2capNetworks = new ArraySet<>();
 
         private class AcceptThread extends Thread {
-            private static final int TIMEOUT_MS = 500;
             private final BluetoothServerSocket mServerSocket;
 
             public AcceptThread(BluetoothServerSocket serverSocket) {

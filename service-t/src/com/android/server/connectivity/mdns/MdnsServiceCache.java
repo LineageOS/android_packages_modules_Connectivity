@@ -20,6 +20,8 @@ import static com.android.net.module.util.DnsUtils.equalsIgnoreDnsCase;
 import static com.android.net.module.util.DnsUtils.toDnsUpperCase;
 import static com.android.net.module.util.HandlerUtils.ensureRunningOnHandlerThread;
 import static com.android.server.connectivity.mdns.MdnsResponse.EXPIRATION_NEVER;
+import static com.android.server.connectivity.mdns.MdnsServiceTypeClient.REMOVE_SERVICE_AFTER_QUERY_SENT_TIME;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.responseMatchesInstanceNameAndSubtypes;
 
 import static java.lang.Math.min;
 
@@ -30,10 +32,12 @@ import android.os.Looper;
 import android.util.ArrayMap;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.CollectionUtils;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -49,6 +53,9 @@ import java.util.Objects;
  *  to their default value (0, false or null).
  */
 public class MdnsServiceCache {
+    @VisibleForTesting
+    static final long NEVER_SENT_QUERY = -1L;
+
     public static class CacheKey {
         @NonNull final String mUpperCaseServiceType;
         @NonNull final SocketKey mSocketKey;
@@ -82,10 +89,20 @@ public class MdnsServiceCache {
     public static class CachedService {
         @NonNull final MdnsResponse mService;
         boolean mServiceExpired;
+        // The timestamp of the first query sent after the service last received time (from the SRV
+        // record).
+        long mFirstQueryTimeAfterLastUpdate;
 
         CachedService(MdnsResponse service) {
             mService = service;
             mServiceExpired = false;
+            mFirstQueryTimeAfterLastUpdate = NEVER_SENT_QUERY;
+        }
+
+        boolean isServiceQueriedAfterLastUpdate(long now) {
+            return mFirstQueryTimeAfterLastUpdate != NEVER_SENT_QUERY
+                    && (now - mFirstQueryTimeAfterLastUpdate)
+                    >= REMOVE_SERVICE_AFTER_QUERY_SENT_TIME;
         }
     }
 
@@ -124,9 +141,11 @@ public class MdnsServiceCache {
         mClock = clock;
     }
 
-    private List<MdnsResponse> cachedServicesToResponses(List<CachedService> cachedServices) {
+    private List<MdnsResponse> cachedServicesToResponses(List<CachedService> cachedServices,
+            boolean excludeExpiredServices) {
         final List<MdnsResponse> responses = new ArrayList<>();
         for (CachedService cachedService : cachedServices) {
+            if (excludeExpiredServices && cachedService.mServiceExpired) continue;
             responses.add(cachedService.mService);
         }
         return responses;
@@ -139,14 +158,16 @@ public class MdnsServiceCache {
      * @return the set of services which matches the given service type.
      */
     @NonNull
-    public List<MdnsResponse> getCachedServices(@NonNull CacheKey cacheKey) {
+    public List<MdnsResponse> getCachedServices(@NonNull CacheKey cacheKey,
+            boolean excludeExpiredServices) {
         ensureRunningOnHandlerThread(mHandler);
         if (mMdnsFeatureFlags.mIsExpiredServicesRemovalEnabled) {
             maybeRemoveExpiredServices(cacheKey, mClock.elapsedRealtime());
         }
         return mCachedServices.containsKey(cacheKey)
                 ? Collections.unmodifiableList(
-                        cachedServicesToResponses(mCachedServices.get(cacheKey)))
+                        cachedServicesToResponses(mCachedServices.get(cacheKey),
+                                excludeExpiredServices))
                 : Collections.emptyList();
     }
 
@@ -185,7 +206,8 @@ public class MdnsServiceCache {
      * @return the service which matches given conditions.
      */
     @Nullable
-    public MdnsResponse getCachedService(@NonNull String serviceName, @NonNull CacheKey cacheKey) {
+    public MdnsResponse getCachedService(@NonNull String serviceName, @NonNull CacheKey cacheKey,
+            boolean excludeExpiredServices) {
         ensureRunningOnHandlerThread(mHandler);
         if (mMdnsFeatureFlags.mIsExpiredServicesRemovalEnabled) {
             maybeRemoveExpiredServices(cacheKey, mClock.elapsedRealtime());
@@ -195,7 +217,8 @@ public class MdnsServiceCache {
             return null;
         }
         final CachedService cachedService = findMatchedCachedService(cachedServices, serviceName);
-        return cachedService != null ? new MdnsResponse(cachedService.mService) : null;
+        return cachedService != null && !(excludeExpiredServices && cachedService.mServiceExpired)
+                ? new MdnsResponse(cachedService.mService) : null;
     }
 
     static void insertServiceAndSortList(
@@ -321,10 +344,11 @@ public class MdnsServiceCache {
         mHandler.post(()-> callback.onServiceRecordExpired(previousResponse, newResponse));
     }
 
-    static List<CachedService> removeExpiredServices(@NonNull List<CachedService> cachedServices,
-            long now) {
+    private List<CachedService> removeExpiredServices(@NonNull List<CachedService> cachedServices,
+            long now, boolean removeOnlyIfQuerySent) {
         final List<CachedService> removedServices = new ArrayList<>();
         final Iterator<CachedService> iterator = cachedServices.iterator();
+        boolean hasNewlyExpiredService = false;
         while (iterator.hasNext()) {
             final CachedService cachedService = iterator.next();
             // TODO: Check other records (A, AAAA, TXT) ttl time and remove the record if it's
@@ -335,46 +359,74 @@ public class MdnsServiceCache {
                 // early if service is not expired or no service record.
                 break;
             }
+            hasNewlyExpiredService = true;
+            if (removeOnlyIfQuerySent) {
+                // Set service is expired.
+                cachedService.mServiceExpired = true;
+                // Skip removal if no query sent for this expired service.
+                if (!cachedService.isServiceQueriedAfterLastUpdate(now)) {
+                    continue;
+                }
+            }
             // Remove the ttl expired service.
             iterator.remove();
             removedServices.add(cachedService);
         }
+
+        // Update next expiration time.
+        if (hasNewlyExpiredService) {
+            mNextExpirationTime = getNextExpirationTime(now);
+        }
+
         return removedServices;
     }
 
+    /**
+     * Calculates the absolute timestamp for the next service expiration based on cached services.
+     *
+     * If the cache is empty or if all cached services are already expired, this method returns
+     * {@code EXPIRATION_NEVER}.
+     *
+     * @param now The current time.
+     * @return The absolute timestamp when the next service is expected to expire, or
+     *         {@code EXPIRATION_NEVER} if no non-expired services are found in the cache.
+     */
     private long getNextExpirationTime(long now) {
+        ensureRunningOnHandlerThread(mHandler);
         if (mCachedServices.isEmpty()) {
             return EXPIRATION_NEVER;
         }
 
         long minRemainingTtl = EXPIRATION_NEVER;
         for (int i = 0; i < mCachedServices.size(); i++) {
+            final List<CachedService> services = mCachedServices.valueAt(i);
+            final int index = CollectionUtils.indexOf(
+                    services, service -> !service.mServiceExpired);
+            if (index == -1) continue;
             minRemainingTtl = min(minRemainingTtl,
-                    // The empty lists are not kept in the map, so there's always at least one
-                    // element in the list. Therefore, it's fine to get the first element without a
-                    // null check.
-                    mCachedServices.valueAt(i).get(0).mService.getMinRemainingTtl(now));
+                    services.get(index).mService.getMinRemainingTtl(now));
         }
         return minRemainingTtl == EXPIRATION_NEVER ? EXPIRATION_NEVER : now + minRemainingTtl;
     }
 
     /**
-     * Check whether the ttl time is expired on each service and notify to the listeners
+     * Check for expired services, remove them if they meet the removal criteria, and notify
+     * listeners.
+     *
+     * @param cacheKey the target CacheKey.
+     * @param now current time
      */
-    private void maybeRemoveExpiredServices(CacheKey cacheKey, long now) {
+    public void removeExpiredServicesAndNotifyListeners(CacheKey cacheKey, long now) {
         ensureRunningOnHandlerThread(mHandler);
-        if (now < mNextExpirationTime) {
-            // Skip the check if ttl time is not expired.
-            return;
-        }
-
         final List<CachedService> cachedServices = mCachedServices.get(cacheKey);
         if (cachedServices == null) {
             // No such services.
             return;
         }
 
-        final List<CachedService> removedServices = removeExpiredServices(cachedServices, now);
+        final List<CachedService> removedServices = removeExpiredServices(
+                cachedServices, now, mMdnsFeatureFlags.mIsOptimizedExpiredServiceRemovalEnabled);
+
         if (removedServices.isEmpty()) {
             // No expired services.
             return;
@@ -388,9 +440,68 @@ public class MdnsServiceCache {
         if (cachedServices.isEmpty()) {
             mCachedServices.remove(cacheKey);
         }
+    }
 
-        // Update next expiration time.
-        mNextExpirationTime = getNextExpirationTime(now);
+    /**
+     * Check whether the ttl time is expired on each service and notify to the listeners
+     */
+    private void maybeRemoveExpiredServices(CacheKey cacheKey, long now) {
+        ensureRunningOnHandlerThread(mHandler);
+        if (now < mNextExpirationTime) {
+            // Skip the check if ttl time is not expired.
+            return;
+        }
+
+        removeExpiredServicesAndNotifyListeners(cacheKey, now);
+    }
+
+    /**
+     * Update the query time for the cached services
+     *
+     * @param serviceName the target service name.
+     * @param cacheKey the target CacheKey.
+     * @param currentTime current time.
+     */
+    public void updateFirstQueryTimeForCachedServices(@Nullable String serviceName,
+            @NonNull Collection<String> subtypes, @NonNull CacheKey cacheKey, long currentTime) {
+        ensureRunningOnHandlerThread(mHandler);
+        final List<CachedService> cachedServices = mCachedServices.get(cacheKey);
+        if (cachedServices == null) {
+            // No such services.
+            return;
+        }
+        for (CachedService cachedService : cachedServices) {
+            if (cachedService.mFirstQueryTimeAfterLastUpdate != NEVER_SENT_QUERY) continue;
+            if (responseMatchesInstanceNameAndSubtypes(
+                    cachedService.mService, serviceName, subtypes)) {
+                cachedService.mFirstQueryTimeAfterLastUpdate = currentTime;
+            }
+        }
+    }
+
+    @VisibleForTesting
+    long getFirstQueryTimeAfterLastUpdate(@NonNull String serviceName, @NonNull CacheKey cacheKey) {
+        ensureRunningOnHandlerThread(mHandler);
+        final List<CachedService> cachedServices = mCachedServices.get(cacheKey);
+        if (cachedServices == null) {
+            return NEVER_SENT_QUERY;
+        }
+        final CachedService cachedService = findMatchedCachedService(cachedServices, serviceName);
+        return cachedService != null
+                ? cachedService.mFirstQueryTimeAfterLastUpdate : NEVER_SENT_QUERY;
+    }
+
+    /**
+     * Retrieve the current expiration time.
+     * <p>
+     * NOTE: This method exposes internal state ({@code mNextExpirationTime}) for testing purposes.
+     * It should not be used in production code.
+     *
+     * @return The expiration time.
+     */
+    @VisibleForTesting
+    long getCurrentExpiredTime() {
+        return mNextExpirationTime;
     }
 
     /**
@@ -404,7 +515,9 @@ public class MdnsServiceCache {
             pw.println(indent + key);
             for (CachedService cachedService : mCachedServices.valueAt(i)) {
                 pw.println(indent + "  Response{ " + cachedService.mService
-                        + " } Expired=" + cachedService.mServiceExpired);
+                        + " } Expired=" + cachedService.mServiceExpired
+                        + " FirstQueryTimeAfterLastUpdate="
+                        + cachedService.mFirstQueryTimeAfterLastUpdate);
             }
             pw.println();
         }

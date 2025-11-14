@@ -64,7 +64,6 @@ public class MdnsSocket {
         // Time to live is set 255, which is similar to the jMDNS implementation.
         multicastSocket.setTimeToLive(255);
 
-        // TODO (changed when importing code): consider tagging the socket for data usage
         isOnIPv6OnlyNetwork = false;
     }
 

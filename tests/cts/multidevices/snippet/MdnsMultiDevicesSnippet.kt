@@ -20,6 +20,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.testutils.NsdDiscoveryRecord
+import com.android.testutils.NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStarted
 import com.android.testutils.NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStopped
 import com.android.testutils.NsdRegistrationRecord
 import com.android.testutils.NsdRegistrationRecord.RegistrationEvent.ServiceRegistered
@@ -58,6 +59,10 @@ class MdnsMultiDevicesSnippet : Snippet {
 
     @Rpc(description = "Unregister a mDns service")
     fun unregisterMDnsService() {
+        if (!(registrationRecord.poll(timeoutMs = 0, pos = 0) is ServiceRegistered)) {
+            // Ignore unregistration if the service has not registered
+            return
+        }
         nsdManager.unregisterService(registrationRecord)
         registrationRecord.expectCallback<ServiceUnregistered>()
     }
@@ -86,6 +91,10 @@ class MdnsMultiDevicesSnippet : Snippet {
 
     @Rpc(description = "Stop discovery")
     fun stopMDnsServiceDiscovery() {
+        if (!(discoveryRecord.poll(timeoutMs = 0, pos = 0) is DiscoveryStarted)) {
+            // Ignore discovery stop if discovery has not started
+            return
+        }
         nsdManager.stopServiceDiscovery(discoveryRecord)
         discoveryRecord.expectCallbackEventually<DiscoveryStopped>()
     }

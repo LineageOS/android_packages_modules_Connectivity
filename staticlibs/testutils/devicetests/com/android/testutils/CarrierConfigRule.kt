@@ -25,7 +25,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.ConditionVariable
-import android.os.ParcelFileDescriptor
 import android.os.PersistableBundle
 import android.os.Process
 import android.telephony.CarrierConfigManager
@@ -37,10 +36,11 @@ import android.telephony.TelephonyManager.CarrierPrivilegesCallback
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.modules.utils.build.SdkLevel
+import com.android.net.module.util.ArrayTrackRecord
 import com.android.testutils.runAsShell
+import com.android.testutils.runCommandInShell
 import com.android.testutils.tryTest
 import java.security.MessageDigest
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.rules.TestRule
@@ -62,6 +62,21 @@ class CarrierConfigRule : TestRule {
     private val context by lazy { InstrumentationRegistry.getInstrumentation().context }
     private val uiAutomation by lazy { InstrumentationRegistry.getInstrumentation().uiAutomation }
     private val ccm by lazy { context.getSystemService(CarrierConfigManager::class.java) }
+    private val tm by lazy { context.getSystemService(TelephonyManager::class.java) }
+    private val certHash by lazy {
+        val signatures = context.packageManager.getPackageInfo(
+            context.opPackageName,
+            PackageManager.GET_SIGNATURES
+        ).signatures
+
+        val digest = MessageDigest.getInstance("SHA-256")
+        val result = signatures?.get(0)?.toByteArray()?.let {
+            bytesToHexString(digest.digest(it))
+        }
+
+        if (result == null) Log.e(TAG, "Can't get cert!")
+        result
+    }
 
     // Map of (subId) -> (original values of overridden settings)
     private val originalConfigs = mutableMapOf<Int, PersistableBundle>()
@@ -103,14 +118,30 @@ class CarrierConfigRule : TestRule {
     }
 
     private fun overrideConfigAndWait(subId: Int, config: PersistableBundle) {
-        val changeReceiver = ConfigChangeReceiver(subId)
-        context.registerReceiver(changeReceiver, IntentFilter(ACTION_CARRIER_CONFIG_CHANGED))
-        ccm.overrideConfig(subId, config)
-        assertTrue(
-            changeReceiver.cv.block(CARRIER_CONFIG_CHANGE_TIMEOUT_MS),
-            "Timed out waiting for config change for subId $subId"
-        )
-        context.unregisterReceiver(changeReceiver)
+        runAsShell(MODIFY_PHONE_STATE) {
+            val changeReceiver = ConfigChangeReceiver(subId)
+            context.registerReceiver(changeReceiver, IntentFilter(ACTION_CARRIER_CONFIG_CHANGED))
+            ccm.overrideConfig(subId, config)
+            assertTrue(
+                changeReceiver.cv.block(CARRIER_CONFIG_CHANGE_TIMEOUT_MS),
+                "Timed out waiting for config change for subId $subId"
+            )
+            context.unregisterReceiver(changeReceiver)
+        }
+
+        // Carrier privilege status may not be reset yet even after receiving
+        // ACTION_CARRIER_CONFIG_CHANGED, so make sure to also wait for
+        // CarrierPrivilegesCallback before proceeding.
+        if (SdkLevel.isAtLeastT()) {
+            config.getStringArray(
+                CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY
+            )?.let {
+                eventuallyExpectCarrierPrivilegesChangedOnSubId(
+                    subId,
+                    it.contains(certHash)
+                )
+            }
+        }
     }
 
     /**
@@ -130,20 +161,12 @@ class CarrierConfigRule : TestRule {
         }
         originalConfig.putAll(previousValues)
 
-        runAsShell(MODIFY_PHONE_STATE) {
-            overrideConfigAndWait(subId, config)
-        }
-    }
-
-    private fun runShellCommand(cmd: String) {
-        val fd: ParcelFileDescriptor = uiAutomation.executeShellCommand(cmd)
-        fd.close() // Don't care about the output.
+        overrideConfigAndWait(subId, config)
     }
 
     /**
      * Converts a byte array into a String of hexadecimal characters.
      *
-     * @param bytes an array of bytes
      * @return hex string representation of bytes array
      */
     private fun bytesToHexString(bytes: ByteArray?): String? {
@@ -169,59 +192,34 @@ class CarrierConfigRule : TestRule {
             )
         }
 
-        fun getCertHash(): String {
-            val pkgInfo = context.packageManager.getPackageInfo(
-                context.opPackageName,
-                PackageManager.GET_SIGNATURES
+        val hasPrivilege = getCarrierPrivilegesOnSubId(subId).uids.contains(Process.myUid())
+        if (hasPrivilege == hold) {
+            Log.w(
+                TAG,
+                "Package ${context.opPackageName} is already ${if (hold) "" else "not "}privileged"
             )
-            val digest = MessageDigest.getInstance("SHA-256")
-            val certHash = digest.digest(pkgInfo.signatures!![0]!!.toByteArray())
-            return bytesToHexString(certHash)!!
+            return
         }
 
-        val tm = context.getSystemService(TelephonyManager::class.java)!!
+        val currentCertStrings = runAsShell(READ_PHONE_STATE) {
+            ccm.getConfigForSubIdCompat(
+                subId,
+                setOf(CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY)
+            )
+        }.getStringArray(CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY) ?: arrayOf()
 
-        val cv = ConditionVariable()
-        val cpb = PrivilegeWaiterCallback(cv)
-        // The lambda below is capturing |cpb|, whose type inherits from a class that appeared in
-        // T. This means the lambda will compile as a private method of this class taking a
-        // PrivilegeWaiterCallback argument. As JUnit uses reflection to enumerate all methods
-        // including private methods, this would fail with a link error when running on S-.
-        // To solve this, make the lambda serializable, which causes the compiler to emit a
-        // synthetic class instead of a synthetic method.
-        tryTest @JvmSerializableLambda {
-            val slotIndex = SubscriptionManager.getSlotIndex(subId)!!
-            runAsShell(READ_PRIVILEGED_PHONE_STATE) @JvmSerializableLambda {
-                tm.registerCarrierPrivilegesCallback(slotIndex, { it.run() }, cpb)
-            }
-            // Wait for the callback to be registered
-            assertTrue(cv.block(CARRIER_CONFIG_CHANGE_TIMEOUT_MS),
-                "Can't register CarrierPrivilegesCallback")
-            if (cpb.hasPrivilege == hold) {
-                if (hold) {
-                    Log.w(TAG, "Package ${context.opPackageName} already is privileged")
-                } else {
-                    Log.w(TAG, "Package ${context.opPackageName} already isn't privileged")
-                }
-                return@tryTest
-            }
-            cv.close()
-            if (hold) {
-                addConfigOverrides(subId, PersistableBundle().also {
-                    it.putStringArray(CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY,
-                        arrayOf(getCertHash()))
-                })
-            } else {
-                cleanUpNow()
-            }
-            assertTrue(cv.block(CARRIER_CONFIG_CHANGE_TIMEOUT_MS),
-                "Timed out waiting for CarrierPrivilegesCallback")
-            assertEquals(cpb.hasPrivilege, hold, "Couldn't set carrier privilege")
-        } cleanup @JvmSerializableLambda {
-            runAsShell(READ_PRIVILEGED_PHONE_STATE) @JvmSerializableLambda {
-                tm.unregisterCarrierPrivilegesCallback(cpb)
-            }
+        val hashes = if (hold) {
+            currentCertStrings + certHash
+        } else {
+            currentCertStrings.subtract(setOf(certHash)).toTypedArray()
         }
+
+        addConfigOverrides(subId, PersistableBundle().apply {
+            putStringArray(
+                CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY,
+                hashes
+            )
+        })
     }
 
     /**
@@ -235,31 +233,35 @@ class CarrierConfigRule : TestRule {
     fun dropCarrierPrivilege(subId: Int) = setHoldCarrierPrivilege(false, subId)
 
     /**
+     * Setting carrier service package was added in U QPR1, so check for that.
+     *
+     * In T and below, return false. In V and above, return true as this must work.
+     * In U, test for the command presence. That means the test can be disabled by
+     * removing that command in QPR1+, but this would indicate malicious intent.
+     */
+    fun isSettingCarrierServicePackageSupported(): Boolean {
+        if (SdkLevel.isAtLeastV()) return true
+        // A T device with this command present should not be held accountable to have it work
+        if (!SdkLevel.isAtLeastU()) return false
+        return !runCommandInShell("cmd phone set-carrier-service-package-override")
+                .startsWith("Unknown command")
+    }
+
+    /**
      * Sets the carrier service package override for the given subscription ID. A null argument will
      * clear any previously-set override.
      */
     fun setCarrierServicePackageOverride(subId: Int, pkg: String?) {
-        if (!SdkLevel.isAtLeastU()) {
+        if (!isSettingCarrierServicePackageSupported()) {
             throw UnsupportedOperationException(
                 "Setting carrier service package override requires at least U SDK"
             )
         }
 
-        val tm = context.getSystemService(TelephonyManager::class.java)!!
-
         val cv = ConditionVariable()
         val cpb = CarrierServiceChangedWaiterCallback(cv)
-        // The lambda below is capturing |cpb|, whose type inherits from a class that appeared in
-        // T. This means the lambda will compile as a private method of this class taking a
-        // PrivilegeWaiterCallback argument. As JUnit uses reflection to enumerate all methods
-        // including private methods, this would fail with a link error when running on S-.
-        // To solve this, make the lambda serializable, which causes the compiler to emit a
-        // synthetic class instead of a synthetic method.
-        tryTest @JvmSerializableLambda {
-            val slotIndex = SubscriptionManager.getSlotIndex(subId)!!
-            runAsShell(READ_PRIVILEGED_PHONE_STATE) @JvmSerializableLambda {
-                tm.registerCarrierPrivilegesCallback(slotIndex, { it.run() }, cpb)
-            }
+        tryTest {
+            tm.registerCarrierPrivilegesCallbackWithPermission(subId, cpb)
             // Wait for the callback to be registered
             assertTrue(cv.block(CARRIER_CONFIG_CHANGE_TIMEOUT_MS),
                 "Can't register CarrierPrivilegesCallback")
@@ -275,28 +277,87 @@ class CarrierConfigRule : TestRule {
                 if (null == pkg) {
                     // There is a bug in clear-carrier-service-package-override where not adding
                     // the -s argument will use the wrong slot index : b/299604822
-                    runShellCommand("cmd phone clear-carrier-service-package-override" +
+                    runCommandInShell("cmd phone clear-carrier-service-package-override" +
                             " -s $subId")
                 } else {
-                    runShellCommand("cmd phone set-carrier-service-package-override $pkg" +
+                    runCommandInShell("cmd phone set-carrier-service-package-override $pkg" +
                             " -s $subId")
                 }
             }
             assertTrue(cv.block(CARRIER_CONFIG_CHANGE_TIMEOUT_MS),
                 "Can't modify carrier service package")
-        } cleanup @JvmSerializableLambda {
-            runAsShell(READ_PRIVILEGED_PHONE_STATE) @JvmSerializableLambda {
-                tm.unregisterCarrierPrivilegesCallback(cpb)
-            }
+        } cleanup {
+            tm.unregisterCarrierPrivilegesCallbackWithPermission(cpb)
         }
     }
 
-    private class PrivilegeWaiterCallback(private val cv: ConditionVariable) :
-        CarrierPrivilegesCallback {
-        var hasPrivilege = false
+    private fun TelephonyManager.registerCarrierPrivilegesCallbackWithPermission(
+        subId: Int,
+        cpb: CarrierPrivilegesCallback
+    ) =
+        runAsShell(READ_PRIVILEGED_PHONE_STATE) {
+            registerCarrierPrivilegesCallback(
+                SubscriptionManager.getSlotIndex(subId)!!,
+                { it.run() },
+                cpb
+            )
+        }
+
+    private fun TelephonyManager.unregisterCarrierPrivilegesCallbackWithPermission(
+        cpb: CarrierPrivilegesCallback
+    ) =
+        runAsShell(READ_PRIVILEGED_PHONE_STATE) {
+            unregisterCarrierPrivilegesCallback(cpb)
+        }
+
+    private class PrivilegeWaiterCallback() : CarrierPrivilegesCallback {
+        data class CarrierPrivileges(val packages: Set<String>, val uids: Set<Int>)
+        private val history = ArrayTrackRecord<CarrierPrivileges>().ReadHead()
+
         override fun onCarrierPrivilegesChanged(p: MutableSet<String>, uids: MutableSet<Int>) {
-            hasPrivilege = uids.contains(Process.myUid())
-            cv.open()
+            history.add(CarrierPrivileges(p, uids))
+        }
+
+        fun expectCarrierPrivilegesChanged(): CarrierPrivileges {
+            return eventuallyExpectCarrierPrivilegesChanged { true }
+        }
+
+        fun eventuallyExpectCarrierPrivilegesChanged(
+            predicate: (CarrierPrivileges) -> Boolean
+        ): CarrierPrivileges {
+            val result = history.poll(
+                CARRIER_CONFIG_CHANGE_TIMEOUT_MS,
+                predicate
+            )
+            assertNotNull(result, "onCarrierPrivilegesChanged not received!")
+            return result
+        }
+    }
+
+    private fun getCarrierPrivilegesOnSubId(
+        subId: Int
+    ): PrivilegeWaiterCallback.CarrierPrivileges {
+        val cpb = PrivilegeWaiterCallback()
+        return tryTest {
+            tm.registerCarrierPrivilegesCallbackWithPermission(subId, cpb)
+            cpb.expectCarrierPrivilegesChanged()
+        } cleanup {
+            tm.unregisterCarrierPrivilegesCallbackWithPermission(cpb)
+        }
+    }
+
+    private fun eventuallyExpectCarrierPrivilegesChangedOnSubId(
+        subId: Int,
+        expectedPrivilege: Boolean
+    ): PrivilegeWaiterCallback.CarrierPrivileges {
+        val cpb = PrivilegeWaiterCallback()
+        return tryTest {
+            tm.registerCarrierPrivilegesCallbackWithPermission(subId, cpb)
+            cpb.eventuallyExpectCarrierPrivilegesChanged {
+                it.uids.contains(Process.myUid()) == expectedPrivilege
+            }
+        } cleanup {
+            tm.unregisterCarrierPrivilegesCallbackWithPermission(cpb)
         }
     }
 
@@ -317,19 +378,14 @@ class CarrierConfigRule : TestRule {
      * test case unless cleaning up earlier is required.
      */
     fun cleanUpNow() {
-        runAsShell(MODIFY_PHONE_STATE) {
-            originalConfigs.forEach { (subId, config) ->
-                try {
-                    // Do not use null as the config to reset, as it would reset configs that may
-                    // have been set by target preparers such as
-                    // ConnectivityTestTargetPreparer / CarrierConfigSetupTest.
-                    overrideConfigAndWait(subId, config)
-                } catch (e: Throwable) {
-                    Log.e(TAG, "Error resetting carrier config for subId $subId")
-                }
+        originalConfigs.forEach { (subId, config) ->
+            try {
+                overrideConfigAndWait(subId, config)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Error resetting carrier config for subId $subId: $e", e)
             }
-            originalConfigs.clear()
         }
+        originalConfigs.clear()
         originalCarrierServicePackages.forEach { (subId, pkg) ->
             setCarrierServicePackageOverride(subId, pkg)
         }

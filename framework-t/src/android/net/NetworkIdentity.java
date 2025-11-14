@@ -22,6 +22,9 @@ import static android.net.ConnectivityManager.TYPE_WIFI;
 import static android.net.NetworkTemplate.NETWORK_TYPE_ALL;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
+import static com.android.net.module.util.CollectionUtils.intArrayToSet;
+import static com.android.net.module.util.NetworkCapabilitiesUtils.TYPE_TEST;
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -43,6 +46,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Network definition that includes strong identity. Analogous to combining
@@ -86,9 +90,6 @@ public class NetworkIdentity {
 
     private static final long SUPPORTED_OEM_MANAGED_TYPES = OEM_PAID | OEM_PRIVATE;
 
-    // Need to be synchronized with ConnectivityManager.
-    // TODO: Use {@code ConnectivityManager#*} when visible.
-    static final int TYPE_TEST = 18;
     private static final int MAX_NETWORK_TYPE = TYPE_TEST;
     private static final int MIN_NETWORK_TYPE = TYPE_MOBILE;
 
@@ -101,11 +102,13 @@ public class NetworkIdentity {
     final boolean mMetered;
     final boolean mDefaultNetwork;
     final int mOemManaged;
+    final long mTransportTypesBits;
 
     /** @hide */
     public NetworkIdentity(
             int type, int ratType, @Nullable String subscriberId, @Nullable String wifiNetworkKey,
-            boolean roaming, boolean metered, boolean defaultNetwork, int oemManaged, int subId) {
+            boolean roaming, boolean metered, boolean defaultNetwork, int oemManaged, int subId,
+            long transportTypesBits) {
         mType = type;
         mRatType = ratType;
         mSubscriberId = subscriberId;
@@ -115,25 +118,26 @@ public class NetworkIdentity {
         mDefaultNetwork = defaultNetwork;
         mOemManaged = oemManaged;
         mSubId = subId;
+        mTransportTypesBits = transportTypesBits;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(mType, mRatType, mSubscriberId, mWifiNetworkKey, mRoaming, mMetered,
-                mDefaultNetwork, mOemManaged, mSubId);
+                mDefaultNetwork, mOemManaged, mSubId, mTransportTypesBits);
     }
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        if (obj instanceof NetworkIdentity) {
-            final NetworkIdentity ident = (NetworkIdentity) obj;
+        if (obj instanceof NetworkIdentity ident) {
             return mType == ident.mType && mRatType == ident.mRatType && mRoaming == ident.mRoaming
                     && Objects.equals(mSubscriberId, ident.mSubscriberId)
                     && Objects.equals(mWifiNetworkKey, ident.mWifiNetworkKey)
                     && mMetered == ident.mMetered
                     && mDefaultNetwork == ident.mDefaultNetwork
                     && mOemManaged == ident.mOemManaged
-                    && mSubId == ident.mSubId;
+                    && mSubId == ident.mSubId
+                    && mTransportTypesBits == ident.mTransportTypesBits;
         }
         return false;
     }
@@ -162,6 +166,8 @@ public class NetworkIdentity {
         builder.append(", defaultNetwork=").append(mDefaultNetwork);
         builder.append(", oemManaged=").append(getOemManagedNames(mOemManaged));
         builder.append(", subId=").append(mSubId);
+        // TODO: Print human friendly names instead.
+        builder.append(", transports=").append(getTransportTypes());
         return builder.append("}").toString();
     }
 
@@ -204,7 +210,7 @@ public class NetworkIdentity {
         proto.write(NetworkIdentityProto.METERED, mMetered);
         proto.write(NetworkIdentityProto.DEFAULT_NETWORK, mDefaultNetwork);
         proto.write(NetworkIdentityProto.OEM_MANAGED_NETWORK, mOemManaged);
-
+        proto.write(NetworkIdentityProto.TRANSPORT_TYPES, mTransportTypesBits);
         proto.end(start);
     }
 
@@ -274,6 +280,14 @@ public class NetworkIdentity {
     }
 
     /**
+     * Get transport types
+     * @hide
+     */
+    public Set<Integer> getTransportTypes() {
+        return intArrayToSet(BitUtils.unpackBits(mTransportTypesBits));
+    }
+
+    /**
      * Assemble a {@link NetworkIdentity} from the passed arguments.
      *
      * This methods builds an identity based on the capabilities of the network in the
@@ -323,6 +337,9 @@ public class NetworkIdentity {
         Objects.requireNonNull(right);
         int res = Integer.compare(left.mType, right.mType);
         if (res == 0) {
+            res = Long.compare(left.mTransportTypesBits, right.mTransportTypesBits);
+        }
+        if (res == 0) {
             res = Integer.compare(left.mRatType, right.mRatType);
         }
         if (res == 0 && left.mSubscriberId != null && right.mSubscriberId != null) {
@@ -362,6 +379,7 @@ public class NetworkIdentity {
         private boolean mDefaultNetwork;
         private int mOemManaged;
         private int mSubId;
+        private long mTransportTypes;
 
         /**
          * Creates a new Builder.
@@ -377,6 +395,7 @@ public class NetworkIdentity {
             mDefaultNetwork = false;
             mOemManaged = NetworkTemplate.OEM_MANAGED_NO;
             mSubId = INVALID_SUBSCRIPTION_ID;
+            mTransportTypes = 0L;
         }
 
         /**
@@ -389,6 +408,7 @@ public class NetworkIdentity {
          *  - metered
          *  - oemManaged
          *  - wifiNetworkKey
+         *  - transportTypes
          *
          * @param snapshot The target {@link NetworkStateSnapshot} object.
          * @return The builder object.
@@ -397,6 +417,7 @@ public class NetworkIdentity {
         @NonNull
         public Builder setNetworkStateSnapshot(@NonNull NetworkStateSnapshot snapshot) {
             setType(snapshot.getLegacyType());
+            setTransportTypes(intArrayToSet(snapshot.getNetworkCapabilities().getTransportTypes()));
 
             setSubscriberId(snapshot.getSubscriberId());
             setRoaming(!snapshot.getNetworkCapabilities().hasCapability(
@@ -406,6 +427,7 @@ public class NetworkIdentity {
 
             setOemManaged(getOemBitfield(snapshot.getNetworkCapabilities()));
 
+            // TODO: Use the transports instead.
             if (mType == TYPE_WIFI) {
                 final NetworkCapabilities nc = snapshot.getNetworkCapabilities();
                 final TransportInfo transportInfo = nc.getTransportInfo();
@@ -580,6 +602,17 @@ public class NetworkIdentity {
             return this;
         }
 
+        /**
+         * Set the transport types.
+         *
+         * @hide
+         */
+        @NonNull
+        public Builder setTransportTypes(Set<Integer> transportTypes) {
+            mTransportTypes = BitUtils.packBits(CollectionUtils.toIntArray(transportTypes));
+            return this;
+        }
+
         private void ensureValidParameters() {
             // Assert non-mobile network cannot have a ratType.
             if (mType != TYPE_MOBILE && mRatType != NetworkTemplate.NETWORK_TYPE_ALL) {
@@ -602,7 +635,7 @@ public class NetworkIdentity {
         public NetworkIdentity build() {
             ensureValidParameters();
             return new NetworkIdentity(mType, mRatType, mSubscriberId, mWifiNetworkKey,
-                    mRoaming, mMetered, mDefaultNetwork, mOemManaged, mSubId);
+                    mRoaming, mMetered, mDefaultNetwork, mOemManaged, mSubId, mTransportTypes);
         }
     }
 }

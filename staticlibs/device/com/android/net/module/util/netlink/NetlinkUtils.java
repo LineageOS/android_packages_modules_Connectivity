@@ -87,7 +87,7 @@ public class NetlinkUtils {
 
     public static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
     public static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
-    public static final int SOCKET_DUMP_RECV_BUFSIZE = 128 * 1024;
+    public static final int SOCKET_DUMP_RECV_BUFSIZE = 1024 * 1024;
 
     /**
      * Return whether the input ByteBuffer contains enough remaining bytes for
@@ -474,18 +474,18 @@ public class NetlinkUtils {
     /**
      * Sends a netlink request to set flags for given interface
      *
-     * @param interfaceName The name of the network interface to query.
+     * @param ifIndex The index of the network interface to configure.
      * @param flags power-of-two integer flags to set or unset. A flag to set should be passed as
      *        is as a power-of-two value, and a flag to remove should be passed inversed as -1 with
      *        a single bit down. For example: IFF_UP, ~IFF_BROADCAST...
      * @return true if the request finished successfully, otherwise false.
      */
-    public static boolean setInterfaceFlags(@NonNull String interfaceName, int... flags) {
+    public static boolean setInterfaceFlags(int ifIndex, int... flags) {
         final RtNetlinkLinkMessage ntMsg =
-                RtNetlinkLinkMessage.createSetFlagsMessage(interfaceName, /*seqNo*/ 0, flags);
+                RtNetlinkLinkMessage.createSetFlagsMessage(ifIndex, /*seqNo*/ 0, flags);
         if (ntMsg == null) {
-            Log.e(TAG, "Failed to create message to set interface flags for interface "
-                    + interfaceName + ", input flags are: " + Arrays.toString(flags));
+            Log.e(TAG, "Failed to create message to set interface flags for interface with index: "
+                    + ifIndex + ", input flags are: " + Arrays.toString(flags));
             return false;
         }
         final byte[] msg = ntMsg.pack(ByteOrder.nativeOrder());
@@ -493,7 +493,7 @@ public class NetlinkUtils {
             NetlinkUtils.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
             return true;
         } catch (ErrnoException e) {
-            Log.e(TAG, "Failed to set flags for: " + interfaceName, e);
+            Log.e(TAG, "Failed to set flags for interface with index: " + ifIndex, e);
             return false;
         }
     }
@@ -501,20 +501,20 @@ public class NetlinkUtils {
     /**
      * Sends a netlink request to set MTU for given interface
      *
-     * @param interfaceName The name of the network interface to query.
+     * @param ifIndex The index of the network interface to configure.
      * @param mtu MTU value to set for the interface.
      * @return true if the request finished successfully, otherwise false.
      */
-    public static boolean setInterfaceMtu(@NonNull String interfaceName, int mtu) {
+    public static boolean setInterfaceMtu(int ifIndex, int mtu) {
         if (mtu < 68) {
             Log.e(TAG, "Invalid mtu: " + mtu + ", mtu should be greater than 68 referring RFC791");
             return false;
         }
         final RtNetlinkLinkMessage ntMsg =
-                RtNetlinkLinkMessage.createSetMtuMessage(interfaceName, /*seqNo*/ 0, mtu);
+                RtNetlinkLinkMessage.createSetMtuMessage(ifIndex, /*seqNo*/ 0, mtu);
         if (ntMsg == null) {
             Log.e(TAG, "Failed to create message to set MTU to " + mtu
-                    + "for interface " + interfaceName);
+                    + "for interface with index: " + ifIndex);
             return false;
         }
         final byte[] msg = ntMsg.pack(ByteOrder.nativeOrder());
@@ -522,7 +522,7 @@ public class NetlinkUtils {
             NetlinkUtils.sendOneShotKernelMessage(NETLINK_ROUTE, msg);
             return true;
         } catch (ErrnoException e) {
-            Log.e(TAG, "Failed to set MTU to " + mtu + " for: " + interfaceName, e);
+            Log.e(TAG, "Failed to set MTU to " + mtu + " for interface with index: " + ifIndex, e);
             return false;
         }
     }

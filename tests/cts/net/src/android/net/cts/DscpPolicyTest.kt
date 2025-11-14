@@ -46,6 +46,8 @@ import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.net.TestNetworkManager.TestInterfaceRequest
 import android.net.cts.util.CtsNetUtils.TestNetworkCallback
+import android.os.Build
+import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import android.platform.test.annotations.AppModeFull
@@ -70,12 +72,12 @@ import com.android.testutils.ArpResponder
 import com.android.testutils.CompatUtil
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
-import com.android.testutils.RouterAdvertisementResponder
-import com.android.testutils.SC_V2
+import com.android.testutils.NdResponder
 import com.android.testutils.PollPacketReader
+import com.android.testutils.SC_V2
 import com.android.testutils.TestableNetworkAgent
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnDscpPolicyStatusUpdated
-import com.android.testutils.TestableNetworkAgent.CallbackEntry.OnNetworkCreated
+import com.android.testutils.TestableNetworkAgent.Event.OnDscpPolicyStatusUpdated
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkCreated
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.assertParcelingIsLossless
 import com.android.testutils.runAsShell
@@ -114,7 +116,7 @@ private const val IPV6_ADDRESS_WAIT_TIME_MS = 10_000L
 class DscpPolicyTest {
     @JvmField
     @Rule
-    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = SC_V2)
+    val ignoreRule = DevSdkIgnoreRule(ignoreClassUpTo = Build.VERSION_CODES.S_V2)
 
     private val LOCAL_IPV4_ADDRESS = InetAddresses.parseNumericAddress("192.0.2.1")
     private val TEST_TARGET_IPV4_ADDR =
@@ -138,7 +140,7 @@ class DscpPolicyTest {
     private lateinit var tunNetworkCallback: TestNetworkCallback
     private lateinit var reader: PollPacketReader
     private lateinit var arpResponder: ArpResponder
-    private lateinit var raResponder: RouterAdvertisementResponder
+    private lateinit var ndResponder: NdResponder
 
     private fun getKernelVersion(): IntArray {
         // Example:
@@ -175,16 +177,16 @@ class DscpPolicyTest {
 
         handlerThread.start()
         reader = PollPacketReader(
-                handlerThread.threadHandler,
+                Handler(handlerThread.looper),
                 iface.fileDescriptor.fileDescriptor,
                 MAX_PACKET_LENGTH)
         reader.startAsyncForTest()
 
         arpResponder = ArpResponder(reader, mapOf(TEST_TARGET_IPV4_ADDR to TEST_TARGET_MAC_ADDR))
         arpResponder.start()
-        raResponder = RouterAdvertisementResponder(reader)
-        raResponder.addRouterEntry(TEST_TARGET_MAC_ADDR, TEST_ROUTER_IPV6_ADDR)
-        raResponder.start()
+        ndResponder = NdResponder(reader)
+        ndResponder.addRouterEntry(TEST_TARGET_MAC_ADDR, TEST_ROUTER_IPV6_ADDR)
+        ndResponder.start()
     }
 
     @After
@@ -192,7 +194,7 @@ class DscpPolicyTest {
         if (!kernelIsAtLeast(5, 15)) {
             return
         }
-        raResponder.stop()
+        ndResponder.stop()
         arpResponder.stop()
 
         agentsToCleanUp.forEach { it.unregister() }
@@ -226,7 +228,7 @@ class DscpPolicyTest {
     private fun waitForGlobalIpv6Address(network: Network): Inet6Address {
         // Wait for global IPv6 address to be available
         var inet6Addr: Inet6Address? = null
-        val onLinkPrefix = raResponder.prefix
+        val onLinkPrefix = ndResponder.prefix
         val startTime = SystemClock.elapsedRealtime()
         while (SystemClock.elapsedRealtime() - startTime < IPV6_ADDRESS_WAIT_TIME_MS) {
             SystemClock.sleep(50 /* ms */)

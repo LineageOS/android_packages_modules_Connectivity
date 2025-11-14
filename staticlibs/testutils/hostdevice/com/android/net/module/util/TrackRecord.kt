@@ -255,7 +255,7 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
          * the last element in the queue if null is returned. This means this method will always
          * skip elements that do not match the predicate, even if it returns null.
          *
-         * This method can only be used by the thread that created this ManagedRecordingQueue.
+         * This method can only be used by the thread that created this ReadHead.
          * If used on another thread, this throws IllegalStateException.
          *
          * @param timeoutMs how long, in milliseconds, to wait at most (best effort approximation).
@@ -278,8 +278,57 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
         }
 
         /**
-         * Returns a list of events that were observed since the last time poll() was called on this
-         * ReadHead.
+         * Returns the first element after the mark, optionally blocking until one is available,
+         * or null if no such element can be found within the timeout.
+         * If a predicate is given, only elements matching the predicate are returned.
+         *
+         * Upon return, the mark will be advanced up to the point of the returned element (or
+         * after the last element in the queue if not found) if and only if that element was
+         * found after the current mark. This means this method will always skip elements that
+         * do not match the predicate even if it returns null, and repeated calls with the
+         * same position will advance the mark up to the last of the found elements.
+         *
+         * This method can only be used by the thread that created this ReadHead.
+         * If used on another thread, this throws IllegalStateException.
+         *
+         * Typical usage would be to check for multiple elements in any order. For example,
+         * val mark = readHead.mark
+         * readHead.poll(timeout, mark) { it matches condition 1 }
+         * readHead.poll(timeout, mark) { it matches condition 2 }
+         * readHead.poll(timeout, mark) { it matches condition 3 }
+         * The above would check that starting at the mark, there are three events, one matching
+         * each condition, in any order. A caller could further check that there were no other
+         * event beside the 3 checked with something like
+         * assertEquals(readHead.mark - mark, 3)
+         *
+         * @param timeoutMs how long, in milliseconds, to wait at most (best effort approximation).
+         * @param pos the position in the underlying track record where to start the search.
+         * @param predicate a predicate to filter elements to be returned.
+         * @return an element matching the predicate, or null if timeout.
+         */
+        override fun poll(timeoutMs: Long, pos: Int, predicate: (E) -> Boolean): E? {
+            val stamp = slock.tryWriteLock()
+            if (0L == stamp) concurrentAccessDetected()
+            pollMark = readHead
+            try {
+                lock.withLock {
+                    val index = pollForIndexReadLocked(timeoutMs, pos, predicate)
+                    when {
+                        index < 0 -> readHead = size
+                        index >= readHead -> readHead = index + 1
+                        // else do nothing, the element was found prior to the read head so
+                        // don't move the read head
+                    }
+                    return getOrNull(index)
+                }
+            } finally {
+                slock.unlockWrite(stamp)
+            }
+        }
+
+        /**
+         * Returns a list of events that were observed since before the last poll() operation on
+         * this ReadHead.
          *
          * @return list of events since poll() was called.
          */

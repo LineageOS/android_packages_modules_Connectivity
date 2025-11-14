@@ -20,6 +20,7 @@ import android.Manifest.permission.MANAGE_TEST_NETWORKS
 import android.content.Context
 import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
+import android.net.TestNetworkManager.TestInterfaceRequest
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -35,6 +36,14 @@ class AutoCloseTestInterfaceRule(
     fun createTapInterface(): TestNetworkInterface {
         return runAsShell(MANAGE_TEST_NETWORKS) {
             tnm.createTapInterface()
+        }.also {
+            ifaces.add(it)
+        }
+    }
+
+    fun createTestInterface(req: TestInterfaceRequest): TestNetworkInterface {
+        return runAsShell(MANAGE_TEST_NETWORKS) {
+            tnm.createTestInterface(req)
         }.also {
             ifaces.add(it)
         }

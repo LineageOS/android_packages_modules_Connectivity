@@ -57,7 +57,6 @@ public class MdnsServiceInfo implements Parcelable {
                             source.readInt(),
                             source.createStringArrayList(),
                             source.createStringArrayList(),
-                            source.createStringArrayList(),
                             source.createTypedArrayList(TextEntry.CREATOR),
                             source.readInt(),
                             source.readParcelable(Network.class.getClassLoader()),
@@ -79,7 +78,6 @@ public class MdnsServiceInfo implements Parcelable {
     private final List<String> ipv4Addresses;
     @NonNull
     private final List<String> ipv6Addresses;
-    final List<String> textStrings;
     @Nullable
     final List<TextEntry> textEntries;
     private final int interfaceIndex;
@@ -104,7 +102,6 @@ public class MdnsServiceInfo implements Parcelable {
             int port,
             @Nullable String ipv4Address,
             @Nullable String ipv6Address,
-            @Nullable List<String> textStrings,
             @Nullable List<TextEntry> textEntries,
             int interfaceIndex) {
         this(
@@ -115,7 +112,6 @@ public class MdnsServiceInfo implements Parcelable {
                 port,
                 List.of(ipv4Address),
                 List.of(ipv6Address),
-                textStrings,
                 textEntries,
                 interfaceIndex,
                 /* network= */ null,
@@ -135,7 +131,6 @@ public class MdnsServiceInfo implements Parcelable {
             int port,
             @NonNull List<String> ipv4Addresses,
             @NonNull List<String> ipv6Addresses,
-            @Nullable List<String> textStrings,
             @Nullable List<TextEntry> textEntries,
             int interfaceIndex,
             @Nullable Network network,
@@ -150,19 +145,13 @@ public class MdnsServiceInfo implements Parcelable {
         this.port = port;
         this.ipv4Addresses = new ArrayList<>(ipv4Addresses);
         this.ipv6Addresses = new ArrayList<>(ipv6Addresses);
-        this.textStrings = new ArrayList<>();
-        if (textStrings != null) {
-            this.textStrings.addAll(textStrings);
-        }
-        this.textEntries = (textEntries == null) ? null : new ArrayList<>(textEntries);
+        this.textEntries = (textEntries == null)
+                ? Collections.emptyList()
+                : new ArrayList<>(textEntries);
 
-        // The module side sends both {@code textStrings} and {@code textEntries} for backward
-        // compatibility. We should prefer only {@code textEntries} if it's not null.
-        List<TextEntry> entries =
-                (this.textEntries != null) ? this.textEntries : parseTextStrings(this.textStrings);
         // The map of attributes is case-insensitive.
         final Map<String, byte[]> attributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (TextEntry entry : entries) {
+        for (TextEntry entry : this.textEntries) {
             // Per https://datatracker.ietf.org/doc/html/rfc6763#section-6.4, only the first entry
             // of the same key should be accepted:
             // If a client receives a TXT record containing the same key more than once, then the
@@ -173,17 +162,6 @@ public class MdnsServiceInfo implements Parcelable {
         this.interfaceIndex = interfaceIndex;
         this.network = network;
         this.expirationTime = Instant.ofEpochSecond(expirationTime.getEpochSecond());
-    }
-
-    private static List<TextEntry> parseTextStrings(List<String> textStrings) {
-        List<TextEntry> list = new ArrayList(textStrings.size());
-        for (String textString : textStrings) {
-            TextEntry entry = TextEntry.fromString(textString);
-            if (entry != null) {
-                list.add(entry);
-            }
-        }
-        return Collections.unmodifiableList(list);
     }
 
     /** Returns the name of this service instance. */
@@ -327,7 +305,6 @@ public class MdnsServiceInfo implements Parcelable {
         out.writeInt(port);
         out.writeStringList(ipv4Addresses);
         out.writeStringList(ipv6Addresses);
-        out.writeStringList(textStrings);
         out.writeTypedList(textEntries);
         out.writeInt(interfaceIndex);
         out.writeParcelable(network, 0);
@@ -344,7 +321,6 @@ public class MdnsServiceInfo implements Parcelable {
                 + ", port: " + port
                 + ", interfaceIndex: " + interfaceIndex
                 + ", network: " + network
-                + ", textStrings: " + textStrings
                 + ", textEntries: " + textEntries
                 + ", expirationTime: " + expirationTime;
     }

@@ -141,6 +141,11 @@ public abstract class FdEventsReader<BufferType> {
         return mPacketsReceived;
     }
 
+    /** Returns the FileDescriptor if the FdEventsReader is running, null otherwise. */
+    protected FileDescriptor getFd() {
+        return isRunning() ? mFd : null;
+    }
+
     /**
      * Subclasses MUST create the listening socket here, including setting all desired socket
      * options, interface or address/port binding, etc. The socket MUST be created nonblocking.

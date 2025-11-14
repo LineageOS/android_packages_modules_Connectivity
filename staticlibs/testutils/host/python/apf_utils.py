@@ -13,12 +13,12 @@
 #  limitations under the License.
 
 from dataclasses import dataclass
+import functools
 import re
 from mobly import asserts
 from mobly.controllers import android_device
 from mobly.controllers.android_device_lib.adb import AdbError
 from net_tests_utils.host.python import adb_utils, assert_utils
-import functools
 
 
 class PatternNotFoundException(Exception):
@@ -32,57 +32,32 @@ class UnsupportedOperationException(Exception):
 def get_apf_counter(
     ad: android_device.AndroidDevice, iface: str, counter_name: str
 ) -> int:
-  counters = get_apf_counters_from_dumpsys(ad, iface)
-  return counters.get(counter_name, 0)
+  counters = get_apf_counters_from_cmd(ad, iface)
+  try:
+    return int(counters.get(counter_name, 0))
+  except ValueError:
+    return -1
 
 
-def get_apf_counters_from_dumpsys(
+def get_apf_counters_from_cmd(
     ad: android_device.AndroidDevice, iface_name: str
 ) -> dict:
-  dumpsys = adb_utils.get_dumpsys_for_service(ad, "network_stack")
+  cmd = f'cmd network_stack apf {iface_name} dump-counters'
+  output = AdbOutputHandler(ad, cmd).get_output()
+  data_dict = {}
+  for line in output.strip().split('\n'):
+    if line:  # Ensure the line is not empty
+      # split only at the first colon
+      parts = line.split(':', 1)
+      if len(parts) == 2:
+        data_dict[parts[0]] = parts[1]
+      else:
+        raise assert_utils.UnexpectedBehaviorError(
+            f'Got unexpected output: {output}.'
+        )
 
-  # Extract IpClient section of the specified interface.
-  # This takes inputs like:
-  # IpClient.wlan0
-  #   ...
-  # IpClient.wlan1
-  #   ...
-  iface_pattern = re.compile(
-      r"^IpClient\." + iface_name + r"\n" + r"((^\s.*\n)+)", re.MULTILINE
-  )
-  iface_result = iface_pattern.search(dumpsys)
-  if iface_result is None:
-    raise PatternNotFoundException("Cannot find IpClient for " + iface_name)
+  return data_dict
 
-  # Extract APF counters section from IpClient section, which looks like:
-  #     APF packet counters:
-  #       COUNTER_NAME: VALUE
-  #       ....
-  apf_pattern = re.compile(
-      r"APF packet counters:.*\n.(\s+[A-Z_0-9]+: \d+\n)+", re.MULTILINE
-  )
-  apf_result = apf_pattern.search(iface_result.group(0))
-  if apf_result is None:
-    raise PatternNotFoundException(
-        "Cannot find APF counters in text: " + iface_result.group(0)
-    )
-
-  # Extract key-value pairs from APF counters section into a list of tuples,
-  # e.g. [('COUNTER1', '1'), ('COUNTER2', '2')].
-  counter_pattern = re.compile(r"(?P<name>[A-Z_0-9]+): (?P<value>\d+)")
-  counter_result = counter_pattern.findall(apf_result.group(0))
-  if counter_result is None:
-    raise PatternNotFoundException(
-        "Cannot extract APF counters in text: " + apf_result.group(0)
-    )
-
-  # Convert into a dict.
-  result = {}
-  for key, value_str in counter_result:
-    result[key] = int(value_str)
-
-  ad.log.debug("Getting apf counters: " + str(result))
-  return result
 
 def get_ipv4_addresses(
     ad: android_device.AndroidDevice, iface_name: str
@@ -107,8 +82,8 @@ def get_ipv4_addresses(
   #         valid_lft forever preferred_lft forever
   #     inet 192.168.1.1/24 brd 192.168.1.255 scope global wlan2
   #         valid_lft forever preferred_lft forever
-  output = adb_utils.adb_shell(ad, f"ip -4 address show {iface_name}")
-  pattern = r"inet\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\/\d+"
+  output = adb_utils.adb_shell(ad, f'ip -4 address show {iface_name}')
+  pattern = r'inet\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\/\d+'
   matches = re.findall(pattern, output)
 
   if matches:
@@ -116,12 +91,14 @@ def get_ipv4_addresses(
   else:
     return []
 
+
 def get_non_tentative_ipv6_addresses(
     ad: android_device.AndroidDevice, iface_name: str
 ) -> list[str]:
   """Retrieves the non-tentative IPv6 addresses of a given interface on an Android device.
 
-  This function executes an ADB shell command (`ip -6 address show -tentative`) to get the
+  This function executes an ADB shell command (`ip -6 address show -tentative`)
+  to get the
   network interface information and extracts the IPv6 address from the output.
   If devices have no IPv6 address, raise PatternNotFoundException.
 
@@ -139,8 +116,10 @@ def get_non_tentative_ipv6_addresses(
   #         valid_lft forever preferred_lft forever
   #     inet6 fe80::1233:aadb:3d32:1234/64 scope link
   #         valid_lft forever preferred_lft forever
-  output = adb_utils.adb_shell(ad, f"ip -6 address show -tentative {iface_name}")
-  pattern = r"inet6\s+([0-9a-fA-F:]+)\/\d+"
+  output = adb_utils.adb_shell(
+      ad, f'ip -6 address show -tentative {iface_name}'
+  )
+  pattern = r'inet6\s+([0-9a-fA-F:]+)\/\d+'
   matches = re.findall(pattern, output)
 
   if matches:
@@ -148,13 +127,15 @@ def get_non_tentative_ipv6_addresses(
   else:
     return []
 
+
 def get_exclude_all_host_ipv6_multicast_addresses(
     ad: android_device.AndroidDevice, iface_name: str
 ) -> list[str]:
   """Retrieves the IPv6 multicast addresses of a given interface on an Android device.
 
   This function executes an ADB shell command (`ip -6 maddr show`) to get the
-  network interface information and extracts the IPv6 multicast address from the output.
+  network interface information and extracts the IPv6 multicast address from the
+  output.
   If devices have no IPv6 multicast address, raise PatternNotFoundException.
 
   Args:
@@ -171,14 +152,15 @@ def get_exclude_all_host_ipv6_multicast_addresses(
   #         inet6 ff02::1:ffb7:cba2 users 2
   #         inet6 ff02::1
   #         inet6 ff01::1
-  output = adb_utils.adb_shell(ad, f"ip -6 maddr show {iface_name}")
-  pattern = r"inet6\s+([a-fA-F0-9:]+)(?:\s+users\s+\d+)?"
+  output = adb_utils.adb_shell(ad, f'ip -6 maddr show {iface_name}')
+  pattern = r'inet6\s+([a-fA-F0-9:]+)(?:\s+users\s+\d+)?'
   matches = re.findall(pattern, output)
 
   if matches:
-    return [addr for addr in matches if addr not in ("ff02::1", "ff01::1")]
+    return [addr for addr in matches if addr not in ('ff02::1', 'ff01::1')]
   else:
     return []
+
 
 def get_hardware_address(
     ad: android_device.AndroidDevice, iface_name: str
@@ -195,7 +177,7 @@ def get_hardware_address(
   """
 
   # Run the "ip link" command and get its output.
-  ip_link_output = adb_utils.adb_shell(ad, f"ip link")
+  ip_link_output = adb_utils.adb_shell(ad, f'ip link')
 
   # Regular expression to extract the MAC address.
   # Parse hardware address from ip link output like below:
@@ -205,34 +187,37 @@ def get_hardware_address(
   #    link/ether 72:05:77:82:21:e0 brd ff:ff:ff:ff:ff:ff
   # 47: wlan1: <BROADCAST,MULTICAST> mtu 1500 qdisc ...
   #    link/ether 6a:16:81:ff:82:9b brd ff:ff:ff:ff:ff:ff"
-  pattern = rf"{iface_name}:.*?link/ether (([0-9a-fA-F]{{2}}:){{5}}[0-9a-fA-F]{{2}})"
+  pattern = (
+      rf'{iface_name}:.*?link/ether (([0-9a-fA-F]{{2}}:){{5}}[0-9a-fA-F]{{2}})'
+  )
   match = re.search(pattern, ip_link_output, re.DOTALL)
 
   if match:
     return match.group(1).upper()  # Extract the MAC address string.
   else:
     raise PatternNotFoundException(
-        "Cannot get hardware address for " + iface_name
+        'Cannot get hardware address for ' + iface_name
     )
 
+
 def is_packet_capture_supported(
-        ad: android_device.AndroidDevice,
+    ad: android_device.AndroidDevice,
 ) -> bool:
 
   try:
     # Invoke the shell command with empty argument and see how NetworkStack respond.
     # If supported, an IllegalArgumentException with help page will be printed.
     assert_utils.expect_throws(
-      lambda: start_capture_packets(ad, ""),
-      assert_utils.UnexpectedBehaviorError
+        lambda: start_capture_packets(ad, ''),
+        assert_utils.UnexpectedBehaviorError,
     )
     assert_utils.expect_throws(
-      lambda: stop_capture_packets(ad, ""),
-      assert_utils.UnexpectedBehaviorError
+        lambda: stop_capture_packets(ad, ''),
+        assert_utils.UnexpectedBehaviorError,
     )
     assert_utils.expect_throws(
-      lambda: get_matched_packet_counts(ad, "", ""),
-      assert_utils.UnexpectedBehaviorError
+        lambda: get_matched_packet_counts(ad, '', ''),
+        assert_utils.UnexpectedBehaviorError,
     )
   except assert_utils.UnexpectedExceptionError:
     return False
@@ -240,13 +225,29 @@ def is_packet_capture_supported(
   # If no UnsupportOperationException is thrown, regard it as supported
   return True
 
+
+def is_apf_dump_counters_supported(ad: android_device.AndroidDevice) -> bool:
+  try:
+    # Invoke the shell command with empty argument and see how NetworkStack respond.
+    # If supported, an IllegalArgumentException with help page will be printed.
+    assert_utils.expect_throws(
+        lambda: get_apf_counters_from_cmd(ad, ''),
+        assert_utils.UnexpectedBehaviorError,
+    )
+  except assert_utils.UnexpectedExceptionError:
+    return False
+
+  # If no UnsupportOperationException is thrown, regard it as supported
+  return True
+
+
 def is_send_raw_packet_downstream_supported(
     ad: android_device.AndroidDevice,
 ) -> bool:
   try:
     # Invoke the shell command with empty argument and see how NetworkStack respond.
     # If supported, an IllegalArgumentException with help page will be printed.
-    send_raw_packet_downstream(ad, "", "")
+    send_raw_packet_downstream(ad, '', '')
   except assert_utils.UnexpectedBehaviorError:
     return True
   except UnsupportedOperationException:
@@ -285,18 +286,21 @@ def send_raw_packet_downstream(
         representation of a packet starting from L2 header.
   """
 
-  cmd = f"cmd network_stack send-raw-packet-downstream {iface_name} {packet_in_hex}"
+  cmd = (
+      'cmd network_stack send-raw-packet-downstream'
+      f' {iface_name} {packet_in_hex}'
+  )
 
   # Expect no output or Unknown command if NetworkStack is too old. Throw otherwise.
   adb_output = AdbOutputHandler(ad, cmd).get_output()
   if adb_output:
     raise assert_utils.UnexpectedBehaviorError(
-      f"Got unexpected output: {adb_output} for command: {cmd}."
+        f'Got unexpected output: {adb_output} for command: {cmd}.'
     )
 
+
 def start_capture_packets(
-        ad: android_device.AndroidDevice,
-        iface_name: str
+    ad: android_device.AndroidDevice, iface_name: str
 ) -> None:
   """Starts packet capturing on a specified network interface.
 
@@ -309,18 +313,18 @@ def start_capture_packets(
     ad: The Android device object.
     iface_name: The name of the network interface (e.g., "wlan0").
   """
-  cmd = f"cmd network_stack capture start {iface_name}"
+  cmd = f'cmd network_stack capture start {iface_name}'
 
   # Expect no output or Unknown command if NetworkStack is too old. Throw otherwise.
   adb_output = AdbOutputHandler(ad, cmd).get_output()
-  if adb_output != "success":
+  if adb_output != 'success':
     raise assert_utils.UnexpectedBehaviorError(
-      f"Got unexpected output: {adb_output} for command: {cmd}."
+        f'Got unexpected output: {adb_output} for command: {cmd}.'
     )
 
+
 def stop_capture_packets(
-        ad: android_device.AndroidDevice,
-        iface_name: str
+    ad: android_device.AndroidDevice, iface_name: str
 ) -> None:
   """Stops packet capturing on a specified network interface.
 
@@ -332,19 +336,18 @@ def stop_capture_packets(
     ad: The Android device object.
     iface_name: The name of the network interface (e.g., "wlan0").
   """
-  cmd = f"cmd network_stack capture stop {iface_name}"
+  cmd = f'cmd network_stack capture stop {iface_name}'
 
   # Expect no output or Unknown command if NetworkStack is too old. Throw otherwise.
   adb_output = AdbOutputHandler(ad, cmd).get_output()
-  if adb_output != "success":
+  if adb_output != 'success':
     raise assert_utils.UnexpectedBehaviorError(
-      f"Got unexpected output: {adb_output} for command: {cmd}."
+        f'Got unexpected output: {adb_output} for command: {cmd}.'
     )
 
+
 def get_matched_packet_counts(
-        ad: android_device.AndroidDevice,
-        iface_name: str,
-        packet_in_hex: str
+    ad: android_device.AndroidDevice, iface_name: str, packet_in_hex: str
 ) -> int:
   """Gets the number of captured packets matching a specific hexadecimal pattern.
 
@@ -361,7 +364,10 @@ def get_matched_packet_counts(
   Returns:
     The number of matched packets as an integer.
   """
-  cmd = f"cmd network_stack capture matched-packet-counts {iface_name} {packet_in_hex}"
+  cmd = (
+      'cmd network_stack capture matched-packet-counts'
+      f' {iface_name} {packet_in_hex}'
+  )
 
   # Expect no output or Unknown command if NetworkStack is too old. Throw otherwise.
   adb_output = AdbOutputHandler(ad, cmd).get_output()
@@ -369,8 +375,9 @@ def get_matched_packet_counts(
     return int(adb_output)
   except ValueError as e:
     raise assert_utils.UnexpectedBehaviorError(
-      f"Got unexpected exception: {e} for command: {cmd}."
+        f'Got unexpected exception: {e} for command: {cmd}.'
     )
+
 
 @dataclass
 class ApfCapabilities:
@@ -404,9 +411,9 @@ class ApfCapabilities:
   def __str__(self):
     """Returns a user-friendly string representation of the APF capabilities."""
     return (
-        f"APF Version: {self.apf_version_supported}\n"
-        f"Ram Size: {self.apf_ram_size} bytes\n"
-        f"Packet Format: {self.apf_packet_format}"
+        f'APF Version: {self.apf_version_supported}\n'
+        f'Ram Size: {self.apf_ram_size} bytes\n'
+        f'Packet Format: {self.apf_packet_format}'
     )
 
 
@@ -414,10 +421,10 @@ def get_apf_capabilities(
     ad: android_device.AndroidDevice, iface_name: str
 ) -> ApfCapabilities:
   output = adb_utils.adb_shell(
-      ad, f"cmd network_stack apf {iface_name} capabilities"
+      ad, f'cmd network_stack apf {iface_name} capabilities'
   )
   try:
-    values = [int(value_str) for value_str in output.split(",")]
+    values = [int(value_str) for value_str in output.split(',')]
   except ValueError:
     return ApfCapabilities(0, 0, 0)  # Conversion to integer failed
   return ApfCapabilities(values[0], values[1], values[2])
@@ -429,43 +436,55 @@ def assume_apf_version_support_at_least(
   caps = get_apf_capabilities(ad, iface_name)
   asserts.abort_class_if(
       caps.apf_version_supported < expected_version,
-      f"Supported apf version {caps.apf_version_supported} < expected version"
-      f" {expected_version}",
+      f'Supported apf version {caps.apf_version_supported} < expected version'
+      f' {expected_version}',
   )
+
 
 def at_least_B():
   def decorator(test_function):
     @functools.wraps(test_function)
     def wrapper(self, *args, **kwargs):
       asserts.abort_class_if(
-        (not hasattr(self, 'client')) or (not hasattr(self.client, 'isAtLeastB')),
-        "no valid client attribute"
+          (not hasattr(self, 'client'))
+          or (not hasattr(self.client, 'isAtLeastB')),
+          'no valid client attribute',
       )
 
-      asserts.abort_class_if(not self.client.isAtLeastB(), "client device is not Android B+")
+      asserts.abort_class_if(
+          not self.client.isAtLeastB(), 'client device is not Android B+'
+      )
       return test_function(self, *args, **kwargs)
+
     return wrapper
+
   return decorator
+
 
 def apf_ram_at_least(size):
   def decorator(test_function):
     @functools.wraps(test_function)
     def wrapper(self, *args, **kwargs):
       asserts.abort_class_if(
-        (not hasattr(self, 'clientDevice')) or (not hasattr(self, 'client_iface_name')),
-        "no valid client attribute"
+          (not hasattr(self, 'clientDevice'))
+          or (not hasattr(self, 'client_iface_name')),
+          'no valid client attribute',
       )
 
       caps = get_apf_capabilities(self.clientDevice, self.client_iface_name)
       asserts.skip_if(
-        caps.apf_ram_size < size,
-        f'APF rame size {caps.apf_ram_size} < {size}'
+          caps.apf_ram_size < size,
+          f'APF rame size {caps.apf_ram_size} < {size}',
       )
       return test_function(self, *args, **kwargs)
+
     return wrapper
+
   return decorator
 
+
 class AdbOutputHandler:
+
   def __init__(self, ad, cmd):
     self._ad = ad
     self._cmd = cmd
@@ -475,8 +494,6 @@ class AdbOutputHandler:
       return adb_utils.adb_shell(self._ad, self._cmd)
     except AdbError as e:
       output = str(e.stdout)
-      if "Unknown command" in output:
-        raise UnsupportedOperationException(
-          f"{self._cmd} is not supported."
-        )
+      if 'Unknown command' in output:
+        raise UnsupportedOperationException(f'{self._cmd} is not supported.')
       return output

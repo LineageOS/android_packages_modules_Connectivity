@@ -23,10 +23,10 @@ def assume_mdns_test_preconditions(
   discovery = discovery_device.connectivity_multi_devices_snippet
 
   asserts.skip_if(
-      not advertising.isAtLeastT(), "Advertising device SDK is lower than T."
+      not advertising.isAtLeastT(), 'Advertising device SDK is lower than T.'
   )
   asserts.skip_if(
-      not discovery.isAtLeastT(), "Discovery device SDK is lower than T."
+      not discovery.isAtLeastT(), 'Discovery device SDK is lower than T.'
   )
 
 

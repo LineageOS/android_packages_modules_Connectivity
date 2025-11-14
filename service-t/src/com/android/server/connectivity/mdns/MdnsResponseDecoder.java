@@ -16,6 +16,9 @@
 
 package com.android.server.connectivity.mdns;
 
+import static com.android.server.connectivity.mdns.MdnsRecord.TYPE_A;
+import static com.android.server.connectivity.mdns.MdnsRecord.TYPE_AAAA;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
@@ -35,8 +38,6 @@ import java.util.Set;
 public class MdnsResponseDecoder {
     public static final int SUCCESS = 0;
     private static final String TAG = "MdnsResponseDecoder";
-    private final boolean allowMultipleSrvRecordsPerHost =
-            MdnsConfigs.allowMultipleSrvRecordsPerHost();
     @Nullable private final String[] serviceType;
     private final MdnsUtils.Clock clock;
 
@@ -129,7 +130,8 @@ public class MdnsResponseDecoder {
     public Pair<Set<MdnsResponse>, ArrayList<MdnsResponse>> augmentResponses(
             @NonNull MdnsPacket mdnsPacket,
             @NonNull Collection<MdnsResponse> existingResponses, int interfaceIndex,
-            @Nullable Network network) {
+            @Nullable Network network,
+            @NonNull MdnsFeatureFlags flags) {
         final ArrayList<MdnsRecord> records = new ArrayList<>(
                 mdnsPacket.questions.size() + mdnsPacket.answers.size()
                         + mdnsPacket.authorityRecords.size() + mdnsPacket.additionalRecords.size());
@@ -217,37 +219,25 @@ public class MdnsResponseDecoder {
             if (record instanceof MdnsInetAddressRecord) {
                 MdnsInetAddressRecord inetRecord = (MdnsInetAddressRecord) record;
                 inetRecords.add(inetRecord);
-                if (allowMultipleSrvRecordsPerHost) {
-                    List<MdnsResponse> matchingResponses =
-                            findResponsesWithHostName(responses, inetRecord.getName());
-                    for (MdnsResponse response : matchingResponses) {
-                        // Per RFC6762 10.2, clear all address records if the cache-flush bit set.
-                        // This bit, the cache-flush bit, tells neighboring hosts
-                        // that this is not a shared record type.  Instead of merging this new
-                        // record additively into the cache in addition to any previous records with
-                        // the same name, rrtype, and rrclass.
-                        // TODO: All old records with that name, rrtype, and rrclass that were
-                        //       received more than one second ago are declared invalid, and marked
-                        //       to expire from the cache in one second.
-                        if (inetRecord.getCacheFlush()) {
+                List<MdnsResponse> matchingResponses =
+                        findResponsesWithHostName(responses, inetRecord.getName());
+                for (MdnsResponse response : matchingResponses) {
+                    // Per RFC6762 10.2, clear all same-type address records if the cache-flush bit
+                    // set.
+                    // This bit, the cache-flush bit, tells neighboring hosts
+                    // that this is not a shared record type.  Instead of merging this new
+                    // record additively into the cache in addition to any previous records with
+                    // the same name, rrtype, and rrclass.
+                    // TODO: All old records with that name, rrtype, and rrclass that were
+                    //       received more than one second ago are declared invalid, and marked
+                    //       to expire from the cache in one second.
+                    if (inetRecord.getCacheFlush()) {
+                        if (!flags.mIsCacheFlushPerAddressTypeEnabled
+                                || inetRecord.getType() == TYPE_A) {
                             response.clearInet4AddressRecords();
-                            response.clearInet6AddressRecords();
                         }
-                    }
-                } else {
-                    MdnsResponse response =
-                            findResponseWithHostName(responses, inetRecord.getName());
-                    if (response != null) {
-                        // Per RFC6762 10.2, clear all address records if the cache-flush bit set.
-                        // This bit, the cache-flush bit, tells neighboring hosts
-                        // that this is not a shared record type.  Instead of merging this new
-                        // record additively into the cache in addition to any previous records with
-                        // the same name, rrtype, and rrclass.
-                        // TODO: All old records with that name, rrtype, and rrclass that were
-                        //       received more than one second ago are declared invalid, and marked
-                        //       to expire from the cache in one second.
-                        if (inetRecord.getCacheFlush()) {
-                            response.clearInet4AddressRecords();
+                        if (!flags.mIsCacheFlushPerAddressTypeEnabled
+                                || inetRecord.getType() == TYPE_AAAA) {
                             response.clearInet6AddressRecords();
                         }
                     }
@@ -257,28 +247,14 @@ public class MdnsResponseDecoder {
 
         // Loop 3-2: Assign addresses, which reference the host name in the SRV record.
         for (MdnsInetAddressRecord inetRecord : inetRecords) {
-            if (allowMultipleSrvRecordsPerHost) {
-                List<MdnsResponse> matchingResponses =
-                        findResponsesWithHostName(responses, inetRecord.getName());
-                for (MdnsResponse response : matchingResponses) {
-                    if (assignInetRecord(response, inetRecord)) {
-                        final MdnsResponse originalResponse = augmentedToOriginal.get(response);
-                        if (originalResponse == null
-                                || !originalResponse.hasIdenticalRecord(inetRecord)) {
-                            modified.add(response);
-                        }
-                    }
-                }
-            } else {
-                MdnsResponse response =
-                        findResponseWithHostName(responses, inetRecord.getName());
-                if (response != null) {
-                    if (assignInetRecord(response, inetRecord)) {
-                        final MdnsResponse originalResponse = augmentedToOriginal.get(response);
-                        if (originalResponse == null
-                                || !originalResponse.hasIdenticalRecord(inetRecord)) {
-                            modified.add(response);
-                        }
+            List<MdnsResponse> matchingResponses =
+                    findResponsesWithHostName(responses, inetRecord.getName());
+            for (MdnsResponse response : matchingResponses) {
+                if (assignInetRecord(response, inetRecord)) {
+                    final MdnsResponse originalResponse = augmentedToOriginal.get(response);
+                    if (originalResponse == null
+                            || !originalResponse.hasIdenticalRecord(inetRecord)) {
+                        modified.add(response);
                     }
                 }
             }

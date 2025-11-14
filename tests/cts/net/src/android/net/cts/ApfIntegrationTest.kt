@@ -19,8 +19,10 @@
 
 package android.net.cts
 
+import android.Manifest.permission
 import android.content.pm.PackageManager.FEATURE_AUTOMOTIVE
 import android.content.pm.PackageManager.FEATURE_LEANBACK
+import android.content.pm.PackageManager.FEATURE_WATCH
 import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
 import android.net.Network
@@ -71,7 +73,8 @@ import com.android.compatibility.common.util.PropertyUtil.getVsrApiLevel
 import com.android.compatibility.common.util.SystemUtil.runShellCommand
 import com.android.compatibility.common.util.SystemUtil.runShellCommandOrThrow
 import com.android.compatibility.common.util.VsrTest
-import com.android.internal.util.HexDump
+import com.android.modules.utils.build.SdkLevel
+import com.android.net.module.util.HexDump
 import com.android.net.module.util.NetworkStackConstants.ETHER_ADDR_LEN
 import com.android.net.module.util.NetworkStackConstants.ETHER_DST_ADDR_OFFSET
 import com.android.net.module.util.NetworkStackConstants.ETHER_HEADER_LEN
@@ -83,11 +86,12 @@ import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.NetworkStackModuleTest
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.SkipPresubmit
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.Available
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import com.android.testutils.pollingCheck
+import com.android.testutils.runAsShell
 import com.android.testutils.waitForIdle
 import com.google.common.truth.Expect
 import com.google.common.truth.Truth.assertThat
@@ -106,6 +110,7 @@ import kotlin.test.assertNotNull
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Rule
@@ -116,6 +121,8 @@ private const val TAG = "ApfIntegrationTest"
 private const val TIMEOUT_MS = 2000L
 private const val RCV_BUFFER_SIZE = 1480
 private const val PING_HEADER_LENGTH = 8
+
+open class FromU<Type>(val value: Type)
 
 @AppModeFull(reason = "CHANGE_NETWORK_STATE permission can't be granted to instant apps")
 @RunWith(DevSdkIgnoreRunner::class)
@@ -130,6 +137,8 @@ class ApfIntegrationTest {
         private val context = InstrumentationRegistry.getInstrumentation().context
         private val powerManager = context.getSystemService(PowerManager::class.java)!!
         private val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG)
+        private var isLowPowerStandbyOriginalEnabled: Boolean = false
+        private var originalPolicy: FromU<PowerManager.LowPowerStandbyPolicy?>? = null
 
         fun turnScreenOff() {
             if (!wakeLock.isHeld()) wakeLock.acquire()
@@ -163,7 +172,37 @@ class ApfIntegrationTest {
             val packageManager = context.getPackageManager()
             val userManager = context.getSystemService(UserManager::class.java)!!
             return (packageManager.hasSystemFeature(FEATURE_AUTOMOTIVE) &&
-                    userManager.isVisibleBackgroundUsersSupported)
+                    // isVisibleBackgroundUsersSupported is @TestApi, but this test should build
+                    // against module API stubs, which do not include it (b/409931932).
+                    userManager.javaClass.getMethod("isVisibleBackgroundUsersSupported")
+                        .invoke(userManager) as Boolean)
+        }
+
+        private fun disableLowPowerStandby() {
+            if (!SdkLevel.isAtLeastU()) {
+                return
+            }
+            runAsShell(permission.DEVICE_POWER) {
+                if (powerManager.isLowPowerStandbySupported) {
+                    isLowPowerStandbyOriginalEnabled = powerManager.isLowPowerStandbyEnabled
+                    originalPolicy = FromU(powerManager.lowPowerStandbyPolicy)
+                    powerManager.isLowPowerStandbyEnabled = false
+                    Log.i(TAG, "Low power standby is supported, disabling it temporary.")
+                }
+            }
+        }
+
+        private fun restoreLowPowerStandby() {
+            if (!SdkLevel.isAtLeastU()) {
+                return
+            }
+            runAsShell(permission.DEVICE_POWER) {
+                if (powerManager.isLowPowerStandbySupported) {
+                    powerManager.isLowPowerStandbyEnabled = isLowPowerStandbyOriginalEnabled
+                    powerManager.lowPowerStandbyPolicy = originalPolicy?.value
+                    Log.i(TAG, "Reset Low power standby to original state.")
+                }
+            }
         }
 
         @BeforeClass
@@ -180,12 +219,14 @@ class ApfIntegrationTest {
             Thread.sleep(1000)
             // TODO: check that there is no active wifi network. Otherwise, ApfFilter has already been
             // created.
+            disableLowPowerStandby()
         }
 
         @AfterClass
         @JvmStatic
         fun tearDownOnce() {
             turnScreenOn()
+            restoreLowPowerStandby()
         }
     }
 
@@ -312,6 +353,10 @@ class ApfIntegrationTest {
             isTvDeviceSupportFullNetworkingUnder2w()
         )
 
+        // APF GMS-VSR requirements don't apply to automotive devices. There is no power benefit to
+        // running APF on automotive as the device has almost infinite battery power.
+        assumeFalse("Skip test: automotive device", pm.hasSystemFeature(FEATURE_AUTOMOTIVE))
+
         networkCallback = TestableNetworkCallback()
         cm.requestNetwork(
                 NetworkRequest.Builder()
@@ -351,15 +396,28 @@ class ApfIntegrationTest {
         }
     }
 
+    private fun shouldEnforceApfSupport(vsrApiLevel: Int): Boolean {
+        // Note: GMS-VSR requirements related to APFv4/APFv6 are only applicable to handheld
+        // and tablet devices. GTVS requirements related to APFv6 are only applicable to TV devices.
+        // For Wear OS devices, APFv4/APFv6 will not be enforced until Wear OS 7.
+        if (pm.hasSystemFeature(FEATURE_WATCH)) {
+            // Enforce APF on watch post VSR-16.
+            return vsrApiLevel > 202504
+        }
+        return vsrApiLevel >= 34
+    }
+
     @VsrTest(
         requirements = ["VSR-5.3.12-001", "VSR-5.3.12-003", "VSR-5.3.12-004", "VSR-5.3.12-009",
             "VSR-5.3.12-012"]
     )
     @Test
     fun testApfCapabilities() {
+        // If APF is supported, the version must be valid.
+        assertThat(caps.apfVersionSupported).isAnyOf(0, 2, 3, 4, 6000, 6100)
         // APF became mandatory in Android 14 VSR.
         val vsrApiLevel = getVsrApiLevel()
-        assume().that(vsrApiLevel).isAtLeast(34)
+        assumeTrue(shouldEnforceApfSupport(vsrApiLevel))
 
         // DEVICEs launching with Android 14 with CHIPSETs that set ro.board.first_api_level to 34:
         // - [GMS-VSR-5.3.12-003] MUST return 4 or higher as the APF version number from calls to
@@ -434,8 +492,8 @@ class ApfIntegrationTest {
     @SkipPresubmit(reason = "This test takes longer than 1 minute, do not run it on presubmit.")
     // APF integration is mostly broken before V, only run the full read / write test on V+.
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    // Increase timeout for test to 15 minutes to accommodate device with large APF RAM.
-    @Test(timeout = 15 * 60 * 1000)
+    // Increase timeout for test to 20 minutes to accommodate device with large APF RAM.
+    @Test(timeout = 20 * 60 * 1000)
     fun testReadWriteProgram() {
         assumeApfVersionSupportAtLeast(4)
 

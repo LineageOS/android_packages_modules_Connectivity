@@ -21,7 +21,7 @@ from host.python.assert_utils_test import TestAssertUtils
 from mobly import suite_runner
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   # For MoblyBinaryHostTest, this entry point will be called twice:
   # 1. List tests.
   #   <mobly-par-file-name> -- --list_tests

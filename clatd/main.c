@@ -152,7 +152,7 @@ void enable_seccomp(void) {
     // _exit(0)
     BPF2_SECCOMP_ALLOW_IF_EQUAL(__NR_exit_group),    // 94
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) && 0  // disabled
     // Pixels are aarch64 - if we break clatd functionality on them,
     // we *will* notice on GoogleGuest WiFi network (which is ipv6 only)
     BPF_SECCOMP_KILL,

@@ -17,11 +17,11 @@
 package android.net.cts
 
 import android.net.nsd.NsdManager
+import android.os.Build
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.networkstack.apishim.ConnectivityFrameworkInitShimImpl
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.SC_V2
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertNotNull
@@ -30,7 +30,7 @@ private val cfiShim = ConnectivityFrameworkInitShimImpl.newInstance()
 
 @RunWith(DevSdkIgnoreRunner::class)
 // ConnectivityFrameworkInitializerTiramisu was added in T
-@IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+@IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class ConnectivityFrameworkInitializerTiramisuTest {
     @Test
     fun testServicesRegistered() {

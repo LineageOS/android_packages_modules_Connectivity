@@ -22,6 +22,7 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.content.Context;
 import android.net.Network;
+import android.net.TrafficStats;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.SystemClock;
 import android.text.format.DateUtils;
@@ -34,6 +35,7 @@ import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
@@ -145,7 +147,10 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
         shouldStopSocketLoop = false;
         interfaceProvider.startWatchingConnectivityChanges();
         try {
-            // TODO (changed when importing code): consider setting thread stats tag
+            if (mdnsFeatureFlags.mMdnsSocketThreadStatsTag
+                    != MdnsFeatureFlags.MDNS_SOCKET_THREAD_STATS_TAG_NONE) {
+                setThreadStatsTag(mdnsFeatureFlags.mMdnsSocketThreadStatsTag);
+            }
             multicastSocket = createMdnsSocket(MdnsConstants.MDNS_PORT, sharedLog);
             multicastSocket.joinGroup();
             if (useSeparateSocketForUnicast) {
@@ -165,7 +170,10 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             }
             throw e;
         } finally {
-            // TODO (changed when importing code): consider resetting thread stats tag
+            if (mdnsFeatureFlags.mMdnsSocketThreadStatsTag
+                    != MdnsFeatureFlags.MDNS_SOCKET_THREAD_STATS_TAG_NONE) {
+                clearThreadStatsTag();
+            }
         }
         createAndStartSendThread();
         createAndStartReceiverThreads();
@@ -451,13 +459,32 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
                 if (!shouldStopSocketLoop) {
                     String responseType = socket == multicastSocket ? MULTICAST_TYPE : UNICAST_TYPE;
+                    // packet.getAddress() can return:
+                    // an IP address of the machine to which this datagram is being sent or
+                    // from which the datagram was received
+                    // or {@code null} if not set.
+                    final InetAddress packetAddress = packet.getAddress();
+                    final SocketKey key =
+                        (mdnsFeatureFlags.mIsSocketClientNetworkGuessingEnabled && packetAddress != null)
+                            ? interfaceProvider.guessNetworkOfRemoteHost(packetAddress)
+                            : null;
+                    final int interfaceIndex;
+                    if (socket == null || !propagateInterfaceIndex) {
+                        interfaceIndex = MdnsSocket.INTERFACE_INDEX_UNSPECIFIED;
+                    } else if (mdnsFeatureFlags.mIsSocketClientNetworkGuessingEnabled) {
+                        interfaceIndex = key == null
+                                ? MdnsSocket.INTERFACE_INDEX_UNSPECIFIED
+                                : key.getInterfaceIndex();
+                    } else {
+                        // Note this is incorrect: getInterfaceIndex is the last interface that sent
+                        // a packet, not the one that received the packet.
+                        interfaceIndex = socket.getInterfaceIndex();
+                    }
                     processResponsePacket(
                             packet,
                             responseType,
-                            /* interfaceIndex= */ (socket == null || !propagateInterfaceIndex)
-                                    ? MdnsSocket.INTERFACE_INDEX_UNSPECIFIED
-                                    : socket.getInterfaceIndex(),
-                            /* network= */ socket.getNetwork());
+                            interfaceIndex,
+                            key == null ? null : key.getNetwork());
                 }
             } catch (IOException e) {
                 if (!shouldStopSocketLoop) {
@@ -501,6 +528,16 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     @VisibleForTesting
     MdnsSocket createMdnsSocket(int port, SharedLog sharedLog) throws IOException {
         return new MdnsSocket(interfaceProvider, port, sharedLog);
+    }
+
+    @VisibleForTesting
+    void setThreadStatsTag(int tag) {
+        TrafficStats.setThreadStatsTag(tag);
+    }
+
+    @VisibleForTesting
+    void clearThreadStatsTag() {
+        TrafficStats.clearThreadStatsTag();
     }
 
     private void sendPackets(List<DatagramPacket> packets, MdnsSocket socket) {

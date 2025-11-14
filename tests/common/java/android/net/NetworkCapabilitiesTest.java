@@ -66,7 +66,6 @@ import static android.os.Process.INVALID_UID;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastS;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastT;
 import static com.android.modules.utils.build.SdkLevel.isAtLeastV;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.MiscAsserts.assertEmpty;
 import static com.android.testutils.MiscAsserts.assertThrows;
 import static com.android.testutils.ParcelUtils.assertParcelingIsLossless;
@@ -322,7 +321,7 @@ public class NetworkCapabilitiesTest {
         }
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testSetAllowedUids() {
         final NetworkCapabilities nc = new NetworkCapabilities();
         assertThrows(NullPointerException.class, () -> nc.setAllowedUids(null));
@@ -478,7 +477,7 @@ public class NetworkCapabilitiesTest {
         assertFalse(nr.satisfiedByNetworkCapabilities(new NetworkCapabilities()));
     }
 
-    @Test @IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testPrioritizeLatencyAndBandwidth() {
         NetworkCapabilities netCap = new NetworkCapabilities();
         netCap.addCapability(NET_CAPABILITY_PRIORITIZE_LATENCY);
@@ -927,7 +926,7 @@ public class NetworkCapabilitiesTest {
         } catch (IllegalStateException expected) { }
     }
 
-    @Test @IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testEnterpriseId() {
         final NetworkCapabilities nc1 = new NetworkCapabilities.Builder()
                 .addCapability(NET_CAPABILITY_ENTERPRISE)
@@ -1522,7 +1521,7 @@ public class NetworkCapabilitiesTest {
         assertTrue(reservationNc.satisfiedByNetworkCapabilities(offerNc));
     }
 
-    @Test @IgnoreUpTo(SC_V2)
+    @Test @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void testReservationIdEquals() {
         final NetworkCapabilities nc = new NetworkCapabilities();
         nc.setReservationId(42);

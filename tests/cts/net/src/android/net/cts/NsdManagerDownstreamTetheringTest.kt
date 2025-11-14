@@ -20,7 +20,6 @@ import android.net.LinkAddress
 import android.net.TetheringManager.CONNECTIVITY_SCOPE_LOCAL
 import android.net.TetheringManager.TETHERING_ETHERNET
 import android.net.TetheringManager.TetheringRequest
-import android.net.cts.util.EthernetTestInterface
 import android.net.nsd.NsdManager
 import android.os.Build
 import android.os.Handler
@@ -31,6 +30,7 @@ import com.android.testutils.AutoCloseTestInterfaceRule
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.EthernetTestInterface
 import com.android.testutils.NsdDiscoveryRecord
 import com.android.testutils.pollForQuery
 import com.android.testutils.tryTest
@@ -104,7 +104,7 @@ class NsdManagerDownstreamTetheringTest : EthernetTetheringTestBase() {
             nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryRecord)
             discoveryRecord.expectCallback<NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStarted>()
             assertNotNull(downstreamReader.pollForQuery("$serviceType.local", 12 /* type PTR */))
-        } cleanupStep {
+        } cleanup {
             nsdManager.stopServiceDiscovery(discoveryRecord)
             discoveryRecord.expectCallback<NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStopped>()
         }
@@ -137,7 +137,7 @@ class NsdManagerDownstreamTetheringTest : EthernetTetheringTestBase() {
             val downstreamReader = downstreamIface.packetReader
             assertNotNull(downstreamReader.pollForQuery("$serviceType.local", 12 /* type PTR */))
             // TODO: Add another test to check packet reply can trigger serviceFound.
-        } cleanupStep {
+        } cleanup {
             nsdManager.stopServiceDiscovery(discoveryRecord)
             discoveryRecord.expectCallback<NsdDiscoveryRecord.DiscoveryEvent.DiscoveryStopped>()
         }

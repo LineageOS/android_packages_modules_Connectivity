@@ -97,7 +97,7 @@ public class CarrierPrivilegeAuthenticator {
         mContext = c;
         mTelephonyManager = t;
         mTelephonyManagerShim = telephonyManagerShim;
-        mUseCallbacksForServiceChanged = deps.isFeatureEnabled(
+        mUseCallbacksForServiceChanged = deps.isFeatureNotChickenedOut(
                 c, CARRIER_SERVICE_CHANGED_USE_CALLBACK);
         mRequestRestrictedWifiEnabled = requestRestrictedWifiEnabled;
         mListener = listener;
@@ -159,10 +159,10 @@ public class CarrierPrivilegeAuthenticator {
         }
 
         /**
-         * @see DeviceConfigUtils#isTetheringFeatureEnabled
+         * @see DeviceConfigUtils#isTetheringFeatureNotChickenedOut
          */
-        public boolean isFeatureEnabled(Context context, String name) {
-            return DeviceConfigUtils.isTetheringFeatureEnabled(context, name);
+        public boolean isFeatureNotChickenedOut(Context context, String name) {
+            return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context, name);
         }
     }
 

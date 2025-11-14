@@ -42,7 +42,11 @@ const bool isAtLeastS = (api_level >= 31);
 const bool isAtLeastT = (api_level >= 33);
 const bool isAtLeastU = (api_level >= 34);
 const bool isAtLeastV = (api_level >= 35);
-const bool isAtLeast25Q2 = (api_level >= 36);
+const bool isAtLeast25Q2 = (api_level >= 36); // 36.0
+const bool isAtLeast25Q3 = (api_level > 36);  // 36.0+ (TODO: fix this!)
+const bool isAtLeast25Q4 = false;  // 36.1
+const bool isAtLeast26Q1 = false;  // 36.1+
+const bool isAtLeast26Q2 = false;  // 37.0
 
 // See kernel's net/core/sock_diag.c __sock_gen_cookie()
 // the implementation of which guarantees 0 will never be returned,

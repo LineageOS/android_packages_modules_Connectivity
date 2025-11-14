@@ -18,14 +18,18 @@ package android.net.cts.util;
 
 import static android.Manifest.permission.MODIFY_PHONE_STATE;
 import static android.Manifest.permission.NETWORK_SETTINGS;
+import static android.content.pm.PackageManager.FEATURE_TELEPHONY;
+import static android.content.pm.PackageManager.FEATURE_WIFI;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 
 import static com.android.compatibility.common.util.PropertyUtil.getFirstApiLevel;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -59,6 +63,7 @@ import android.system.OsConstants;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -69,6 +74,8 @@ import com.android.compatibility.common.util.SystemUtil;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ConnectivitySettingsUtils;
 import com.android.testutils.ConnectUtil;
+import com.android.testutils.TestableNetworkCallback;
+import com.android.testutils.TestableNetworkCallback.Event;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,11 +83,14 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 
 public final class CtsNetUtils {
     private static final String TAG = CtsNetUtils.class.getSimpleName();
@@ -162,6 +172,7 @@ public final class CtsNetUtils {
                 new NetworkRequest.Builder()
                         .clearCapabilities()
                         .addTransportType(TRANSPORT_TEST)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
                         .setNetworkSpecifier(ifname)
                         .build();
 
@@ -512,12 +523,15 @@ public final class CtsNetUtils {
         final NetworkCallback callback = new NetworkCallback() {
             @Override
             public void onLinkPropertiesChanged(Network n, LinkProperties lp) {
-                Log.i(TAG, "Link properties of network " + n + " changed to " + lp);
+                Log.i(TAG,  "Waiting for the private DNS server to change to " + server + " on "
+                        + network + ": Link properties of network " + n
+                        + " changed with private DNS server " + lp.getPrivateDnsServerName()
+                        + ", full LinkProperties: " + lp);
                 if (requiresValidatedServer && lp.getValidatedPrivateDnsServers().isEmpty()) {
                     return;
                 }
-                Log.i(TAG, "Set private DNS server to " + server);
                 if (network.equals(n) && Objects.equals(server, lp.getPrivateDnsServerName())) {
+                    Log.i(TAG, "Set private DNS server to " + server + " on " + network);
                     latch.countDown();
                 }
             }
@@ -541,23 +555,69 @@ public final class CtsNetUtils {
 
     /**
      * Get all testable Networks with internet capability.
+     *
+     * <p>At least cellular and Wi-Fi networks are expected to be returned when supported, so tests
+     * must ensure that network requests are filed for them (so they are up) before calling this
+     * method.
      */
-    public Network[] getTestableNetworks() {
+    public Set<Network> getTestableNetworks() {
+        // Calling requestNetwork() to request a cell or Wi-Fi network via CtsNetUtils or
+        // NetworkCallbackRule requires the CHANGE_NETWORK_STATE permission. This permission cannot
+        // be granted to instant apps. Therefore, return currently available testable networks
+        // directly in instant mode.
+        if (mContext.getApplicationInfo().isInstantApp()) {
+            return new ArraySet<>(getTestableNetworks(nc -> true));
+        }
+
+        // Obtain cell and Wi-Fi through NetworkCallbacks, as they may have just been reconnected by
+        // the test using NetworkCallbacks, so synchronous calls may not yet return them
+        // (synchronous calls and callbacks should not be mixed for a given Network).
+        final Set<Network> testableNetworks = new ArraySet<>();
+        if (mContext.getPackageManager().hasSystemFeature(FEATURE_TELEPHONY)) {
+            final String errorMsg = "No cell network obtained within timeout. Ensure that the "
+                    + "device has working mobile data, and that the test has filed a request for "
+                    + "TRANSPORT_CELLULAR before calling getTestableNetworks().";
+            final TestableNetworkCallback cb = new TestableNetworkCallback();
+            mCm.registerNetworkCallback(new NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build(), cb);
+            final Network cellNetwork = cb.expect(Event.AVAILABLE, errorMsg).getNetwork();
+            mCm.unregisterNetworkCallback(cb);
+            testableNetworks.add(cellNetwork);
+        }
+
+        if (mContext.getPackageManager().hasSystemFeature(FEATURE_WIFI)) {
+            testableNetworks.add(ensureWifiConnected());
+        }
+
+        // Obtain other networks through the synchronous API, if any.
+        testableNetworks.addAll(getTestableNetworks(nc ->
+                !nc.hasTransport(TRANSPORT_WIFI) && !nc.hasTransport(TRANSPORT_CELLULAR)));
+
+        // If Wi-Fi or cell are supported testableNetworks won't be empty as per previous assertions
+        assertFalse("This device does not support Wi-Fi nor cell data, and does not have any other "
+                        + "network connected. This test requires at least one internet-providing "
+                        + "network.",
+                testableNetworks.isEmpty());
+        return testableNetworks;
+    }
+
+    /**
+     * Get all testable Networks with internet capability.
+     */
+    private List<Network> getTestableNetworks(Predicate<NetworkCapabilities> filter) {
         final ArrayList<Network> testableNetworks = new ArrayList<Network>();
         for (Network network : mCm.getAllNetworks()) {
             final NetworkCapabilities nc = mCm.getNetworkCapabilities(network);
             if (nc != null
                     && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
-                    && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                    && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    && filter.test(nc)) {
                 testableNetworks.add(network);
             }
         }
-
-        assertTrue("This test requires that at least one public Internet-providing"
-                        + " network be connected. Please ensure that the device is connected to"
-                        + " a network.",
-                testableNetworks.size() >= 1);
-        return testableNetworks.toArray(new Network[0]);
+        return testableNetworks;
     }
 
     /**

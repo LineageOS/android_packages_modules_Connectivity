@@ -1353,9 +1353,8 @@ public final class NsdManager {
      * @param listener The listener notifies of a successful registration and is used to
      * unregister this service through a call on {@link #unregisterService}. Cannot be null.
      *
-     * @hide
      */
-//    @FlaggedApi(Flags.ADVERTISE_REQUEST_API)
+    @FlaggedApi(Flags.FLAG_MDNS_ADVERTISING_IMPROVEMENT)
     public void registerService(@NonNull AdvertisingRequest advertisingRequest,
             @NonNull Executor executor,
             @NonNull RegistrationListener listener) {

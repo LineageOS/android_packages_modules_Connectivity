@@ -35,6 +35,7 @@ import android.net.dhcp.DhcpPacket.DHCP_MESSAGE_TYPE
 import android.net.dhcp.DhcpPacket.DHCP_MESSAGE_TYPE_DISCOVER
 import android.net.dhcp.DhcpPacket.DHCP_MESSAGE_TYPE_REQUEST
 import android.net.dhcp.DhcpRequestPacket
+import android.os.Handler
 import android.os.HandlerThread
 import android.platform.test.annotations.AppModeFull
 import androidx.test.platform.app.InstrumentationRegistry
@@ -45,23 +46,24 @@ import com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_ANY
 import com.android.testutils.AutoCloseTestInterfaceRule
 import com.android.testutils.DhcpClientPacketFilter
 import com.android.testutils.DhcpOptionFilter
-import com.android.testutils.RecorderCallback.CallbackEntry
 import com.android.testutils.PollPacketReader
 import com.android.testutils.TestHttpServer
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import com.android.testutils.runAsShell
 import fi.iki.elonen.NanoHTTPD.Response.Status
+import java.net.Inet4Address
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 import org.junit.After
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.Inet4Address
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-import kotlin.test.fail
 
 private const val MAX_PACKET_LENGTH = 1500
 private const val TEST_TIMEOUT_MS = 10_000L
@@ -92,6 +94,7 @@ class NetworkValidationTest {
             .addTransportType(TRANSPORT_TEST).build()
     private val ethRequestCb = TestableNetworkCallback()
 
+    private var readerHandler: Handler? = null
     private lateinit var iface: TestNetworkInterface
     private lateinit var reader: PollPacketReader
     private lateinit var capportUrl: Uri
@@ -118,8 +121,9 @@ class NetworkValidationTest {
         iface = testInterfaceRule.createTapInterface()
 
         handlerThread.start()
+        readerHandler = Handler(handlerThread.looper)
         reader = PollPacketReader(
-                handlerThread.threadHandler,
+                readerHandler,
                 iface.fileDescriptor.fileDescriptor,
                 MAX_PACKET_LENGTH)
         reader.startAsyncForTest()
@@ -139,7 +143,7 @@ class NetworkValidationTest {
         runAsShell(NETWORK_SETTINGS) { eth.setIncludeTestInterfaces(false) }
 
         httpServer.stop()
-        handlerThread.threadHandler.post { reader.stop() }
+        readerHandler?.post { reader.stop() }
         handlerThread.quitSafely()
         handlerThread.join()
     }
@@ -177,10 +181,11 @@ class NetworkValidationTest {
             cm.registerNetworkCallback(ethRequest, testCb)
 
             try {
-                val ncCb = testCb.eventuallyExpect<CallbackEntry.CapabilitiesChanged> {
+                val mark = testCb.mark
+                val ncCb = testCb.eventuallyExpect<CapabilitiesChanged>(from = mark) {
                     it.caps.hasCapability(NET_CAPABILITY_CAPTIVE_PORTAL)
                 }
-                testCb.eventuallyExpect<CallbackEntry.LinkPropertiesChanged> {
+                testCb.eventuallyExpect<LinkPropertiesChanged>(from = mark) {
                     it.network == ncCb.network && it.lp.captivePortalData != null
                 }.lp
             } finally {

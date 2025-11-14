@@ -18,8 +18,6 @@ package android.net.cts;
 
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThrows;
@@ -29,6 +27,7 @@ import android.net.EthernetNetworkUpdateRequest;
 import android.net.IpConfiguration;
 import android.net.NetworkCapabilities;
 import android.net.StaticIpConfiguration;
+import android.os.Build;
 
 import androidx.test.filters.SmallTest;
 
@@ -39,7 +38,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2) // TODO: Use to Build.VERSION_CODES.SC_V2 when available
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 @RunWith(DevSdkIgnoreRunner.class)
 public class EthernetNetworkUpdateRequestTest {
     private static final NetworkCapabilities DEFAULT_CAPS =

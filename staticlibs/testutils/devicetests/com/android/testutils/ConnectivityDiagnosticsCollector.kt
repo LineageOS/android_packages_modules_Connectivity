@@ -43,6 +43,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.modules.utils.build.SdkLevel.isAtLeastS
+import com.android.testutils.com.android.testutils.getTargetModuleVersion
 import java.io.ByteArrayOutputStream
 import java.io.CharArrayWriter
 import java.io.File
@@ -339,6 +340,7 @@ class ConnectivityDiagnosticsCollector : BaseMetricListener() {
             headerObj.put("shellPermissionsUnavailable", true)
         }
         failureHeader = headerObj.apply {
+            put("targetModuleVersion", getTargetModuleVersion())
             put("time", DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ZonedDateTime.now()))
             put(
                 "wifiEnabled",

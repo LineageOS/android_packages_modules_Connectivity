@@ -78,10 +78,18 @@ internal fun emptyAgentConfig(legacyType: Int) = NetworkAgentConfig.Builder()
 
 internal fun defaultNc() = NetworkCapabilities.Builder()
         // Add sensible defaults for agents that don't want to care
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
         .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
         .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING)
         .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
         .build()
+
+internal fun nc(transport: Int, vararg caps: Int) = defaultNc().apply {
+    addTransportType(transport)
+    caps.forEach {
+        addCapability(it)
+    }
+}
 
 internal fun defaultScore() = FromS(NetworkScore.Builder().build())
 
@@ -215,11 +223,12 @@ internal fun makeConnectivityService(
         context: Context,
         netd: INetd,
         deps: Dependencies,
-        mPermDeps: PermissionMonitor.Dependencies
+        mPermDeps: PermissionMonitor.Dependencies,
+        resolver: IDnsResolver
 ) =
         ConnectivityService(
                 context,
-                mock<IDnsResolver>(),
+                resolver,
                 mock<IpConnectivityLog>(),
                 netd,
                 deps,

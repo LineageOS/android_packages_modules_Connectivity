@@ -24,7 +24,6 @@ import static androidx.test.InstrumentationRegistry.getContext;
 
 import static com.android.net.module.util.NetworkStackConstants.ETHER_MTU;
 import static com.android.net.module.util.NetworkStackConstants.IPV4_ADDR_ANY;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
@@ -48,6 +47,7 @@ import android.net.RouteInfo;
 import android.net.TestNetworkInterface;
 import android.net.TestNetworkManager;
 import android.net.TestNetworkSpecifier;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -81,7 +81,7 @@ import java.util.stream.Collectors;
 
 @AppModeFull(reason = "Instant apps cannot access /dev/tun, so createTunInterface fails")
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class RateLimitTest {
     // cannot be final as it gets initialized inside ensureKernelConfigLoaded().
     private static HashSet<String> sKernelConfig;

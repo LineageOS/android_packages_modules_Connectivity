@@ -12,10 +12,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import time
 from mobly import asserts
 from net_tests_utils.host.python import adb_utils, apf_utils, assert_utils, multi_devices_test_base, tether_utils
 from net_tests_utils.host.python.tether_utils import UpstreamType
-import time
+
 
 class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
 
@@ -25,8 +26,8 @@ class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
     # Check test preconditions.
     asserts.abort_class_if(
         not self.client.isAtLeastV(),
-        "Do not enforce the test until V+ since chipset potential bugs are"
-        " expected to be fixed on V+ releases.",
+        'Do not enforce the test until V+ since chipset potential bugs are'
+        ' expected to be fixed on V+ releases.',
     )
     tether_utils.assume_hotspot_test_preconditions(
         self.serverDevice, self.clientDevice, UpstreamType.NONE
@@ -35,9 +36,14 @@ class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
         not apf_utils.is_send_raw_packet_downstream_supported(
             self.serverDevice
         ),
-        "NetworkStack is too old to support send raw packet, skip test.",
+        'NetworkStack is too old to support send raw packet, skip test.',
     )
 
+    asserts.abort_class_if(
+        self.client.hasAutomotiveFeature(),
+        'APF GMS-VSR requirements do not apply to automotive devices, skip'
+        ' test.',
+    )
     # Fetch device properties and storing them locally for later use.
     # TODO: refactor to separate instances to store client and server device
     self.server_iface_name, client_network = (
@@ -104,35 +110,35 @@ class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
       self, send_packet: str, counter_name: str, receive_packet: str
   ) -> None:
     try:
-        apf_utils.start_capture_packets(self.serverDevice, self.server_iface_name)
+      apf_utils.start_capture_packets(self.serverDevice, self.server_iface_name)
 
-        count_before_test = apf_utils.get_apf_counter(
-            self.clientDevice,
-            self.client_iface_name,
-            counter_name,
-        )
+      count_before_test = apf_utils.get_apf_counter(
+          self.clientDevice,
+          self.client_iface_name,
+          counter_name,
+      )
 
-        apf_utils.send_raw_packet_downstream(
-            self.serverDevice, self.server_iface_name, send_packet
-        )
+      apf_utils.send_raw_packet_downstream(
+          self.serverDevice, self.server_iface_name, send_packet
+      )
 
+      assert_utils.expect_with_retry(
+          lambda: apf_utils.get_matched_packet_counts(
+              self.serverDevice, self.server_iface_name, receive_packet
+          )
+          == 1
+      )
+
+      # TODO: re-enable once the test passes reliably.
+      if False:
         assert_utils.expect_with_retry(
-            lambda: apf_utils.get_matched_packet_counts(
-                self.serverDevice, self.server_iface_name, receive_packet
+            lambda: apf_utils.get_apf_counter(
+                self.clientDevice,
+                self.client_iface_name,
+                counter_name,
             )
-            == 1
+            > count_before_test
         )
-
-        # TODO: re-enable once the test passes reliably.
-        if False:
-            assert_utils.expect_with_retry(
-                lambda: apf_utils.get_apf_counter(
-                    self.clientDevice,
-                    self.client_iface_name,
-                    counter_name,
-                )
-                > count_before_test
-            )
 
     finally:
-        apf_utils.stop_capture_packets(self.serverDevice, self.server_iface_name)
+      apf_utils.stop_capture_packets(self.serverDevice, self.server_iface_name)

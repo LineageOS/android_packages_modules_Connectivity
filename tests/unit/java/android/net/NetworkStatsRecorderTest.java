@@ -27,7 +27,6 @@ import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_UID;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_UIDTAG;
 import static com.android.server.ConnectivityStatsLog.NETWORK_STATS_RECORDER_FILE_OPERATED__RECORDER_PREFIX__PREFIX_XT;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
@@ -43,6 +42,7 @@ import android.net.NetworkIdentity;
 import android.net.NetworkIdentitySet;
 import android.net.NetworkStats;
 import android.net.NetworkStatsCollection;
+import android.os.Build;
 import android.os.DropBoxManager;
 
 import androidx.test.filters.SmallTest;
@@ -67,7 +67,7 @@ import java.io.IOException;
 
 @RunWith(DevSdkIgnoreRunner.class)
 @SmallTest
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public final class NetworkStatsRecorderTest {
     private static final String TAG = NetworkStatsRecorderTest.class.getSimpleName();
 

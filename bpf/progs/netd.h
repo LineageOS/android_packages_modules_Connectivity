@@ -90,6 +90,11 @@ typedef struct {
 } PacketTrace;
 STRUCT_SIZE(PacketTrace, 8+4+4 + 4+4 + 2+2 + 1+1+1+1);
 
+typedef struct {
+    uint64_t cookie;
+} SkStorageValue;
+STRUCT_SIZE(SkStorageValue, 8);
+
 // Since we cannot garbage collect the stats map since device boot, we need to make these maps as
 // large as possible. The maximum size of number of map entries we can have is depend on the rlimit
 // of MEM_LOCK granted to netd. The memory space needed by each map can be calculated by the

@@ -23,22 +23,11 @@ import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.net.CaptivePortal
 import android.net.ConnectivityManager.ACTION_CAPTIVE_PORTAL_SIGN_IN
 import android.net.ConnectivityManager.EXTRA_CAPTIVE_PORTAL
-import android.net.IpPrefix
-import android.net.LinkAddress
-import android.net.LinkProperties
-import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
-import android.net.NetworkScore
-import android.net.NetworkScore.KEEP_CONNECTED_FOR_TEST
 import android.net.NetworkStack
-import android.net.RouteInfo
 import android.os.Build
 import android.os.Bundle
 import androidx.test.filters.SmallTest
@@ -51,30 +40,6 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
-
-// This allows keeping all the networks connected without having to file individual requests
-// for them.
-private fun keepScore() = FromS(
-        NetworkScore.Builder().setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST).build()
-)
-
-private fun nc(transport: Int, vararg caps: Int) = NetworkCapabilities.Builder().apply {
-    addTransportType(transport)
-    caps.forEach {
-        addCapability(it)
-    }
-    // Useful capabilities for everybody
-    addCapability(NET_CAPABILITY_NOT_RESTRICTED)
-    addCapability(NET_CAPABILITY_NOT_SUSPENDED)
-    addCapability(NET_CAPABILITY_NOT_ROAMING)
-    addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
-}.build()
-
-private fun lp(iface: String) = LinkProperties().apply {
-    interfaceName = iface
-    addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
-    addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
-}
 
 @DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
@@ -91,7 +56,7 @@ class CSCaptivePortalAppTest : CSTest() {
         val captivePortalRequest = NetworkRequest.Builder()
                 .addCapability(NET_CAPABILITY_CAPTIVE_PORTAL).build()
         cm.registerNetworkCallback(captivePortalRequest, captivePortalCallback)
-        val wifiAgent = createWifiAgent()
+        val wifiAgent = Agent(WIFI_IFACE, TRANSPORT_WIFI, NET_CAPABILITY_INTERNET)
         wifiAgent.connectWithCaptivePortal(TEST_REDIRECT_URL)
         captivePortalCallback.expectAvailableCallbacksUnvalidated(wifiAgent)
         val signInIntent = startCaptivePortalApp(wifiAgent)
@@ -104,14 +69,6 @@ class CSCaptivePortalAppTest : CSTest() {
         val captivePortal: CaptivePortal? = signInIntent.getParcelableExtra(EXTRA_CAPTIVE_PORTAL)
         captivePortal?.reevaluateNetwork()
         verify(wifiAgent.networkMonitor, never()).forceReevaluation(anyInt())
-    }
-
-    private fun createWifiAgent(): CSAgentWrapper {
-        return Agent(
-            score = keepScore(),
-            lp = lp(WIFI_IFACE),
-                nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET)
-        )
     }
 
     private fun startCaptivePortalApp(networkAgent: CSAgentWrapper): Intent {

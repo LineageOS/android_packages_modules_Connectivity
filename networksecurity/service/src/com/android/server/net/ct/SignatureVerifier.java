@@ -15,10 +15,13 @@
  */
 package com.android.server.net.ct;
 
+import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.PUBLIC_KEY_INVALID;
+import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.PUBLIC_KEY_NOT_ALLOWED;
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.PUBLIC_KEY_NOT_FOUND;
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.SIGNATURE_INVALID;
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.SIGNATURE_NOT_FOUND;
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.SIGNATURE_VERIFICATION_FAILED;
+import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.UNABLE_TO_READ_FILE;
 
 import android.annotation.NonNull;
 import android.annotation.RequiresApi;
@@ -84,28 +87,38 @@ public class SignatureVerifier {
         mPublicKey = Optional.empty();
     }
 
-    void setPublicKeyFrom(Uri file) throws GeneralSecurityException, IOException {
+    LogListUpdateStatus setPublicKeyFrom(Uri file) {
         try (InputStream fileStream = mContext.getContentResolver().openInputStream(file)) {
-            setPublicKey(new String(fileStream.readAllBytes()));
+            return setPublicKey(new String(fileStream.readAllBytes()));
+        } catch (IOException e) {
+            Log.e(TAG, "Could not read the public key file", e);
+            return LogListUpdateStatus.builder().setState(UNABLE_TO_READ_FILE).build();
         }
     }
 
-    void setPublicKey(String publicKey) throws GeneralSecurityException {
+    private LogListUpdateStatus setPublicKey(String publicKey) {
         byte[] decodedPublicKey = null;
+        LogListUpdateStatus.Builder statusBuilder = LogListUpdateStatus.builder();
+
         try {
             decodedPublicKey = Base64.getDecoder().decode(publicKey);
-        } catch (IllegalArgumentException e) {
-            throw new GeneralSecurityException("Invalid public key base64 encoding", e);
-        }
-        setPublicKey(
+            setPublicKey(
                 KeyFactory.getInstance("RSA")
                         .generatePublic(new X509EncodedKeySpec(decodedPublicKey)));
+        } catch (IllegalArgumentException e) {
+            statusBuilder.setState(PUBLIC_KEY_INVALID);
+            Log.w(TAG, "Invalid public key base64 encoding", e);
+        } catch (GeneralSecurityException e) {
+            statusBuilder.setState(PUBLIC_KEY_NOT_ALLOWED);
+            Log.e(TAG, "Public key not in allowlist", e);
+        }
+
+        return statusBuilder.build();
     }
 
     @VisibleForTesting
     void setPublicKey(PublicKey publicKey) throws GeneralSecurityException {
         if (!mAllowedKeys.contains(publicKey)) {
-            // TODO(b/400704086): add logging for this failure.
             throw new GeneralSecurityException("Public key not in allowlist");
         }
         mPublicKey = Optional.of(publicKey);
@@ -144,7 +157,11 @@ public class SignatureVerifier {
             Log.e(TAG, "Key invalid for log list verification", e);
             statusBuilder.setState(SIGNATURE_INVALID);
             return statusBuilder.build();
-        } catch (IOException | GeneralSecurityException e) {
+        } catch (IOException e) {
+            Log.e(TAG, "Could not read log list file", e);
+            statusBuilder.setState(UNABLE_TO_READ_FILE);
+            return statusBuilder.build();
+        } catch (GeneralSecurityException e) {
             Log.e(TAG, "Could not verify new log list", e);
             statusBuilder.setState(SIGNATURE_VERIFICATION_FAILED);
             return statusBuilder.build();

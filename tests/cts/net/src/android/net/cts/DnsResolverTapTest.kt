@@ -38,8 +38,8 @@ import com.android.testutils.AutoReleaseNetworkCallbackRule
 import com.android.testutils.DeviceConfigRule
 import com.android.testutils.DnsResolverModuleTest
 import com.android.testutils.IPv6UdpFilter
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
-import com.android.testutils.RouterAdvertisementResponder
+import com.android.testutils.NdResponder
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import com.android.testutils.TapPacketReaderRule
 import com.android.testutils.TestableNetworkAgent
 import com.android.testutils.TestDnsPacket
@@ -92,7 +92,7 @@ class DnsResolverTapTest {
     @get:Rule(order = 4)
     val cbRule = AutoReleaseNetworkCallbackRule()
 
-    private val ndResponder by lazy { RouterAdvertisementResponder(packetReaderRule.reader) }
+    private val ndResponder by lazy { NdResponder(packetReaderRule.reader) }
     private val dnsServerAddr by lazy {
         parseNumericAddress("fe80::124%${packetReaderRule.iface.interfaceName}") as Inet6Address
     }

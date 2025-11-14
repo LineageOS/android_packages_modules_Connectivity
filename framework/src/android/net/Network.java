@@ -29,6 +29,7 @@ import android.system.Os;
 import android.system.OsConstants;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.modules.utils.build.SdkLevel;
 
 import libcore.io.IoUtils;
 import libcore.net.http.Dns;
@@ -102,12 +103,7 @@ public class Network implements Parcelable {
     // and permission checks are made by netd (attempts to bypass Private DNS
     // without appropriate permission are silently turned into vanilla DNS
     // requests). This only affects DNS queries made using this network object.
-    //
-    // It it not parceled to receivers because (a) it can be set or cleared at
-    // anytime and (b) receivers should be explicit about attempts to bypass
-    // Private DNS so that the intent of the code is easily determined and
-    // code search audits are possible.
-    private final transient boolean mPrivateDnsBypass;
+    private final boolean mPrivateDnsBypass;
 
     /**
      * @hide
@@ -168,6 +164,18 @@ public class Network implements Parcelable {
     @SystemApi
     public @NonNull Network getPrivateDnsBypassingCopy() {
         return new Network(netId, true);
+    }
+
+    /**
+     * Obtain a Network object that respects the Private DNS settings when attempting
+     * to use {@link #getAllByName(String)}/{@link #getByName(String)} methods on the given
+     * instance for hostname resolution.
+     *
+     * @hide
+     */
+    // TODO : @SystemApi if this becomes useful.
+    public @NonNull Network getPrivateDnsNonBypassingCopy() {
+        return new Network(netId, false);
     }
 
     /**
@@ -497,31 +505,35 @@ public class Network implements Parcelable {
     }
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(netId);
+        if (SdkLevel.isAtLeastB()) {
+            dest.writeBoolean(mPrivateDnsBypass);
+        } else {
+            dest.writeBoolean(false);
+        }
     }
 
     public static final @android.annotation.NonNull Creator<Network> CREATOR =
-        new Creator<Network>() {
-            public Network createFromParcel(Parcel in) {
-                int netId = in.readInt();
+            new Creator<>() {
+                public Network createFromParcel(Parcel in) {
+                    final int netId = in.readInt();
+                    final boolean bypass = in.readBoolean();
+                    return new Network(netId, bypass);
+                }
 
-                return new Network(netId);
-            }
-
-            public Network[] newArray(int size) {
-                return new Network[size];
-            }
-    };
+                public Network[] newArray(int size) {
+                    return new Network[size];
+                }
+            };
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        if (!(obj instanceof Network)) return false;
-        Network other = (Network)obj;
+        if (!(obj instanceof Network other)) return false;
         return this.netId == other.netId;
     }
 
     @Override
     public int hashCode() {
-        return netId * 11;
+        return netId;
     }
 
     @Override

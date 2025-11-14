@@ -16,9 +16,6 @@
 
 package com.android.server
 
-import android.net.IpPrefix
-import android.net.LinkAddress
-import android.net.LinkProperties
 import android.net.LocalNetworkConfig
 import android.net.MulticastRoutingConfig
 import android.net.MulticastRoutingConfig.CONFIG_FORWARD_NONE
@@ -26,26 +23,20 @@ import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_DUN
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
 import android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
 import android.net.NetworkCapabilities.TRANSPORT_THREAD
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
 import android.net.NetworkScore
-import android.net.NetworkScore.KEEP_CONNECTED_FOR_TEST
 import android.net.NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK
-import android.net.RouteInfo
 import android.net.connectivity.ConnectivityCompatChanges.ENABLE_MATCH_LOCAL_NETWORK
 import android.net.connectivity.ConnectivityCompatChanges.ENABLE_MATCH_NON_THREAD_LOCAL_NETWORKS
 import android.os.Build
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry.LocalInfoChanged
-import com.android.testutils.RecorderCallback.CallbackEntry.Lost
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.LocalInfoChanged
+import com.android.testutils.TestableNetworkCallback.Event.Lost
 import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,29 +52,7 @@ private const val TIMEOUT_MS = 200L
 private const val MEDIUM_TIMEOUT_MS = 1_000L
 private const val LONG_TIMEOUT_MS = 5_000
 
-private fun nc(transport: Int, vararg caps: Int) = NetworkCapabilities.Builder().apply {
-    addTransportType(transport)
-    caps.forEach {
-        addCapability(it)
-    }
-    // Useful capabilities for everybody
-    addCapability(NET_CAPABILITY_NOT_RESTRICTED)
-    addCapability(NET_CAPABILITY_NOT_SUSPENDED)
-    addCapability(NET_CAPABILITY_NOT_ROAMING)
-    addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
-}.build()
-
-private fun lp(iface: String) = LinkProperties().apply {
-    interfaceName = iface
-    addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
-    addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
-}
-
-// This allows keeping all the networks connected without having to file individual requests
-// for them.
-private fun keepScore() = FromS(
-        NetworkScore.Builder().setKeepConnectedReason(KEEP_CONNECTED_FOR_TEST).build()
-)
+private fun lp(iface: String) = defaultLp().apply { interfaceName = iface }
 
 @DevSdkIgnoreRunner.MonitorThreadLeak
 @RunWith(DevSdkIgnoreRunner::class)
@@ -235,19 +204,11 @@ class CSLocalAgentTests : CSTest() {
     }
 
     private fun createWifiAgent(name: String): CSAgentWrapper {
-        return Agent(
-                score = keepScore(),
-                lp = lp(name),
-                nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET)
-        )
+        return Agent(name, TRANSPORT_WIFI, NET_CAPABILITY_INTERNET)
     }
 
     private fun createCellAgent(name: String): CSAgentWrapper {
-        return Agent(
-                score = keepScore(),
-                lp = lp(name),
-                nc = nc(TRANSPORT_CELLULAR, NET_CAPABILITY_INTERNET)
-        )
+        return Agent(name, TRANSPORT_CELLULAR, NET_CAPABILITY_INTERNET)
     }
 
     private fun sendLocalNetworkConfig(

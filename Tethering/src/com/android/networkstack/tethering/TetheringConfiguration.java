@@ -24,6 +24,9 @@ import static android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY;
 
 import static com.android.networkstack.apishim.ConstantsShim.KEY_CARRIER_SUPPORTS_TETHERING_BOOL;
 import static com.android.net.module.util.SdkUtil.isAtLeast25Q2;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHER_ENABLE_SYNC_SM;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHER_ENABLE_WEAR_TETHERING;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION;
 
 import android.content.ContentResolver;
 import android.content.Context;
@@ -101,19 +104,6 @@ public class TetheringConfiguration {
     public static final String USE_LEGACY_WIFI_P2P_DEDICATED_IP =
             "use_legacy_wifi_p2p_dedicated_ip";
 
-    /**
-     * Experiment flag to force choosing upstreams automatically.
-     *
-     * This setting is intended to help force-enable the feature on OEM devices that disabled it
-     * via resource overlays, and later noticed issues. To that end, it overrides
-     * config_tether_upstream_automatic when set to true.
-     *
-     * This flag is enabled if !=0 and less than the module APEX version: see
-     * {@link DeviceConfigUtils#isTetheringFeatureEnabled}. It is also ignored after R, as later
-     * devices should just set config_tether_upstream_automatic to true instead.
-     */
-    public static final String TETHER_FORCE_UPSTREAM_AUTOMATIC_VERSION =
-            "tether_force_upstream_automatic_version";
 
     /**
      * Settings key to foce choosing usb functions for usb tethering.
@@ -124,14 +114,6 @@ public class TetheringConfiguration {
             "tether_force_usb_functions";
 
     /**
-     * Experiment flag to enable TETHERING_WEAR.
-     */
-    public static final String TETHER_ENABLE_WEAR_TETHERING =
-            "tether_enable_wear_tethering";
-
-    public static final String TETHER_ENABLE_SYNC_SM = "tether_enable_sync_sm";
-
-    /**
      * Default value that used to periodic polls tether offload stats from tethering offload HAL
      * to make the data warnings work.
      */
@@ -139,18 +121,6 @@ public class TetheringConfiguration {
 
     /** A flag for using synchronous or asynchronous state machine. */
     public static boolean USE_SYNC_SM = true;
-
-    /**
-     * A feature flag to control whether the active sessions metrics should be enabled.
-     * Disabled by default.
-     */
-    public static final String TETHER_ACTIVE_SESSIONS_METRICS = "tether_active_sessions_metrics";
-
-    /**
-     * A feature flag to control whether the tethering local network agent should be enabled.
-     * Disabled by default.
-     */
-    public static final String TETHERING_LOCAL_NETWORK_AGENT = "tethering_local_network_agent";
 
     public final String[] tetherableUsbRegexs;
     public final String[] tetherableWifiRegexs;

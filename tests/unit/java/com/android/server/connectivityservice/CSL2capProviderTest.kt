@@ -45,10 +45,10 @@ import com.android.server.net.L2capNetwork.L2capIpClient
 import com.android.server.net.L2capPacketForwarder
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry.Lost
-import com.android.testutils.RecorderCallback.CallbackEntry.Reserved
-import com.android.testutils.RecorderCallback.CallbackEntry.Unavailable
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.Lost
+import com.android.testutils.TestableNetworkCallback.Event.Reserved
+import com.android.testutils.TestableNetworkCallback.Event.Unavailable
 import com.android.testutils.anyNetwork
 import com.android.testutils.waitForIdle
 import java.io.IOException
@@ -67,7 +67,6 @@ import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.doThrow
-import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 
 private const val PSM = 0x85

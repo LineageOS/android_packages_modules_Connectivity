@@ -21,13 +21,28 @@ java_defaults {
     name: "CtsNetTestCasesDefaults",
     defaults: [
         "cts_defaults",
-        "framework-connectivity-test-defaults",
     ],
 
     // Include both the 32 and 64 bit versions
     compile_multilib: "both",
 
+    sdk_version: "module_current",
     libs: [
+        "framework-annotations-lib",
+        "framework-connectivity.impl",
+        "framework-connectivity-b.impl",
+        "framework-connectivity-t.impl",
+        "framework-tethering.impl",
+        "framework-configinfrastructure.stubs.module_lib",
+        "framework-bluetooth.stubs.module_lib",
+        "android.net.ipsec.ike.stubs.module_lib",
+        "framework-wifi.stubs.module_lib",
+
+        // module_current stubs will hide test_stubs symbols in classes that also have module API
+        // (for example UserManager#isVisibleBackgroundUsersSupported is test API but UserManager
+        // is picked up from module lib stubs so that method will not be there). But test_stubs
+        // still provide stubs for classes that are only test API, such as VintfRuntimeInfo.
+        "android_test_stubs_current",
         "voip-common",
         "android.test.base.stubs",
     ],
@@ -53,11 +68,13 @@ java_defaults {
         "cts-net-utils",
         "CtsNetTestsNonUpdatableLib",
         "ctstestrunner-axt",
+        "DhcpPacketLib",
         "junit",
         "junit-params",
         "modules-utils-build",
         "net-tests-utils",
         "net-utils-framework-common",
+        "NetworkStackApiCurrentShims",
         "truth",
         "TetheringIntegrationTestsBaseLib",
     ],
@@ -65,6 +82,7 @@ java_defaults {
     min_sdk_version: "30",
     per_testcase_directory: true,
     host_required: ["net-tests-utils-host-common"],
+    host_common_data: [":net-tests-utils-host-common"],
     test_config_template: "AndroidTestTemplate.xml",
     data: [
         ":ConnectivityTestPreparer",
@@ -88,11 +106,6 @@ android_test {
     name: "CtsNetTestCases",
     defaults: [
         "CtsNetTestCasesDefaults",
-        "ConnectivityNextEnableDefaults",
-    ],
-    static_libs: [
-        "DhcpPacketLib",
-        "NetworkStackApiCurrentShims",
     ],
     test_suites: [
         "automotive-general-tests",
@@ -101,24 +114,13 @@ android_test {
         "mcts-tethering",
         "general-tests",
     ],
-}
-
-java_defaults {
-    name: "CtsNetTestCasesApiStableDefaults",
-    // TODO: CTS should not depend on the entirety of the networkstack code.
-    static_libs: [
-        "DhcpPacketLib",
-        "NetworkStackApiStableShims",
-    ],
-    jni_uses_sdk_apis: true,
-    min_sdk_version: "30",
+    resource_zips: [":connectivity-module-version-as-resource-zip"],
 }
 
 java_defaults {
     name: "CtsNetTestCasesMaxTargetSdkDefaults",
     defaults: [
         "CtsNetTestCasesDefaults",
-        "CtsNetTestCasesApiStableDefaults",
     ],
     test_suites: [
         "cts",
@@ -134,6 +136,14 @@ android_test {
     target_sdk_version: "33",
     package_name: "android.net.cts.maxtargetsdk33",
     instrumentation_target_package: "android.net.cts.maxtargetsdk33",
+    test_options: {
+        test_runner_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk33",
+            },
+        ],
+    },
 }
 
 android_test {
@@ -142,6 +152,14 @@ android_test {
     target_sdk_version: "31",
     package_name: "android.net.cts.maxtargetsdk31", // CTS package names must be unique.
     instrumentation_target_package: "android.net.cts.maxtargetsdk31",
+    test_options: {
+        test_runner_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk31",
+            },
+        ],
+    },
 }
 
 android_test {
@@ -150,6 +168,14 @@ android_test {
     target_sdk_version: "30",
     package_name: "android.net.cts.maxtargetsdk30", // CTS package names must be unique.
     instrumentation_target_package: "android.net.cts.maxtargetsdk30",
+    test_options: {
+        test_runner_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.testutils.filters.CtsNetTestCasesMaxTargetSdk30",
+            },
+        ],
+    },
 }
 
 android_test_helper_app {

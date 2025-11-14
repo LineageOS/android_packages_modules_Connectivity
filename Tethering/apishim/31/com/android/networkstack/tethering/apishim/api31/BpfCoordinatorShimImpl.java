@@ -19,7 +19,7 @@ package com.android.networkstack.tethering.apishim.api31;
 import static android.net.netstats.provider.NetworkStatsProvider.QUOTA_UNLIMITED;
 
 import static com.android.net.module.util.NetworkStackConstants.RFC7421_PREFIX_LENGTH;
-import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_ACTIVE_SESSIONS_METRICS;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHER_ACTIVE_SESSIONS_METRICS;
 
 import android.system.ErrnoException;
 import android.system.Os;

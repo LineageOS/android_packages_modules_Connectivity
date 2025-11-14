@@ -16,14 +16,18 @@
 
 package com.android.testutils
 
+import android.content.pm.PackageManager.FEATURE_TELEPHONY
+import android.content.pm.PackageManager.FEATURE_WIFI
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkRequest
 import android.os.Handler
 import androidx.test.platform.app.InstrumentationRegistry
-import com.android.testutils.RecorderCallback.CallbackEntry
+import com.android.testutils.TestableNetworkCallback.Event.Available
 import java.util.Collections
 import kotlin.test.fail
 import org.junit.rules.TestRule
@@ -58,9 +62,11 @@ class AutoReleaseNetworkCallbackRule : NetworkCallbackHelper(), TestRule {
  * Helps file [NetworkCallback]s to request or watch networks, keeping track of them for cleanup.
  */
 open class NetworkCallbackHelper {
-    private val cm by lazy {
+    private val context by lazy {
         InstrumentationRegistry.getInstrumentation().context
-            .getSystemService(ConnectivityManager::class.java)
+    }
+    private val cm by lazy {
+        context.getSystemService(ConnectivityManager::class.java)
             ?: fail("ConnectivityManager not found")
     }
     private val cbToCleanup = Collections.synchronizedSet(mutableSetOf<NetworkCallback>())
@@ -76,18 +82,18 @@ open class NetworkCallbackHelper {
         if (cellRequestCb != null) {
             fail("Cell network was already requested")
         }
-        val cb = requestNetwork(
-            NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
-        )
+        val cb = requestNetwork(getInternetRequest(TRANSPORT_CELLULAR))
         cellRequestCb = cb
-        return cb.expect<CallbackEntry.Available>(
+        return cb.expect<Available>(
             errorMsg = "Cell network not available. " +
                     "Please ensure the device has working mobile data."
         ).network
     }
+
+    private fun getInternetRequest(transportType: Int) = NetworkRequest.Builder()
+        .addTransportType(transportType)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        .build()
 
     /**
      * Unrequest a cell network requested through [requestCell].
@@ -96,6 +102,24 @@ open class NetworkCallbackHelper {
         val cb = cellRequestCb ?: fail("Cell network was not requested")
         unregisterNetworkCallback(cb)
         cellRequestCb = null
+    }
+
+    /**
+     * Request a cell network if supported by the device.
+     */
+    fun requestCellIfSupported() = if (context.packageManager.hasSystemFeature(FEATURE_TELEPHONY)) {
+        requestNetwork(getInternetRequest(TRANSPORT_CELLULAR))
+    } else {
+        null
+    }
+
+    /**
+     * Request a Wi-Fi network if supported by the device.
+     */
+    fun requestWifiIfSupported() = if (context.packageManager.hasSystemFeature(FEATURE_WIFI)) {
+        requestNetwork(getInternetRequest(TRANSPORT_WIFI))
+    } else {
+        null
     }
 
     private fun <T> addCallback(

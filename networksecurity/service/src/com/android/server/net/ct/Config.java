@@ -15,23 +15,10 @@
  */
 package com.android.server.net.ct;
 
-import android.content.ApexEnvironment;
-
-import com.android.net.module.util.DeviceConfigUtils;
-
-import java.io.File;
-
 /** Class holding the constants used by the CT feature. */
 final class Config {
 
     static final boolean DEBUG = false;
-
-    // preferences file
-    private static final File DEVICE_PROTECTED_DATA_DIR =
-            ApexEnvironment.getApexEnvironment(DeviceConfigUtils.TETHERING_MODULE_NAME)
-                    .getDeviceProtectedDataDir();
-    private static final String PREFERENCES_FILE_NAME = "ct.preferences";
-    static final File PREFERENCES_FILE = new File(DEVICE_PROTECTED_DATA_DIR, PREFERENCES_FILE_NAME);
 
     // CT paths
     static final String CT_ROOT_DIRECTORY_PATH = "/data/misc/keychain/ct/";

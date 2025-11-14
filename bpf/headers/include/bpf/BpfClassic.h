@@ -48,7 +48,7 @@
 	BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, (v), 0, 1), \
 	BPF_REJECT
 
-// *THREE* instructions: compare and if *NOT* in range [lo, hi], jump over the reject statement
+// *THREE* instructions: compare and if *IN* range [lo, hi] jump over the reject statement
 #define BPF3_REJECT_IF_NOT_IN_RANGE(lo, hi) \
 	BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, (lo), 0, 1), \
 	BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, (hi), 0, 1), \
@@ -97,42 +97,42 @@
 #define BPF_LOAD_IPV4_U8(field) \
 	BPF_LOAD_NET_RELATIVE_U8(({ \
 	  _Static_assert(field_sizeof(struct iphdr, field) == 1, "field of wrong size"); \
-	  offsetof(iphdr, field); \
+	  offsetof(struct iphdr, field); \
 	}))
 
 // Big/Network Endian 16-bit load from IPv4 header field.
 #define BPF_LOAD_IPV4_BE16(field) \
 	BPF_LOAD_NET_RELATIVE_BE16(({ \
 	  _Static_assert(field_sizeof(struct iphdr, field) == 2, "field of wrong size"); \
-	  offsetof(iphdr, field); \
+	  offsetof(struct iphdr, field); \
 	}))
 
 // Big/Network Endian 32-bit load from IPv4 header field.
 #define BPF_LOAD_IPV4_BE32(field) \
 	BPF_LOAD_NET_RELATIVE_BE32(({ \
 	  _Static_assert(field_sizeof(struct iphdr, field) == 4, "field of wrong size"); \
-	  offsetof(iphdr, field); \
+	  offsetof(struct iphdr, field); \
 	}))
 
 // 8-bit load from IPv6 header field.
 #define BPF_LOAD_IPV6_U8(field) \
 	BPF_LOAD_NET_RELATIVE_U8(({ \
 	  _Static_assert(field_sizeof(struct ipv6hdr, field) == 1, "field of wrong size"); \
-	  offsetof(ipv6hdr, field); \
+	  offsetof(struct ipv6hdr, field); \
 	}))
 
 // Big/Network Endian 16-bit load from IPv6 header field.
 #define BPF_LOAD_IPV6_BE16(field) \
 	BPF_LOAD_NET_RELATIVE_BE16(({ \
 	  _Static_assert(field_sizeof(struct ipv6hdr, field) == 2, "field of wrong size"); \
-	  offsetof(ipv6hdr, field); \
+	  offsetof(struct ipv6hdr, field); \
 	}))
 
 // Big/Network Endian 32-bit load from IPv6 header field.
 #define BPF_LOAD_IPV6_BE32(field) \
 	BPF_LOAD_NET_RELATIVE_BE32(({ \
 	  _Static_assert(field_sizeof(struct ipv6hdr, field) == 4, "field of wrong size"); \
-	  offsetof(ipv6hdr, field); \
+	  offsetof(struct ipv6hdr, field); \
 	}))
 
 // Load the length of the IPv4 header into X index register.

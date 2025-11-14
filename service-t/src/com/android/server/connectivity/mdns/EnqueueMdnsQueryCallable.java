@@ -16,8 +16,6 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.server.connectivity.mdns.MdnsServiceTypeClient.INVALID_TRANSACTION_ID;
-
 import android.annotation.NonNull;
 import android.os.Build;
 import android.text.TextUtils;
@@ -26,6 +24,7 @@ import android.util.Pair;
 import com.android.net.module.util.CollectionUtils;
 import com.android.net.module.util.DnsUtils;
 import com.android.net.module.util.SharedLog;
+import com.android.server.connectivity.mdns.MdnsServiceTypeClient.QuerySentResult;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 
 import java.io.IOException;
@@ -44,7 +43,7 @@ import java.util.concurrent.Callable;
  * and the list of the subtypes in the query as a {@link Pair}. If a query is failed to build, or if
  * it can not be enqueued, then call to {@link #call()} returns {@code null}.
  */
-public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<String>>> {
+public class EnqueueMdnsQueryCallable implements Callable<QuerySentResult> {
 
     private static final String TAG = "MdnsQueryCallable";
     private static final List<Integer> castShellEmulatorMdnsPorts;
@@ -68,8 +67,6 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
     private final String[] serviceTypeLabels;
     @NonNull
     private final List<String> subtypes;
-    private final boolean expectUnicastResponse;
-    private final int transactionId;
     @NonNull
     private final SocketKey socketKey;
     private final boolean sendDiscoveryQueries;
@@ -86,13 +83,13 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
     @NonNull
     private final List<MdnsResponse> existingServices;
     private final boolean isQueryWithKnownAnswer;
+    private final MdnsQueryScheduler.ScheduledQueryTaskArgs taskArgs;
 
     EnqueueMdnsQueryCallable(
             @NonNull MdnsSocketClientBase requestSender,
             @NonNull String serviceType,
             @NonNull Collection<String> subtypes,
-            boolean expectUnicastResponse,
-            int transactionId,
+            MdnsQueryScheduler.ScheduledQueryTaskArgs taskArgs,
             @NonNull SocketKey socketKey,
             boolean onlyUseIpv6OnIpv6OnlyNetworks,
             boolean sendDiscoveryQueries,
@@ -105,8 +102,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
         weakRequestSender = new WeakReference<>(requestSender);
         serviceTypeLabels = TextUtils.split(serviceType, "\\.");
         this.subtypes = new ArrayList<>(subtypes);
-        this.expectUnicastResponse = expectUnicastResponse;
-        this.transactionId = transactionId;
+        this.taskArgs = taskArgs;
         this.socketKey = socketKey;
         this.onlyUseIpv6OnIpv6OnlyNetworks = onlyUseIpv6OnIpv6OnlyNetworks;
         this.sendDiscoveryQueries = sendDiscoveryQueries;
@@ -126,18 +122,23 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
     // Incompatible return type for override of Callable#call().
     @SuppressWarnings("nullness:override.return.invalid")
     @Override
-    public Pair<Integer, List<String>> call() {
+    public QuerySentResult call() {
         try {
             MdnsSocketClientBase requestSender = weakRequestSender.get();
             if (requestSender == null) {
-                return Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
+                return QuerySentResult.createFailedQueryResult(taskArgs);
             }
 
             final List<MdnsRecord> questions = new ArrayList<>();
+            final boolean expectUnicastResponse = taskArgs.config.expectUnicastResponse;
+            final int transactionId = taskArgs.config.getTransactionId();
+            final List<MdnsResponse> resolvedServices = new ArrayList<>();
+            boolean queriedBaseType = false;
 
             if (sendDiscoveryQueries) {
                 // Base service type
                 questions.add(new MdnsPointerRecord(serviceTypeLabels, expectUnicastResponse));
+                queriedBaseType = true;
                 for (String subtype : subtypes) {
                     final String[] labels = MdnsUtils.constructFullSubtype(serviceTypeLabels,
                             MdnsConstants.SUBTYPE_PREFIX + subtype);
@@ -154,6 +155,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
                         response.getTextRecord(), now);
                 boolean renewSrv = !response.hasServiceRecord() || MdnsUtils.isRecordRenewalNeeded(
                         response.getServiceRecord(), now);
+                final int questionsBeforeAdding = questions.size();
                 if (renewSrv && renewTxt) {
                     questions.add(new MdnsAnyRecord(serviceName, expectUnicastResponse));
                 } else {
@@ -176,11 +178,14 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
                                 host, MdnsRecord.TYPE_AAAA, expectUnicastResponse));
                     }
                 }
+                if (questions.size() > questionsBeforeAdding) {
+                    resolvedServices.add(response);
+                }
             }
 
             if (questions.size() == 0) {
                 // No query to send
-                return Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
+                return QuerySentResult.createFailedQueryResult(taskArgs);
             }
 
             // Put the existing ptr records into known-answer section.
@@ -217,11 +222,12 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             for (Integer emulatorPort : castShellEmulatorMdnsPorts) {
                 sendPacketToIpv4AndIpv6(requestSender, emulatorPort, queryPacket);
             }
-            return Pair.create(transactionId, subtypes);
+            return new QuerySentResult(
+                    transactionId, subtypes, taskArgs, queriedBaseType, resolvedServices);
         } catch (Exception e) {
             sharedLog.e(String.format("Failed to create mDNS packet for subtype: %s.",
                     TextUtils.join(",", subtypes)), e);
-            return Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
+            return QuerySentResult.createFailedQueryResult(taskArgs);
         }
     }
 
@@ -229,7 +235,7 @@ public class EnqueueMdnsQueryCallable implements Callable<Pair<Integer, List<Str
             MdnsPacket mdnsPacket) throws IOException {
         final List<DatagramPacket> packets = dependencies.getDatagramPacketsFromMdnsPacket(
                 packetCreationBuffer, mdnsPacket, address, isQueryWithKnownAnswer);
-        if (expectUnicastResponse) {
+        if (taskArgs.config.expectUnicastResponse) {
             // MdnsMultinetworkSocketClient is only available on T+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                     && requestSender instanceof MdnsMultinetworkSocketClient) {

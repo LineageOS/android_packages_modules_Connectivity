@@ -16,6 +16,12 @@
 
 package com.android.net.module.util;
 
+import static android.net.ConnectivityManager.TYPE_BLUETOOTH;
+import static android.net.ConnectivityManager.TYPE_ETHERNET;
+import static android.net.ConnectivityManager.TYPE_MOBILE;
+import static android.net.ConnectivityManager.TYPE_PROXY;
+import static android.net.ConnectivityManager.TYPE_VPN;
+import static android.net.ConnectivityManager.TYPE_WIFI;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_BIP;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_CBS;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_DUN;
@@ -40,13 +46,13 @@ import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_SATELLITE;
+import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_USB;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI_AWARE;
 
 import static com.android.net.module.util.BitUtils.packBits;
-import static com.android.net.module.util.BitUtils.unpackBits;
 
 import android.annotation.NonNull;
 import android.net.NetworkCapabilities;
@@ -58,6 +64,10 @@ import com.android.internal.annotations.VisibleForTesting;
  * @hide
  */
 public final class NetworkCapabilitiesUtils {
+    // Need to be synchronized with ConnectivityManager.
+    // TODO: Use {@code ConnectivityManager#*} when visible.
+    public static final int TYPE_TEST = 18;
+
     // Transports considered to classify networks in UI, in order of which transport should be
     // surfaced when there are multiple transports. Transports not in this list do not have
     // an ordering preference (in practice they will have a deterministic order based on the
@@ -150,6 +160,32 @@ public final class NetworkCapabilitiesUtils {
         return transports[0];
     }
 
+    /**
+     * Deduces the primary NetworkCapabilities.TRANSPORT_* type from a legacy
+     * ConnectivityManager.TYPE_* network type.
+     *
+     * This is used to deduce transport type for legacy persistent NetworkStats files
+     * with NetworkIdentitySet version under VERSION_ADD_TRANSPORT_TYPES.
+     *
+     * @param legacyNetworkType One of the deprecated ConnectivityManager.TYPE_* constants
+     *        (e.g., ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE).
+     * @return The corresponding NetworkCapabilities.TRANSPORT_* constant, or
+     *         -1 if no direct or clear mapping exists or unknown.
+     */
+    public static int deduceTransportTypeForLegacyNetworkType(int legacyNetworkType) {
+        return switch (legacyNetworkType) {
+            case TYPE_WIFI -> TRANSPORT_WIFI;
+            case TYPE_MOBILE -> TRANSPORT_CELLULAR;
+            case TYPE_ETHERNET -> TRANSPORT_ETHERNET;
+            case TYPE_VPN -> TRANSPORT_VPN;
+            // TYPE_PROXY (deprecated) historically represented a network primarily
+            // for proxying traffic, often over Bluetooth (e.g., on Wear OS devices
+            // tethered to a phone). See ProxyNetworkAgent (deprecated) for more detail.
+            case TYPE_BLUETOOTH, TYPE_PROXY -> TRANSPORT_BLUETOOTH;
+            case TYPE_TEST -> TRANSPORT_TEST;
+            default -> -1; // Ignore legacy types such as TYPE_WIMAX, TYPE_MOBILE_*, etc.
+        };
+    }
 
     /**
      * Infers that all the capabilities it provides are typically provided by restricted networks

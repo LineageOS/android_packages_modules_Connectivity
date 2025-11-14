@@ -40,7 +40,6 @@ import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSess
 import static com.android.networkstack.apishim.ConstantsShim.KEY_CARRIER_SUPPORTS_TETHERING_BOOL;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreAfter;
 import static com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -67,6 +66,7 @@ import android.content.pm.ModuleInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PersistableBundle;
@@ -603,7 +603,7 @@ public final class EntitlementManagerTest {
                 .onTetherProvisioningFailed(TETHERING_WIFI, FAILED_TETHERING_REASON);
     }
 
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @Test
     public void testUiProvisioningMultiUser_aboveT_createContextAsUserThrows() {
         mMockContext.setCreateContextAsUserException(new IllegalStateException());
@@ -611,14 +611,14 @@ public final class EntitlementManagerTest {
         doTestUiProvisioningMultiUser(false, 1);
     }
 
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @Test
     public void testUiProvisioningMultiUser_aboveT() {
         doTestUiProvisioningMultiUser(true, 1);
         doTestUiProvisioningMultiUser(false, 0);
     }
 
-    @IgnoreAfter(SC_V2)
+    @IgnoreAfter(Build.VERSION_CODES.S_V2)
     @Test
     public void testUiProvisioningMultiUser_belowT() {
         doTestUiProvisioningMultiUser(true, 1);
@@ -734,7 +734,7 @@ public final class EntitlementManagerTest {
     }
 
     @Test
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void requestLatestTetheringEntitlementResult_carrierDoesNotSupport_noProvisionCount()
             throws Exception {
         setupCarrierConfig(false);
@@ -746,7 +746,7 @@ public final class EntitlementManagerTest {
     }
 
     @Test
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void reevaluateSimCardProvisioning_carrierUnsupportAndSimswitch() {
         setupForRequiredProvisioning();
 
@@ -771,7 +771,7 @@ public final class EntitlementManagerTest {
     }
 
     @Test
-    @IgnoreUpTo(SC_V2)
+    @IgnoreUpTo(Build.VERSION_CODES.S_V2)
     public void startProvisioningIfNeeded_carrierUnsupport()
             throws Exception {
         setupCarrierConfig(false);

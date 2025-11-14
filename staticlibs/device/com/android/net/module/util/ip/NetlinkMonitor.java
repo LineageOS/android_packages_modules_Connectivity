@@ -41,6 +41,7 @@ import com.android.net.module.util.netlink.NetlinkMessage;
 import com.android.net.module.util.netlink.NetlinkUtils;
 
 import java.io.FileDescriptor;
+import java.io.InterruptedIOException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -93,6 +94,29 @@ public class NetlinkMonitor extends PacketReader {
     public NetlinkMonitor(@NonNull Handler h, @NonNull SharedLog log, @NonNull String tag,
             int family, int bindGroups) {
         this(h, log, tag, family, bindGroups, DEFAULT_SOCKET_RECV_BUFSIZE);
+    }
+
+    /**
+     * Send a netlink message on the underlying netlink socket.
+     *
+     * Any responses will be processed by {@link #processNetlinkMessage}. This is particularly
+     * useful to request a dump of the current state when the {@link NetlinkMonitor} is first
+     * created.
+     * This prevents having an application to open multiple netlink sockets of the same family (for
+     * example by using a utility function in {@link NetlinkUtils} which can introduce races.
+     *
+     * TODO(b/422484024): add builder support to NetlinkMessage and accept a NetlinkMessage object
+     * rather than a ByteBuffer.
+     */
+    public void sendNetlinkMessage(ByteBuffer msg) {
+        if (!isRunning()) throw new IllegalStateException("NetlinkMonitor must be running");
+
+        final FileDescriptor fd = getFd();
+        try {
+            Os.write(fd, msg);
+        } catch (ErrnoException | InterruptedIOException e) {
+            Log.e(mTag, "Failed to send netlink message", e);
+        }
     }
 
     @Override

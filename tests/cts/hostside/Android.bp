@@ -47,6 +47,7 @@ java_test_host {
     ],
     static_libs: [
         "modules-utils-build-testing",
+        "net-tests-utils-host-common",
     ],
     // Tag this module as a cts test artifact
     test_suites: [

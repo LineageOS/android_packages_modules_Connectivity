@@ -52,6 +52,8 @@ import com.android.net.module.util.InterfaceParams;
 import com.android.server.connectivity.ConnectivityResources;
 
 import java.io.FileDescriptor;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -126,27 +128,41 @@ public class EthernetNetworkFactory {
         mContext.getSystemService(ConnectivityManager.class).registerNetworkProvider(mProvider);
     }
 
+    /** Returns an unordered(!) list of EthernetPort objects tracked by this factory. */
+    public List<EthernetPort> getEthernetPorts() {
+        // Note that while mTrackingInterfaces is a ConcurrentHashMap, it is only ever modified on
+        // the handler thread.
+        final List<EthernetPort> ports = new ArrayList<>(mTrackingInterfaces.size());
+        for (NetworkInterfaceState iface : mTrackingInterfaces.values()) {
+            ports.add(iface.getPort());
+        }
+        return ports;
+    }
+
     /**
      * Returns an array of available interface names. The array is sorted: unrestricted interfaces
      * goes first, then sorted by name.
      */
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-    protected String[] getAvailableInterfaces(boolean includeRestricted) {
+    public String[] getInterfacesSorted(boolean includeRestricted) {
         return mTrackingInterfaces.values()
                 .stream()
                 .filter(iface -> !iface.isRestricted() || includeRestricted)
                 .sorted((iface1, iface2) -> {
-                    int r = Boolean.compare(iface1.isRestricted(), iface2.isRestricted());
-                    return r == 0 ? iface1.name.compareTo(iface2.name) : r;
+                    final int r = Boolean.compare(iface1.isRestricted(), iface2.isRestricted());
+                    final String ifname1 = iface1.getPort().getInterfaceName();
+                    final String ifname2 = iface2.getPort().getInterfaceName();
+                    return r == 0 ? ifname1.compareTo(ifname2) : r;
                 })
-                .map(iface -> iface.name)
+                .map(iface -> iface.getPort().getInterfaceName())
                 .toArray(String[]::new);
     }
 
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-    protected void addInterface(@NonNull final String ifaceName, @NonNull final String hwAddress,
-            @NonNull final IpConfiguration ipConfig,
-            @NonNull final NetworkCapabilities capabilities) {
+    /** Add an interface to the factory. */
+    public void addInterface(EthernetPort port, IpConfiguration ipConfig,
+            NetworkCapabilities capabilities) {
+        final String ifaceName = port.getInterfaceName();
+        final String hwAddress = port.getMacAddress().toString();
+
         if (mTrackingInterfaces.containsKey(ifaceName)) {
             Log.e(TAG, "Interface with name " + ifaceName + " already exists.");
             return;
@@ -161,7 +177,7 @@ public class EthernetNetworkFactory {
         }
 
         final NetworkInterfaceState iface = new NetworkInterfaceState(
-                ifaceName, hwAddress, mHandler, mContext, ipConfig, nc, mProvider, mDeps);
+                port, mHandler, mContext, ipConfig, nc, mProvider, mDeps);
         mTrackingInterfaces.put(ifaceName, iface);
     }
 
@@ -202,9 +218,9 @@ public class EthernetNetworkFactory {
         return;
     }
 
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-    protected boolean removeInterface(String interfaceName) {
-        NetworkInterfaceState iface = mTrackingInterfaces.remove(interfaceName);
+    /** Removes the interface from the factory and returns whether the interface was tracked */
+    public boolean removeInterface(EthernetPort port) {
+        NetworkInterfaceState iface = mTrackingInterfaces.remove(port.getInterfaceName());
         if (iface != null) {
             iface.unregisterNetworkOfferAndStop();
             return true;
@@ -212,13 +228,13 @@ public class EthernetNetworkFactory {
         // TODO(b/236892130): if an interface is currently in server mode, it may not be properly
         // removed.
         // TODO: when false is returned, do not send a STATE_ABSENT callback.
-        Log.w(TAG, interfaceName + " is not tracked and cannot be removed");
+        Log.w(TAG, "removeInterface() failed because port is not tracked " + port);
         return false;
     }
 
     /** Returns true if state has been modified */
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
-    protected boolean updateInterfaceLinkState(@NonNull final String ifaceName, final boolean up) {
+    public boolean updateInterfaceLinkState(EthernetPort port, boolean up) {
+        final String ifaceName = port.getInterfaceName();
         if (!hasInterface(ifaceName)) {
             return false;
         }
@@ -244,14 +260,12 @@ public class EthernetNetworkFactory {
         }
 
         NetworkInterfaceState iface = mTrackingInterfaces.get(ifaceName);
-        return iface.mHwAddress;
+        return iface.getPort().getMacAddress().toString();
     }
 
     @VisibleForTesting
     static class NetworkInterfaceState {
-        final String name;
-
-        private final String mHwAddress;
+        private final EthernetPort mPort;
         private final Handler mHandler;
         private final Context mContext;
         private final NetworkProvider mNetworkProvider;
@@ -363,7 +377,7 @@ public class EthernetNetworkFactory {
                     return;
                 }
                 if (DBG) {
-                    Log.d(TAG, String.format("%s: onNetworkNeeded for request: %s", name, request));
+                    Log.d(TAG, String.format("%s: onNetworkNeeded: %s", mPort, request));
                 }
                 // When the network offer is first registered, onNetworkNeeded is called with all
                 // existing requests.
@@ -380,8 +394,7 @@ public class EthernetNetworkFactory {
                     return;
                 }
                 if (DBG) {
-                    Log.d(TAG,
-                            String.format("%s: onNetworkUnneeded for request: %s", name, request));
+                    Log.d(TAG, String.format("%s: onNetworkUnneeded: %s", mPort, request));
                 }
                 if (!mRequestIds.remove(request.requestId)) {
                     // This can only happen if onNetworkNeeded was not called for a request or if
@@ -395,10 +408,10 @@ public class EthernetNetworkFactory {
             }
         }
 
-        NetworkInterfaceState(String ifaceName, String hwAddress, Handler handler, Context context,
+        NetworkInterfaceState(EthernetPort port, Handler handler, Context context,
                 @NonNull IpConfiguration ipConfig, @NonNull NetworkCapabilities capabilities,
                 NetworkProvider networkProvider, Dependencies deps) {
-            name = ifaceName;
+            mPort = port;
             mIpConfig = Objects.requireNonNull(ipConfig);
             mCapabilities = Objects.requireNonNull(capabilities);
             mLegacyType = getLegacyType(mCapabilities);
@@ -406,7 +419,11 @@ public class EthernetNetworkFactory {
             mContext = context;
             mNetworkProvider = networkProvider;
             mDeps = deps;
-            mHwAddress = hwAddress;
+        }
+
+        /** Returns the EthernetPort object */
+        public EthernetPort getPort() {
+            return mPort;
         }
 
         /**
@@ -446,7 +463,7 @@ public class EthernetNetworkFactory {
         void updateInterface(@Nullable final IpConfiguration ipConfig,
                 @Nullable final NetworkCapabilities capabilities) {
             if (DBG) {
-                Log.d(TAG, "updateInterface, iface: " + name
+                Log.d(TAG, "updateInterface, port: " + mPort
                         + ", ipConfig: " + ipConfig + ", old ipConfig: " + mIpConfig
                         + ", capabilities: " + capabilities + ", old capabilities: " + mCapabilities
                 );
@@ -474,11 +491,11 @@ public class EthernetNetworkFactory {
                 return;
             }
             if (DBG) {
-                Log.d(TAG, String.format("Starting Ethernet IpClient(%s)", name));
+                Log.d(TAG, String.format("Starting Ethernet IpClient(%s)", mPort));
             }
 
             mIpClientCallback = new EthernetIpClientCallback();
-            mDeps.makeIpClient(mContext, name, mIpClientCallback);
+            mDeps.makeIpClient(mContext, mPort.getInterfaceName(), mIpClientCallback);
             mIpClientCallback.awaitIpClientStart();
 
             if (mIpConfig.getProxySettings() == ProxySettings.STATIC
@@ -508,7 +525,7 @@ public class EthernetNetworkFactory {
             final NetworkAgentConfig config = new NetworkAgentConfig.Builder()
                     .setLegacyType(mLegacyType)
                     .setLegacyTypeName(NETWORK_TYPE)
-                    .setLegacyExtraInfo(mHwAddress)
+                    .setLegacyExtraInfo(mPort.getMacAddress().toString())
                     .build();
             mNetworkAgent = mDeps.makeEthernetNetworkAgent(mContext, mHandler.getLooper(),
                     mCapabilities, mLinkProperties, config, mNetworkProvider,
@@ -534,8 +551,9 @@ public class EthernetNetworkFactory {
             // There is no point in continuing if the interface is gone as stop() will be triggered
             // by removeInterface() when processed on the handler thread and start() won't
             // work for a non-existent interface.
-            if (null == mDeps.getNetworkInterfaceByName(name)) {
-                if (DBG) Log.d(TAG, name + " is no longer available.");
+            // TODO: consider removing this functionality entirely and maybeRestart() regardless.
+            if (null == mDeps.getNetworkInterfaceByName(mPort.getInterfaceName())) {
+                if (DBG) Log.d(TAG, mPort + " is no longer available.");
                 // Send a callback in case a provisioning request was in progress.
                 return;
             }
@@ -644,7 +662,7 @@ public class EthernetNetworkFactory {
                 // possible that link disappeared in the meantime. In that
                 // case, stop() has already been called and IpClient should not
                 // get restarted to prevent a provisioning failure loop.
-                Log.i(TAG, String.format("maybeRestart() called on stopped interface %s", name));
+                Log.i(TAG, String.format("maybeRestart() called on stopped interface %s", mPort));
                 return;
             }
             if (DBG) Log.d(TAG, "restart IpClient");
@@ -655,9 +673,8 @@ public class EthernetNetworkFactory {
         @Override
         public String toString() {
             return getClass().getSimpleName() + "{ "
-                    + "iface: " + name + ", "
+                    + "port: " + mPort + ", "
                     + "up: " + mLinkUp + ", "
-                    + "hwAddress: " + mHwAddress + ", "
                     + "networkCapabilities: " + mCapabilities + ", "
                     + "networkAgent: " + mNetworkAgent + ", "
                     + "ipClient: " + mIpClient + ","

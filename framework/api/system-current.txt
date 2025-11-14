@@ -433,8 +433,10 @@ package android.net {
   public abstract class QosFilter {
     method @NonNull public abstract android.net.Network getNetwork();
     method public abstract boolean matchesLocalAddress(@NonNull java.net.InetAddress, int, int);
+    method @FlaggedApi("com.android.net.flags.qos_filter_ip_range_matching") public abstract boolean matchesLocalPrefix(@NonNull android.net.IpPrefix, int, int);
     method public boolean matchesProtocol(int);
     method public abstract boolean matchesRemoteAddress(@NonNull java.net.InetAddress, int, int);
+    method @FlaggedApi("com.android.net.flags.qos_filter_ip_range_matching") public abstract boolean matchesRemotePrefix(@NonNull android.net.IpPrefix, int, int);
   }
 
   public final class QosSession implements android.os.Parcelable {

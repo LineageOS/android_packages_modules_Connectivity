@@ -93,8 +93,8 @@ import com.android.testutils.DeviceInfoUtils;
 import com.android.testutils.DumpTestUtils;
 import com.android.testutils.NetworkStackModuleTest;
 import com.android.testutils.PollPacketReader;
-import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestableNetworkCallback;
+import com.android.testutils.TestableNetworkCallback.Event;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -219,6 +219,7 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
 
     // Shamelessly copied from TetheringConfiguration.
     private static final String TETHERING_LOCAL_NETWORK_AGENT = "tethering_local_network_agent";
+    private static final String WIFIP2PGO_LOCAL_NETWORK_AGENT = "wifip2pgo_local_network_agent";
 
     @After
     public void tearDown() throws Exception {
@@ -1245,15 +1246,29 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
         }
     }
 
+    private void assumeMatchNonThreadLocalNetworksEnabled() {
+        assumeTrue(runAsShell(READ_COMPAT_CHANGE_CONFIG, LOG_COMPAT_CHANGE,
+                () -> CompatChanges.isChangeEnabled(ENABLE_MATCH_NON_THREAD_LOCAL_NETWORKS)));
+    }
+
     @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Test
-    public void testLocalAgent_networkCallbacks() throws Exception {
-        final boolean isMatchNonThreadLocalNetworksEnabled = runAsShell(
-                READ_COMPAT_CHANGE_CONFIG, LOG_COMPAT_CHANGE,
-                () -> CompatChanges.isChangeEnabled(ENABLE_MATCH_NON_THREAD_LOCAL_NETWORKS));
-        assumeTrue(isMatchNonThreadLocalNetworksEnabled);
-
+    public void testTetheringLocalAgent_networkCallbacks() throws Exception {
+        assumeMatchNonThreadLocalNetworksEnabled();
         mDeviceConfigRule.setConfig(NAMESPACE_TETHERING, TETHERING_LOCAL_NETWORK_AGENT, "1");
+        doTestLocalAgent_networkCallbacks(CONNECTIVITY_SCOPE_GLOBAL);
+    }
+
+    @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    public void testWifiP2pGroupOwnerLocalAgent_networkCallbacks() throws Exception {
+        assumeMatchNonThreadLocalNetworksEnabled();
+        mDeviceConfigRule.setConfig(NAMESPACE_TETHERING, TETHERING_LOCAL_NETWORK_AGENT, "1");
+        mDeviceConfigRule.setConfig(NAMESPACE_TETHERING, WIFIP2PGO_LOCAL_NETWORK_AGENT, "1");
+        doTestLocalAgent_networkCallbacks(CONNECTIVITY_SCOPE_LOCAL);
+    }
+
+    private void doTestLocalAgent_networkCallbacks(int scope) throws Exception {
         assumeFalse(isInterfaceForTetheringAvailable());
         setIncludeTestInterfaces(true);
 
@@ -1273,17 +1288,30 @@ public class EthernetTetheringTest extends EthernetTetheringTestBase {
                     downstreamIface.getInterfaceName(), iface);
 
             final TetheringRequest request = new TetheringRequest.Builder(TETHERING_ETHERNET)
-                    .setConnectivityScope(CONNECTIVITY_SCOPE_GLOBAL).build();
+                    .setConnectivityScope(scope).build();
             tetheringEventCallback = enableTethering(iface, request, null /* any upstream */);
-            tetheringEventCallback.awaitInterfaceTethered();
+            if (scope == CONNECTIVITY_SCOPE_GLOBAL) {
+                tetheringEventCallback.awaitInterfaceTethered();
+            } else {
+                tetheringEventCallback.awaitInterfaceLocalOnly();
+            }
 
             // Verify NetworkCallback works accordingly.
-            final Network network = networkCallback.expect(CallbackEntry.AVAILABLE).getNetwork();
-            final CallbackEntry.CapabilitiesChanged capEvent =
-                    networkCallback.eventuallyExpect(CallbackEntry.NETWORK_CAPS_UPDATED);
+            final Network network = networkCallback.expect(Event.AVAILABLE).getNetwork();
+            final Event.CapabilitiesChanged capEvent =
+                    networkCallback.eventuallyExpect(Event.NETWORK_CAPS_UPDATED);
             assertEquals(network, capEvent.getNetwork());
             assertTrue(capEvent.getCaps().hasTransport(TRANSPORT_ETHERNET));
             assertTrue(capEvent.getCaps().hasCapability(NET_CAPABILITY_LOCAL_NETWORK));
+
+            // Verify details in the LinkPropertiesChanged event.
+            final Event.LinkPropertiesChanged lpEvent =
+                    networkCallback.eventuallyExpect(Event.LINK_PROPERTIES_CHANGED);
+            assertEquals(network, lpEvent.getNetwork());
+            assertEquals(iface, lpEvent.getLp().getInterfaceName());
+            assertTrue(lpEvent.getLp().hasIPv4Address());
+            // At least one Ipv4 route for the subnet is needed.
+            assertTrue(lpEvent.getLp().getRoutes().size() >= 1);
         } finally {
             stopEthernetTethering(tetheringEventCallback);
             maybeCloseTestInterface(downstreamIface);

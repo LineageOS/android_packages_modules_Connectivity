@@ -57,6 +57,7 @@ import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_SERVICE_UNAVAIL;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_IFACE;
 import static android.net.TetheringManager.TETHER_ERROR_UNKNOWN_REQUEST;
+import static android.net.TetheringManager.TETHER_ERROR_UNSUPPORTED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_FAILED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STARTED;
 import static android.net.TetheringManager.TETHER_HARDWARE_OFFLOAD_STOPPED;
@@ -84,10 +85,10 @@ import static com.android.networkstack.tethering.OffloadHardwareInterface.OFFLOA
 import static com.android.networkstack.tethering.TestConnectivityManager.BROADCAST_FIRST;
 import static com.android.networkstack.tethering.TestConnectivityManager.CALLBACKS_FIRST;
 import static com.android.networkstack.tethering.Tethering.UserRestrictionActionListener;
-import static com.android.networkstack.tethering.TetheringConfiguration.TETHERING_LOCAL_NETWORK_AGENT;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_FORCE_USB_FUNCTIONS;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_NCM_FUNCTION;
 import static com.android.networkstack.tethering.TetheringConfiguration.TETHER_USB_RNDIS_FUNCTION;
+import static com.android.networkstack.tethering.TetheringFeatureFlags.TETHERING_LOCAL_NETWORK_AGENT;
 import static com.android.networkstack.tethering.TetheringNotificationUpdater.DOWNSTREAM_NONE;
 import static com.android.networkstack.tethering.UpstreamNetworkMonitor.EVENT_ON_CAPABILITIES;
 import static com.android.testutils.TestPermissionUtil.runAsShell;
@@ -538,8 +539,8 @@ public class TetheringTest {
         public RoutingCoordinatorManager getRoutingCoordinator(
                 final Context context, SharedLog log) {
             ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
-            when(mPrivateAddressCoordinatorDependencies.isFeatureEnabled(anyString()))
-                    .thenReturn(false);
+            when(mPrivateAddressCoordinatorDependencies.isFeatureNotChickenedOut(anyString()))
+                    .thenReturn(true);
             RoutingCoordinatorService service = new RoutingCoordinatorService(
                     getINetd(context, log),
                             cm::getAllNetworks,
@@ -1007,23 +1008,11 @@ public class TetheringTest {
         }
         sendWifiApStateChanged(WIFI_AP_STATE_ENABLED);
 
-        // If, and only if, Tethering received an interface status changed then
-        // it creates a IpServer and sends out a broadcast indicating that the
-        // interface is "available".
-        if (emulateInterfaceStatusChanged) {
-            if (!SdkLevel.isAtLeastB()) {
-                // There is 1 IpServer state change event: STATE_AVAILABLE
-                verify(mNotificationUpdater, times(1)).onDownstreamChanged(DOWNSTREAM_NONE);
-                verifyTetheringBroadcast(TEST_WLAN_IFNAME, EXTRA_AVAILABLE_TETHER);
-                verify(mWifiManager).updateInterfaceIpState(
-                        TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
-            } else {
-                // Starting in B, ignore the interfaceStatusChanged
-                verify(mNotificationUpdater, never()).onDownstreamChanged(DOWNSTREAM_NONE);
-                verify(mWifiManager, never()).updateInterfaceIpState(
-                        TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
-            }
-        }
+        // Wi-Fi tethering ignores interface up events. The behaviour is the same
+        // regardless of whether the interface up event was received or not.
+        verify(mNotificationUpdater, never()).onDownstreamChanged(DOWNSTREAM_NONE);
+        verify(mWifiManager, never()).updateInterfaceIpState(
+                TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
         verifyNoMoreInteractions(mNetd);
         verifyNoMoreInteractions(mWifiManager);
     }
@@ -2045,18 +2034,10 @@ public class TetheringTest {
         sendWifiApStateChanged(WIFI_AP_STATE_ENABLED);
         mLooper.dispatchAll();
 
-        if (!SdkLevel.isAtLeastB()) {
-            // There is 1 IpServer state change event: STATE_AVAILABLE from interfaceStatusChanged
-            verify(mNotificationUpdater, times(1)).onDownstreamChanged(DOWNSTREAM_NONE);
-            verifyTetheringBroadcast(TEST_WLAN_IFNAME, EXTRA_AVAILABLE_TETHER);
-            verify(mWifiManager).updateInterfaceIpState(
-                    TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
-        } else {
-            // Starting in B, ignore the interfaceStatusChanged
-            verify(mNotificationUpdater, never()).onDownstreamChanged(DOWNSTREAM_NONE);
-            verify(mWifiManager, never()).updateInterfaceIpState(
-                    TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
-        }
+        // Wi-Fi tethering ignores interface up events.
+        verify(mNotificationUpdater, never()).onDownstreamChanged(DOWNSTREAM_NONE);
+        verify(mWifiManager, never()).updateInterfaceIpState(
+                TEST_WLAN_IFNAME, WifiManager.IFACE_IP_MODE_UNSPECIFIED);
         verifyNoMoreInteractions(mNetd);
         verifyNoMoreInteractions(mWifiManager);
     }
@@ -3420,39 +3401,22 @@ public class TetheringTest {
 
     @Test
     @IgnoreAfter(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    public void testRequestStaticIpLegacyTether() throws Exception {
+    public void testLegacyTetherUnsupported() throws Exception {
         initTetheringOnTestThread();
 
-        // Call startTethering with static ip
-        final LinkAddress serverLinkAddr = new LinkAddress("192.168.0.123/24");
-        final LinkAddress clientLinkAddr = new LinkAddress("192.168.0.42/24");
-        final String serverAddr = "192.168.0.123";
-        final int clientAddrParceled = 0xc0a8002a;
-        final ArgumentCaptor<DhcpServingParamsParcel> dhcpParamsCaptor =
-                ArgumentCaptor.forClass(DhcpServingParamsParcel.class);
-        mTethering.startTethering(createTetheringRequest(TETHERING_WIFI,
-                        serverLinkAddr, clientLinkAddr, false, CONNECTIVITY_SCOPE_GLOBAL, null),
-                TEST_CALLER_PKG, null);
+        mTethering.interfaceAdded(TEST_WIFI_IFNAME);
         mLooper.dispatchAll();
-        verifyWifiTetheringRequested();
-        mTethering.interfaceStatusChanged(TEST_WLAN_IFNAME, true);
+        mTethering.interfaceStatusChanged(TEST_WIFI_IFNAME, false);
+        mTethering.interfaceStatusChanged(TEST_WIFI_IFNAME, true);
 
-        // Call legacyTether on the interface before the link layer event comes back.
-        // This happens, for example, in pre-T bluetooth tethering: Settings calls startTethering,
-        // and then the bluetooth code calls the tether() API.
-        final ResultListener tetherResult = new ResultListener(TETHER_ERROR_NO_ERROR);
-        mTethering.legacyTether(TEST_WLAN_IFNAME, tetherResult);
+        final ResultListener result = new ResultListener(TETHER_ERROR_UNSUPPORTED);
+        mTethering.legacyTether(TEST_WIFI_IFNAME, result);
         mLooper.dispatchAll();
-        tetherResult.assertHasResult();
+        result.assertHasResult();
 
-        // Verify that the static ip set in startTethering is used
-        verify(mNetd).interfaceSetCfg(argThat(cfg -> serverAddr.equals(cfg.ipv4Addr)));
-        verify(mIpServerDependencies, times(1)).makeDhcpServer(any(), dhcpParamsCaptor.capture(),
-                any());
-        final DhcpServingParamsParcel params = dhcpParamsCaptor.getValue();
-        assertEquals(serverAddr, intToInet4AddressHTH(params.serverAddr).getHostAddress());
-        assertEquals(24, params.serverAddrPrefixLength);
-        assertEquals(clientAddrParceled, params.singleClientAddr);
+        // No IpServer should have been started, so no STATE_AVAILABLE should have been sent, and no
+        // tethering broadcasts should have been sent.
+        assertEquals(0, mIntents.size());
     }
 
     @Test

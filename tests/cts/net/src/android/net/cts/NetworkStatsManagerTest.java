@@ -33,8 +33,6 @@ import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_UID_TAG;
 import static android.net.netstats.NetworkStatsDataMigrationUtils.PREFIX_XT;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -79,8 +77,8 @@ import com.android.testutils.ConnectivityDiagnosticsCollector;
 import com.android.testutils.ConnectivityModuleTest;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
-import com.android.testutils.RecorderCallback.CallbackEntry;
 import com.android.testutils.TestableNetworkCallback;
+import com.android.testutils.TestableNetworkCallback.Event;
 
 import org.junit.After;
 import org.junit.Before;
@@ -194,7 +192,7 @@ public class NetworkStatsManagerTest {
                             networkCallbackRule.requestNetwork(buildRequestForTransport(
                                     NetworkCapabilities.TRANSPORT_WIFI),
                                     mRequestNetworkCb, TIMEOUT_MILLIS);
-                            return mRequestNetworkCb.expect(CallbackEntry.AVAILABLE,
+                            return mRequestNetworkCb.expect(Event.AVAILABLE,
                                     "Wifi network not available. "
                                             + "Please ensure the device has working wifi."
                             ).getNetwork();
@@ -216,7 +214,7 @@ public class NetworkStatsManagerTest {
                             networkCallbackRule.requestNetwork(buildRequestForTransport(
                                             NetworkCapabilities.TRANSPORT_CELLULAR),
                                     mRequestNetworkCb, TIMEOUT_MILLIS);
-                            return mRequestNetworkCb.expect(CallbackEntry.AVAILABLE,
+                            return mRequestNetworkCb.expect(Event.AVAILABLE,
                                     "Cell network not available. "
                                             + "Please ensure the device has working mobile data."
                             ).getNetwork();
@@ -368,7 +366,7 @@ public class NetworkStatsManagerTest {
         // interested attributes are not mutable, and not expected to be
         // changed during the test.
         final NetworkCapabilities caps = networkInterface.mRequestNetworkCb.expect(
-                CallbackEntry.NETWORK_CAPS_UPDATED, network).getCaps();
+                Event.NETWORK_CAPS_UPDATED, network).getCaps();
         networkInterface.setMetered(!caps.hasCapability(
                 NetworkCapabilities.NET_CAPABILITY_NOT_METERED));
         networkInterface.setRoaming(!caps.hasCapability(
@@ -915,7 +913,7 @@ public class NetworkStatsManagerTest {
         }
     }
 
-    @DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
     @Test
     public void testDataMigrationUtils() throws Exception {
         final List<String> prefixes = List.of(PREFIX_UID, PREFIX_XT, PREFIX_UID_TAG);

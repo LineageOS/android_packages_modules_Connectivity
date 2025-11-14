@@ -16,8 +16,6 @@
 
 package com.android.server.connectivity.mdns;
 
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -27,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import android.annotation.NonNull;
 import android.content.Context;
+import android.os.Build;
 
 import androidx.test.InstrumentationRegistry;
 
@@ -53,7 +52,7 @@ import java.util.List;
 
 /** Tests for {@link MulticastNetworkInterfaceProvider}. */
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class MulticastNetworkInterfaceProviderTests {
 
     @Mock private NetworkInterfaceWrapper loopbackInterface;
@@ -193,7 +192,8 @@ public class MulticastNetworkInterfaceProviderTests {
 
     @Test
     public void testStartWatchingConnectivityChanges() {
-        ConnectivityMonitor mockMonitor = mock(ConnectivityMonitor.class);
+        ConnectivityMonitorWithConnectivityManager mockMonitor =
+                mock(ConnectivityMonitorWithConnectivityManager.class);
         provider.connectivityMonitor = mockMonitor;
 
         InOrder inOrder = inOrder(mockMonitor);

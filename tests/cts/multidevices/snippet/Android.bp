@@ -16,6 +16,20 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+java_library {
+    name: "ConnectivityWifiP2pMultiDevicesSnippetLib",
+    srcs: [
+        "Wifip2pMultiDevicesSnippet.kt",
+    ],
+    static_libs: [
+        "mobly-snippet-lib",
+        "cts-net-utils",
+    ],
+    visibility: [
+        "//packages/modules/Connectivity/tests/cts/tethering",
+    ],
+}
+
 android_test_helper_app {
     name: "connectivity_multi_devices_snippet",
     defaults: [

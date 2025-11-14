@@ -18,9 +18,7 @@ package com.android.server
 
 import android.net.INetd.PERMISSION_INTERNET
 import android.net.INetd.PERMISSION_NONE
-import android.net.NetworkCapabilities
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
-import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkInfo.DetailedState.BLOCKED
 import android.net.NetworkInfo.DetailedState.CONNECTED
@@ -37,12 +35,6 @@ import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.doReturn
 
-private fun nc() = NetworkCapabilities.Builder()
-        .addTransportType(TRANSPORT_WIFI)
-        .addCapability(NET_CAPABILITY_INTERNET)
-        .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
-        .build()
-
 @RunWith(DevSdkIgnoreRunner::class)
 @SmallTest
 @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -56,7 +48,7 @@ class CSActiveNetworkInfoTest : CSTest() {
         deps.setChangeIdEnabled(changeEnabled, NETWORK_BLOCKED_WITHOUT_INTERNET_PERMISSION)
         doReturn(permissions).`when`(bpfNetMaps).getNetPermForUid(anyInt())
 
-        val agent = Agent(nc = nc())
+        val agent = Agent(nc = nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
         agent.connect()
 
         val networkInfo = cm.activeNetworkInfo

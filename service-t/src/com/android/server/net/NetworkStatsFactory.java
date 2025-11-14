@@ -252,8 +252,6 @@ public class NetworkStatsFactory {
         synchronized (mPersistentDataLock) {
             // Take a reference. If this gets swapped out, we still have the old reference.
             final UnderlyingNetworkInfo[] vpnArray = mUnderlyingNetworkInfos;
-            // Take a defensive copy. mPersistSnapshot is mutated in some cases below
-            final NetworkStats prev = mPersistSnapshot.clone();
 
             requestSwapActiveStatsMapLocked();
             // Stats are always read from the inactive map, so they must be read after the
@@ -266,11 +264,27 @@ public class NetworkStatsFactory {
             mPersistSnapshot.setElapsedRealtime(diff.getElapsedRealtime());
             mPersistSnapshot.combineAllValues(filteredDiff);
 
-            NetworkStats adjustedStats = adjustForTunAnd464Xlat(mPersistSnapshot, prev, vpnArray);
+            // Update the stats adjusted for TunAnd464Xlat
+            // Apply 464xlat adjustments before VPN adjustments. If VPNs are using v4 on a v6 only
+            // network, the overhead is their fault.
+            // No locking here: apply464xlatAdjustments behaves fine with an add-only
+            // ConcurrentHashMap.
+            filteredDiff.apply464xlatAdjustments(mStackedIfaces);
+
+            // Migrate data usage over a VPN to the TUN network.
+            for (UnderlyingNetworkInfo info : vpnArray) {
+                filteredDiff.migrateTun(info.getOwnerUid(), info.getInterface(),
+                        info.getUnderlyingInterfaces());
+                // Filter out debug entries as that may lead to over counting.
+                filteredDiff.filterDebugEntries();
+            }
+
+            // Update mTunAnd464xlatAdjustedStats with migrated stats.
+            mTunAnd464xlatAdjustedStats.combineAllValues(filteredDiff);
+            mTunAnd464xlatAdjustedStats.setElapsedRealtime(filteredDiff.getElapsedRealtime());
 
             // Filter return values
-            adjustedStats.filter(limitUid, limitIfaces, limitTag);
-            return adjustedStats;
+            return mTunAnd464xlatAdjustedStats.filteredClone(limitUid, limitIfaces, limitTag);
         }
     }
 
@@ -307,33 +321,6 @@ public class NetworkStatsFactory {
             Log.wtf(TAG, "Too many tags detected for uids: " + tooManyTagsUidSet);
         }
         return filteredStats;
-    }
-
-    @GuardedBy("mPersistentDataLock")
-    private NetworkStats adjustForTunAnd464Xlat(NetworkStats uidDetailStats,
-            NetworkStats previousStats, UnderlyingNetworkInfo[] vpnArray) {
-        // Calculate delta from last snapshot
-        final NetworkStats delta = uidDetailStats.subtract(previousStats);
-
-        // Apply 464xlat adjustments before VPN adjustments. If VPNs are using v4 on a v6 only
-        // network, the overhead is their fault.
-        // No locking here: apply464xlatAdjustments behaves fine with an add-only
-        // ConcurrentHashMap.
-        delta.apply464xlatAdjustments(mStackedIfaces);
-
-        // Migrate data usage over a VPN to the TUN network.
-        for (UnderlyingNetworkInfo info : vpnArray) {
-            delta.migrateTun(info.getOwnerUid(), info.getInterface(),
-                    info.getUnderlyingInterfaces());
-            // Filter out debug entries as that may lead to over counting.
-            delta.filterDebugEntries();
-        }
-
-        // Update mTunAnd464xlatAdjustedStats with migrated delta.
-        mTunAnd464xlatAdjustedStats.combineAllValues(delta);
-        mTunAnd464xlatAdjustedStats.setElapsedRealtime(uidDetailStats.getElapsedRealtime());
-
-        return mTunAnd464xlatAdjustedStats.clone();
     }
 
     /**

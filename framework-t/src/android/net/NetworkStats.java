@@ -44,6 +44,7 @@ import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -492,6 +493,21 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
             this.txPackets = txPackets;
             this.operations = operations;
             return this;
+        }
+
+        /**
+         * Checks if this entry matches the given filter parameters.
+         * @param uid UID to filter for, or {@link #UID_ALL}.
+         * @param ifaces Interfaces to filter for, or {@link #INTERFACES_ALL}.
+         * @param tag Tag to filter for, or {@link #TAG_ALL}.
+         *
+         * @return true if this entry matches the given filter parameters.
+         * @hide
+         */
+        public boolean matches(int uid, String[] ifaces, int tag) {
+            return (uid == UID_ALL || uid == this.uid)
+                && (tag == TAG_ALL || tag == this.tag)
+                && (ifaces == INTERFACES_ALL || CollectionUtils.contains(ifaces, this.iface));
         }
 
         @Override
@@ -1379,10 +1395,7 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
         if (limitUid == UID_ALL && limitTag == TAG_ALL && limitIfaces == INTERFACES_ALL) {
             return;
         }
-        filter(e -> (limitUid == UID_ALL || limitUid == e.uid)
-                && (limitTag == TAG_ALL || limitTag == e.tag)
-                && (limitIfaces == INTERFACES_ALL
-                    || CollectionUtils.contains(limitIfaces, e.iface)));
+        filter(e -> e.matches(limitUid, limitIfaces, limitTag));
     }
 
     /**
@@ -1408,6 +1421,39 @@ public final class NetworkStats implements Parcelable, Iterable<NetworkStats.Ent
             }
         }
         size = nextOutputEntry;
+    }
+
+    /**
+     * Make a filtered copy of the network stats.
+     *
+     * @param limitUid UID to filter for, or {@link #UID_ALL}.
+     * @param limitIfaces Interfaces to filter for, or {@link #INTERFACES_ALL}.
+     * @param limitTag Tag to filter for, or {@link #TAG_ALL}.
+     * @hide
+     */
+    public NetworkStats filteredClone(int limitUid, String[] limitIfaces, int limitTag) {
+        // Compute the size needed for the final NetworkStats object to avoid
+        // overallocation and intermediate copies. Performance experiments
+        // suggest we save a little by avoiding getValues calls on unmatched
+        // entries, even at the allocation cost of a temporary BitSet.
+        BitSet matches = new BitSet(size);
+        NetworkStats.Entry e = null;
+        int filteredSize = 0;
+        for (int i = 0; i < size; i++) {
+            e = getValues(i, e);
+            if (e.matches(limitUid, limitIfaces, limitTag)) {
+                matches.set(i);
+                filteredSize++;
+            }
+        }
+
+        final NetworkStats clone = new NetworkStats(elapsedRealtime, filteredSize);
+        int i = matches.nextSetBit(0);
+        while (i != -1) {
+            clone.insertEntry(getValues(i, e));
+            i = matches.nextSetBit(i + 1);
+        }
+        return clone;
     }
 
     /** @hide */

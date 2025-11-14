@@ -23,7 +23,6 @@ import static com.android.testutils.TestPermissionUtil.runAsShell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.app.Instrumentation;
 import android.content.BroadcastReceiver;
@@ -45,7 +44,6 @@ import android.util.Range;
 import androidx.test.InstrumentationRegistry;
 
 import com.android.compatibility.common.util.RequiredFeatureRule;
-
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.TestHttpServer;
@@ -133,8 +131,10 @@ public final class PacProxyManagerTest {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            final ProxyInfo proxy = (ProxyInfo) intent.getExtra(Proxy.EXTRA_PROXY_INFO,
-                    ProxyInfo.buildPacProxy(Uri.EMPTY));
+            ProxyInfo proxy = intent.getParcelableExtra("android.intent.extra.PROXY_INFO");
+            if (proxy == null) {
+                proxy = ProxyInfo.buildPacProxy(Uri.EMPTY);
+            }
             // ProxyTracker sends sticky broadcast which will receive the last broadcast while
             // register the intent receiver. That is, if system never receives the intent then
             // it won't receive an intent when register the receiver. How many intents will be

@@ -29,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Predicate;
 
 import kotlin.Lazy;
@@ -108,6 +109,13 @@ public class PollPacketReader extends PacketReader {
     @Nullable
     public byte[] poll(long timeoutMs, @NonNull Predicate<byte[]> filter) {
         return mReadHead.getValue().poll(timeoutMs, filter::test);
+    }
+
+    /**
+     * Get all packets received since before the start of the last poll operation.
+     */
+    public List<byte[]> backtrace() {
+        return mReadHead.getValue().backtrace();
     }
 
     /**

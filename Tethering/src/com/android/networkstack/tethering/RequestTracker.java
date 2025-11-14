@@ -43,7 +43,7 @@ import java.util.Map;
  * Note: This class is not thread-safe.
  */
 public class RequestTracker {
-    private static final String TAG = RequestTracker.class.getSimpleName();
+    private static final String TAG = "TetheringRequestTracker";
 
     @NonNull
     private final boolean mUseFuzzyMatching;

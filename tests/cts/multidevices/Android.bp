@@ -21,8 +21,8 @@ python_test_host {
     name: "CtsConnectivityMultiDevicesTestCases",
     main: "run_tests.py",
     srcs: [
-        // "apfv4_test.py",
-        // "apfv6_test.py",
+        "apfv4_test.py",
+        "apfv6_test.py",
         "connectivity_multi_devices_test.py",
         "run_tests.py",
     ],

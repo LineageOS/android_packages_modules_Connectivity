@@ -22,6 +22,7 @@ import android.system.Os;
 import android.util.ArrayMap;
 import android.util.Log;
 
+import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.BpfNetMaps;
 
@@ -39,6 +40,7 @@ public class InterfaceTracker {
     }
     private static final String TAG = "InterfaceTracker";
     private final Dependencies mDeps;
+    @GuardedBy("mInterfaceMap")
     private final Map<String, Integer> mInterfaceMap;
 
     public InterfaceTracker(final Context context) {

@@ -23,6 +23,7 @@ import static com.android.server.connectivity.mdns.MdnsServiceCache.findMatchedR
 import static com.android.server.connectivity.mdns.MdnsQueryScheduler.ScheduledQueryTaskArgs;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.buildMdnsServiceInfoFromResponse;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.responseMatchesInstanceNameAndSubtypes;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -64,7 +65,9 @@ public class MdnsServiceTypeClient {
     @VisibleForTesting
     static final int EVENT_START_QUERYTASK = 1;
     static final int EVENT_QUERY_RESULT = 2;
+    static final int EVENT_REMOVE_EXPIRED_SERVICES = 3;
     static final int INVALID_TRANSACTION_ID = -1;
+    static final long REMOVE_SERVICE_AFTER_QUERY_SENT_TIME = 2000L;
 
     private final String serviceType;
     private final String[] serviceTypeLabels;
@@ -128,8 +131,13 @@ public class MdnsServiceTypeClient {
             return discoveredServiceNames.add(DnsUtils.toDnsUpperCase(serviceName));
         }
 
-        void unsetServiceDiscovered(@NonNull String serviceName) {
-            discoveredServiceNames.remove(DnsUtils.toDnsUpperCase(serviceName));
+        /**
+         * Unset the given service name as discovered.
+         *
+         * @return true if the service name was discovered before.
+         */
+        boolean unsetServiceDiscovered(@NonNull String serviceName) {
+            return discoveredServiceNames.remove(DnsUtils.toDnsUpperCase(serviceName));
         }
     }
 
@@ -157,7 +165,7 @@ public class MdnsServiceTypeClient {
                     break;
                 }
                 case EVENT_QUERY_RESULT: {
-                    final QuerySentArguments sentResult = (QuerySentArguments) msg.obj;
+                    final QuerySentResult sentResult = (QuerySentResult) msg.obj;
                     // If a task is cancelled while the Executor is running it, EVENT_QUERY_RESULT
                     // will still be sent when it ends. So use session ID to check if this task
                     // should continue to schedule more.
@@ -168,11 +176,14 @@ public class MdnsServiceTypeClient {
                     if ((sentResult.transactionId != INVALID_TRANSACTION_ID)) {
                         for (int i = 0; i < listeners.size(); i++) {
                             listeners.keyAt(i).onDiscoveryQuerySent(
-                                    sentResult.subTypes, sentResult.transactionId);
+                                    sentResult.queriedSubtypes, sentResult.transactionId);
                         }
                     }
 
-                    tryRemoveServiceAfterTtlExpires();
+                    if (!featureFlags.mIsOptimizedExpiredServiceRemovalEnabled) {
+                        tryRemoveServiceAfterTtlExpires();
+                    }
+
 
                     final long now = clock.elapsedRealtime();
                     lastSentTime = now;
@@ -200,6 +211,42 @@ public class MdnsServiceTypeClient {
                                 handler.obtainMessage(EVENT_START_QUERYTASK, args),
                                 timeToNextTaskMs);
                     }
+                    if (featureFlags.mIsOptimizedExpiredServiceRemovalEnabled) {
+                        // Update the first query time based on the query result
+                        if (sentResult.queriedBaseType) {
+                            serviceCache.updateFirstQueryTimeForCachedServices(
+                                    null /* serviceName */,
+                                    Collections.emptyList() /* subtypes */, cacheKey, now);
+                        }
+                        if (sentResult.queriedSubtypes.size() != 0) {
+                            serviceCache.updateFirstQueryTimeForCachedServices(
+                                    null /* serviceName */,
+                                    sentResult.queriedSubtypes, cacheKey, now);
+                        }
+                        for (MdnsResponse service : sentResult.resolvedServices) {
+                            serviceCache.updateFirstQueryTimeForCachedServices(
+                                    service.getServiceInstanceName(),
+                                    Collections.emptyList() /* subtypes */, cacheKey, now);
+                        }
+
+                        // A query is sent. Schedule a task with a delay to wait for responses, and
+                        // then remove expired services, and notify listeners.
+                        if (scheduler != null) {
+                            scheduler.sendDelayedMessage(
+                                    EVENT_REMOVE_EXPIRED_SERVICES, 0, 0, null /* obj */,
+                                    REMOVE_SERVICE_AFTER_QUERY_SENT_TIME);
+                        } else {
+                            dependencies.sendMessageDelayed(
+                                    handler,
+                                    handler.obtainMessage(EVENT_REMOVE_EXPIRED_SERVICES),
+                                    REMOVE_SERVICE_AFTER_QUERY_SENT_TIME);
+                        }
+                    }
+                    break;
+                }
+                case EVENT_REMOVE_EXPIRED_SERVICES: {
+                    serviceCache.removeExpiredServicesAndNotifyListeners(
+                            cacheKey, clock.elapsedRealtime());
                     break;
                 }
                 default:
@@ -334,13 +381,14 @@ public class MdnsServiceTypeClient {
 
     private List<MdnsResponse> getExistingServices() {
         return featureFlags.isQueryWithKnownAnswerEnabled()
-                ? serviceCache.getCachedServices(cacheKey) : Collections.emptyList();
+                ? serviceCache.getCachedServices(cacheKey, true /* excludeExpiredServices */)
+                : Collections.emptyList();
     }
 
     private void setDelayedTask(ScheduledQueryTaskArgs args, long timeToNextTaskMs) {
         scheduler.removeDelayedMessage(EVENT_START_QUERYTASK);
-        scheduler.sendDelayedMessage(
-                handler.obtainMessage(EVENT_START_QUERYTASK, args), timeToNextTaskMs);
+        scheduler.sendDelayedMessage(EVENT_START_QUERYTASK, 0, 0, args,
+                timeToNextTaskMs);
     }
 
     /**
@@ -362,8 +410,12 @@ public class MdnsServiceTypeClient {
         final ListenerInfo listenerInfo = new ListenerInfo(searchOptions, existingInfo);
         listeners.put(listener, listenerInfo);
         if (existingInfo == null) {
-            for (MdnsResponse existingResponse : serviceCache.getCachedServices(cacheKey)) {
-                if (!responseMatchesOptions(existingResponse, searchOptions)) continue;
+            for (MdnsResponse existingResponse : serviceCache.getCachedServices(
+                    cacheKey, true /* excludeExpiredServices */)) {
+                if (!responseMatchesInstanceNameAndSubtypes(existingResponse,
+                        searchOptions.getResolveInstanceName(), searchOptions.getSubtypes())) {
+                    continue;
+                }
                 final MdnsServiceInfo info = buildMdnsServiceInfoFromResponse(
                         existingResponse, serviceTypeLabels, clock.elapsedRealtime());
                 listener.onServiceNameDiscovered(info, true /* isServiceFromCache */);
@@ -460,26 +512,6 @@ public class MdnsServiceTypeClient {
         ++currentSessionId;
     }
 
-    private boolean responseMatchesOptions(@NonNull MdnsResponse response,
-            @NonNull MdnsSearchOptions options) {
-        final boolean matchesInstanceName = options.getResolveInstanceName() == null
-                // DNS is case-insensitive, so ignore case in the comparison
-                || DnsUtils.equalsIgnoreDnsCase(options.getResolveInstanceName(),
-                response.getServiceInstanceName());
-
-        // If discovery is requiring some subtypes, the response must have one that matches a
-        // requested one.
-        final List<String> responseSubtypes = response.getSubtypes() == null
-                ? Collections.emptyList() : response.getSubtypes();
-        final boolean matchesSubtype = options.getSubtypes().size() == 0
-                || CollectionUtils.any(options.getSubtypes(), requiredSub ->
-                CollectionUtils.any(responseSubtypes, actualSub ->
-                        DnsUtils.equalsIgnoreDnsCase(
-                                MdnsConstants.SUBTYPE_PREFIX + requiredSub, actualSub)));
-
-        return matchesInstanceName && matchesSubtype;
-    }
-
     /**
      * Unregisters {@code listener} from receiving discovery event of mDNS service instances.
      *
@@ -506,7 +538,9 @@ public class MdnsServiceTypeClient {
         ensureRunningOnHandlerThread(handler);
         // Augment the list of current known responses, and generated responses for resolve
         // requests if there is no known response
-        final List<MdnsResponse> cachedList = serviceCache.getCachedServices(cacheKey);
+        // Expired services are also needed because the response may include them.
+        final List<MdnsResponse> cachedList = serviceCache.getCachedServices(
+                cacheKey, false /* excludeExpiredServices */);
         final List<MdnsResponse> currentList = new ArrayList<>(cachedList);
         List<MdnsResponse> additionalResponses = makeResponsesForResolve(socketKey);
         for (MdnsResponse additionalResponse : additionalResponses) {
@@ -517,7 +551,7 @@ public class MdnsServiceTypeClient {
         }
         final Pair<Set<MdnsResponse>, ArrayList<MdnsResponse>> augmentedResult =
                 responseDecoder.augmentResponses(packet, currentList,
-                        socketKey.getInterfaceIndex(), socketKey.getNetwork());
+                        socketKey.getInterfaceIndex(), socketKey.getNetwork(), featureFlags);
 
         final Set<MdnsResponse> modifiedResponse = augmentedResult.first;
         final ArrayList<MdnsResponse> allResponses = augmentedResult.second;
@@ -577,10 +611,18 @@ public class MdnsServiceTypeClient {
     private void notifyRemovedServiceToListeners(@NonNull MdnsResponse response,
             @NonNull String message) {
         for (int i = 0; i < listeners.size(); i++) {
-            if (!responseMatchesOptions(response, listeners.valueAt(i).searchOptions)) continue;
+            if (!responseMatchesInstanceNameAndSubtypes(response,
+                    listeners.valueAt(i).searchOptions.getResolveInstanceName(),
+                    listeners.valueAt(i).searchOptions.getSubtypes())) {
+                continue;
+            }
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             if (response.getServiceInstanceName() != null) {
-                listeners.valueAt(i).unsetServiceDiscovered(response.getServiceInstanceName());
+                if (!listeners.valueAt(i).unsetServiceDiscovered(
+                        response.getServiceInstanceName())) {
+                    // Skip the lost callback if this service has not been notified previously
+                    continue;
+                }
                 final MdnsServiceInfo serviceInfo = buildMdnsServiceInfoFromResponse(
                         response, serviceTypeLabels, clock.elapsedRealtime());
                 if (response.isComplete()) {
@@ -596,7 +638,8 @@ public class MdnsServiceTypeClient {
     /** Notify all services are removed because the socket is destroyed. */
     public void notifySocketDestroyed() {
         ensureRunningOnHandlerThread(handler);
-        for (MdnsResponse response : serviceCache.getCachedServices(cacheKey)) {
+        for (MdnsResponse response : serviceCache.getCachedServices(
+                cacheKey, false /* excludeExpiredServices */)) {
             final String name = response.getServiceInstanceName();
             if (name == null) continue;
             notifyRemovedServiceToListeners(response, "Socket destroyed");
@@ -606,8 +649,8 @@ public class MdnsServiceTypeClient {
 
     private void onResponseModified(@NonNull MdnsResponse response) {
         final String serviceInstanceName = response.getServiceInstanceName();
-        final MdnsResponse currentResponse =
-                serviceCache.getCachedService(serviceInstanceName, cacheKey);
+        final MdnsResponse currentResponse = serviceCache.getCachedService(serviceInstanceName,
+                cacheKey, false /* excludeExpiredServices */);
 
         final boolean newInCache = currentResponse == null;
         boolean serviceBecomesComplete = false;
@@ -634,7 +677,11 @@ public class MdnsServiceTypeClient {
             // subtype), service lost callbacks should also be sent; this is not done today as
             // only expiration of SRV records is used, not PTR records used for subtypes, so
             // services never lose PTR record subtypes.
-            if (!responseMatchesOptions(response, listeners.valueAt(i).searchOptions)) continue;
+            if (!responseMatchesInstanceNameAndSubtypes(response,
+                    listeners.valueAt(i).searchOptions.getResolveInstanceName(),
+                    listeners.valueAt(i).searchOptions.getSubtypes())) {
+                continue;
+            }
             final MdnsServiceBrowserListener listener = listeners.keyAt(i);
             final ListenerInfo listenerInfo = listeners.valueAt(i);
             final boolean newServiceFound = listenerInfo.setServiceDiscovered(serviceInstanceName);
@@ -682,8 +729,12 @@ public class MdnsServiceTypeClient {
                     r -> DnsUtils.equalsIgnoreDnsCase(resolveName, r.getServiceInstanceName()))) {
                 continue;
             }
-            MdnsResponse knownResponse =
-                    serviceCache.getCachedService(resolveName, cacheKey);
+            // The "knownResponse" is used by the query to understand what information the cache
+            // already holds, allowing it to determine which records need to be renewed. Therefore,
+            // expired services should always be included in the returned responses to ensure all
+            // their records are renewed.
+            MdnsResponse knownResponse = serviceCache.getCachedService(
+                    resolveName, cacheKey, false /* excludeExpiredServices */);
             if (knownResponse == null) {
                 final ArrayList<String> instanceFullName = new ArrayList<>(
                         serviceTypeLabels.length + 1);
@@ -712,7 +763,8 @@ public class MdnsServiceTypeClient {
     private void tryRemoveServiceAfterTtlExpires() {
         if (!shouldRemoveServiceAfterTtlExpires()) return;
 
-        final Iterator<MdnsResponse> iter = serviceCache.getCachedServices(cacheKey).iterator();
+        final Iterator<MdnsResponse> iter = serviceCache.getCachedServices(
+                cacheKey, false /* excludeExpiredServices */).iterator();
         while (iter.hasNext()) {
             MdnsResponse existingResponse = iter.next();
             if (existingResponse.hasServiceRecord()
@@ -724,16 +776,36 @@ public class MdnsServiceTypeClient {
         }
     }
 
-    private static class QuerySentArguments {
+    public static class QuerySentResult {
         private final int transactionId;
-        private final List<String> subTypes = new ArrayList<>();
+        private final List<String> queriedSubtypes = new ArrayList<>();
         private final ScheduledQueryTaskArgs taskArgs;
+        private final boolean queriedBaseType;
+        private final Collection<MdnsResponse> resolvedServices = new ArrayList<>();
 
-        QuerySentArguments(int transactionId, @NonNull List<String> subTypes,
-                @NonNull ScheduledQueryTaskArgs taskArgs) {
+        QuerySentResult(int transactionId, @NonNull List<String> subTypes,
+                @NonNull ScheduledQueryTaskArgs taskArgs, boolean queriedBaseType,
+                @NonNull Collection<MdnsResponse> resolvedServices) {
             this.transactionId = transactionId;
-            this.subTypes.addAll(subTypes);
+            this.queriedSubtypes.addAll(subTypes);
             this.taskArgs = taskArgs;
+            this.queriedBaseType = queriedBaseType;
+            this.resolvedServices.addAll(resolvedServices);
+        }
+
+
+        /**
+         * Creates a QuerySentResult instance representing a failed query attempt.
+         *
+         * This factory method is used when the query packet could not be sent successfully.
+         *
+         * @param taskArgs The arguments of the task that attempted the query.
+         * @return A QuerySentResult configured to indicate failure.
+         */
+        public static QuerySentResult createFailedQueryResult(
+                @NonNull ScheduledQueryTaskArgs taskArgs) {
+            return new QuerySentResult(INVALID_TRANSACTION_ID, new ArrayList<>(), taskArgs,
+                    false /* queriedBaseType */, Collections.emptyList() /* resolvedServices */);
         }
     }
 
@@ -763,15 +835,14 @@ public class MdnsServiceTypeClient {
 
         @Override
         public void run() {
-            Pair<Integer, List<String>> result;
+            QuerySentResult result;
             try {
                 result =
                         new EnqueueMdnsQueryCallable(
                                 socketClient,
                                 serviceType,
                                 subtypes,
-                                taskArgs.config.expectUnicastResponse,
-                                taskArgs.config.getTransactionId(),
+                                taskArgs,
                                 socketKey,
                                 onlyUseIpv6OnIpv6OnlyNetworks,
                                 sendDiscoveryQueries,
@@ -785,17 +856,16 @@ public class MdnsServiceTypeClient {
             } catch (RuntimeException e) {
                 sharedLog.e(String.format("Failed to run EnqueueMdnsQueryCallable for subtype: %s",
                         TextUtils.join(",", subtypes)), e);
-                result = Pair.create(INVALID_TRANSACTION_ID, new ArrayList<>());
+                result = QuerySentResult.createFailedQueryResult(taskArgs);
             }
-            dependencies.sendMessage(
-                    handler, handler.obtainMessage(EVENT_QUERY_RESULT,
-                            new QuerySentArguments(result.first, result.second, taskArgs)));
+            dependencies.sendMessage(handler, handler.obtainMessage(EVENT_QUERY_RESULT, result));
         }
     }
 
     private long getMinRemainingTtl(long now) {
         long minRemainingTtl = Long.MAX_VALUE;
-        for (MdnsResponse response : serviceCache.getCachedServices(cacheKey)) {
+        for (MdnsResponse response : serviceCache.getCachedServices(
+                cacheKey, false /* excludeExpiredServices */)) {
             if (!response.isComplete()) {
                 continue;
             }

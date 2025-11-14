@@ -17,7 +17,6 @@
 package com.android.server.connectivity.mdns;
 
 import static com.android.server.connectivity.mdns.MdnsConstants.QCLASS_INTERNET;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -30,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 
 import static java.util.Collections.emptyList;
 
+import android.os.Build;
 import android.util.Log;
 
 import com.android.net.module.util.HexDump;
@@ -51,7 +51,7 @@ import java.util.List;
 // The record test data does not use compressed names (label pointers), since that would require
 // additional data to populate the label dictionary accordingly.
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class MdnsRecordTests {
     private static final String TAG = "MdnsRecordTests";
     private static final int MAX_PACKET_SIZE = 4096;
@@ -351,14 +351,6 @@ public class MdnsRecordTests {
         assertEquals(MdnsRecord.TYPE_TXT, type);
 
         MdnsTextRecord record = new MdnsTextRecord(name, reader);
-
-        List<String> strings = record.getStrings();
-        assertNotNull(strings);
-        assertEquals(3, strings.size());
-
-        assertEquals("a=hello there", strings.get(0));
-        assertEquals("b=1234567890", strings.get(1));
-        assertEquals("xyz=!@#$", strings.get(2));
 
         List<TextEntry> entries = record.getEntries();
         assertNotNull(entries);

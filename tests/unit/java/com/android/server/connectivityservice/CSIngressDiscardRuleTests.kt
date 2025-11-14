@@ -35,8 +35,8 @@ import androidx.test.filters.SmallTest
 import com.android.server.connectivity.ConnectivityFlags
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
-import com.android.testutils.RecorderCallback.CallbackEntry.LinkPropertiesChanged
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.InOrder

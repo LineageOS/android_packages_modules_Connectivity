@@ -32,8 +32,9 @@ import com.android.server.net.ct.DownloadHelper.DownloadStatus;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.GeneralSecurityException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /** Helper class to download certificate transparency log files. */
@@ -43,22 +44,21 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
     private static final String TAG = "CertificateTransparencyDownloader";
 
     private final Context mContext;
-    private final DataStore mDataStore;
     private final DownloadHelper mDownloadHelper;
     private final SignatureVerifier mSignatureVerifier;
     private final CertificateTransparencyLogger mLogger;
     private final Collection<CompatibilityVersion> mCompatVersions;
 
+    private final Map<String, Long> mDownloadIds = new HashMap<>();
+
     CertificateTransparencyDownloader(
             Context context,
-            DataStore dataStore,
             DownloadHelper downloadHelper,
             SignatureVerifier signatureVerifier,
             CertificateTransparencyLogger logger,
             Collection<CompatibilityVersion> compatVersions) {
         mContext = context;
         mSignatureVerifier = signatureVerifier;
-        mDataStore = dataStore;
         mDownloadHelper = downloadHelper;
         mLogger = logger;
         mCompatVersions = compatVersions;
@@ -67,8 +67,7 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
     long startPublicKeyDownload() {
         long downloadId = download(Config.URL_PUBLIC_KEY);
         if (downloadId != -1) {
-            mDataStore.setPropertyLong(Config.PUBLIC_KEY_DOWNLOAD_ID, downloadId);
-            mDataStore.store();
+            mDownloadIds.put(Config.PUBLIC_KEY_DOWNLOAD_ID, downloadId);
         }
         return downloadId;
     }
@@ -76,8 +75,7 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
     private long startMetadataDownload(CompatibilityVersion compatVersion) {
         long downloadId = download(compatVersion.getMetadataUrl());
         if (downloadId != -1) {
-            mDataStore.setPropertyLong(compatVersion.getMetadataPropertyName(), downloadId);
-            mDataStore.store();
+            mDownloadIds.put(compatVersion.getMetadataPropertyName(), downloadId);
         }
         return downloadId;
     }
@@ -97,8 +95,7 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
     long startContentDownload(CompatibilityVersion compatVersion) {
         long downloadId = download(compatVersion.getContentUrl());
         if (downloadId != -1) {
-            mDataStore.setPropertyLong(compatVersion.getContentPropertyName(), downloadId);
-            mDataStore.store();
+            mDownloadIds.put(compatVersion.getContentPropertyName(), downloadId);
         }
         return downloadId;
     }
@@ -151,10 +148,9 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
             return;
         }
 
-        try {
-            mSignatureVerifier.setPublicKeyFrom(publicKeyUri);
-        } catch (GeneralSecurityException | IOException | IllegalArgumentException e) {
-            Log.e(TAG, "Error setting the public Key", e);
+        LogListUpdateStatus updateStatus = mSignatureVerifier.setPublicKeyFrom(publicKeyUri);
+        if (!updateStatus.isPublicKeySet()) {
+            mLogger.logCTLogListUpdateStateChangedEvent(updateStatus);
             return;
         }
 
@@ -237,19 +233,17 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
 
     @VisibleForTesting
     long getPublicKeyDownloadId() {
-        return mDataStore.getPropertyLong(Config.PUBLIC_KEY_DOWNLOAD_ID, /* defaultValue= */ -1);
+        return mDownloadIds.getOrDefault(Config.PUBLIC_KEY_DOWNLOAD_ID, -1L);
     }
 
     @VisibleForTesting
     long getMetadataDownloadId(CompatibilityVersion compatVersion) {
-        return mDataStore.getPropertyLong(
-                compatVersion.getMetadataPropertyName(), /* defaultValue */ -1);
+        return mDownloadIds.getOrDefault(compatVersion.getMetadataPropertyName(), -1L);
     }
 
     @VisibleForTesting
     long getContentDownloadId(CompatibilityVersion compatVersion) {
-        return mDataStore.getPropertyLong(
-                compatVersion.getContentPropertyName(), /* defaultValue= */ -1);
+        return mDownloadIds.getOrDefault(compatVersion.getContentPropertyName(), -1L);
     }
 
     @VisibleForTesting

@@ -28,7 +28,7 @@ import android.net.TestNetworkInterface
 import android.net.TestNetworkManager
 import android.net.TestNetworkSpecifier
 import android.os.Binder
-import com.android.testutils.RecorderCallback.CallbackEntry.Available
+import com.android.testutils.TestableNetworkCallback.Event.Available
 import java.net.InetAddress
 import libcore.io.IoUtils
 

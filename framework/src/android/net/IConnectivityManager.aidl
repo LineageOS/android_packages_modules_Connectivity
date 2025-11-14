@@ -266,4 +266,7 @@ interface IConnectivityManager
     long getEnabledConnectivityManagerFeatures();
 
     boolean isConnectivityServiceFeatureEnabledForTesting(String featureFlag);
+
+    oneway void registerQuicConnectionClosePayload(in ParcelFileDescriptor pfd, in byte[] payload);
+    oneway void unregisterQuicConnectionClosePayload(in ParcelFileDescriptor pfd);
 }

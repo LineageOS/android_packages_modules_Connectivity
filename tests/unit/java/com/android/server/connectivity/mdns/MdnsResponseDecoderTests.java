@@ -19,7 +19,6 @@ package com.android.server.connectivity.mdns;
 import static android.net.InetAddresses.parseNumericAddress;
 
 import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
-import static com.android.testutils.DevSdkIgnoreRuleKt.SC_V2;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -32,16 +31,17 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 import android.net.Network;
+import android.os.Build;
 import android.util.ArraySet;
 
 import com.android.net.module.util.HexDump;
 import com.android.server.connectivity.mdns.MdnsResponseTests.MdnsInet4AddressRecord;
 import com.android.server.connectivity.mdns.MdnsResponseTests.MdnsInet6AddressRecord;
+import com.android.server.connectivity.mdns.MdnsServiceInfo.TextEntry;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RunWith(DevSdkIgnoreRunner.class)
-@DevSdkIgnoreRule.IgnoreUpTo(SC_V2)
+@DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 public class MdnsResponseDecoderTests {
     private static final byte[] data = HexDump.hexStringToByteArray(
             "0000840000000004"
@@ -165,6 +165,10 @@ public class MdnsResponseDecoderTests {
     // for the records changed.
     private static final byte[] DATAIN_IPV4_2 = HexDump.hexStringToByteArray(
             "0974657374686f73743100000180010000007800040a010204");
+    // MDNS record for name "testhost1" with an IPv4 address of 10.1.2.5. Does not set the cache
+    // flush bit.
+    private static final byte[] DATAIN_IPV4_NOCACHEFLUSH = HexDump.hexStringToByteArray(
+            "0974657374686f73743100000100010000007800040a010205");
     // MDNS record w/name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040.
     // Also set cache flush bit for the records changed.
     private static final byte[] DATAIN_IPV6_1 = HexDump.hexStringToByteArray(
@@ -173,6 +177,10 @@ public class MdnsResponseDecoderTests {
     // Also set cache flush bit for the records changed.
     private static final byte[] DATAIN_IPV6_2 = HexDump.hexStringToByteArray(
             "0974657374686f73743100001c8001000000780010aabbccdd11223344a0b0c0d010203030");
+    // MDNS record for name "testhost1" & IPv6 address of aabb:ccdd:1122:3344:a0b0:c0d0:1020:3050.
+    // Does not set the cache flush bit.
+    private static final byte[] DATAIN_IPV6_NOCACHEFLUSH = HexDump.hexStringToByteArray(
+            "0974657374686f73743100001c0001000000780010aabbccdd11223344a0b0c0d010203050");
     // MDNS record w/name "test" & PTR to foo.bar.quxx
     private static final byte[] DATAIN_PTR_1 = HexDump.hexStringToByteArray(
             "047465737400000C000100001194000E03666F6F03626172047175787800");
@@ -205,6 +213,7 @@ public class MdnsResponseDecoderTests {
     private static final String MATTER_SERVICE_NAME = "_matter";
     private static final String[] MATTER_SERVICE_TYPE =
             new String[] {MATTER_SERVICE_NAME, "_tcp", "local"};
+    private final MdnsFeatureFlags defaultFlags = MdnsFeatureFlags.newBuilder().build();
 
     private ArraySet<MdnsResponse> responses;
 
@@ -259,15 +268,16 @@ public class MdnsResponseDecoderTests {
         assertEquals(0, serviceWeight);
 
         MdnsTextRecord textRecord = response.getTextRecord();
-        List<String> textStrings = textRecord.getStrings();
-        assertEquals(7, textStrings.size());
-        assertEquals("id=970bf547b753fc63c2d2a36bb896aba8", textStrings.get(0));
-        assertEquals("ve=02", textStrings.get(1));
-        assertEquals("md=Chromecast", textStrings.get(2));
-        assertEquals("ic=/setup/icon.png", textStrings.get(3));
-        assertEquals("fn=Johnny's Chromecast", textStrings.get(4));
-        assertEquals("ca=5", textStrings.get(5));
-        assertEquals("st=0", textStrings.get(6));
+        List<TextEntry> textEntries = textRecord.getEntries();
+        assertEquals(List.of(
+                new TextEntry("id", "970bf547b753fc63c2d2a36bb896aba8"),
+                new TextEntry("ve", "02"),
+                new TextEntry("md", "Chromecast"),
+                new TextEntry("ic", "/setup/icon.png"),
+                new TextEntry("fn", "Johnny's Chromecast"),
+                new TextEntry("ca", "5"),
+                new TextEntry("st", "0")
+        ), textEntries);
     }
 
     private void verifyResponse(ArraySet<MdnsResponse> responseArraySet) {
@@ -340,13 +350,13 @@ public class MdnsResponseDecoderTests {
                 new InetSocketAddress(MdnsConstants.getMdnsIPv6Address(), MdnsConstants.MDNS_PORT));
 
         final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
-                data6, data6.length, MdnsFeatureFlags.newBuilder().build());
+                data6, data6.length, defaultFlags);
         assertNotNull(parsedPacket);
 
         final Network network = mock(Network.class);
         responses = new ArraySet<>(decoder.augmentResponses(parsedPacket,
                 /* existingResponses= */ Collections.emptyList(),
-                /* interfaceIndex= */ 10, network /* expireOnExit= */).first);
+                /* interfaceIndex= */ 10, network /* expireOnExit= */, defaultFlags).first);
 
         assertEquals(responses.size(), 1);
         assertEquals(responses.valueAt(0).getInterfaceIndex(), 10);
@@ -356,7 +366,6 @@ public class MdnsResponseDecoderTests {
     @Test
     public void decode_singleHostname_multipleSrvRecords_flagEnabled_multipleCompleteResponses()
             throws Exception {
-        //MdnsScannerConfigsFlagsImpl.allowMultipleSrvRecordsPerHost.override(true);
         MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, MATTER_SERVICE_TYPE);
         assertNotNull(matterDuplicateHostname);
 
@@ -379,24 +388,6 @@ public class MdnsResponseDecoderTests {
         assertTrue(response2.getInet6AddressRecords().stream().anyMatch(
                 record -> record.getInet6Address().equals(
                         parseNumericAddress("2605:a601:a846:5700:3e61:5ff:fe0c:89f8"))));
-    }
-
-    @Test
-    @Ignore("MdnsConfigs is not configurable currently.")
-    public void decode_singleHostname_multipleSrvRecords_flagDisabled_singleCompleteResponse()
-            throws Exception {
-        //MdnsScannerConfigsFlagsImpl.allowMultipleSrvRecordsPerHost.override(false);
-        MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, MATTER_SERVICE_TYPE);
-        assertNotNull(matterDuplicateHostname);
-
-        responses = decode(decoder, matterDuplicateHostname);
-
-        // This should emit only two records:
-        assertEquals(2, responses.size());
-
-        // But only the first is complete:
-        assertTrue(responses.valueAt(0).isComplete());
-        assertFalse(responses.valueAt(1).isComplete());
     }
 
     @Test
@@ -488,6 +479,96 @@ public class MdnsResponseDecoderTests {
     }
 
     @Test
+    public void testDecodeWithAddressesAddedAndRemoved_AddIpv4Address() throws IOException {
+        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
+                new PacketAndRecordClass(DATAIN_PTR_1,
+                        MdnsPointerRecord.class),
+                new PacketAndRecordClass(DATAIN_SERVICE_1,
+                        MdnsServiceRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV6_1,
+                        MdnsInet6AddressRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV4_1,
+                        MdnsInet4AddressRecord.class)));
+        // Now update the response replacing IPv6 addresses, and adding an IPv4 address
+        final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
+        final byte[] removedAddrResponse = makeResponsePacket(List.of(
+                DATAIN_PTR_1, DATAIN_SERVICE_1, DATAIN_IPV6_2, DATAIN_IPV4_NOCACHEFLUSH));
+        final ArraySet<MdnsResponse> updatedResponses = decode(
+                decoder, removedAddrResponse, List.of(response));
+        assertEquals(1, updatedResponses.size());
+        assertEquals(1, updatedResponses.valueAt(0).getInet6AddressRecords().size());
+        assertEquals(parseNumericAddress("aabb:ccdd:1122:3344:a0b0:c0d0:1020:3030"),
+                updatedResponses.valueAt(0).getInet6AddressRecords().get(0).getInet6Address());
+        assertEquals(2, updatedResponses.valueAt(0).getInet4AddressRecords().size());
+        assertEquals(parseNumericAddress("10.1.2.3"),
+                updatedResponses.valueAt(0).getInet4AddressRecords().get(0).getInet4Address());
+        assertEquals(parseNumericAddress("10.1.2.5"),
+                updatedResponses.valueAt(0).getInet4AddressRecords().get(1).getInet4Address());
+    }
+
+    @Test
+    public void testDecodeWithAddressesReplaced_PerAddressTypeCacheFlushDisabled()
+            throws IOException {
+        final MdnsFeatureFlags flags = MdnsFeatureFlags.newBuilder()
+                .setIsCacheFlushPerAddressTypeEnabled(false)
+                .build();
+        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
+                new PacketAndRecordClass(DATAIN_PTR_1,
+                        MdnsPointerRecord.class),
+                new PacketAndRecordClass(DATAIN_SERVICE_1,
+                        MdnsServiceRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV6_1,
+                        MdnsInet6AddressRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV4_1,
+                        MdnsInet4AddressRecord.class)));
+        // Update the response replacing addresses with an IPv6 address (per-type flush disabled)
+        final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
+        final byte[] removedAddrResponse = makeResponsePacket(List.of(
+                DATAIN_PTR_1, DATAIN_SERVICE_1, DATAIN_IPV6_2));
+        final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
+                removedAddrResponse, removedAddrResponse.length, flags);
+        assertNotNull(parsedPacket);
+
+        final ArraySet<MdnsResponse> updatedResponses = new ArraySet<>(decoder.augmentResponses(
+                parsedPacket, List.of(response), MdnsSocket.INTERFACE_INDEX_UNSPECIFIED,
+                mock(Network.class), flags).first);
+
+        assertEquals(1, updatedResponses.size());
+        assertEquals(1, updatedResponses.valueAt(0).getInet6AddressRecords().size());
+        assertEquals(parseNumericAddress("aabb:ccdd:1122:3344:a0b0:c0d0:1020:3030"),
+                updatedResponses.valueAt(0).getInet6AddressRecords().get(0).getInet6Address());
+        assertEquals(0, updatedResponses.valueAt(0).getInet4AddressRecords().size());
+    }
+
+    @Test
+    public void testDecodeWithAddressesAdded_AddIpv6Address() throws IOException {
+        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
+                new PacketAndRecordClass(DATAIN_PTR_1,
+                        MdnsPointerRecord.class),
+                new PacketAndRecordClass(DATAIN_SERVICE_1,
+                        MdnsServiceRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV6_1,
+                        MdnsInet6AddressRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV4_1,
+                        MdnsInet4AddressRecord.class)));
+        // Now update the response adding an IPv6 address
+        final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
+        final byte[] removedAddrResponse = makeResponsePacket(List.of(
+                DATAIN_PTR_1, DATAIN_SERVICE_1, DATAIN_IPV6_NOCACHEFLUSH));
+        final ArraySet<MdnsResponse> updatedResponses = decode(
+                decoder, removedAddrResponse, List.of(response));
+        assertEquals(1, updatedResponses.size());
+        assertEquals(2, updatedResponses.valueAt(0).getInet6AddressRecords().size());
+        assertEquals(parseNumericAddress("aabb:ccdd:1122:3344:a0b0:c0d0:1020:3040"),
+                updatedResponses.valueAt(0).getInet6AddressRecords().get(0).getInet6Address());
+        assertEquals(parseNumericAddress("aabb:ccdd:1122:3344:a0b0:c0d0:1020:3050"),
+                updatedResponses.valueAt(0).getInet6AddressRecords().get(1).getInet6Address());
+        assertEquals(1, updatedResponses.valueAt(0).getInet4AddressRecords().size());
+        assertEquals(parseNumericAddress("10.1.2.3"),
+                updatedResponses.valueAt(0).getInet4AddressRecords().get(0).getInet4Address());
+    }
+
+    @Test
     public void testDecodeWithChangeOnText() throws IOException {
         MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
                 new PacketAndRecordClass(DATAIN_PTR_1,
@@ -502,9 +583,9 @@ public class MdnsResponseDecoderTests {
                 decoder, makeResponsePacket(DATAIN_TEXT_2), List.of(response));
         assertEquals(1, updatedResponses.size());
         assertEquals(List.of(
-                new MdnsServiceInfo.TextEntry("a", "hello there"),
-                new MdnsServiceInfo.TextEntry("b", "1234567890"),
-                new MdnsServiceInfo.TextEntry("xyz", "!@#$")),
+                new TextEntry("a", "hello there"),
+                new TextEntry("b", "1234567890"),
+                new TextEntry("xyz", "!@#$")),
                 updatedResponses.valueAt(0).getTextRecord().getEntries());
     }
 
@@ -568,6 +649,26 @@ public class MdnsResponseDecoderTests {
 
         // Decoding should not indicate any change.
         assertEquals(0, changes.size());
+    }
+
+    @Test
+    public void testDecodeWithNoChange_AddressRecordWithNoCacheFlush() throws IOException {
+        MdnsResponse response = makeMdnsResponse(0, DATAIN_SERVICE_NAME_1, List.of(
+                new PacketAndRecordClass(DATAIN_PTR_1,
+                        MdnsPointerRecord.class),
+                new PacketAndRecordClass(DATAIN_SERVICE_1,
+                        MdnsServiceRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV6_1,
+                        MdnsInet6AddressRecord.class),
+                new PacketAndRecordClass(DATAIN_IPV4_NOCACHEFLUSH,
+                        MdnsInet4AddressRecord.class)));
+        // Now update the response adding an already existing IPv4 address
+        final MdnsResponseDecoder decoder = new MdnsResponseDecoder(mClock, null);
+        final byte[] removedAddrResponse = makeResponsePacket(List.of(
+                DATAIN_PTR_1, DATAIN_SERVICE_1, DATAIN_IPV4_NOCACHEFLUSH));
+        final ArraySet<MdnsResponse> updatedResponses = decode(
+                decoder, removedAddrResponse, List.of(response));
+        assertEquals(0, updatedResponses.size());
     }
 
     private static MdnsResponse makeMdnsResponse(long time, String[] serviceName,
@@ -640,11 +741,11 @@ public class MdnsResponseDecoderTests {
     private ArraySet<MdnsResponse> decode(MdnsResponseDecoder decoder, byte[] data,
             Collection<MdnsResponse> existingResponses) throws MdnsPacket.ParseException {
         final MdnsPacket parsedPacket = MdnsResponseDecoder.parseResponse(
-                data, data.length, MdnsFeatureFlags.newBuilder().build());
+                data, data.length, defaultFlags);
         assertNotNull(parsedPacket);
 
         return new ArraySet<>(decoder.augmentResponses(parsedPacket,
                 existingResponses,
-                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class)).first);
+                MdnsSocket.INTERFACE_INDEX_UNSPECIFIED, mock(Network.class), defaultFlags).first);
     }
 }

@@ -65,6 +65,36 @@ public final class ConnectivityFlags {
     public static final String QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER =
             "queue_network_agent_events_in_system_server";
 
+    public static final String CLOSE_QUIC_CONNECTION = "close_quic_connection";
+
+    public static final String CONSTRAINED_DATA_SATELLITE_OPTIN =
+            "constrained_data_satellite_optin";
+
+    public static final String CONSTRAINED_DATA_SATELLITE_METRICS =
+            "constrained_data_satellite_metrics";
+
+    /**
+     * A feature flag to control whether the early link properties update for vpn should be enabled.
+     *
+     * Note: This feature is automatically enabled if the flag
+     *       QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER is enabled.
+     */
+    public static final String EARLY_LINK_PROPERTIES_UPDATE_FOR_VPN =
+            "early_link_properties_update_for_vpn";
+
+    /**
+     * Kill switch for the PermissionMonitor refactoring that centralizes intent
+     * receiving and dispatching within the {@link BroadcastReceiveHelper}.
+     * If enabled, the refactored logic in {@link BroadcastReceiveHelper} will be used.
+     * If disabled, the PermissionMonitor will revert to its previous implementation
+     * for receiving and dispatching intents.
+     *
+     * This flag is introduced as a risk mitigation strategy in case issues are
+     * discovered with the new refactored implementation.
+     */
+    public static final String USE_BROADCAST_RECEIVE_HELPER_FOR_PERMISSION_MONITOR =
+            "use_broadcast_receive_helper_for_permission_monitor";
+
     private boolean mNoRematchAllRequestsOnRegister;
 
     /**

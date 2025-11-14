@@ -82,10 +82,10 @@ import androidx.test.InstrumentationRegistry;
 
 import com.android.compatibility.common.util.SystemUtil;
 import com.android.compatibility.common.util.ThrowingRunnable;
-import com.android.internal.telephony.uicc.IccUtils;
-import com.android.internal.util.ArrayUtils;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.ArrayTrackRecord;
+import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.HexDump;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.com.android.testutils.CarrierConfigRule;
@@ -280,7 +280,7 @@ public class ConnectivityDiagnosticsManagerTest {
                         mContext.getOpPackageName(), PackageManager.GET_SIGNATURES);
         final MessageDigest md = MessageDigest.getInstance(SHA_256);
         final byte[] certHash = md.digest(pkgInfo.signatures[0].toByteArray());
-        return IccUtils.bytesToHexString(certHash);
+        return HexDump.toHexString(certHash);
     }
 
     private void doBroadcastCarrierConfigsAndVerifyOnConnectivityReportAvailable(
@@ -680,7 +680,7 @@ public class ConnectivityDiagnosticsManagerTest {
             final String[] certs = carrierConfigs.getStringArray(
                     CarrierConfigManager.KEY_CARRIER_CERTIFICATE_STRING_ARRAY);
             try {
-                if (ArrayUtils.contains(certs, getCertHashForThisPackage())) {
+                if (CollectionUtils.contains(certs, getCertHashForThisPackage())) {
                     // Received an update for this package's cert hash - countdown and exit
                     mLatch.countDown();
                 }

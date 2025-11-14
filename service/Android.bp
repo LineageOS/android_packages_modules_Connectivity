@@ -164,6 +164,7 @@ java_library {
         "framework-bluetooth.stubs.module_lib",
         "framework-configinfrastructure.stubs.module_lib",
         "framework-connectivity-pre-jarjar",
+        "framework-connectivity-t-pre-jarjar",
         // The framework-connectivity-t library is only available on T+ platforms
         // so any calls to it must be protected with a check to ensure that it is
         // available. The linter will detect any unprotected calls through an API
@@ -186,6 +187,7 @@ java_library {
     static_libs: [
         // Do not add libs here if they are already included
         // in framework-connectivity
+        "android.net.platform.flags-aconfig-java-export",
         "androidx.annotation_annotation",
         "connectivity-net-module-utils-bpf",
         "connectivity_native_aidl_interface-lateststable-java",
