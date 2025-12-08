@@ -14,6 +14,7 @@
 
 import time
 from absl.testing import parameterized
+from android.platform.test.annotations import CddTest, VsrTest
 from mobly import asserts
 from net_tests_utils.host.python import apf_test_base, apf_utils
 from scapy.layers.l2 import Ether
@@ -24,6 +25,8 @@ ETHER_BROADCAST_ADDR = 'FFFFFFFFFFFF'
 MIN_PACKET_SIZE = 60
 
 
+@VsrTest(requirements=['VSR-5.3.12-002', 'VSR-5.3.12-005'])
+@CddTest(requirements=['7.4.5.2/C-0-5', '7.4.2/C-1-4'])
 class ApfV4Test(apf_test_base.ApfTestBase, parameterized.TestCase):
 
   def setup_class(self):
@@ -43,6 +46,9 @@ class ApfV4Test(apf_test_base.ApfTestBase, parameterized.TestCase):
       apf_utils.assume_apf_version_support_at_least(
           self.clientDevice, self.client_iface_name, 4
       )
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
 
   # APF L2 packet filtering on V+ Android allows only specific
   # types: IPv4, ARP, IPv6, EAPOL, WAPI.

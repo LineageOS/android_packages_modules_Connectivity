@@ -16,6 +16,7 @@
 
 package com.android.testutils.com.android.testutils
 
+import com.android.testutils.tryTest
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -90,10 +91,12 @@ class SetFeatureFlagsRule(
 
                 // Execute the test method, which includes methods annotated with
                 // @Before, @Test and @After.
-                base.evaluate()
-
-                valuesToBeRestored.forEach {
-                    setFlagsMethod(it.key, it.value)
+                tryTest {
+                    base.evaluate()
+                } cleanup {
+                    valuesToBeRestored.forEach {
+                        setFlagsMethod(it.key, it.value)
+                    }
                 }
             }
         }

@@ -68,6 +68,11 @@ public class EthernetPort {
         return mInterfaceIndex;
     }
 
+    /** Returns true if the interface name matches this EthernetPort. */
+    public boolean matches(String interfaceName) {
+        return mInterfaceName.equals(interfaceName);
+    }
+
     @Override
     public String toString() {
         return "EthernetPort(" + mInterfaceName + ", ifindex=" + mInterfaceIndex

@@ -24,6 +24,7 @@
 
 using android::base::Result;
 using android::bpf::BpfMap;
+using android::bpf::BpfMapRW;
 
 class Firewall {
   public:
@@ -37,8 +38,8 @@ class Firewall {
     Result<bool> getDataSaverSetting();
     Result<void> setDataSaver(bool enabled);
   private:
-    BpfMap<uint32_t, uint32_t> mConfigurationMap GUARDED_BY(mMutex);
+    BpfMapRW<uint32_t, uint32_t> mConfigurationMap GUARDED_BY(mMutex);
     BpfMap<uint32_t, UidOwnerValue> mUidOwnerMap GUARDED_BY(mMutex);
-    BpfMap<uint32_t, bool> mDataSaverEnabledMap GUARDED_BY(mMutex);
+    BpfMapRW<uint32_t, bool> mDataSaverEnabledMap GUARDED_BY(mMutex);
     std::mutex mMutex;
 };

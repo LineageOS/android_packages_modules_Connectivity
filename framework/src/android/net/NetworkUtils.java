@@ -39,7 +39,7 @@ import java.util.TreeSet;
 /**
  * Native methods for managing network interfaces.
  *
- * {@hide}
+ * @hide
  */
 public class NetworkUtils {
     static {

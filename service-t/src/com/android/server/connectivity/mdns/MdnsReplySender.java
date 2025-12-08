@@ -28,6 +28,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.ArrayMap;
 import android.util.ArraySet;
+import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.SharedLog;
@@ -53,7 +54,9 @@ import java.util.Set;
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class MdnsReplySender {
-    private static final int MSG_SEND = 1;
+    @VisibleForTesting
+    static final int MSG_SEND = 1;
+    private static final String TAG = MdnsReplySender.class.getSimpleName();
     private static final int PACKET_NOT_SENT = 0;
     private static final int PACKET_SENT = 1;
 
@@ -96,10 +99,11 @@ public class MdnsReplySender {
         }
 
         /**
-         * @see Handler#removeMessages(int)
+         * @see Handler#removeEqualMessages(int, Object)
          */
-        public void removeMessages(@NonNull Handler handler, int what, @NonNull Object object) {
-            handler.removeMessages(what, object);
+        public void removeEqualMessages(@NonNull Handler handler, int what,
+                @NonNull Object object) {
+            handler.removeEqualMessages(what, object);
         }
 
         /**
@@ -155,7 +159,7 @@ public class MdnsReplySender {
         ensureRunningOnHandlerThread(mHandler);
 
         if (mMdnsFeatureFlags.isKnownAnswerSuppressionEnabled()) {
-            mDependencies.removeMessages(mHandler, MSG_SEND, reply.source);
+            mDependencies.removeEqualMessages(mHandler, MSG_SEND, reply.source);
 
             final MdnsReplyInfo queuingReply = mSrcReplies.remove(reply.source);
             final ArraySet<MdnsRecord> answers = new ArraySet<>();
@@ -280,7 +284,7 @@ public class MdnsReplySender {
                 return;
             }
 
-            mSharedLog.log("Sending " + replyInfo);
+            Log.i(TAG, "Sending " + replyInfo);
 
             final int flags = 0x8400; // Response, authoritative (rfc6762 18.4)
             final MdnsPacket packet = new MdnsPacket(flags,

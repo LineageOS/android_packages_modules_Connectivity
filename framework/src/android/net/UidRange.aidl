@@ -19,6 +19,6 @@ package android.net;
 /**
  * An inclusive range of UIDs.
  *
- * {@hide}
+ * @hide
  */
 parcelable UidRange;

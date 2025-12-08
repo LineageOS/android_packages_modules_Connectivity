@@ -19,7 +19,7 @@ package android.net;
 /**
  * Configuration details for a network interface.
  *
- * {@hide}
+ * @hide
  */
 parcelable InterfaceConfigurationParcel {
     @utf8InCpp String ifName;

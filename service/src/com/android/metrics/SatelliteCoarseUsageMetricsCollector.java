@@ -299,12 +299,11 @@ public class SatelliteCoarseUsageMetricsCollector {
     private void handleStartMonitoring() {
         // Note that in the constructor it is too early to get the managers.
         mCm = mContext.getSystemService(ConnectivityManager.class);
+        // Note: there is no need to call setPollOnOpen(true) to obtain accurate data. This class
+        // collects data usage only when processing the onLost callback, and ConnectivityService
+        // calls onLost only after it calls notifyIfacesChangedForNetworkStats, which forces a poll.
+        // Also, it is not safe to call setPollOnOpen(true) inside system server. b/427909947 .
         mNsm = mContext.getSystemService(NetworkStatsManager.class);
-        // Note: This might create heavy workload on NetworkStatsService if queried with high
-        // frequency, as the calling UID is system. Each query made with this manager
-        // updates usage stored in files before returning the newest result.
-        // This behavior is not rate-limited because the calling uid is the system UID.
-        mNsm.setPollOnOpen(true);
         // Get the first baseline.
         updateStartTimestamp();
         mSatelliteBaseline = mDeps.getSummary(mNsm, mStartTime);

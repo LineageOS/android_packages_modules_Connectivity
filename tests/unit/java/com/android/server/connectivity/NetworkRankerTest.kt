@@ -23,6 +23,7 @@ import android.net.NetworkCapabilities.TRANSPORT_WIFI
 import android.net.NetworkScore.KEEP_CONNECTED_NONE
 import android.net.NetworkScore.POLICY_EXITING as EXITING
 import android.net.NetworkScore.POLICY_TRANSPORT_PRIMARY as PRIMARY
+import android.net.NetworkScore.POLICY_VCN as VCN
 import android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI as YIELD_TO_BAD_WIFI
 import android.os.Build
 import androidx.test.filters.SmallTest
@@ -30,6 +31,7 @@ import com.android.connectivity.resources.R
 import com.android.server.connectivity.FullScore.POLICY_AVOIDED_WHEN_UNVALIDATED as AVOIDED_UNVALID
 import com.android.server.connectivity.FullScore.POLICY_EVER_EVALUATED as EVER_EVALUATED
 import com.android.server.connectivity.FullScore.POLICY_EVER_VALIDATED as EVER_VALIDATED
+import com.android.server.connectivity.FullScore.POLICY_IS_DESTROYED
 import com.android.server.connectivity.FullScore.POLICY_IS_VALIDATED as IS_VALIDATED
 import com.android.testutils.DevSdkIgnoreRule
 import org.junit.Rule
@@ -195,5 +197,41 @@ class NetworkRankerTest(private val activelyPreferBadWifi: Boolean) {
         val cell = TestScore(score(EVER_EVALUATED, YIELD_TO_BAD_WIFI, IS_VALIDATED), CAPS_CELL)
         val badExitingWifi = TestScore(score(EVER_EVALUATED, EVER_VALIDATED, EXITING), CAPS_WIFI)
         assertEquals(cell, rank(cell, badExitingWifi))
+    }
+
+    @Test
+    fun testPreferVcn_onePhysicalCell() {
+        // A VCN network wins over a physical cell
+        val physicalCell = TestScore(score(PRIMARY), CAPS_CELL)
+        val vcn = TestScore(score(PRIMARY, VCN), CAPS_CELL)
+
+        assertEquals(vcn, rank(physicalCell, vcn))
+    }
+
+    @Test
+    fun testPreferDestroyedVcn_onePhysicalCell() {
+        // A destroyed VCN network wins over a physical cell
+        val physicalCell = TestScore(score(PRIMARY), CAPS_CELL)
+        val destroyedVcn = TestScore(score(PRIMARY, VCN, POLICY_IS_DESTROYED), CAPS_CELL)
+
+        assertEquals(destroyedVcn, rank(physicalCell, destroyedVcn))
+    }
+
+    @Test
+    fun testPhysicalCell_oneExitingVcn() {
+        // A physical cell wins over an exiting VCN network
+        val physicalCell = TestScore(score(PRIMARY), CAPS_CELL)
+        val exitingVcn = TestScore(score(PRIMARY, VCN, EXITING), CAPS_CELL)
+
+        assertEquals(physicalCell, rank(physicalCell, exitingVcn))
+    }
+
+    @Test
+    fun testPreferWifi_oneVcn() {
+        // A Wifi wins over a VCN network
+        val wifi = TestScore(score(), CAPS_WIFI)
+        val vcn = TestScore(score(PRIMARY, VCN), CAPS_CELL)
+
+        assertEquals(wifi, rank(wifi, vcn))
     }
 }

@@ -47,8 +47,9 @@ import android.net.TetheringManager;
 import android.net.TetheringManager.TetheringEventCallback;
 import android.net.TetheringManager.TetheringInterfaceRegexps;
 import android.net.TetheringManager.TetheringRequest;
+import android.net.cts.util.TestSoftApCallback.SoftApEvent;
 import android.net.wifi.SoftApConfiguration;
-import android.net.wifi.WifiClient;
+import android.net.wifi.SoftApInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.SoftApCallback;
 import android.os.ConditionVariable;
@@ -607,22 +608,6 @@ public final class CtsTetheringUtils {
         return iface;
     }
 
-    private static class StopSoftApCallback implements SoftApCallback {
-        private final ConditionVariable mWaiting = new ConditionVariable();
-        @Override
-        public void onStateChanged(int state, int failureReason) {
-            if (state == WifiManager.WIFI_AP_STATE_DISABLED) mWaiting.open();
-        }
-
-        @Override
-        public void onConnectedClientsChanged(List<WifiClient> clients) { }
-
-        public void waitForSoftApStopped() {
-            if (!mWaiting.block(DEFAULT_TIMEOUT_MS)) {
-                fail("stopSoftAp Timeout");
-            }
-        }
-    }
 
     // Wait for softAp to be disabled. This is necessary on devices where stopping softAp
     // deletes the interface. On these devices, tethering immediately stops when the softAp
@@ -630,12 +615,34 @@ public final class CtsTetheringUtils {
     // fully disabled, because otherwise the next test might fail because it attempts to
     // start softAp before it's fully stopped.
     public void expectSoftApDisabled() {
-        final StopSoftApCallback callback = new StopSoftApCallback();
+        final TestSoftApCallback callback = new TestSoftApCallback();
         try {
             runAsShell(NETWORK_SETTINGS, () -> mWm.registerSoftApCallback(c -> c.run(), callback));
             // registerSoftApCallback will immediately call the callback with the current state, so
             // this callback will fire even if softAp is already disabled.
-            callback.waitForSoftApStopped();
+            callback.eventuallyExpect(SoftApEvent.STATE_CHANGED, DEFAULT_TIMEOUT_MS,
+                    "SoftAp Stopped Timeout",
+                    entry -> entry.getState() == WifiManager.WIFI_AP_STATE_DISABLED);
+        } finally {
+            runAsShell(NETWORK_SETTINGS, () -> mWm.unregisterSoftApCallback(callback));
+        }
+    }
+
+    /**
+     * Waits for the SoftAP to be successfully started and ready.
+     * <p>
+     * This method registers a {@link SoftApCallback} and blocks until the
+     * {@link SoftApCallback#onInfoChanged(List)} callback is invoked with a non-empty list of
+     * {@link SoftApInfo}. This indicates that the SoftAP has been configured and is operational.
+     * </p>
+     */
+    public void expectSoftApCompleted() {
+        final TestSoftApCallback callback = new TestSoftApCallback();
+        try {
+            runAsShell(NETWORK_SETTINGS, () -> mWm.registerSoftApCallback(c -> c.run(), callback));
+            callback.eventuallyExpect(SoftApEvent.INFO_CHANGED, DEFAULT_TIMEOUT_MS,
+                    "SoftAp Completed Timeout",
+                    entry -> entry.getSoftApInfoList().size() > 0);
         } finally {
             runAsShell(NETWORK_SETTINGS, () -> mWm.unregisterSoftApCallback(callback));
         }

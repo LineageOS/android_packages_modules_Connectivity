@@ -16,30 +16,17 @@
 
 package com.android.net.module.util.bpf;
 
-import com.android.net.module.util.InetAddressUtils;
 import com.android.net.module.util.Struct;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 
 /** Key type for ingress discard map */
 public class IngressDiscardKey extends Struct {
-    // The destination ip of the incoming packet. IPv4 uses IPv4-mapped IPv6 address.
-    @Field(order = 0, type = Type.Ipv6Address)
-    public final Inet6Address dstAddr;
+    @Field(order = 0, type = Type.IpAddress)
+    public final InetAddress dstAddr;
 
-    public IngressDiscardKey(final Inet6Address dstAddr) {
+    public IngressDiscardKey(final InetAddress dstAddr) {
         this.dstAddr = dstAddr;
     }
 
-    private static Inet6Address getInet6Address(final InetAddress addr) {
-        return (addr instanceof Inet4Address)
-                ? InetAddressUtils.v4MappedV6Address((Inet4Address) addr)
-                : (Inet6Address) addr;
-    }
-
-    public IngressDiscardKey(final InetAddress dstAddr) {
-        this(getInet6Address(dstAddr));
-    }
 }

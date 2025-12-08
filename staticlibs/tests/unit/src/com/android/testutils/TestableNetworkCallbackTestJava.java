@@ -17,7 +17,7 @@
 package com.android.testutils;
 
 import static com.android.testutils.TestableNetworkCallback.Event.AVAILABLE;
-import static com.android.testutils.TestableNetworkCallbackKt.anyNetwork;
+import static com.android.testutils.TestableNetworkCallbackKt.AnyNetwork;
 
 import static org.junit.Assume.assumeTrue;
 
@@ -25,37 +25,37 @@ import org.junit.Test;
 
 public class TestableNetworkCallbackTestJava {
     @Test
-    void testAllExpectOverloads() {
+    public void testAllExpectOverloads() {
         // This test should never run, it only checks that all overloads exist and build
         assumeTrue(false);
         final TestableNetworkCallback callback = new TestableNetworkCallback();
-        TestableNetworkCallback.HasNetwork hn = TestableNetworkCallbackKt::anyNetwork;
+        TestableNetworkCallback.HasNetwork hn = TestableNetworkCallbackKt::AnyNetwork;
 
         // Method with all arguments (version that takes a Network)
-        callback.expect(AVAILABLE, anyNetwork(), 10, "error", cb -> true);
+        callback.expect(AVAILABLE, AnyNetwork(), 10, "error", cb -> true);
 
         // Overloads omitting one argument. One line for omitting each argument, in positional
         // order. Versions that take a Network.
         callback.expect(AVAILABLE, 10, "error", cb -> true);
-        callback.expect(AVAILABLE, anyNetwork(), "error", cb -> true);
-        callback.expect(AVAILABLE, anyNetwork(), 10, cb -> true);
-        callback.expect(AVAILABLE, anyNetwork(), 10, "error");
+        callback.expect(AVAILABLE, AnyNetwork(), "error", cb -> true);
+        callback.expect(AVAILABLE, AnyNetwork(), 10, cb -> true);
+        callback.expect(AVAILABLE, AnyNetwork(), 10, "error");
 
         // Overloads for omitting two arguments. One line for omitting each pair of arguments.
         // Versions that take a Network.
         callback.expect(AVAILABLE, "error", cb -> true);
         callback.expect(AVAILABLE, 10, cb -> true);
         callback.expect(AVAILABLE, 10, "error");
-        callback.expect(AVAILABLE, anyNetwork(), cb -> true);
-        callback.expect(AVAILABLE, anyNetwork(), "error");
-        callback.expect(AVAILABLE, anyNetwork(), 10);
+        callback.expect(AVAILABLE, AnyNetwork(), cb -> true);
+        callback.expect(AVAILABLE, AnyNetwork(), "error");
+        callback.expect(AVAILABLE, AnyNetwork(), 10);
 
         // Overloads for omitting three arguments. One line for each remaining argument.
         // Versions that take a Network.
         callback.expect(AVAILABLE, cb -> true);
         callback.expect(AVAILABLE, "error");
         callback.expect(AVAILABLE, 10);
-        callback.expect(AVAILABLE, anyNetwork());
+        callback.expect(AVAILABLE, AnyNetwork());
 
         // Java overload for omitting all four arguments.
         callback.expect(AVAILABLE);

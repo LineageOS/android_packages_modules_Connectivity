@@ -46,7 +46,7 @@ class BpfRingbufTest : public ::testing::Test {
         mRingbufPath("/sys/fs/bpf/map_bpfRingbufProg_test_ringbuf") {}
 
   void SetUp() {
-    if (!android::bpf::isAtLeastKernelVersion(5, 8, 0)) {
+    if (!android::bpf::isAtLeastKernelVersion(5, 8)) {
       GTEST_SKIP() << "BPF ring buffers not supported below 5.8";
     }
 

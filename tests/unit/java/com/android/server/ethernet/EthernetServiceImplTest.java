@@ -103,7 +103,7 @@ public class EthernetServiceImplTest {
     }
 
     private void shouldTrackIface(@NonNull final String iface, final boolean shouldTrack) {
-        doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterface(iface);
+        doReturn(shouldTrack).when(mEthernetTracker).isTrackingInterfaceByRegex(iface);
     }
 
     @Test

@@ -19,7 +19,7 @@ package android.net;
 /**
  * Structure that stores a firewall mark and its mask.
  *
- * {@hide}
+ * @hide
  */
 parcelable MarkMaskParcel {
     // The fwmark.

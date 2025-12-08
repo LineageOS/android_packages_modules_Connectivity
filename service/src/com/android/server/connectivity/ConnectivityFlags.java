@@ -62,7 +62,7 @@ public final class ConnectivityFlags {
     public static final String QUEUE_CALLBACKS_FOR_FROZEN_APPS =
             "queue_callbacks_for_frozen_apps";
 
-    public static final String QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER =
+    public static final String QUEUE_NETWORK_AGENT_EVENTS_AFTER_B =
             "queue_network_agent_events_in_system_server";
 
     public static final String CLOSE_QUIC_CONNECTION = "close_quic_connection";
@@ -72,6 +72,12 @@ public final class ConnectivityFlags {
 
     public static final String CONSTRAINED_DATA_SATELLITE_METRICS =
             "constrained_data_satellite_metrics";
+
+    public static final String SATISFIED_BY_LOCAL_NETWORK_METRICS =
+            "satisfied_by_local_network_metrics";
+
+    public static final String USE_SATELLITE_REPORTED_SUSPENDED_AND_ROAMING =
+            "use_satellite_reported_suspended_and_roaming";
 
     /**
      * A feature flag to control whether the early link properties update for vpn should be enabled.

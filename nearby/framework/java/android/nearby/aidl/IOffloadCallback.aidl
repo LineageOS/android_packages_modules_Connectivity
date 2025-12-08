@@ -21,7 +21,7 @@ import android.nearby.OffloadCapability;
 /**
  * Listener for offload queries.
  *
- * {@hide}
+ * @hide
  */
 oneway interface IOffloadCallback {
         /** Invokes when ContextHub transaction completes. */

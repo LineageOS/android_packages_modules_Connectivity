@@ -22,7 +22,7 @@ import android.net.Network;
 /**
  * A pair of Network and NetworkAgentRegistry.
  *
- * {@hide}
+ * @hide
  */
 @JavaDerive(toString=true)
 parcelable NetworkAndAgentRegistryParcelable {

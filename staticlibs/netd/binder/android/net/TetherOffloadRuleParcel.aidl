@@ -19,7 +19,7 @@ package android.net;
 /**
  * Represents a forwarding rule for tethering offload.
  *
- * {@hide}
+ * @hide
  */
 parcelable TetherOffloadRuleParcel {
     /** The interface index of the input interface. */

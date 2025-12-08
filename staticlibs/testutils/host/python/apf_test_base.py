@@ -17,6 +17,8 @@ from mobly import asserts
 from net_tests_utils.host.python import adb_utils, apf_utils, assert_utils, multi_devices_test_base, tether_utils
 from net_tests_utils.host.python.tether_utils import UpstreamType
 
+APF_ACTIVATION_WAIT_TIME_SEC = 5
+
 
 class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
 
@@ -60,29 +62,50 @@ class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
     self.client_mac_address = apf_utils.get_hardware_address(
         self.clientDevice, self.client_iface_name
     )
-    self.server_ipv4_addresses = apf_utils.get_ipv4_addresses(
-        self.serverDevice, self.server_iface_name
-    )
-    self.client_ipv4_addresses = apf_utils.get_ipv4_addresses(
-        self.clientDevice, self.client_iface_name
-    )
-    self.server_ipv6_addresses = apf_utils.get_non_tentative_ipv6_addresses(
-        self.serverDevice, self.server_iface_name
-    )
-    self.client_ipv6_addresses = apf_utils.get_non_tentative_ipv6_addresses(
-        self.clientDevice, self.client_iface_name
-    )
 
     # Enable doze mode to activate APF.
     adb_utils.set_doze_mode(self.clientDevice, True)
-
-    # Longer wait time is required for APF to become active in CTS test suite.
-    time.sleep(5)
 
   def teardown_class(self):
     adb_utils.set_doze_mode(self.clientDevice, False)
     tether_utils.cleanup_tethering_for_upstream_type(
         self.serverDevice, UpstreamType.NONE
+    )
+
+  def get_and_expect_ipv4_addresses_exist(self):
+    self.server_ipv4_addresses = apf_utils.get_ipv4_addresses(
+        self.serverDevice, self.server_iface_name
+    )
+
+    asserts.assert_true(
+        self.server_ipv4_addresses,
+        'Server does not have IPv4 address, fail the test.',
+    )
+
+    self.client_ipv4_addresses = apf_utils.get_ipv4_addresses(
+        self.clientDevice, self.client_iface_name
+    )
+    asserts.assert_true(
+        self.client_ipv4_addresses,
+        'Client does not have IPv4 address, fail the test.',
+    )
+
+  def get_and_expect_ipv6_addresses_exist(self):
+    self.server_ipv6_addresses = apf_utils.get_non_tentative_ipv6_addresses(
+        self.serverDevice, self.server_iface_name
+    )
+
+    asserts.assert_true(
+        self.server_ipv6_addresses,
+        'Server does not have IPv6 address, fail the test.',
+    )
+
+    self.client_ipv6_addresses = apf_utils.get_non_tentative_ipv6_addresses(
+        self.clientDevice, self.client_iface_name
+    )
+    asserts.assert_true(
+        self.client_ipv6_addresses,
+        'Client does not have IPv6 address, fail the test.',
     )
 
   def send_packet_and_expect_counter_increased(
@@ -118,15 +141,25 @@ class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
           counter_name,
       )
 
-      apf_utils.send_raw_packet_downstream(
-          self.serverDevice, self.server_iface_name, send_packet
+      matched_pkt_count_before_test = apf_utils.get_matched_packet_counts(
+          self.serverDevice, self.server_iface_name, receive_packet
       )
+
+      # send 3 packets to prevent flaky test result
+      for _ in range(3):
+        # Sleep for 3 seconds to give the firmware a time buffer to turn on the APF.
+        time.sleep(3)
+        apf_utils.send_raw_packet_downstream(
+            self.serverDevice, self.server_iface_name, send_packet
+        )
 
       assert_utils.expect_with_retry(
           lambda: apf_utils.get_matched_packet_counts(
               self.serverDevice, self.server_iface_name, receive_packet
           )
-          == 1
+          > matched_pkt_count_before_test,
+          # ensure the server device capturing the offload packet on the handler thread
+          retry_interval_sec=3,
       )
 
       # TODO: re-enable once the test passes reliably.
@@ -142,3 +175,11 @@ class ApfTestBase(multi_devices_test_base.MultiDevicesTestBase):
 
     finally:
       apf_utils.stop_capture_packets(self.serverDevice, self.server_iface_name)
+
+  def expect_apf_offload_enabled(self, offload: str):
+    assert_utils.expect_with_retry(
+        lambda: offload
+        in apf_utils.get_apf_config_from_cmd(
+            self.clientDevice, self.client_iface_name
+        )
+    )

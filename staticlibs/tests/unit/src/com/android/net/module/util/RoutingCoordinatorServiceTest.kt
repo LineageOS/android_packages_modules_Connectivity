@@ -38,7 +38,12 @@ class RoutingCoordinatorServiceTest {
     val mNetd = mock(INetd::class.java)
     val mGetAllNetworksSupplier = { emptyArray<Network>() }
     val mContext = mock(Context::class.java)
-    val mService = RoutingCoordinatorService(mNetd, mGetAllNetworksSupplier, mContext)
+    val mService = RoutingCoordinatorService(
+            mNetd,
+            mGetAllNetworksSupplier,
+            mContext,
+            false /* bluetoothTetheringUseRandomAddress */
+    )
 
     @Test
     fun testInterfaceForward() {

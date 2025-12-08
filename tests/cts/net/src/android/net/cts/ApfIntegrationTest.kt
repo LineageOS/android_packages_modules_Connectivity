@@ -54,7 +54,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.PowerManager
 import android.os.SystemProperties
-import android.os.UserManager
 import android.platform.test.annotations.AppModeFull
 import android.system.Os
 import android.system.OsConstants
@@ -136,6 +135,7 @@ class ApfIntegrationTest {
 
         private val context = InstrumentationRegistry.getInstrumentation().context
         private val powerManager = context.getSystemService(PowerManager::class.java)!!
+        private val pm = context.packageManager
         private val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG)
         private var isLowPowerStandbyOriginalEnabled: Boolean = false
         private var originalPolicy: FromU<PowerManager.LowPowerStandbyPolicy?>? = null
@@ -153,29 +153,10 @@ class ApfIntegrationTest {
         }
 
         private fun waitForInteractiveState(interactive: Boolean) {
-            // TODO(b/366037029): This test condition should be removed once
-            // PowerManager#isInteractive is fully implemented on automotive
-            // form factor with visible background user.
-            if (isAutomotiveWithVisibleBackgroundUser()) {
-                // Wait for 2 seconds to ensure the interactive state is updated.
-                // This is a workaround for b/366037029.
-                Thread.sleep(2000L)
-            } else {
-                val result = pollingCheck(timeout_ms = 2000) {
-                    powerManager.isInteractive()
-                }
-                assertThat(result).isEqualTo(interactive)
+            val result = pollingCheck(timeout_ms = 2000) {
+                powerManager.isInteractive()
             }
-        }
-
-        private fun isAutomotiveWithVisibleBackgroundUser(): Boolean {
-            val packageManager = context.getPackageManager()
-            val userManager = context.getSystemService(UserManager::class.java)!!
-            return (packageManager.hasSystemFeature(FEATURE_AUTOMOTIVE) &&
-                    // isVisibleBackgroundUsersSupported is @TestApi, but this test should build
-                    // against module API stubs, which do not include it (b/409931932).
-                    userManager.javaClass.getMethod("isVisibleBackgroundUsersSupported")
-                        .invoke(userManager) as Boolean)
+            assertThat(result).isEqualTo(interactive)
         }
 
         private fun disableLowPowerStandby() {
@@ -211,6 +192,14 @@ class ApfIntegrationTest {
         fun setupOnce() {
             // TODO: assertions thrown in @BeforeClass / @AfterClass are not well supported in the
             // test infrastructure. Consider saving exception and throwing it in setUp().
+
+            if (pm.hasSystemFeature(FEATURE_AUTOMOTIVE)) {
+                // Skip on Android Automotive to avoid running unnecessary SLEEP/WAKEUP logic.
+                // Ideally, this would use assumeFalse(isAutomotive) here, but this isn't fully
+                // supported by the test infra (see comment above). Thus, the proper assumption
+                // check is later done in the #setup (@Before).
+                return
+            }
 
             // APF must run when the screen is off and the device is not interactive.
             turnScreenOff()
@@ -318,7 +307,6 @@ class ApfIntegrationTest {
     @get:Rule val expect = Expect.create()
 
     private val cm by lazy { context.getSystemService(ConnectivityManager::class.java)!! }
-    private val pm by lazy { context.packageManager }
     private lateinit var network: Network
     private lateinit var ifname: String
     private lateinit var networkCallback: TestableNetworkCallback
@@ -417,7 +405,11 @@ class ApfIntegrationTest {
         assertThat(caps.apfVersionSupported).isAnyOf(0, 2, 3, 4, 6000, 6100)
         // APF became mandatory in Android 14 VSR.
         val vsrApiLevel = getVsrApiLevel()
-        assumeTrue(shouldEnforceApfSupport(vsrApiLevel))
+        // If the firmware declares a version greater than or equal to 6000, it must properly
+        // support APFv6+.
+        if (caps.apfVersionSupported < 6000) {
+            assumeTrue(shouldEnforceApfSupport(vsrApiLevel))
+        }
 
         // DEVICEs launching with Android 14 with CHIPSETs that set ro.board.first_api_level to 34:
         // - [GMS-VSR-5.3.12-003] MUST return 4 or higher as the APF version number from calls to
@@ -553,7 +545,11 @@ class ApfIntegrationTest {
         // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
         // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
         // should be turned on.
-        assume().that(getVsrApiLevel()).isAtLeast(34)
+        // If the firmware declares a version greater than or equal to 6000, it must properly
+        // support APFv6+.
+        if (caps.apfVersionSupported < 6000) {
+            assume().that(getVsrApiLevel()).isAtLeast(34)
+        }
         assumeApfVersionSupportAtLeast(4)
         assumeNotCuttlefish()
 
@@ -619,7 +615,11 @@ class ApfIntegrationTest {
         // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
         // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
         // should be turned on.
-        assume().that(getVsrApiLevel()).isAtLeast(34)
+        // If the firmware declares a version greater than or equal to 6000, it must properly
+        // support APFv6+.
+        if (caps.apfVersionSupported < 6000) {
+            assume().that(getVsrApiLevel()).isAtLeast(34)
+        }
         // Test v4 memory slots on both v4 and v6 interpreters.
         assumeApfVersionSupportAtLeast(4)
         assumeNotCuttlefish()
@@ -686,7 +686,11 @@ class ApfIntegrationTest {
         // VSR-14 mandates APF to be turned on when the screen is off and the Wi-Fi link
         // is idle or traffic is less than 10 Mbps. Before that, we don't mandate when the APF
         // should be turned on.
-        assume().that(getVsrApiLevel()).isAtLeast(34)
+        // If the firmware declares a version greater than or equal to 6000, it must properly
+        // support APFv6+.
+        if (caps.apfVersionSupported < 6000) {
+            assume().that(getVsrApiLevel()).isAtLeast(34)
+        }
         assumeApfVersionSupportAtLeast(4)
         assumeNotCuttlefish()
         clearApfMemory()

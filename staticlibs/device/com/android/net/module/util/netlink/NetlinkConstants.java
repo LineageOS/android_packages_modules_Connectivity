@@ -149,6 +149,7 @@ public class NetlinkConstants {
     public static final int RTMGRP_IPV4_IFADDR = 0x10;
     public static final int RTMGRP_IPV6_IFADDR = 0x100;
     public static final int RTMGRP_IPV6_ROUTE  = 0x400;
+    public static final int RTMGRP_IPV6_IFINFO = 0x800;
     public static final int RTNLGRP_IPV6_PREFIX = 18;
     public static final int RTMGRP_IPV6_PREFIX = 1 << (RTNLGRP_IPV6_PREFIX - 1);
     public static final int RTNLGRP_ND_USEROPT = 20;

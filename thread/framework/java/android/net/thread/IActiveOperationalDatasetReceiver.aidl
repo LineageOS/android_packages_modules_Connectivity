@@ -18,7 +18,10 @@ package android.net.thread;
 
 import android.net.thread.ActiveOperationalDataset;
 
-/** Receives the result of an operation which returns an Active Operational Dataset. @hide */
+/**
+ * Receives the result of an operation which returns an Active Operational Dataset.
+ * @hide
+ */
 oneway interface IActiveOperationalDatasetReceiver {
     void onSuccess(in ActiveOperationalDataset dataset);
     void onError(int errorCode, String errorMessage);

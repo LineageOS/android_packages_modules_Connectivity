@@ -19,7 +19,7 @@ package android.net;
 /**
  * The statistics of tethering interface
  *
- * {@hide}
+ * @hide
  */
 parcelable TetherStatsParcel {
     /**

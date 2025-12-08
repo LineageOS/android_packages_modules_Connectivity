@@ -27,12 +27,15 @@ java_library {
         "framework-connectivity-test-defaults",
     ],
     libs: [
+        // TODO: is there a way to subclass MockContentResolver without depending on the impl?
+        "android.test.mock.impl",
         "androidx.annotation_annotation",
         "net-utils-device-common-bpf", // TestBpfMap extends IBpfMap.
     ],
     static_libs: [
         "androidx.test.ext.junit",
         "collector-device-lib",
+        "frameworks-base-testutils", // For FakeSettingsProvider.
         "kotlin-reflect",
         "libnanohttpd",
         "mockito-target-minus-junit4",

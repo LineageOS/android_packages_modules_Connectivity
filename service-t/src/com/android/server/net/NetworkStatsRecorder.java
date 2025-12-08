@@ -84,6 +84,7 @@ public class NetworkStatsRecorder {
     private final boolean mOnlyTags;
     private final boolean mWipeOnError;
     private final boolean mUseFastDataInput;
+    private final boolean mStoreTransportTypes;
 
     private long mPersistThresholdBytes = 2 * MB_IN_BYTES;
     private NetworkStats mLastSnapshot;
@@ -113,9 +114,14 @@ public class NetworkStatsRecorder {
         mOnlyTags = false;
         mWipeOnError = true;
         mUseFastDataInput = false;
+        mStoreTransportTypes = true;
 
         mPending = null;
-        mSinceBoot = new NetworkStatsCollection(mBucketDuration);
+        // This is only used to track usage inside the observer, which doesn't read/write
+        // from/to persistent files. It is guaranteed that the file won't be written
+        // because the rotator is null.
+        mSinceBoot = new NetworkStatsCollection(mBucketDuration, mUseFastDataInput,
+                mStoreTransportTypes);
 
         mPendingRewriter = null;
         mStatsDir = null;
@@ -126,7 +132,8 @@ public class NetworkStatsRecorder {
      */
     public NetworkStatsRecorder(FileRotator rotator, NonMonotonicObserver<String> observer,
             DropBoxManager dropBox, String cookie, long bucketDuration, boolean onlyTags,
-            boolean wipeOnError, boolean useFastDataInput, @Nullable File statsDir) {
+            boolean wipeOnError, boolean useFastDataInput, boolean storeTransportTypes,
+            @Nullable File statsDir) {
         mRotator = Objects.requireNonNull(rotator, "missing FileRotator");
         mObserver = Objects.requireNonNull(observer, "missing NonMonotonicObserver");
         mDropBox = Objects.requireNonNull(dropBox, "missing DropBoxManager");
@@ -136,9 +143,12 @@ public class NetworkStatsRecorder {
         mOnlyTags = onlyTags;
         mWipeOnError = wipeOnError;
         mUseFastDataInput = useFastDataInput;
+        mStoreTransportTypes = storeTransportTypes;
 
-        mPending = new NetworkStatsCollection(bucketDuration);
-        mSinceBoot = new NetworkStatsCollection(bucketDuration);
+        mPending = new NetworkStatsCollection(bucketDuration, mUseFastDataInput,
+                mStoreTransportTypes);
+        mSinceBoot = new NetworkStatsCollection(bucketDuration, mUseFastDataInput,
+                mStoreTransportTypes);
 
         mPendingRewriter = new CombiningRewriter(mPending);
         mStatsDir = statsDir;
@@ -220,7 +230,8 @@ public class NetworkStatsRecorder {
                     + " useFastDataInput: " + mUseFastDataInput);
         }
         final NetworkStatsCollection res =
-                new NetworkStatsCollection(mBucketDuration, mUseFastDataInput);
+                new NetworkStatsCollection(mBucketDuration, mUseFastDataInput,
+                        mStoreTransportTypes);
         try {
             mRotator.readMatching(res, start, end);
             res.recordCollection(mPending);
@@ -353,7 +364,9 @@ public class NetworkStatsRecorder {
         if (mRotator != null) {
             try {
                 // Rewrite all persisted data to migrate UID stats
-                mRotator.rewriteAll(new RemoveUidRewriter(mBucketDuration, uids));
+                final NetworkStatsCollection temp = new NetworkStatsCollection(mBucketDuration,
+                        mUseFastDataInput, mStoreTransportTypes);
+                mRotator.rewriteAll(new RemoveUidRewriter(temp, uids));
             } catch (IOException e) {
                 Log.wtf(TAG, "problem removing UIDs " + Arrays.toString(uids), e);
                 recoverAndDeleteData();
@@ -422,8 +435,8 @@ public class NetworkStatsRecorder {
         private final NetworkStatsCollection mTemp;
         private final int[] mUids;
 
-        public RemoveUidRewriter(long bucketDuration, int[] uids) {
-            mTemp = new NetworkStatsCollection(bucketDuration);
+        public RemoveUidRewriter(@NonNull NetworkStatsCollection temp, int[] uids) {
+            mTemp = temp;
             mUids = uids;
         }
 
@@ -475,8 +488,8 @@ public class NetworkStatsRecorder {
         private final NetworkStatsCollection mTemp;
         private final long mCutoffMills;
 
-        public RemoveDataBeforeRewriter(long bucketDuration, long cutoffMills) {
-            mTemp = new NetworkStatsCollection(bucketDuration);
+        public RemoveDataBeforeRewriter(@NonNull NetworkStatsCollection temp, long cutoffMills) {
+            mTemp = temp;
             mCutoffMills = cutoffMills;
         }
 
@@ -509,8 +522,9 @@ public class NetworkStatsRecorder {
     public void removeDataBefore(long cutoffMillis) throws IOException {
         if (mRotator != null) {
             try {
-                mRotator.rewriteAll(new RemoveDataBeforeRewriter(
-                        mBucketDuration, cutoffMillis));
+                final NetworkStatsCollection temp = new NetworkStatsCollection(mBucketDuration,
+                        mUseFastDataInput, mStoreTransportTypes);
+                mRotator.rewriteAll(new RemoveDataBeforeRewriter(temp, cutoffMillis));
             } catch (IOException e) {
                 Log.wtf(TAG, "problem importing netstats", e);
                 recoverAndDeleteData();

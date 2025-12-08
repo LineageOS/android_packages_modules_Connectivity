@@ -17,6 +17,7 @@ package {
 
 android_test {
     name: "FrameworksNetSmokeTests",
+    min_sdk_version: "31",
     defaults: ["FrameworksNetTests-jni-defaults"],
     srcs: ["java/SmokeTest.java"],
     test_suites: ["device-tests"],

@@ -25,6 +25,7 @@ import android.net.Uri;
 import androidx.annotation.VisibleForTesting;
 
 import com.google.auto.value.AutoValue;
+import java.util.Objects;
 
 /** Class to handle downloads for Certificate Transparency. */
 public class DownloadHelper {
@@ -47,11 +48,42 @@ public class DownloadHelper {
      * @return a downloadId if the request was created successfully, -1 otherwise.
      */
     public long startDownload(String url) {
+        long downloadId = isUrlAlreadyScheduled(url);
+        if (downloadId != -1) {
+            return downloadId;
+        }
         return mDownloadManager.enqueue(
                 new Request(Uri.parse(url))
                         .setAllowedOverRoaming(false)
                         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN)
                         .setRequiresCharging(true));
+    }
+
+    private long isUrlAlreadyScheduled(String url) {
+        try (Cursor cursor =
+                mDownloadManager.query(
+                        new Query()
+                                .setFilterByStatus(
+                                        DownloadManager.STATUS_PENDING
+                                                | DownloadManager.STATUS_RUNNING
+                                                | DownloadManager.STATUS_PAUSED))) {
+            if (cursor == null) {
+                return -1;
+            }
+            for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
+                int idIndex = cursor.getColumnIndex(DownloadManager.COLUMN_ID);
+                int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_URI);
+                if (idIndex == -1 || uriIndex == -1) {
+                    continue;
+                }
+                long downloadId = cursor.getLong(idIndex);
+                String uri = cursor.getString(uriIndex);
+                if (Objects.equals(uri, url)) {
+                    return downloadId;
+                }
+            }
+        }
+        return -1;
     }
 
     /**
@@ -67,7 +99,7 @@ public class DownloadHelper {
                 builder.setStatus(
                         cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)));
                 builder.setReason(
-                        cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_REASON)));
+                        cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)));
             }
         }
         return builder.build();

@@ -26,7 +26,7 @@ import android.os.Messenger;
 /**
  * Interface that NsdService implements for each NsdManager client.
  *
- * {@hide}
+ * @hide
  */
 interface INsdServiceConnector {
     void registerService(int listenerKey, in AdvertisingRequest advertisingRequest);

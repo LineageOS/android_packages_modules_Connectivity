@@ -21,9 +21,11 @@ import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
+import android.net.ConnectivityManager.PROFILE_NETWORK_PREFERENCE_ENTERPRISE
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED
 import android.net.NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED
+import android.net.NetworkCapabilities.NET_ENTERPRISE_ID_1
 import android.net.NetworkCapabilities.TRANSPORT_SATELLITE
 import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
@@ -31,6 +33,7 @@ import android.net.NetworkProvider
 import android.net.NetworkScore
 import android.net.OemNetworkPreferences
 import android.net.OemNetworkPreferences.OEM_NETWORK_PREFERENCE_TEST
+import android.net.ProfileNetworkPreference
 import android.os.Build
 import android.os.ConditionVariable
 import android.os.Handler
@@ -41,6 +44,7 @@ import androidx.test.filters.SmallTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.testutils.TestableNetworkAgent.Event.OnNetworkDestroyed
 import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.TestableNetworkCallback.Event.Lost
 import com.android.testutils.TestableNetworkOfferCallback
@@ -52,9 +56,15 @@ import kotlin.test.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.argThat
 import org.mockito.Mockito.any
 import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.eq
+import org.mockito.Mockito.inOrder
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 
 const val UID1 = 184
 const val UID2 = 10184
@@ -384,5 +394,36 @@ class CSPreferenceTest : CSTest() {
         restrictedSatelliteCallback.expect<Needed> { it.isRestricted }
         satelliteCallback.assertNoCallback()
         restrictedSatelliteCallback.assertNoCallback()
+    }
+
+    // Netd#setNetworkAllowlist was implemented in U.
+    @Test @IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    fun testPreferenceWithUnregisterAfterReplacement() {
+        val netdCalls = inOrder(netd)
+        val user = UserHandle.getUserHandleForUid(Process.myUid())
+        doReturn(true).`when`(userManager).isManagedProfile(user.identifier)
+
+        val wifiAgent = Agent(nc(TRANSPORT_WIFI, NET_CAPABILITY_INTERNET))
+        wifiAgent.connect()
+        netdCalls.verify(netd).setNetworkAllowlist(argThat { allowList ->
+            allowList.any { it.netId == wifiAgent.network.netId }
+        })
+        wifiAgent.unregisterAfterReplacement(DEFAULT_TIMEOUT_MS.toInt())
+        wifiAgent.eventuallyExpect<OnNetworkDestroyed>()
+
+        val pref = ProfileNetworkPreference.Builder()
+            .setPreference(PROFILE_NETWORK_PREFERENCE_ENTERPRISE)
+            .setPreferenceEnterpriseId(NET_ENTERPRISE_ID_1)
+            .setIncludedUids(intArrayOf(Process.myUid()))
+            .build()
+        val cv = ConditionVariable()
+        cm.setProfileNetworkPreferences(user, listOf(pref), Runnable::run) {
+            cv.open()
+        }
+        cv.block()
+
+        netdCalls.verify(netd, never()).setNetworkAllowlist(argThat { allowList ->
+            allowList.any { it.netId == wifiAgent.network.netId }
+        })
     }
 }

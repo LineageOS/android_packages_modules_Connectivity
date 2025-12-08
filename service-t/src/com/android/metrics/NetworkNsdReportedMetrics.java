@@ -38,16 +38,18 @@ public class NetworkNsdReportedMetrics {
     private final int mClientId;
     private final Dependencies mDependencies;
     private final Random mRandom;
+    private final int mUid;
 
-    public NetworkNsdReportedMetrics(int clientId) {
-        this(clientId, new Dependencies());
+    public NetworkNsdReportedMetrics(int clientId, int uid) {
+        this(clientId, new Dependencies(), uid);
     }
 
     @VisibleForTesting
-    NetworkNsdReportedMetrics(int clientId, Dependencies dependencies) {
+    NetworkNsdReportedMetrics(int clientId, Dependencies dependencies, int uid) {
         mClientId = clientId;
         mDependencies = dependencies;
         mRandom = dependencies.makeRandomGenerator();
+        mUid = uid;
     }
 
     /**
@@ -75,7 +77,8 @@ public class NetworkNsdReportedMetrics {
                     event.getSentPacketCount(),
                     event.getConflictDuringProbingCount(),
                     event.getConflictAfterProbingCount(),
-                    event.getRandomNumber());
+                    event.getRandomNumber(),
+                    event.getUid());
         }
 
         /**
@@ -92,6 +95,7 @@ public class NetworkNsdReportedMetrics {
         builder.setClientId(mClientId);
         builder.setRandomNumber(mRandom.nextInt(RANDOM_NUMBER_UPPER_BOUND));
         builder.setTransactionId(transactionId);
+        builder.setUid(mUid);
         return builder;
     }
 

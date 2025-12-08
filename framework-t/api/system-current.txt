@@ -580,5 +580,20 @@ package android.net.thread {
     method @NonNull public java.util.List<android.net.thread.ThreadNetworkController> getAllThreadNetworkControllers();
   }
 
+  @FlaggedApi("com.android.net.thread.flags.thread_mobile_enabled") public final class ThreadNetworkSpecifier extends android.net.NetworkSpecifier implements android.os.Parcelable {
+    method public int describeContents();
+    method @Nullable public android.net.thread.ActiveOperationalDataset getActiveOperationalDataset();
+    method public boolean shouldCreatePartitionIfNotFound();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.thread.ThreadNetworkSpecifier> CREATOR;
+  }
+
+  public static final class ThreadNetworkSpecifier.Builder {
+    ctor public ThreadNetworkSpecifier.Builder();
+    method @NonNull public android.net.thread.ThreadNetworkSpecifier build();
+    method @NonNull public android.net.thread.ThreadNetworkSpecifier.Builder setActiveOperationalDataset(@Nullable android.net.thread.ActiveOperationalDataset);
+    method @NonNull public android.net.thread.ThreadNetworkSpecifier.Builder setShouldCreatePartitionIfNotFound(boolean);
+  }
+
 }
 

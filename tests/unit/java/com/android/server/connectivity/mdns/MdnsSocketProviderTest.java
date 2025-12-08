@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_THREAD;
@@ -551,16 +552,13 @@ public class MdnsSocketProviderTest {
         testCallback.expectedNoCallback();
 
         // Notify a LinkPropertiesChanged with TEST_NETWORK.
-        final LinkProperties testLp = new LinkProperties();
-        testLp.setInterfaceName(TEST_IFACE_NAME);
-        testLp.setLinkAddresses(List.of(LINKADDRV4));
-        runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
+        postNetworkAvailable(TRANSPORT_WIFI);
         verify(mTestNetworkIfaceWrapper, times(1)).getNetworkInterface();
         testCallback.expectedSocketCreatedForNetwork(TEST_NETWORK, List.of(LINKADDRV4));
 
         // Try to stop monitoring and unrequest the socket.
         runOnHandler(mSocketProvider::requestStopWhenInactive);
-        runOnHandler(()-> mSocketProvider.unrequestSocket(testCallback));
+        runOnHandler(() -> mSocketProvider.unrequestSocket(testCallback));
         // No callback sent when unregistered
         testCallback.expectedNoCallback();
         verify(mCm, times(1)).unregisterNetworkCallback(any(NetworkCallback.class));
@@ -575,12 +573,14 @@ public class MdnsSocketProviderTest {
         runOnHandler(() -> mSocketProvider.requestSocket(null, testCallback));
         testCallback.expectedNoCallback();
 
-        // Notify a LinkPropertiesChanged with another network.
+        // Notify onCapabilitiesChanged and onLinkPropertiesChanged for another network.
         final LinkProperties otherLp = new LinkProperties();
         final LinkAddress otherAddress = new LinkAddress("192.0.2.1/24");
         final Network otherNetwork = new Network(456);
         otherLp.setInterfaceName("test2");
         otherLp.setLinkAddresses(List.of(otherAddress));
+        final NetworkCapabilities otherNc = makeCapabilities(new int[]{TRANSPORT_WIFI});
+        runOnHandler(() -> mNetworkCallback.onCapabilitiesChanged(otherNetwork, otherNc));
         runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(otherNetwork, otherLp));
         verify(mTestNetworkIfaceWrapper, times(2)).getNetworkInterface();
         testCallback.expectedSocketCreatedForNetwork(otherNetwork, List.of(otherAddress));
@@ -605,6 +605,26 @@ public class MdnsSocketProviderTest {
         runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
 
         postNetworkAvailable(TRANSPORT_THREAD);
+        testCallback.expectedNoCallback();
+    }
+
+    @Test
+    public void testNoSocketCreatedForLocalNetwork() {
+        startMonitoringSockets();
+
+        final TestSocketCallback testCallback = new TestSocketCallback();
+        runOnHandler(() -> mSocketProvider.requestSocket(TEST_NETWORK, testCallback));
+
+        final LinkProperties testLp = new LinkProperties();
+        testLp.setInterfaceName(TEST_IFACE_NAME);
+        testLp.setLinkAddresses(List.of(LINKADDRV4));
+
+        final NetworkCapabilities testNc = makeCapabilities(TRANSPORT_WIFI);
+        testNc.addCapability(NET_CAPABILITY_LOCAL_NETWORK);
+
+        runOnHandler(() -> mNetworkCallback.onCapabilitiesChanged(TEST_NETWORK, testNc));
+        runOnHandler(() -> mNetworkCallback.onLinkPropertiesChanged(TEST_NETWORK, testLp));
+
         testCallback.expectedNoCallback();
     }
 

@@ -118,27 +118,21 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
     private long mTotalBytes;
     private boolean mDirty;
     private final boolean mUseFastDataInput;
-
-    /**
-     * Construct a {@link NetworkStatsCollection} object.
-     *
-     * @param bucketDurationMillis duration of the buckets in this object, in milliseconds.
-     * @hide
-     */
-    public NetworkStatsCollection(long bucketDurationMillis) {
-        this(bucketDurationMillis, false /* useFastDataInput */);
-    }
+    private final boolean mStoreTransportTypes;
 
     /**
      * Construct a {@link NetworkStatsCollection} object.
      *
      * @param bucketDurationMillis duration of the buckets in this object, in milliseconds.
      * @param useFastDataInput true if using {@link FastDataInput} is preferred. Otherwise, false.
+     * @param storeTransportTypes true if storing transport types is supported. Otherwise, false.
      * @hide
      */
-    public NetworkStatsCollection(long bucketDurationMillis, boolean useFastDataInput) {
+    public NetworkStatsCollection(long bucketDurationMillis, boolean useFastDataInput,
+            boolean storeTransportTypes) {
         mBucketDurationMillis = bucketDurationMillis;
         mUseFastDataInput = useFastDataInput;
+        mStoreTransportTypes = storeTransportTypes;
         reset();
     }
 
@@ -563,7 +557,7 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
         out.writeInt(keysByIdent.size());
         for (NetworkIdentitySet ident : keysByIdent.keySet()) {
             final ArrayList<Key> keys = keysByIdent.get(ident);
-            ident.writeToStream(out);
+            ident.writeToStream(out, mStoreTransportTypes);
 
             out.writeInt(keys.size());
             for (Key key : keys) {
@@ -935,8 +929,14 @@ public class NetworkStatsCollection implements FileRotator.Reader, FileRotator.W
          */
         @NonNull
         public NetworkStatsCollection build() {
+            // If this object is OEM-created, especially for data migration,
+            // `storeTransportTypes` is set to `false` because older data lacks transport types.
+            // The file will be rewritten with transport types later if the feature is enabled.
+            // For OEM objects not used by the importer, this flag remains `false` as
+            // transport types aren't applicable yet, indicating the new feature isn't available.
             final NetworkStatsCollection collection =
-                    new NetworkStatsCollection(mBucketDurationMillis);
+                    new NetworkStatsCollection(mBucketDurationMillis, false /* useFastDataInput */,
+                            false /* storeTransportTypes */);
             for (int i = 0; i < mEntries.size(); i++) {
                 collection.recordHistory(mEntries.keyAt(i), mEntries.valueAt(i));
             }

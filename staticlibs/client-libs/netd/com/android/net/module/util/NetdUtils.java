@@ -176,27 +176,27 @@ public class NetdUtils {
 
     /** Add |routes| to the given network. */
     public static void addRoutesToNetwork(final INetd netd, int netId, final String iface,
-            final List<RouteInfo> routes) {
+            final List<RouteInfo> routes, final boolean useRouteParcel) {
 
         for (RouteInfo route : routes) {
             if (!route.isDefaultRoute()) {
-                modifyRoute(netd, ModifyOperation.ADD, netId, route);
+                modifyRoute(netd, ModifyOperation.ADD, netId, route, useRouteParcel);
             }
         }
 
         // IPv6 link local should be activated always.
         modifyRoute(netd, ModifyOperation.ADD, netId,
-                new RouteInfo(new IpPrefix("fe80::/64"), null, iface, RTN_UNICAST));
+                new RouteInfo(new IpPrefix("fe80::/64"), null, iface, RTN_UNICAST), useRouteParcel);
     }
 
     /** Remove routes from the given network. */
     public static int removeRoutesFromNetwork(final INetd netd, int netId,
-            final List<RouteInfo> routes) {
+            final List<RouteInfo> routes, final boolean useRouteParcel) {
         int failures = 0;
 
         for (RouteInfo route : routes) {
             try {
-                modifyRoute(netd, ModifyOperation.REMOVE, netId, route);
+                modifyRoute(netd, ModifyOperation.REMOVE, netId, route, useRouteParcel);
             } catch (IllegalStateException e) {
                 failures++;
             }
@@ -231,18 +231,26 @@ public class NetdUtils {
 
     /** Add or remove |route|. */
     public static void modifyRoute(final INetd netd, final ModifyOperation op, final int netId,
-            final RouteInfo route) {
-        final String ifName = route.getInterface();
-        final String dst = route.getDestination().toString();
-        final String nextHop = findNextHop(route);
-
+            final RouteInfo route, final boolean useRouteParcel) {
         try {
             switch(op) {
                 case ADD:
-                    netd.networkAddRoute(netId, ifName, dst, nextHop);
+                    if (useRouteParcel) {
+                        RouteInfoParcel routeParcel = NetdUtils.toRouteInfoParcel(route);
+                        netd.networkAddRouteParcel(netId, routeParcel);
+                    } else {
+                        netd.networkAddRoute(netId, route.getInterface(),
+                                route.getDestination().toString(), findNextHop(route));
+                    }
                     break;
                 case REMOVE:
-                    netd.networkRemoveRoute(netId, ifName, dst, nextHop);
+                    if (useRouteParcel) {
+                        RouteInfoParcel routeParcel = NetdUtils.toRouteInfoParcel(route);
+                        netd.networkRemoveRouteParcel(netId, routeParcel);
+                    } else {
+                        netd.networkRemoveRoute(netId, route.getInterface(),
+                                route.getDestination().toString(), findNextHop(route));
+                    }
                     break;
                 default:
                     throw new IllegalStateException("Unsupported modify operation:" + op);
@@ -256,31 +264,10 @@ public class NetdUtils {
      * Convert a RouteInfo into a RouteInfoParcel.
      */
     public static RouteInfoParcel toRouteInfoParcel(RouteInfo route) {
-        final String nextHop;
-
-        switch (route.getType()) {
-            case RouteInfo.RTN_UNICAST:
-                if (route.hasGateway()) {
-                    nextHop = route.getGateway().getHostAddress();
-                } else {
-                    nextHop = INetd.NEXTHOP_NONE;
-                }
-                break;
-            case RouteInfo.RTN_UNREACHABLE:
-                nextHop = INetd.NEXTHOP_UNREACHABLE;
-                break;
-            case RouteInfo.RTN_THROW:
-                nextHop = INetd.NEXTHOP_THROW;
-                break;
-            default:
-                nextHop = INetd.NEXTHOP_NONE;
-                break;
-        }
-
         final RouteInfoParcel rip = new RouteInfoParcel();
         rip.ifName = route.getInterface();
         rip.destination = route.getDestination().toString();
-        rip.nextHop = nextHop;
+        rip.nextHop = findNextHop(route);
         rip.mtu = route.getMtu();
 
         return rip;

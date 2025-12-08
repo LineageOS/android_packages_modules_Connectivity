@@ -20,6 +20,9 @@ import static com.android.net.module.util.NetworkStackConstants.DHCP_MAX_LENGTH;
 
 import androidx.annotation.NonNull;
 
+import com.android.net.module.util.structs.IaAddressOption;
+
+import java.net.Inet6Address;
 import java.nio.ByteBuffer;
 
 /**
@@ -29,13 +32,27 @@ import java.nio.ByteBuffer;
  * https://www.rfc-editor.org/rfc/rfc9686.html#section-4.2
  */
 public class Dhcp6AddrRegInformPacket extends Dhcp6Packet {
+    @NonNull
+    public final Inet6Address mIaAddress;
+    public final long mPreferred;
+    public final long mValid;
+
     /**
      * Generates a ADDR-REG-INFORM packet with the specified parameters.
      */
-    Dhcp6AddrRegInformPacket(int transId, int elapsedTime, @NonNull final byte[] clientDuid,
-            @NonNull final byte[] iaAddress) {
+    public Dhcp6AddrRegInformPacket(int transId, int elapsedTime, @NonNull final byte[] clientDuid,
+            @NonNull final Inet6Address iaAddress, long preferred, long valid) {
         super(transId, elapsedTime, clientDuid, null /* serverDuid */, null /* iapd */);
         mIaAddress = iaAddress;
+        mPreferred = preferred;
+        mValid = valid;
+    }
+
+    /**
+     * Return the DHCPv6 ADDR_REG_INFORM message type (36).
+     */
+    public byte getMessageType() {
+        return DHCP6_MESSAGE_TYPE_ADDR_REG_INFORM;
     }
 
     /**
@@ -48,7 +65,9 @@ public class Dhcp6AddrRegInformPacket extends Dhcp6Packet {
 
         addTlv(packet, DHCP6_CLIENT_IDENTIFIER, mClientDuid);
         addTlv(packet, DHCP6_ELAPSED_TIME, (short) (mElapsedTime & 0xFFFF));
-        addTlv(packet, DHCP6_IA_ADDR, mIaAddress);
+        final ByteBuffer iaAddressOption = IaAddressOption.build(
+                (short) IaAddressOption.LENGTH, mIaAddress, mPreferred, mValid);
+        addTlv(packet, iaAddressOption);
 
         packet.flip();
         return packet;

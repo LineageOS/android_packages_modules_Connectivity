@@ -19,6 +19,8 @@ package android.net;
 import static com.android.internal.annotations.VisibleForTesting.Visibility.PRIVATE;
 import static com.android.net.module.util.BitUtils.appendStringRepresentationOfBitMaskToStringBuilder;
 import static com.android.net.module.util.BitUtils.describeDifferences;
+import static com.android.net.module.util.FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED;
+import static com.android.net.module.util.FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_SPECIFIER_REDACTION_REFLECTION_ERROR;
 
 import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
@@ -37,6 +39,7 @@ import android.os.Process;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
+import android.util.LruCache;
 import android.util.Range;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -44,15 +47,19 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.flags.Flags;
 import com.android.net.module.util.BitUtils;
 import com.android.net.module.util.CollectionUtils;
+import com.android.net.module.util.FrameworkConnectivityStatsLog;
 import com.android.net.module.util.NetworkCapabilitiesUtils;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 
@@ -170,6 +177,15 @@ public final class NetworkCapabilities implements Parcelable {
     public static final long REDACT_FOR_NETWORK_SETTINGS = 1 << 2;
 
     /**
+     * Redact any fields that need {@link android.Manifest.permission#THREAD_NETWORK_PRIVILEGED}
+     * permission since the receiving app does not hold this permission.
+     *
+     * @see android.Manifest.permission#THREAD_NETWORK_PRIVILEGED
+     * @hide for only {@code ThreadNetworkSpecifier} which is in the same module
+     */
+    public static final long REDACT_FOR_THREAD_NETWORK_PRIVILEGED = 1 << 3;
+
+    /**
      * Redact all fields in this object that require any relevant permission.
      * @hide
      */
@@ -182,6 +198,7 @@ public final class NetworkCapabilities implements Parcelable {
             REDACT_FOR_ACCESS_FINE_LOCATION,
             REDACT_FOR_LOCAL_MAC_ADDRESS,
             REDACT_FOR_NETWORK_SETTINGS,
+            REDACT_FOR_THREAD_NETWORK_PRIVILEGED,
             REDACT_ALL
     })
     @Retention(RetentionPolicy.SOURCE)
@@ -334,6 +351,11 @@ public final class NetworkCapabilities implements Parcelable {
         }
         if (mTransportInfo != null) {
             mTransportInfo = nc.mTransportInfo.makeCopy(redactions);
+        }
+        if (mNetworkSpecifier != null) {
+            mNetworkSpecifier =
+                    (NetworkSpecifier) RedactionHelper.getSpecifierRedactResult(
+                            mNetworkSpecifier, redactions);
         }
     }
 
@@ -1291,6 +1313,7 @@ public final class NetworkCapabilities implements Parcelable {
     private long mTransportTypes;
 
     /** @hide */
+    // LINT.IfChange
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(prefix = { "TRANSPORT_" }, value = {
             TRANSPORT_CELLULAR,
@@ -1306,6 +1329,7 @@ public final class NetworkCapabilities implements Parcelable {
             TRANSPORT_SATELLITE,
     })
     public @interface Transport { }
+    // LINT.ThenChange(../../../../framework-t/src/android/net/NetworkTemplate.java)
 
     /**
      * Indicates this network uses a Cellular transport.
@@ -3003,13 +3027,14 @@ public final class NetworkCapabilities implements Parcelable {
      * @hide
      */
     public @RedactionType long getApplicableRedactions() {
-        // Currently, there are no fields redacted in NetworkCapabilities itself, so we just
-        // passthrough the redactions required by the embedded TransportInfo. If this changes
-        // in the future, modify this method.
-        if (mTransportInfo == null) {
-            return NetworkCapabilities.REDACT_NONE;
+        long redactions = REDACT_NONE;
+        if (mTransportInfo != null) {
+            redactions |= mTransportInfo.getApplicableRedactions();
         }
-        return mTransportInfo.getApplicableRedactions();
+        if (mNetworkSpecifier != null) {
+            redactions |= RedactionHelper.getSpecifierApplicableRedactions(mNetworkSpecifier);
+        }
+        return redactions;
     }
 
     private NetworkCapabilities removeDefaultCapabilites() {
@@ -3505,6 +3530,150 @@ public final class NetworkCapabilities implements Parcelable {
                         + " only with ENTERPRISE capability.");
             }
             return new NetworkCapabilities(mCaps);
+        }
+    }
+
+    /**
+     * Helper class for providing access to {@link NetworkSpecifier} redaction methods via
+     * reflection.
+     *
+     * Reflection is necessary because NetworkSpecifier is platform code. So it's possible for a
+     * mainline update to define a getApplicableRedactions() or redact(long) method in a subclass
+     * of NetworkSpecifier (e.g., EthernetNetworkSpecifier), and then to run that mainline module
+     * on an Android release where the NetworkSpecifier base class does not have those methods.
+     * On such a device, ConnectivityService must still call those methods if they exist, otherwise
+     * it would fail to redact information that needs to be redacted. Another way to do this would
+     * be for ConnectivityService to just call the method and catch NoSuchMethodError, but this
+     * code runs fairly often and constructing exceptions is expensive.
+     *
+     * @hide
+     */
+    public static final class RedactionHelper {
+        // LruCache is thread-safe so that no locks are used to project it this class
+        private static final LruCache<Class<? extends NetworkSpecifier>, Optional<Method>>
+            sGetApplicableRedactionsMethodCache = new LruCache<>(100);
+        private static final LruCache<Class<? extends NetworkSpecifier>, Optional<Method>>
+            sRedactLongMethodCache = new LruCache<>(100);
+
+        private RedactionHelper() {}
+
+        /**
+         * Returns the {@link Method} of the {@link NetworkSpecifier} class for the given method
+         * name, or {@code null} if the method doesn't exist.
+         * <p>
+         * This is typically used for {@link NetworkSpecifier#getApplicableRedactions()} and {@link
+         * NetworkSpecifier#redact(long)} to work with new NetworkSpecifier subclasses added in new
+         * mainline version but deployed to older platforms which don't have those two
+         * NetworkSpecifier methods.
+         * <p>
+         * See {@link #createWithSensitiveInfoSanitizedIfNecessaryWhenParceled} and {@link
+         * #ensureSufficientPermissionsForRequest} for how this method should be used.
+         */
+        @Nullable
+        private static Method getNetworkSpecifierMethod(
+                Class<? extends NetworkSpecifier> clazz, String name, Class<?> returnType,
+                Class<?>... parameterTypes) {
+            // Use {@code getMethods()} rather than {@code getDeclaredMethods()} so that it can
+            // return the inherited NetworkSpecifier methods for those existing subclasses which
+            // don't override {@link NetworkSpecifier#getApplicableRedactions()} and {@link
+            // NetworkSpecifier#redact(long)}.
+            // Note also {@code getMethods()} returns only public methods, which is necessary for
+            // code to call the method later.
+            for (Method method : clazz.getMethods()) {
+                if (name.equals(method.getName())
+                        && returnType.equals(method.getReturnType())
+                        && Arrays.equals(parameterTypes, method.getParameterTypes())) {
+                    return method;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Returns the {@link NetworkSpecifier#getApplicableRedactions()} method or {@code null} if
+         * it doesn't exist for the given {@link NetworkSpecifier} subclass.
+         */
+        @Nullable
+        private static Method getApplicableRedactionsMethod(
+                Class<? extends NetworkSpecifier> clazz) {
+            // If this method is called concurrently from two threads, both may see cache missed
+            // and the reflection branch in method will be executed for twice. But this is okay
+            // because getApplicableRedactions() itself has no side-effect (and this is why we can
+            // create caches for it).
+            Optional<Method> cache = sGetApplicableRedactionsMethodCache.get(clazz);
+            if (cache != null) {
+                return cache.orElse(null);
+            }
+            Method method = getNetworkSpecifierMethod(
+                    clazz, "getApplicableRedactions", long.class);
+            sGetApplicableRedactionsMethodCache.put(clazz, Optional.ofNullable(method));
+            return method;
+        }
+
+        /**
+         * Returns the value of {@link NetworkSpecifier#getApplicableRedactions()} or
+         * {@link REDACT_NONE} if the platform doesn't support
+         * {@link NetworkSpecifier#getApplicableRedactions()}.
+         */
+        public static long getSpecifierApplicableRedactions(NetworkSpecifier specifier) {
+            final Method getApplicableRedactions =
+                    getApplicableRedactionsMethod(specifier.getClass());
+            if (getApplicableRedactions == null) {
+                return REDACT_NONE;
+            }
+
+            try {
+                return (long) getApplicableRedactions.invoke(specifier);
+            } catch (IllegalAccessException | InvocationTargetException
+                    | IllegalArgumentException e) {
+                FrameworkConnectivityStatsLog.write(CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_SPECIFIER_REDACTION_REFLECTION_ERROR);
+                Log.wtf(TAG, "Un expected reflection error on specifier " + specifier, e);
+                return REDACT_ALL;
+            }
+        }
+
+        /**
+         * Returns the {@link NetworkSpecifier#redact(long)} method or {@code null} if it doesn't
+         * exist for the given {@link NetworkSpecifier} subclass.
+         */
+        @Nullable
+        private static Method getRedactLongMethod(Class<? extends NetworkSpecifier> clazz) {
+            // If this method is called concurrently from two threads, both may see cache missed
+            // and the reflection branch in method will be executed for twice. But this is okay
+            // because redact(long) itself has no side-effect (and this is why we can create caches
+            // for it).
+            Optional<Method> cache = sRedactLongMethodCache.get(clazz);
+            if (cache != null) {
+                return cache.orElse(null);
+            }
+            Method method = getNetworkSpecifierMethod(
+                    clazz, "redact", NetworkSpecifier.class, long.class);
+            sRedactLongMethodCache.put(clazz, Optional.ofNullable(method));
+            return method;
+        }
+
+        /**
+         * Returns the result of {@link NetworkSpecifier#redact(long)} or {@code specifier} itself
+         * if the platform doesn't support {@link NetworkSpecifier#redact(long)}.
+         */
+        @Nullable
+        public static NetworkSpecifier getSpecifierRedactResult(
+                NetworkSpecifier specifier, long redactions) {
+            final Method redactLong = getRedactLongMethod(specifier.getClass());
+            if (redactLong == null) {
+                return specifier;
+            }
+
+            try {
+                return (NetworkSpecifier) redactLong.invoke(specifier, redactions);
+            } catch (IllegalAccessException | InvocationTargetException
+                    | IllegalArgumentException e) {
+                FrameworkConnectivityStatsLog.write(CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_SPECIFIER_REDACTION_REFLECTION_ERROR);
+                Log.wtf(TAG, "Un expected reflection error on specifier " + specifier, e);
+                return null;
+            }
         }
     }
 }

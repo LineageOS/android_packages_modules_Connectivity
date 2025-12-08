@@ -23,6 +23,7 @@ import static com.android.server.connectivity.mdns.MdnsServiceCache.findMatchedR
 import static com.android.server.connectivity.mdns.MdnsQueryScheduler.ScheduledQueryTaskArgs;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.Clock;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.buildMdnsServiceInfoFromResponse;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.createOffloadServiceInfoFromFilterReplies;
 import static com.android.server.connectivity.mdns.util.MdnsUtils.responseMatchesInstanceNameAndSubtypes;
 
 import android.annotation.NonNull;
@@ -32,6 +33,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+import android.util.ArraySet;
 import android.util.Pair;
 
 import androidx.annotation.VisibleForTesting;
@@ -51,6 +53,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -68,6 +71,8 @@ public class MdnsServiceTypeClient {
     static final int EVENT_REMOVE_EXPIRED_SERVICES = 3;
     static final int INVALID_TRANSACTION_ID = -1;
     static final long REMOVE_SERVICE_AFTER_QUERY_SENT_TIME = 2000L;
+    static final String SERVICE_NAME_DISCOVERY = "";
+    static final String NO_HOSTNAME = "";
 
     private final String serviceType;
     private final String[] serviceTypeLabels;
@@ -93,8 +98,15 @@ public class MdnsServiceTypeClient {
                 }
             };
     @NonNull private final MdnsFeatureFlags featureFlags;
+    @NonNull private final OffloadCallback offloadCallback;
     private final ArrayMap<MdnsServiceBrowserListener, ListenerInfo> listeners =
             new ArrayMap<>();
+    /**
+     * Information for filtering mDNS replies, for hardware offload.
+     *
+     * <p>This map is keyed by service name (or SERVICE_NAME_DISCOVERY for discovery).
+     */
+    private final ArrayMap<String, FilterRepliesInfo> offloadInfo = new ArrayMap<>();
     private final boolean removeServiceAfterTtlExpires =
             MdnsConfigs.removeServiceAfterTtlExpires();
     private final Clock clock;
@@ -110,16 +122,98 @@ public class MdnsServiceTypeClient {
     private long currentSessionId = 0;
     private long lastSentTime;
 
+    /**
+     * Represents information used to filter mDNS replies.
+     */
+    public static class FilterRepliesInfo {
+        /**
+         * The name of the service to filter for.
+         */
+        public final String serviceName;
+        /**
+         * The type of the service to filter for (e.g., "_http._tcp.").
+         */
+        public final String serviceType;
+        /**
+         * A list of service subtypes to filter for.
+         * Can be an empty list if no specific subtypes are desired.
+         */
+        public final List<String> subtypes;
+        /**
+         * The hostname of the service to filter for.
+         * Can be empty if filtering is not based on hostname.
+         */
+        public final String hostname;
+
+        public FilterRepliesInfo(@NonNull String serviceName, @NonNull String serviceType,
+                @NonNull List<String> subtypes, @NonNull String hostname) {
+            this.serviceName = serviceName;
+            this.serviceType = serviceType;
+            this.subtypes = Collections.unmodifiableList(subtypes);
+            this.hostname = hostname;
+        }
+
+        /**
+         * Returns a string representation of the FilterRepliesInfo object.
+         *
+         * @return A string containing the serviceName, serviceType, subtypes, and hostname.
+         */
+        @Override
+        public String toString() {
+            return "FilterRepliesInfo{serviceName='" + serviceName
+                    + ", serviceType='" + serviceType
+                    + ", subtypes=" + subtypes
+                    + ", hostname='" + hostname + '}';
+        }
+
+        /**
+         * Indicates whether some other object is "equal to" this one.
+         * Two FilterRepliesInfo objects are considered equal if all their fields
+         * (serviceName, serviceType, subtypes, and hostname) are equal.
+         *
+         * @param other The reference object with which to compare.
+         * @return true if this object is the same as the obj argument; false otherwise.
+         */
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) return true;
+            if (!(other instanceof FilterRepliesInfo)) {
+                return false;
+            }
+            final FilterRepliesInfo that = (FilterRepliesInfo) other;
+            return serviceName.equals(that.serviceName)
+                    && serviceType.equals(that.serviceType)
+                    && Objects.equals(subtypes, that.subtypes)
+                    && hostname.equals(that.hostname);
+        }
+
+        /**
+         * Returns a hash code value for the object. This method is supported for the benefit of
+         * hash tables such as those provided by {@link java.util.HashMap}.
+         *
+         * @return A hash code value for this object.
+         */
+        @Override
+        public int hashCode() {
+            return Objects.hash(serviceName, serviceType, subtypes, hostname);
+        }
+    }
+
     private static class ListenerInfo {
         @NonNull
         final MdnsSearchOptions searchOptions;
         final Set<String> discoveredServiceNames;
+        FilterRepliesInfo filterRepliesInfo;
 
         ListenerInfo(@NonNull MdnsSearchOptions searchOptions,
-                @Nullable ListenerInfo previousInfo) {
+                @Nullable ListenerInfo previousInfo, @NonNull String serviceType) {
             this.searchOptions = searchOptions;
             this.discoveredServiceNames = previousInfo == null
                     ? MdnsUtils.newSet() : previousInfo.discoveredServiceNames;
+            final String resolveName = searchOptions.getResolveInstanceName();
+            this.filterRepliesInfo = new FilterRepliesInfo(
+                    resolveName != null ? resolveName : SERVICE_NAME_DISCOVERY, serviceType,
+                    searchOptions.getSubtypes(), NO_HOSTNAME);
         }
 
         /**
@@ -138,6 +232,26 @@ public class MdnsServiceTypeClient {
          */
         boolean unsetServiceDiscovered(@NonNull String serviceName) {
             return discoveredServiceNames.remove(DnsUtils.toDnsUpperCase(serviceName));
+        }
+
+        /**
+         * Updates the hostname used for filtering replies.
+         * <p>
+         * The hostname is only set if the search options specify a particular service
+         * instance name to resolve. Otherwise, it remains empty.
+         *
+         * @param hostname The new hostname to use for filtering.
+         */
+        void updateFilterRepliesHostname(@NonNull String hostname) {
+            // The hostname is only set for resolution or service information callback requests.
+            // Since discovery can find numerous services, replies for other services could be
+            // blocked if a hostname is assigned to specific one. Consequently, for discovery
+            // requests, the hostname should remain empty.
+            filterRepliesInfo = new FilterRepliesInfo(
+                    filterRepliesInfo.serviceName,
+                    filterRepliesInfo.serviceType,
+                    filterRepliesInfo.subtypes,
+                    searchOptions.getResolveInstanceName() != null ? hostname : NO_HOSTNAME);
         }
     }
 
@@ -332,9 +446,10 @@ public class MdnsServiceTypeClient {
             @NonNull SharedLog sharedLog,
             @NonNull Looper looper,
             @NonNull MdnsServiceCache serviceCache,
-            @NonNull MdnsFeatureFlags featureFlags) {
+            @NonNull MdnsFeatureFlags featureFlags,
+            @NonNull OffloadCallback offloadCallback) {
         this(serviceType, socketClient, executor, new Clock(), socketKey, sharedLog, looper,
-                new Dependencies(), serviceCache, featureFlags);
+                new Dependencies(), serviceCache, featureFlags, offloadCallback);
     }
 
     @VisibleForTesting
@@ -348,7 +463,8 @@ public class MdnsServiceTypeClient {
             @NonNull Looper looper,
             @NonNull Dependencies dependencies,
             @NonNull MdnsServiceCache serviceCache,
-            @NonNull MdnsFeatureFlags featureFlags) {
+            @NonNull MdnsFeatureFlags featureFlags,
+            @NonNull OffloadCallback offloadCallback) {
         this.serviceType = serviceType;
         this.socketClient = socketClient;
         this.executor = executor;
@@ -365,6 +481,7 @@ public class MdnsServiceTypeClient {
         this.featureFlags = featureFlags;
         this.scheduler = featureFlags.isAccurateDelayCallbackEnabled()
                 ? dependencies.createScheduler(handler) : null;
+        this.offloadCallback = offloadCallback;
     }
 
     /**
@@ -391,6 +508,57 @@ public class MdnsServiceTypeClient {
                 timeToNextTaskMs);
     }
 
+    private FilterRepliesInfo getDiscoveryFilterRepliesInfo() {
+        final Set<String> combinedSubtypes = new ArraySet<>();
+        for (int i = 0; i < listeners.size(); i++) {
+            final FilterRepliesInfo info = listeners.valueAt(i).filterRepliesInfo;
+            if (!info.serviceName.equals(SERVICE_NAME_DISCOVERY)) continue;
+
+            // If there is a discovery listener without subtype, then the FilterRepliesInfo should
+            // let through any response for the service type.
+            if (info.subtypes.isEmpty()) {
+                return info;
+            }
+            combinedSubtypes.addAll(info.subtypes);
+        }
+
+        // Update the info with combined subtypes
+        if (!combinedSubtypes.isEmpty()) {
+            return new FilterRepliesInfo(SERVICE_NAME_DISCOVERY, serviceType,
+                    new ArrayList<>(combinedSubtypes), NO_HOSTNAME);
+        } else {
+            return null;
+        }
+    }
+
+    private void updateOffloadInfo(@NonNull String serviceName,
+            @Nullable FilterRepliesInfo newInfo) {
+        final FilterRepliesInfo combinedInfo;
+        if (!serviceName.equals(SERVICE_NAME_DISCOVERY)) { // Resolution
+            combinedInfo = newInfo;
+        } else { // Discovery
+            combinedInfo = getDiscoveryFilterRepliesInfo();
+        }
+
+        final FilterRepliesInfo oldInfo = offloadInfo.get(serviceName);
+        if (combinedInfo == null) {
+            offloadInfo.remove(serviceName);
+            if (featureFlags.mIsSelectiveMdnsResponseOffloadEnabled && oldInfo != null) {
+                offloadCallback.onOffloadStop(
+                        socketKey.getInterfaceName(),
+                        createOffloadServiceInfoFromFilterReplies(oldInfo));
+            }
+        } else {
+            offloadInfo.put(serviceName, combinedInfo);
+            if (featureFlags.mIsSelectiveMdnsResponseOffloadEnabled
+                    && (oldInfo == null || !oldInfo.equals(combinedInfo))) {
+                offloadCallback.onOffloadStartOrUpdate(
+                        socketKey.getInterfaceName(),
+                        createOffloadServiceInfoFromFilterReplies(combinedInfo));
+            }
+        }
+    }
+
     /**
      * Registers {@code listener} for receiving discovery event of mDNS service instances, and
      * starts
@@ -407,7 +575,8 @@ public class MdnsServiceTypeClient {
         this.searchOptions = searchOptions;
         boolean hadReply = false;
         final ListenerInfo existingInfo = listeners.get(listener);
-        final ListenerInfo listenerInfo = new ListenerInfo(searchOptions, existingInfo);
+        final ListenerInfo listenerInfo =
+                new ListenerInfo(searchOptions, existingInfo, serviceType);
         listeners.put(listener, listenerInfo);
         if (existingInfo == null) {
             for (MdnsResponse existingResponse : serviceCache.getCachedServices(
@@ -422,6 +591,8 @@ public class MdnsServiceTypeClient {
                 listenerInfo.setServiceDiscovered(info.getServiceInstanceName());
                 if (existingResponse.isComplete()) {
                     listener.onServiceFound(info, true /* isServiceFromCache */);
+                    listenerInfo.updateFilterRepliesHostname(MdnsRecord.labelsToString(
+                            existingResponse.getServiceRecord().getServiceHost()));
                     hadReply = true;
                 }
             }
@@ -475,6 +646,9 @@ public class MdnsServiceTypeClient {
         }
 
         serviceCache.registerServiceExpiredCallback(cacheKey, serviceExpiredCallback);
+        updateOffloadInfo(
+                listenerInfo.filterRepliesInfo.serviceName,
+                listenerInfo.filterRepliesInfo);
     }
 
     private Set<String> getAllDiscoverySubtypes() {
@@ -521,9 +695,11 @@ public class MdnsServiceTypeClient {
      */
     public boolean stopSendAndReceive(@NonNull MdnsServiceBrowserListener listener) {
         ensureRunningOnHandlerThread(handler);
-        if (listeners.remove(listener) == null) {
+        final ListenerInfo listenerInfo = listeners.remove(listener);
+        if (listenerInfo == null) {
             return listeners.isEmpty();
         }
+        updateOffloadInfo(listenerInfo.filterRepliesInfo.serviceName, null /* newInfo */);
         if (listeners.isEmpty()) {
             shutDown();
         }
@@ -698,6 +874,11 @@ public class MdnsServiceTypeClient {
                     sharedLog.log("onServiceUpdated: " + serviceInfo);
                     listener.onServiceUpdated(serviceInfo);
                 }
+                listenerInfo.updateFilterRepliesHostname(MdnsRecord.labelsToString(
+                        response.getServiceRecord().getServiceHost()));
+                updateOffloadInfo(
+                        listenerInfo.filterRepliesInfo.serviceName,
+                        listenerInfo.filterRepliesInfo);
             }
         }
     }
@@ -885,6 +1066,18 @@ public class MdnsServiceTypeClient {
     private static long calculateTimeToNextTask(ScheduledQueryTaskArgs args,
             long now) {
         return Math.max(args.timeToRun - now, 0);
+    }
+
+    /**
+     * Retrieves a list of {@link FilterRepliesInfo} objects based on the currently registered
+     * listeners and their associated search options.
+     *
+     * @return A Set of {@link FilterRepliesInfo} objects, each representing a service to be
+     *         offloaded for reply filtering, derived from the current listener configurations.
+     */
+    public Set<FilterRepliesInfo> getFilterRepliesInfo() {
+        ensureRunningOnHandlerThread(handler);
+        return new ArraySet<>(offloadInfo.values());
     }
 
     /**

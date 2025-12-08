@@ -95,11 +95,64 @@ inline int findMapEntry(const borrowed_fd& map_fd, const void* key, void* value)
                                     });
 }
 
+// requires 5.4+
+inline int findAndDeleteMapEntry(const borrowed_fd& map_fd, const void* key, void* value) {
+    return bpf(BPF_MAP_LOOKUP_AND_DELETE_ELEM, {
+                                                       .map_fd = static_cast<__u32>(map_fd.get()),
+                                                       .key = ptr_to_u64(key),
+                                                       .value = ptr_to_u64(value),
+                                               });
+}
+
 inline int deleteMapEntry(const borrowed_fd& map_fd, const void* key) {
     return bpf(BPF_MAP_DELETE_ELEM, {
                                             .map_fd = static_cast<__u32>(map_fd.get()),
                                             .key = ptr_to_u64(key),
                                     });
+}
+
+// Requires 5.10+, set 'in' to NULL to begin
+//
+// in/out are otherwise opaque (maybe equal), must fit max(4, sizeof(key)) bytes
+//   (technically 4 for HASHes where it's a bucket nr, keysize for other map types)
+// keys/values must fit count keys/values (unclear about size roundup to multiple of 8)
+// count is both an input (how many to lookup) & output (how many did get looked up).
+//
+// Returns 0 on success, sets errno on error.
+//
+// Officially if an error besides EFAULT is returned it still sets count,
+// but likely does not apply to ENOSYS and seccomp blocked EPERM, etc.
+// ENOENT should still set count (and likely flags end of iteration).
+// ENOSPC if count is too small to dump a full HASH bucket.
+inline int batchLookupAndMaybeDelete(const borrowed_fd& map_fd,
+                                     const void* in, void* out,
+                                     void* keys, void* values,
+                                     uint32_t* count, bool del) {
+    bpf_attr arg = {
+            .batch = {
+                    .in_batch = ptr_to_u64(in),
+                    .out_batch = ptr_to_u64(out),
+                    .keys = ptr_to_u64(keys),
+                    .values = ptr_to_u64(values),
+                    .count = *count,
+                    .map_fd = static_cast<__u32>(map_fd.get()),
+            }
+    };
+    int rv = bpf(del ? BPF_MAP_LOOKUP_AND_DELETE_BATCH : BPF_MAP_LOOKUP_BATCH, &arg);
+    *count = arg.batch.count;
+    return rv;
+}
+
+// requires 5.10+, see above
+inline int batchLookup(const borrowed_fd& map_fd, const void* in, void* out,
+                       void* keys, void* values, uint32_t* count) {
+    return batchLookupAndMaybeDelete(map_fd, in, out, keys, values, count, false);
+}
+
+// requires 5.10+, see above
+inline int batchLookupAndDelete(const borrowed_fd& map_fd, const void* in, void* out,
+                                void* keys, void* values, uint32_t* count) {
+    return batchLookupAndMaybeDelete(map_fd, in, out, keys, values, count, true);
 }
 
 inline int getNextMapKey(const borrowed_fd& map_fd, const void* key, void* next_key) {

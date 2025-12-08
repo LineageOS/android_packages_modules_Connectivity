@@ -101,6 +101,31 @@ cc_library_shared {
 }
 
 cc_library_shared {
+    name: "libandroid_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni",
+    srcs: [
+        "jni/commonconnectivity/onload.cpp",
+    ],
+    min_sdk_version: "30",
+    shared_libs: [
+        "libbinder_ndk",
+        "liblog",
+        "libnativehelper",
+    ],
+    static_libs: [
+        "libcommonconnectivityjni",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wthread-safety",
+    ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+}
+
+cc_library_shared {
     name: "libservice-connectivity",
     min_sdk_version: "30",
     cflags: [
@@ -112,7 +137,6 @@ cc_library_shared {
     srcs: [
         ":services.connectivity-netstats-jni-sources",
         "jni/com_android_server_connectivity_ClatCoordinator.cpp",
-        "jni/com_android_server_ServiceManagerWrapper.cpp",
         "jni/onload.cpp",
     ],
     header_libs: [
@@ -126,10 +150,10 @@ cc_library_shared {
         "libnet_utils_device_common_bpfjni",
         "libserviceconnectivityjni",
         "netd_aidl_interface-lateststable-ndk",
+        "libcommonconnectivityjni",
     ],
     shared_libs: [
         "libbase",
-        "libbinder_ndk",
         "libcutils",
         "libnetdutils",
         "liblog",
@@ -189,9 +213,10 @@ java_library {
         // in framework-connectivity
         "android.net.platform.flags-aconfig-java-export",
         "androidx.annotation_annotation",
+        "com.android.tethering.mainline.beta.flags-aconfig-java",
         "connectivity-net-module-utils-bpf",
         "connectivity_native_aidl_interface-lateststable-java",
-        "dnsresolver_aidl_interface-V15-java",
+        "dnsresolver_aidl_interface-V17-java",
         "modules-utils-shell-command-handler",
         "net-utils-service-connectivity",
         "netd-client",
@@ -302,6 +327,14 @@ java_library {
     name: "service-connectivity",
     defaults: ["service-connectivity-defaults"],
     installable: true,
+    dex_preopt: {
+        // The profile is updated monthly or before mainline releases if requested, with the
+        // aggregated profiles collected from Droidfooders. go/boot-image-profiles.
+        profile: select(release_flag("RELEASE_ART_COMPILE_CONNECTIVITY_SERVICE_SPEED_PROFILE"), {
+            true: "art-profile",
+            false: "",
+        }),
+    },
 }
 
 java_library_static {

@@ -16,7 +16,7 @@
 
 package com.android.net.module.util.structs;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -34,7 +34,7 @@ import com.android.net.module.util.Struct.Type;
  * |   Options ...
  * +-+-+-+-+-+-+-+-+-+-+-+-
  */
-public class RsHeader extends Struct {
+public class RsHeader extends LegacyStruct {
     @Field(order = 0, type = Type.S32)
     public final int reserved;
 

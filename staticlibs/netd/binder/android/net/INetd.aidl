@@ -28,7 +28,7 @@ import android.net.TetherStatsParcel;
 import android.net.UidRangeParcel;
 import android.net.netd.aidl.NativeUidRangeConfig;
 
-/** {@hide} */
+/** @hide */
 interface INetd {
     /**
      * Returns true if the service is responding.

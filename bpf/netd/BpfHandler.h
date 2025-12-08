@@ -22,6 +22,7 @@
 
 using android::bpf::BpfMap;
 using android::bpf::BpfMapRO;
+using android::bpf::BpfMapRW;
 
 namespace android {
 namespace net {

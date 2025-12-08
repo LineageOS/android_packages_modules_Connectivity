@@ -47,11 +47,8 @@ import android.os.SystemClock
 import android.os.SystemConfigManager
 import android.os.UserHandle
 import android.os.UserManager
-import android.provider.Settings
-import android.test.mock.MockContentResolver
 import com.android.connectivity.resources.R
 import com.android.internal.util.WakeupMessage
-import com.android.internal.util.test.FakeSettingsProvider
 import com.android.modules.utils.build.SdkLevel
 import com.android.server.ConnectivityService.Dependencies
 import com.android.server.connectivity.ConnectivityResources
@@ -101,10 +98,6 @@ internal fun defaultLnc() = FromS(LocalNetworkConfig.Builder().build())
 internal fun defaultLp() = LinkProperties().apply {
     addLinkAddress(LinkAddress(LOCAL_IPV4_ADDRESS, 32))
     addRoute(RouteInfo(IpPrefix("0.0.0.0/0"), null, null))
-}
-
-internal fun makeMockContentResolver(context: Context) = MockContentResolver(context).apply {
-    addProvider(Settings.AUTHORITY, FakeSettingsProvider())
 }
 
 internal fun makeMockUserManager(info: UserInfo, handle: UserHandle) = mock<UserManager>().also {

@@ -536,9 +536,13 @@ public class DeviceConfigUtilsTest {
                 TEST_EXPERIMENT_FLAG));
         doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
+        doReturn(TEST_FLAG_VALUE_STRING).when(() -> DeviceConfig.getProperty(
+                NAMESPACE_CAPTIVEPORTALLOGIN, TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isCaptivePortalLoginFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
     }
 
@@ -548,9 +552,13 @@ public class DeviceConfigUtilsTest {
                 TEST_EXPERIMENT_FLAG));
         doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
+        doReturn(null).when(() -> DeviceConfig.getProperty(NAMESPACE_CAPTIVEPORTALLOGIN,
+                TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isCaptivePortalLoginFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
 
         // If the flag is unset, package info is not queried
@@ -565,9 +573,13 @@ public class DeviceConfigUtilsTest {
                 TEST_EXPERIMENT_FLAG));
         doReturn("1").when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
+        doReturn("1").when(() -> DeviceConfig.getProperty(NAMESPACE_CAPTIVEPORTALLOGIN,
+                TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
         assertTrue(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertTrue(DeviceConfigUtils.isCaptivePortalLoginFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
 
         // If the feature is force enabled, package info is not queried
@@ -582,9 +594,13 @@ public class DeviceConfigUtilsTest {
                 TEST_EXPERIMENT_FLAG));
         doReturn("-1").when(() -> DeviceConfig.getProperty(NAMESPACE_TETHERING,
                 TEST_EXPERIMENT_FLAG));
+        doReturn("-1").when(() -> DeviceConfig.getProperty(NAMESPACE_CAPTIVEPORTALLOGIN,
+                TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isNetworkStackFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
         assertFalse(DeviceConfigUtils.isTetheringFeatureNotChickenedOut(
+                mContext, TEST_EXPERIMENT_FLAG));
+        assertFalse(DeviceConfigUtils.isCaptivePortalLoginFeatureNotChickenedOut(
                 mContext, TEST_EXPERIMENT_FLAG));
 
         // If the feature is force disabled, package info is not queried

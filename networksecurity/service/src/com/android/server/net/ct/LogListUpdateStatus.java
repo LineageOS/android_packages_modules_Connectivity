@@ -23,6 +23,7 @@ import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListU
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.SIGNATURE_VERIFICATION_FAILED;
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.SUCCESS;
 import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.UNABLE_TO_READ_FILE;
+import static com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState.VERSION_ALREADY_EXISTS;
 
 import com.android.server.net.ct.CertificateTransparencyLogger.CTLogListUpdateState;
 
@@ -68,6 +69,10 @@ public abstract class LogListUpdateStatus {
         return state() == SUCCESS;
     }
 
+    boolean isLogListAvailable() {
+        return state() == SUCCESS || state() == VERSION_ALREADY_EXISTS;
+    }
+
     static LogListUpdateStatus getDefaultInstance() {
         return builder().build();
     }
@@ -91,10 +96,10 @@ public abstract class LogListUpdateStatus {
 
     static Builder builder() {
         return new AutoValue_LogListUpdateStatus.Builder()
-            .setState(CTLogListUpdateState.UNKNOWN_STATE)
-            .setSignature("")
-            .setLogListTimestamp(0L)
-            .setHttpErrorStatusCode(0)
-            .setDownloadStatus(Optional.empty());
+                .setState(CTLogListUpdateState.UNKNOWN_STATE)
+                .setSignature("")
+                .setLogListTimestamp(0L)
+                .setHttpErrorStatusCode(0)
+                .setDownloadStatus(Optional.empty());
     }
 }

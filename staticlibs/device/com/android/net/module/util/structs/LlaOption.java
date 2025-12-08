@@ -18,7 +18,7 @@ package com.android.net.module.util.structs;
 
 import android.net.MacAddress;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -34,7 +34,7 @@ import java.nio.ByteOrder;
  * |     Type      |    Length     |    Link-Layer Address ...
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class LlaOption extends Struct {
+public class LlaOption extends LegacyStruct {
     @Field(order = 0, type = Type.S8)
     public final byte type;
     @Field(order = 1, type = Type.S8)

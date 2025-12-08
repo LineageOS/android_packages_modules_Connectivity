@@ -38,7 +38,7 @@ class DefaultNetworkRestoreMonitor(
         private val notifier: RunNotifier,
         private val timeoutMs: Long = 30_000
 ) {
-    var firstFailure: Exception? = null
+    var firstFailure: Pair<Description, Exception>? = null
     var initialTransports = 0L
     val cm = ctx.getSystemService(ConnectivityManager::class.java)!!
     val pm = ctx.packageManager
@@ -60,7 +60,8 @@ class DefaultNetworkRestoreMonitor(
                 }
             } catch (e: AssertionError) {
                 val expectedTransports = BitUtils.unpackBits(initialTransports)
-                firstFailure = IllegalStateException(desc.methodName + " does not restore the " +
+                firstFailure = desc to
+                        IllegalStateException(desc.methodName + " does not restore the " +
                         "default network. Default network has caps ${cm.activeNetworkCaps()} ; " +
                         "expected a network with transports = " +
                         NetworkCapabilities.transportNamesOf(expectedTransports))
@@ -94,9 +95,11 @@ class DefaultNetworkRestoreMonitor(
             val cap = capFuture.get(10_000, TimeUnit.MILLISECONDS)
             initialTransports = BitUtils.packBits(cap.transportTypes)
         } catch (e: Exception) {
-            firstFailure = IllegalStateException(
-                    "Failed to get default network status before starting tests", e
-            )
+            firstFailure = Description.createSuiteDescription("ConnectivityTestTargetPreparer") to
+                    IllegalStateException(
+                        "Failed to get default network status before starting tests",
+                        e
+                    )
         } finally {
             cm.unregisterNetworkCallback(cb)
         }
@@ -104,11 +107,15 @@ class DefaultNetworkRestoreMonitor(
     }
 
     fun reportResultAndCleanUp(desc: Description) {
-        notifier.fireTestStarted(desc)
-        if (firstFailure != null) {
-            notifier.fireTestFailure(Failure(desc, firstFailure))
+        val failure = firstFailure
+        if (failure != null) {
+            notifier.fireTestStarted(failure.first)
+            notifier.fireTestFailure(Failure(failure.first, failure.second))
+            notifier.fireTestFinished(failure.first)
+        } else {
+            notifier.fireTestStarted(desc)
+            notifier.fireTestFinished(desc)
         }
-        notifier.fireTestFinished(desc)
         notifier.removeListener(listener)
     }
 }

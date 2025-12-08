@@ -20,6 +20,8 @@ final class Config {
 
     static final boolean DEBUG = false;
 
+    public static final String INSTALL_COMPLETE_ACTION = "android.intent.action.INSTALL_COMPLETE";
+
     // CT paths
     static final String CT_ROOT_DIRECTORY_PATH = "/data/misc/keychain/ct/";
     static final String URL_PREFIX = "https://www.gstatic.com/android/certificate_transparency/";

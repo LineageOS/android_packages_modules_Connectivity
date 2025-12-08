@@ -18,7 +18,7 @@ package android.net;
 
 /**
  * Listener interface allowing objects to listen to various module event.
- * {@hide}
+ * @hide
  */
 oneway interface IIntResultListener {
     void onResult(int resultCode);

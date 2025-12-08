@@ -62,4 +62,5 @@ cc_test {
     ],
     require_root: true,
     test_suites: ["general-tests"],
+    min_sdk_version: "30",
 }

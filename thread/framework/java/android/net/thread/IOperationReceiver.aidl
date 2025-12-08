@@ -16,7 +16,10 @@
 
 package android.net.thread;
 
-/** Receives the result of a Thread network operation. @hide */
+/**
+ * Receives the result of a Thread network operation.
+ * @hide
+ */
 oneway interface IOperationReceiver {
     void onSuccess();
     void onError(int errorCode, String errorMessage);

@@ -592,7 +592,6 @@ class CSQueuedCallbacksTest(freezingBehavior: FreezingBehavior) : CSTest() {
 
     private fun setMobileDataPreferredUids(uids: Set<Int>) {
         ConnectivitySettingsManager.setMobileDataPreferredUids(context, uids)
-        service.updateMobileDataPreferredUids()
         waitForIdle()
     }
 }

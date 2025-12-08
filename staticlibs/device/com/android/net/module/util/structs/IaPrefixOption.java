@@ -21,7 +21,7 @@ import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IAP
 import android.net.IpPrefix;
 import android.util.Log;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Computed;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
@@ -58,7 +58,7 @@ import java.nio.ByteOrder;
  * .                                                               .
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class IaPrefixOption extends Struct {
+public class IaPrefixOption extends LegacyStruct {
     private static final String TAG = IaPrefixOption.class.getSimpleName();
     public static final int LENGTH = 25; // option length excluding IAprefix-options
 

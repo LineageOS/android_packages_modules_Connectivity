@@ -38,6 +38,13 @@ public class Dhcp6ReplyPacket extends Dhcp6Packet {
     }
 
     /**
+     * Return the DHCPv6 REPLY message type (7).
+     */
+    public byte getMessageType() {
+        return DHCP6_MESSAGE_TYPE_REPLY;
+    }
+
+    /**
      * Build a DHCPv6 Reply message with the specific parameters.
      */
     public ByteBuffer buildPacket() {

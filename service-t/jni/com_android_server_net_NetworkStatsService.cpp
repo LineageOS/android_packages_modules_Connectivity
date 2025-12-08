@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <jni.h>
+#include <nativehelper/jni_macros.h>
 #include <nativehelper/ScopedUtfChars.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -39,73 +40,54 @@ using android::bpf::NetworkTraceHandler;
 
 namespace android {
 
+static struct {
+    jclass theClass;
+    jmethodID constructor;
+    jfieldID rxBytes;
+    jfieldID txBytes;
+    jfieldID rxPackets;
+    jfieldID txPackets;
+} gNetworkStatsEntry;
+
 static void nativeRegisterIface(JNIEnv* env, jclass clazz, jstring iface) {
     ScopedUtfChars iface8(env, iface);
-    if (iface8.c_str() == nullptr) return;
+    if (!iface8.c_str()) return;
     bpfRegisterIface(iface8.c_str());
 }
 
 static jobject statsValueToEntry(JNIEnv* env, StatsValue* stats) {
-    // Find the Java class that represents the structure
-    jclass gEntryClass = env->FindClass("android/net/NetworkStats$Entry");
-    if (gEntryClass == nullptr) {
-        return nullptr;
-    }
-
-    // Find the constructor.
-    jmethodID constructorID = env->GetMethodID(gEntryClass, "<init>", "()V");
-    if (constructorID == nullptr) {
-        return nullptr;
-    }
-
     // Create a new instance of the Java class
-    jobject result = env->NewObject(gEntryClass, constructorID);
-    if (result == nullptr) {
-        return nullptr;
-    }
+    jobject result = env->NewObject(gNetworkStatsEntry.theClass, gNetworkStatsEntry.constructor);
+    if (!result) return nullptr;
 
     // Set the values of the structure fields in the Java object
-    env->SetLongField(result, env->GetFieldID(gEntryClass, "rxBytes", "J"), stats->rxBytes);
-    env->SetLongField(result, env->GetFieldID(gEntryClass, "txBytes", "J"), stats->txBytes);
-    env->SetLongField(result, env->GetFieldID(gEntryClass, "rxPackets", "J"), stats->rxPackets);
-    env->SetLongField(result, env->GetFieldID(gEntryClass, "txPackets", "J"), stats->txPackets);
+    env->SetLongField(result, gNetworkStatsEntry.rxBytes, stats->rxBytes);
+    env->SetLongField(result, gNetworkStatsEntry.txBytes, stats->txBytes);
+    env->SetLongField(result, gNetworkStatsEntry.rxPackets, stats->rxPackets);
+    env->SetLongField(result, gNetworkStatsEntry.txPackets, stats->txPackets);
 
     return result;
 }
 
 static jobject nativeGetTotalStat(JNIEnv* env, jclass clazz) {
     StatsValue stats = {};
-
-    if (bpfGetIfaceStats(nullptr, &stats) == 0) {
-        return statsValueToEntry(env, &stats);
-    } else {
-        return nullptr;
-    }
+    if (bpfGetIfaceStats(nullptr, &stats)) return nullptr;
+    return statsValueToEntry(env, &stats);
 }
 
 static jobject nativeGetIfaceStat(JNIEnv* env, jclass clazz, jstring iface) {
     ScopedUtfChars iface8(env, iface);
-    if (iface8.c_str() == nullptr) {
-        return nullptr;
-    }
+    if (!iface8.c_str()) return nullptr;
 
     StatsValue stats = {};
-
-    if (bpfGetIfaceStats(iface8.c_str(), &stats) == 0) {
-        return statsValueToEntry(env, &stats);
-    } else {
-        return nullptr;
-    }
+    if (bpfGetIfaceStats(iface8.c_str(), &stats)) return nullptr;
+    return statsValueToEntry(env, &stats);
 }
 
 static jobject nativeGetUidStat(JNIEnv* env, jclass clazz, jint uid) {
     StatsValue stats = {};
-
-    if (bpfGetUidStats(uid, &stats) == 0) {
-        return statsValueToEntry(env, &stats);
-    } else {
-        return nullptr;
-    }
+    if (bpfGetUidStats(uid, &stats)) return nullptr;
+    return statsValueToEntry(env, &stats);
 }
 
 static void nativeInitNetworkTracing(JNIEnv* env, jclass clazz) {
@@ -113,37 +95,44 @@ static void nativeInitNetworkTracing(JNIEnv* env, jclass clazz) {
 }
 
 static const JNINativeMethod gMethods[] = {
-        {
-            "nativeRegisterIface",
-            "(Ljava/lang/String;)V",
-            (void*)nativeRegisterIface
-        },
-        {
-            "nativeGetTotalStat",
-            "()Landroid/net/NetworkStats$Entry;",
-            (void*)nativeGetTotalStat
-        },
-        {
-            "nativeGetIfaceStat",
-            "(Ljava/lang/String;)Landroid/net/NetworkStats$Entry;",
-            (void*)nativeGetIfaceStat
-        },
-        {
-            "nativeGetUidStat",
-            "(I)Landroid/net/NetworkStats$Entry;",
-            (void*)nativeGetUidStat
-        },
-        {
-            "nativeInitNetworkTracing",
-            "()V",
-            (void*)nativeInitNetworkTracing
-        },
+    MAKE_JNI_NATIVE_METHOD_AUTOSIG("nativeRegisterIface", nativeRegisterIface),
+    MAKE_JNI_NATIVE_METHOD("nativeGetTotalStat", "()Landroid/net/NetworkStats$Entry;", nativeGetTotalStat),
+    MAKE_JNI_NATIVE_METHOD("nativeGetIfaceStat", "(Ljava/lang/String;)Landroid/net/NetworkStats$Entry;", nativeGetIfaceStat),
+    MAKE_JNI_NATIVE_METHOD("nativeGetUidStat", "(I)Landroid/net/NetworkStats$Entry;", nativeGetUidStat),
+    MAKE_JNI_NATIVE_METHOD_AUTOSIG("nativeInitNetworkTracing", nativeInitNetworkTracing),
 };
 
 int register_android_server_net_NetworkStatsService(JNIEnv* env) {
-    return jniRegisterNativeMethods(env,
-            "android/net/connectivity/com/android/server/net/NetworkStatsService", gMethods,
-            NELEM(gMethods));
+    if (jniRegisterNativeMethods(env,
+        "android/net/connectivity/com/android/server/net/NetworkStatsService",
+        gMethods,
+        NELEM(gMethods))) abort();
+
+    // Find the Java class that represents the structure
+    jclass clazz = env->FindClass("android/net/NetworkStats$Entry");
+    if (!clazz) abort();
+    clazz = static_cast<jclass>(env->NewGlobalRef(clazz));
+    if (!clazz) abort();
+    gNetworkStatsEntry.theClass = clazz;
+
+    // Find the constructor.
+    gNetworkStatsEntry.constructor = env->GetMethodID(clazz, "<init>", "()V");
+    if (!gNetworkStatsEntry.constructor) abort();
+
+    // and the individual fields...
+    gNetworkStatsEntry.rxBytes = env->GetFieldID(clazz, "rxBytes", "J");
+    if (!gNetworkStatsEntry.rxBytes) abort();
+
+    gNetworkStatsEntry.txBytes = env->GetFieldID(clazz, "txBytes", "J");
+    if (!gNetworkStatsEntry.txBytes) abort();
+
+    gNetworkStatsEntry.rxPackets = env->GetFieldID(clazz, "rxPackets", "J");
+    if (!gNetworkStatsEntry.rxPackets) abort();
+
+    gNetworkStatsEntry.txPackets = env->GetFieldID(clazz, "txPackets", "J");
+    if (!gNetworkStatsEntry.txPackets) abort();
+
+    return 0;
 }
 
 }

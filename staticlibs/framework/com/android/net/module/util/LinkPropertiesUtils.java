@@ -147,20 +147,25 @@ public final class LinkPropertiesUtils {
     }
 
     /**
-     * Compares the all addresses including stacked addresses in {@code left} LinkProperties with
-     * {@code right} LinkProperties, examining only addresses on the base link.
+     * Compares the all addresses {@link InetAddress} including stacked addresses in {@code left}
+     * LinkProperties with {@code right} LinkProperties, examining only addresses on the base link.
      *
      * @param left A LinkProperties with the old list of all addresses.
      * @param right A LinkProperties with the new list of all addresses.
      * @return the differences between the addresses.
      */
-    public static @NonNull CompareResult<LinkAddress> compareAllAddresses(
+    public static @NonNull CompareResult<InetAddress> compareAllAddresses(
             @Nullable LinkProperties left, @Nullable LinkProperties right) {
+        final List<InetAddress> leftAddresses = left != null
+                ? CollectionUtils.map(left.getAllLinkAddresses(), LinkAddress::getAddress)
+                : null;
+        final List<InetAddress> rightAddresses = right != null
+                ? CollectionUtils.map(right.getAllLinkAddresses(), LinkAddress::getAddress)
+                : null;
         /*
          * Same logic as compareAddresses()
          */
-        return new CompareResult<>(left != null ? left.getAllLinkAddresses() : null,
-                right != null ? right.getAllLinkAddresses() : null);
+        return new CompareResult<>(leftAddresses, rightAddresses);
     }
 
     /**

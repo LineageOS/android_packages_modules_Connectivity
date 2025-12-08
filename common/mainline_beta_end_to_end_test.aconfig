@@ -1,0 +1,17 @@
+package: "com.android.tethering.beta.test"
+container: "com.android.tethering"
+
+flag {
+    name: "beta_end_to_end_test_rw_flag"
+    namespace: "com_android_tethering"
+    description: "mainline beta RW end to end test flag"
+    bug: "123456789"
+}
+
+flag {
+    name: "beta_end_to_end_test_fixed_ro_flag"
+    namespace: "com_android_tethering"
+    description: "mainline beta fixed RO end to end test flag"
+    is_fixed_read_only: true
+    bug: "123456789"
+}

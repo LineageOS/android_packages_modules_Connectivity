@@ -1,0 +1,122 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains messages for representing the basic information and
+// configuration of an network interface.
+//
+// Messages defined in this file are stored on disk, so reader should be able
+// to parse all historic versions of the serialized data, and to merge data
+// with different serialization formats.
+syntax = "proto2";
+package com_android_server_network_configstore;
+
+option java_package = "com.android.server.network.configstore.proto";
+option java_outer_classname = "NetworkConfigStoreProto";
+
+// Represents an IPv4 address along with its prefix length.
+message LinkAddressProto {
+    // The string of the IPv4 address in the format of IPv4 address in dotted decimal notation, for
+    // example "192.168.1.50".
+    required string address = 1;
+    // The prefix length of the IP address, indicating the subnet mask.
+    required int32 prefix_length = 2;
+}
+
+// Configuration for a static IPv4 assignment.
+message StaticIpv4ConfigurationProto {
+    // The IPv4 address and prefix length for the static IPv4 configuration.
+    required LinkAddressProto address = 1;
+    // The gateway IPv4 address as string in the format of IPv4 address in dotted decimal notation,
+    // for example "192.168.1.100".
+    optional string gateway = 2;
+    // A list of DNS server IPv4 addresses as strings in the format of IPv4 address in dotted
+    // decimal notation, for example "8.8.8.8".
+    repeated string dns_servers = 3;
+    // A list of domains to search when resolving host names on this link, in priority order.
+    repeated string search_domains = 4;
+}
+
+// Manual configuration of the proxy server.
+message ManualProxyConfigProto {
+    // A list of hosts for which the proxy should not be used.
+    repeated string exclusion_hosts = 1;
+    // The hostname or IP address of the proxy server.
+    required string host = 2;
+    // The port number of the proxy server.
+    required int32 port = 3;
+}
+
+// Configuration using a PAC (Proxy Auto-Configuration) script downloaded from a URL.
+message PacUrlConfigProto {
+    // The URL of the Proxy Auto-Configuration (PAC) file.
+    required string pac_url = 1;
+}
+
+// IP configuration for the interface.
+message IpConfigurationProto {
+    // IPv4 configuration of this interface. Making this an oneoff field because of the possibility
+    // of adding DHCP IPv4 configuration in the future.
+    oneof ipv4_configuration {
+        // Static IPv4 configuration of this interface. DHCP is not used when a static configuration
+        // exists.
+        StaticIpv4ConfigurationProto static_ipv4_config = 1;
+    }
+    // Proxy configuration to use for network connections on this interface, when not set, means
+    // no proxy configuration is used.
+    oneof proxy_config {
+        // Manual proxy configuration.
+        ManualProxyConfigProto manual_proxy_config = 2;
+        // PAC (Proxy Auto-Configuration) configuration.
+        PacUrlConfigProto pac_url_config = 3;
+    }
+}
+
+// Defines a selector to identify the ethernet port.
+message EthernetPortSelectorProto {
+    oneof identifier {
+        // MAC address of this ethernet port.
+        string mac_addr = 1;
+        // Interface name of this ethernet port.
+        string iface_name = 2;
+    }
+}
+
+// Enum for metered override configuration.
+enum MeteredOverrideProto {
+    // There is no metered override configuration.
+    METERED_OVERRIDE_NONE = 0;
+    // Forces the connection to be treated as metered.
+    METERED_OVERRIDE_FORCE_METERED = 1;
+    // Forces the connection to be treated as unmetered.
+    METERED_OVERRIDE_FORCE_UNMETERED = 2;
+}
+
+// Defines the configuration of an ethernet interface.
+message EthernetConfigurationProto {
+    // Selector for applying this configuration to an Ethernet port, containing identifiable
+    // information of related ethernet port.
+    required EthernetPortSelectorProto selector = 1;
+    // IP configuration of this ethernet interface.
+    required IpConfigurationProto ip_config = 2;
+    // Static metered override configuration, note that this is not the actual meteredness but
+    // static configuration.
+    required MeteredOverrideProto metered_override = 3;
+}
+
+// Defines the collective configuration states for all ethernet interfaces.
+message EthernetConfigHolderProto {
+  repeated EthernetConfigurationProto configs = 1;
+}

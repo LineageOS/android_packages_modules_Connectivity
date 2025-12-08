@@ -36,6 +36,13 @@ public class Dhcp6AdvertisePacket extends Dhcp6Packet {
     }
 
     /**
+     * Return the DHCPv6 ADVERTISE message type (2).
+     */
+    public byte getMessageType() {
+        return DHCP6_MESSAGE_TYPE_ADVERTISE;
+    }
+
+    /**
      * Build a DHCPv6 Advertise message with the specific parameters.
      */
     public ByteBuffer buildPacket() {

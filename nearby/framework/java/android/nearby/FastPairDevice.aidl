@@ -19,6 +19,6 @@ package android.nearby;
 /**
  * A class represents a Fast Pair device that can be discovered by multiple mediums.
  *
- * {@hide}
+ * @hide
  */
 parcelable FastPairDevice;

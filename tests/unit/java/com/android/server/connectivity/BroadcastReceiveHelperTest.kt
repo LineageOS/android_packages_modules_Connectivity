@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity
 
+import android.Manifest.permission.NETWORK_STACK
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -33,7 +34,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.UserHandle
 import android.os.UserManager
-import com.android.compatibility.common.util.MoreMatchers.anyOrNull
 import com.android.server.connectivity.BroadcastReceiveHelper.Delegate
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.waitForIdle
@@ -95,7 +95,7 @@ class BroadcastReceiveHelperTest {
         verify(mockContext, times(1)).registerReceiver(
                 receiverCaptor.capture(),
                 argThat { it.hasAction(action) },
-                anyOrNull(String::class.java),
+                eq(NETWORK_STACK),
                 eq(handler)
         )
         // Return the first match.

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/personality.h>
 #include <sys/system_properties.h>
@@ -29,32 +30,69 @@ namespace bpf {
 
 static inline unsigned uncachedKernelVersion() {
     struct utsname buf;
-    if (uname(&buf)) return 0;
+    if (uname(&buf)) abort();
 
     unsigned kver_major = 0;
     unsigned kver_minor = 0;
     unsigned kver_sub = 0;
     char kver_override[PROP_VALUE_MAX];
     int kver_override_len = __system_property_get("ro.bpf.kver_override", kver_override);
-    if (kver_override_len > 0) {
-        (void)sscanf(kver_override, "%u.%u.%u", &kver_major, &kver_minor, &kver_sub);
-    } else {
-        (void)sscanf(buf.release, "%u.%u.%u", &kver_major, &kver_minor, &kver_sub);
-    }
+    if (sscanf(kver_override_len > 0 ? kver_override : buf.release, "%u.%u.%u",
+               &kver_major, &kver_minor, &kver_sub) < 2) abort();
     return KVER(kver_major, kver_minor, kver_sub);
 }
 
-static inline unsigned kernelVersion() {
-    static unsigned kver = uncachedKernelVersion();
-    return kver;
+static const unsigned kernelVer = uncachedKernelVersion();
+
+static inline unsigned __unused kernelVersion() {
+    return kernelVer;
 }
 
-static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
-    return kernelVersion() >= KVER(major, minor, sub);
+#ifndef __ANDROID_API__
+    #error "__ANDROID_API__ is not defined"
+#endif
+
+static constexpr unsigned minSupportedKernelVer =
+#ifdef __ANDROID_APEX__  // Mainline code (incl. NetBpfLoad) in APEX shouldn't (yet) assume anything
+        KVER(0, 0, 0);
+#elif __ANDROID_API__ >= 10000 // tip of dev tree - we'll need to bump this manually as time advances
+        KVER(5, 10, 0);
+#elif __ANDROID_API__ >= 41 // Android ~21 - 30Q2: G -- note: 6.12 likely min for 29Q4-ish
+        KVER(6, 12, 0);
+#elif __ANDROID_API__ >= 40 // Android ~20 - 29Q2: F -- note: 6.6 likely min for 28Q4-ish
+        KVER(6, 6, 0);
+#elif __ANDROID_API__ >= 39 // Android ~19 - 28Q2: E -- note: 6.1 likely min for 27Q4-ish
+        KVER(6, 1, 0);
+#elif __ANDROID_API__ >= 38 // Android ~18 - 27Q2: D -- note: 5.15 likely min for 26Q4-ish
+        KVER(5, 15, 0);
+#elif __ANDROID_API__ >= 37 // Android ~17 - 26Q2: C -- note: 5.10 is min for 25Q4 (or even 25Q3)
+        KVER(5, 10, 0);
+#elif __ANDROID_API__ >= 36 // Android 16 - 25Q2: Baklava
+        KVER(5, 4, 0);
+#elif __ANDROID_API__ >= 35 // Android 15 - 24Q3: Vanilla Ice Cream
+        KVER(4, 19, 0);
+#elif __ANDROID_API__ >= 34 // Android 14 - Upside Down Cake
+        KVER(4, 14, 0);
+#elif __ANDROID_API__ >= 33 // Android 13 - Tiramisu
+        KVER(4, 9, 0);
+#elif __ANDROID_API__ >= 32 // Android 12L - Sv2
+        KVER(4, 9, 0);
+#elif __ANDROID_API__ >= 31 // Android 12 - Snow Cone
+        KVER(4, 9, 0);
+#elif __ANDROID_API__ >= 30 // Android 11 - Red Velvet Cake
+        KVER(4, 4, 0);
+#else
+    #error "__ANDROID_API__ is pre-R"
+#endif
+
+static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub = 0) {
+    unsigned k = KVER(major, minor, sub);
+    if (k <= minSupportedKernelVer) return true;
+    return kernelVer >= k;
 }
 
 static inline bool isKernelVersion(unsigned major, unsigned minor) {
-    return isAtLeastKernelVersion(major, minor, 0) && !isAtLeastKernelVersion(major, minor + 1, 0);
+    return isAtLeastKernelVersion(major, minor) && !isAtLeastKernelVersion(major, minor + 1);
 }
 
 static inline bool __unused isLtsKernel() {

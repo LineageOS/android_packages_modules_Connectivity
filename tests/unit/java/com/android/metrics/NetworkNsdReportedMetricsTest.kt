@@ -38,6 +38,9 @@ import org.mockito.Mockito.verify
 class NetworkNsdReportedMetricsTest {
     private val deps = mock(NetworkNsdReportedMetrics.Dependencies::class.java)
     private val random = mock(Random::class.java)
+    private val clientId = 99
+    private val transactionId = 100
+    private val uid = 10123
 
     @Before
     fun setUp() {
@@ -46,10 +49,8 @@ class NetworkNsdReportedMetricsTest {
 
     @Test
     fun testReportServiceRegistrationSucceeded() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceRegistrationSucceeded(true /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -61,15 +62,14 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_REGISTER, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_REGISTERED, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceRegistrationFailed() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceRegistrationFailed(false /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -81,19 +81,18 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_REGISTER, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_REGISTRATION_FAILED, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceUnregistration() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
         val repliedRequestsCount = 25
         val sentPacketCount = 50
         val conflictDuringProbingCount = 2
         val conflictAfterProbingCount = 1
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceUnregistration(true /* isLegacy */, transactionId, durationMs,
                 repliedRequestsCount, sentPacketCount, conflictDuringProbingCount,
                 conflictAfterProbingCount)
@@ -111,14 +110,13 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(sentPacketCount, it.sentPacketCount)
             assertEquals(conflictDuringProbingCount, it.conflictDuringProbingCount)
             assertEquals(conflictAfterProbingCount, it.conflictAfterProbingCount)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceDiscoveryStarted() {
-        val clientId = 99
-        val transactionId = 100
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceDiscoveryStarted(true /* isLegacy */, transactionId)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -129,15 +127,14 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(transactionId, it.transactionId)
             assertEquals(NsdEventType.NET_DISCOVER, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_DISCOVERY_STARTED, it.queryResult)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceDiscoveryFailed() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceDiscoveryFailed(false /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -149,19 +146,18 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_DISCOVER, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_DISCOVERY_FAILED, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceDiscoveryStop() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
         val foundCallbackCount = 100
         val lostCallbackCount = 49
         val servicesCount = 75
         val sentQueryCount = 150
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceDiscoveryStop(true /* isLegacy */, transactionId, durationMs,
                 foundCallbackCount, lostCallbackCount, servicesCount, sentQueryCount,
                 true /* isServiceFromCache */)
@@ -181,16 +177,15 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(durationMs, it.eventDurationMillisec)
             assertEquals(sentQueryCount, it.sentQueryCount)
             assertTrue(it.isKnownService)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceResolved() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
         val sentQueryCount = 0
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceResolved(true /* isLegacy */, transactionId, durationMs,
                 true /* isServiceFromCache */, sentQueryCount)
 
@@ -205,15 +200,14 @@ class NetworkNsdReportedMetricsTest {
             assertTrue(it.isKnownService)
             assertEquals(durationMs, it.eventDurationMillisec)
             assertEquals(sentQueryCount, it.sentQueryCount)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceResolutionFailed() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceResolutionFailed(false /* isLegacy */, transactionId, durationMs)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -225,16 +219,15 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_RESOLVE, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_RESOLUTION_FAILED, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceResolutionStop() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
         val sentQueryCount = 10
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceResolutionStop(
                 true /* isLegacy */, transactionId, durationMs, sentQueryCount)
 
@@ -248,14 +241,13 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(MdnsQueryResult.MQR_SERVICE_RESOLUTION_STOP, it.queryResult)
             assertEquals(durationMs, it.eventDurationMillisec)
             assertEquals(sentQueryCount, it.sentQueryCount)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceInfoCallbackRegistered() {
-        val clientId = 99
-        val transactionId = 100
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceInfoCallbackRegistered(transactionId)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -266,14 +258,13 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(transactionId, it.transactionId)
             assertEquals(NsdEventType.NET_SERVICE_INFO_CALLBACK, it.type)
             assertEquals(MdnsQueryResult.MQR_SERVICE_INFO_CALLBACK_REGISTERED, it.queryResult)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceInfoCallbackRegistrationFailed() {
-        val clientId = 99
-        val transactionId = 100
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceInfoCallbackRegistrationFailed(transactionId)
 
         val eventCaptor = ArgumentCaptor.forClass(NetworkNsdReported::class.java)
@@ -285,18 +276,17 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(NsdEventType.NET_SERVICE_INFO_CALLBACK, it.type)
             assertEquals(
                     MdnsQueryResult.MQR_SERVICE_INFO_CALLBACK_REGISTRATION_FAILED, it.queryResult)
+            assertEquals(uid, it.uid)
         }
     }
 
     @Test
     fun testReportServiceInfoCallbackUnregistered() {
-        val clientId = 99
-        val transactionId = 100
         val durationMs = 10L
         val updateCallbackCount = 100
         val lostCallbackCount = 10
         val sentQueryCount = 150
-        val metrics = NetworkNsdReportedMetrics(clientId, deps)
+        val metrics = NetworkNsdReportedMetrics(clientId, deps, uid)
         metrics.reportServiceInfoCallbackUnregistered(transactionId, durationMs,
                 updateCallbackCount, lostCallbackCount, false /* isServiceFromCache */,
                 sentQueryCount)
@@ -314,6 +304,7 @@ class NetworkNsdReportedMetricsTest {
             assertEquals(lostCallbackCount, it.lostCallbackCount)
             assertFalse(it.isKnownService)
             assertEquals(sentQueryCount, it.sentQueryCount)
+            assertEquals(uid, it.uid)
         }
     }
 }

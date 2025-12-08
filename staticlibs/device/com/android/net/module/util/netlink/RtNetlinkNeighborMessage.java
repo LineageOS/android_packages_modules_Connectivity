@@ -107,21 +107,17 @@ public class RtNetlinkNeighborMessage extends NetlinkMessage {
      * A convenience method to create an RTM_GETNEIGH request message.
      */
     public static byte[] newGetNeighborsRequest(int seqNo) {
-        final int length = StructNlMsgHdr.STRUCT_SIZE + StructNdMsg.STRUCT_SIZE;
-        final byte[] bytes = new byte[length];
+        short flags = NLM_F_REQUEST | NLM_F_DUMP;
+        final RtNetlinkNeighborMessage msg = new Builder()
+                .setNlMsgType(NetlinkConstants.RTM_GETNEIGH)
+                .setNlMsgFlags(flags)
+                .setNlMsgSeq(seqNo)
+                .build();
+
+        final byte[] bytes = new byte[msg.getHeader().nlmsg_len];
         final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         byteBuffer.order(ByteOrder.nativeOrder());
-
-        final StructNlMsgHdr nlmsghdr = new StructNlMsgHdr();
-        nlmsghdr.nlmsg_len = length;
-        nlmsghdr.nlmsg_type = NetlinkConstants.RTM_GETNEIGH;
-        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-        nlmsghdr.nlmsg_seq = seqNo;
-        nlmsghdr.pack(byteBuffer);
-
-        final StructNdMsg ndmsg = new StructNdMsg();
-        ndmsg.pack(byteBuffer);
-
+        msg.pack(byteBuffer);
         return bytes;
     }
 
@@ -130,27 +126,113 @@ public class RtNetlinkNeighborMessage extends NetlinkMessage {
      * the kernel's state information for a specific neighbor.
      */
     public static byte[] newNewNeighborMessage(
-            int seqNo, InetAddress ip, short nudState, int ifIndex, byte[] llAddr) {
-        final StructNlMsgHdr nlmsghdr = new StructNlMsgHdr();
-        nlmsghdr.nlmsg_type = NetlinkConstants.RTM_NEWNEIGH;
-        nlmsghdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_REPLACE;
-        nlmsghdr.nlmsg_seq = seqNo;
+            int seqNo, @NonNull InetAddress ip, short nudState, int ifIndex,
+            @Nullable byte[] llAddr) {
+        short flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_REPLACE;
+        final RtNetlinkNeighborMessage msg = new Builder()
+                .setNlMsgType(NetlinkConstants.RTM_NEWNEIGH)
+                .setNlMsgFlags(flags)
+                .setNlMsgSeq(seqNo)
+                .setIfIndex(ifIndex)
+                .setState(nudState)
+                .setDestination(ip)
+                .setLinkLayerAddress(llAddr)
+                .build();
 
-        final RtNetlinkNeighborMessage msg = new RtNetlinkNeighborMessage(nlmsghdr);
-        msg.mNdmsg = new StructNdMsg();
-        msg.mNdmsg.ndm_family =
-                (byte) ((ip instanceof Inet6Address) ? OsConstants.AF_INET6 : OsConstants.AF_INET);
-        msg.mNdmsg.ndm_ifindex = ifIndex;
-        msg.mNdmsg.ndm_state = nudState;
-        msg.mDestination = ip;
-        msg.mLinkLayerAddr = llAddr;  // might be null
-
-        final byte[] bytes = new byte[msg.getRequiredSpace()];
-        nlmsghdr.nlmsg_len = bytes.length;
+        final byte[] bytes = new byte[msg.getHeader().nlmsg_len];
         final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         byteBuffer.order(ByteOrder.nativeOrder());
         msg.pack(byteBuffer);
         return bytes;
+    }
+
+    /**
+     * Builder for {@link RtNetlinkNeighborMessage}.
+     */
+    public static class Builder {
+        private final StructNlMsgHdr mHeader = new StructNlMsgHdr();
+        private final StructNdMsg mNdmsg = new StructNdMsg();
+        @Nullable private InetAddress mDestination;
+        @Nullable private byte[] mLinkLayerAddr;
+
+        /**
+         * Build a {@link RtNetlinkNeighborMessage}.
+         */
+        public RtNetlinkNeighborMessage build() {
+            if (mHeader.nlmsg_type == 0) {
+                throw new IllegalArgumentException("Netlink message type is not set");
+            }
+            final RtNetlinkNeighborMessage msg = new RtNetlinkNeighborMessage(mHeader);
+            msg.mNdmsg = mNdmsg;
+            msg.mDestination = mDestination;
+            if (mLinkLayerAddr != null) {
+                msg.mLinkLayerAddr = mLinkLayerAddr;
+            }
+            mHeader.nlmsg_len = msg.getRequiredSpace();
+            return msg;
+        }
+
+        /** Set the netlink message header type. */
+        public Builder setNlMsgType(short type) {
+            if (type != NetlinkConstants.RTM_NEWNEIGH
+                && type != NetlinkConstants.RTM_GETNEIGH
+                && type != NetlinkConstants.RTM_DELNEIGH) {
+                throw new IllegalArgumentException("Unsupported netlink message type: " + type);
+            }
+            mHeader.nlmsg_type = type;
+            return this;
+        }
+
+        /** Set the netlink message header flags. */
+        public Builder setNlMsgFlags(short flags) {
+            mHeader.nlmsg_flags = flags;
+            return this;
+        }
+
+        /** Set the netlink message header sequence number. Default is 0. */
+        public Builder setNlMsgSeq(int seq) {
+            if (seq < 0) {
+                throw new IllegalArgumentException("Negative sequence number: " + seq);
+            }
+            mHeader.nlmsg_seq = seq;
+            return this;
+        }
+
+        /** Set the interface index. */
+        public Builder setIfIndex(int ifindex) {
+            if (ifindex < 0) {
+                throw new IllegalArgumentException("Negative interface index: " + ifindex);
+            }
+            mNdmsg.ndm_ifindex = ifindex;
+            return this;
+        }
+
+        /** Set the neighbor unreachability detection (NUD) state. */
+        public Builder setState(short state) {
+            if (!StructNdMsg.isNudStateValid(state)) {
+                throw new IllegalArgumentException("Invalid NUD state: " + state);
+            }
+            mNdmsg.ndm_state = state;
+            return this;
+        }
+
+        /** Set the destination IP address. */
+        public Builder setDestination(@Nullable InetAddress destination) {
+            mDestination = destination;
+            if (mDestination == null) {
+                mNdmsg.ndm_family = (byte) OsConstants.AF_UNSPEC;
+            } else {
+                mNdmsg.ndm_family = (byte) ((destination instanceof Inet6Address)
+                        ? OsConstants.AF_INET6 : OsConstants.AF_INET);
+            }
+            return this;
+        }
+
+        /** Set the link-layer address. */
+        public Builder setLinkLayerAddress(@Nullable byte[] llAddr) {
+            mLinkLayerAddr = llAddr;
+            return this;
+        }
     }
 
     private StructNdMsg mNdmsg;

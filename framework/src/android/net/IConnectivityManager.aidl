@@ -54,7 +54,7 @@ import android.os.UserHandle;
  * Interface that answers queries about, and allows changing, the
  * state of network connectivity.
  */
-/** {@hide} */
+/** @hide */
 interface IConnectivityManager
 {
     Network getActiveNetwork();

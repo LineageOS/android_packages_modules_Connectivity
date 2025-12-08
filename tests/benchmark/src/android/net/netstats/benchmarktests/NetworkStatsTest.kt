@@ -72,7 +72,7 @@ class NetworkStatsTest {
             repeat(FILE_CACHE_WARM_UP_REPEAT_COUNT) {
                 testFilesAssets.forEach {
                     val uidTestFiles = getSortedListForPrefix(it, "uid")
-                    val collection = NetworkStatsCollection(UID_COLLECTION_BUCKET_DURATION_MS)
+                    val collection = buildNetworkStatsCollection(UID_COLLECTION_BUCKET_DURATION_MS)
                     for (file in uidTestFiles) {
                         readFile(file, collection)
                     }
@@ -117,6 +117,13 @@ class NetworkStatsTest {
             BufferedInputStream(file.inputStream()).use {
                 reader.read(it)
             }
+
+        private fun buildNetworkStatsCollection(bucketDuration: Long) =
+                NetworkStatsCollection(
+                        bucketDuration,
+                        false /* useFastDataInput */,
+                        true /* storeTransportTypes */
+                )
     }
 
     @Test
@@ -125,7 +132,7 @@ class NetworkStatsTest {
         // this a number of time to have a stable number.
         testFilesAssets.forEach {
             val uidTestFiles = getSortedListForPrefix(it, "uid")
-            val collection = NetworkStatsCollection(UID_COLLECTION_BUCKET_DURATION_MS)
+            val collection = buildNetworkStatsCollection(UID_COLLECTION_BUCKET_DURATION_MS)
             for (file in uidTestFiles) {
                 readFile(file, collection)
             }
@@ -148,7 +155,10 @@ class NetworkStatsTest {
         testFilesAssets.forEach {
             val recorder = NetworkStatsRecorder(
                 FileRotator(
-                    it, PREFIX_UID, UID_RECORDER_ROTATE_AGE_MS, UID_RECORDER_DELETE_AGE_MS
+                    it,
+                    PREFIX_UID,
+                    UID_RECORDER_ROTATE_AGE_MS,
+                    UID_RECORDER_DELETE_AGE_MS
                 ),
                 mockObserver,
                 mockDropBox,
@@ -157,6 +167,7 @@ class NetworkStatsTest {
                 false /* includeTags */,
                 false /* wipeOnError */,
                 useFastDataInput /* useFastDataInput */,
+                true /* storeTransportTypes */,
                 it
             )
             recorder.orLoadCompleteLocked

@@ -21,7 +21,6 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.RouteInfo;
 import android.os.IBinder;
 import android.os.RemoteException;
 
@@ -48,54 +47,6 @@ public class RoutingCoordinatorManager {
             @NonNull final IBinder binder) {
         mContext = context;
         mService = IRoutingCoordinator.Stub.asInterface(binder);
-    }
-
-    /**
-     * Add a route for specific network
-     *
-     * @param netId the network to add the route to
-     * @param route the route to add
-     * @throws ServiceSpecificException in case of failure, with an error code indicating the
-     *         cause of the failure.
-     */
-    public void addRoute(final int netId, final RouteInfo route) {
-        try {
-            mService.addRoute(netId, route);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
-        }
-    }
-
-    /**
-     * Remove a route for specific network
-     *
-     * @param netId the network to remove the route from
-     * @param route the route to remove
-     * @throws ServiceSpecificException in case of failure, with an error code indicating the
-     *         cause of the failure.
-     */
-    public void removeRoute(final int netId, final RouteInfo route) {
-        try {
-            mService.removeRoute(netId, route);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
-        }
-    }
-
-    /**
-     * Update a route for specific network
-     *
-     * @param netId the network to update the route for
-     * @param route parcelable with route information
-     * @throws ServiceSpecificException in case of failure, with an error code indicating the
-     *         cause of the failure.
-     */
-    public void updateRoute(final int netId, final RouteInfo route) {
-        try {
-            mService.updateRoute(netId, route);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
-        }
     }
 
     /**

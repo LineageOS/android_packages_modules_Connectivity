@@ -87,6 +87,10 @@ java_library {
     srcs: [
         "device/com/android/net/module/util/ProcfsParsingUtils.java",
         "device/com/android/net/module/util/dhcp6/*.java",
+        "device/com/android/net/module/util/CommonConnectivityJni.java",
+        "device/com/android/net/module/util/RealtimeScheduler.java",
+        "device/com/android/net/module/util/TimerFdUtils.java",
+        "device/com/android/net/module/util/JniUtil.java",
         "framework/com/android/net/module/util/HexDump.java",
     ],
     sdk_version: "module_current",
@@ -174,6 +178,7 @@ java_library {
 java_library {
     name: "net-utils-device-common-struct-base",
     srcs: [
+        "device/com/android/net/module/util/LegacyStruct.java",
         "device/com/android/net/module/util/Struct.java",
     ],
     sdk_version: "module_current",
@@ -613,6 +618,9 @@ aidl_interface {
     visibility: [
         "//system/tools/aidl/build",
     ],
+    imports: [
+        "netd_aidl_interface-V18", // For RouteInfoParcel.
+    ],
 }
 
 // Use a filegroup and not a library for telephony sources, as framework-annotations cannot be
@@ -684,6 +692,7 @@ filegroup {
         "device/com/android/net/module/util/BpfUtils.java",
         "device/com/android/net/module/util/IBpfMap.java",
         "device/com/android/net/module/util/JniUtil.java",
+        "device/com/android/net/module/util/LegacyStruct.java",
         "device/com/android/net/module/util/SingleWriterBpfMap.java",
         "device/com/android/net/module/util/Struct.java",
         "device/com/android/net/module/util/TcUtils.java",
@@ -767,6 +776,7 @@ java_library {
     visibility: [
         // TODO: b/374174952 Remove it when VCN modularization is released
         "//frameworks/base/packages/Vcn/service-b",
+        "//packages/modules/Connectivity/Vcn/service-b",
 
         "//packages/modules/Connectivity/service-b",
     ],
@@ -775,5 +785,24 @@ java_library {
         "//apex_available:platform",
 
         "com.android.tethering",
+    ],
+}
+
+java_library {
+    name: "net-utils-framework-vcn",
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+    srcs: [
+        "framework/com/android/net/module/util/HexDump.java",
+    ],
+    libs: [
+        "androidx.annotation_annotation",
+    ],
+    visibility: [
+        // TODO: b/374174952 Clean up the paths when the VCN
+        // code location is finalized
+        "//frameworks/base/packages/Vcn/framework-b",
+        "//packages/modules/Connectivity/Vcn/framework-b",
+        "//packages/modules/Connectivity/framework-b",
     ],
 }

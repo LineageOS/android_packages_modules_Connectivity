@@ -23,7 +23,7 @@ import android.os.Messenger;
 /**
  * Interface that NsdService implements to connect NsdManager clients.
  *
- * {@hide}
+ * @hide
  */
 interface INsdManager {
     INsdServiceConnector connect(INsdManagerCallback cb, boolean useJavaBackend);

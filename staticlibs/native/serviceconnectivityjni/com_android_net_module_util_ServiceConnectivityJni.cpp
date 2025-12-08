@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <jni.h>
+#include <linux/ethtool.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <linux/ipv6_route.h>
@@ -51,33 +52,29 @@
 
 namespace android {
 
-static jint createTimerFd(JNIEnv *env, jclass clazz) {
-  int tfd;
-  // For safety, the file descriptor should have O_NONBLOCK(TFD_NONBLOCK) set
-  // using fcntl during creation. This ensures that, in the worst-case scenario,
-  // an EAGAIN error is returned when reading.
-  tfd = timerfd_create(CLOCK_BOOTTIME, TFD_NONBLOCK);
-  if (tfd == -1) {
-    jniThrowErrnoException(env, "createTimerFd", tfd);
+static jstring getDriverNameForInterface(JNIEnv *env, jclass clazz, jstring jifname) {
+  base::unique_fd fd(socket(AF_INET6, SOCK_DGRAM, 0));
+  if (!fd.ok()) {
+    jniThrowErrnoException(env, "getDriverNameForInterface", errno);
+    return nullptr;
   }
-  return tfd;
-}
 
-static void setTimerFdTime(JNIEnv *env, jclass clazz, jint tfd,
-                           jlong milliseconds) {
-  struct itimerspec new_value;
-  new_value.it_value.tv_sec = milliseconds / MSEC_PER_SEC;
-  new_value.it_value.tv_nsec = (milliseconds % MSEC_PER_SEC) * NSEC_PER_MSEC;
-  // Set the interval time to 0 because it's designed for repeated timer
-  // expirations after the initial expiration, which doesn't fit the current
-  // usage.
-  new_value.it_interval.tv_sec = 0;
-  new_value.it_interval.tv_nsec = 0;
-
-  int ret = timerfd_settime(tfd, 0, &new_value, NULL);
-  if (ret == -1) {
-    jniThrowErrnoException(env, "setTimerFdTime", ret);
+  ScopedUtfChars ifname(env, jifname);
+  if (!ifname.c_str()) {
+    jniThrowNullPointerException(env, "getDriverNameForInterface: ifname is null");
+    return nullptr;
   }
+
+  ethtool_drvinfo msg = { .cmd = ETHTOOL_GDRVINFO };
+  ifreq ifr = { .ifr_data = reinterpret_cast<char *>(&msg) };
+  strlcpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ);
+
+  if (ioctl(fd, SIOCETHTOOL, &ifr)) {
+    jniThrowErrnoException(env, "getDriverNameForInterface", errno);
+    return nullptr;
+  }
+
+  return env->NewStringUTF(msg.driver);
 }
 
 static void throwException(JNIEnv *env, int error, const char *action,
@@ -107,7 +104,7 @@ static int createTunTapImpl(JNIEnv *env, bool isTun, bool hasCarrier,
   if (!hasCarrier) {
     // Using IFF_NO_CARRIER is supported starting in kernel version >= 6.0
     // Up until then, unsupported flags are ignored.
-    if (!bpf::isAtLeastKernelVersion(6, 0, 0)) {
+    if (!bpf::isAtLeastKernelVersion(6, 0)) {
       throwException(env, EOPNOTSUPP, "IFF_NO_CARRIER not supported",
                      ifr.ifr_name);
       return -1;
@@ -193,8 +190,8 @@ static void bringUpInterface(JNIEnv *env, jclass /* clazz */, jstring jIface) {
  */
 static const JNINativeMethod gMethods[] = {
     /* name, signature, funcPtr */
-    {"createTimerFd", "()I", (void *)createTimerFd},
-    {"setTimerFdTime", "(IJ)V", (void *)setTimerFdTime},
+    {"getDriverNameForInterface", "(Ljava/lang/String;)Ljava/lang/String;",
+      (void *)getDriverNameForInterface},
     {"setTunTapCarrierEnabled", "(Ljava/lang/String;IZ)V",
      (void *)setTunTapCarrierEnabled},
     {"createTunTap", "(ZZZLjava/lang/String;)I", (void *)createTunTap},

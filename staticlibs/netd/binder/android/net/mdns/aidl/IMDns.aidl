@@ -22,7 +22,7 @@ import android.net.mdns.aidl.IMDnsEventListener;
 import android.net.mdns.aidl.RegistrationInfo;
 import android.net.mdns.aidl.ResolutionInfo;
 
-/** {@hide} */
+/** @hide */
 interface IMDns {
     /**
      * Start the MDNSResponder daemon.

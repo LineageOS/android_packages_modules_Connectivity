@@ -60,32 +60,32 @@ public final class QosCallbackException extends Exception {
     // The constants are used for the sendQosCallbackError system API, so they must not be changed
     // as there may be callers relying on their historical values to call that API.
     // TODO: mark the constants as @SystemApi, since they are necessary to call a system API.
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_NONE = 0;
 
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_NETWORK_RELEASED = 1;
 
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_SOCKET_NOT_BOUND = 2;
 
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_NOT_SUPPORTED = 3;
 
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_SOCKET_LOCAL_ADDRESS_CHANGED = 4;
 
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_SOCKET_NOT_CONNECTED = 5;
 
-    /** {@hide} */
+    /** @hide */
     public static final int EX_TYPE_FILTER_SOCKET_REMOTE_ADDRESS_CHANGED = 6;
 
     /**
      * Creates exception based off of a type and message.  Not all types of exceptions accept a
      * custom message.
      *
-     * {@hide}
+     * @hide
      */
     @NonNull
     public static QosCallbackException createException(@ExceptionType final int type) {

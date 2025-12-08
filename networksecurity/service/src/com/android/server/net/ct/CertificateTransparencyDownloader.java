@@ -43,6 +43,8 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
 
     private static final String TAG = "CertificateTransparencyDownloader";
 
+    private static final Intent INSTALL_COMPLETE = new Intent(Config.INSTALL_COMPLETE_ACTION);
+
     private final Context mContext;
     private final DownloadHelper mDownloadHelper;
     private final SignatureVerifier mSignatureVerifier;
@@ -201,6 +203,10 @@ class CertificateTransparencyDownloader extends BroadcastReceiver {
         } catch (IOException e) {
             Log.e(TAG, "Could not install new content", e);
             return;
+        }
+
+        if (updateStatus.isLogListAvailable()) {
+            mContext.sendBroadcast(INSTALL_COMPLETE);
         }
 
         mLogger.logCTLogListUpdateStateChangedEvent(updateStatus);

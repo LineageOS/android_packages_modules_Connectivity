@@ -198,7 +198,7 @@ public class VpnTest {
     private static final String PRIVATE_DNS_MODE_PROVIDER_HOSTNAME = "hostname";
     private static final String PRIVATE_DNS_MODE_OPPORTUNISTIC = "opportunistic";
     private static final String PRIVATE_DNS_SPECIFIER_SETTING = "private_dns_specifier";
-    private static final int NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
+    private static final long NETWORK_CALLBACK_TIMEOUT_MS = 30_000;
 
     private static final LinkAddress TEST_IP4_DST_ADDR = new LinkAddress("198.51.100.1/24");
     private static final LinkAddress TEST_IP4_SRC_ADDR = new LinkAddress("198.51.100.2/24");
@@ -266,11 +266,14 @@ public class VpnTest {
         mNetwork = null;
         mTestContext = getInstrumentation().getContext();
         mTargetContext = getInstrumentation().getTargetContext();
-        getInstrumentation()
-                .getUiAutomation()
-                .grantRuntimePermission(
-                        "com.android.cts.net.hostside",
-                        "android.permission.NEARBY_WIFI_DEVICES");
+        if (SdkLevel.isAtLeastT()) {
+            // Permission NEARBY_WIFI_DEVICES was added in T.
+            getInstrumentation()
+                    .getUiAutomation()
+                    .grantRuntimePermission(
+                            "com.android.cts.net.hostside",
+                            "android.permission.NEARBY_WIFI_DEVICES");
+        }
         storePrivateDnsSetting();
         mDevice = UiDevice.getInstance(getInstrumentation());
         mActivity = launchActivity(mTargetContext.getPackageName(), MyActivity.class);
@@ -1942,18 +1945,18 @@ public class VpnTest {
 
             expectVpnNetwork(defaultNetworkCallback);
         }, /* cleanup */ () -> {
-                stopVpn();
-                defaultNetworkCallback.eventuallyExpect(Event.LOST);
-            }, /* cleanup */ () -> {
-                runWithShellPermissionIdentity(() -> {
-                    mCM.setVpnDefaultForUids(session, new ArraySet<>());
-                }, NETWORK_SETTINGS);
-                // The default network of the app will be changed back to wifi when the VPN network
-                // preference feature is disabled.
-                defaultNetworkCallback.eventuallyExpect(Event.AVAILABLE,
-                        NETWORK_CALLBACK_TIMEOUT_MS,
-                        entry -> defaultNetwork.equals(entry.getNetwork()));
-            });
+            stopVpn();
+            defaultNetworkCallback.eventuallyExpect(Event.LOST);
+        }, /* cleanup */ () -> {
+            runWithShellPermissionIdentity(() -> {
+                mCM.setVpnDefaultForUids(session, new ArraySet<>());
+            }, NETWORK_SETTINGS);
+            // The default network of the app will be changed back to wifi when the VPN network
+            // preference feature is disabled.
+            defaultNetworkCallback.eventuallyExpect(Event.AVAILABLE,
+                    NETWORK_CALLBACK_TIMEOUT_MS,
+                    entry -> defaultNetwork.equals(entry.getNetwork()));
+        });
     }
 
     /**

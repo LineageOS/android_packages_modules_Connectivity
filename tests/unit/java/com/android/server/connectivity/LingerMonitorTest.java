@@ -375,8 +375,8 @@ public class LingerMonitorTest {
                 new LinkProperties(), caps, null /* localNetworkConfiguration */,
                 new NetworkScore.Builder().setLegacyInt(50).build(), mCtx, null,
                 new NetworkAgentConfig.Builder().build(), mConnService, mNetd, mDnsResolver,
-                NetworkProvider.ID_NONE, Binder.getCallingUid(), TEST_LINGER_DELAY_MS,
-                mQosCallbackTracker, new ConnectivityService.Dependencies());
+                NetworkProvider.ID_NONE, Binder.getCallingUid(), false /* isAppSpecificNetwork */,
+                TEST_LINGER_DELAY_MS, mQosCallbackTracker, new ConnectivityService.Dependencies());
         if (setEverValidated) {
             // As tests in this class deal with testing lingering, most tests are interested
             // in networks that can be lingered, and therefore must have validated in the past.

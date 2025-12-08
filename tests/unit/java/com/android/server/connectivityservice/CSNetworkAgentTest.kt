@@ -36,10 +36,11 @@ import android.os.Build
 import android.os.Process
 import android.util.Range
 import com.android.server.connectivity.ConnectivityFlags.EARLY_LINK_PROPERTIES_UPDATE_FOR_VPN
-import com.android.server.connectivity.ConnectivityFlags.QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER
+import com.android.server.connectivity.ConnectivityFlags.QUEUE_NETWORK_AGENT_EVENTS_AFTER_B
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRunner
+import com.android.tethering.mainline.beta.Flags.FLAG_QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyInt
@@ -112,7 +113,8 @@ class CSNetworkAgentTest : CSTest() {
     // QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER is disabled. That flag is enabled by default in
     // the CSTest.
     @ConnectivityModuleTest
-    @FeatureFlags(flags = [Flag(QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER, false)])
+    @FeatureFlags(flags = [Flag(QUEUE_NETWORK_AGENT_EVENTS_AFTER_B, false),
+        Flag(FLAG_QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER, false)])
     @Test
     fun testEarlyLinkPropertiesUpdateForVPN() =
             testEarlyLinkPropertiesUpdate(TRANSPORT_VPN, expectEarlyLinkPropertiesUpdate = true)
@@ -121,7 +123,8 @@ class CSNetworkAgentTest : CSTest() {
     // QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER is disabled. That flag is enabled by default in
     // the CSTest.
     @ConnectivityModuleTest
-    @FeatureFlags(flags = [Flag(QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER, false)])
+    @FeatureFlags(flags = [Flag(QUEUE_NETWORK_AGENT_EVENTS_AFTER_B, false),
+        Flag(FLAG_QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER, false)])
     @Test
     fun testEarlyLinkPropertiesUpdateForNonVPN() =
             testEarlyLinkPropertiesUpdate(TRANSPORT_WIFI, expectEarlyLinkPropertiesUpdate = false)
@@ -131,8 +134,9 @@ class CSNetworkAgentTest : CSTest() {
     // disabled. These flags are enabled by default in the CSTest.
     @ConnectivityModuleTest
     @FeatureFlags(
-        flags = [Flag(QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER, false),
-            Flag(EARLY_LINK_PROPERTIES_UPDATE_FOR_VPN, false)]
+        flags = [Flag(QUEUE_NETWORK_AGENT_EVENTS_AFTER_B, false),
+            Flag(EARLY_LINK_PROPERTIES_UPDATE_FOR_VPN, false),
+            Flag(FLAG_QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER, false)]
     )
     @Test
     fun testEarlyLinkPropertiesUpdateDisabledForVPN() =

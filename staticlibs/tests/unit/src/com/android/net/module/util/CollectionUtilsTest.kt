@@ -53,6 +53,12 @@ class CollectionUtilsTest {
         assertEquals(1, CollectionUtils.indexOf(listOf("AA", "BBB", "CCCC")) { it.length >= 3 })
         assertEquals(1, CollectionUtils.indexOf(listOf("AA", null, "CCCC")) { it == null })
         assertEquals(1, CollectionUtils.indexOf(listOf(null, "CCCC")) { it != null })
+
+        assertEquals(4, CollectionUtils.indexOf(setOf("A", "B", "C", "D", "E")) { it == "E" })
+        assertEquals(0, CollectionUtils.indexOf(setOf("A", "B", "C", "D", "E")) { it == "A" })
+        assertEquals(1, CollectionUtils.indexOf(setOf("AA", "BBB", "CCCC")) { it.length >= 3 })
+        assertEquals(1, CollectionUtils.indexOf(setOf("AA", null, "CCCC")) { it == null })
+        assertEquals(1, CollectionUtils.indexOf(setOf(null, "CCCC")) { it != null })
     }
 
     @Test

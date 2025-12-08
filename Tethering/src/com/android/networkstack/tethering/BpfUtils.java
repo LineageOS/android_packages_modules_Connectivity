@@ -30,7 +30,7 @@ import java.io.IOException;
 /**
  * The classes and the methods for BPF utilization.
  *
- * {@hide}
+ * @hide
  */
 public class BpfUtils {
     static {

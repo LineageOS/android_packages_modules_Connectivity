@@ -24,6 +24,7 @@
 
 #include <jni.h>
 
+#include <nativehelper/jni_macros.h>
 #include <nativehelper/JNIHelp.h>
 #include <nativehelper/ScopedUtfChars.h>
 #include <nativehelper/ScopedLocalRef.h>
@@ -64,9 +65,7 @@ static jobjectArray get_string_array(JNIEnv* env, jobject obj, jfieldID field, i
 {
     if (!grow) {
         jobjectArray array = (jobjectArray)env->GetObjectField(obj, field);
-        if (array != NULL) {
-            return array;
-        }
+        if (array) return array;
     }
     return env->NewObjectArray(size, gStringClass, NULL);
 }
@@ -75,9 +74,7 @@ static jintArray get_int_array(JNIEnv* env, jobject obj, jfieldID field, int siz
 {
     if (!grow) {
         jintArray array = (jintArray)env->GetObjectField(obj, field);
-        if (array != NULL) {
-            return array;
-        }
+        if (array) return array;
     }
     return env->NewIntArray(size);
 }
@@ -86,9 +83,7 @@ static jlongArray get_long_array(JNIEnv* env, jobject obj, jfieldID field, int s
 {
     if (!grow) {
         jlongArray array = (jlongArray)env->GetObjectField(obj, field);
-        if (array != NULL) {
-            return array;
-        }
+        if (array) return array;
     }
     return env->NewLongArray(size);
 }
@@ -101,40 +96,51 @@ static int statsLinesToNetworkStats(JNIEnv* env, jclass clazz, jobject stats,
 
     ScopedLocalRef<jobjectArray> iface(env, get_string_array(env, stats,
             gNetworkStatsClassInfo.iface, size, grow));
-    if (iface.get() == NULL) return -1;
+    if (!iface.get()) return -1;
+
     ScopedIntArrayRW uid(env, get_int_array(env, stats,
             gNetworkStatsClassInfo.uid, size, grow));
-    if (uid.get() == NULL) return -1;
+    if (!uid.get()) return -1;
+
     ScopedIntArrayRW set(env, get_int_array(env, stats,
             gNetworkStatsClassInfo.set, size, grow));
-    if (set.get() == NULL) return -1;
+    if (!set.get()) return -1;
+
     ScopedIntArrayRW tag(env, get_int_array(env, stats,
             gNetworkStatsClassInfo.tag, size, grow));
-    if (tag.get() == NULL) return -1;
+    if (!tag.get()) return -1;
+
     ScopedIntArrayRW metered(env, get_int_array(env, stats,
             gNetworkStatsClassInfo.metered, size, grow));
-    if (metered.get() == NULL) return -1;
+    if (!metered.get()) return -1;
+
     ScopedIntArrayRW roaming(env, get_int_array(env, stats,
             gNetworkStatsClassInfo.roaming, size, grow));
-    if (roaming.get() == NULL) return -1;
+    if (!roaming.get()) return -1;
+
     ScopedIntArrayRW defaultNetwork(env, get_int_array(env, stats,
             gNetworkStatsClassInfo.defaultNetwork, size, grow));
-    if (defaultNetwork.get() == NULL) return -1;
+    if (!defaultNetwork.get()) return -1;
+
     ScopedLongArrayRW rxBytes(env, get_long_array(env, stats,
             gNetworkStatsClassInfo.rxBytes, size, grow));
-    if (rxBytes.get() == NULL) return -1;
+    if (!rxBytes.get()) return -1;
+
     ScopedLongArrayRW rxPackets(env, get_long_array(env, stats,
             gNetworkStatsClassInfo.rxPackets, size, grow));
-    if (rxPackets.get() == NULL) return -1;
+    if (!rxPackets.get()) return -1;
+
     ScopedLongArrayRW txBytes(env, get_long_array(env, stats,
             gNetworkStatsClassInfo.txBytes, size, grow));
-    if (txBytes.get() == NULL) return -1;
+    if (!txBytes.get()) return -1;
+
     ScopedLongArrayRW txPackets(env, get_long_array(env, stats,
             gNetworkStatsClassInfo.txPackets, size, grow));
-    if (txPackets.get() == NULL) return -1;
+    if (!txPackets.get()) return -1;
+
     ScopedLongArrayRW operations(env, get_long_array(env, stats,
             gNetworkStatsClassInfo.operations, size, grow));
-    if (operations.get() == NULL) return -1;
+    if (!operations.get()) return -1;
 
     for (int i = 0; i < size; i++) {
         ScopedLocalRef<jstring> ifaceString(env, env->NewStringUTF(lines[i].iface));
@@ -173,8 +179,7 @@ static int statsLinesToNetworkStats(JNIEnv* env, jclass clazz, jobject stats,
 static int readNetworkStatsDetail(JNIEnv* env, jclass clazz, jobject stats) {
     std::vector<stats_line> lines;
 
-    if (parseBpfNetworkStatsDetail(&lines) < 0)
-        return -1;
+    if (parseBpfNetworkStatsDetail(&lines) < 0) return -1;
 
     return statsLinesToNetworkStats(env, clazz, stats, lines);
 }
@@ -182,25 +187,26 @@ static int readNetworkStatsDetail(JNIEnv* env, jclass clazz, jobject stats) {
 static int readNetworkStatsDev(JNIEnv* env, jclass clazz, jobject stats) {
     std::vector<stats_line> lines;
 
-    if (parseBpfNetworkStatsDev(&lines) < 0)
-            return -1;
+    if (parseBpfNetworkStatsDev(&lines) < 0) return -1;
 
     return statsLinesToNetworkStats(env, clazz, stats, lines);
 }
 
 static const JNINativeMethod gMethods[] = {
-        { "nativeReadNetworkStatsDetail", "(Landroid/net/NetworkStats;)I",
-                (void*) readNetworkStatsDetail },
-        { "nativeReadNetworkStatsDev", "(Landroid/net/NetworkStats;)I",
-                (void*) readNetworkStatsDev },
+    MAKE_JNI_NATIVE_METHOD("nativeReadNetworkStatsDetail", "(Landroid/net/NetworkStats;)I", readNetworkStatsDetail),
+    MAKE_JNI_NATIVE_METHOD("nativeReadNetworkStatsDev", "(Landroid/net/NetworkStats;)I", readNetworkStatsDev),
 };
 
 int register_android_server_net_NetworkStatsFactory(JNIEnv* env) {
-    int err = jniRegisterNativeMethods(env,
-            "android/net/connectivity/com/android/server/net/NetworkStatsFactory", gMethods,
-            NELEM(gMethods));
+    if (jniRegisterNativeMethods(env,
+        "android/net/connectivity/com/android/server/net/NetworkStatsFactory",
+        gMethods,
+        NELEM(gMethods))) abort();
+
     gStringClass = env->FindClass("java/lang/String");
+    if (!gStringClass) abort();
     gStringClass = static_cast<jclass>(env->NewGlobalRef(gStringClass));
+    if (!gStringClass) abort();
 
     jclass clazz = env->FindClass("android/net/NetworkStats");
     gNetworkStatsClassInfo.size = env->GetFieldID(clazz, "size", "I");
@@ -218,7 +224,7 @@ int register_android_server_net_NetworkStatsFactory(JNIEnv* env) {
     gNetworkStatsClassInfo.txPackets = env->GetFieldID(clazz, "txPackets", "[J");
     gNetworkStatsClassInfo.operations = env->GetFieldID(clazz, "operations", "[J");
 
-    return err;
+    return 0;
 }
 
 }

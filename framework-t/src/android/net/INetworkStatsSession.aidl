@@ -20,7 +20,7 @@ import android.net.NetworkStats;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
 
-/** {@hide} */
+/** @hide */
 interface INetworkStatsSession {
 
     /** Return device aggregated network layer usage summary for traffic that matches template. */

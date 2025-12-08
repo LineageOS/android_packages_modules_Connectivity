@@ -50,8 +50,10 @@ public class NetworkIdentitySet extends HashSet<NetworkIdentity> {
     private static final int VERSION_ADD_METERED = 4;
     private static final int VERSION_ADD_DEFAULT_NETWORK = 5;
     private static final int VERSION_ADD_OEM_MANAGED_NETWORK = 6;
-    private static final int VERSION_ADD_SUB_ID = 7;
-    private static final int VERSION_ADD_TRANSPORT_TYPES = 8;
+    @VisibleForTesting
+    public static final int VERSION_ADD_SUB_ID = 7;
+    @VisibleForTesting
+    public static final int VERSION_ADD_TRANSPORT_TYPES = 8;
 
     /**
      * Construct a {@link NetworkIdentitySet} object.
@@ -144,8 +146,12 @@ public class NetworkIdentitySet extends HashSet<NetworkIdentity> {
      * Method to serialize this object into a {@code DataOutput}.
      * @hide
      */
-    public void writeToStream(DataOutput out) throws IOException {
-        out.writeInt(VERSION_ADD_TRANSPORT_TYPES);
+    public void writeToStream(DataOutput out, boolean storeTransportTypes) throws IOException {
+        if (storeTransportTypes) {
+            out.writeInt(VERSION_ADD_TRANSPORT_TYPES);
+        } else {
+            out.writeInt(VERSION_ADD_SUB_ID);
+        }
         out.writeInt(size());
         for (NetworkIdentity ident : this) {
             out.writeInt(ident.getType());
@@ -157,7 +163,9 @@ public class NetworkIdentitySet extends HashSet<NetworkIdentity> {
             out.writeBoolean(ident.isDefaultNetwork());
             out.writeInt(ident.getOemManaged());
             out.writeInt(ident.getSubId());
-            out.writeLong(BitUtils.packBits(toIntArray(ident.getTransportTypes())));
+            if (storeTransportTypes) {
+                out.writeLong(BitUtils.packBits(toIntArray(ident.getTransportTypes())));
+            }
         }
     }
 

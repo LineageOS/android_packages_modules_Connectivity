@@ -30,7 +30,7 @@ public class TimerFdUtils {
      */
     static int createTimerFileDescriptor() {
         try {
-            return ServiceConnectivityJni.createTimerFd();
+            return CommonConnectivityJni.createTimerFd();
         } catch (ErrnoException e) {
             Log.e(TAG, "createTimerFd failed", e);
             return -1;
@@ -42,7 +42,7 @@ public class TimerFdUtils {
      */
     static boolean setExpirationTime(int fd, long expirationTimeMs) {
         try {
-            ServiceConnectivityJni.setTimerFdTime(fd, expirationTimeMs);
+            CommonConnectivityJni.setTimerFdTime(fd, expirationTimeMs);
         } catch (ErrnoException e) {
             Log.e(TAG, "setExpirationTime failed", e);
             return false;

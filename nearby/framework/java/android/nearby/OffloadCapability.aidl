@@ -19,7 +19,7 @@ package android.nearby;
 /**
  * A class that can describe what offload functions are available.
  *
- * {@hide}
+ * @hide
  */
 parcelable OffloadCapability;
 

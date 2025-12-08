@@ -191,7 +191,7 @@ TEST_F(BpfHandlerTest, TestTagSocketWithUnsupportedProtocol) {
     int rawSocket = socket(AF_INET, SOCK_RAW | SOCK_CLOEXEC, IPPROTO_RAW);
     EXPECT_LE(0, rawSocket);
     EXPECT_NE(NONEXISTENT_COOKIE, getSocketCookie(rawSocket));
-    if (isAtLeastKernelVersion(5, 10, 0)) {
+    if (isAtLeastKernelVersion(5, 10)) {
         EXPECT_EQ(0, mBh.tagSocket(rawSocket, TEST_TAG, TEST_UID, TEST_UID));
     } else {
         EXPECT_EQ(-EPROTONOSUPPORT, mBh.tagSocket(rawSocket, TEST_TAG, TEST_UID, TEST_UID));

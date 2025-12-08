@@ -16,7 +16,7 @@
 
 package com.android.net.module.util.structs;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -31,7 +31,7 @@ import com.android.net.module.util.Struct.Type;
  * |                         Identification                        |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class FragmentHeader extends Struct {
+public class FragmentHeader extends LegacyStruct {
     @Field(order = 0, type = Type.U8)
     public final short nextHeader;
     @Field(order = 1, type = Type.S8)

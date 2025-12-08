@@ -21,6 +21,7 @@ package {
 
 filegroup {
     name: "framework-thread-sources",
+    defaults: ["framework-sources-module-defaults"],
     srcs: [
         "java/**/*.java",
         "java/**/*.aidl",

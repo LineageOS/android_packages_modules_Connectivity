@@ -48,7 +48,7 @@ import java.util.Arrays;
 /**
  * The classes and the methods for tethering utilization.
  *
- * {@hide}
+ * @hide
  */
 public class TetheringUtils {
     static {

@@ -93,7 +93,8 @@ package android.net {
     method @NonNull public static java.time.Duration getMobileDataActivityTimeout(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static boolean getMobileDataAlwaysOn(@NonNull android.content.Context, boolean);
     method @NonNull public static java.util.Set<java.lang.Integer> getMobileDataPreferredUids(@NonNull android.content.Context);
-    method public static int getNetworkAvoidBadWifi(@NonNull android.content.Context);
+    method @Deprecated @FlaggedApi("com.android.net.flags.carrier_aware_avoid_bad_wifi") public static int getNetworkAvoidBadWifi(@NonNull android.content.Context);
+    method @FlaggedApi("com.android.net.flags.carrier_aware_avoid_bad_wifi") public static boolean getNetworkAvoidBadWifi(@NonNull android.content.Context, int);
     method @Nullable public static String getNetworkMeteredMultipathPreference(@NonNull android.content.Context);
     method public static int getNetworkSwitchNotificationMaximumDailyCount(@NonNull android.content.Context, int);
     method @NonNull public static java.time.Duration getNetworkSwitchNotificationRateDuration(@NonNull android.content.Context, @NonNull java.time.Duration);
@@ -114,7 +115,8 @@ package android.net {
     method public static void setMobileDataActivityTimeout(@NonNull android.content.Context, @NonNull java.time.Duration);
     method public static void setMobileDataAlwaysOn(@NonNull android.content.Context, boolean);
     method public static void setMobileDataPreferredUids(@NonNull android.content.Context, @NonNull java.util.Set<java.lang.Integer>);
-    method public static void setNetworkAvoidBadWifi(@NonNull android.content.Context, int);
+    method @Deprecated @FlaggedApi("com.android.net.flags.carrier_aware_avoid_bad_wifi") public static void setNetworkAvoidBadWifi(@NonNull android.content.Context, int);
+    method @FlaggedApi("com.android.net.flags.carrier_aware_avoid_bad_wifi") public static void setNetworkAvoidBadWifi(@NonNull android.content.Context, int, int);
     method public static void setNetworkMeteredMultipathPreference(@NonNull android.content.Context, @NonNull String);
     method public static void setNetworkSwitchNotificationMaximumDailyCount(@NonNull android.content.Context, @IntRange(from=0) int);
     method public static void setNetworkSwitchNotificationRateDuration(@NonNull android.content.Context, @NonNull java.time.Duration);
@@ -124,6 +126,7 @@ package android.net {
     method public static void setUidsAllowedOnRestrictedNetworks(@NonNull android.content.Context, @NonNull java.util.Set<java.lang.Integer>);
     method public static void setWifiAlwaysRequested(@NonNull android.content.Context, boolean);
     method public static void setWifiDataActivityTimeout(@NonNull android.content.Context, @NonNull java.time.Duration);
+    method @FlaggedApi("com.android.net.flags.carrier_aware_avoid_bad_wifi") public static boolean shouldShowAvoidBadWifiToggle(@NonNull android.content.Context, int);
     field public static final int CAPTIVE_PORTAL_MODE_AVOID = 2; // 0x2
     field public static final int CAPTIVE_PORTAL_MODE_IGNORE = 0; // 0x0
     field public static final int CAPTIVE_PORTAL_MODE_PROMPT = 1; // 0x1

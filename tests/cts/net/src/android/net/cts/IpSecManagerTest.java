@@ -305,8 +305,6 @@ public class IpSecManagerTest extends IpSecBaseTest {
     private void doTestCreateTransform(String loopbackAddrString, boolean encap) throws Exception {
         InetAddress localAddr = InetAddress.getByName(loopbackAddrString);
 
-        final boolean [][] applyInApplyOut = {
-                {false, false}, {false, true}, {true, false}, {true,true}};
         final byte[] data = new String("Best test data ever!").getBytes("UTF-8");
         final DatagramPacket outPacket = new DatagramPacket(data, 0, data.length, localAddr, 0);
 
@@ -314,18 +312,26 @@ public class IpSecManagerTest extends IpSecBaseTest {
         DatagramPacket inPacket = new DatagramPacket(in, in.length);
         int localPort;
 
-        for(boolean[] io : applyInApplyOut) {
-            boolean applyIn = io[0];
-            boolean applyOut = io[1];
+        for (int i = 0; i < 16; i++) {
+            boolean applyIn = (i & 1) > 0;
+            boolean applyOut = (i & 2) > 0;
+            boolean rekeyIn = (i & 4) > 0;
+            boolean rekeyOut = (i & 8) > 0;
             try (
-                SecurityParameterIndex spi = mISM.allocateSecurityParameterIndex(localAddr);
-                UdpEncapsulationSocket encapSocket = encap
-                        ? getPrivilegedUdpEncapSocket(/*ipv6=*/ localAddr instanceof Inet6Address)
-                        : null;
-                IpSecTransform transform = buildTransportModeTransform(spi, localAddr,
-                        encapSocket);
-                // Bind localSocket to a random available port.
-                DatagramSocket localSocket = new DatagramSocket(0);
+                    SecurityParameterIndex spi = mISM.allocateSecurityParameterIndex(localAddr);
+                    UdpEncapsulationSocket encapSocket = encap
+                            ? getPrivilegedUdpEncapSocket(
+                                    /*ipv6=*/ localAddr instanceof Inet6Address)
+                            : null;
+                    IpSecTransform transform = buildTransportModeTransform(spi, localAddr,
+                            encapSocket);
+                    // Bind localSocket to a random available port.
+                    DatagramSocket localSocket = new DatagramSocket(0);
+
+                    SecurityParameterIndex rekeySpi = mISM.allocateSecurityParameterIndex(
+                            localAddr);
+                    IpSecTransform rekeyTransform = buildTransportModeTransform(
+                            rekeySpi, localAddr, encapSocket);
             ) {
                 localPort = localSocket.getLocalPort();
                 localSocket.setSoTimeout(200);
@@ -341,24 +347,46 @@ public class IpSecManagerTest extends IpSecBaseTest {
                 if (applyIn == applyOut) {
                     localSocket.send(outPacket);
                     localSocket.receive(inPacket);
-                    assertTrue("Encrypted data did not match.",
+                    assertTrue("Data did not match.",
                             Arrays.equals(outPacket.getData(), inPacket.getData()));
-                    mISM.removeTransportModeTransforms(localSocket);
-                } else {
-                    try {
+                }
+                // FIXME update this check once SdkLevel#isAtLeastB1() exists for 25Q4
+                //
+                // Also note, this is based on code that is in netd, *not* in the mainline
+                // module, which is why the SDK check is used.
+                if (android.os.Build.VERSION.SDK_INT_FULL
+                        > android.os.Build.VERSION_CODES_FULL.BAKLAVA) {
+                    if (rekeyIn) {
+                        mISM.applyTransportModeTransform(
+                                localSocket, IpSecManager.DIRECTION_IN, rekeyTransform);
+                    }
+                    if (rekeyOut) {
+                        mISM.applyTransportModeTransform(
+                                localSocket, IpSecManager.DIRECTION_OUT, rekeyTransform);
+                    }
+                    // There are some unusual combinations here, such as:
+                    // >>    applyOut && !rekeyOut && !applyIn && rekeyIn
+                    // These combinations work because the SAs specified in the test are
+                    // bidirectional, so if there is any valid SA that has been applied in
+                    // each direction, then this should succeed. Unfortunately, on some
+                    // kernel versions, the test *may* also be able to pass even if there
+                    // is a valid transport SA even though one has not been "applied" to
+                    // the socket (the policy has not been set for input). Even if those
+                    // combinations would pass, we do not wish to enforce them in tests
+                    // because they are effectively bugs. The intent of this test is to
+                    // ensure that if we have called "apply" for any policy that has
+                    // matching security policies, it is accepted even if the SPI does
+                    // not match, which is what allows rekey to work on the downlink/input
+                    // direction for a socket.
+                    if ((applyOut || rekeyOut) && (applyIn || rekeyIn)) {
                         localSocket.send(outPacket);
                         localSocket.receive(inPacket);
-                    } catch (IOException e) {
-                        continue;
-                    } finally {
+                        assertTrue("Encrypted data did not match. i=" + i,
+                                Arrays.equals(outPacket.getData(), inPacket.getData()));
                         mISM.removeTransportModeTransforms(localSocket);
                     }
-                    // FIXME: This check is disabled because sockets currently receive data
-                    // if there is a valid SA for decryption, even when the input policy is
-                    // not applied to a socket.
-                    //  fail("Data IO should fail on asymmetrical transforms! + Input="
-                    //          + applyIn + " Output=" + applyOut);
                 }
+                mISM.removeTransportModeTransforms(localSocket);
             }
         }
     }

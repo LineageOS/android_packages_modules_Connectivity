@@ -229,6 +229,24 @@ public final class DeviceConfigUtils {
                 () -> getPackageVersion(context));
     }
 
+    /**
+     * Check whether one specific experimental feature in CaptivePortalLogin module from
+     * {@link DeviceConfig} is not disabled.
+     * If the feature is enabled by default and disabled by flag push (kill switch), this method
+     * should be used.
+     * If the feature is disabled by default and enabled by flag push,
+     * {@link #isCaptivePortalLoginFeatureEnabled(Context, String)} should be used.
+     *
+     * @param context The global context information about an app environment.
+     * @param name The name of the property in CaptivePortalLogin module to look up.
+     * @return true if this feature is enabled, or false if disabled.
+     */
+    public static boolean isCaptivePortalLoginFeatureNotChickenedOut(@NonNull Context context,
+            @NonNull String name) {
+        return isFeatureEnabled(NAMESPACE_CAPTIVEPORTALLOGIN, name, true /* defaultEnabled */,
+                () -> getPackageVersion(context));
+    }
+
     private static boolean isFeatureEnabled(@NonNull String namespace,
             String name, boolean defaultEnabled, Supplier<Long> packageVersionSupplier) {
         final int flagValue = getDeviceConfigPropertyInt(namespace, name, 0 /* default value */);

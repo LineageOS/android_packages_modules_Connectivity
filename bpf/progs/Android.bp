@@ -60,35 +60,60 @@ cc_library_headers {
     ],
 }
 
+cc_library_headers {
+    name: "bpf_prog_mainline_headers",
+    native_bridge_supported: true,
+    export_include_dirs: ["include"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sdk_version: "30",
+    min_sdk_version: "30",
+    // This header is for internal use within the tethering module.
+    // Platform code should use bpf_prog_platform_headers instead.
+    visibility: [
+        "//packages/modules/Connectivity/bpf:__subpackages__",
+    ],
+    apex_available: [
+        "com.android.tethering",
+    ],
+}
+
 //
 // bpf kernel programs
 //
 bpf {
     name: "clatd.o",
     srcs: ["clatd.c"],
+    include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
     sub_dir: "mainline",
 }
 
 bpf {
     name: "dscpPolicy.o",
     srcs: ["dscpPolicy.c"],
+    include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
     sub_dir: "mainline",
 }
 
 bpf {
     name: "netd.o",
     srcs: ["netd.c"],
+    include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
     sub_dir: "mainline",
 }
 
 bpf {
     name: "offload.o",
     srcs: ["offload.c"],
+    include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
     sub_dir: "mainline",
 }
 
 bpf {
     name: "test.o",
     srcs: ["test.c"],
+    include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
     sub_dir: "mainline",
 }

@@ -21,11 +21,8 @@ import android.net.MacAddress;
 import androidx.annotation.NonNull;
 
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.Field;
-import com.android.net.module.util.Struct.Type;
 
 import java.net.Inet4Address;
-import java.net.UnknownHostException;
 import java.util.Objects;
 
 /** Key type for downstream & upstream IPv4 forwarding maps. */
@@ -39,11 +36,11 @@ public class Tether4Key extends Struct {
     @Field(order = 2, type = Type.U8, padding = 1)
     public final short l4proto;
 
-    @Field(order = 3, type = Type.ByteArray, arraysize = 4)
-    public final byte[] src4;
+    @Field(order = 3, type = Type.Ipv4Address)
+    public final Inet4Address src4;
 
-    @Field(order = 4, type = Type.ByteArray, arraysize = 4)
-    public final byte[] dst4;
+    @Field(order = 4, type = Type.Ipv4Address)
+    public final Inet4Address dst4;
 
     @Field(order = 5, type = Type.UBE16)
     public final int srcPort;
@@ -52,9 +49,11 @@ public class Tether4Key extends Struct {
     public final int dstPort;
 
     public Tether4Key(final int iif, @NonNull final MacAddress dstMac, final short l4proto,
-            final byte[] src4, final byte[] dst4, final int srcPort,
+            @NonNull final Inet4Address src4, @NonNull final Inet4Address dst4, final int srcPort,
             final int dstPort) {
         Objects.requireNonNull(dstMac);
+        Objects.requireNonNull(src4);
+        Objects.requireNonNull(dst4);
 
         this.iif = iif;
         this.dstMac = dstMac;
@@ -67,15 +66,10 @@ public class Tether4Key extends Struct {
 
     @Override
     public String toString() {
-        try {
-            return String.format(
-                    "iif: %d, dstMac: %s, l4proto: %d, src4: %s, dst4: %s, "
-                            + "srcPort: %d, dstPort: %d",
-                    iif, dstMac, l4proto,
-                    Inet4Address.getByAddress(src4), Inet4Address.getByAddress(dst4),
-                    Short.toUnsignedInt((short) srcPort), Short.toUnsignedInt((short) dstPort));
-        } catch (UnknownHostException | IllegalArgumentException e) {
-            return "Invalid IP address" + e;
-        }
+        return String.format(
+                "iif: %d, dstMac: %s, l4proto: %d, src4: %s, dst4: %s, "
+                        + "srcPort: %d, dstPort: %d",
+                iif, dstMac, l4proto, src4, dst4,
+                Short.toUnsignedInt((short) srcPort), Short.toUnsignedInt((short) dstPort));
     }
 }

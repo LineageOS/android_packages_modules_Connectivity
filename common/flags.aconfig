@@ -199,3 +199,20 @@ flag {
   bug: "406146808"
   is_fixed_read_only: true
 }
+
+flag {
+  name: "netstats_transport_type"
+  is_exported: true
+  namespace: "android_core_networking"
+  description: "Flag for NetworkTemplate#get/setTransportType API"
+  bug: "419123367"
+  is_fixed_read_only: true
+}
+
+flag {
+  name: "carrier_aware_avoid_bad_wifi"
+  namespace: "android_core_networking"
+  description: "Flag for API to provide carrier-aware avoid bad Wi-Fi setting."
+  bug: "410976315"
+  is_fixed_read_only: true
+}

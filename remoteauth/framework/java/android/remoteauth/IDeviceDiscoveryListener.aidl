@@ -21,7 +21,7 @@ import android.remoteauth.RemoteDevice;
 /**
  * Binder callback for DeviceDiscoveryCallback.
  *
- * {@hide}
+ * @hide
  */
 oneway interface IDeviceDiscoveryListener {
         /** Reports a {@link RemoteDevice} being discovered. */

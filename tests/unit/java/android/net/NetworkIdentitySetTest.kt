@@ -29,6 +29,7 @@ import android.net.NetworkCapabilities.TRANSPORT_ETHERNET
 import android.net.NetworkCapabilities.TRANSPORT_TEST
 import android.net.NetworkCapabilities.TRANSPORT_VPN
 import android.net.NetworkCapabilities.TRANSPORT_WIFI
+import android.net.NetworkIdentitySet.VERSION_ADD_SUB_ID
 import android.net.NetworkIdentitySet.writeOptionalString
 import android.os.Build
 import android.telephony.TelephonyManager
@@ -121,7 +122,7 @@ class NetworkIdentitySetTest {
 
         val baos = ByteArrayOutputStream()
         val outDataStream = DataOutputStream(baos)
-        originalSet.writeToStream(outDataStream)
+        originalSet.writeToStream(outDataStream, true /* storeTransportTypes */)
 
         val bais = ByteArrayInputStream(baos.toByteArray())
         val inDataStream = DataInputStream(bais)
@@ -151,17 +152,17 @@ class NetworkIdentitySetTest {
     }
 
     @Test
-    fun testMigrateToSupportTransportTypes() {
-        doTestMigrateToSupportTransportTypes(TYPE_MOBILE, TRANSPORT_CELLULAR)
-        doTestMigrateToSupportTransportTypes(TYPE_WIFI, TRANSPORT_WIFI)
-        doTestMigrateToSupportTransportTypes(TYPE_BLUETOOTH, TRANSPORT_BLUETOOTH)
-        doTestMigrateToSupportTransportTypes(TYPE_ETHERNET, TRANSPORT_ETHERNET)
-        doTestMigrateToSupportTransportTypes(TYPE_VPN, TRANSPORT_VPN)
-        doTestMigrateToSupportTransportTypes(TYPE_TEST, TRANSPORT_TEST)
-        doTestMigrateToSupportTransportTypes(TYPE_WIMAX)
+    fun testMigrateToStoreTransportTypes() {
+        doTestMigrateToStoreTransportTypes(TYPE_MOBILE, TRANSPORT_CELLULAR)
+        doTestMigrateToStoreTransportTypes(TYPE_WIFI, TRANSPORT_WIFI)
+        doTestMigrateToStoreTransportTypes(TYPE_BLUETOOTH, TRANSPORT_BLUETOOTH)
+        doTestMigrateToStoreTransportTypes(TYPE_ETHERNET, TRANSPORT_ETHERNET)
+        doTestMigrateToStoreTransportTypes(TYPE_VPN, TRANSPORT_VPN)
+        doTestMigrateToStoreTransportTypes(TYPE_TEST, TRANSPORT_TEST)
+        doTestMigrateToStoreTransportTypes(TYPE_WIMAX)
     }
 
-    private fun doTestMigrateToSupportTransportTypes(
+    private fun doTestMigrateToStoreTransportTypes(
             legacyNetworkType: Int,
             vararg expectedTransportTypes: Int
     ) {
@@ -182,6 +183,37 @@ class NetworkIdentitySetTest {
             it.add(expectedIdent)
         }
 
+        assertEquals(expectedSet, deserializedSet)
+    }
+
+    @Test
+    fun testDowngradeFromStoreTransportTypes() {
+        val originalSet = NetworkIdentitySet()
+        originalSet.add(buildNetworkIdentity(TYPE_MOBILE, TRANSPORT_CELLULAR))
+        originalSet.add(buildNetworkIdentity(TYPE_WIFI, TRANSPORT_VPN, TRANSPORT_WIFI))
+
+        val baos = ByteArrayOutputStream()
+        val outDataStream = DataOutputStream(baos)
+        // Write to stream with storeTransportTypes disabled.
+        originalSet.writeToStream(outDataStream, false /* storeTransportTypes */)
+
+        val bais = ByteArrayInputStream(baos.toByteArray())
+        val inDataStream = DataInputStream(bais)
+
+        // Verify the output is in the corresponding format.
+        val version = inDataStream.readInt()
+        val size = inDataStream.readInt()
+        assertEquals(VERSION_ADD_SUB_ID, version)
+        assertEquals(2, size)
+
+        // Generate expected identity set with deduced transport type.
+        val expectedSet = NetworkIdentitySet()
+        expectedSet.add(buildNetworkIdentity(TYPE_MOBILE, TRANSPORT_CELLULAR))
+        expectedSet.add(buildNetworkIdentity(TYPE_WIFI, TRANSPORT_WIFI))
+
+        // Verify the transport types are from deduced transport type.
+        inDataStream.reset()
+        val deserializedSet = NetworkIdentitySet(inDataStream)
         assertEquals(expectedSet, deserializedSet)
     }
 }

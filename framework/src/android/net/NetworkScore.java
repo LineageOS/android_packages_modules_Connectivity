@@ -89,11 +89,15 @@ public final class NetworkScore implements Parcelable {
     // This network is exiting : it will likely disconnect in a few seconds.
     /** @hide */
     public static final int POLICY_EXITING = 3;
+    // This is a VCN network
+    // TODO: b/424266491 Remove this policy after adding a new NET_CAP to identify VCN
+    /** @hide */
+    public static final int POLICY_VCN = 4;
 
     /** @hide */
     public static final int MIN_AGENT_MANAGED_POLICY = POLICY_YIELD_TO_BAD_WIFI;
     /** @hide */
-    public static final int MAX_AGENT_MANAGED_POLICY = POLICY_EXITING;
+    public static final int MAX_AGENT_MANAGED_POLICY = POLICY_VCN;
 
     // Bitmask of all the policies applied to this score.
     private final long mPolicies;
@@ -191,6 +195,17 @@ public final class NetworkScore implements Parcelable {
     @SystemApi
     public boolean isExiting() {
         return hasPolicy(POLICY_EXITING);
+    }
+
+    /**
+     * Whether this network is a VCN cell network.
+     *
+     * <p>When multiple cell networks are active, the device prefers the VCN cell network over a
+     * physical cell network.
+     */
+    /** @hide */
+    public boolean isVcn() {
+        return hasPolicy(POLICY_VCN);
     }
 
     @Override
@@ -315,6 +330,23 @@ public final class NetworkScore implements Parcelable {
                 mPolicies |= (1L << POLICY_EXITING);
             } else {
                 mPolicies &= ~(1L << POLICY_EXITING);
+            }
+            return this;
+        }
+
+        /**
+         * Set for a VCN network.
+         *
+         * <p>When multiple cell networks are active, the device prefers the VCN cell network over a
+         * physical cell network.
+         */
+        /** @hide */
+        @NonNull
+        public Builder setVcn(final boolean val) {
+            if (val) {
+                mPolicies |= (1L << POLICY_VCN);
+            } else {
+                mPolicies &= ~(1L << POLICY_VCN);
             }
             return this;
         }

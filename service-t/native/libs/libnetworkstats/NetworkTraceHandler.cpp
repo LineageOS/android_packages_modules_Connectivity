@@ -288,9 +288,9 @@ void NetworkTraceHandler::Fill(const BundleKey& src,
 
   char ifname[IF_NAMESIZE] = {};
   if (if_indextoname(src.ifindex, ifname) == ifname) {
-    event->set_interface(std::string(ifname));
+      event->set_network_interface(std::string(ifname));
   } else {
-    event->set_interface("error");
+      event->set_network_interface("error");
   }
 }
 

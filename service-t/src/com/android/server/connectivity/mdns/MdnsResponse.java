@@ -298,6 +298,11 @@ public class MdnsResponse {
         return new LinkedList<>(records);
     }
 
+    /** Gets the number of records. */
+    synchronized int getNumRecords() {
+        return records.size();
+    }
+
     /**
      * Drop address records if they are for a hostname that does not match the service record.
      *

@@ -16,7 +16,7 @@
 
 package com.android.net.module.util.structs;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -38,7 +38,7 @@ import com.android.net.module.util.Struct.Type;
  * |   Options ...
  * +-+-+-+-+-+-+-+-+-+-+-+-
  */
-public class RaHeader extends Struct {
+public class RaHeader extends LegacyStruct {
     @Field(order = 0, type = Type.S8)
     public final byte hopLimit;
     // "Managed address configuration", "Other configuration" bits, and 6 reserved bits

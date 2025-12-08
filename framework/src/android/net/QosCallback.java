@@ -35,7 +35,7 @@ import java.util.concurrent.Executor;
  * <li>A network specific issue occurs.  eg. Congestion on a carrier network.</li>
  * <li>The network registered with the callback has no associated QoS providers</li>
  * </ul>
- * {@hide}
+ * @hide
  */
 @SystemApi
 public abstract class QosCallback {

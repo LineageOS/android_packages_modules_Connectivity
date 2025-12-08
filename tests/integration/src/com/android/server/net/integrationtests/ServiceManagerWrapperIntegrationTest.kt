@@ -18,7 +18,7 @@ package com.android.server.net.integrationtests
 
 import android.content.Context
 import android.os.Build
-import com.android.server.ServiceManagerWrapper
+import com.android.net.module.util.CommonConnectivityJni
 import com.android.testutils.ConnectivityModuleTest
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
@@ -26,13 +26,13 @@ import kotlin.test.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Integration tests for {@link ServiceManagerWrapper}. */
+/** Integration tests for {@link CommonConnectivityJni}. */
 @RunWith(DevSdkIgnoreRunner::class)
 @IgnoreUpTo(Build.VERSION_CODES.S)
 @ConnectivityModuleTest
 class ServiceManagerWrapperIntegrationTest {
     @Test
     fun testWaitForService_successFullyRetrievesConnectivityServiceBinder() {
-        assertNotNull(ServiceManagerWrapper.waitForService(Context.CONNECTIVITY_SERVICE))
+        assertNotNull(CommonConnectivityJni.waitForService(Context.CONNECTIVITY_SERVICE))
     }
 }

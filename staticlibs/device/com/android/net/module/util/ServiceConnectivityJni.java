@@ -49,6 +49,15 @@ public class ServiceConnectivityJni {
      */
     public static native void setTimerFdTime(int fd, long timeMs) throws ErrnoException;
 
+    /**
+     * Get the driver name for a given interface using the ethtool API.
+     *
+     * @param ifname name of the interface to query.
+     * @return the name of the driver.
+     * @throws ErrnoException if ioctl() returns -1.
+     */
+    public static native String getDriverNameForInterface(String ifname) throws ErrnoException;
+
     /** Create tun/tap interface */
     public static native int createTunTap(boolean isTun, boolean hasCarrier,
             boolean setIffMulticast, @NonNull String iface);

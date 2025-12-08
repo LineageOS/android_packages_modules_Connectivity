@@ -59,6 +59,27 @@ def get_apf_counters_from_cmd(
   return data_dict
 
 
+def get_apf_config_from_cmd(
+    ad: android_device.AndroidDevice, iface_name: str
+) -> list[str]:
+  cmd = f'cmd network_stack apf {iface_name} config'
+  output = AdbOutputHandler(ad, cmd).get_output()
+  if not output or '\n' in output.strip():
+    return []
+
+  match = re.search(r'offloads:\s*\[(.*?)\]', output)
+  if not match:
+    return []
+
+  # The captured group contains the list items (e.g., " ARP, ND, MLD, ... ")
+  list_content = match.group(1)
+
+  # Split the content string by commas or spaces, filter empty items,
+  # and return the result as a list.
+  items = [item for item in re.split(r'[,\s]+', list_content) if item]
+  return items
+
+
 def get_ipv4_addresses(
     ad: android_device.AndroidDevice, iface_name: str
 ) -> list[str]:

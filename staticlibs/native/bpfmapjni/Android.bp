@@ -20,7 +20,7 @@ package {
 cc_library_static {
     name: "libnet_utils_device_common_bpfjni",
     srcs: [
-        "com_android_net_module_util_BpfMap.cpp",
+        "com_android_net_module_util_Bpf.cpp",
         "com_android_net_module_util_TcUtils.cpp",
     ],
     header_libs: [

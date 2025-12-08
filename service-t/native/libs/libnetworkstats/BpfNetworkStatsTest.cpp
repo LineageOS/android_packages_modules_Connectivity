@@ -50,6 +50,7 @@ constexpr int TEST_MAP_SIZE = 10;
 constexpr uid_t TEST_UID1 = 10086;
 constexpr uid_t TEST_UID2 = 12345;
 constexpr uint32_t TEST_TAG = 42;
+constexpr uint32_t TEST_TAG2 = 43;
 constexpr int TEST_COUNTERSET0 = 0;
 constexpr int TEST_COUNTERSET1 = 1;
 constexpr uint64_t TEST_BYTES0 = 1000;
@@ -72,10 +73,10 @@ class BpfNetworkStatsHelperTest : public testing::Test {
   protected:
     BpfNetworkStatsHelperTest() {}
     BpfMap<uint64_t, UidTagValue> mFakeCookieTagMap;
-    BpfMap<uint32_t, StatsValue> mFakeAppUidStatsMap;
+    BpfMapRW<uint32_t, StatsValue> mFakeAppUidStatsMap;
     BpfMap<StatsKey, StatsValue> mFakeStatsMap;
-    BpfMap<uint32_t, IfaceValue> mFakeIfaceIndexNameMap;
-    BpfMap<uint32_t, StatsValue> mFakeIfaceStatsMap;
+    BpfMapRW<uint32_t, IfaceValue> mFakeIfaceIndexNameMap;
+    BpfMapRW<uint32_t, StatsValue> mFakeIfaceStatsMap;
 
     IfIndexToNameFunc mIfIndex2Name = [this](const uint32_t ifindex){
         return mFakeIfaceIndexNameMap.readValue(ifindex);
@@ -108,7 +109,7 @@ class BpfNetworkStatsHelperTest : public testing::Test {
     }
 
     void populateFakeStats(uid_t uid, uint32_t tag, uint32_t ifaceIndex, uint32_t counterSet,
-                           StatsValue value, BpfMap<StatsKey, StatsValue>& map) {
+                           StatsValue value, BpfMapRW<StatsKey, StatsValue>& map) {
         StatsKey key = {
             .uid = (uint32_t)uid, .tag = tag, .counterSet = counterSet, .ifaceIndex = ifaceIndex};
         EXPECT_RESULT_OK(map.writeValue(key, value, BPF_ANY));
@@ -179,14 +180,13 @@ TEST_F(BpfNetworkStatsHelperTest, TestBpfIterateMap) {
     }
     int totalCount = 0;
     int totalSum = 0;
-    const auto iterateWithoutDeletion =
-            [&totalCount, &totalSum](const uint64_t& key, const BpfMap<uint64_t, UidTagValue>&) {
-                EXPECT_GE((uint64_t)5, key);
-                totalCount++;
-                totalSum += key;
-                return Result<void>();
-            };
-    EXPECT_RESULT_OK(mFakeCookieTagMap.iterate(iterateWithoutDeletion));
+    EXPECT_RESULT_OK(mFakeCookieTagMap.forAll(
+        [&totalCount, &totalSum](const uint64_t& key) {
+            EXPECT_GE((uint64_t)5, key);
+            totalCount++;
+            totalSum += key;
+        }
+    ));
     EXPECT_EQ(5, totalCount);
     EXPECT_EQ(1 + 2 + 3 + 4 + 5, totalSum);
 }
@@ -303,8 +303,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsDetail) {
     };
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX2, TEST_COUNTERSET0, value1, mFakeStatsMap);
-    populateFakeStats(TEST_UID1, TEST_TAG + 1, IFACE_INDEX1, TEST_COUNTERSET0, value1,
-                      mFakeStatsMap);
+    populateFakeStats(TEST_UID1, TEST_TAG2, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     std::vector<stats_line> lines;
     ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(lines, mFakeStatsMap, mIfIndex2Name));
@@ -455,16 +454,23 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsSortedAndGrouped) {
     expectStatsLineEqual(value1, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, TEST_TAG, lines[1]);
     lines.clear();
 
+    // bpf map was consumed, repopulate it with same data as above:
+    populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     // These items should not be grouped.
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX2, TEST_COUNTERSET0, value2, mFakeStatsMap);
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX3, TEST_COUNTERSET1, value2, mFakeStatsMap);
-    populateFakeStats(TEST_UID1, TEST_TAG + 1, IFACE_INDEX1, TEST_COUNTERSET0, value2,
-                      mFakeStatsMap);
+    populateFakeStats(TEST_UID1, TEST_TAG2, IFACE_INDEX1, TEST_COUNTERSET0, value2, mFakeStatsMap);
     populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     ASSERT_EQ(0, parseBpfNetworkStatsDetailInternal(lines, mFakeStatsMap, mIfIndex2Name));
     ASSERT_EQ((size_t) 9, lines.size());
     lines.clear();
 
+    // bpf map was consumed, repopulate it again with same data as above:
+    populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
+    populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX2, TEST_COUNTERSET0, value2, mFakeStatsMap);
+    populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX3, TEST_COUNTERSET1, value2, mFakeStatsMap);
+    populateFakeStats(TEST_UID1, TEST_TAG2, IFACE_INDEX1, TEST_COUNTERSET0, value2, mFakeStatsMap);
+    populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX1, TEST_COUNTERSET0, value1, mFakeStatsMap);
     // These items should be grouped.
     populateFakeStats(TEST_UID1, TEST_TAG, IFACE_INDEX3, TEST_COUNTERSET0, value1, mFakeStatsMap);
     populateFakeStats(TEST_UID2, TEST_TAG, IFACE_INDEX3, TEST_COUNTERSET0, value1, mFakeStatsMap);
@@ -477,7 +483,7 @@ TEST_F(BpfNetworkStatsHelperTest, TestGetStatsSortedAndGrouped) {
     expectStatsLineEqual(value2, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET1, 0,            lines[1]);
     expectStatsLineEqual(value3, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, TEST_TAG,     lines[2]);
     expectStatsLineEqual(value2, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET1, TEST_TAG,     lines[3]);
-    expectStatsLineEqual(value2, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, TEST_TAG + 1, lines[4]);
+    expectStatsLineEqual(value2, IFACE_NAME1, TEST_UID1, TEST_COUNTERSET0, TEST_TAG2,    lines[4]);
     expectStatsLineEqual(value3, IFACE_NAME1, TEST_UID2, TEST_COUNTERSET0, 0,            lines[5]);
     expectStatsLineEqual(value3, IFACE_NAME1, TEST_UID2, TEST_COUNTERSET0, TEST_TAG,     lines[6]);
     expectStatsLineEqual(value2, IFACE_NAME2, TEST_UID1, TEST_COUNTERSET0, 0,            lines[7]);

@@ -48,8 +48,11 @@ import com.android.testutils.DevSdkIgnoreRule
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo
 import com.android.testutils.DevSdkIgnoreRunner
 import com.android.testutils.TestableNetworkCallback
+import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
 import com.android.testutils.TestableNetworkCallback.Event.Losing
 import com.android.testutils.TestableNetworkCallback.Event.Lost
+import com.android.testutils.TestableNetworkCallback.Event.Resumed
+import com.android.testutils.TestableNetworkCallback.Event.Suspended
 import com.android.testutils.runAsShell
 import com.android.testutils.visibleOnHandlerThread
 import kotlin.test.assertEquals
@@ -299,6 +302,46 @@ class CSSatelliteNetworkTest : CSTest() {
         allNetworksCb.expect<Lost>(satelliteNetwork2)
         defaultCb.expect<Lost>(satelliteNetwork2)
         otherUidCb.assertNoCallback()
+    }
+
+    @Test
+    fun testSuspendAndRoam() {
+        val agent = createSatelliteAgent(
+                name = "satellite0",
+                restricted = false,
+                keepConnected = true
+        )
+        agent.connect()
+        val nr = NetworkRequest.Builder()
+                .clearCapabilities()
+                .addTransportType(TRANSPORT_SATELLITE)
+                .build()
+        val cb = TestableNetworkCallback()
+        cm.registerNetworkCallback(nr, cb)
+        cb.eventuallyExpect<CapabilitiesChanged> {it.network == agent.network &&
+                    it.caps.hasCapability(NET_CAPABILITY_NOT_SUSPENDED) &&
+                    it.caps.hasCapability(NET_CAPABILITY_NOT_ROAMING)
+        }
+
+        // Suspend satellite network
+        val nc1 = satelliteNc(restricted = false)
+                .removeCapability(NET_CAPABILITY_NOT_SUSPENDED)
+                .removeCapability(NET_CAPABILITY_NOT_ROAMING)
+        agent.sendNetworkCapabilities(nc1)
+        cb.eventuallyExpect<CapabilitiesChanged> {it.network == agent.network &&
+                    !it.caps.hasCapability(NET_CAPABILITY_NOT_SUSPENDED) &&
+                    !it.caps.hasCapability(NET_CAPABILITY_NOT_ROAMING)
+        }
+        cb.expect<Suspended>(agent)
+
+        // Resume satellite network
+        val nc2 = satelliteNc(restricted = false)
+        agent.sendNetworkCapabilities(nc2)
+        cb.expect<CapabilitiesChanged> {it.network == agent.network &&
+                it.caps.hasCapability(NET_CAPABILITY_NOT_SUSPENDED) &&
+                it.caps.hasCapability(NET_CAPABILITY_NOT_ROAMING)
+        }
+        cb.expect<Resumed>(agent)
     }
 
     private fun assertCreateMultiLayerNrisFromSatelliteNetworkPreferredUids(uids: Set<Int>) {

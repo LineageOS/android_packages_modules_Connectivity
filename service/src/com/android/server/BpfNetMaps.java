@@ -80,9 +80,9 @@ import com.android.net.module.util.SingleWriterBpfMap;
 import com.android.net.module.util.Struct;
 import com.android.net.module.util.Struct.Bool;
 import com.android.net.module.util.Struct.S32;
+import com.android.net.module.util.Struct.S64;
 import com.android.net.module.util.Struct.U32;
 import com.android.net.module.util.Struct.U8;
-import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
 import com.android.net.module.util.bpf.IngressDiscardKey;
 import com.android.net.module.util.bpf.IngressDiscardValue;
@@ -101,7 +101,7 @@ import java.util.StringJoiner;
 /**
  * BpfNetMaps is responsible for providing traffic controller relevant functionality.
  *
- * {@hide}
+ * @hide
  */
 public class BpfNetMaps {
     static {
@@ -134,7 +134,7 @@ public class BpfNetMaps {
     // BpfMap for UID_OWNER_MAP_PATH. This map is not accessed by others.
     private static IBpfMap<S32, UidOwnerValue> sUidOwnerMap = null;
     private static IBpfMap<S32, U8> sUidPermissionMap = null;
-    private static IBpfMap<CookieTagMapKey, CookieTagMapValue> sCookieTagMap = null;
+    private static IBpfMap<S64, CookieTagMapValue> sCookieTagMap = null;
     // TODO: Add BOOL class and replace U8?
     private static IBpfMap<S32, U8> sDataSaverEnabledMap = null;
     private static IBpfMap<IngressDiscardKey, IngressDiscardValue> sIngressDiscardMap = null;
@@ -177,7 +177,7 @@ public class BpfNetMaps {
      */
     @VisibleForTesting
     public static void setCookieTagMapForTest(
-            IBpfMap<CookieTagMapKey, CookieTagMapValue> cookieTagMap) {
+            IBpfMap<S64, CookieTagMapValue> cookieTagMap) {
         sCookieTagMap = cookieTagMap;
     }
 
@@ -248,11 +248,11 @@ public class BpfNetMaps {
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private static IBpfMap<CookieTagMapKey, CookieTagMapValue> getCookieTagMap() {
+    private static IBpfMap<S64, CookieTagMapValue> getCookieTagMap() {
         try {
             // Cannot use SingleWriterBpfMap because it's written by ClatCoordinator as well.
             return new BpfMap<>(COOKIE_TAG_MAP_PATH,
-                    CookieTagMapKey.class, CookieTagMapValue.class);
+                    S64.class, CookieTagMapValue.class);
         } catch (ErrnoException e) {
             throw new IllegalStateException("Cannot open cookie tag map", e);
         }
@@ -1308,7 +1308,7 @@ public class BpfNetMaps {
             // to dump CookieTagMap. But the TagSocketTest in CTS depends on this dump so the tests
             // need to be updated before remove the dump from BpfNetMaps.
             BpfDump.dumpMap(sCookieTagMap, pw, "sCookieTagMap",
-                    (key, value) -> "cookie=" + key.socketCookie
+                    (key, value) -> "cookie=" + key.val
                             + " tag=0x" + Long.toHexString(value.tag)
                             + " uid=" + value.uid);
             BpfDump.dumpMap(sUidOwnerMap, pw, "sUidOwnerMap",

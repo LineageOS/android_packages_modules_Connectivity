@@ -22,9 +22,11 @@ import static com.android.net.module.util.netlink.StructNdMsg.NUD_STALE;
 import static com.android.testutils.NetlinkTestUtils.makeDelNeighMessage;
 import static com.android.testutils.NetlinkTestUtils.makeNewNeighMessage;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
 
 import android.net.InetAddresses;
 import android.system.OsConstants;
@@ -34,6 +36,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import libcore.util.HexEncoding;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -204,4 +207,66 @@ public class RtNetlinkNeighborMessageTest {
             }
         }
     }
+
+    @Test
+    public void testBuilder() {
+        final RtNetlinkNeighborMessage msg = new RtNetlinkNeighborMessage.Builder()
+                .setNlMsgType(NetlinkConstants.RTM_NEWNEIGH)
+                .setNlMsgFlags(StructNlMsgHdr.NLM_F_REQUEST)
+                .setNlMsgSeq(1234)
+                .setIfIndex(14)
+                .setState(StructNdMsg.NUD_DELAY)
+                .setDestination(Inet4Address.LOOPBACK)
+                .setLinkLayerAddress(new byte[] { (byte) 1, (byte) 2, (byte) 3,
+                        (byte) 4, (byte) 5, (byte) 6 })
+                .build();
+        assertEquals(NetlinkConstants.RTM_NEWNEIGH, msg.getHeader().nlmsg_type);
+        assertEquals(StructNlMsgHdr.NLM_F_REQUEST, msg.getHeader().nlmsg_flags);
+        assertEquals(1234, msg.getHeader().nlmsg_seq);
+        assertEquals(14, msg.getNdHeader().ndm_ifindex);
+        assertEquals(StructNdMsg.NUD_DELAY, msg.getNdHeader().ndm_state);
+        assertEquals(Inet4Address.LOOPBACK, msg.getDestination());
+        assertArrayEquals(new byte[] { (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5, (byte) 6 },
+                msg.getLinkLayerAddress());
+        assertEquals(OsConstants.AF_INET, msg.getNdHeader().ndm_family);
+    }
+
+    @Test
+    public void testBuilder_nullDestination() {
+        final RtNetlinkNeighborMessage msg = new RtNetlinkNeighborMessage.Builder()
+                .setNlMsgType(NetlinkConstants.RTM_NEWNEIGH)
+                .setNlMsgFlags(StructNlMsgHdr.NLM_F_REQUEST)
+                .setNlMsgSeq(1234)
+                .setIfIndex(14)
+                .setState(StructNdMsg.NUD_DELAY)
+                .setDestination(null)
+                .setLinkLayerAddress(new byte[] { (byte) 1, (byte) 2, (byte) 3,
+                        (byte) 4, (byte) 5, (byte) 6 })
+                .build();
+        assertEquals(NetlinkConstants.RTM_NEWNEIGH, msg.getHeader().nlmsg_type);
+        assertEquals(StructNlMsgHdr.NLM_F_REQUEST, msg.getHeader().nlmsg_flags);
+        assertEquals(1234, msg.getHeader().nlmsg_seq);
+        assertEquals(14, msg.getNdHeader().ndm_ifindex);
+        assertEquals(StructNdMsg.NUD_DELAY, msg.getNdHeader().ndm_state);
+        assertEquals(null, msg.getDestination());
+        assertArrayEquals(new byte[] { (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5, (byte) 6 },
+                msg.getLinkLayerAddress());
+        assertEquals(OsConstants.AF_UNSPEC, msg.getNdHeader().ndm_family);
+    }
+
+    @Test
+    public void testBuilder_negativeSeqNo() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new RtNetlinkNeighborMessage.Builder().setNlMsgSeq(-1));
+    }
+
+    @Test
+    public void testBuilder_unsupportedNlMsgType() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new RtNetlinkNeighborMessage.Builder()
+                .setNlMsgType(NetlinkConstants.RTM_NEWROUTE));
+    }
 }
+

@@ -17,8 +17,10 @@
 package com.android.server.ethernet;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import android.net.MacAddress;
 import android.os.Build;
@@ -109,6 +111,15 @@ public class EthernetPortTest {
         int hash1 = port1.hashCode();
         int hash2 = port2.hashCode();
         assertEquals(hash1, hash2);
+        assertEquals(port1, port2);
+    }
+
+    @Test
+    public void testMatchesInterfaceName() {
+        EthernetPort port =
+                new EthernetPort(mTestInterfaceName, mTestMacAddress, mTestInterfaceIndex);
+        assertTrue(port.matches(mTestInterfaceName));
+        assertFalse(port.matches("randomif42"));
     }
 
     @Test

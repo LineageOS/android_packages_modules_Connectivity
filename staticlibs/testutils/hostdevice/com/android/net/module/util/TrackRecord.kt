@@ -346,6 +346,45 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
         }
 
         /**
+         * Returns a pretty-printed list of events.
+         * @param before how many events before the last poll() operation to return
+         * @param after how many events after the mark to return
+         * @param width how many columns wide the string can be
+         * @return a string to embed in an error message.
+         */
+        fun prettyPrintBacktrace(before: Int = 0, after: Int = 0, width: Int = 300): String {
+            val sb = StringBuilder()
+            val stamp = slock.tryReadLock()
+            if (0L == stamp) concurrentAccessDetected()
+            val from = pollMark
+            val to = mark
+            val start = (from - before).coerceAtLeast(0)
+            val end = (to + after).coerceAtMost(size - 1)
+
+            try {
+                lock.withLock {
+                    for (i in start..end) {
+                        when (i) {
+                            from -> sb.append("< ")
+                            to -> sb.append("> ")
+                            else -> sb.append("  ")
+                        }
+                        sb.append(get(i).toString().safeSubstring(0..width))
+                        sb.append("\n")
+                    }
+                }
+            } finally {
+                slock.unlockRead(stamp)
+            }
+            if (from == size) {
+                sb.append("<>\n")
+            } else if (to == size) {
+                sb.append("> \n")
+            }
+            return sb.toString()
+        }
+
+        /**
          * Returns the first element after the mark or null. This never blocks.
          *
          * This method is subject to threading restrictions. It can be used concurrently on
@@ -356,5 +395,7 @@ class ArrayTrackRecord<E> : TrackRecord<E> {
     }
 }
 
-// Private helper
+// Private helpers
 private fun Condition.await(timeoutMs: Long) = this.await(timeoutMs, TimeUnit.MILLISECONDS)
+private fun String.safeSubstring(range: IntRange) =
+    substring(range.start..range.endInclusive.coerceAtMost(length - 1))

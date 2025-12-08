@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import android.app.DownloadManager;
 
+import android.database.MatrixCursor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,10 +55,38 @@ public class DownloadHelperTest {
     }
 
     @Test
+    public void testDownloadHelper_multipleDownloads_doesNotRescheduleDuplicates() {
+        long downloadId1 = 666;
+        String url1 = "http://test1.org";
+        long downloadId2 = 777;
+        String url2 = "http://test2.org";
+        when(mDownloadManager.enqueue(any())).thenReturn(downloadId1, downloadId2);
+
+        assertThat(mDownloadHelper.startDownload(url1)).isEqualTo(downloadId1);
+        mockPendingDownload(downloadId1, url1);
+
+        assertThat(mDownloadHelper.startDownload(url2)).isEqualTo(downloadId2);
+        assertThat(mDownloadHelper.startDownload(url1)).isEqualTo(downloadId1);
+    }
+
+    @Test
     public void testDownloadHelper_wrongUri() {
         when(mDownloadManager.enqueue(any())).thenReturn(666L);
 
         assertThrows(
                 IllegalArgumentException.class, () -> mDownloadHelper.startDownload("not_a_uri"));
+    }
+
+    private void mockPendingDownload(long downloadId, String url) {
+        MatrixCursor cursor =
+                new MatrixCursor(
+                        new String[] {
+                            DownloadManager.COLUMN_ID,
+                            DownloadManager.COLUMN_URI,
+                            DownloadManager.COLUMN_STATUS
+                        });
+        cursor.addRow(new Object[] {downloadId, url, DownloadManager.STATUS_PENDING});
+
+        when(mDownloadManager.query(any())).thenReturn(cursor);
     }
 }

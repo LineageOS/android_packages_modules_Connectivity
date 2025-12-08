@@ -336,7 +336,6 @@ class CSBlockedReasonsTest : CSTest() {
 
         // CS must send correct blocked reasons after per app default network change
         ConnectivitySettingsManager.setMobileDataPreferredUids(context, setOf(Process.myUid()))
-        service.updateMobileDataPreferredUids()
         cb.expectAvailableCallbacks(
                 cellAgent.network,
                 validated = false,
@@ -345,7 +344,6 @@ class CSBlockedReasonsTest : CSTest() {
 
         // Remove per app default network request
         ConnectivitySettingsManager.setMobileDataPreferredUids(context, setOf())
-        service.updateMobileDataPreferredUids()
         cb.expectAvailableCallbacks(
                 wifiAgent.network,
                 validated = false,

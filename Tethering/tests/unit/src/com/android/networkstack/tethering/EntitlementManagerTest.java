@@ -110,6 +110,7 @@ public final class EntitlementManagerTest {
     private static final String TEST_PACKAGE_NAME = "com.android.tethering.test";
     private static final String FAILED_TETHERING_REASON = "Tethering provisioning failed.";
     private static final int RECHECK_TIMER_HOURS = 24;
+    private static final int TEST_SUBID = 1;
 
     @Mock private CarrierConfigManager mCarrierConfigManager;
     @Mock private Context mContext;
@@ -326,7 +327,7 @@ public final class EntitlementManagerTest {
         when(mCarrierConfigManager.getConfigForSubId(anyInt())).thenReturn(mCarrierConfig);
         mCarrierConfig.putBoolean(CarrierConfigManager.KEY_REQUIRE_ENTITLEMENT_CHECKS_BOOL, true);
         mCarrierConfig.putBoolean(CarrierConfigManager.KEY_CARRIER_CONFIG_APPLIED_BOOL, true);
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, TEST_SUBID);
     }
 
     private void setupCarrierConfig(boolean carrierSupported) {
@@ -349,12 +350,22 @@ public final class EntitlementManagerTest {
         setupForRequiredProvisioning();
         when(mResources.getStringArray(R.array.config_mobile_hotspot_provision_app))
             .thenReturn(null);
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, TEST_SUBID);
         assertFalse(mEnMgr.isTetherProvisioningRequired(mConfig));
         when(mResources.getStringArray(R.array.config_mobile_hotspot_provision_app))
             .thenReturn(new String[] {"malformedApp"});
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, TEST_SUBID);
         assertFalse(mEnMgr.isTetherProvisioningRequired(mConfig));
+    }
+
+    @Test
+    public void provisioningNotRequiredAfterSwitchToInvalidSubId() {
+        setupForRequiredProvisioning();
+        assertTrue(mEnMgr.isTetherProvisioningRequired(mConfig));
+
+        final TetheringConfiguration config = new FakeTetheringConfiguration(mMockContext, mLog,
+                INVALID_SUBSCRIPTION_ID);
+        assertFalse(mEnMgr.isTetherProvisioningRequired(config));
     }
 
     @Test
@@ -759,7 +770,7 @@ public final class EntitlementManagerTest {
         mEnMgr.notifyUpstream(false);
         mLooper.dispatchAll();
         setupCarrierConfig(false);
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, TEST_SUBID);
         mEnMgr.reevaluateSimCardProvisioning(mConfig);
 
         // Turn on upstream.
@@ -799,7 +810,7 @@ public final class EntitlementManagerTest {
         setupCarrierConfig(false);
         when(mResources.getStringArray(R.array.config_mobile_hotspot_provision_app))
                 .thenReturn(new String[0]);
-        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, INVALID_SUBSCRIPTION_ID);
+        mConfig = new FakeTetheringConfiguration(mMockContext, mLog, TEST_SUBID);
 
         if (SdkLevel.isAtLeastT()) {
             assertTrue(mEnMgr.isTetherProvisioningRequired(mConfig));

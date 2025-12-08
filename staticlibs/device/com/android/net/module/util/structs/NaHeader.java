@@ -16,7 +16,7 @@
 
 package com.android.net.module.util.structs;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -44,7 +44,7 @@ import java.net.Inet6Address;
  * |   Options ...
  * +-+-+-+-+-+-+-+-+-+-+-+-
  */
-public class NaHeader extends Struct {
+public class NaHeader extends LegacyStruct {
     @Field(order = 0, type = Type.S32)
     public int flags; // Router flag, Solicited flag, Override flag and 29 Reserved bits.
     @Field(order = 1, type = Type.Ipv6Address)

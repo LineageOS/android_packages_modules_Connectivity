@@ -35,7 +35,7 @@ package android.net.mdns.aidl;
  * - interfaceIdx
  * - result
  *
- * {@hide}
+ * @hide
  */
 @JavaOnlyImmutable
 @JavaDerive(equals=true, toString=true)

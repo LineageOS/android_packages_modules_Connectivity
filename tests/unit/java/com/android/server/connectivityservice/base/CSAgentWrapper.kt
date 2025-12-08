@@ -41,7 +41,11 @@ import android.net.Uri
 import android.net.networkstack.NetworkStackClientBase
 import android.os.HandlerThread
 import android.os.Looper
-import com.android.net.module.util.ArrayTrackRecord
+import com.android.net.module.util.Expectable
+import com.android.net.module.util.TestableCallback
+import com.android.net.module.util.assertNo
+import com.android.net.module.util.eventuallyExpect
+import com.android.net.module.util.expect
 import com.android.testutils.TestableNetworkAgent.Event
 import com.android.testutils.TestableNetworkAgent.Event.OnAddKeepalivePacketFilter
 import com.android.testutils.TestableNetworkAgent.Event.OnAutomaticReconnectDisabled
@@ -64,8 +68,6 @@ import com.android.testutils.TestableNetworkCallback.Event.Lost
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
@@ -98,8 +100,9 @@ class CSAgentWrapper(
         val lp: LinkProperties,
         val lnc: FromS<LocalNetworkConfig>?,
         val score: FromS<NetworkScore>,
-        val provider: NetworkProvider?
-) : TestableNetworkCallback.HasNetwork {
+        val provider: NetworkProvider?,
+        private val internalEventTracker: TestableCallback<Event> = TestableCallback()
+) : TestableNetworkCallback.HasNetwork, Expectable<Event> by internalEventTracker {
     private val TAG = "CSAgent${nextAgentId()}"
     private val VALIDATION_RESULT_INVALID = 0
     private val NO_PROBE_RESULT = 0
@@ -111,7 +114,6 @@ class CSAgentWrapper(
     private var nmValidationResult = NO_PROBE_RESULT
     private var nmProbesCompleted = NO_PROBE_RESULT
     private var nmProbesSucceeded = NO_PROBE_RESULT
-    val history = ArrayTrackRecord<Event>().newReadHead()
     val DEFAULT_TIMEOUT_MS = 5000L
 
     override val network: Network get() = agent.network!!
@@ -222,7 +224,7 @@ class CSAgentWrapper(
         val nmCbCaptor = ArgumentCaptor<INetworkMonitorCallbacks>()
         doNothing().`when`(networkStack).makeNetworkMonitor(
                 nmNetworkCaptor.capture(),
-                any() /* name */,
+                any(), // name
                 nmCbCaptor.capture()
         )
 
@@ -233,7 +235,7 @@ class CSAgentWrapper(
                 score.value, nac, provider)
         } else {
             TestAgent(
-                context, csHandlerThread.looper, TAG, nc, lp, 50 /* score */, nac, provider)
+                context, csHandlerThread.looper, TAG, nc, lp, score = 50, nac, provider)
         }
         agent.register()
         assertEquals(agent.network!!.netId, nmNetworkCaptor.value.netId)
@@ -247,7 +249,7 @@ class CSAgentWrapper(
         } else {
             verify(networkMonitor).notifyNetworkConnected(any(), any())
         }
-        nmCallbacks.notifyProbeStatusChanged(0 /* completed */, 0 /* succeeded */)
+        nmCallbacks.notifyProbeStatusChanged(0, 0)
         val p = NetworkTestResultParcelable()
         p.result = nmValidationResult
         p.probesAttempted = nmProbesCompleted
@@ -347,15 +349,23 @@ class CSAgentWrapper(
         )
     }
 
-    inline fun <reified T : Event> expect(test: (T) -> Boolean = { true }): T {
-        val foundCallback = history.poll(DEFAULT_TIMEOUT_MS)
-        assertTrue(foundCallback is T, "Expected ${T::class} but found $foundCallback")
-        assertTrue(test(foundCallback), "Unexpected callback : $foundCallback")
-        return foundCallback
-    }
+    // ---- Bridge to TestableCallback, do not modify (implements standard behavior) ----
+    inline fun <reified T : Event> expect(
+        timeoutMs: Long = defaultTimeoutMs,
+        errorMsg: String? = null,
+        noinline predicate: (T) -> Boolean = { true }
+    ) = expect<_, T>(timeoutMs, errorMsg, predicate)
 
-    inline fun <reified T : Event> eventuallyExpect() =
-        history.poll(DEFAULT_TIMEOUT_MS) { it is T }.also {
-            assertNotNull(it, "Callback ${T::class} not received")
-        } as T
+    inline fun <reified T : Event> eventuallyExpect(
+        timeoutMs: Long = defaultTimeoutMs,
+        errorMsg: String? = null,
+        noinline predicate: (T) -> Boolean = { true }
+    ) = eventuallyExpect<_, T>(timeoutMs, errorMsg, predicate)
+
+    inline fun <reified T : Event> assertNo(
+        timeoutMs: Long = defaultTimeoutMs,
+        errorMsg: String? = null,
+        noinline predicate: (T) -> Boolean = { true }
+    ): Unit = assertNo<Event, T>(timeoutMs, errorMsg, predicate)
+    // ---- End of bridge section ----
 }

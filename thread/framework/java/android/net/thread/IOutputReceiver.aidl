@@ -16,7 +16,10 @@
 
 package android.net.thread;
 
-/** Receives the output of a Thread network operation. @hide */
+/**
+ * Receives the output of a Thread network operation.
+ * @hide
+ */
 oneway interface IOutputReceiver {
     void onOutput(in String output);
     void onComplete();

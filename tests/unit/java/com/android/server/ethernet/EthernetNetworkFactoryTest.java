@@ -69,6 +69,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.EnumSet;
 import java.util.Objects;
 
 @SmallTest
@@ -232,8 +233,8 @@ public class EthernetNetworkFactoryTest {
     private void createInterfaceUndergoingProvisioning(
             EthernetPort port, final int transportType) {
         final IpConfiguration ipConfig = createDefaultIpConfig();
-        mNetFactory.addInterface(port, ipConfig,
-                createInterfaceCapsBuilder(transportType).build());
+        mNetFactory.addInterface(port, ipConfig, createInterfaceCapsBuilder(transportType).build(),
+                EnumSet.of(EthernetTracker.TrackingReason.REGEX));
         assertTrue(mNetFactory.updateInterfaceLinkState(port, true));
 
         ArgumentCaptor<NetworkOfferCallback> captor = ArgumentCaptor.forClass(

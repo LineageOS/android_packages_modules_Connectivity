@@ -28,6 +28,7 @@ java_defaults {
     static_libs: [
         "DhcpPacketLib",
         "androidx.test.rules",
+        "com.android.tethering.mainline.beta.flags-aconfig-java",
         "cts-net-utils",
         "mockito-target-minus-junit4",
         "net-tests-utils",

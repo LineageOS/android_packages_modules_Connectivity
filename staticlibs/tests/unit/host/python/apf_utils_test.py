@@ -23,6 +23,7 @@ from net_tests_utils.host.python.apf_utils import (
     PatternNotFoundException,
     UnsupportedOperationException,
     get_apf_capabilities,
+    get_apf_config_from_cmd,
     get_apf_counter,
     get_apf_counters_from_cmd,
     get_exclude_all_host_ipv6_multicast_addresses,
@@ -385,6 +386,42 @@ class TestApfUtils(base_test.BaseTestClass, parameterized.TestCase):
         is_apf_dump_counters_supported(self.mock_ad),
         'Dump APF packet counters should not be supported.',
     )
+
+    @patch('net_tests_utils.host.python.adb_utils.adb_shell')
+    def test_get_apf_config_from_cmd_success(
+        self, mock_adb_shell: MagicMock
+    ) -> None:
+      """Tests successful parsing of APF config."""
+      mock_adb_shell.return_value = (
+          '{ mcast: DROP, doze: FALSE, offloads: [ ARP, ND, MLD, ] total RAs: 2'
+          ' filtered RAs: 2 mDNSs: 0 }'
+      )
+      config = get_apf_config_from_cmd(self.mock_ad, TEST_IFACE_NAME)
+      asserts.assert_equal(config, ['ARP', 'ND', 'MLD'])
+      mock_adb_shell.assert_called_once_with(
+          self.mock_ad, f'cmd network_stack apf {TEST_IFACE_NAME} config'
+      )
+
+    @patch('net_tests_utils.host.python.adb_utils.adb_shell')
+    def test_get_apf_config_from_cmd_failure_returns_empty(
+        self, mock_adb_shell: MagicMock
+    ) -> None:
+      """Tests that unexpected output results in an empty list."""
+      # This function is designed to return an empty list on parsing failure.
+      mock_adb_shell.return_value = 'some unexpected output'
+      config = get_apf_config_from_cmd(self.mock_ad, TEST_IFACE_NAME)
+      asserts.assert_equal(config, [])
+
+    @patch('net_tests_utils.host.python.adb_utils.adb_shell')
+    def test_get_apf_config_from_cmd_unsupported(
+        self, mock_adb_shell: MagicMock
+    ) -> None:
+      """Tests the case where the command is not supported by the device."""
+      mock_adb_shell.side_effect = AdbError(
+          cmd='', stdout='Unknown command', stderr='', ret_code=1
+      )
+      with asserts.assert_raises(UnsupportedOperationException):
+        get_apf_config_from_cmd(self.mock_ad, TEST_IFACE_NAME)
 
   @parameterized.parameters(
       ('2,2048,1', ApfCapabilities(2, 2048, 1)),  # Valid input

@@ -200,11 +200,12 @@ public class BatteryStatsManagerTest{
                 mBsm::getWifiBatteryStats);
 
         // Generate traffic on wifi network.
-        Log.d(TAG, "Generate traffic on wifi network.");
+        Log.d(TAG, "Generate traffic on wifi network: " + wifiNetwork);
         generateNetworkTraffic(wifiNetwork, url);
         // Wifi battery stats are updated when wifi on.
-        mCtsNetUtils.disableWifi();
-        mCtsNetUtils.ensureWifiConnected();
+        mCtsNetUtils.ensureWifiDisconnected(null /* wifiNetworkToCheck */);
+        final Network reconnectedWifiNetwork = mCtsNetUtils.ensureWifiConnected();
+        Log.d(TAG, "Reconnected to wifi network: " + reconnectedWifiNetwork);
 
         // Check wifi battery stats are updated.
         runAsShell(UPDATE_DEVICE_STATS,

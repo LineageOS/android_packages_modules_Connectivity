@@ -19,7 +19,7 @@ package android.net.thread;
 /**
  * Mapping from a channel to its max power.
  *
- * {@hide}
+ * @hide
  */
 parcelable ChannelMaxPower {
     int channel; // The Thread radio channel.
