@@ -32,4 +32,18 @@ public final class JniUtil {
 
         return libPrefix + "_jni";
     }
+
+    /**
+     * The method to find jni library accroding to the giving class name.
+     *
+     * The jni library name would be packageName + _jni_ + className .so. E.g.
+     * com_android_networkstack_tethering_util_jni_CommonConnectivityJni
+     * for tethering.
+     * android_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni
+     * for connectivity,
+     *
+     */
+    public static String getJniLibraryName(final Class cls) {
+        return getJniLibraryName(cls.getPackage()) + "_" + cls.getSimpleName();
+    }
 }

@@ -24,6 +24,7 @@
 #include <string.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
+#include <sys/system_properties.h>
 #include <sys/utsname.h>
 
 #include <android-base/properties.h>
@@ -34,19 +35,44 @@
 namespace android {
 namespace bpf {
 
-const bool unreleased = (base::GetProperty("ro.build.version.codename", "REL") != "REL");
-const int api_level = unreleased ? 10000 : android_get_device_api_level();
-const bool isAtLeastR = (api_level >= 30);
-const bool isAtLeastS = (api_level >= 31);
-// Sv2 is 32
-const bool isAtLeastT = (api_level >= 33);
-const bool isAtLeastU = (api_level >= 34);
-const bool isAtLeastV = (api_level >= 35);
-const bool isAtLeast25Q2 = (api_level >= 36); // 36.0
-const bool isAtLeast25Q3 = (api_level > 36);  // 36.0+ (TODO: fix this!)
-const bool isAtLeast25Q4 = false;  // 36.1
-const bool isAtLeast26Q1 = false;  // 36.1+
-const bool isAtLeast26Q2 = false;  // 37.0
+static inline int get_api_level_full() {
+    // This fetches/parses 'ro.build.version.sdk' system property.
+    const int api_level = android_get_device_api_level();
+    // Before Baklava/25Q2 there is no 'sdk_full'
+    if (api_level < 36) return api_level * 100;  // 3x -> 3x00
+
+    // Fetch and parse the 'sdk_full' system property.
+    char value[92] = {};
+    if (__system_property_get("ro.build.version.sdk_full", value) < 1) abort();
+    int major, minor;
+    if (sscanf(value, "%d.%d", &major, &minor) != 2) abort();
+    if (major < 36 || minor < 0 || minor > 9) abort();
+    const int api_level_full = major * 100 + minor * 10;  // 3x.y -> 3xy0
+
+    // Fetch and parse our platform provided .rc file - this provides quarterly info as well
+    FILE * f = fopen("/system/etc/init/netbpfload.rc", "re");
+    if (!f) abort();
+    int y, q, a, b, c;
+    if (fscanf(f, "# %d %d %d %d %d #", &y, &q, &a, &b, &c) != 5) abort();
+    if (a < 36 || b < 0 || b > 9 || c < 0 || c > 4) abort();
+    fclose(f);
+    const int api_level_fuller = a * 100 + b * 10 + c * 2;  // 3x.y.z -> 3xy[2z]
+
+    const bool unreleased = (base::GetProperty("ro.build.version.codename", "REL") != "REL");
+    return std::max(api_level_fuller, api_level_full) + unreleased;
+}
+
+const int api_level_full = get_api_level_full();
+
+const bool isAtLeastS    = (api_level_full >= 3100);  // 31
+                                                      // 32 is Sv2
+const bool isAtLeastT    = (api_level_full >= 3300);  // 33
+const bool isAtLeastU    = (api_level_full >= 3400);  // 34
+const bool isAtLeastV    = (api_level_full >= 3500);  // 35
+const bool isAtLeast25Q2 = (api_level_full >= 3600);  // 36.0
+const bool isAtLeast25Q4 = (api_level_full >= 3610);  // 36.1
+const bool isAtLeast26Q1 = (api_level_full >= 3612);  // 36.1+
+const bool isAtLeast26Q2 = (api_level_full >= 3700);  // 37.0
 
 // See kernel's net/core/sock_diag.c __sock_gen_cookie()
 // the implementation of which guarantees 0 will never be returned,

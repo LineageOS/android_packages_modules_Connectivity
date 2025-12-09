@@ -1,13 +1,11 @@
 package com.android.server.connectivity
 
+import android.content.Context
 import android.content.res.Resources
-import android.os.Handler
 import android.provider.DeviceConfig
 import android.provider.DeviceConfig.NAMESPACE_CONNECTIVITY
 import android.provider.DeviceConfig.OnPropertiesChangedListener
-import android.telephony.CarrierConfigManager
 import com.android.internal.annotations.GuardedBy
-import com.android.internal.os.BackgroundThread
 import com.android.server.connectivity.MultinetworkPolicyTracker.CONFIG_ACTIVELY_PREFER_BAD_WIFI
 import java.util.concurrent.Executor
 
@@ -23,7 +21,6 @@ class MultinetworkPolicyTrackerTestDependencies(
 
     private var avoidBadWifiFromCarrierConfigFeature = false
     private val avoidBadWifiCarrierConfigForSubIdMap = HashMap<Int, Boolean>()
-    private var backgroundThreadHandler = BackgroundThread.getHandler()
 
     fun putConfigActivelyPreferBadWifi(value: Int) {
         synchronized(listeners) {
@@ -51,10 +48,6 @@ class MultinetworkPolicyTrackerTestDependencies(
         avoidBadWifiCarrierConfigForSubIdMap.clear()
     }
 
-    fun setBackgroundThreadHandler(handler: Handler) {
-        backgroundThreadHandler = handler
-    }
-
     override fun getConfigActivelyPreferBadWifi(): Int {
         return synchronized(listeners) { configActivelyPreferBadWifi }
     }
@@ -71,15 +64,10 @@ class MultinetworkPolicyTrackerTestDependencies(
     override fun getResourcesForActiveSubId(res: ConnectivityResources, id: Int): Resources =
         resources
 
-    override fun readAvoidBadWifiFromCarrierConfig(
-        ccm: CarrierConfigManager,
-        subId: Int
-    ): Boolean =
-        avoidBadWifiCarrierConfigForSubIdMap.getOrDefault(subId, true)
-
     public override fun getAvoidBadWifiFromCarrierConfigFeature(): Boolean =
         avoidBadWifiFromCarrierConfigFeature
 
-    public override fun getBackgroundThreadHandler(): Handler =
-        backgroundThreadHandler
+    public override fun getAvoidBadWifi(context: Context, subId: Int): Boolean {
+        return avoidBadWifiCarrierConfigForSubIdMap.getOrDefault(subId, true)
+    }
 }

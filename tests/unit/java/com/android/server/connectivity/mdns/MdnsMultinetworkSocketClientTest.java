@@ -88,7 +88,7 @@ public class MdnsMultinetworkSocketClientTest {
         mHandlerThread = new HandlerThread("MdnsMultinetworkSocketClientTest");
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
-        mSocketKey = new SocketKey(1000 /* interfaceIndex */);
+        mSocketKey = new SocketKey(1000 /* interfaceIndex */, "interface");
         mSocketClient = new MdnsMultinetworkSocketClient(mHandlerThread.getLooper(), mProvider,
                 mSharedLog, MdnsFeatureFlags.newBuilder().build());
         mHandler.post(() -> mSocketClient.setCallback(mCallback));
@@ -150,8 +150,8 @@ public class MdnsMultinetworkSocketClientTest {
             doReturn(createEmptyNetworkInterface()).when(socket).getInterface();
         }
 
-        final SocketKey tetherSocketKey1 = new SocketKey(1001 /* interfaceIndex */);
-        final SocketKey tetherSocketKey2 = new SocketKey(1002 /* interfaceIndex */);
+        final SocketKey tetherSocketKey1 = new SocketKey(1001 /* interfaceIndex */, "interface1");
+        final SocketKey tetherSocketKey2 = new SocketKey(1002 /* interfaceIndex */, "interface2");
         // Notify socket created
         callback.onSocketCreated(mSocketKey, mSocket, List.of());
         verify(mSocketCreationCallback).onSocketCreated(mSocketKey);
@@ -263,8 +263,8 @@ public class MdnsMultinetworkSocketClientTest {
         doReturn(createEmptyNetworkInterface()).when(socket2).getInterface();
         doReturn(createEmptyNetworkInterface()).when(socket3).getInterface();
 
-        final SocketKey socketKey2 = new SocketKey(1001 /* interfaceIndex */);
-        final SocketKey socketKey3 = new SocketKey(1002 /* interfaceIndex */);
+        final SocketKey socketKey2 = new SocketKey(1001 /* interfaceIndex */, "interface1");
+        final SocketKey socketKey3 = new SocketKey(1002 /* interfaceIndex */, "interface2");
         callback.onSocketCreated(mSocketKey, mSocket, List.of());
         callback.onSocketCreated(socketKey2, socket2, List.of());
         callback.onSocketCreated(socketKey3, socket3, List.of());
@@ -338,7 +338,7 @@ public class MdnsMultinetworkSocketClientTest {
     @Test
     public void testNotifyNetworkUnrequested_SocketsOnNullNetwork() {
         final MdnsInterfaceSocket otherSocket = mock(MdnsInterfaceSocket.class);
-        final SocketKey otherSocketKey = new SocketKey(1001 /* interfaceIndex */);
+        final SocketKey otherSocketKey = new SocketKey(1001 /* interfaceIndex */, "interface1");
         final SocketCallback callback = expectSocketCallback(
                 mListener, null /* requestedNetwork */);
         doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
@@ -364,7 +364,7 @@ public class MdnsMultinetworkSocketClientTest {
     @Test
     public void testSocketCreatedAndDestroyed_NullNetwork() throws IOException {
         final MdnsInterfaceSocket otherSocket = mock(MdnsInterfaceSocket.class);
-        final SocketKey otherSocketKey = new SocketKey(1001 /* interfaceIndex */);
+        final SocketKey otherSocketKey = new SocketKey(1001 /* interfaceIndex */, "interface1");
         final SocketCallback callback = expectSocketCallback(mListener, null /* network */);
         doReturn(createEmptyNetworkInterface()).when(mSocket).getInterface();
         doReturn(createEmptyNetworkInterface()).when(otherSocket).getInterface();
@@ -386,7 +386,7 @@ public class MdnsMultinetworkSocketClientTest {
     @Test
     public void testSocketDestroyed_MultipleCallbacks() {
         final MdnsInterfaceSocket socket2 = mock(MdnsInterfaceSocket.class);
-        final SocketKey socketKey2 = new SocketKey(1001 /* interfaceIndex */);
+        final SocketKey socketKey2 = new SocketKey(1001 /* interfaceIndex */, "interface1");
         final SocketCreationCallback creationCallback1 = mock(SocketCreationCallback.class);
         final SocketCreationCallback creationCallback2 = mock(SocketCreationCallback.class);
         final SocketCreationCallback creationCallback3 = mock(SocketCreationCallback.class);

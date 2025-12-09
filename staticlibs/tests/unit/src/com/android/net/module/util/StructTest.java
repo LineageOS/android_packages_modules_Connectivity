@@ -123,8 +123,7 @@ public class StructTest {
         assertEquals(0, msg.mIcmpCode);
 
         assertEquals(16, Struct.getSize(HeaderMsgWithConstructor.class));
-        assertArrayEquals(toByteBuffer(HDR_EMPTY).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(HDR_EMPTY).array(), msg.writeToBytes());
     }
 
     @Test
@@ -184,8 +183,7 @@ public class StructTest {
         assertEquals(0, msg.mIcmpCode);
 
         assertEquals(16, Struct.getSize(HeaderMsgWithoutConstructor.class));
-        assertArrayEquals(toByteBuffer(HDR_EMPTY).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(HDR_EMPTY).array(), msg.writeToBytes());
     }
 
     public static class HeaderMessage {
@@ -255,8 +253,7 @@ public class StructTest {
         assertEquals(9151314442816847871L, msg.mUBE63);
 
         assertEquals(22, Struct.getSize(NetworkOrderMessage.class));
-        assertArrayEquals(toByteBuffer(NETWORK_ORDER_MSG).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(NETWORK_ORDER_MSG).array(), msg.writeToBytes());
     }
 
     public static class UnsignedDataMessage extends Struct {
@@ -296,8 +293,7 @@ public class StructTest {
         assertEquals(-1L, msg.mLU64);
 
         assertEquals(31, Struct.getSize(UnsignedDataMessage.class));
-        assertArrayEquals(toByteBuffer(UNSIGNED_DATA).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(UNSIGNED_DATA).array(), msg.writeToBytes());
     }
 
     public static class U64DataMessage extends Struct {
@@ -336,11 +332,10 @@ public class StructTest {
         assertEquals(new BigInteger("0"), msg.mZero);
 
         assertEquals(24, Struct.getSize(SmallValueBigInteger.class));
-        assertArrayEquals(toByteBuffer(SMALL_VALUE_BIGINTEGER).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(SMALL_VALUE_BIGINTEGER).array(), msg.writeToBytes());
     }
 
-    public static class SignedDataMessage extends Struct {
+    public static class SignedDataMessage extends LegacyStruct {
         @Field(order = 0, type = Type.S8)
         public final byte mS8;
         @Field(order = 1, type = Type.S16)
@@ -368,8 +363,7 @@ public class StructTest {
         assertEquals(9223372036854775807L, msg.mS64);
 
         assertEquals(15, Struct.getSize(SignedDataMessage.class));
-        assertArrayEquals(toByteBuffer(SIGNED_DATA).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(SIGNED_DATA).array(), msg.writeToBytes());
     }
 
     @Test
@@ -382,8 +376,7 @@ public class StructTest {
         assertEquals(-9223372036854775807L, msg.mS64);
 
         assertEquals(15, Struct.getSize(SignedDataMessage.class));
-        assertArrayEquals(toByteBuffer(SIGNED_NEGATIVE_DATA).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(SIGNED_NEGATIVE_DATA).array(), msg.writeToBytes());
     }
 
     public static class HeaderMessageWithDuplicateOrder extends Struct {
@@ -489,8 +482,7 @@ public class StructTest {
         assertTrue(prefix.equals(new IpPrefix("2001:db8:3:4:5:6::/96")));
 
         assertEquals(14, Struct.getSize(PrefixMessage.class));
-        assertArrayEquals(toByteBuffer(OPT_PREF64).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(OPT_PREF64).array(), msg.writeToBytes());
     }
 
     public static class PrefixMessageWithZeroLengthArray extends Struct {
@@ -581,8 +573,7 @@ public class StructTest {
         assertEquals(0, msg.mIcmpCode);
 
         assertEquals(16, Struct.getSize(HeaderMsgWithStaticConstant.class));
-        assertArrayEquals(toByteBuffer(HDR_EMPTY).array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer(HDR_EMPTY).array(), msg.writeToBytes());
     }
 
     public static class MismatchedConstructor extends Struct {
@@ -622,8 +613,7 @@ public class StructTest {
         assertEquals(30806 /* 0x7856 */, msg.mInt2);
 
         assertEquals(4, Struct.getSize(ClassWithTwoConstructors.class));
-        assertArrayEquals(toByteBuffer("1234" + "5678").array(),
-                msg.writeToBytes(ByteOrder.LITTLE_ENDIAN));
+        assertArrayEquals(toByteBuffer("1234" + "5678").array(), msg.writeToBytes());
     }
 
     @Test
@@ -669,7 +659,7 @@ public class StructTest {
         }
     }
 
-    public static class BigEndianDataMessage extends Struct {
+    public static class BigEndianDataMessage extends LegacyStruct {
         @Field(order = 0, type = Type.S32) public int mInt1;
         @Field(order = 1, type = Type.S32) public int mInt2;
         @Field(order = 2, type = Type.UBE16) public int mInt3;
@@ -724,7 +714,7 @@ public class StructTest {
 
         assertEquals(12, Struct.getSize(MacAddressMessage.class));
         assertArrayEquals(toByteBuffer("001122334455" + "ffffffffffff").array(),
-                msg.writeToBytes(ByteOrder.BIG_ENDIAN));
+                msg.writeToBytes());
     }
 
     public static class BadMacAddressType extends Struct {
@@ -748,11 +738,6 @@ public class StructTest {
                 SignedDataMessage.class, ByteOrder.BIG_ENDIAN);
         assertArrayEquals(toByteBuffer(SIGNED_DATA).array(),
                 bigEndianMsg.writeToBytes(ByteOrder.BIG_ENDIAN));
-
-        final SignedDataMessage nativeOrderMsg = ByteOrder.nativeOrder().equals(
-                ByteOrder.LITTLE_ENDIAN) ? littleEndianMsg : bigEndianMsg;
-        assertArrayEquals(toByteBuffer(SIGNED_DATA).array(),
-                nativeOrderMsg.writeToBytes());
     }
 
     @Test
@@ -786,7 +771,7 @@ public class StructTest {
 
         assertEquals(20, Struct.getSize(IpAddressMessage.class));
         assertArrayEquals(toByteBuffer("c0a86401" + "20010db8000300040005000600070008").array(),
-                msg.writeToBytes(ByteOrder.BIG_ENDIAN));
+                msg.writeToBytes());
     }
 
     @Test
@@ -823,7 +808,7 @@ public class StructTest {
                 "00000000000000000000ffffc0a86401", InetAddressMessage.class, ByteOrder.BIG_ENDIAN);
         assertEquals(TEST_IPV4_ADDRESS, msg.ipAddress);
         assertArrayEquals(toByteBuffer("00000000000000000000ffffc0a86401").array(),
-                msg.writeToBytes(ByteOrder.BIG_ENDIAN));
+                msg.writeToBytes());
     }
     @Test
     public void testV6AddressInIpAddress() {
@@ -831,10 +816,10 @@ public class StructTest {
                 "20010db8000300040005000600070008", InetAddressMessage.class, ByteOrder.BIG_ENDIAN);
         assertEquals(TEST_IPV6_ADDRESS, msg.ipAddress);
         assertArrayEquals(toByteBuffer("20010db8000300040005000600070008").array(),
-                msg.writeToBytes(ByteOrder.BIG_ENDIAN));
+                msg.writeToBytes());
     }
 
-    public static class FullTypeMessage extends Struct {
+    public static class FullTypeMessage extends LegacyStruct {
         @Field(order = 0, type = Type.U8) public final short u8;
         @Field(order = 1, type = Type.U16) public final int u16;
         @Field(order = 2, type = Type.U32) public final long u32;

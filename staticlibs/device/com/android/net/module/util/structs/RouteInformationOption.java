@@ -22,7 +22,7 @@ import android.net.IpPrefix;
 
 import androidx.annotation.NonNull;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -44,7 +44,7 @@ import java.nio.ByteOrder;
  * .                                                               .
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class RouteInformationOption extends Struct {
+public class RouteInformationOption extends LegacyStruct {
     public enum Preference {
         HIGH((byte) 0x1),
         MEDIUM((byte) 0x0),

@@ -66,6 +66,7 @@ import static com.android.server.thread.openthread.IOtDaemon.OT_STATE_ENABLED;
 import static com.android.server.thread.openthread.IOtDaemon.TUN_IF_NAME;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 import android.Manifest.permission;
 import android.annotation.NonNull;
@@ -89,7 +90,6 @@ import android.net.Network;
 import android.net.NetworkAgent;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
-import android.net.NetworkProvider;
 import android.net.NetworkRequest;
 import android.net.NetworkScore;
 import android.net.TestNetworkSpecifier;
@@ -110,11 +110,13 @@ import android.net.thread.ThreadNetworkController;
 import android.net.thread.ThreadNetworkController.DeviceRole;
 import android.net.thread.ThreadNetworkException;
 import android.net.thread.ThreadNetworkException.ErrorCode;
+import android.net.thread.ThreadNetworkSpecifier;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.OutcomeReceiver;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.SystemClock;
@@ -123,10 +125,10 @@ import android.util.SparseArray;
 
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.net.module.util.CommonConnectivityJni;
 import com.android.net.module.util.IIpv4PrefixRequest;
 import com.android.net.module.util.RoutingCoordinatorManager;
 import com.android.net.module.util.SharedLog;
-import com.android.server.ServiceManagerWrapper;
 import com.android.server.connectivity.ConnectivityResources;
 import com.android.server.connectivity.MockableSystemProperties;
 import com.android.server.thread.openthread.BackboneRouterState;
@@ -198,7 +200,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     // particular, the constructor does not run on the handler thread, so it must not touch any of
     // the non-final fields, nor must it mutate any of the non-final fields inside these objects.
 
-    private final NetworkProvider mNetworkProvider;
+    private final ThreadNetworkFactory mNetworkFactory;
     private final Supplier<IOtDaemon> mOtDaemonSupplier;
     private final ConnectivityManager mConnectivityManager;
     private final RoutingCoordinatorManager mRoutingCoordinatorManager;
@@ -233,12 +235,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
 
     private InfraLinkState mInfraLinkState;
 
+    @Nullable private ThreadNetworkSpecifier mJoinNetworkSpecifier;
+
     @VisibleForTesting
     ThreadNetworkControllerService(
             Context context,
             Handler handler,
             MockableSystemProperties systemProperties,
-            NetworkProvider networkProvider,
+            ThreadNetworkFactory networkFactory,
             Supplier<IOtDaemon> otDaemonSupplier,
             ConnectivityManager connectivityManager,
             RoutingCoordinatorManager routingCoordinatorManager,
@@ -253,7 +257,7 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mContext = context;
         mHandler = handler;
         mSystemProperties = systemProperties;
-        mNetworkProvider = networkProvider;
+        mNetworkFactory = networkFactory;
         mOtDaemonSupplier = otDaemonSupplier;
         mConnectivityManager = connectivityManager;
         mRoutingCoordinatorManager = routingCoordinatorManager;
@@ -278,8 +282,6 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         HandlerThread handlerThread = new HandlerThread("ThreadHandlerThread");
         handlerThread.start();
         Handler handler = new Handler(handlerThread.getLooper());
-        NetworkProvider networkProvider =
-                new NetworkProvider(context, handlerThread.getLooper(), "ThreadNetworkProvider");
         Map<Network, LinkProperties> networkToLinkProperties = new HashMap<>();
         final ConnectivityManager connectivityManager =
                 context.getSystemService(ConnectivityManager.class);
@@ -291,8 +293,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 context,
                 handler,
                 new MockableSystemProperties(),
-                networkProvider,
-                () -> IOtDaemon.Stub.asInterface(ServiceManagerWrapper.waitForService("ot_daemon")),
+                ThreadNetworkFactory.newInstance(context, handler.getLooper()),
+                () -> IOtDaemon.Stub.asInterface(CommonConnectivityJni.waitForService("ot_daemon")),
                 connectivityManager,
                 routingCoordinatorManager,
                 new TunInterfaceController(TUN_IF_NAME),
@@ -501,7 +503,8 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         } catch (IOException e) {
             throw new IllegalStateException("Failed to create Thread tunnel interface", e);
         }
-        mConnectivityManager.registerNetworkProvider(mNetworkProvider);
+        mNetworkFactory.initialize(this);
+        mNetworkFactory.register();
         mUserRestricted = isThreadUserRestricted();
         registerUserRestrictionsReceiver();
 
@@ -904,31 +907,47 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         mTestNetworkAgent = testNetworkAgent;
     }
 
+    private NetworkCapabilities computeNetworkCapabilities(
+            @Nullable ActiveOperationalDataset activeDataset) {
+        final var netCapsBuilder =
+                new NetworkCapabilities.Builder()
+                        .addTransportType(TRANSPORT_THREAD)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK);
+        if (activeDataset != null) {
+            boolean createPartition =
+                    (mJoinNetworkSpecifier != null)
+                            ? mJoinNetworkSpecifier.shouldCreatePartitionIfNotFound()
+                            : false;
+            final var actualSpecifier =
+                    new ThreadNetworkSpecifier.Builder()
+                            .setActiveOperationalDataset(activeDataset)
+                            .setShouldCreatePartitionIfNotFound(createPartition)
+                            .build();
+            netCapsBuilder.setNetworkSpecifier(actualSpecifier);
+        }
+        return netCapsBuilder.build();
+    }
+
     private NetworkAgent newNetworkAgent() {
         if (mTestNetworkAgent != null) {
             return mTestNetworkAgent;
         }
 
-        final var netCapsBuilder =
-                new NetworkCapabilities.Builder()
-                        .addTransportType(TRANSPORT_THREAD)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
         final var scoreBuilder = new NetworkScore.Builder();
-
-        netCapsBuilder.addCapability(NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK);
         scoreBuilder.setKeepConnectedReason(NetworkScore.KEEP_CONNECTED_LOCAL_NETWORK);
 
         return new NetworkAgent(
                 mContext,
                 mHandler.getLooper(),
                 LOG.getTag(),
-                netCapsBuilder.build(),
+                computeNetworkCapabilities(mOtDaemonCallbackProxy.mActiveDataset),
                 getTunIfLinkProperties(),
                 newLocalNetworkConfig(),
                 scoreBuilder.build(),
                 new NetworkAgentConfig.Builder().build(),
-                mNetworkProvider) {
+                mNetworkFactory.getProvider()) {
 
             // TODO(b/374037595): use NetworkFactory to handle dynamic network requests
             @Override
@@ -1235,6 +1254,22 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
         };
     }
 
+    private IOtStatusReceiver newOtStatusReceiver(
+            OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        return new IOtStatusReceiver.Stub() {
+            @Override
+            public void onSuccess() {
+                receiver.onResult(null);
+            }
+
+            @Override
+            public void onError(int otError, String message) {
+                receiver.onError(
+                        new ThreadNetworkException(otErrorToAndroidError(otError), message));
+            }
+        };
+    }
+
     private IOtOutputReceiver newOtOutputReceiver(OutputReceiverWrapper receiver) {
         return new IOtOutputReceiver.Stub() {
             @Override
@@ -1299,12 +1334,43 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
             @NonNull OperationReceiverWrapper receiver) {
         checkOnHandlerThread();
 
+        mJoinNetworkSpecifier = null;
         try {
             // The otDaemon.join() will leave first if this device is currently attached
-            getOtDaemon().join(activeDataset.toThreadTlvs(), newOtStatusReceiver(receiver));
+            getOtDaemon()
+                    .join(
+                            activeDataset.toThreadTlvs(),
+                            true /* createPartitionIfNotFound */,
+                            newOtStatusReceiver(receiver));
         } catch (RemoteException | ThreadNetworkException e) {
             LOG.e("otDaemon.join failed", e);
             receiver.onError(e);
+        }
+    }
+
+    void joinWithSpecifier(
+            ThreadNetworkSpecifier specifier,
+            OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        mHandler.post(() -> joinWithSpecifierInternal(specifier, receiver));
+    }
+
+    private void joinWithSpecifierInternal(
+            ThreadNetworkSpecifier specifier,
+            OutcomeReceiver<Void, ThreadNetworkException> receiver) {
+        checkOnHandlerThread();
+
+        mJoinNetworkSpecifier = specifier;
+        byte[] dataset = requireNonNull(specifier.getActiveOperationalDataset()).toThreadTlvs();
+        boolean createPartitionIfNotFound = specifier.shouldCreatePartitionIfNotFound();
+        try {
+            getOtDaemon().join(dataset, createPartitionIfNotFound, newOtStatusReceiver(receiver));
+        } catch (RemoteException | ThreadNetworkException e) {
+            LOG.e("otDaemon.joinWithSpecifier failed", e);
+            if (e instanceof RemoteException re) {
+                receiver.onError(new ThreadNetworkException(ERROR_INTERNAL_ERROR, re.getMessage()));
+            } else {
+                receiver.onError((ThreadNetworkException) e);
+            }
         }
     }
 
@@ -1507,6 +1573,13 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
     private void disableBorderRouting() {
         LOG.i("Disabling border routing");
         setInfraLinkState(newInfraLinkStateBuilder().build());
+    }
+
+    private void handleActiveDatasetChanged(@Nullable ActiveOperationalDataset newActiveDataset) {
+        if (mNetworkAgent == null) {
+            return;
+        }
+        mNetworkAgent.sendNetworkCapabilities(computeNetworkCapabilities(newActiveDataset));
     }
 
     private void handleThreadInterfaceStateChanged(boolean isUp) {
@@ -1994,6 +2067,14 @@ final class ThreadNetworkControllerService extends IThreadNetworkController.Stub
                 ActiveOperationalDataset activeDataset, long listenerId) {
             checkOnHandlerThread();
             boolean hasChange = !Objects.equals(mActiveDataset, activeDataset);
+            if (hasChange) {
+                LOG.i(
+                        "Current Active Operational Dataset changed: "
+                                + mActiveDataset
+                                + " -> "
+                                + activeDataset);
+                handleActiveDatasetChanged(activeDataset);
+            }
 
             for (var callbackEntry : mOpDatasetCallbacks.entrySet()) {
                 if (!hasChange && callbackEntry.getValue().id != listenerId) {

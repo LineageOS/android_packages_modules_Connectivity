@@ -32,6 +32,7 @@ import static android.net.TetheringManager.TETHERING_WIFI;
 import static android.net.TetheringManager.TETHER_ERROR_ENTITLEMENT_UNKNOWN;
 import static android.net.TetheringManager.TETHER_ERROR_NO_ERROR;
 import static android.net.TetheringManager.TETHER_ERROR_PROVISIONING_FAILED;
+import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
 import static com.android.internal.annotations.VisibleForTesting.Visibility.PRIVATE;
 import static com.android.networkstack.apishim.ConstantsShim.ACTION_TETHER_UNSUPPORTED_CARRIER_UI;
@@ -448,7 +449,8 @@ public class EntitlementManager {
             return TETHERING_PROVISIONING_CARRIER_UNSUPPORT;
         }
 
-        if (!config.isCarrierConfigAffirmsEntitlementCheckRequired) {
+        if (!config.isCarrierConfigAffirmsEntitlementCheckRequired
+                || INVALID_SUBSCRIPTION_ID == config.activeDataSubId) {
             return TETHERING_PROVISIONING_NOT_REQUIRED;
         }
         return (config.provisioningApp.length == 2)

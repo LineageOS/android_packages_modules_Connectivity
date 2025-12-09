@@ -397,13 +397,13 @@ static jint com_android_server_connectivity_ClatCoordinator_startClatd(
 
     // clang-format off
     const char* args[] = {progname.c_str(),
-                          "-i", ifaceStr.c_str(),
-                          "-p", pfx96Str.c_str(),
-                          "-4", v4Str.c_str(),
-                          "-6", v6Str.c_str(),
-                          "-t", tunFdStr,
-                          "-r", sockReadStr,
-                          "-w", sockWriteStr,
+                          ifaceStr.c_str(),
+                          pfx96Str.c_str(),
+                          v4Str.c_str(),
+                          v6Str.c_str(),
+                          tunFdStr,
+                          sockReadStr,
+                          sockWriteStr,
                           nullptr};
     // clang-format on
 

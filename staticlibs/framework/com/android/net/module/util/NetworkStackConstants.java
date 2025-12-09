@@ -49,6 +49,7 @@ public final class NetworkStackConstants {
     public static final int ETHER_TYPE_ARP  = 0x0806;
     public static final int ETHER_TYPE_IPV4 = 0x0800;
     public static final int ETHER_TYPE_IPV6 = 0x86dd;
+    public static final int ETHER_TYPE_WAKE_ON_LAN = 0x0842;
     public static final int ETHER_HEADER_LEN = 14;
     public static final int ETHER_MTU = 1500;
     public static final byte[] ETHER_BROADCAST = new byte[] {

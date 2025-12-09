@@ -16,68 +16,80 @@
 
 package android.net.thread;
 
+import static android.Manifest.permission.THREAD_NETWORK_PRIVILEGED;
+import static android.net.NetworkCapabilities.REDACT_FOR_ACCESS_FINE_LOCATION;
 import static android.net.thread.ActiveOperationalDataset.LENGTH_EXTENDED_PAN_ID;
+import static android.net.thread.ActiveOperationalDataset.LENGTH_NETWORK_KEY;
+import static android.net.thread.ActiveOperationalDataset.LENGTH_PSKC;
 
+import static com.android.net.thread.flags.Flags.FLAG_THREAD_MOBILE_ENABLED;
+
+import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
+import android.net.NetworkRequest;
 import android.net.NetworkSpecifier;
 import android.os.Parcel;
 import android.os.Parcelable;
-
-import com.android.net.module.util.HexDump;
+import android.util.SparseArray;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Represents and identifies a Thread network.
+ * Specifies and identifies a Thread network.
+ *
+ * <p>Using this class with {@link NetworkRequest} requires the app holding {@link
+ * THREAD_NETWORK_PRIVILEGED} permission.
  *
  * @hide
  */
+@FlaggedApi(FLAG_THREAD_MOBILE_ENABLED)
+@SystemApi
 public final class ThreadNetworkSpecifier extends NetworkSpecifier implements Parcelable {
-    /** The Extended PAN ID of a Thread network. */
-    @NonNull private final byte[] mExtendedPanId;
+    // TODO: b/427955643 - use NetworkCapabilities#REDACT_FOR_THREAD_NETWORK_PRIVILEGED
+    private static final long REDACT_FOR_THREAD_NETWORK_PRIVILEGED = 1 << 3;
+    private static final String UNKNOWN_NETWORK_NAME = "UNKNOWN";
 
-    /** The Active Timestamp of a Thread network. */
-    @Nullable private final OperationalDatasetTimestamp mActiveTimestamp;
+    /** The Active Operational Dataset of a Thread network. */
+    @Nullable private final ActiveOperationalDataset mActiveDataset;
 
-    private final boolean mRouterEligibleForLeader;
+    private final boolean mShouldCreatePartitionIfNotFound;
 
     private ThreadNetworkSpecifier(@NonNull Builder builder) {
-        mExtendedPanId = builder.mExtendedPanId.clone();
-        mActiveTimestamp = builder.mActiveTimestamp;
-        mRouterEligibleForLeader = builder.mRouterEligibleForLeader;
+        mActiveDataset = builder.mActiveDataset;
+        mShouldCreatePartitionIfNotFound = builder.mShouldCreatePartitionIfNotFound;
     }
 
-    /** Returns the Extended PAN ID of the Thread network this specifier refers to. */
-    @NonNull
-    public byte[] getExtendedPanId() {
-        return mExtendedPanId.clone();
-    }
-
-    /**
-     * Returns the Active Timestamp of the Thread network this specifier refers to, or {@code null}
-     * if not specified.
-     */
+    /** Returns the Active Operational Dataset of the Thread network this specifier refers to. */
     @Nullable
-    public OperationalDatasetTimestamp getActiveTimestamp() {
-        return mActiveTimestamp;
+    public ActiveOperationalDataset getActiveOperationalDataset() {
+        return mActiveDataset;
     }
 
     /**
-     * Returns {@code true} if this device can be a leader during attachment when there are no
-     * nearby routers.
-     */
-    public boolean isRouterEligibleForLeader() {
-        return mRouterEligibleForLeader;
-    }
-
-    /**
-     * Returns {@code true} if both {@link #getExtendedPanId()} and {@link #getActiveTimestamp()}
-     * (if not {@code null}) of the two {@link ThreadNetworkSpecifier} objects are equal.
+     * Returns {@code true} if this device should create a Thread network partition with the given
+     * {@code activeDataset} and become the Leader of the network partition if the target network
+     * can't be found nearby.
      *
-     * <p>Note value of {@link #isRouterEligibleForLeader()} is expiclitly excluded because this is
-     * not part of the identifier.
+     * <p>Setting this option may cause significant battery drain because this device will need to
+     * be a router and setting its radio to a high power state when creating a partition. This
+     * should typically be used for a short period of time. For example, when provisioning new
+     * Thread accessory devices.
+     *
+     * <p>This value is not used for matching in {@link #canBeSatisfiedBy}.
+     */
+    public boolean shouldCreatePartitionIfNotFound() {
+        return mShouldCreatePartitionIfNotFound;
+    }
+
+    /**
+     * Returns {@code true} if the Network Key of the Active Operational Dataset in the two {@link
+     * ThreadNetworkSpecifier} objects are equal.
+     *
+     * <p>The full Active Operational Dataset rather than only the Network Key is needed in this
+     * specifier because creating a partition requires full dataset.
      *
      * @hide
      */
@@ -86,13 +98,50 @@ public final class ThreadNetworkSpecifier extends NetworkSpecifier implements Pa
         if (!(other instanceof ThreadNetworkSpecifier)) {
             return false;
         }
-        ThreadNetworkSpecifier otherSpecifier = (ThreadNetworkSpecifier) other;
 
-        if (mActiveTimestamp != null && !mActiveTimestamp.equals(otherSpecifier.mActiveTimestamp)) {
+        final ThreadNetworkSpecifier otherSpecifier = (ThreadNetworkSpecifier) other;
+        if (mActiveDataset == null) {
+            return true;
+        } else if (otherSpecifier.mActiveDataset == null) {
             return false;
         }
+        return Arrays.equals(
+                mActiveDataset.getNetworkKey(), otherSpecifier.mActiveDataset.getNetworkKey());
+    }
 
-        return Arrays.equals(mExtendedPanId, otherSpecifier.mExtendedPanId);
+    /** @hide */
+    @Override
+    public NetworkSpecifier redact(long redactions) {
+        if (mActiveDataset == null) {
+            return new ThreadNetworkSpecifier.Builder(this).build();
+        }
+
+        var redactedDatasetBuilder = new ActiveOperationalDataset.Builder(mActiveDataset);
+        if ((redactions & REDACT_FOR_THREAD_NETWORK_PRIVILEGED) != 0
+                || (redactions & REDACT_FOR_ACCESS_FINE_LOCATION) != 0) {
+            redactedDatasetBuilder.setNetworkKey(new byte[LENGTH_NETWORK_KEY]);
+            redactedDatasetBuilder.setPskc(new byte[LENGTH_PSKC]);
+            redactedDatasetBuilder.setUnknownTlvs(new SparseArray<byte[]>());
+        }
+
+        if ((redactions & REDACT_FOR_ACCESS_FINE_LOCATION) != 0) {
+            redactedDatasetBuilder.setExtendedPanId(new byte[LENGTH_EXTENDED_PAN_ID]);
+            redactedDatasetBuilder.setPanId(0);
+            redactedDatasetBuilder.setNetworkName(UNKNOWN_NETWORK_NAME);
+            redactedDatasetBuilder.setMeshLocalPrefix(
+                    new byte[] {(byte) 0xfd, 0, 0, 0, 0, 0, 0, 0});
+        }
+
+        return new ThreadNetworkSpecifier.Builder()
+                .setActiveOperationalDataset(redactedDatasetBuilder.build())
+                .setShouldCreatePartitionIfNotFound(mShouldCreatePartitionIfNotFound)
+                .build();
+    }
+
+    /** @hide */
+    @Override
+    public long getApplicableRedactions() {
+        return REDACT_FOR_ACCESS_FINE_LOCATION | REDACT_FOR_THREAD_NETWORK_PRIVILEGED;
     }
 
     @Override
@@ -103,31 +152,24 @@ public final class ThreadNetworkSpecifier extends NetworkSpecifier implements Pa
             return true;
         }
 
-        ThreadNetworkSpecifier otherSpecifier = (ThreadNetworkSpecifier) other;
+        final ThreadNetworkSpecifier otherSpecifier = (ThreadNetworkSpecifier) other;
 
-        return Arrays.equals(mExtendedPanId, otherSpecifier.mExtendedPanId)
-                && Objects.equals(mActiveTimestamp, otherSpecifier.mActiveTimestamp)
-                && mRouterEligibleForLeader == otherSpecifier.mRouterEligibleForLeader;
+        return Objects.equals(mActiveDataset, otherSpecifier.mActiveDataset)
+                && (mShouldCreatePartitionIfNotFound
+                        == otherSpecifier.mShouldCreatePartitionIfNotFound);
     }
 
     @Override
     public int hashCode() {
-        return deepHashCode(mExtendedPanId, mActiveTimestamp, mRouterEligibleForLeader);
-    }
-
-    /** An easy-to-use wrapper of {@link Arrays#deepHashCode}. */
-    private static int deepHashCode(Object... values) {
-        return Arrays.deepHashCode(values);
+        return Objects.hash(mActiveDataset, mShouldCreatePartitionIfNotFound);
     }
 
     @Override
     public String toString() {
-        return "ThreadNetworkSpecifier{extendedPanId="
-                + HexDump.toHexString(mExtendedPanId)
-                + ", activeTimestamp="
-                + mActiveTimestamp
-                + ", routerEligibleForLeader="
-                + mRouterEligibleForLeader
+        return "ThreadNetworkSpecifier{activeDataset="
+                + mActiveDataset
+                + ", shouldCreatePartitionIfNotFound="
+                + mShouldCreatePartitionIfNotFound
                 + "}";
     }
 
@@ -138,26 +180,22 @@ public final class ThreadNetworkSpecifier extends NetworkSpecifier implements Pa
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeByteArray(mExtendedPanId);
-        dest.writeByteArray(mActiveTimestamp != null ? mActiveTimestamp.toTlvValue() : null);
-        dest.writeBoolean(mRouterEligibleForLeader);
+        dest.writeParcelable(mActiveDataset, 0 /* parcelableFlags */);
+        dest.writeBoolean(mShouldCreatePartitionIfNotFound);
     }
 
     public static final @NonNull Parcelable.Creator<ThreadNetworkSpecifier> CREATOR =
             new Parcelable.Creator<ThreadNetworkSpecifier>() {
                 @Override
                 public ThreadNetworkSpecifier createFromParcel(Parcel in) {
-                    byte[] extendedPanId = in.createByteArray();
-                    byte[] activeTimestampBytes = in.createByteArray();
-                    OperationalDatasetTimestamp activeTimestamp =
-                            (activeTimestampBytes != null)
-                                    ? OperationalDatasetTimestamp.fromTlvValue(activeTimestampBytes)
-                                    : null;
-                    boolean routerEligibleForLeader = in.readBoolean();
-
-                    return new Builder(extendedPanId)
-                            .setActiveTimestamp(activeTimestamp)
-                            .setRouterEligibleForLeader(routerEligibleForLeader)
+                    final ActiveOperationalDataset activeDataset =
+                            in.readParcelable(
+                                    ActiveOperationalDataset.class.getClassLoader(),
+                                    ActiveOperationalDataset.class);
+                    final boolean createPartitionIfNotFound = in.readBoolean();
+                    return new Builder()
+                            .setActiveOperationalDataset(activeDataset)
+                            .setShouldCreatePartitionIfNotFound(createPartitionIfNotFound)
                             .build();
                 }
 
@@ -167,54 +205,48 @@ public final class ThreadNetworkSpecifier extends NetworkSpecifier implements Pa
                 }
             };
 
-    /** The builder for creating {@link ActiveOperationalDataset} objects. */
+    /** The builder for creating {@link ThreadNetworkSpecifier} objects. */
     public static final class Builder {
-        @NonNull private final byte[] mExtendedPanId;
-        @Nullable private OperationalDatasetTimestamp mActiveTimestamp;
-        private boolean mRouterEligibleForLeader;
+        @Nullable private ActiveOperationalDataset mActiveDataset;
+        private boolean mShouldCreatePartitionIfNotFound;
 
-        /**
-         * Creates a new {@link Builder} object with given Extended PAN ID.
-         *
-         * @throws IllegalArgumentException if {@code extendedPanId} is {@code null} or the length
-         *     is not {@link ActiveOperationalDataset#LENGTH_EXTENDED_PAN_ID}
-         */
-        public Builder(@NonNull byte[] extendedPanId) {
-            if (extendedPanId == null || extendedPanId.length != LENGTH_EXTENDED_PAN_ID) {
-                throw new IllegalArgumentException(
-                        "extendedPanId is null or length is not "
-                                + LENGTH_EXTENDED_PAN_ID
-                                + ": "
-                                + Arrays.toString(extendedPanId));
-            }
-            mExtendedPanId = extendedPanId.clone();
-            mRouterEligibleForLeader = false;
-        }
+        /** Creates an empty builder. */
+        public Builder() {}
 
         /**
          * Creates a new {@link Builder} object by copying the data in the given {@code specifier}
          * object.
+         *
+         * @hide
          */
         public Builder(@NonNull ThreadNetworkSpecifier specifier) {
-            this(specifier.getExtendedPanId());
-            setActiveTimestamp(specifier.getActiveTimestamp());
-            setRouterEligibleForLeader(specifier.isRouterEligibleForLeader());
+            mActiveDataset = specifier.mActiveDataset;
+            mShouldCreatePartitionIfNotFound = specifier.mShouldCreatePartitionIfNotFound;
         }
 
-        /** Sets the Active Timestamp of the Thread network. */
+        /**
+         * Sets the Active Operational Dataset.
+         *
+         * <p>The dataset is for matching a satisfied network (see {@link
+         * ThreadNetworkSpecifier#canBeSatisfiedBy}) or creating a new network partition when {@link
+         * #setShouldCreatePartitionIfNotFound} is called with {@code true}.
+         */
         @NonNull
-        public Builder setActiveTimestamp(@Nullable OperationalDatasetTimestamp activeTimestamp) {
-            mActiveTimestamp = activeTimestamp;
+        public Builder setActiveOperationalDataset(
+                @Nullable ActiveOperationalDataset activeDataset) {
+            mActiveDataset = activeDataset;
             return this;
         }
 
         /**
-         * Sets whether this device should be a leader during attachment when there are no nearby
-         * routers.
+         * Sets whether this device should create a new Thread network partition if no existing
+         * network with the given Active Operational Dataset can be found nearby.
+         *
+         * @see ThreadNetworkSpecifier#shouldCreatePartitionIfNotFound()
          */
         @NonNull
-        public Builder setRouterEligibleForLeader(boolean eligible) {
-            mRouterEligibleForLeader = eligible;
+        public Builder setShouldCreatePartitionIfNotFound(boolean create) {
+            mShouldCreatePartitionIfNotFound = create;
             return this;
         }
 

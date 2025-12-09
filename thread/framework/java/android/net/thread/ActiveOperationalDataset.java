@@ -363,6 +363,14 @@ public final class ActiveOperationalDataset implements Parcelable {
         outputStream.write(entries, 0, entries.length);
     }
 
+    private static int byteArraySparseArrayHashCode(@NonNull SparseArray<byte[]> array) {
+        int result = 0;
+        for (int i = 0; i < array.size(); i++) {
+            result = 31 * result + deepHashCode(array.keyAt(i), array.valueAt(i));
+        }
+        return result;
+    }
+
     private static boolean areByteSparseArraysEqual(
             @NonNull SparseArray<byte[]> first, @NonNull SparseArray<byte[]> second) {
         if (first == second) {
@@ -591,18 +599,21 @@ public final class ActiveOperationalDataset implements Parcelable {
 
     @Override
     public int hashCode() {
-        return deepHashCode(
-                mActiveTimestamp,
-                mNetworkName,
-                mExtendedPanId,
-                mPanId,
-                mChannel,
-                mChannelPage,
-                mChannelMask,
-                mPskc,
-                mNetworkKey,
-                mMeshLocalPrefix,
-                mSecurityPolicy);
+        // SparseArray<byte[]> is not hashable
+        int result = byteArraySparseArrayHashCode(mChannelMask);
+        result = result * 31 + byteArraySparseArrayHashCode(mUnknownTlvs);
+        return result * 31
+                + deepHashCode(
+                        mActiveTimestamp,
+                        mNetworkName,
+                        mExtendedPanId,
+                        mPanId,
+                        mChannel,
+                        mChannelPage,
+                        mPskc,
+                        mNetworkKey,
+                        mMeshLocalPrefix,
+                        mSecurityPolicy);
     }
 
     @Override
@@ -920,7 +931,10 @@ public final class ActiveOperationalDataset implements Parcelable {
             return this;
         }
 
-        /** Adds one more unknown TLV. @hide */
+        /**
+         * Adds one more unknown TLV.
+         * @hide
+         */
         @VisibleForTesting
         @NonNull
         public Builder addUnknownTlv(int type, byte[] value) {

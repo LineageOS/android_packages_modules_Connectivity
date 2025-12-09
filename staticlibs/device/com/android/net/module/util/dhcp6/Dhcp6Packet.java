@@ -28,6 +28,9 @@ import com.android.net.module.util.Struct;
 import com.android.net.module.util.structs.IaPdOption;
 import com.android.net.module.util.structs.IaPrefixOption;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -44,7 +47,7 @@ import java.util.OptionalInt;
  *
  * @hide
  */
-public class Dhcp6Packet {
+public abstract class Dhcp6Packet {
     private static final String TAG = Dhcp6Packet.class.getSimpleName();
     /** DHCP constants copied from NetworkStackConstants.java */
     protected static final int DHCP_MAX_LENGTH = 1500;
@@ -70,6 +73,11 @@ public class Dhcp6Packet {
     public static final byte DHCP6_MESSAGE_TYPE_ADDR_REG_REPLY = 37;
 
     /**
+     * Returns a specific DHCPv6 message type.
+     */
+    public abstract byte getMessageType();
+
+    /**
      * DHCPv6 Optional Type: Client Identifier.
      * DHCPv6 message from client must have this option.
      */
@@ -88,8 +96,6 @@ public class Dhcp6Packet {
      * DHCPv6 Optional Type: IA Address option.
      */
     public static final byte DHCP6_IA_ADDR = 5;
-    @Nullable
-    protected byte[] mIaAddress;
 
     /**
      * DHCPv6 Optional Type: Option Request Option.
@@ -151,7 +157,6 @@ public class Dhcp6Packet {
      * option in the Option Request options that it sends.
      */
     public static final short DHCP6_OPTION_ADDR_REG_ENABLE = 148;
-    public boolean mAddrRegEnable;
 
     /**
      * The transaction identifier used in this particular DHCPv6 negotiation
@@ -210,14 +215,6 @@ public class Dhcp6Packet {
     @Nullable
     public byte[] getServerDuid() {
         return mServerDuid;
-    }
-
-    /**
-     * Returns the IA Address option.
-     */
-    @Nullable
-    public byte[] getIaAddress() {
-        return mIaAddress;
     }
 
     /**
@@ -473,7 +470,9 @@ public class Dhcp6Packet {
     private static Dhcp6Packet decode(@NonNull final ByteBuffer packet) throws ParseException {
         int elapsedTime = 0;
         byte[] iapd = null;
-        byte[] iaAddress = null;
+        Inet6Address iaAddress = null;
+        long preferred = 0;
+        long valid = 0;
         byte[] serverDuid = null;
         byte[] clientDuid = null;
         short statusCode = STATUS_SUCCESS;
@@ -549,10 +548,10 @@ public class Dhcp6Packet {
                         expectedLen = optionLen;
                         final byte[] iaAddressBytes = new byte[16];
                         packet.get(iaAddressBytes, 0 /* offset */, 16);
-                        iaAddress = iaAddressBytes;
-                        // TODO: support parsing preferred and valid lifetime.
-                        packet.getInt(); // preferred lifetime
-                        packet.getInt(); // valid lifetime
+                        // UnknownHostException will be thrown if host address is not determined.
+                        iaAddress = (Inet6Address) InetAddress.getByAddress(iaAddressBytes);
+                        preferred = packet.getInt();
+                        valid = packet.getInt();
                         // IAaddr-options are currently unsupported, skip over them.
                         final int remainingBytesLength = optionLen - 16 - 8;
                         if (remainingBytesLength > 0) {
@@ -578,7 +577,7 @@ public class Dhcp6Packet {
                             "Invalid length " + optionLen + " for option " + optionType
                                     + ", expected " + expectedLen);
                 }
-            } catch (BufferUnderflowException e) {
+            } catch (BufferUnderflowException | UnknownHostException e) {
                 throw new ParseException(e.getMessage());
             }
         }
@@ -609,8 +608,18 @@ public class Dhcp6Packet {
                 newPacket = new Dhcp6RebindPacket(transId, elapsedTime, clientDuid, iapd);
                 break;
             case DHCP6_MESSAGE_TYPE_ADDR_REG_INFORM:
+                if (iaAddress == null) {
+                    throw new ParseException("IA Address option isn't present in ADDR_REG_INFORM");
+                }
                 newPacket = new Dhcp6AddrRegInformPacket(transId, elapsedTime, clientDuid,
-                        iaAddress);
+                        iaAddress, preferred, valid);
+                break;
+            case DHCP6_MESSAGE_TYPE_ADDR_REG_REPLY:
+                if (iaAddress == null) {
+                    throw new ParseException("IA Address option isn't present in ADDR_REG_REPLY");
+                }
+                newPacket = new Dhcp6AddrRegReplyPacket(transId, clientDuid, serverDuid,
+                        iaAddress, preferred, valid);
                 break;
             default:
                 throw new ParseException("Unimplemented DHCP6 message type %d" + messageType);
@@ -626,7 +635,6 @@ public class Dhcp6Packet {
                 (solMaxRt >= 60 && solMaxRt <= 86400)
                         ? OptionalInt.of(solMaxRt * 1000)
                         : OptionalInt.empty();
-        newPacket.mAddrRegEnable = addrRegEnable;
 
         return newPacket;
     }
@@ -729,6 +737,13 @@ public class Dhcp6Packet {
     }
 
     /**
+     * Adds an optional parameter containing a complete option (type, length, value).
+     */
+    protected static void addTlv(ByteBuffer buf, ByteBuffer option) {
+        buf.put(option);
+    }
+
+    /**
      * Builds a DHCPv6 SOLICIT packet from the required specified parameters.
      */
     public static ByteBuffer buildSolicitPacket(int transId, long millisecs,
@@ -791,6 +806,30 @@ public class Dhcp6Packet {
             @NonNull final byte[] iapd, @NonNull final byte[] clientDuid) {
         final Dhcp6RebindPacket pkt = new Dhcp6RebindPacket(transId,
                 (int) (millisecs / 10) /* elapsed time */, clientDuid, iapd);
+        return pkt.buildPacket();
+    }
+
+    /**
+     * Builds a DHCPv6 ADDR-REG-INFORM packet from the required specified parameters.
+     */
+    public static ByteBuffer buildAddrRegInformPacket(int transId, long millisecs,
+            @NonNull final byte[] clientDuid, @NonNull final Inet6Address iaAddress, long preferred,
+            long valid) {
+        final Dhcp6AddrRegInformPacket pkt =
+                new Dhcp6AddrRegInformPacket(transId, (int) (millisecs / 10) /* elapsed time */,
+                        clientDuid, iaAddress, preferred, valid);
+        return pkt.buildPacket();
+    }
+
+    /**
+     * Builds a DHCPv6 ADDR-REG-INFORM packet from the required specified parameters.
+     */
+    public static ByteBuffer buildAddrRegReplyPacket(int transId, @NonNull final byte[] clientDuid,
+            @NonNull final byte[] serverDuid, @NonNull final Inet6Address iaAddress, long preferred,
+            long valid) {
+        final Dhcp6AddrRegReplyPacket pkt =
+                new Dhcp6AddrRegReplyPacket(transId, clientDuid, serverDuid, iaAddress, preferred,
+                        valid);
         return pkt.buildPacket();
     }
 }

@@ -20,6 +20,7 @@
     package="android.net.thread.unittests">
 
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="android.permission.NETWORK_FACTORY" />
 
     <application android:debuggable="true">
         <uses-library android:name="android.test.runner" />

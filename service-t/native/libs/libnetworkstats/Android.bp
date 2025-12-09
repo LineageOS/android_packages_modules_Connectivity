@@ -100,4 +100,5 @@ cc_test {
             suffix: "64",
         },
     },
+    min_sdk_version: "33",
 }

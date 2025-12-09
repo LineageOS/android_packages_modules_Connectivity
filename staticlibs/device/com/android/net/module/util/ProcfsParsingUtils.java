@@ -35,9 +35,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public final class ProcfsParsingUtils {
     public static final String TAG = ProcfsParsingUtils.class.getSimpleName();
+
+    // rfc894 describes the minimum length of the data field of a packet sent over an
+    // Ethernet is 1500 octets, thus the maximum length of an IP datagram
+    // sent over an Ethernet is 1500 octets.
+    public static final int DEFAULT_MTU = 1500;
+    public static final int DEFAULT_TRAFFIC_CLASS = 0;
 
     private static final Inet4Address IPV4_ADDR_ALL_HOST_MULTICAST =
             (Inet4Address) InetAddresses.parseNumericAddress("224.0.0.1");
@@ -48,6 +55,9 @@ public final class ProcfsParsingUtils {
     private static final String IPV4_MCAST_PATH = "/proc/net/igmp";
     private static final String IPV6_MCAST_PATH = "/proc/net/igmp6";
     private static final String IPV4_DEFAULT_TTL_PATH = "/proc/sys/net/ipv4/ip_default_ttl";
+    private static final String SYS_CLASS_NET_PATH = "/sys/class/net/";
+
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     private ProcfsParsingUtils() {
     }
@@ -68,7 +78,7 @@ public final class ProcfsParsingUtils {
                 lines.add(line);
             }
         } catch (IOException e) {
-            Log.wtf(TAG, "failed to read " + filePath, e);
+            Log.e(TAG, "failed to read " + filePath, e);
         }
 
         return lines;
@@ -86,10 +96,15 @@ public final class ProcfsParsingUtils {
     @VisibleForTesting
     public static int parseNdTrafficClass(final List<String> lines) {
         if (lines.size() != 1) {
-            return 0;   // default
+            return DEFAULT_TRAFFIC_CLASS;
         }
 
-        return Integer.parseInt(lines.get(0));
+        try {
+            return Integer.parseInt(lines.get(0));
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "failed to parse ND traffic class.", e);
+            return DEFAULT_TRAFFIC_CLASS;
+        }
     }
 
     /**
@@ -106,6 +121,29 @@ public final class ProcfsParsingUtils {
         } catch (NumberFormatException e) {
             Log.e(TAG, "failed to parse default ttl.", e);
             return 64; // default ttl value as per rfc1700
+        }
+    }
+
+    /**
+     * Parses an interface's Maximum Transmission Unit (MTU) value from a list of strings.
+     *
+     * This function expects a list containing a single string representing the interface MTU.
+     * If the list is empty or contains multiple lines, it assumes a default value for 1500.
+     *
+     * @param lines A list of strings, expected to contain the MTU value as its sole element.
+     * @return The parsed MTU value as an integer.
+     */
+    @VisibleForTesting
+    public static int parseInterfaceMtu(final List<String> lines) {
+        if (lines.size() != 1) {
+            return DEFAULT_MTU;
+        }
+
+        try {
+            return Integer.parseInt(lines.get(0));
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "failed to parse interface mtu.", e);
+            return DEFAULT_MTU;
         }
     }
 
@@ -129,7 +167,7 @@ public final class ProcfsParsingUtils {
         final List<Inet6Address> addresses = new ArrayList<>();
         try {
             for (String line : lines) {
-                final String[] fields = line.split("\\s+");
+                final String[] fields = WHITESPACE_PATTERN.split(line);
                 if (!fields[1].equals(ifname)) {
                     continue;
                 }
@@ -156,7 +194,7 @@ public final class ProcfsParsingUtils {
             @NonNull List<String> lines, @NonNull String ifname) {
         final List<MacAddress> addresses = new ArrayList<>();
         for (String line: lines) {
-            final String[] fields = line.split("\\s+");
+            final String[] fields = WHITESPACE_PATTERN.split(line);
             if (!fields[1].equals(ifname)) {
                 continue;
             }
@@ -182,7 +220,7 @@ public final class ProcfsParsingUtils {
         final List<Inet6Address> addresses = new ArrayList<>();
         try {
             for (String line: lines) {
-                final String[] fields = line.split("\\s+");
+                final String[] fields = WHITESPACE_PATTERN.split(line);
                 if (!fields[1].equals(ifname)) {
                     continue;
                 }
@@ -217,7 +255,7 @@ public final class ProcfsParsingUtils {
             String name = "";
             // parse output similar to `ip maddr` command (iproute2/ip/ipmaddr.c#read_igmp())
             for (String line : lines) {
-                final String[] parts = line.trim().split("\\s+");
+                final String[] parts = WHITESPACE_PATTERN.split(line.trim());
                 if (!line.startsWith("\t")) {
                     name = parts[1];
                     if (name.endsWith(":")) {
@@ -294,6 +332,23 @@ public final class ProcfsParsingUtils {
         final String ndTcPath = IPV6_CONF_PATH + ifname + "/ndisc_tclass";
         final List<String> lines = readFile(ndTcPath);
         return parseNdTrafficClass(lines);
+    }
+
+    /**
+     * Returns the interface MTU for the specified interface.
+     * The function loads the existing interface MTU from the file
+     * `/sys/class/net/{ifname}/mtu`. If the file does not exist, the
+     * function returns the default value 1280.
+     * rfc8200#5 describes IPv6 requires that every link in the Internet have an MTU of 1280
+     * octets or greater. This is known as the IPv6 minimum link MTU.
+     *
+     * @param ifname The name of the interface.
+     * @return The traffic class for the interface.
+     */
+    public static int getInterfaceMtu(final String ifname) {
+        final String mtuPath = SYS_CLASS_NET_PATH + ifname + "/mtu";
+        final List<String> lines = readFile(mtuPath);
+        return parseInterfaceMtu(lines);
     }
 
     /**

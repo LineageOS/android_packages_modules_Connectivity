@@ -54,7 +54,7 @@ class BpfBasicTest : public NetNativeTestBase {
 };
 
 TEST_F(BpfBasicTest, TestTagSocket) {
-    BpfMap<uint64_t, UidTagValue> cookieTagMap(COOKIE_TAG_MAP_PATH);
+    BpfMapRO<uint64_t, UidTagValue> cookieTagMap(COOKIE_TAG_MAP_PATH);
     ASSERT_TRUE(cookieTagMap.isValid());
     int sock = socket(AF_INET6, SOCK_STREAM | SOCK_CLOEXEC, 0);
     ASSERT_LE(0, sock);
@@ -72,7 +72,7 @@ TEST_F(BpfBasicTest, TestTagSocket) {
 }
 
 TEST_F(BpfBasicTest, TestCloseSocketWithoutUntag) {
-    BpfMap<uint64_t, UidTagValue> cookieTagMap(COOKIE_TAG_MAP_PATH);
+    BpfMapRO<uint64_t, UidTagValue> cookieTagMap(COOKIE_TAG_MAP_PATH);
     ASSERT_TRUE(cookieTagMap.isValid());
     int sock = socket(AF_INET6, SOCK_STREAM | SOCK_CLOEXEC, 0);
     ASSERT_LE(0, sock);

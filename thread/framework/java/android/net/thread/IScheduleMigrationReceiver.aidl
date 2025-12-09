@@ -16,7 +16,10 @@
 
 package android.net.thread;
 
-/** Receives the result of {@link ThreadNetworkManager#scheduleMigration}. @hide */
+/**
+ * Receives the result of {@link ThreadNetworkManager#scheduleMigration}.
+ * @hide
+ */
 oneway interface IScheduleMigrationReceiver {
     void onScheduled(long delayTimerMillis);
     void onMigrated();

@@ -25,12 +25,15 @@ import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkCapabilities.transportNamesOf;
+import static android.os.Process.INVALID_UID;
 import static android.system.OsConstants.EEXIST;
 import static android.system.OsConstants.EIO;
 import static android.system.OsConstants.ENOENT;
 
 import static com.android.net.module.util.FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED;
+import static com.android.net.module.util.FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_ALLOW_BYPASS_PRIVATE_DNS_FOR_DELEGATE_UID_ERROR;
 import static com.android.net.module.util.FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_DISALLOW_BYPASS_VPN_FOR_DELEGATE_UID_ENOENT;
+import static com.android.net.module.util.FrameworkConnectivityStatsLog.CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_DISALLOW_BYPASS_PRIVATE_DNS_FOR_DELEGATE_UID_ENOENT;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -91,6 +94,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Consumer;
@@ -435,6 +439,9 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
     // The UID of the remote entity that created this Network.
     public final int creatorUid;
 
+    // Indicates whether this network is specific to the app that registered the networkAgent.
+    private final boolean mIsAppSpecificNetwork;
+
     // Network agent portal info of the network, if any. This information is provided from
     // non-RFC8908 sources, such as Wi-Fi Passpoint, which can provide information such as Venue
     // URL, Terms & Conditions URL, and network friendly name.
@@ -502,6 +509,18 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
             Log.e(TAG, toShortString() + ": ignoring attempt to change owner from "
                     + networkCapabilities.getOwnerUid() + " to " + nc.getOwnerUid());
             nc.setOwnerUid(networkCapabilities.getOwnerUid());
+        }
+        if (mIsAppSpecificNetwork) {
+            if (!networkCapabilities.getUids().equals(nc.getUids())) {
+                Log.e(TAG, toShortString() + ": ignoring attempt to change uid from "
+                        + networkCapabilities.getUids() + " to " + nc.getUids());
+                nc.setUids(networkCapabilities.getUids());
+            }
+            if (nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)) {
+                Log.e(TAG, toShortString() + ": ignoring attempt to add "
+                        + NetworkCapabilities.capabilityNameOf(NET_CAPABILITY_NOT_RESTRICTED));
+                nc.removeCapability(NET_CAPABILITY_NOT_RESTRICTED);
+            }
         }
         restrictCapabilitiesFromNetworkAgent(nc, creatorUid, mHasAutomotiveFeature,
                 mConnServiceDeps, carrierPrivilegeAuthenticator);
@@ -586,7 +605,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
     // For fast lookups. Indexes into mInactivityTimers by request ID.
     private final SparseArray<InactivityTimer> mInactivityTimerForRequest = new SparseArray<>();
 
-    // Map of delegated UIDs used to bypass VPN and its captive portal app caller.
+    // Map of delegated UIDs used to bypass VPN and private DNS and its captive portal app caller.
     private final ArrayMap<CaptivePortalImpl, Integer> mCaptivePortalDelegateUids =
             new ArrayMap<>();
 
@@ -645,6 +664,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
     private final NetworkAgentMessageHandler mRegistry;
     private final QosCallbackTracker mQosCallbackTracker;
     private final INetd mNetd;
+    private final IDnsResolver mDnsResolver;
 
     private final long mCreationTime;
 
@@ -654,7 +674,8 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
             @NonNull NetworkScore score, Context context,
             Handler handler, NetworkAgentConfig config, ConnectivityService connService, INetd netd,
             IDnsResolver dnsResolver, int factorySerialNumber, int creatorUid,
-            int lingerDurationMs, QosCallbackTracker qosCallbackTracker,
+            boolean isAppSpecificNetwork, int lingerDurationMs,
+            QosCallbackTracker qosCallbackTracker,
             ConnectivityService.Dependencies deps) {
         Objects.requireNonNull(net);
         Objects.requireNonNull(info);
@@ -675,11 +696,13 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         setScore(score); // uses members connService, networkCapabilities and networkAgentConfig
         clatd = new Nat464Xlat(this, netd, dnsResolver, deps);
         mNetd = netd;
+        mDnsResolver = dnsResolver;
         mContext = context;
         mHandler = handler;
         mRegistry = new NetworkAgentMessageHandler(mHandler);
         this.factorySerialNumber = factorySerialNumber;
         this.creatorUid = creatorUid;
+        mIsAppSpecificNetwork = isAppSpecificNetwork;
         mLingerDurationMs = lingerDurationMs;
         mQosCallbackTracker = qosCallbackTracker;
         declaredUnderlyingNetworks = (nc.getUnderlyingNetworks() != null)
@@ -1608,7 +1631,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         }
     }
 
-    private int allowBypassVpnOnNetwork(boolean allow, int uid, int netId) {
+    private int setAllowBypassVpnOnNetwork(boolean allow, int uid, int netId) {
         try {
             mNetd.networkAllowBypassVpnOnNetwork(allow, uid, netId);
             return 0;
@@ -1620,20 +1643,80 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
         }
     }
 
+    private int setAllowBypassPrivateDnsOnNetwork(boolean allow, int uid, int netId) {
+        try {
+            mDnsResolver.setAllowBypassPrivateDnsOnNetwork(netId, uid, allow);
+            return 0;
+        } catch (RemoteException e) {
+            // DnsResolver has crashed, and this process is about to crash as well.
+            return EIO;
+        } catch (ServiceSpecificException e) {
+            return e.errorCode;
+        }
+    }
+
+    /**
+     * Get the delegate UIDs of the apps that are allowed to perform network traffic for captive.
+     */
+    public Set<Integer> getCaptivePortalDelegateUids() {
+        return new ArraySet<>(mCaptivePortalDelegateUids.values());
+    }
+
+    /**
+     * Clear all the delegate UIDs.
+     */
+    public void clearCaptivePortalDelegateUids() {
+        mCaptivePortalDelegateUids.clear();
+    }
+
+    /**
+     * Check if the given uid is the delegate uid of the given caller.
+     */
+    public boolean isCurrentUidDelegate(@NonNull CaptivePortalImpl caller, int uid) {
+        return uid == mCaptivePortalDelegateUids.getOrDefault(caller, INVALID_UID);
+    }
+
     /**
      * Set the delegate UID of the app that is allowed to perform network traffic for captive
      * portal login, and configure the netd bypass rule with this delegated UID.
      *
      * @param caller the captive portal app to that delegated UID
      * @param uid the delegated UID of the captive portal app.
-     * @return Return 0 if set the UID and VPN bypass rule successfully or bypass rule corresponding
-     *                to this UID already exists otherwise return errno.
+     * @return Return 0 if set the UID and VPN/private DNS bypass rules successfully or bypass rules
+     *                corresponding to this UID already exists otherwise return errno.
      */
     public int setCaptivePortalDelegateUid(@NonNull final CaptivePortalImpl caller, int uid) {
-        final int errorCode = allowBypassVpnOnNetwork(true /* allow */, uid, network.netId);
-        if (errorCode == 0 || errorCode == EEXIST) {
+        HandlerUtils.ensureRunningOnHandlerThread(mHandler);
+        if (!mConnServiceDeps.isAtLeastV()) {
+            // For Android U and below, only update the map and return. The connectivity service
+            // will handle the bypass rules configuration.
+            // per network bypass (setAllowBypassVpnOnNetwork) is only available on V+.
             mCaptivePortalDelegateUids.put(caller, uid);
+            return 0;
         }
+        int errorCode = setAllowBypassVpnOnNetwork(true /* allow */, uid, network.netId);
+        if (errorCode != 0 && errorCode != EEXIST) return errorCode;
+        if (errorCode == EEXIST) {
+            Log.wtf(TAG, "allow VPN bypass rule for delegated UID " + uid + " already exists.");
+        }
+
+        errorCode = setAllowBypassPrivateDnsOnNetwork(true /* allow */, uid, network.netId);
+        if (errorCode != 0 && errorCode != EEXIST) {
+            // TODO: add a specific error code in CoreNetworkingTerribleErrorOccurred proto
+            // and log it.
+            FrameworkConnectivityStatsLog.write(
+                    CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+                    CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_ALLOW_BYPASS_PRIVATE_DNS_FOR_DELEGATE_UID_ERROR
+            );
+            // Also remove VPN allow bypass rule if failing to set private DNS allow bypass rule.
+            setAllowBypassVpnOnNetwork(false /* allow */, uid, network.netId);
+            return errorCode;
+        }
+        if (errorCode == EEXIST) {
+            Log.wtf(TAG, "allow private DNS bypass rule for delegated UID " + uid
+                    + " already exists.");
+        }
+        mCaptivePortalDelegateUids.put(caller, uid);
         return errorCode == EEXIST ? 0 : errorCode;
     }
 
@@ -1642,19 +1725,41 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
      * portal login, and remove the netd bypass rule if no other caller is delegating this UID.
      *
      * @param caller the captive portal app to that delegated UID.
-     * @return Return 0 if remove the UID and VPN bypass rule successfully or bypass rule
-     *                corresponding to this UID doesn't exist otherwise return errno.
+     * @return Return 0 if remove the UID and VPN/private DNS bypass rules successfully or bypass
+     *                rules corresponding to this UID doesn't exist otherwise return errno.
      */
     public int removeCaptivePortalDelegateUid(@NonNull final CaptivePortalImpl caller) {
+        HandlerUtils.ensureRunningOnHandlerThread(mHandler);
+        if (!mConnServiceDeps.isAtLeastV()) {
+            // For Android U and below, only update the map and return. The connectivity service
+            // will handle the bypass rules configuration.
+            // per network bypass (setAllowBypassVpnOnNetwork) is only available on V+.
+            mCaptivePortalDelegateUids.remove(caller);
+            return 0;
+        }
         final Integer maybeDelegateUid = mCaptivePortalDelegateUids.remove(caller);
         if (maybeDelegateUid == null) return 0;
         if (mCaptivePortalDelegateUids.values().contains(maybeDelegateUid)) return 0;
-        final int errorCode =
-                allowBypassVpnOnNetwork(false /* allow */, maybeDelegateUid, network.netId);
+
+        int errorCode =
+                setAllowBypassVpnOnNetwork(false /* allow */, maybeDelegateUid, network.netId);
         if (errorCode == ENOENT) {
             FrameworkConnectivityStatsLog.write(
                     CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
                     CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_DISALLOW_BYPASS_VPN_FOR_DELEGATE_UID_ENOENT
+            );
+        }
+        if (errorCode == EIO) {
+            // Indicate that netd has crashed, nothing can be done.
+            Log.wtf(TAG, "netd has crashed when setting disallow bypass VPN rule.");
+        }
+
+        errorCode = setAllowBypassPrivateDnsOnNetwork(false /* allow */, maybeDelegateUid,
+                network.netId);
+        if (errorCode == ENOENT) {
+            FrameworkConnectivityStatsLog.write(
+                    CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+                    CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_DISALLOW_BYPASS_PRIVATE_DNS_FOR_DELEGATE_UID_ENOENT
             );
         }
         return errorCode == ENOENT ? 0 : errorCode;
@@ -1730,6 +1835,7 @@ public class NetworkAgentInfo implements NetworkRanker.Scoreable {
                 + "  lp{" + linkProperties + "}"
                 + "  nc{" + networkCapabilities + "}"
                 + "  factorySerialNumber=" + factorySerialNumber
+                + (mIsAppSpecificNetwork ? " appSpecificNetwork" : "")
                 + "}";
     }
 

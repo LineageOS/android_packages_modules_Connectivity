@@ -22,6 +22,8 @@ import android.system.ErrnoException;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
+import dalvik.annotation.optimization.CriticalNative;
+
  /**
  *
  * Generic bitmap class for use with BPF programs. Corresponds to a BpfMap
@@ -30,7 +32,12 @@ import androidx.annotation.RequiresApi;
  */
 @RequiresApi(Build.VERSION_CODES.S)
 public class BpfBitmap {
-    private BpfMap<Struct.S32, Struct.S64> mBpfMap;
+    static {
+        System.loadLibrary(JniUtil.getJniLibraryName(BpfBitmap.class.getPackage()));
+    }
+
+    private final BpfMap<Struct.S32, Struct.S64> mBpfMap;
+    private final int mMapFd;
 
     /**
      * Create a BpfBitmap map wrapper with "path" of filesystem.
@@ -39,21 +46,16 @@ public class BpfBitmap {
      */
     public BpfBitmap(@NonNull String path) throws ErrnoException {
         mBpfMap = new BpfMap<>(path, Struct.S32.class, Struct.S64.class);
+        mMapFd = mBpfMap.getFd();
     }
 
-    /**
-     * Retrieves the value from BpfMap for the given key.
-     *
-     * @param key The key in the map corresponding to the value to return.
-     */
-    private long getBpfMapValue(Struct.S32 key) throws ErrnoException  {
-        Struct.S64 curVal = mBpfMap.getValue(key);
-        if (curVal != null) {
-            return curVal.val;
-        } else {
-            return 0;
-        }
-    }
+    // Returns > 0 if bit is set, 0 if not set, < 0 on error (negative errno).
+    @CriticalNative
+    private static native int nativeGet(int fd, int index);
+
+    // Returns 0 on success, < 0 on error (negative errno).
+    @CriticalNative
+    private static native int nativeSet(int fd, int index, boolean set);
 
     /**
      * Retrieves the bit for the given index in the bitmap.
@@ -63,8 +65,26 @@ public class BpfBitmap {
     public boolean get(int index) throws ErrnoException  {
         if (index < 0) return false;
 
-        Struct.S32 key = new Struct.S32(index >> 6);
-        return ((getBpfMapValue(key) >>> (index & 63)) & 1L) != 0;
+        final int ret = nativeGet(mMapFd, index);
+        if (ret < 0) {
+            throw new ErrnoException("nativeGet", -ret);
+        }
+        return ret > 0;
+    }
+
+    /**
+     * Change the specified index in the bitmap to set value.
+     *
+     * @param index Position to (un)set in bitmap.
+     * @param set Boolean indicating to set or unset index.
+     */
+    public void set(int index, boolean set) throws ErrnoException {
+        if (index < 0) throw new IllegalArgumentException("Index out of bounds.");
+
+        final int ret = nativeSet(mMapFd, index, set);
+        if (ret < 0) {
+            throw new ErrnoException("nativeSet", -ret);
+        }
     }
 
     /**
@@ -86,22 +106,6 @@ public class BpfBitmap {
     }
 
     /**
-     * Change the specified index in the bitmap to set value.
-     *
-     * @param index Position to unset in bitmap.
-     * @param set Boolean indicating to set or unset index.
-     */
-    public void set(int index, boolean set) throws ErrnoException {
-        if (index < 0) throw new IllegalArgumentException("Index out of bounds.");
-
-        Struct.S32 key = new Struct.S32(index >> 6);
-        long mask = (1L << (index & 63));
-        long val = getBpfMapValue(key);
-        if (set) val |= mask; else val &= ~mask;
-        mBpfMap.updateEntry(key, new Struct.S64(val));
-    }
-
-    /**
      * Clears the map. The map may already be empty.
      *
      * @throws ErrnoException if updating entry to 0 fails.
@@ -118,7 +122,8 @@ public class BpfBitmap {
     public boolean isEmpty() throws ErrnoException {
         Struct.S32 key = mBpfMap.getFirstKey();
         while (key != null) {
-            if (getBpfMapValue(key) != 0) {
+            Struct.S64 val = mBpfMap.getValue(key);
+            if (val != null && val.val != 0) {
                 return false;
             }
             key = mBpfMap.getNextKey(key);

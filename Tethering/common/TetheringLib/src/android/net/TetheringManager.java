@@ -381,7 +381,7 @@ public class TetheringManager {
      * @param context Context for the manager.
      * @param connectorSupplier Supplier for the manager connector; may return null while the
      *                          service is not connected.
-     * {@hide}
+     * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public TetheringManager(@NonNull final Context context,
@@ -574,7 +574,7 @@ public class TetheringManager {
      * already released.
      * 2. This is not synchronous, so it's not useful to use try-with-resources.
      *
-     * {@hide}
+     * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     @SuppressLint("NotCloseable")
@@ -588,7 +588,7 @@ public class TetheringManager {
     /**
      * Callback for requestTetheredInterface.
      *
-     * {@hide}
+     * @hide
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public interface TetheredInterfaceCallback {
@@ -694,7 +694,7 @@ public class TetheringManager {
      * @param iface the interface name to tether.
      * @return error a {@code TETHER_ERROR} value indicating success or failure type
      *
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @SystemApi(client = MODULE_LIBRARIES)
@@ -729,7 +729,7 @@ public class TetheringManager {
      *             On SDK versions after {@link Build.VERSION_CODES.VANILLA_ICE_CREAM}, this will
      *             throw an UnsupportedOperationException.
      *
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @SystemApi(client = MODULE_LIBRARIES)
@@ -758,7 +758,7 @@ public class TetheringManager {
      * used and an entitlement check is needed, downstream USB tethering will be enabled but will
      * not have any upstream.
      *
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @SystemApi(client = MODULE_LIBRARIES)
@@ -1553,7 +1553,7 @@ public class TetheringManager {
      * Helper function of #requestLatestTetheringEntitlementResult to remain backwards compatible
      * with ConnectivityManager#getLatestTetheringEntitlementResult
      *
-     * {@hide}
+     * @hide
      */
     // TODO: improve the usage of ResultReceiver, b/145096122
     @SystemApi(client = MODULE_LIBRARIES)

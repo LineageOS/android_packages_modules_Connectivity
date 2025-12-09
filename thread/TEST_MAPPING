@@ -8,6 +8,9 @@
     },
     {
       "name": "ThreadNetworkIntegrationTests"
+    },
+    {
+      "name": "ThreadBorderRouterIntegrationTests"
     }
   ],
   "postsubmit": [
@@ -16,9 +19,6 @@
     },
     {
       "name": "ThreadNetworkTrelDisabledTests"
-    },
-    {
-      "name": "ThreadBorderRouterIntegrationTests"
     }
   ]
 }

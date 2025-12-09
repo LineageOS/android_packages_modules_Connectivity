@@ -39,7 +39,7 @@ class ConnectivityNativeBinderTest : public ::testing::Test {
             GTEST_SKIP() << "Should be at least U device.";
 
         // Skip test case if not on 5.4 kernel which is required by bpf prog.
-        if (!android::bpf::isAtLeastKernelVersion(5, 4, 0))
+        if (!android::bpf::isAtLeastKernelVersion(5, 4))
             GTEST_SKIP() << "Kernel should be at least 5.4.";
 
         // If there are already ports being blocked on device store the

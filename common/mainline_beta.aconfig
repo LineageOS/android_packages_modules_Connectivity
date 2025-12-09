@@ -1,0 +1,37 @@
+package: "com.android.tethering.mainline.beta"
+container: "com.android.tethering"
+
+flag {
+    name: "bluetooth_tethering_randomized_address"
+    namespace: "com_android_tethering"
+    description: "bluetooth tethering use randomized address"
+    bug: "287177081"
+}
+
+flag {
+    name: "queue_network_agent_events_in_system_server"
+    namespace: "com_android_tethering"
+    description: "Queue NetworkAgent events in system server"
+    bug: "428098184"
+}
+
+flag {
+    name: "lnp_developer_opt_in"
+    namespace: "com_android_tethering"
+    description: "The flag enables the developer opt-in for LNP."
+    bug: "421952907"
+}
+
+flag {
+    name: "tethering_and_p2p_go_local_agent"
+    namespace: "com_android_tethering"
+    description: "The flag enables the Tethering and WI-Fi P2p Group Owner mode local network agent."
+    bug: "420590461"
+}    
+
+flag {
+    name: "nsd_selective_mdns_response_offload"
+    namespace: "com_android_tethering"
+    description: "A flag to control whether the selective mDNS response offload should be enabled."
+    bug: "410734687"
+}

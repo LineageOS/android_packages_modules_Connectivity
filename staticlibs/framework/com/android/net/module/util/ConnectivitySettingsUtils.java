@@ -29,6 +29,7 @@ import android.text.TextUtils;
  * @hide
  */
 public class ConnectivitySettingsUtils {
+    public static final String TAG = ConnectivitySettingsUtils.class.getSimpleName();
     public static final int PRIVATE_DNS_MODE_OFF = 1;
     public static final int PRIVATE_DNS_MODE_OPPORTUNISTIC = 2;
     public static final int PRIVATE_DNS_MODE_PROVIDER_HOSTNAME = 3;
@@ -39,6 +40,10 @@ public class ConnectivitySettingsUtils {
     public static final String PRIVATE_DNS_MODE_OPPORTUNISTIC_STRING = "opportunistic";
     public static final String PRIVATE_DNS_MODE_PROVIDER_HOSTNAME_STRING = "hostname";
     public static final String PRIVATE_DNS_SPECIFIER = "private_dns_specifier";
+
+    public static final String NETWORK_AVOID_BAD_WIFI = "network_avoid_bad_wifi";
+    public static final String NETWORK_CARRIER_AWARE_AVOID_BAD_WIFI =
+            "network_carrier_aware_avoid_bad_wifi";
 
     /**
      * Get private DNS mode as string.
@@ -77,6 +82,23 @@ public class ConnectivitySettingsUtils {
                 // throw new IllegalArgumentException("Invalid private dns mode: " + mode);
                 return PRIVATE_DNS_MODE_OPPORTUNISTIC;
         }
+    }
+
+    /**
+     * Generates a unique setting key for the "avoid bad Wi-Fi" feature,
+     * specific to a given cellular subscription ID.
+     * This key is typically used to store and retrieve a preference
+     * that controls how the device manages Wi-Fi connectivity
+     * in the context of a particular cellular carrier.
+     *
+     * @param subId The unique identifier of the cellular subscription.
+     * @return A {@code String} representing the unique setting key.
+     * The key is constructed by appending the {@code subId} to a
+     * base constant string for carrier-aware "avoid bad Wi-Fi" settings,
+     * separated by a forward slash.
+     */
+    public static String getAvoidBadWifiSettingKey(int subId) {
+        return NETWORK_CARRIER_AWARE_AVOID_BAD_WIFI + "/" + subId;
     }
 
     /**
@@ -127,5 +149,66 @@ public class ConnectivitySettingsUtils {
      */
     public static void setPrivateDnsHostname(@NonNull Context context, @Nullable String specifier) {
         Settings.Global.putString(context.getContentResolver(), PRIVATE_DNS_SPECIFIER, specifier);
+    }
+
+    /**
+     * Set legacy global avoid bad wifi to {@link Settings}.
+     *
+     * @param context The {@link Context} to set the setting.
+     * @param setting The desired setting value.
+     * "0": Don't avoid bad Wi-Fi.
+     * "1": Avoid bad Wi-Fi.
+     * {@code null}: Ask the user whether to switch away from bad Wi-Fi.
+     * @deprecated Use {@link #setNetworkAvoidBadWifiSetting(Context, String)} instead.
+     */
+    @Deprecated
+    public static void setNetworkLegacyGlobalAvoidBadWifiSetting(
+            @NonNull Context context, @Nullable String setting) {
+        Settings.Global.putString(context.getContentResolver(), NETWORK_AVOID_BAD_WIFI, setting);
+    }
+
+    /**
+     * Get legacy global avoid bad wifi to {@link Settings}.
+     *
+     * @param context The {@link Context} to query the setting.
+     * @return The current setting value, which can be "0", "1", or {@code null}.
+     * Returns {@code null} if the setting is not found.
+     * @deprecated Use {@link #getNetworkAvoidBadWifiSetting(Context)} instead.
+     */
+    @Deprecated
+    @Nullable
+    public static String getNetworkLegacyGlobalAvoidBadWifiSetting(@NonNull Context context) {
+        return Settings.Global.getString(context.getContentResolver(), NETWORK_AVOID_BAD_WIFI);
+    }
+
+    /**
+     * Set the carrier-aware avoid bad wifi to {@link Settings}.
+     *
+     * @param context The {@link Context} to set the setting.
+     * @param subId The subscription ID
+     * @param setting The desired setting string.
+     * subId: The carrier subscription ID (integer).
+     * value: "0" to not avoid bad Wi-Fi for this subscription, or "1" to avoid.
+     * {@code null}: Ask the user whether to switch away from bad Wi-Fi.
+     */
+    public static void setNetworkAvoidBadWifiSetting(
+                @NonNull Context context, int subId, @Nullable String setting) {
+        Settings.Global.putString(
+                context.getContentResolver(), getAvoidBadWifiSettingKey(subId), setting);
+    }
+
+    /**
+     * Get the raw carrier-aware avoid bad wifi string from {@link Settings}.
+     * @see #convertCarrierAwareSettingsStringToMap(String)
+     *
+     * @param context The {@link Context} to set the setting.
+     * @param subId The subscription ID.
+     * @return The current setting string, formatted as
+     * "network_carrier_aware_avoid_bad_wifi/{subId}" or {@code null} if the setting is not set.
+     */
+    @Nullable
+    public static String getNetworkAvoidBadWifiSetting(@NonNull Context context, int subId) {
+        return Settings.Global.getString(
+            context.getContentResolver(), getAvoidBadWifiSettingKey(subId));
     }
 }

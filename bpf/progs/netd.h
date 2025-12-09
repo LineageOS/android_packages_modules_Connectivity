@@ -95,43 +95,8 @@ typedef struct {
 } SkStorageValue;
 STRUCT_SIZE(SkStorageValue, 8);
 
-// Since we cannot garbage collect the stats map since device boot, we need to make these maps as
-// large as possible. The maximum size of number of map entries we can have is depend on the rlimit
-// of MEM_LOCK granted to netd. The memory space needed by each map can be calculated by the
-// following fomula:
-//      elem_size = 40 + roundup(key_size, 8) + roundup(value_size, 8)
-//      cost = roundup_pow_of_two(max_entries) * 16 + elem_size * max_entries +
-//              elem_size * number_of_CPU
-// And the cost of each map currently used is(assume the device have 8 CPUs):
-// cookie_tag_map:      key:  8 bytes, value:  8 bytes, cost:  822592 bytes    =   823Kbytes
-// uid_counter_set_map: key:  4 bytes, value:  1 bytes, cost:  145216 bytes    =   145Kbytes
-// app_uid_stats_map:   key:  4 bytes, value: 32 bytes, cost: 1062784 bytes    =  1063Kbytes
-// uid_stats_map:       key: 16 bytes, value: 32 bytes, cost: 1142848 bytes    =  1143Kbytes
-// tag_stats_map:       key: 16 bytes, value: 32 bytes, cost: 1142848 bytes    =  1143Kbytes
-// iface_index_name_map:key:  4 bytes, value: 16 bytes, cost:   80896 bytes    =    81Kbytes
-// iface_stats_map:     key:  4 bytes, value: 32 bytes, cost:   97024 bytes    =    97Kbytes
-// dozable_uid_map:     key:  4 bytes, value:  1 bytes, cost:  145216 bytes    =   145Kbytes
-// standby_uid_map:     key:  4 bytes, value:  1 bytes, cost:  145216 bytes    =   145Kbytes
-// powersave_uid_map:   key:  4 bytes, value:  1 bytes, cost:  145216 bytes    =   145Kbytes
-// packet_trace_ringbuf:key:  0 bytes, value: 24 bytes, cost:   32768 bytes    =    32Kbytes
-// total:                                                                         4962Kbytes
-// It takes maximum 4.9MB kernel memory space if all maps are full, which requires any devices
-// running this module to have a memlock rlimit to be larger then 5MB. In the old qtaguid module,
-// we don't have a total limit for data entries but only have limitation of tags each uid can have.
-// (default is 1024 in kernel);
-
-// 'static' - otherwise these constants end up in .rodata in the resulting .o post compilation
-static const int COOKIE_UID_MAP_SIZE = 10000;
-static const int UID_COUNTERSET_MAP_SIZE = 20000;
-static const int APP_STATS_MAP_SIZE = 10000;
-static const int STATS_MAP_SIZE = 5000;
-static const int IFACE_INDEX_NAME_MAP_SIZE = 1000;
-static const int IFACE_STATS_MAP_SIZE = 1000;
-static const int CONFIGURATION_MAP_SIZE = 2;
-static const int UID_OWNER_MAP_SIZE = 20000;
-static const int INGRESS_DISCARD_MAP_SIZE = 100;
-static const int PACKET_TRACE_BUF_SIZE = 32 * 1024;
-static const int DATA_SAVER_ENABLED_MAP_SIZE = 1;
+#define STATS_MAP_SIZE 5000
+#define CONFIGURATION_MAP_SIZE 2
 
 #ifdef __cplusplus
 
@@ -193,7 +158,24 @@ ASSERT_STRING_EQUAL(XT_BPF_DENYLIST_PROG_PATH,  BPF_NETD_PATH "prog_netd_skfilte
 #define LOCAL_NET_ACCESS_MAP_PATH BPF_NETD_PATH "map_netd_local_net_access_map"
 #define LOCAL_NET_BLOCKED_UID_MAP_PATH BPF_NETD_PATH "map_netd_local_net_blocked_uid_map"
 
+#define L4S_INGRESS_ETHER_PROG_PATH   BPF_NETD_PATH "prog_netd_schedcls_ingress_accecn_eth"
+#define L4S_EGRESS_ETHER_PROG_PATH    BPF_NETD_PATH "prog_netd_schedcls_egress_accecn_eth"
+#define L4S_INGRESS_RAWIP_PROG_PATH   BPF_NETD_PATH "prog_netd_schedcls_ingress_accecn_rawip"
+#define L4S_EGRESS_RAWIP_PROG_PATH    BPF_NETD_PATH "prog_netd_schedcls_egress_accecn_rawip"
+#define L4S_OPTIONS_SOCKOPS_PROG_PATH BPF_NETD_PATH "prog_netd_sockops_accecn_option"
+
+#define L4S_ACCECN_CE_MAP_PATH        BPF_NETD_PATH "map_netd_l4s_accecn_ce_map"
+#define L4S_ACCECN_BYTE_MAP_PATH      BPF_NETD_PATH "map_netd_l4s_accecn_byte_map"
+#define L4S_ACCECN_MSS_MAP_PATH       BPF_NETD_PATH "map_netd_l4s_accecn_mss_map"
+
 #endif // __cplusplus
+
+typedef struct {
+    uint64_t ceb;
+    uint64_t e0b;
+    uint64_t e1b;
+} EcnByteCounters;
+STRUCT_SIZE(EcnByteCounters, 3 * 8);  // 24
 
 // LINT.IfChange(match_type)
 enum UidOwnerMatchType : uint32_t {
@@ -270,8 +252,6 @@ STRUCT_SIZE(LocalNetAccessKey, 4 + 4 + 16 + 2 + 2);  // 28
 #define CURRENT_STATS_MAP_CONFIGURATION_KEY 1
 // Entry in the data saver enabled map that stores whether data saver is enabled or not.
 #define DATA_SAVER_ENABLED_KEY 0
-
-#undef STRUCT_SIZE
 
 // DROP_IF_SET is set of rules that DROP if rule is globally enabled, and per-uid bit is set
 #define DROP_IF_SET (STANDBY_MATCH | OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)

@@ -31,6 +31,10 @@
 namespace android {
 namespace bpf {
 
+using android::base::ErrnoError;
+using android::base::Result;
+using android::base::unique_fd;
+
 // BpfRingbufBase contains the non-templated functionality of BPF ring buffers.
 class BpfRingbufBase {
  public:
@@ -62,10 +66,10 @@ class BpfRingbufBase {
   BpfRingbufBase(const BpfRingbufBase&) = delete;
 
   // Initialize the base ringbuffer components. Must be called exactly once.
-  base::Result<void> Init(const char* path);
+  Result<void> Init(const char* path);
 
   // Consumes all messages from the ring buffer, passing them to the callback.
-  base::Result<int> ConsumeAll(
+  Result<int> ConsumeAll(
       const std::function<void(const void*)>& callback);
 
   // Replicates c-style void* "byte-wise" pointer addition.
@@ -86,7 +90,7 @@ class BpfRingbufBase {
   size_t mConsumerSize;
   size_t mProducerSize;
   unsigned long mPosMask;
-  android::base::unique_fd mRingFd;
+  unique_fd mRingFd;
 
   void* mDataPos = nullptr;
   // The kernel uses an "unsigned long" type for both consumer and producer position.
@@ -138,7 +142,7 @@ class BpfRingbuf : public BpfRingbufBase {
   // Creates a ringbuffer wrapper from a pinned path. There are no guarantees
   // that the ringbuf outputs messaged of type `Value`, only that they are the
   // same size. Size is only checked in ConsumeAll.
-  static base::Result<std::unique_ptr<BpfRingbuf<Value>>> Create(
+  static Result<std::unique_ptr<BpfRingbuf<Value>>> Create(
       const char* path);
 
   int epoll_ctl_add(int epfd, struct epoll_event *event) {
@@ -156,7 +160,7 @@ class BpfRingbuf : public BpfRingbufBase {
   // Consumes all messages from the ring buffer, passing them to the callback.
   // Returns the number of messages consumed or a non-ok result on error. If the
   // ring buffer has no pending messages an OK result with count 0 is returned.
-  base::Result<int> ConsumeAll(const MessageCallback& callback);
+  Result<int> ConsumeAll(const MessageCallback& callback);
 
  protected:
   // Empty ctor for use by Create.
@@ -164,29 +168,27 @@ class BpfRingbuf : public BpfRingbufBase {
 };
 
 
-inline base::Result<void> BpfRingbufBase::Init(const char* path) {
+inline Result<void> BpfRingbufBase::Init(const char* path) {
   mRingFd.reset(mapRetrieveExclusiveRW(path));
   if (!mRingFd.ok()) {
-    return android::base::ErrnoError()
-           << "failed to retrieve ringbuffer at " << path;
+    return ErrnoError() << "failed to retrieve ringbuffer at " << path;
   }
 
   int map_type = android::bpf::bpfGetFdMapType(mRingFd);
   if (map_type != BPF_MAP_TYPE_RINGBUF) {
     errno = EINVAL;
-    return android::base::ErrnoError()
+    return ErrnoError()
            << "bpf map has wrong type: want BPF_MAP_TYPE_RINGBUF ("
            << BPF_MAP_TYPE_RINGBUF << ") got " << map_type;
   }
 
   int max_entries = android::bpf::bpfGetFdMaxEntries(mRingFd);
   if (max_entries < 0) {
-    return android::base::ErrnoError()
-           << "failed to read max_entries from ringbuf";
+    return ErrnoError() << "failed to read max_entries from ringbuf";
   }
   if (max_entries == 0) {
     errno = EINVAL;
-    return android::base::ErrnoError() << "max_entries must be non-zero";
+    return ErrnoError() << "max_entries must be non-zero";
   }
 
   mPosMask = max_entries - 1;
@@ -197,8 +199,7 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
     void* ptr = mmap(NULL, mConsumerSize, PROT_READ | PROT_WRITE, MAP_SHARED,
                      mRingFd, 0);
     if (ptr == MAP_FAILED) {
-      return android::base::ErrnoError()
-             << "failed to mmap ringbuf consumer pages";
+      return ErrnoError() << "failed to mmap ringbuf consumer pages";
     }
     mConsumerPos = reinterpret_cast<decltype(mConsumerPos)>(ptr);
   }
@@ -207,8 +208,7 @@ inline base::Result<void> BpfRingbufBase::Init(const char* path) {
     void* ptr = mmap(NULL, mProducerSize, PROT_READ, MAP_SHARED, mRingFd,
                      mConsumerSize);
     if (ptr == MAP_FAILED) {
-      return android::base::ErrnoError()
-             << "failed to mmap ringbuf producer page";
+      return ErrnoError() << "failed to mmap ringbuf producer page";
     }
     mProducerPos = reinterpret_cast<decltype(mProducerPos)>(ptr);
   }
@@ -233,7 +233,7 @@ inline bool BpfRingbufBase::wait(int timeout_ms) {
   return !isEmpty();
 }
 
-inline base::Result<int> BpfRingbufBase::ConsumeAll(
+inline Result<int> BpfRingbufBase::ConsumeAll(
     const std::function<void(const void*)>& callback) {
   int64_t count = 0;
   uint32_t prod_pos = mProducerPos->load(std::memory_order_acquire);
@@ -260,7 +260,7 @@ inline base::Result<int> BpfRingbufBase::ConsumeAll(
       if (length != mValueSize) {
         mConsumerPos->store(cons_pos, std::memory_order_release);
         errno = EMSGSIZE;
-        return android::base::ErrnoError()
+        return ErrnoError()
                << "BPF ring buffer message has unexpected size (want "
                << mValueSize << " bytes, got " << length << " bytes)";
       }
@@ -275,7 +275,7 @@ inline base::Result<int> BpfRingbufBase::ConsumeAll(
 }
 
 template <typename Value>
-inline base::Result<std::unique_ptr<BpfRingbuf<Value>>>
+inline Result<std::unique_ptr<BpfRingbuf<Value>>>
 BpfRingbuf<Value>::Create(const char* path) {
   auto rb = std::unique_ptr<BpfRingbuf>(new BpfRingbuf);
   if (auto status = rb->Init(path); !status.ok()) return status.error();
@@ -283,7 +283,7 @@ BpfRingbuf<Value>::Create(const char* path) {
 }
 
 template <typename Value>
-inline base::Result<int> BpfRingbuf<Value>::ConsumeAll(
+inline Result<int> BpfRingbuf<Value>::ConsumeAll(
     const MessageCallback& callback) {
   return BpfRingbufBase::ConsumeAll([&](const void* value) {
     callback(*reinterpret_cast<const Value*>(value));

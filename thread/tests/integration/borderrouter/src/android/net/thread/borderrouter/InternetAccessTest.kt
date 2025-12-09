@@ -24,7 +24,7 @@ import android.net.InetAddresses.parseNumericAddress
 import android.net.thread.utils.FullThreadDevice
 import android.net.thread.utils.InfraNetworkDevice
 import android.net.thread.utils.IntegrationTestUtils.DEFAULT_DATASET
-import android.net.thread.utils.IntegrationTestUtils.enableThreadAndJoinNetwork
+import android.net.thread.utils.IntegrationTestUtils.enableBorderRouterAndJoinNetwork
 import android.net.thread.utils.IntegrationTestUtils.joinNetworkAndWaitForOmr
 import android.net.thread.utils.IntegrationTestUtils.leaveNetworkAndDisableThread
 import android.net.thread.utils.IntegrationTestUtils.newPacketReader
@@ -92,7 +92,7 @@ class InternetAccessTest {
         @BeforeClass
         @JvmStatic
         fun beforeClass() {
-            enableThreadAndJoinNetwork(DEFAULT_DATASET)
+            enableBorderRouterAndJoinNetwork(DEFAULT_DATASET)
         }
 
         @AfterClass

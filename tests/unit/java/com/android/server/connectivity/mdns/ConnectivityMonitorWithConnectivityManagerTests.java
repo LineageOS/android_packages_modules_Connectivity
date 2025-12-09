@@ -148,11 +148,13 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
         final Network testNetwork1 = mock(Network.class);
         final Network testNetwork2 = mock(Network.class);
         final int ifIndex1 = 1;
-        final NetworkInterfaceWrapper iface1 = getTestInterface("iface1", ifIndex1);
-        final NetworkInterfaceWrapper iface2 = getTestInterface("iface2", 2);
+        final String ifName1 = "iface1";
+        final String ifName2 = "iface2";
+        final NetworkInterfaceWrapper iface1 = getTestInterface(ifName1, ifIndex1);
+        final NetworkInterfaceWrapper iface2 = getTestInterface(ifName2, 2);
 
         final LinkProperties lp1 = new LinkProperties();
-        lp1.setInterfaceName("iface1");
+        lp1.setInterfaceName(ifName1);
         lp1.addRoute(new RouteInfo(
                 new IpPrefix("192.0.1.123/24"), null, lp1.getInterfaceName(), RTN_UNICAST));
         lp1.addRoute(new RouteInfo(
@@ -169,8 +171,9 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
         callback.onLinkPropertiesChanged(testNetwork1, lp1);
         callback.onLinkPropertiesChanged(testNetwork2, lp2);
 
-        assertEquals(new SocketKey(testNetwork1, ifIndex1), monitor.guessNetworkOfRemoteHost(
-                List.of(iface1, iface2), parseNumericAddress("192.0.1.124")));
+        assertEquals(new SocketKey(testNetwork1, ifIndex1, ifName1),
+                monitor.guessNetworkOfRemoteHost(
+                        List.of(iface1, iface2), parseNumericAddress("192.0.1.124")));
     }
 
     @Test
@@ -179,7 +182,8 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
 
         final Network testNetwork = mock(Network.class);
         final int ifIndex = 1;
-        final NetworkInterfaceWrapper iface = getTestInterface("iface1", ifIndex);
+        final String ifName = "iface1";
+        final NetworkInterfaceWrapper iface = getTestInterface(ifName, ifIndex);
 
         final LinkProperties lp = new LinkProperties();
         lp.setInterfaceName("iface1");
@@ -191,7 +195,7 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
 
         callback.onLinkPropertiesChanged(testNetwork, lp);
 
-        assertEquals(new SocketKey(testNetwork, ifIndex), monitor.guessNetworkOfRemoteHost(
+        assertEquals(new SocketKey(testNetwork, ifIndex, ifName), monitor.guessNetworkOfRemoteHost(
                 List.of(iface), parseNumericAddress("169.254.1.2")));
     }
 
@@ -201,8 +205,9 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
 
         final Network testNetwork1 = mock(Network.class);
         final Network testNetwork2 = mock(Network.class);
+        final String interfaceName = "lo";
         final NetworkInterfaceWrapper loIface = new NetworkInterfaceWrapper(
-                NetworkInterface.getByName("lo"));
+                NetworkInterface.getByName(interfaceName));
         final NetworkInterfaceWrapper wrongIface = getTestInterface(
                 "wrongiface", loIface.getIndex() + 1);
 
@@ -220,7 +225,7 @@ public class ConnectivityMonitorWithConnectivityManagerTests {
         callback.onLinkPropertiesChanged(testNetwork1, lp1);
         callback.onLinkPropertiesChanged(testNetwork2, lp2);
 
-        assertEquals(new SocketKey(testNetwork2, loIface.getIndex()),
+        assertEquals(new SocketKey(testNetwork2, loIface.getIndex(), interfaceName),
                 monitor.guessNetworkOfRemoteHost(List.of(wrongIface, loIface),
                         parseNumericAddress("fe80::124%lo")));
     }

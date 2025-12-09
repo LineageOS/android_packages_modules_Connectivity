@@ -18,7 +18,10 @@ package android.net.thread;
 
 import android.net.thread.ThreadConfiguration;
 
-/** Receives the result of a Thread Configuration change. @hide */
+/**
+ * Receives the result of a Thread Configuration change.
+ * @hide
+ */
 oneway interface IConfigurationReceiver {
     void onConfigurationChanged(in ThreadConfiguration configuration);
 }

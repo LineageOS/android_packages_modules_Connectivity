@@ -241,7 +241,8 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
             throw new IllegalArgumentException("This socket client does not support requesting "
                     + "specific networks");
         }
-        socketCreationCallback.onSocketCreated(new SocketKey(multicastSocket.getInterfaceIndex()));
+        socketCreationCallback.onSocketCreated(new SocketKey(
+                multicastSocket.getInterfaceIndex(), multicastSocket.getInterfaceName()));
     }
 
     @Override
@@ -469,22 +470,29 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                             ? interfaceProvider.guessNetworkOfRemoteHost(packetAddress)
                             : null;
                     final int interfaceIndex;
+                    final String interfaceName;
                     if (socket == null || !propagateInterfaceIndex) {
                         interfaceIndex = MdnsSocket.INTERFACE_INDEX_UNSPECIFIED;
+                        interfaceName = MdnsSocket.INTERFACE_NAME_UNKNOWN;
                     } else if (mdnsFeatureFlags.mIsSocketClientNetworkGuessingEnabled) {
                         interfaceIndex = key == null
                                 ? MdnsSocket.INTERFACE_INDEX_UNSPECIFIED
                                 : key.getInterfaceIndex();
+                        interfaceName = key == null
+                                ? MdnsSocket.INTERFACE_NAME_UNKNOWN
+                                : key.getInterfaceName();
                     } else {
                         // Note this is incorrect: getInterfaceIndex is the last interface that sent
                         // a packet, not the one that received the packet.
                         interfaceIndex = socket.getInterfaceIndex();
+                        interfaceName = socket.getInterfaceName();
                     }
                     processResponsePacket(
                             packet,
                             responseType,
                             interfaceIndex,
-                            key == null ? null : key.getNetwork());
+                            key == null ? null : key.getNetwork(),
+                            interfaceName);
                 }
             } catch (IOException e) {
                 if (!shouldStopSocketLoop) {
@@ -496,7 +504,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
     }
 
     private int processResponsePacket(@NonNull DatagramPacket packet, String responseType,
-            int interfaceIndex, @Nullable Network network) {
+            int interfaceIndex, @Nullable Network network, @NonNull String interfaceName) {
         int packetNumber = ++receivedPacketNumber;
 
         final MdnsPacket response;
@@ -508,7 +516,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
                     responseType, packetNumber, e.code));
             if (callback != null) {
                 callback.onFailedToParseMdnsResponse(packetNumber, e.code,
-                        new SocketKey(network, interfaceIndex));
+                        new SocketKey(network, interfaceIndex, interfaceName));
             }
             return e.code;
         }
@@ -519,7 +527,7 @@ public class MdnsSocketClient implements MdnsSocketClientBase {
 
         if (callback != null) {
             callback.onResponseReceived(
-                    response, new SocketKey(network, interfaceIndex));
+                    response, new SocketKey(network, interfaceIndex, interfaceName));
         }
 
         return MdnsResponseErrorCode.SUCCESS;

@@ -16,6 +16,8 @@
 
 // The resulting .o needs to load on Android T+
 #define BPFLOADER_MIN_VER BPFLOADER_MAINLINE_T_VERSION
+#define BPF_OBJ_NAME "clatd"
+#define DEFAULT_BPF_PIN_SUBDIR "net_shared"
 
 #include "bpf_net_helpers.h"
 #include "clatd.h"
@@ -245,29 +247,29 @@ static inline __always_inline int nat64(struct __sk_buff* skb,
     return TC_ACT_PIPE;
 }
 
-DEFINE_BPF_PROG_KVER("schedcls/ingress6/clat_ether$4_14", AID_ROOT, AID_SYSTEM, sched_cls_ingress6_clat_ether_4_14, KVER_4_14)
+DEFINE_BPF_PROG_KVER(schedcls, ingress6_clat_ether, 4_14, AID_SYSTEM, 4_14)
 (struct __sk_buff* skb) {
     return nat64(skb, ETHER, KVER_4_14);
 }
 
-DEFINE_BPF_PROG_KVER_RANGE("schedcls/ingress6/clat_ether$4_9", AID_ROOT, AID_SYSTEM, sched_cls_ingress6_clat_ether_4_9, KVER_NONE, KVER_4_14)
+DEFINE_BPF_PROG_KVER_RANGE(schedcls, ingress6_clat_ether, 4_9, AID_SYSTEM, 4_9, 4_14)
 (struct __sk_buff* skb) {
-    return nat64(skb, ETHER, KVER_NONE);
+    return nat64(skb, ETHER, KVER_4_9);
 }
 
-DEFINE_BPF_PROG_KVER("schedcls/ingress6/clat_rawip$4_14", AID_ROOT, AID_SYSTEM, sched_cls_ingress6_clat_rawip_4_14, KVER_4_14)
+DEFINE_BPF_PROG_KVER(schedcls, ingress6_clat_rawip, 4_14, AID_SYSTEM, 4_14)
 (struct __sk_buff* skb) {
     return nat64(skb, RAWIP, KVER_4_14);
 }
 
-DEFINE_BPF_PROG_KVER_RANGE("schedcls/ingress6/clat_rawip$4_9", AID_ROOT, AID_SYSTEM, sched_cls_ingress6_clat_rawip_4_9, KVER_NONE, KVER_4_14)
+DEFINE_BPF_PROG_KVER_RANGE(schedcls, ingress6_clat_rawip, 4_9, AID_SYSTEM, 4_9, 4_14)
 (struct __sk_buff* skb) {
-    return nat64(skb, RAWIP, KVER_NONE);
+    return nat64(skb, RAWIP, KVER_4_9);
 }
 
 DEFINE_BPF_MAP_GRW(clat_egress4_map, HASH, ClatEgress4Key, ClatEgress4Value, 16, AID_SYSTEM)
 
-DEFINE_BPF_PROG("schedcls/egress4/clat_rawip", AID_ROOT, AID_SYSTEM, sched_cls_egress4_clat_rawip)
+DEFINE_BPF_PROG(schedcls, egress4_clat_rawip, , AID_SYSTEM)
 (struct __sk_buff* skb) {
     // Must be meta-ethernet IPv4 frame
     if (skb->protocol != htons(ETH_P_IP)) return TC_ACT_PIPE;

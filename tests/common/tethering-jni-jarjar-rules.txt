@@ -5,6 +5,7 @@
 # jarjar rules the test is using, but this is a bit less realistic (using a different JNI library),
 # and complicates the test build. It would be necessary if TetheringUtils had a different package
 # name in test code though, as the JNI library name is deducted from the TetheringUtils package.
+rule com.android.net.module.util.BpfBitmap* com.android.networkstack.tethering.util.BpfBitmap@1
 rule com.android.net.module.util.BpfMap* com.android.networkstack.tethering.util.BpfMap@1
 rule com.android.net.module.util.BpfUtils* com.android.networkstack.tethering.util.BpfUtils@1
 rule com.android.net.module.util.TcUtils* com.android.networkstack.tethering.util.TcUtils@1

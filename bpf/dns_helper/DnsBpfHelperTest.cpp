@@ -43,7 +43,7 @@ class DnsBpfHelperTest : public ::testing::Test {
     mFakeUidOwnerMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
     ASSERT_VALID(mFakeUidOwnerMap);
 
-    mFakeDataSaverEnabledMap.resetMap(BPF_MAP_TYPE_ARRAY, DATA_SAVER_ENABLED_MAP_SIZE);
+    mFakeDataSaverEnabledMap.resetMap(BPF_MAP_TYPE_ARRAY, 1);
     ASSERT_VALID(mFakeDataSaverEnabledMap);
 
     mDnsBpfHelper.mConfigurationMap = mFakeConfigurationMap;

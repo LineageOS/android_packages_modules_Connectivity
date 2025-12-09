@@ -37,6 +37,13 @@ public class Dhcp6RenewPacket extends Dhcp6Packet {
     }
 
     /**
+     * Return the DHCPv6 RENEW message type (5).
+     */
+    public byte getMessageType() {
+        return DHCP6_MESSAGE_TYPE_RENEW;
+    }
+
+    /**
      * Build a DHCPv6 Renew message with the specific parameters.
      */
     public ByteBuffer buildPacket() {

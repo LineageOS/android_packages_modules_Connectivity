@@ -48,6 +48,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Connect to no-sct.badssl.com" />
+    <Button
+        android:id="@+id/button_check_log_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Check log list" />
     <TextView
         android:id="@+id/textView"
         android:layout_width="match_parent"

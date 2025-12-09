@@ -20,6 +20,7 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -86,12 +87,15 @@ public class ConnectivityInternalApiUtil {
     public static NetworkAgent buildTetheringNetworkAgent(@NonNull Context ctx,
             @NonNull Looper looper, @NonNull String logTag, int transportType,
             @NonNull LinkProperties lp) {
+        // LINT.IfChange
         final NetworkCapabilities.Builder builder = new NetworkCapabilities.Builder()
                 .addCapability(NET_CAPABILITY_NOT_METERED)
                 .addCapability(NET_CAPABILITY_NOT_ROAMING)
                 .addCapability(NET_CAPABILITY_NOT_CONGESTED)
                 .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
                 .addTransportType(transportType);
+        // LINT.ThenChange(../../../../../service/src/com/android/metrics/SatisfiedByLocalNetworkMetrics.java)
         // TODO: Change to use the constant definition. Flags.netCapabilityLocalNetwork() was not
         //  fully rolled out but the service will still process this capability, set it anyway.
         builder.addCapability(36 /* NET_CAPABILITY_LOCAL_NETWORK */);

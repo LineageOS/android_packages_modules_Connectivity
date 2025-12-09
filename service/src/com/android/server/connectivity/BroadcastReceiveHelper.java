@@ -16,6 +16,8 @@
 
 package com.android.server.connectivity;
 
+import static android.Manifest.permission.NETWORK_STACK;
+
 import android.annotation.NonNull;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
@@ -134,7 +136,7 @@ public class BroadcastReceiveHelper {
         userIntentFilter.addAction(Intent.ACTION_USER_ADDED);
         userIntentFilter.addAction(Intent.ACTION_USER_REMOVED);
         userAllContext.registerReceiver(mUserIntentReceiver, userIntentFilter,
-                null /* broadcastPermission */, mHandler);
+                NETWORK_STACK, mHandler);
 
         // Listen to package change events.
         final IntentFilter packageIntentFilter = new IntentFilter();
@@ -143,7 +145,7 @@ public class BroadcastReceiveHelper {
         packageIntentFilter.addAction(Intent.ACTION_PACKAGE_REPLACED);
         packageIntentFilter.addDataScheme("package");
         userAllContext.registerReceiver(mPackageIntentReceiver, packageIntentFilter,
-                null /* broadcastPermission */, mHandler);
+                NETWORK_STACK, mHandler);
 
         // For PermissionMonitor, listen to EXTERNAL_APPLICATIONS_AVAILABLE is that an app
         // becoming available means it may need to gain a permission. But an app that becomes
@@ -152,7 +154,7 @@ public class BroadcastReceiveHelper {
         final IntentFilter externalIntentFilter =
                 new IntentFilter(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
         userAllContext.registerReceiver(mExternalAppIntentReceiver, externalIntentFilter,
-                null /* broadcastPermission */, mHandler);
+                NETWORK_STACK, mHandler);
     }
 
     /**

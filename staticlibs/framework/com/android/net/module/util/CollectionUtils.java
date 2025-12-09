@@ -114,6 +114,16 @@ public final class CollectionUtils {
     }
 
     /**
+     * @return True if any element satisfies the predicate, false otherwise.
+     *   Note that means this always returns false for empty collections.
+     *
+     * This is an overload for List that avoids unnecessary iterator allocation.
+     */
+    public static <T> boolean any(@NonNull List<T> elem, @NonNull Predicate<T> predicate) {
+        return indexOf(elem, predicate) >= 0;
+    }
+
+    /**
      * @return The index of the first element that matches the predicate, or -1 if none.
      */
     public static <T> int indexOf(@NonNull final Collection<T> elem,
@@ -122,6 +132,21 @@ public final class CollectionUtils {
         for (final T e : elem) {
             if (predicate.test(e)) return idx;
             idx++;
+        }
+        return -1;
+    }
+
+    /**
+     * @return The index of the first element that matches the predicate, or -1 if none.
+     *
+     * This is an overload for List that avoids unnecessary iterator allocation.
+     */
+    public static <T> int indexOf(@NonNull final List<T> elem,
+            @NonNull final Predicate<? super T> predicate) {
+        for (int idx = 0; idx < elem.size(); ++idx) {
+            if (predicate.test(elem.get(idx))) {
+                return idx;
+            }
         }
         return -1;
     }

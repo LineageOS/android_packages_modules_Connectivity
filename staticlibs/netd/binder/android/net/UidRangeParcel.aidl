@@ -19,7 +19,7 @@ package android.net;
 /**
  * An inclusive range of UIDs.
  *
- * {@hide}
+ * @hide
  */
 @JavaOnlyImmutable @JavaDerive(toString=true, equals=true)
 parcelable UidRangeParcel {

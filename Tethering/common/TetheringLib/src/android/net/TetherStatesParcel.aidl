@@ -20,7 +20,7 @@ import android.net.TetheringInterface;
 
 /**
  * Status details for tethering downstream interfaces.
- * {@hide}
+ * @hide
  */
 parcelable TetherStatesParcel {
     TetheringInterface[] availableList;

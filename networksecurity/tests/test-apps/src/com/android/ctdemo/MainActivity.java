@@ -31,6 +31,9 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -67,7 +70,8 @@ public class MainActivity extends AppCompatActivity {
                     new Runnable() {
                         @Override
                         public void run() {
-                            textView.setText("Failure in " + estimatedTime + " us");
+                            textView.setText(
+                                    "Failure:" + e.getMessage() + " in " + estimatedTime + " us");
                         }
                     });
             return;
@@ -82,9 +86,11 @@ public class MainActivity extends AppCompatActivity {
                     new Runnable() {
                         @Override
                         public void run() {
-                            textView.setText("Failure in " + estimatedTime + " us");
+                            textView.setText(
+                                    "Failure: " + e.getMessage() + " in " + estimatedTime + " us");
                         }
                     });
+            return;
         }
         Trace.endAsyncSection("connectTo", myCookie);
         long estimatedTime = (System.nanoTime() - startTime) / 1000;
@@ -98,6 +104,33 @@ public class MainActivity extends AppCompatActivity {
         urlConnection.disconnect();
     }
 
+    private void checkLogList(TextView textView) {
+        StringBuilder builder = new StringBuilder();
+        Path root = Paths.get("/data/misc/keychain/ct/");
+        try {
+            for (Path version : Files.newDirectoryStream(root, "v*")) {
+                if (Files.isDirectory(version)) {
+                    for (Path dir : Files.newDirectoryStream(version)) {
+                        if (!dir.endsWith("current")) {
+                            builder.append(dir.toString() + "\n");
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            builder = new StringBuilder();
+            builder.append(e.toString());
+        }
+        final String text = builder.toString();
+        handler.post(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        textView.setText(text);
+                    }
+                });
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -107,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
         Button buttonWikipedia = (Button) findViewById(R.id.button_wikipedia);
         Button buttonValid = (Button) findViewById(R.id.button_valid_badssl);
         Button buttonNoSCT = (Button) findViewById(R.id.button_no_sct_badssl);
+        Button buttonCheckLogList = (Button) findViewById(R.id.button_check_log_list);
         final TextView textView = (TextView) findViewById(R.id.textView);
         buttonWikipedia.setOnClickListener(
                 new View.OnClickListener() {
@@ -140,6 +174,18 @@ public class MainActivity extends AppCompatActivity {
                                     @Override
                                     public void run() {
                                         connectTo("https://no-sct.badssl.com/", textView);
+                                    }
+                                });
+                    }
+                });
+        buttonCheckLogList.setOnClickListener(
+                new View.OnClickListener() {
+                    public void onClick(View v) {
+                        executor.execute(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        checkLogList(textView);
                                     }
                                 });
                     }

@@ -285,8 +285,13 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
             mAnnouncer.stop(replacedExitingService);
         }
         final MdnsProber.ProbingInfo probingInfo = mRecordRepository.setServiceProbing(id);
-        if (advertisingOptions.skipProbing() || advertisingOptions.isOffloadOnly()) {
+        if (advertisingOptions.skipProbing()) {
             handleProbingFinished(probingInfo);
+        } else if (advertisingOptions.isOffloadOnly()) {
+            mSharedLog.i("skip probing and announcing for offload only service "
+                    + probingInfo.getServiceId());
+            mCbHandler.post(() -> mCb.onServiceProbingSucceeded(
+                    MdnsInterfaceAdvertiser.this, probingInfo.getServiceId()));
         } else {
             mProber.startProbing(probingInfo);
         }
@@ -443,7 +448,7 @@ public class MdnsInterfaceAdvertiser implements MulticastPacketReader.PacketHand
         // conflicting service is still probing and won't reply either.
         final MdnsReplyInfo answers = mRecordRepository.getReply(packet, srcCopy);
         // Dump the query packet.
-        if (DBG || answers != null) {
+        if (DBG && answers != null) {
             mSharedLog.v("Parsed packet with transactionId(" + packet.transactionId + "): "
                     + packet.questions.size() + " questions, "
                     + packet.answers.size() + " answers, "

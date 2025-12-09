@@ -25,4 +25,6 @@ parcelable RouteInfoParcel {
   @utf8InCpp String nextHop;
   // The MTU of the route.
   int mtu;
+  // True if the route should be treated as local for purposes of local network protection.
+  boolean isLocalRoute;
 }

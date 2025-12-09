@@ -281,6 +281,36 @@ public class EthernetManager {
     @SystemApi(client = MODULE_LIBRARIES)
     public void addInterfaceStateListener(@NonNull Executor executor,
             @NonNull InterfaceStateListener listener) {
+        addInterfaceStateListener(executor, listener, LISTENER_FLAG_DEFAULT);
+    }
+
+
+    /** @hide */
+    public static final int LISTENER_FLAG_DEFAULT = 0;
+
+    /**
+     * Include callbacks for NCM interfaces which are not tracked by the regex.
+     * @hide
+     */
+    public static final int LISTENER_FLAG_INCLUDE_NCM = 1 << 0;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = { "LISTENER_FLAG_" }, value = {
+        LISTENER_FLAG_DEFAULT,
+        LISTENER_FLAG_INCLUDE_NCM
+    })
+    public @interface ListenerFlag {}
+
+    /**
+     * Listen to ethernet interface state changes
+     *
+     * Version of {@link #addInterfaceStateListener} that accepts flags for testing.
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    public void addInterfaceStateListener(@NonNull Executor executor,
+            @NonNull InterfaceStateListener listener, @ListenerFlag int flags) {
         if (listener == null || executor == null) {
             throw new NullPointerException("listener and executor must not be null");
         }
@@ -297,15 +327,16 @@ public class EthernetManager {
             }
         };
         synchronized (mListenerLock) {
-            addServiceListener(serviceListener);
+            addServiceListener(serviceListener, flags);
             mIfaceServiceListeners.put(listener, serviceListener);
         }
     }
 
     @GuardedBy("mListenerLock")
-    private void addServiceListener(@NonNull final IEthernetServiceListener listener) {
+    private void addServiceListener(@NonNull final IEthernetServiceListener listener,
+            @ListenerFlag int flags) {
         try {
-            mService.addListener(listener);
+            mService.addListener(listener, flags);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -365,6 +396,45 @@ public class EthernetManager {
     }
 
     /**
+     * Do not include test interfaces.
+     * @hide
+     */
+    public static final int TEST_INTERFACE_MODE_NONE = 0;
+
+    /**
+     * Includes test interfaces as if they were present in the regex.
+     * @hide
+     */
+    public static final int TEST_INTERFACE_MODE_ETHERNET = 1 << 0;
+
+    /**
+     * Includes test interfaces as if they were NCM interfaces.
+     * @hide
+     */
+    public static final int TEST_INTERFACE_MODE_NCM      = 1 << 1;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = { "TEST_INTERFACE_MODE_" }, value = {
+        TEST_INTERFACE_MODE_NONE,
+        TEST_INTERFACE_MODE_ETHERNET,
+        TEST_INTERFACE_MODE_NCM,
+    })
+    public @interface TestInterfaceMode {}
+
+    /**
+     * Version of {@code setIncludeTestInterfaces} that accepts mode flags.
+     * @hide
+     */
+    public void setIncludeTestInterfaces(@TestInterfaceMode int mode) {
+        try {
+            mService.setIncludeTestInterfaces(mode);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Whether to treat interfaces created by {@link TestNetworkManager#createTapInterface}
      * as Ethernet interfaces. The effects of this method apply to any test interfaces that are
      * already present on the system.
@@ -372,11 +442,10 @@ public class EthernetManager {
      */
     @SystemApi(client = MODULE_LIBRARIES)
     public void setIncludeTestInterfaces(boolean include) {
-        try {
-            mService.setIncludeTestInterfaces(include);
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
-        }
+        final int mode = include
+                ? TEST_INTERFACE_MODE_ETHERNET | TEST_INTERFACE_MODE_NCM
+                : TEST_INTERFACE_MODE_NONE;
+        setIncludeTestInterfaces(mode);
     }
 
     /**
@@ -673,7 +742,7 @@ public class EthernetManager {
                     IpConfiguration configuration) {}
         };
         synchronized (mListenerLock) {
-            addServiceListener(serviceListener);
+            addServiceListener(serviceListener, LISTENER_FLAG_DEFAULT);
             mStateServiceListeners.put(listener, serviceListener);
         }
     }

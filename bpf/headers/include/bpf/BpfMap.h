@@ -33,10 +33,13 @@ namespace android {
 namespace bpf {
 
 using base::Result;
+using base::ResultError;
 using base::unique_fd;
 using std::function;
 
 #ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
+#undef BPFMAP_VERBOSE
+#define BPFMAP_VERBOSE
 #undef BPFMAP_VERBOSE_ABORT
 #define BPFMAP_VERBOSE_ABORT
 #endif
@@ -59,6 +62,24 @@ void Abort(int __unused error, const char* __unused fmt, ...) {
     abort();
 }
 
+// We care about enabling SSO on 64-bit platforms
+// It turns out that our string implementation can SSO optimize 22 characters + (23rd) trailing NULL
+//
+// 32-bit userspace is obsolete, and SSO would require shortening the errors more than is reasonable
+//
+// For the curious: the initial u8 is a 7+1 bitfield and stores strlen * 2 + (is_short_flag=0),
+// though newer versions (_LIBCPP_ABI_VERSION >= 2), reverse the order
+#ifndef __ILP32__
+static_assert(sizeof(std::string) == 24);
+#endif
+
+// Our string implementation, on 64-bit platforms can fit up to 22 characters with SSO
+// The common case (ENOENT) shouldn't require heap memory allocation nor string formatting
+// Other errors will return (string argument passed to ErrnoErrorf) + ": " + strerror(errno)
+#define ERROR_FROM_ERRNO(f) ({ \
+  static_assert(__builtin_strlen(f ": ENOENT") <= 22, "ERROR_FROM_ERRNO - arg string too long"); \
+  (errno == ENOENT) ? ResultError(f ": ENOENT", ENOENT) : ErrnoErrorf("BpfMap::" f "() failed"); \
+})
 
 // This is a class wrapper for eBPF maps. The eBPF map is a special in-kernel
 // data structure that stores data in <Key, Value> pairs. It can be read/write
@@ -86,7 +107,7 @@ class BpfMapRO {
   protected:
     void abortOnMismatch(bool writable) const {
         if (!mMapFd.ok()) Abort(errno, "mMapFd %d is not valid", mMapFd.get());
-        if (isAtLeastKernelVersion(4, 14, 0)) {
+        if (isAtLeastKernelVersion(4, 14)) {
             int flags = bpfGetFdMapFlags(mMapFd);
             if (flags < 0) Abort(errno, "bpfGetFdMapFlags fail: flags=%d", flags);
             if (flags & BPF_F_WRONLY) Abort(0, "map is write-only (flags=0x%X)", flags);
@@ -111,25 +132,19 @@ class BpfMapRO {
 
     Result<Key> getFirstKey() const {
         Key firstKey;
-        if (getFirstMapKey(mMapFd, &firstKey)) {
-            return ErrnoErrorf("BpfMap::getFirstKey() failed");
-        }
+        if (getFirstMapKey(mMapFd, &firstKey)) return ERROR_FROM_ERRNO("getFirstKey");
         return firstKey;
     }
 
     Result<Key> getNextKey(const Key& key) const {
         Key nextKey;
-        if (getNextMapKey(mMapFd, &key, &nextKey)) {
-            return ErrnoErrorf("BpfMap::getNextKey() failed");
-        }
+        if (getNextMapKey(mMapFd, &key, &nextKey)) return ERROR_FROM_ERRNO("getNextKey");
         return nextKey;
     }
 
-    Result<Value> readValue(const Key key) const {
+    Result<Value> readValue(const Key& key) const {
         Value value;
-        if (findMapEntry(mMapFd, &key, &value)) {
-            return ErrnoErrorf("BpfMap::readValue() failed");
-        }
+        if (findMapEntry(mMapFd, &key, &value)) return ERROR_FROM_ERRNO("readValue");
         return value;
     }
 
@@ -147,23 +162,110 @@ class BpfMapRO {
         return {};
     }
 
+    // Observed 4 <= sizeof(Key) <= 16 (48 for Java), 1 <= sizeof(Value) <= 32 (64 for Java)
+    // You can uncomment the following to check:
+    //   static_assert(sizeof(Key) >= 4);
+    //   static_assert(sizeof(Key) <= 16); // 48 observed, but not in C++
+    //   static_assert(sizeof(Value) >= 1);
+    //   static_assert(sizeof(Value) <= 32); // 64 observed, but not in C++
+
+    // ~16KiB initial stack usage seems reasonable
+    static constexpr int BATCHSIZE = 16384 / (sizeof(Key) + sizeof(Value));
+    static_assert(BATCHSIZE >= 64, "consider Key/Value size, whether incr mem limit, decr batch req");
+    static_assert(BATCHSIZE * sizeof(Key) + BATCHSIZE * sizeof(Value) <= 16384);
+
+    Result<void> doBulkLookupAndMaybeDelete(bool del, const function<void(const Key &, const Value &)> &f) const {
+        union { Key k; uint32_t nr; } batch;
+        bool first = true;
+
+        // starting with N == 1 fails with -28/ENOSPC in:
+        //   BpfNetworkStatsTest.cpp BpfNetworkStatsHelperTest#TestGetStatsSortedAndGrouped
+        // requiring us to loop back around, kernel code itself claims that in practice 5
+        // is almost always enough for a bucket (which is what you'd expect, it's not a good
+        // hashtable if there's lots of items in a single bucket)
+        //
+        // Since we start with 64+ we shouldn't ever actually need to increase N...
+        // Also note that the 'true' condition is not really an infinite loop,
+        // as we'll blow up the stack and crash instead of looping infinitely.
+        // But that also shouldn't happen cause it would imply/require a ridiculously
+        // large bpf map sitting entirely in one bucket...
+        for (int N = BATCHSIZE; true; N *= 2) {
+            // N is how many we have space for, can grow on demand as needed
+            Key keys[N];
+            Value values[N];
+            for (;;) {
+                uint32_t count = N; // how many to fetch (and possibly delete)
+                int rv = batchLookupAndMaybeDelete(mMapFd, first ? NULL : &batch, &batch, &keys, &values, &count, del);
+                if (rv && errno == ENOSPC) break;  // not enough space for full HASH bucket, go around the *outer* loop
+                if (rv && errno != ENOENT) return ERROR_FROM_ERRNO("bulkLookup&Del");
+                // count is now how many *were* fetched (and possibly delete)
+                for (unsigned i = 0; i < count; ++i) f(keys[i], values[i]);
+                if (rv) return {};  // ENOENT -> success
+                first = false;
+            }
+        }
+    }
+
   public:
     // Function that tries to get map from a pinned path.
     [[clang::reinitializes]] Result<void> init(const char* path) {
         return init(path, mapRetrieveRO(path), /* writable */ false);
     }
 
-    // Iterate through the map and handle each key retrieved based on the filter
-    // without modification of map content.
-    Result<void> iterate(
-            const function<Result<void>(const Key& key,
-                                        const BpfMapRO<Key, Value>& map)>& filter) const;
+    // For all keys in the map call filter() - unless it errors out.
+    Result<void> iterate(const function<Result<void>(const Key &)> &filter) const {
+        Result<Key> curKey = getFirstKey();
+        while (curKey.ok()) {
+            const Result<Key> &nextKey = getNextKey(curKey.value());
+            Result<void> status = filter(curKey.value());
+            if (!status.ok()) return status;
+            curKey = nextKey;
+        }
+        if (curKey.error().code() == ENOENT) return {};
+        return curKey.error();
+    }
 
-    // Iterate through the map and get each <key, value> pair, handle each <key,
-    // value> pair based on the filter without modification of map content.
-    Result<void> iterateWithValue(
-            const function<Result<void>(const Key& key, const Value& value,
-                                        const BpfMapRO<Key, Value>& map)>& filter) const;
+    // Does not allow early termination (via f erroring out) - may be implemented with bulk api
+    Result<void> forAll(const function<void(const Key &)> &f) const {
+        // No kernel bpfmap bulk lookup api which doesn't return both keys & values.
+        if (isAtLeastKernelVersion(5, 10)) return doBulkLookupAndMaybeDelete(/*delete*/ false,
+            [&f](const Key &key, const Value &) {
+                f(key);
+            }
+        );
+        return iterate(
+            [&f](const Key &key) -> Result<void> {
+                f(key);
+                return {};
+            }
+        );
+    }
+
+    // For all (key, value) pairs in the map call filter() - unless it errors out.
+    Result<void> iterate(const function<Result<void>(const Key &, const Value &)> &filter) const {
+        Result<Key> curKey = getFirstKey();
+        while (curKey.ok()) {
+            const Result<Key> &nextKey = getNextKey(curKey.value());
+            Result<Value> curValue = readValue(curKey.value());
+            if (!curValue.ok()) return curValue.error();
+            Result<void> status = filter(curKey.value(), curValue.value());
+            if (!status.ok()) return status;
+            curKey = nextKey;
+        }
+        if (curKey.error().code() == ENOENT) return {};
+        return curKey.error();
+    }
+
+    // Does not allow early termination (via f erroring out) - maybe implemented with bulk api
+    Result<void> forAll(const function<void(const Key &, const Value &)> &f) const {
+        if (isAtLeastKernelVersion(5, 10)) return doBulkLookupAndMaybeDelete(/*delete*/ false, f);
+        return iterate(
+            [&f](const Key &key, const Value &value) -> Result<void> {
+                f(key, value);
+                return {};
+            }
+        );
+    }
 
 #ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
     const unique_fd& getMap() const { return mMapFd; };
@@ -221,51 +323,15 @@ class BpfMapRO {
 };
 
 template <class Key, class Value>
-Result<void> BpfMapRO<Key, Value>::iterate(
-        const function<Result<void>(const Key& key,
-                                    const BpfMapRO<Key, Value>& map)>& filter) const {
-    Result<Key> curKey = getFirstKey();
-    while (curKey.ok()) {
-        const Result<Key>& nextKey = getNextKey(curKey.value());
-        Result<void> status = filter(curKey.value(), *this);
-        if (!status.ok()) return status;
-        curKey = nextKey;
-    }
-    if (curKey.error().code() == ENOENT) return {};
-    return curKey.error();
-}
-
-template <class Key, class Value>
-Result<void> BpfMapRO<Key, Value>::iterateWithValue(
-        const function<Result<void>(const Key& key, const Value& value,
-                                    const BpfMapRO<Key, Value>& map)>& filter) const {
-    Result<Key> curKey = getFirstKey();
-    while (curKey.ok()) {
-        const Result<Key>& nextKey = getNextKey(curKey.value());
-        Result<Value> curValue = readValue(curKey.value());
-        if (!curValue.ok()) return curValue.error();
-        Result<void> status = filter(curKey.value(), curValue.value(), *this);
-        if (!status.ok()) return status;
-        curKey = nextKey;
-    }
-    if (curKey.error().code() == ENOENT) return {};
-    return curKey.error();
-}
-
-template <class Key, class Value>
-class BpfMap : public BpfMapRO<Key, Value> {
+class BpfMapRW : public BpfMapRO<Key, Value> {
   protected:
     using BpfMapRO<Key, Value>::mMapFd;
     using BpfMapRO<Key, Value>::abortOnMismatch;
 
   public:
-    using BpfMapRO<Key, Value>::getFirstKey;
-    using BpfMapRO<Key, Value>::getNextKey;
-    using BpfMapRO<Key, Value>::readValue;
+    using BpfMapRO<Key, Value>::BpfMapRO;
 
-    BpfMap<Key, Value>() {};
-
-    explicit BpfMap<Key, Value>(const char* pathname) {
+    explicit BpfMapRW<Key, Value>(const char* pathname) {
         mMapFd.reset(mapRetrieveRW(pathname));
         abortOnMismatch(/* writable */ true);
     }
@@ -276,17 +342,64 @@ class BpfMap : public BpfMapRO<Key, Value> {
     }
 
     Result<void> writeValue(const Key& key, const Value& value, uint64_t flags) {
-        if (writeToMapEntry(mMapFd, &key, &value, flags)) {
-            return ErrnoErrorf("BpfMap::writeValue() failed");
-        }
+        if (writeToMapEntry(mMapFd, &key, &value, flags)) return ERROR_FROM_ERRNO("writeValue");
         return {};
     }
 
-    Result<void> deleteValue(const Key& key) {
-        if (deleteMapEntry(mMapFd, &key)) {
-            return ErrnoErrorf("BpfMap::deleteValue() failed");
-        }
+#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
+    [[clang::reinitializes]] Result<void> resetMap(bpf_map_type map_type,
+                                                   uint32_t max_entries,
+                                                   uint32_t map_flags = 0) {
+        if (map_flags & BPF_F_WRONLY) Abort(0, "map_flags is write-only");
+        if (map_flags & BPF_F_RDONLY) Abort(0, "map_flags is read-only");
+        mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries,
+                               map_flags));
+        if (!mMapFd.ok()) return ERROR_FROM_ERRNO("resetMap");
+        abortOnMismatch(/* writable */ true);
         return {};
+    }
+#endif
+};
+
+template <class Key, class Value>
+class BpfMap : public BpfMapRW<Key, Value> {
+  protected:
+    using BpfMapRW<Key, Value>::mMapFd;
+    using BpfMapRW<Key, Value>::doBulkLookupAndMaybeDelete;
+
+  public:
+    using BpfMapRW<Key, Value>::BpfMapRW;
+    using BpfMapRW<Key, Value>::getFirstKey;
+    using BpfMapRW<Key, Value>::getNextKey;
+    using BpfMapRW<Key, Value>::readValue;
+
+    Result<void> deleteValue(const Key& key) {
+        if (deleteMapEntry(mMapFd, &key)) return ERROR_FROM_ERRNO("deleteValue");
+        return {};
+    }
+
+    Result<Value> readAndDeleteValue(const Key& key) {
+        if (isAtLeastKernelVersion(5, 4)) {
+            Value value;
+            if (!findAndDeleteMapEntry(mMapFd, &key, &value)) return value;
+            if (errno == ENOENT) return ERROR_FROM_ERRNO("read&DeleteVal");
+        };
+
+        // fallback path in case of weird error and for pre-5.4 kernels
+
+        Result<Value> v = readValue(key);
+        if (!v.ok()) return v;  // most likely ENOENT
+        Result<void> res = deleteValue(key);
+        if (res.ok()) return v;
+        // We already have the data, not clear what to do on delete failure...
+        // Let's just log something...
+        // (but ignore ENOENT in case we're racing against someone else)
+#ifdef BPFMAP_VERBOSE
+        if (res.error().code() != ENOENT)
+            ALOGE("BpfMap::readAndDeleteValue(): read but failed to delete data %s",
+                  strerror(res.error().code()));
+#endif
+        return v;
     }
 
     Result<void> clear() {
@@ -300,114 +413,29 @@ class BpfMap : public BpfMapRO<Key, Value> {
             if (!res.ok()) {
                 // Someone else could have deleted the key, so ignore ENOENT
                 if (res.error().code() == ENOENT) continue;
+#ifdef BPFMAP_VERBOSE
                 ALOGE("Failed to delete data %s", strerror(res.error().code()));
+#endif
                 return res.error();
             }
         }
     }
 
-#ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
-    [[clang::reinitializes]] Result<void> resetMap(bpf_map_type map_type,
-                                                   uint32_t max_entries,
-                                                   uint32_t map_flags = 0) {
-        if (map_flags & BPF_F_WRONLY) Abort(0, "map_flags is write-only");
-        if (map_flags & BPF_F_RDONLY) Abort(0, "map_flags is read-only");
-        mMapFd.reset(createMap(map_type, sizeof(Key), sizeof(Value), max_entries,
-                               map_flags));
-        if (!mMapFd.ok()) return ErrnoErrorf("BpfMap::resetMap() failed");
-        abortOnMismatch(/* writable */ true);
-        return {};
+    // Does not allow early termination (via f erroring out) - maybe implemented with bulk api
+    Result<void> consume(const std::function<void(const Key&, const Value&)>& f) {
+        if (isAtLeastKernelVersion(5, 10)) return doBulkLookupAndMaybeDelete(/*delete*/true, f);
+        Result<Key> curKey = getFirstKey();
+        while (curKey.ok()) {
+            const Result<Key> &nextKey = getNextKey(curKey.value());
+            Result<Value> curValue = readAndDeleteValue(curKey.value());
+            // on readAndDelete error (most likely ENOENT due to a delete race) move to next key...
+            if (curValue.ok()) f(curKey.value(), curValue.value());
+            curKey = nextKey;
+        }
+        if (curKey.error().code() == ENOENT) return {};
+        return curKey.error();
     }
-#endif
-
-    // Iterate through the map and handle each key retrieved based on the filter
-    // without modification of map content.
-    Result<void> iterate(
-            const function<Result<void>(const Key& key,
-                                        const BpfMap<Key, Value>& map)>& filter) const;
-
-    // Iterate through the map and get each <key, value> pair, handle each <key,
-    // value> pair based on the filter without modification of map content.
-    Result<void> iterateWithValue(
-            const function<Result<void>(const Key& key, const Value& value,
-                                        const BpfMap<Key, Value>& map)>& filter) const;
-
-    // Iterate through the map and handle each key retrieved based on the filter
-    Result<void> iterate(
-            const function<Result<void>(const Key& key,
-                                        BpfMap<Key, Value>& map)>& filter);
-
-    // Iterate through the map and get each <key, value> pair, handle each <key,
-    // value> pair based on the filter.
-    Result<void> iterateWithValue(
-            const function<Result<void>(const Key& key, const Value& value,
-                                        BpfMap<Key, Value>& map)>& filter);
-
 };
-
-template <class Key, class Value>
-Result<void> BpfMap<Key, Value>::iterate(
-        const function<Result<void>(const Key& key,
-                                    const BpfMap<Key, Value>& map)>& filter) const {
-    Result<Key> curKey = getFirstKey();
-    while (curKey.ok()) {
-        const Result<Key>& nextKey = getNextKey(curKey.value());
-        Result<void> status = filter(curKey.value(), *this);
-        if (!status.ok()) return status;
-        curKey = nextKey;
-    }
-    if (curKey.error().code() == ENOENT) return {};
-    return curKey.error();
-}
-
-template <class Key, class Value>
-Result<void> BpfMap<Key, Value>::iterateWithValue(
-        const function<Result<void>(const Key& key, const Value& value,
-                                    const BpfMap<Key, Value>& map)>& filter) const {
-    Result<Key> curKey = getFirstKey();
-    while (curKey.ok()) {
-        const Result<Key>& nextKey = getNextKey(curKey.value());
-        Result<Value> curValue = readValue(curKey.value());
-        if (!curValue.ok()) return curValue.error();
-        Result<void> status = filter(curKey.value(), curValue.value(), *this);
-        if (!status.ok()) return status;
-        curKey = nextKey;
-    }
-    if (curKey.error().code() == ENOENT) return {};
-    return curKey.error();
-}
-
-template <class Key, class Value>
-Result<void> BpfMap<Key, Value>::iterate(
-        const function<Result<void>(const Key& key,
-                                    BpfMap<Key, Value>& map)>& filter) {
-    Result<Key> curKey = getFirstKey();
-    while (curKey.ok()) {
-        const Result<Key>& nextKey = getNextKey(curKey.value());
-        Result<void> status = filter(curKey.value(), *this);
-        if (!status.ok()) return status;
-        curKey = nextKey;
-    }
-    if (curKey.error().code() == ENOENT) return {};
-    return curKey.error();
-}
-
-template <class Key, class Value>
-Result<void> BpfMap<Key, Value>::iterateWithValue(
-        const function<Result<void>(const Key& key, const Value& value,
-                                    BpfMap<Key, Value>& map)>& filter) {
-    Result<Key> curKey = getFirstKey();
-    while (curKey.ok()) {
-        const Result<Key>& nextKey = getNextKey(curKey.value());
-        Result<Value> curValue = readValue(curKey.value());
-        if (!curValue.ok()) return curValue.error();
-        Result<void> status = filter(curKey.value(), curValue.value(), *this);
-        if (!status.ok()) return status;
-        curKey = nextKey;
-    }
-    if (curKey.error().code() == ENOENT) return {};
-    return curKey.error();
-}
 
 }  // namespace bpf
 }  // namespace android

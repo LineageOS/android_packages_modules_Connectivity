@@ -949,7 +949,7 @@ public class PermissionMonitorTest {
         final Set<UidRange> vpnRange2 = Set.of(new UidRange(MOCK_UID12, MOCK_UID12));
 
         // When VPN is connected, expect a rule to be set up for user app MOCK_UID11
-        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange1, VPN_UID);
+        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange1, VPN_UID, Set.of());
         verify(mBpfNetMaps).addUidInterfaceRules(eq(ifName), aryEq(new int[]{MOCK_UID11}));
 
         reset(mBpfNetMaps);
@@ -964,15 +964,15 @@ public class PermissionMonitorTest {
 
         // During VPN uid update (vpnRange1 -> vpnRange2), ConnectivityService first deletes the
         // old UID rules then adds the new ones. Expect netd to be updated
-        mPermissionMonitor.onVpnUidRangesRemoved(ifName, vpnRange1, VPN_UID);
+        mPermissionMonitor.onVpnUidRangesRemoved(ifName, vpnRange1, VPN_UID, Set.of());
         verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[] {MOCK_UID11}));
-        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange2, VPN_UID);
+        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange2, VPN_UID, Set.of());
         verify(mBpfNetMaps).addUidInterfaceRules(eq(ifName), aryEq(new int[]{MOCK_UID12}));
 
         reset(mBpfNetMaps);
 
         // When VPN is disconnected, expect rules to be torn down
-        mPermissionMonitor.onVpnUidRangesRemoved(ifName, vpnRange2, VPN_UID);
+        mPermissionMonitor.onVpnUidRangesRemoved(ifName, vpnRange2, VPN_UID, Set.of());
         verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[] {MOCK_UID12}));
     }
 
@@ -1000,7 +1000,7 @@ public class PermissionMonitorTest {
         onUserAddedWithInstalledPackageList(MOCK_USER2, pkgs);
         final Set<UidRange> vpnRange = Set.of(UidRange.createForUser(MOCK_USER1),
                 UidRange.createForUser(MOCK_USER2));
-        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange, VPN_UID);
+        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange, VPN_UID, Set.of());
 
         // Newly-installed package should have uid rules added
         addPackageForUsers(new UserHandle[]{MOCK_USER1, MOCK_USER2}, MOCK_PACKAGE1, MOCK_APPID1);
@@ -1023,6 +1023,36 @@ public class PermissionMonitorTest {
     @EnableCompatChanges(RESTRICT_LOCAL_NETWORK)
     public void testUidFilteringDuringPackageInstallAndUninstallWithWildcard() throws Exception {
         doTestUidFilteringDuringPackageInstallAndUninstall(null /* ifName */);
+    }
+
+    @Test
+    public void testUidFilteringWithDelegatedBypassUids() throws Exception {
+        final String ifName = "tun0";
+        final int delegatedUid = MOCK_UID12;
+        final List<PackageInfo> pkgs = List.of(
+                buildPackageInfo(SYSTEM_PACKAGE1, SYSTEM_APP_UID11, CHANGE_NETWORK_STATE,
+                        CONNECTIVITY_USE_RESTRICTED_NETWORKS),
+                buildPackageInfo(MOCK_PACKAGE1, MOCK_UID11),
+                buildPackageInfo(MOCK_PACKAGE2, delegatedUid),
+                buildPackageInfo(SYSTEM_PACKAGE2, VPN_UID));
+        initialize();
+        onUserAddedWithInstalledPackageList(MOCK_USER1, pkgs);
+
+        final Set<UidRange> vpnRange = Set.of(UidRange.createForUser(MOCK_USER1));
+
+        // When VPN is connected, expect a rule to be set up for user app MOCK_UID11, but not for
+        // delegatedUid.
+        final Set<Integer> delegatedUids = Set.of(delegatedUid);
+        mPermissionMonitor.onVpnUidRangesAdded(ifName, vpnRange, VPN_UID, delegatedUids);
+        verify(mBpfNetMaps).addUidInterfaceRules(eq(ifName), aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps, never()).addUidInterfaceRules(eq(ifName),
+                aryEq(new int[]{delegatedUid}));
+
+        // When VPN is disconnected, expect rules to be torn down for MOCK_UID11 and still no rule
+        // for delegatedUid.
+        mPermissionMonitor.onVpnUidRangesRemoved(ifName, vpnRange, VPN_UID, delegatedUids);
+        verify(mBpfNetMaps).removeUidInterfaceRules(aryEq(new int[]{MOCK_UID11}));
+        verify(mBpfNetMaps, never()).removeUidInterfaceRules(aryEq(new int[]{delegatedUid}));
     }
 
     @Test
@@ -1462,7 +1492,7 @@ public class PermissionMonitorTest {
                         }
                     }
                     return true;
-                }), any(), any());
+                }), eq(NETWORK_STACK), any());
         final BroadcastReceiver originalReceiver = receiverCaptor.getValue();
         return new BroadcastReceiver() {
             @Override
@@ -1813,6 +1843,47 @@ public class PermissionMonitorTest {
         mBpfMapMonitor.expectTrafficPerm(appId1Perm, MOCK_APPID1);
         mBpfMapMonitor.expectTrafficPerm(appId2Perm, MOCK_APPID2);
         mBpfMapMonitor.expectTrafficPerm(appId3Perm, MOCK_APPID3);
+    }
+
+    @Test
+    @EnableCompatChanges(RESTRICT_LOCAL_NETWORK)
+    public void testOnPermissionsChanged_logsLatency_lnpDeveloperOptInEnabled() {
+        PackageManager.OnPermissionsChangedListener listener =
+                setupMocksAndCaptureRegisteredListener(/* isLnpDeveloperOptInEnabled */ true);
+
+        listener.onPermissionsChanged(MOCK_UID11);
+
+        verify(mDeps).logPermissionChangeListenerLatency(anyInt());
+    }
+
+    @Test
+    @EnableCompatChanges(RESTRICT_LOCAL_NETWORK)
+    public void testOnPermissionsChanged_logsLatency_lnpDeveloperOptInDisabled() {
+        PackageManager.OnPermissionsChangedListener listener =
+                setupMocksAndCaptureRegisteredListener(/* isLnpDeveloperOptInEnabled */ false);
+
+        listener.onPermissionsChanged(MOCK_UID11);
+
+        verify(mDeps, never()).logPermissionChangeListenerLatency(anyInt());
+    }
+
+    /**
+     * Sets up mock dependencies, verifies that a permissions listener was registered,
+     * and returns the captured listener for further testing.
+     */
+    private PackageManager.OnPermissionsChangedListener setupMocksAndCaptureRegisteredListener(
+            boolean isLnpDeveloperOptInEnabled) {
+        assumeTrue(BpfNetMaps.isAtLeast25Q2());
+        ArgumentCaptor<PackageManager.OnPermissionsChangedListener> listenerCaptor =
+                ArgumentCaptor.forClass(PackageManager.OnPermissionsChangedListener.class);
+        verify(mPackageManager).addOnPermissionsChangeListener(listenerCaptor.capture());
+        PackageManager.OnPermissionsChangedListener listener = listenerCaptor.getValue();
+
+        when(mDeps.shouldEnforceLocalNetRestrictions(anyInt())).thenReturn(true);
+        when(mDeps.isLnpDeveloperOptInEnabled()).thenReturn(isLnpDeveloperOptInEnabled);
+        when(mPermissionManager.checkPermissionForPreflight(
+                anyString(), any(AttributionSource.class))).thenReturn(PERMISSION_DENIED);
+        return listener;
     }
 
     @Test

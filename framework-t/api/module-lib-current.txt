@@ -159,6 +159,7 @@ package android.net {
     method public int getRatType();
     method public int getRoaming();
     method @NonNull public java.util.Set<java.lang.String> getSubscriberIds();
+    method @FlaggedApi("com.android.net.flags.netstats_transport_type") public int getTransportType();
     method @NonNull public java.util.Set<java.lang.String> getWifiNetworkKeys();
     method public boolean matches(@NonNull android.net.NetworkIdentity);
     method public void writeToParcel(@NonNull android.os.Parcel, int);
@@ -179,6 +180,7 @@ package android.net {
 
   public static final class NetworkTemplate.Builder {
     ctor public NetworkTemplate.Builder(int);
+    ctor @FlaggedApi("com.android.net.flags.netstats_transport_type") public NetworkTemplate.Builder();
     method @NonNull public android.net.NetworkTemplate build();
     method @NonNull public android.net.NetworkTemplate.Builder setDefaultNetworkStatus(int);
     method @NonNull public android.net.NetworkTemplate.Builder setMeteredness(int);
@@ -186,6 +188,7 @@ package android.net {
     method @NonNull public android.net.NetworkTemplate.Builder setRatType(int);
     method @NonNull public android.net.NetworkTemplate.Builder setRoaming(int);
     method @NonNull public android.net.NetworkTemplate.Builder setSubscriberIds(@NonNull java.util.Set<java.lang.String>);
+    method @FlaggedApi("com.android.net.flags.netstats_transport_type") @NonNull public android.net.NetworkTemplate.Builder setTransportType(int);
     method @NonNull public android.net.NetworkTemplate.Builder setWifiNetworkKeys(@NonNull java.util.Set<java.lang.String>);
   }
 

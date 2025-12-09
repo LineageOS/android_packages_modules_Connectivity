@@ -26,7 +26,7 @@ import android.net.mdns.aidl.ResolutionInfo;
  * This one-way interface defines the asynchronous notifications sent by mdns service to any process
  * that registered itself via IMDns.registerEventListener.
  *
- * {@hide}
+ * @hide
  */
 oneway interface IMDnsEventListener {
     /**

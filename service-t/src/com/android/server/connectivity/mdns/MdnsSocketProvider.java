@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_LOCAL_NETWORK;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_THREAD;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
@@ -187,12 +188,20 @@ public class MdnsSocketProvider {
             @Override
             public void onCapabilitiesChanged(@NonNull Network network,
                     @NonNull NetworkCapabilities networkCapabilities) {
-                mActiveNetworksTransports.put(network, networkCapabilities.getTransportTypes());
+                if (!networkCapabilities.hasCapability(NET_CAPABILITY_LOCAL_NETWORK)) {
+                    mActiveNetworksTransports.put(network, networkCapabilities.getTransportTypes());
+                }
             }
 
             @Override
             public void onLinkPropertiesChanged(Network network, LinkProperties lp) {
-                handleLinkPropertiesChanged(network, lp);
+                // The correctness relies on at least one onCapabilitiesChanged
+                // being called before onLinkPropertiesChanged. This is guaranteed
+                // and publicly documented at
+                // ConnectivityManager.NetworkCallback#onAvailable(android.net.Network).
+                if (mActiveNetworksTransports.containsKey(network)) {
+                    handleLinkPropertiesChanged(network, lp);
+                }
             }
         };
         mTetheringEventCallback = new TetheringEventCallback() {
@@ -539,7 +548,8 @@ public class MdnsSocketProvider {
             final List<LinkAddress> addresses = lp.getLinkAddresses();
             final Network network =
                     networkKey == LOCAL_NET ? null : ((NetworkAsKey) networkKey).mNetwork;
-            final SocketKey socketKey = new SocketKey(network, networkInterface.getIndex());
+            final SocketKey socketKey = new SocketKey(
+                    network, networkInterface.getIndex(), networkInterface.getName());
             // TODO: technically transport types are mutable, although generally not in ways that
             // would meaningfully impact the logic using it here. Consider updating logic to
             // support transports being added/removed.

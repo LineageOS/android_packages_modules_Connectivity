@@ -697,6 +697,15 @@ public final class ActiveOperationalDatasetTest {
     }
 
     @Test
+    public void hashCode_datasetsWithUnknownTlvs_hashCodeEquals() {
+        final byte[] datasetWithUnknownTlvs = addTlv(VALID_DATASET_TLVS, "AA01FFBB020102");
+        var dataset1 = ActiveOperationalDataset.fromThreadTlvs(datasetWithUnknownTlvs);
+        var dataset2 = ActiveOperationalDataset.fromThreadTlvs(datasetWithUnknownTlvs);
+
+        assertThat(dataset1.hashCode()).isEqualTo(dataset2.hashCode());
+    }
+
+    @Test
     public void securityPolicy_invalidRotationTime_throwsIllegalArguments() {
         assertThrows(
                 IllegalArgumentException.class,

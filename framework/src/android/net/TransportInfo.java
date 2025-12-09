@@ -50,6 +50,9 @@ public interface TransportInfo {
      * </ul>
      * </p>
      *
+     * <p> Subclasses should silently ignore redactions which are not included in {@link
+     * #getApplicableRedactions()}.
+     *
      * @param redactions bitmask of redactions that needs to be performed on this instance.
      * @return Copy of this instance with the necessary redactions.
      * @hide

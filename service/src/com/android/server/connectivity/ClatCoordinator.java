@@ -45,12 +45,12 @@ import com.android.net.module.util.BpfDump;
 import com.android.net.module.util.BpfMap;
 import com.android.net.module.util.IBpfMap;
 import com.android.net.module.util.InterfaceParams;
+import com.android.net.module.util.Struct.S64;
 import com.android.net.module.util.TcUtils;
 import com.android.net.module.util.bpf.ClatEgress4Key;
 import com.android.net.module.util.bpf.ClatEgress4Value;
 import com.android.net.module.util.bpf.ClatIngress6Key;
 import com.android.net.module.util.bpf.ClatIngress6Value;
-import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
 
 import java.io.FileDescriptor;
@@ -64,7 +64,7 @@ import java.util.Objects;
 /**
  * This coordinator is responsible for providing clat relevant functionality.
  *
- * {@hide}
+ * @hide
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class ClatCoordinator {
@@ -134,7 +134,7 @@ public class ClatCoordinator {
     @Nullable
     private final IBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap;
     @Nullable
-    private final IBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap;
+    private final IBpfMap<S64, CookieTagMapValue> mCookieTagMap;
     @Nullable
     private ClatdTracker mClatdTracker = null;
 
@@ -280,11 +280,11 @@ public class ClatCoordinator {
 
         /** Get cookie tag map */
         @Nullable
-        public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+        public IBpfMap<S64, CookieTagMapValue> getBpfCookieTagMap() {
             try {
                 // also read and written from other locations
                 return new BpfMap<>(COOKIE_TAG_MAP_PATH,
-                       CookieTagMapKey.class, CookieTagMapValue.class);
+                       S64.class, CookieTagMapValue.class);
             } catch (ErrnoException e) {
                 Log.wtf(TAG, "Cannot open cookie tag map: " + e);
                 return null;
@@ -536,7 +536,7 @@ public class ClatCoordinator {
         // Tag raw socket with uid AID_CLAT and set tag as zero because tag is unused in bpf
         // program for counting data usage in netd.c. Tagging socket is used to avoid counting
         // duplicated clat traffic in bpf stat.
-        final CookieTagMapKey key = new CookieTagMapKey(cookie);
+        final S64 key = new S64(cookie);
         final CookieTagMapValue value = new CookieTagMapValue(AID_CLAT, 0 /* tag, unused */);
         try {
             mCookieTagMap.insertEntry(key, value);
@@ -556,7 +556,7 @@ public class ClatCoordinator {
         // destroy listener only monitors on group INET_TCP, INET_UDP, INET6_TCP, INET6_UDP.
         // The other socket types, ex: raw, are not able to be removed automatically by the
         // listener. See TrafficController::makeSkDestroyListener.
-        final CookieTagMapKey key = new CookieTagMapKey(cookie);
+        final S64 key = new S64(cookie);
         try {
             mCookieTagMap.deleteEntry(key);
         } catch (ErrnoException | IllegalStateException e) {

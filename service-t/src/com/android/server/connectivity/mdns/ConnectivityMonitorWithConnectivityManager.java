@@ -219,7 +219,7 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
         if (netIf == null) {
             return null;
         }
-        return new SocketKey(match.first, netIf.getIndex());
+        return new SocketKey(match.first, netIf.getIndex(), netIf.getName());
     }
 
     @Nullable
@@ -229,7 +229,7 @@ public class ConnectivityMonitorWithConnectivityManager implements ConnectivityM
         }
         final Pair<Network, LinkProperties> match = findMatchingNetwork(
                 lp -> iface.getName().equals(lp.getInterfaceName()));
-        return match == null ? null : new SocketKey(match.first, iface.getIndex());
+        return match == null ? null : new SocketKey(match.first, iface.getIndex(), iface.getName());
     }
 
     private Pair<Network, LinkProperties> findMatchingNetwork(

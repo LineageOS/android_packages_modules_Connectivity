@@ -36,6 +36,13 @@ public class Dhcp6SolicitPacket extends Dhcp6Packet {
     }
 
     /**
+     * Return the DHCPv6 SOLICIT message type (1).
+     */
+    public byte getMessageType() {
+        return DHCP6_MESSAGE_TYPE_SOLICIT;
+    }
+
+    /**
      * Build a DHCPv6 Solicit message with the specific parameters.
      */
     public ByteBuffer buildPacket() {

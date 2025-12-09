@@ -21,7 +21,7 @@ import android.nearby.NearbyDeviceParcelable;
 /**
  * Binder callback for ScanCallback.
  *
- * {@hide}
+ * @hide
  */
 oneway interface IScanListener {
         /** Reports a {@link NearbyDevice} being discovered. */

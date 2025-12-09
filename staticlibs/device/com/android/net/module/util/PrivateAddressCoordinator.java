@@ -110,21 +110,24 @@ public class PrivateAddressCoordinator {
         }
     }
 
-    public PrivateAddressCoordinator(Supplier<Network[]> getAllNetworksSupplier, Context context) {
-        this(getAllNetworksSupplier, new Dependencies(context));
+    public PrivateAddressCoordinator(Supplier<Network[]> getAllNetworksSupplier, Context context,
+            boolean bluetoothTetheringUseRandomAddress) {
+        this(getAllNetworksSupplier, new Dependencies(context), bluetoothTetheringUseRandomAddress);
     }
 
     @VisibleForTesting
     public PrivateAddressCoordinator(Supplier<Network[]> getAllNetworksSupplier,
-                                     Dependencies deps) {
+            Dependencies deps, boolean bluetoothTetheringUseRandomAddress) {
         mDownstreams = new ArrayMap<>();
         mUpstreamPrefixMap = new ArrayMap<>();
         mGetAllNetworksSupplier = getAllNetworksSupplier;
         mDeps = deps;
         mCachedAddresses = new ArrayMap<AddressKey, LinkAddress>();
-        // Reserved static addresses for bluetooth and wifi p2p.
-        mCachedAddresses.put(new AddressKey(TETHERING_BLUETOOTH, CONNECTIVITY_SCOPE_GLOBAL),
-                new LinkAddress(LEGACY_BLUETOOTH_IFACE_ADDRESS));
+        // Reserved static addresses for BLUETOOTH pre-T and WIFI_P2P.
+        if (!bluetoothTetheringUseRandomAddress) {
+            mCachedAddresses.put(new AddressKey(TETHERING_BLUETOOTH, CONNECTIVITY_SCOPE_GLOBAL),
+                    new LinkAddress(LEGACY_BLUETOOTH_IFACE_ADDRESS));
+        }
         mCachedAddresses.put(new AddressKey(TETHERING_WIFI_P2P, CONNECTIVITY_SCOPE_LOCAL),
                 new LinkAddress(LEGACY_WIFI_P2P_IFACE_ADDRESS));
 

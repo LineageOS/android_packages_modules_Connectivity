@@ -43,6 +43,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyInt
 import org.mockito.Mockito.anyString
@@ -556,7 +557,7 @@ class MdnsInterfaceAdvertiserTest {
     }
 
     @Test
-    fun testOffloadOnlyWillSkipProbing() {
+    fun testOffloadOnlyWillSkipProbingAndAnnouncing() {
         val testProbingInfo = mock(ProbingInfo::class.java)
         doReturn(TEST_SERVICE_ID_1).`when`(repository)
             .addService(eq(TEST_SERVICE_ID_1), any(), any())
@@ -570,6 +571,7 @@ class MdnsInterfaceAdvertiserTest {
         verify(repository).addService(eq(TEST_SERVICE_ID_1), any(), any())
         thread.waitForIdle(TIMEOUT_MS)
         verify(prober, never()).startProbing(any())
+        verify(announcer, never()).startSending(anyInt(), any(), anyLong())
         verify(cb).onServiceProbingSucceeded(advertiser, TEST_SERVICE_ID_1)
     }
 

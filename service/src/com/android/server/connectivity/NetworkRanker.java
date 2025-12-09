@@ -23,6 +23,7 @@ import static android.net.NetworkCapabilities.TRANSPORT_ETHERNET;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkScore.POLICY_EXITING;
 import static android.net.NetworkScore.POLICY_TRANSPORT_PRIMARY;
+import static android.net.NetworkScore.POLICY_VCN;
 import static android.net.NetworkScore.POLICY_YIELD_TO_BAD_WIFI;
 
 import static com.android.net.module.util.CollectionUtils.filter;
@@ -334,6 +335,16 @@ public class NetworkRanker {
                 candidates = new ArrayList<>(accepted);
                 break;
             }
+        }
+
+        // If two networks are equivalent, and one is a VCN network, keep the VCN network. This
+        // ensures VCN can beat a physical cell network
+        // Note: this check must happen before POLICY_IS_DESTROYED check, so that a VCN being
+        // destroyed can be preferred over a physical cell and then be handed over to another VCN
+        partitionInto(candidates, nai -> nai.getScore().hasPolicy(POLICY_VCN), accepted, rejected);
+        if (accepted.size() == 1) return accepted.get(0);
+        if (accepted.size() > 0 && rejected.size() > 0) {
+            candidates = new ArrayList<>(accepted);
         }
 
         // If two networks are equivalent, and one has been destroyed pending replacement, keep the

@@ -270,7 +270,7 @@ public class ChreDiscoveryProvider extends AbstractDiscoveryProvider {
         @Override
         public void onNanoAppRestart(long nanoAppId) {
             // TODO(b/221082271): hooked with upper level codes.
-            Log.i(TAG, String.format("CHRE NanoApp %d restart.", nanoAppId));
+            Log.i(TAG, String.format("CHRE NanoApp 0x%x restart.", nanoAppId));
         }
 
         @Override

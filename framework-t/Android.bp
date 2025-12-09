@@ -174,8 +174,9 @@ java_sdk_library {
         "//cts/tests/netlegacy22.api",
         "//cts/tests/tests/app.usage", // NetworkUsageStatsTest
 
-        // TODO: b/374174952 Remove it when VCN CTS is moved to Connectivity/
+        // TODO: b/374174952 Clean up VCN paths when the code location is finalized
         "//cts/tests/tests/vcn",
+        "//packages/modules/Connectivity/Vcn/tests:__subpackages__",
 
         "//external/sl4a:__subpackages__",
         "//frameworks/base/core/tests/bandwidthtests",

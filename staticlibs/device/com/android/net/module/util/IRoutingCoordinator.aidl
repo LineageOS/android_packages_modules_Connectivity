@@ -21,6 +21,7 @@ import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.RouteInfo;
+import android.net.RouteInfoParcel;
 
 import com.android.net.module.util.IIpv4PrefixRequest;
 
@@ -30,6 +31,7 @@ import com.android.net.module.util.IIpv4PrefixRequest;
 // invocation to an incorrect interface" when calling the IPC.
 @Descriptor("value=no.jarjar.com.android.net.module.util.IRoutingCoordinator")
 interface IRoutingCoordinator {
+
    /**
     * Add a route for specific network
     *
@@ -38,7 +40,7 @@ interface IRoutingCoordinator {
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
     */
-    void addRoute(int netId, in RouteInfo route);
+    void addRouteParcel(int netId, in RouteInfoParcel route);
 
    /**
     * Remove a route for specific network
@@ -48,7 +50,7 @@ interface IRoutingCoordinator {
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
     */
-    void removeRoute(int netId, in RouteInfo route);
+    void removeRouteParcel(int netId, in RouteInfoParcel route);
 
     /**
     * Update a route for specific network
@@ -58,7 +60,7 @@ interface IRoutingCoordinator {
     * @throws ServiceSpecificException in case of failure, with an error code indicating the
     *         cause of the failure.
     */
-    void updateRoute(int netId, in RouteInfo route);
+    void updateRouteParcel(int netId, in RouteInfoParcel route);
 
     /**
      * Adds an interface to a network. The interface must not be assigned to any network, including

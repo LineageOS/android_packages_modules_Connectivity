@@ -33,8 +33,8 @@ import android.system.Os;
 import android.util.Pair;
 
 import com.android.net.module.util.BpfDump;
-import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
+import com.android.net.module.util.Struct.S64;
 import com.android.testutils.DevSdkIgnoreRule.IgnoreUpTo;
 import com.android.testutils.DevSdkIgnoreRunner;
 
@@ -56,11 +56,11 @@ public class SkDestroyListenerTest {
     private static final String LINE_DELIMITER = "\\n";
     private static final String DUMP_COMMAND = "dumpsys netstats --bpfRawMap --cookieTagMap";
 
-    private Map<CookieTagMapKey, CookieTagMapValue> parseBpfRawMap(final String dump) {
-        final Map<CookieTagMapKey, CookieTagMapValue> map = new HashMap<>();
+    private Map<S64, CookieTagMapValue> parseBpfRawMap(final String dump) {
+        final Map<S64, CookieTagMapValue> map = new HashMap<>();
         for (final String line: dump.split(LINE_DELIMITER)) {
-            final Pair<CookieTagMapKey, CookieTagMapValue> keyValue =
-                    BpfDump.fromBase64EncodedString(CookieTagMapKey.class,
+            final Pair<S64, CookieTagMapValue> keyValue =
+                    BpfDump.fromBase64EncodedString(S64.class,
                             CookieTagMapValue.class, line.trim());
             map.put(keyValue.first, keyValue.second);
         }
@@ -69,7 +69,7 @@ public class SkDestroyListenerTest {
 
     private int countTaggedSocket() {
         final String dump = runShellCommandOrThrow(DUMP_COMMAND);
-        final Map<CookieTagMapKey, CookieTagMapValue> cookieTagMap = parseBpfRawMap(dump);
+        final Map<S64, CookieTagMapValue> cookieTagMap = parseBpfRawMap(dump);
         int count = 0;
         for (final CookieTagMapValue value: cookieTagMap.values()) {
             if (value.tag == COOKIE_TAG && value.uid == Process.myUid()) {

@@ -31,7 +31,7 @@ import android.net.netstats.provider.INetworkStatsProviderCallback;
 import android.os.IBinder;
 import android.os.Messenger;
 
-/** {@hide} */
+/** @hide */
 interface INetworkStatsService {
 
     /** Start a statistics query session. */
@@ -102,9 +102,6 @@ interface INetworkStatsService {
      * Note that invocation of any interface will be sent to all providers.
      */
      void setStatsProviderWarningAndLimitAsync(String iface, long warning, long limit);
-
-     /** Clear TrafficStats rate-limit caches. */
-     void clearTrafficStatsRateLimitCaches();
 
      /** Get rate-limit cache config. */
      TrafficStatsRateLimitCacheConfig getRateLimitCacheConfig();

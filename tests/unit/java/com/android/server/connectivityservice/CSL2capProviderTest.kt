@@ -49,7 +49,7 @@ import com.android.testutils.TestableNetworkCallback
 import com.android.testutils.TestableNetworkCallback.Event.Lost
 import com.android.testutils.TestableNetworkCallback.Event.Reserved
 import com.android.testutils.TestableNetworkCallback.Event.Unavailable
-import com.android.testutils.anyNetwork
+import com.android.testutils.AnyNetwork
 import com.android.testutils.waitForIdle
 import java.io.IOException
 import java.util.Optional
@@ -306,7 +306,7 @@ class CSL2capProviderTest : CSTest() {
         doReturn(true).`when`(btSocket).isConnected()
         acceptQueue.put(Optional.of(btSocket))
 
-        cb.expectAvailableCallbacks(anyNetwork(), validated = false)
+        cb.expectAvailableCallbacks(AnyNetwork(), validated = false)
         cb.assertNoCallback()
         // Verify that packet forwarding was started.
         // TODO: stop mocking L2capPacketForwarder.
@@ -355,7 +355,7 @@ class CSL2capProviderTest : CSTest() {
                 .build()
         val nr = REQUEST.copyWithSpecifier(specifier)
         val cb = requestNetwork(nr)
-        cb.expectAvailableCallbacks(anyNetwork(), validated = false)
+        cb.expectAvailableCallbacks(AnyNetwork(), validated = false)
     }
 
     @Test
@@ -368,7 +368,7 @@ class CSL2capProviderTest : CSTest() {
                 .build()
         var nr = REQUEST.copyWithSpecifier(specifier)
         val cb = requestNetwork(nr)
-        cb.expectAvailableCallbacks(anyNetwork(), validated = false)
+        cb.expectAvailableCallbacks(AnyNetwork(), validated = false)
 
         specifier = L2capNetworkSpecifier.Builder()
                 .setRole(ROLE_CLIENT)
@@ -391,10 +391,10 @@ class CSL2capProviderTest : CSTest() {
                 .build()
         val nr = REQUEST.copyWithSpecifier(specifier)
         val cb = requestNetwork(nr)
-        cb.expectAvailableCallbacks(anyNetwork(), validated = false)
+        cb.expectAvailableCallbacks(AnyNetwork(), validated = false)
 
         val cb2 = requestNetwork(nr)
-        cb2.expectAvailableCallbacks(anyNetwork(), validated = false)
+        cb2.expectAvailableCallbacks(AnyNetwork(), validated = false)
     }
 
     /** Test to ensure onLost() is sent before onUnavailable() when the network is torn down. */
@@ -409,7 +409,7 @@ class CSL2capProviderTest : CSTest() {
 
         val nr = REQUEST.copyWithSpecifier(specifier)
         val cb = requestNetwork(nr)
-        cb.expectAvailableCallbacks(anyNetwork(), validated = false)
+        cb.expectAvailableCallbacks(AnyNetwork(), validated = false)
 
         // Capture the L2capPacketForwarder callback object to tear down the network.
         val handlerCaptor = ArgumentCaptor.forClass(Handler::class.java)

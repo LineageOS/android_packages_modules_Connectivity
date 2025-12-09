@@ -88,7 +88,7 @@ class NetworkTracePoller {
   std::unique_ptr<BpfRingbuf<PacketTrace>> mRingBuffer GUARDED_BY(mBufferMutex);
 
   // The packet tracing config map (really a 1-element array).
-  BpfMap<uint32_t, bool> mConfigurationMap GUARDED_BY(mMutex);
+  BpfMapRW<uint32_t, bool> mConfigurationMap GUARDED_BY(mMutex);
 
   // This must be the last member, causing it to be the first deleted. If it is
   // not, members required for callbacks can be deleted before it's stopped.

@@ -23,6 +23,7 @@
 namespace android {
 
 int register_com_android_net_module_util_BpfMap(JNIEnv* env, char const* class_name);
+int register_com_android_net_module_util_BpfBitmap(JNIEnv* env, char const* class_name);
 int register_com_android_net_module_util_TcUtils(JNIEnv* env, char const* class_name);
 int register_com_android_net_module_util_ServiceConnectivityJni(JNIEnv *env,
                                                       char const *class_name);
@@ -36,6 +37,9 @@ extern "C" jint JNI_OnLoad(JavaVM* vm, void*) {
 
     if (register_com_android_net_module_util_BpfMap(env,
             "android/net/frameworktests/util/BpfMap") < 0) return JNI_ERR;
+
+    if (register_com_android_net_module_util_BpfBitmap(env,
+            "android/net/frameworktests/util/BpfBitmap") < 0) return JNI_ERR;
 
     if (register_com_android_net_module_util_TcUtils(env,
             "android/net/frameworktests/util/TcUtils") < 0) return JNI_ERR;

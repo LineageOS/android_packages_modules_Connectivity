@@ -92,15 +92,15 @@ static uint64_t (*bpf_get_sk_cookie)(struct bpf_sock* sk) = (void*)BPF_FUNC_get_
 
 static uint32_t (*bpf_get_socket_uid)(struct __sk_buff* skb) = (void*)BPF_FUNC_get_socket_uid;
 
-static int (*bpf_skb_pull_data)(struct __sk_buff* skb, __u32 len) = (void*)BPF_FUNC_skb_pull_data;
+static long (*bpf_skb_pull_data)(struct __sk_buff* skb, __u32 len) = (void*)BPF_FUNC_skb_pull_data;
 
-static int (*bpf_skb_load_bytes)(const struct __sk_buff* skb, int off, void* to,
-                                 int len) = (void*)BPF_FUNC_skb_load_bytes;
+static long (*bpf_skb_load_bytes)(const struct __sk_buff* skb, int off, void* to,
+                                  int len) = (void*)BPF_FUNC_skb_load_bytes;
 
-static int (*bpf_skb_load_bytes_relative)(const struct __sk_buff* skb, int off, void* to, int len,
-                                          int start_hdr) = (void*)BPF_FUNC_skb_load_bytes_relative;
+static long (*bpf_skb_load_bytes_relative)(const struct __sk_buff* skb, int off, void* to, int len,
+                                           int start_hdr) = (void*)BPF_FUNC_skb_load_bytes_relative;
 
-static int (*bpf_skb_store_bytes)(struct __sk_buff* skb, __u32 offset, const void* from, __u32 len,
+static long (*bpf_skb_store_bytes)(struct __sk_buff* skb, __u32 offset, const void* from, __u32 len,
                                   __u64 flags) = (void*)BPF_FUNC_skb_store_bytes;
 
 static int64_t (*bpf_csum_diff)(__be32* from, __u32 from_size, __be32* to, __u32 to_size,
@@ -108,20 +108,20 @@ static int64_t (*bpf_csum_diff)(__be32* from, __u32 from_size, __be32* to, __u32
 
 static int64_t (*bpf_csum_update)(struct __sk_buff* skb, __wsum csum) = (void*)BPF_FUNC_csum_update;
 
-static int (*bpf_skb_change_proto)(struct __sk_buff* skb, __be16 proto,
-                                   __u64 flags) = (void*)BPF_FUNC_skb_change_proto;
-static int (*bpf_l3_csum_replace)(struct __sk_buff* skb, __u32 offset, __u64 from, __u64 to,
-                                  __u64 flags) = (void*)BPF_FUNC_l3_csum_replace;
-static int (*bpf_l4_csum_replace)(struct __sk_buff* skb, __u32 offset, __u64 from, __u64 to,
-                                  __u64 flags) = (void*)BPF_FUNC_l4_csum_replace;
-static int (*bpf_redirect)(__u32 ifindex, __u64 flags) = (void*)BPF_FUNC_redirect;
-static int (*bpf_redirect_map)(const struct bpf_map_def* map, __u32 key,
-                               __u64 flags) = (void*)BPF_FUNC_redirect_map;
+static long (*bpf_skb_change_proto)(struct __sk_buff* skb, __be16 proto,
+                                    __u64 flags) = (void*)BPF_FUNC_skb_change_proto;
+static long (*bpf_l3_csum_replace)(struct __sk_buff* skb, __u32 offset, __u64 from, __u64 to,
+                                   __u64 flags) = (void*)BPF_FUNC_l3_csum_replace;
+static long (*bpf_l4_csum_replace)(struct __sk_buff* skb, __u32 offset, __u64 from, __u64 to,
+                                   __u64 flags) = (void*)BPF_FUNC_l4_csum_replace;
+static long (*bpf_redirect)(__u32 ifindex, __u64 flags) = (void*)BPF_FUNC_redirect;
+static long (*bpf_redirect_map)(const struct bpf_map_def* map, __u32 key,
+                                __u64 flags) = (void*)BPF_FUNC_redirect_map;
 
-static int (*bpf_skb_change_head)(struct __sk_buff* skb, __u32 head_room,
-                                  __u64 flags) = (void*)BPF_FUNC_skb_change_head;
-static int (*bpf_skb_adjust_room)(struct __sk_buff* skb, __s32 len_diff, __u32 mode,
-                                  __u64 flags) = (void*)BPF_FUNC_skb_adjust_room;
+static long (*bpf_skb_change_head)(struct __sk_buff* skb, __u32 head_room,
+                                   __u64 flags) = (void*)BPF_FUNC_skb_change_head;
+static long (*bpf_skb_adjust_room)(struct __sk_buff* skb, __s32 len_diff, __u32 mode,
+                                   __u64 flags) = (void*)BPF_FUNC_skb_adjust_room;
 
 // Android only supports little endian architectures
 #define htons(x) (__builtin_constant_p(x) ? ___constant_swab16(x) : __builtin_bswap16(x))

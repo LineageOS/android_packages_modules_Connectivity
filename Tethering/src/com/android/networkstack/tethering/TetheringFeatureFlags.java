@@ -61,15 +61,8 @@ public class TetheringFeatureFlags {
     public static final String TETHER_ACTIVE_SESSIONS_METRICS = "tether_active_sessions_metrics";
 
     /**
-     * A feature flag to control whether the tethering local network agent should be enabled.
-     * Disabled by default.
+     * A kill switch to control whether the TETHERING_AND_P2P_GO_LOCAL_AGENT is enabled.
      */
-    public static final String TETHERING_LOCAL_NETWORK_AGENT = "tethering_local_network_agent";
-
-    /**
-     * A feature flag to control whether the Wifi P2P Group Owner local network agent
-     * should be enabled. Disabled by default. This depends on TETHERING_LOCAL_AGENT
-     * and will not be enabled if that flag is off.
-     */
-    public static final String WIFIP2PGO_LOCAL_NETWORK_AGENT = "wifip2pgo_local_network_agent";
+    public static final String TETHERING_AND_P2P_GO_LOCAL_AGENT =
+            "tethering_and_p2p_go_local_agent";
 }

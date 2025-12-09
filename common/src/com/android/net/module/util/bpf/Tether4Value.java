@@ -21,11 +21,8 @@ import android.net.MacAddress;
 import androidx.annotation.NonNull;
 
 import com.android.net.module.util.Struct;
-import com.android.net.module.util.Struct.Field;
-import com.android.net.module.util.Struct.Type;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Objects;
 
 /** Value type for downstream & upstream IPv4 forwarding maps. */
@@ -44,11 +41,11 @@ public class Tether4Value extends Struct {
     @Field(order = 4, type = Type.U16)
     public final int pmtu;
 
-    @Field(order = 5, type = Type.ByteArray, arraysize = 16)
-    public final byte[] src46;
+    @Field(order = 5, type = Type.IpAddress)
+    public final InetAddress src46;
 
-    @Field(order = 6, type = Type.ByteArray, arraysize = 16)
-    public final byte[] dst46;
+    @Field(order = 6, type = Type.IpAddress)
+    public final InetAddress dst46;
 
     @Field(order = 7, type = Type.UBE16)
     public final int srcPort;
@@ -62,10 +59,12 @@ public class Tether4Value extends Struct {
 
     public Tether4Value(final int oif, @NonNull final MacAddress ethDstMac,
             @NonNull final MacAddress ethSrcMac, final int ethProto, final int pmtu,
-            final byte[] src46, final byte[] dst46, final int srcPort,
+            @NonNull InetAddress src46, @NonNull InetAddress dst46, final int srcPort,
             final int dstPort, final long lastUsed) {
         Objects.requireNonNull(ethDstMac);
         Objects.requireNonNull(ethSrcMac);
+        Objects.requireNonNull(src46);
+        Objects.requireNonNull(dst46);
 
         this.oif = oif;
         this.ethDstMac = ethDstMac;
@@ -81,17 +80,12 @@ public class Tether4Value extends Struct {
 
     @Override
     public String toString() {
-        try {
-            return String.format(
-                    "oif: %d, ethDstMac: %s, ethSrcMac: %s, ethProto: %d, pmtu: %d, "
-                            + "src46: %s, dst46: %s, srcPort: %d, dstPort: %d, "
-                            + "lastUsed: %d",
-                    oif, ethDstMac, ethSrcMac, ethProto, pmtu,
-                    InetAddress.getByAddress(src46), InetAddress.getByAddress(dst46),
-                    Short.toUnsignedInt((short) srcPort), Short.toUnsignedInt((short) dstPort),
-                    lastUsed);
-        } catch (UnknownHostException | IllegalArgumentException e) {
-            return "Invalid IP address" + e;
-        }
+        return String.format(
+                "oif: %d, ethDstMac: %s, ethSrcMac: %s, ethProto: %d, pmtu: %d, "
+                        + "src46: %s, dst46: %s, srcPort: %d, dstPort: %d, "
+                        + "lastUsed: %d",
+                oif, ethDstMac, ethSrcMac, ethProto, pmtu, src46, dst46,
+                Short.toUnsignedInt((short) srcPort), Short.toUnsignedInt((short) dstPort),
+                lastUsed);
     }
 }

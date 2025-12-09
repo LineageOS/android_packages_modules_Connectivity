@@ -19,7 +19,7 @@ package android.net.metrics;
 /**
  * Logs netd events.
  *
- * {@hide}
+ * @hide
  */
 oneway interface INetdEventListener {
     const int EVENT_GETADDRINFO = 1;

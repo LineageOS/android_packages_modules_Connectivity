@@ -20,6 +20,10 @@ import static android.system.OsConstants.ENOENT;
 import static android.system.OsConstants.SOL_SOCKET;
 import static android.system.OsConstants.SO_SNDTIMEO;
 
+import static com.android.server.ConnectivityStatsLog.CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED;
+import static com.android.server.ConnectivityStatsLog.CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED__EVENT_TYPE__CRITICAL_COUNTS_EVENT_TYPE_QUIC_CONNECTION_CLOSE_LOST_ACCESS;
+import static com.android.server.ConnectivityStatsLog.CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED__EVENT_TYPE__CRITICAL_COUNTS_EVENT_TYPE_QUIC_CONNECTION_CLOSE_SOCKET_DESTROY;
+
 import android.annotation.NonNull;
 import android.annotation.TargetApi;
 import android.net.Network;
@@ -27,6 +31,8 @@ import android.net.NetworkUtils;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.os.Process;
+import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.StructTimeval;
@@ -41,6 +47,7 @@ import com.android.net.module.util.HandlerUtils;
 import com.android.net.module.util.SharedLog;
 import com.android.net.module.util.SkDestroyListener;
 import com.android.net.module.util.netlink.InetDiagMessage;
+import com.android.server.ConnectivityStatsLog;
 
 import libcore.io.IoUtils;
 
@@ -69,6 +76,11 @@ public class QuicConnectionCloser {
     // concurrently.
     private static final int MAX_REGISTERED_QUIC_CONNECTION_CLOSE_INFO = 1000;
 
+    // Minimum interval to report metrics.
+    // This is to avoid generating an excessive amount of stats. An arbitrary number
+    // between a few seconds and a few minutes would be reasonable.
+    private static final int METRICS_INTERVAL_MS = 60_000; // 1 min
+
     private final Handler mHandler;
 
     // Reference to ConnectivityService#mNetworkForNetId, must be synchronized on itself.
@@ -80,6 +92,14 @@ public class QuicConnectionCloser {
 
     @NonNull
     private final Dependencies mDeps;
+
+    // Counts QUIC connection close due to lost network access
+    private int mLostAccessCloseCount;
+    // Counts QUIC connection close due to socket destroy
+    private int mSocketDestroyCloseCount;
+    // Last timestamp when connection close metrics were reported
+    // -1 if never reported
+    private long mLastMetricsReportTimeMs;
 
     /**
      * Class to store the necessary information for closing a QUIC connection.
@@ -182,6 +202,24 @@ public class QuicConnectionCloser {
         public InetSocketAddress getpeername(final FileDescriptor fd) throws ErrnoException {
             return (InetSocketAddress) Os.getpeername(fd);
         }
+
+        /**
+         *  Call {@link SystemClock#elapsedRealtime}
+         */
+        public long getElapsedRealtime() {
+            return SystemClock.elapsedRealtime();
+        }
+
+        /**
+         * Write CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED metrics
+         */
+        public void writeStats(final int eventType, final int eventCount) {
+            ConnectivityStatsLog.write_non_chained(CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED,
+                    Process.SYSTEM_UID,
+                    null,
+                    eventType,
+                    eventCount);
+        }
     }
 
     public QuicConnectionCloser(final SparseArray<NetworkAgentInfo> networkForNetId,
@@ -195,6 +233,10 @@ public class QuicConnectionCloser {
         mNetworkForNetId = networkForNetId;
         mHandler = handler;
         mDeps = deps;
+
+        mLostAccessCloseCount = 0;
+        mSocketDestroyCloseCount = 0;
+        mLastMetricsReportTimeMs = -1;
 
         // handleUdpSocketDestroy must be posted to the thread to avoid racing with
         // handleUnregisterQuicConnectionCloseInfo, even though they both run on the same thread.
@@ -224,6 +266,29 @@ public class QuicConnectionCloser {
         HandlerUtils.ensureRunningOnHandlerThread(mHandler);
     }
 
+    private void maybeReportMetricsAndReset() {
+        if (mLostAccessCloseCount == 0 && mSocketDestroyCloseCount == 0) {
+            return;
+        }
+        final long now = mDeps.getElapsedRealtime();
+        // Report metrics if the interval has passed, or if this is the first time.
+        if (mLastMetricsReportTimeMs == -1 ||
+                now - mLastMetricsReportTimeMs >= METRICS_INTERVAL_MS) {
+            if (mLostAccessCloseCount != 0) {
+                mDeps.writeStats(
+                        CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED__EVENT_TYPE__CRITICAL_COUNTS_EVENT_TYPE_QUIC_CONNECTION_CLOSE_LOST_ACCESS,
+                        mLostAccessCloseCount);
+                mLostAccessCloseCount = 0;
+            }
+            if (mSocketDestroyCloseCount != 0) {
+                mDeps.writeStats(CORE_NETWORKING_CRITICAL_COUNTS_EVENT_OCCURRED__EVENT_TYPE__CRITICAL_COUNTS_EVENT_TYPE_QUIC_CONNECTION_CLOSE_SOCKET_DESTROY,
+                        mSocketDestroyCloseCount);
+                mSocketDestroyCloseCount = 0;
+            }
+            mLastMetricsReportTimeMs = now;
+        }
+    }
+
     /**
      * Close registered QUIC connection by uids
      *
@@ -236,10 +301,13 @@ public class QuicConnectionCloser {
                 mRegisteredQuicConnectionCloseInfos.entrySet().iterator(); it.hasNext();) {
             final QuicConnectionCloseInfo info = it.next().getValue();
             if (uids.contains(info.uid)) {
-                closeQuicConnection(info, true /* destroySocket */);
+                if (closeQuicConnection(info, true /* destroySocket */)) {
+                    mLostAccessCloseCount++;
+                }
                 it.remove();
             }
         }
+        maybeReportMetricsAndReset();
     }
 
     private NetworkAgentInfo getNetworkAgentInfoForNetId(int netId) {
@@ -248,13 +316,16 @@ public class QuicConnectionCloser {
         }
     }
 
-    private void closeQuicConnection(final QuicConnectionCloseInfo info,
+    /**
+     * Returns true if the QUIC connection is successfully closed, otherwise false
+     */
+    private boolean closeQuicConnection(final QuicConnectionCloseInfo info,
             final boolean destroySocket) {
         ensureRunningOnHandlerThread();
 
         Log.d(TAG, "Close QUIC socket for " + info + ", destroySocket=" + destroySocket);
         final NetworkAgentInfo nai = getNetworkAgentInfoForNetId(info.netId);
-        if (nai == null) return; // The network has gone away already
+        if (nai == null) return false; // The network has gone away already
 
         final boolean isLoopbackConnection = info.dst.getAddress().isLoopbackAddress();
         final boolean lpContainsSourceAddress =
@@ -262,7 +333,7 @@ public class QuicConnectionCloser {
         if (!isLoopbackConnection && !lpContainsSourceAddress) {
             // The device should not send a packet with an unused source address.
             // Loopback connections are closed exceptionally to simplify device local testing.
-            return;
+            return false;
         }
 
         if (destroySocket) {
@@ -272,10 +343,10 @@ public class QuicConnectionCloser {
                 if (e instanceof ErrnoException && ((ErrnoException) e).errno == ENOENT) {
                     // This can happen if the socket is already closed, but unregister message is
                     // not processed yet.
-                    return;
+                    return false;
                 }
                 Log.e(TAG, "Failed to destroy QUIC socket for " + info + ": " + e);
-                return;
+                return false;
             }
         }
 
@@ -284,7 +355,9 @@ public class QuicConnectionCloser {
         } catch (ErrnoException | IOException e) {
             Log.e(TAG, "Failed to send registered QUIC connection close payload for "
                     + info + ": " + e);
+            return false;
         }
+        return true;
     }
 
     /**
@@ -305,7 +378,10 @@ public class QuicConnectionCloser {
         // App registered a QUIC connection close payload and this socket, but the socket was
         // closed before the socket was unregistered.
         // This can happen if the app crashes or is killed.
-        closeQuicConnection(info, false /* destroySocket */);
+        if (closeQuicConnection(info, false /* destroySocket */)) {
+            mSocketDestroyCloseCount++;
+        }
+        maybeReportMetricsAndReset();
     }
 
     /**

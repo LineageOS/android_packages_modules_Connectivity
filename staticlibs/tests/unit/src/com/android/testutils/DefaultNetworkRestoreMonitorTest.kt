@@ -110,12 +110,13 @@ class DefaultNetworkRestoreMonitorTest {
         val listener = getRunListener()
         listener.testFinished(testDesc)
 
+        val expectedDesc = Description.createSuiteDescription("ConnectivityTestTargetPreparer")
         defaultNetworkMonitor.reportResultAndCleanUp(restoreDefaultNetworkDesc)
         val inOrder = inOrder(notifier)
-        inOrder.verify(notifier).fireTestStarted(restoreDefaultNetworkDesc)
+        inOrder.verify(notifier).fireTestStarted(expectedDesc)
         // fireTestFailure is called
         inOrder.verify(notifier).fireTestFailure(any())
-        inOrder.verify(notifier).fireTestFinished(restoreDefaultNetworkDesc)
+        inOrder.verify(notifier).fireTestFinished(expectedDesc)
         inOrder.verify(notifier).removeListener(listener)
     }
 
@@ -131,14 +132,14 @@ class DefaultNetworkRestoreMonitorTest {
 
         defaultNetworkMonitor.reportResultAndCleanUp(restoreDefaultNetworkDesc)
         val inOrder = inOrder(notifier)
-        inOrder.verify(notifier).fireTestStarted(restoreDefaultNetworkDesc)
+        inOrder.verify(notifier).fireTestStarted(testDesc)
         // fireTestFailure is called with method name
         inOrder.verify(
                 notifier
         ).fireTestFailure(
                 argThat{failure -> failure.exception.message?.contains("testMethod") ?: false}
         )
-        inOrder.verify(notifier).fireTestFinished(restoreDefaultNetworkDesc)
+        inOrder.verify(notifier).fireTestFinished(testDesc)
         inOrder.verify(notifier).removeListener(listener)
     }
 
@@ -154,14 +155,14 @@ class DefaultNetworkRestoreMonitorTest {
 
         defaultNetworkMonitor.reportResultAndCleanUp(restoreDefaultNetworkDesc)
         val inOrder = inOrder(notifier)
-        inOrder.verify(notifier).fireTestStarted(restoreDefaultNetworkDesc)
+        inOrder.verify(notifier).fireTestStarted(testDesc)
         // fireTestFailure is called with method name
         inOrder.verify(
                 notifier
         ).fireTestFailure(
                 argThat{failure -> failure.exception.message?.contains("testMethod") ?: false}
         )
-        inOrder.verify(notifier).fireTestFinished(restoreDefaultNetworkDesc)
+        inOrder.verify(notifier).fireTestFinished(testDesc)
         inOrder.verify(notifier).removeListener(listener)
     }
 }

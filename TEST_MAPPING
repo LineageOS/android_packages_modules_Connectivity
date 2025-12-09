@@ -83,6 +83,14 @@
           "exclude-annotation": "com.android.testutils.NetworkStackModuleTest"
         }
       ]
+    },
+    {
+      "name": "CtsHostsideNetworkTests",
+      "options": [
+        {
+          "exclude-annotation": "androidx.test.filters.RequiresDevice"
+        }
+      ]
     }
   ],
   "captiveportal-networkstack-mainline-presubmit": [
@@ -319,14 +327,6 @@
         }
       ]
     },
-    {
-      "name": "CtsHostsideNetworkTests[CaptivePortalLoginGoogle.apk+NetworkStackGoogle.apk+com.google.android.resolv.apex+com.google.android.tethering.apex]",
-      "options": [
-        {
-          "exclude-annotation": "androidx.test.filters.RequiresDevice"
-        }
-      ]
-    },
     // Test with APK modules only, in cases where APEX is not supported, or the other modules
     // were simply not updated
     {
@@ -435,12 +435,23 @@
       "name": "CtsNetTestCasesUpdateStatsPermission"
     }
   ],
-  "tv-presubmit": [
+  "hsum-presubmit": [
     {
       "name": "CtsNetTestCases"
     },
     {
-      "name": "CtsNativeNetTestCases"
+      "name": "CtsNativeNetDnsTestCases"
+    },
+    {
+      "name": "CtsNetTestCasesInternetPermission"
+    },
+    {
+      "name": "CtsNetTestCasesUpdateStatsPermission"
+    }
+  ],
+  "tv-presubmit": [
+    {
+      "name": "CtsNetTestCases"
     },
     {
       "name": "CtsNativeNetDnsTestCases"
@@ -470,6 +481,19 @@
     },
     {
       "path": "vendor/xts/gts-tests/hostsidetests/networkstack"
+    }
+  ],
+  "wear-cts-presubmit": [
+    {
+      "name": "CtsNetTestCases",
+      "options": [
+        {
+          "exclude-filter": "android.net.cts.NetworkValidationTest#testCapportApiCallbacks"
+        }
+      ]
+    },
+    {
+      "name": "CtsNetTestCasesUpdateStatsPermission"
     }
   ]
 }

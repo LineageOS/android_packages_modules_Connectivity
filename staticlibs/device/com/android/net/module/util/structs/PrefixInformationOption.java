@@ -23,7 +23,7 @@ import android.net.IpPrefix;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Computed;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
@@ -57,7 +57,7 @@ import java.nio.ByteOrder;
  * |                                                               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class PrefixInformationOption extends Struct {
+public class PrefixInformationOption extends LegacyStruct {
     @Field(order = 0, type = Type.S8)
     public final byte type;
     @Field(order = 1, type = Type.S8)

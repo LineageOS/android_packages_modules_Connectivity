@@ -29,16 +29,16 @@ import java.util.List;
  * Interface that answers queries about, and allows changing
  * ethernet configuration.
  */
-/** {@hide} */
+/** @hide */
 interface IEthernetManager
 {
     String[] getAvailableInterfaces();
     IpConfiguration getConfiguration(String iface);
     void setConfiguration(String iface, in IpConfiguration config);
     boolean isAvailable(String iface);
-    void addListener(in IEthernetServiceListener listener);
+    void addListener(in IEthernetServiceListener listener, int flags);
     void removeListener(in IEthernetServiceListener listener);
-    void setIncludeTestInterfaces(boolean include);
+    void setIncludeTestInterfaces(int mode);
     void requestTetheredInterface(in ITetheredInterfaceCallback callback);
     void releaseTetheredInterface(in ITetheredInterfaceCallback callback);
     void updateConfiguration(String iface, in EthernetNetworkUpdateRequest request,

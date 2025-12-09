@@ -773,7 +773,7 @@ public class TrafficStats {
         }
     }
 
-    /** {@hide} */
+    /** @hide */
     public static void closeQuietly(INetworkStatsSession session) {
         // TODO: move to NetworkStatsService once it exists
         if (session != null) {
@@ -858,13 +858,13 @@ public class TrafficStats {
         return total;
     }
 
-    /** {@hide} */
+    /** @hide */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static long getMobileTcpRxPackets() {
         return UNSUPPORTED;
     }
 
-    /** {@hide} */
+    /** @hide */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static long getMobileTcpTxPackets() {
         return UNSUPPORTED;
@@ -891,11 +891,6 @@ public class TrafficStats {
         final LruCacheWithExpiry<Integer, StatsResult> uidCache = maybeGetRateLimitUidCache();
         if (uidCache != null) {
             uidCache.clear();
-        }
-        try {
-            getStatsService().clearTrafficStatsRateLimitCaches();
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
         }
     }
 
@@ -975,25 +970,25 @@ public class TrafficStats {
         return getIfaceStats(iface, TYPE_RX_BYTES);
     }
 
-    /** {@hide} */
+    /** @hide */
     @TestApi
     public static long getLoopbackTxPackets() {
         return getIfaceStats(LOOPBACK_IFACE, TYPE_TX_PACKETS);
     }
 
-    /** {@hide} */
+    /** @hide */
     @TestApi
     public static long getLoopbackRxPackets() {
         return getIfaceStats(LOOPBACK_IFACE, TYPE_RX_PACKETS);
     }
 
-    /** {@hide} */
+    /** @hide */
     @TestApi
     public static long getLoopbackTxBytes() {
         return getIfaceStats(LOOPBACK_IFACE, TYPE_TX_BYTES);
     }
 
-    /** {@hide} */
+    /** @hide */
     @TestApi
     public static long getLoopbackRxBytes() {
         return getIfaceStats(LOOPBACK_IFACE, TYPE_RX_BYTES);
@@ -1330,13 +1325,13 @@ public class TrafficStats {
     }
 
     // NOTE: keep these in sync with {@code com_android_server_net_NetworkStatsService.cpp}.
-    /** {@hide} */
+    /** @hide */
     public static final int TYPE_RX_BYTES = 0;
-    /** {@hide} */
+    /** @hide */
     public static final int TYPE_RX_PACKETS = 1;
-    /** {@hide} */
+    /** @hide */
     public static final int TYPE_TX_BYTES = 2;
-    /** {@hide} */
+    /** @hide */
     public static final int TYPE_TX_PACKETS = 3;
 
     /** @hide */

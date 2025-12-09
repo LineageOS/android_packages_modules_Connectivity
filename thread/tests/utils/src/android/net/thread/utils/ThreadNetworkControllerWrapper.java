@@ -189,7 +189,7 @@ public final class ThreadNetworkControllerWrapper {
         try {
             return future.get(timeout.toSeconds(), SECONDS);
         } finally {
-            mController.unregisterStateCallback(callback);
+            runAsShell(ACCESS_NETWORK_STATE, () -> mController.unregisterStateCallback(callback));
         }
     }
 
@@ -228,6 +228,12 @@ public final class ThreadNetworkControllerWrapper {
                         mController.setConfiguration(
                                 config, directExecutor(), newOutcomeReceiver(future)));
         future.get(CONFIG_TIMEOUT.toSeconds(), SECONDS);
+    }
+
+    public void setBorderRouterEnabledAndWait(boolean enabled) throws Exception {
+        final ThreadConfiguration config =
+                new ThreadConfiguration.Builder().setBorderRouterEnabled(enabled).build();
+        setConfigurationAndWait(config);
     }
 
     public void setNat64EnabledAndWait(boolean enabled) throws Exception {

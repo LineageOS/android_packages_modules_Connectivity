@@ -17,6 +17,7 @@ android_library {
     defaults: ["framework-connectivity-test-defaults"],
     static_libs: [
         "androidx.test.rules",
+        "mockito-kotlin2",
         "mockito-target-extended-minus-junit4",
         "netd-client",
         "net-tests-utils",

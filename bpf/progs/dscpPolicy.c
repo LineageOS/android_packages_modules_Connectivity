@@ -16,6 +16,8 @@
 
 // The resulting .o needs to load on Android T+
 #define BPFLOADER_MIN_VER BPFLOADER_MAINLINE_T_VERSION
+#define BPF_OBJ_NAME "dscpPolicy"
+#define DEFAULT_BPF_PIN_SUBDIR "net_shared"
 
 #include "bpf_net_helpers.h"
 #include "dscpPolicy.h"
@@ -262,8 +264,7 @@ static inline __always_inline void match_policy(struct __sk_buff* skb, const boo
     return;
 }
 
-DEFINE_BPF_PROG_KVER("schedcls/set_dscp_ether", AID_ROOT, AID_SYSTEM, schedcls_set_dscp_ether,
-                     KVER_5_15)
+DEFINE_BPF_PROG_KVER(schedcls, set_dscp_ether, , AID_SYSTEM, 5_15)
 (struct __sk_buff* skb) {
     if (skb->pkt_type != PACKET_HOST) return TC_ACT_PIPE;
 

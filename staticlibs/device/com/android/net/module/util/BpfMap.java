@@ -28,8 +28,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import dalvik.annotation.optimization.FastNative;
+
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,6 +70,11 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     private final int mKeySize;
     private final int mValueSize;
 
+    // The following is (ab)used by BpfBitmap.java
+    /* package */ int getFd() {
+        return mMapFd.getFd();
+    }
+
     private static ConcurrentHashMap<Pair<String, Integer>, ParcelFileDescriptor> sFdCache =
             new ConcurrentHashMap<>();
 
@@ -84,8 +89,12 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
             throws ErrnoException, NullPointerException {
         // Supports up to 1023 byte key and 65535 byte values
         // Creating a BpfMap with larger keys/values seems like a bad idea any way...
-        keySize &= 1023; // 10-bits
-        valueSize &= 65535; // 16-bits
+        if (keySize > 1023) {
+            throw new IllegalArgumentException("Key size " + keySize + " exceeds 1023");
+        }
+        if (valueSize > 65535) {
+            throw new IllegalArgumentException("Value size " + valueSize + " exceeds 65535");
+        }
         var key = Pair.create(path, (mode << 26) ^ (keySize << 16) ^ valueSize);
         // unlocked fetch is safe: map is concurrent read capable, and only inserted into
         ParcelFileDescriptor fd = sFdCache.get(key);
@@ -217,9 +226,7 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
                                  key == null ? null : key.writeToBytes(),
                                  rawKey)) return null;
 
-        final ByteBuffer buffer = ByteBuffer.wrap(rawKey);
-        buffer.order(ByteOrder.nativeOrder());
-        return Struct.parse(mKeyClass, buffer);
+        return Struct.parse(mKeyClass, rawKey);
     }
 
     /**
@@ -257,16 +264,19 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
         byte[] rawValue = new byte[mValueSize];
         if (!nativeFindMapEntry(mMapFd.getFd(), key.writeToBytes(), rawValue)) return null;
 
-        final ByteBuffer buffer = ByteBuffer.wrap(rawValue);
-        buffer.order(ByteOrder.nativeOrder());
-        return Struct.parse(mValueClass, buffer);
+        return Struct.parse(mValueClass, rawValue);
     }
 
     /** Synchronize Kernel RCU */
     public static void synchronizeKernelRCU() throws ErrnoException {
-        nativeSynchronizeKernelRCU();
+        final int err = nativeSynchronizeKernelRCU();
+        if (err != 0) {
+            final int errno = -err;
+            throw new ErrnoException("nativeSynchronizeKernelRCU", errno);
+        }
     }
 
+    @FastNative
     private static native int nativeBpfFdGet(String path, int mode, int keySize, int valueSize)
             throws ErrnoException, NullPointerException;
 
@@ -275,19 +285,23 @@ public class BpfMap<K extends Struct, V extends Struct> implements IBpfMap<K, V>
     // the object from being garbage collected (and thus potentially maps closed) prior
     // to the native code actually running (with a possibly already closed fd).
 
+    @FastNative
     private native void nativeWriteToMapEntry(int fd, byte[] key, byte[] value, int flags)
             throws ErrnoException;
 
+    @FastNative
     private native boolean nativeDeleteMapEntry(int fd, byte[] key) throws ErrnoException;
 
     // If key is found, the operation returns true and the nextKey would reference to the next
     // element.  If key is not found, the operation returns true and the nextKey would reference to
     // the first element.  If key is the last element, false is returned.
+    @FastNative
     private native boolean nativeGetNextMapKey(int fd, byte[] key, byte[] nextKey)
             throws ErrnoException;
 
+    @FastNative
     private native boolean nativeFindMapEntry(int fd, byte[] key, byte[] value)
             throws ErrnoException;
 
-    private static native void nativeSynchronizeKernelRCU() throws ErrnoException;
+    private static native int nativeSynchronizeKernelRCU();
 }

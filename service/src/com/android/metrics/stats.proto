@@ -76,6 +76,9 @@ message NetworkNsdReported {
 
   // The random number between 0 ~ 999 for sampling
   optional int32 random_number = 16;
+
+  // UID uses the NSD functions.
+  optional int32 uid = 17;
 }
 
 /**

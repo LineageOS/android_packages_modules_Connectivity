@@ -227,7 +227,10 @@ public class L2capPacketForwarder {
 
                     mWriteFd.write(mBuffer, 0 /*off*/, readBytes);
                 } catch (IOException|BufferUnderflowException e) {
-                    Log.e(mLogTag, "L2capThread exception", e);
+                    // This exception almost always indicates that the other side disconnected.
+                    // Unfortunately, there is no way to distinguish between an EOF triggered by
+                    // some disconnect or some actual error.
+                    Log.w(mLogTag, "L2capThread exception", e);
                     // Tear down the network on any error.
                     mIsRunning = false;
                     // Notify provider that forwarding has stopped.

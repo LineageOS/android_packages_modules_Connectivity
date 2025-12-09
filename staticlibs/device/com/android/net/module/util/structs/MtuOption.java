@@ -18,7 +18,7 @@ package com.android.net.module.util.structs;
 
 import static com.android.net.module.util.NetworkStackConstants.ICMPV6_ND_OPTION_MTU;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -36,7 +36,7 @@ import java.nio.ByteOrder;
  * |                              MTU                              |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-public class MtuOption extends Struct {
+public class MtuOption extends LegacyStruct {
     @Field(order = 0, type = Type.S8)
     public final byte type;
     @Field(order = 1, type = Type.S8)

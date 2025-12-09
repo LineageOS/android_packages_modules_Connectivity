@@ -178,7 +178,7 @@ public class NetworkInfo implements Parcelable {
         mState = State.UNKNOWN;
     }
 
-    /** {@hide} */
+    /** @hide */
     @UnsupportedAppUsage
     public NetworkInfo(@NonNull NetworkInfo source) {
         // S- didn't use to crash when passing null. This plants a timebomb where mState and
@@ -445,7 +445,7 @@ public class NetworkInfo implements Parcelable {
 
     /**
      * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_NOT_ROAMING} instead.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     @Deprecated

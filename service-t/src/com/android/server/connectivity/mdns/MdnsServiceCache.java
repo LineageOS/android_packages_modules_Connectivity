@@ -59,14 +59,22 @@ public class MdnsServiceCache {
     public static class CacheKey {
         @NonNull final String mUpperCaseServiceType;
         @NonNull final SocketKey mSocketKey;
+        private final int mHashCode;
 
         CacheKey(@NonNull String serviceType, @NonNull SocketKey socketKey) {
             mUpperCaseServiceType = toDnsUpperCase(serviceType);
             mSocketKey = socketKey;
+
+            // Equivalent to Objects.hash(mUpperCaseServiceType, mSocketKey),
+            // but without the unnecessary array allocation.
+            int hashCode = 1;
+            hashCode = 31 * hashCode + mUpperCaseServiceType.hashCode();
+            hashCode = 31 * hashCode + mSocketKey.hashCode();
+            mHashCode = hashCode;
         }
 
         @Override public int hashCode() {
-            return Objects.hash(mUpperCaseServiceType, mSocketKey);
+            return mHashCode;
         }
 
         @Override public boolean equals(Object other) {
@@ -180,7 +188,8 @@ public class MdnsServiceCache {
      */
     public static MdnsResponse findMatchedResponse(@NonNull List<MdnsResponse> responses,
             @NonNull String serviceName) {
-        for (MdnsResponse response : responses) {
+        for (int i = 0; i < responses.size(); ++i) {
+            MdnsResponse response = responses.get(i);
             if (equalsIgnoreDnsCase(serviceName, response.getServiceInstanceName())) {
                 return response;
             }
@@ -190,7 +199,8 @@ public class MdnsServiceCache {
 
     private static CachedService findMatchedCachedService(
             @NonNull List<CachedService> cachedServices, @NonNull String serviceName) {
-        for (CachedService cachedService : cachedServices) {
+        for (int i = 0; i < cachedServices.size(); ++i) {
+            CachedService cachedService = cachedServices.get(i);
             if (equalsIgnoreDnsCase(serviceName, cachedService.mService.getServiceInstanceName())) {
                 return cachedService;
             }

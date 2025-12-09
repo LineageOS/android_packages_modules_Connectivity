@@ -137,7 +137,10 @@ public final class ThreadNetworkController {
     @SuppressLint("MinMaxConstant")
     public static final int MAX_POWER_CHANNEL_DISABLED = Integer.MIN_VALUE;
 
-    /** The maximum lifetime of an ephemeral key. @hide */
+    /**
+     * The maximum lifetime of an ephemeral key.
+     * @hide
+     */
     @NonNull private static final Duration EPHEMERAL_KEY_LIFETIME_MAX = Duration.ofMinutes(10);
 
     /** @hide */

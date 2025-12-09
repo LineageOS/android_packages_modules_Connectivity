@@ -20,8 +20,13 @@ import static android.net.ConnectivityManager.MULTIPATH_PREFERENCE_HANDOVER;
 import static android.net.ConnectivityManager.MULTIPATH_PREFERENCE_PERFORMANCE;
 import static android.net.ConnectivityManager.MULTIPATH_PREFERENCE_RELIABILITY;
 
+import static com.android.net.module.util.ConnectivitySettingsUtils.getNetworkLegacyGlobalAvoidBadWifiSetting;
+import static com.android.net.module.util.ConnectivitySettingsUtils.getNetworkAvoidBadWifiSetting;
 import static com.android.net.module.util.ConnectivitySettingsUtils.getPrivateDnsModeAsString;
+import static com.android.net.module.util.ConnectivitySettingsUtils.setNetworkLegacyGlobalAvoidBadWifiSetting;
+import static com.android.net.module.util.ConnectivitySettingsUtils.setNetworkAvoidBadWifiSetting;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
@@ -32,14 +37,17 @@ import android.content.pm.PackageManager;
 import android.net.ConnectivityManager.MultipathPreference;
 import android.os.Binder;
 import android.os.Build;
+import android.os.PersistableBundle;
 import android.os.Process;
 import android.os.UserHandle;
 import android.provider.Settings;
+import android.telephony.CarrierConfigManager;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
 import android.util.Range;
 
+import com.android.net.flags.Flags;
 import com.android.net.module.util.ConnectivitySettingsUtils;
 import com.android.net.module.util.ProxyUtils;
 
@@ -60,6 +68,29 @@ public class ConnectivitySettingsManager {
     private static final String TAG = ConnectivitySettingsManager.class.getSimpleName();
 
     private ConnectivitySettingsManager() {}
+
+    private static boolean isCarrierConfigValid(@Nullable PersistableBundle config) {
+        return config != null && !config.isEmpty()
+            && CarrierConfigManager.isConfigForIdentifiedCarrier(config);
+    }
+
+    private static @NonNull PersistableBundle getConfigForSubId(
+            @NonNull CarrierConfigManager ccm, int subId, @NonNull String... keys) {
+        PersistableBundle config = null;
+        try {
+            config = ccm.getConfigForSubId(subId, keys);
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Failed to get config from carrier config", e);
+        }
+
+        if (!isCarrierConfigValid(config)) {
+            // If the "avoid bad Wi-Fi" setting is not defined in the carrier-specific config,
+            // retrieve the default configuration.
+            config = CarrierConfigManager.getDefaultConfig();
+        }
+
+        return config;
+    }
 
     /** Data activity timeout settings */
 
@@ -323,6 +354,35 @@ public class ConnectivitySettingsManager {
      * Avoid bad wifi.
      */
     public static final int NETWORK_AVOID_BAD_WIFI_AVOID = 2;
+
+    /**
+     * Per-carrier setting whether to switch away from wifi networks that lose access.
+     *
+     * When a device is connected to both mobile and wifi, and wifi loses Internet
+     * access, normally the device will switch to the mobile network.
+     * Carrier config can override this default behavior per-carrier.
+     * This setting, if defined, overrides both the default and carrier config
+     * for that particular carrier.
+     *
+     * The format is a semicolon-separated list of `subId,value` pairs, where:
+     *
+     * subId: The carrier subscription ID (integer).
+     * value: Controls the avoidance behavior for the corresponding `subId`.
+     *
+     * Valid values are:
+     *   0: Don't avoid bad Wi-Fi for this subscription, and don't prompt the user.
+     *   1: Avoid bad Wi-Fi for this subscription.
+     *
+     * For example: "1,1;2,0" would mean subId 1 avoids bad Wi-Fi, and subId 2 does not.
+     *
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_CARRIER_AWARE_AVOID_BAD_WIFI)
+    public static final String NETWORK_CARRIER_AWARE_AVOID_BAD_WIFI =
+            "network_carrier_aware_avoid_bad_wifi";
+
+    private static final boolean DEFAULT_AVOID_BAD_WIFI = true;
+    private static final boolean DEFAULT_SHOULD_SHOW_AVOID_BAD_WIFI = false;
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -931,11 +991,13 @@ public class ConnectivitySettingsManager {
      * @param context The {@link Context} to query the setting.
      * @return The setting whether to automatically switch away from wifi networks that lose
      *         internet access.
+     * @deprecated Use {@link #getNetworkAvoidBadWifi(Context, int)} instead.
      */
+    @FlaggedApi(Flags.FLAG_CARRIER_AWARE_AVOID_BAD_WIFI)
+    @Deprecated
     @NetworkAvoidBadWifi
     public static int getNetworkAvoidBadWifi(@NonNull Context context) {
-        final String setting =
-                Settings.Global.getString(context.getContentResolver(), NETWORK_AVOID_BAD_WIFI);
+        final String setting = getNetworkLegacyGlobalAvoidBadWifiSetting(context);
         if ("0".equals(setting)) {
             return NETWORK_AVOID_BAD_WIFI_IGNORE;
         } else if ("1".equals(setting)) {
@@ -951,7 +1013,10 @@ public class ConnectivitySettingsManager {
      * @param context The {@link Context} to set the setting.
      * @param value Whether to automatically switch away from wifi networks that lose internet
      *              access.
+     * @deprecated Use {@link #setNetworkAvoidBadWifi(Context, int, int)} instead.
      */
+    @FlaggedApi(Flags.FLAG_CARRIER_AWARE_AVOID_BAD_WIFI)
+    @Deprecated
     public static void setNetworkAvoidBadWifi(@NonNull Context context,
             @NetworkAvoidBadWifi int value) {
         final String setting;
@@ -964,7 +1029,116 @@ public class ConnectivitySettingsManager {
         } else {
             throw new IllegalArgumentException("Invalid avoid bad wifi setting");
         }
-        Settings.Global.putString(context.getContentResolver(), NETWORK_AVOID_BAD_WIFI, setting);
+        setNetworkLegacyGlobalAvoidBadWifiSetting(context, setting);
+    }
+
+    /**
+     * Set avoid bad wifi setting to {@link Settings} with specific subscription ID.
+     *
+     * @param context The {@link Context} to set the setting.
+     * @param subId The subscription ID to query carrier configurations for.
+     * @param value Whether to automatically switch away from wifi networks that lose internet
+     *              access.
+     */
+    @FlaggedApi(Flags.FLAG_CARRIER_AWARE_AVOID_BAD_WIFI)
+    public static void setNetworkAvoidBadWifi(@NonNull Context context, int subId,
+            @NetworkAvoidBadWifi int value) {
+
+        final String config;
+        if (value == NETWORK_AVOID_BAD_WIFI_IGNORE) {
+            config = "0";
+        } else if (value == NETWORK_AVOID_BAD_WIFI_AVOID) {
+            config = "1";
+        } else if (value == NETWORK_AVOID_BAD_WIFI_PROMPT) {
+            config = null;
+        } else {
+            throw new IllegalArgumentException("Invalid avoid bad wifi setting");
+        }
+
+        // for backward compatibility, write to the old avoid bad wifi settings as well.
+        setNetworkAvoidBadWifiSetting(context, subId, config);
+        setNetworkLegacyGlobalAvoidBadWifiSetting(context, config);
+    }
+
+    /**
+     * Get avoid bad wifi setting from {@link Settings} with specific subscription ID.
+     *
+     * @param context The {@link Context} to query the setting and system services.
+     * @param subId The subscription ID to query carrier configurations for.
+     * @return The setting whether to automatically switch away from wifi networks that lose
+     *         internet access.
+     */
+    @FlaggedApi(Flags.FLAG_CARRIER_AWARE_AVOID_BAD_WIFI)
+    public static boolean getNetworkAvoidBadWifi(@NonNull Context context, int subId) {
+        final String setting = getNetworkAvoidBadWifiSetting(context, subId);
+        // check new avoid bad wifi setting first if it's set
+        if (setting != null) return !setting.equals("0");
+
+        // for backward compatibility, read the old avoid bad wifi settings if new key is not set.
+        final String oldSetting = getNetworkLegacyGlobalAvoidBadWifiSetting(context);
+        if (oldSetting != null) return !oldSetting.equals("0");
+
+        // read carrier config if both new and old settings is not set.
+        final CarrierConfigManager ccm = context.getSystemService(CarrierConfigManager.class);
+        if (ccm == null) return DEFAULT_AVOID_BAD_WIFI;
+
+        final PersistableBundle config =
+                getConfigForSubId(ccm, subId, CarrierConfigManager.KEY_AVOID_BAD_WIFI_BOOL);
+
+        return config.getBoolean(
+            CarrierConfigManager.KEY_AVOID_BAD_WIFI_BOOL,
+            DEFAULT_AVOID_BAD_WIFI
+        );
+    }
+
+    /**
+     * Determines whether the "Avoid Bad Wi-Fi" toggle should be displayed to the user.
+     *
+     * This method checks both global system settings and carrier configurations to decide
+     * if the option for automatically switching away from Wi-Fi networks with no internet
+     * access should be visible in the user interface.
+     *
+     * @param context The {@link Context} to query settings and system services.
+     * @param subId The subscription ID to query carrier configurations for.
+     * @return {@code true} if the "Avoid Bad Wi-Fi" toggle should be shown;
+     * {@code false} otherwise.
+     */
+    @FlaggedApi(Flags.FLAG_CARRIER_AWARE_AVOID_BAD_WIFI)
+    public static boolean shouldShowAvoidBadWifiToggle(@NonNull Context context, int subId) {
+        final String setting = getNetworkAvoidBadWifiSetting(context, subId);
+
+        // check new avoid bad wifi setting first if it's set
+        if (setting != null) return true;
+
+        // for backward compatibility, read the old avoid bad wifi if new setting is not set.
+        final String legacySetting = getNetworkLegacyGlobalAvoidBadWifiSetting(context);
+        if (legacySetting != null) return true;
+
+        // default to false if system does not support CarrierConfigManager
+        final CarrierConfigManager ccm = context.getSystemService(CarrierConfigManager.class);
+        if (ccm == null) return DEFAULT_SHOULD_SHOW_AVOID_BAD_WIFI;
+
+        final PersistableBundle config = getConfigForSubId(
+                ccm,
+                subId,
+                CarrierConfigManager.KEY_AVOID_BAD_WIFI_BOOL,
+                CarrierConfigManager.KEY_SHOW_AVOID_BAD_WIFI_TOGGLE_BOOL
+        );
+
+        if (!config.getBoolean(
+                CarrierConfigManager.KEY_AVOID_BAD_WIFI_BOOL, DEFAULT_AVOID_BAD_WIFI)) {
+            // It should not be possible to force a device to be stuck on bad wifi
+            // and not give the user an option to change this, so if the device doesn't
+            // avoid bad wifi, show the toggle even if KEY_SHOW_AVOID_BAD_WIFI_TOGGLE_BOOL
+            // is false.
+            return true;
+        }
+
+        return config.getBoolean(
+            CarrierConfigManager.KEY_SHOW_AVOID_BAD_WIFI_TOGGLE_BOOL,
+            DEFAULT_SHOULD_SHOW_AVOID_BAD_WIFI
+        );
+
     }
 
     /**

@@ -36,7 +36,10 @@ public class DhcpInfo implements Parcelable {
         super();
     }
 
-    /** copy constructor {@hide} */
+    /**
+     * copy constructor
+     * @hide
+     */
     public DhcpInfo(DhcpInfo source) {
         if (source != null) {
             ipAddress = source.ipAddress;

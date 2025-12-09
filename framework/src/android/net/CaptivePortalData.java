@@ -50,7 +50,9 @@ public final class CaptivePortalData implements Parcelable {
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(prefix = {"CAPTIVE_PORTAL_DATA_SOURCE_"}, value = {
             CAPTIVE_PORTAL_DATA_SOURCE_OTHER,
-            CAPTIVE_PORTAL_DATA_SOURCE_PASSPOINT})
+            CAPTIVE_PORTAL_DATA_SOURCE_PASSPOINT,
+            CAPTIVE_PORTAL_DATA_SOURCE_CAPPORT_WITH_CUSTOM_TABS_OPTIN
+    })
     public @interface CaptivePortalDataSource {}
 
     /**
@@ -62,6 +64,17 @@ public final class CaptivePortalData implements Parcelable {
      * Source of information: Wi-Fi Passpoint
      */
     public static final int CAPTIVE_PORTAL_DATA_SOURCE_PASSPOINT = 1;
+
+    // TODO : Remove this, replace with an explicit boolean for opting in. Better yet, when the
+    // feature is publicly rolled out, remove without a replacement. Because the network stack and
+    // connectivity modules are not yet merged, adding anything in this class would require
+    // public API, which would have to be maintained forever and would force very long time-to-
+    // market timelines, so this is used instead.
+    /**
+     * Source of information : Capport, and capport opts in to custom tabs.
+     * @hide
+     */
+    public static final int CAPTIVE_PORTAL_DATA_SOURCE_CAPPORT_WITH_CUSTOM_TABS_OPTIN = 2;
 
     private CaptivePortalData(long refreshTimeMillis, Uri userPortalUrl, Uri venueInfoUrl,
             boolean isSessionExtendable, long byteLimit, long expiryTimeMillis, boolean captive,

@@ -58,8 +58,8 @@ import com.android.net.module.util.bpf.ClatEgress4Key;
 import com.android.net.module.util.bpf.ClatEgress4Value;
 import com.android.net.module.util.bpf.ClatIngress6Key;
 import com.android.net.module.util.bpf.ClatIngress6Value;
-import com.android.net.module.util.bpf.CookieTagMapKey;
 import com.android.net.module.util.bpf.CookieTagMapValue;
+import com.android.net.module.util.Struct.S64;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
 import com.android.testutils.TestBpfMap;
@@ -131,7 +131,7 @@ public class ClatCoordinatorTest {
             INET6_PFX96, INET6_LOCAL6);
     private static final ClatIngress6Value INGRESS_VALUE = new ClatIngress6Value(STACKED_IFINDEX,
             INET4_LOCAL4);
-    private static final CookieTagMapKey COOKIE_TAG_KEY = new CookieTagMapKey(RAW_SOCK_COOKIE);
+    private static final S64 COOKIE_TAG_KEY = new S64(RAW_SOCK_COOKIE);
     private static final CookieTagMapValue COOKIE_TAG_VALUE = new CookieTagMapValue(AID_CLAT,
             0 /* tag, unused */);
 
@@ -139,8 +139,8 @@ public class ClatCoordinatorTest {
             spy(new TestBpfMap<>(ClatIngress6Key.class, ClatIngress6Value.class));
     private final TestBpfMap<ClatEgress4Key, ClatEgress4Value> mEgressMap =
             spy(new TestBpfMap<>(ClatEgress4Key.class, ClatEgress4Value.class));
-    private final TestBpfMap<CookieTagMapKey, CookieTagMapValue> mCookieTagMap =
-            spy(new TestBpfMap<>(CookieTagMapKey.class, CookieTagMapValue.class));
+    private final TestBpfMap<S64, CookieTagMapValue> mCookieTagMap =
+            spy(new TestBpfMap<>(S64.class, CookieTagMapValue.class));
 
     @Mock private INetd mNetd;
     @Spy private TestDependencies mDeps = new TestDependencies();
@@ -341,7 +341,7 @@ public class ClatCoordinatorTest {
 
         /** Get cookie tag map */
         @Override
-        public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+        public IBpfMap<S64, CookieTagMapValue> getBpfCookieTagMap() {
             return mCookieTagMap;
         }
 
@@ -632,7 +632,7 @@ public class ClatCoordinatorTest {
                 throw new IOException();
             }
             @Override
-            public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+            public IBpfMap<S64, CookieTagMapValue> getBpfCookieTagMap() {
                 return  mock(IBpfMap.class);
             }
         }
@@ -650,7 +650,7 @@ public class ClatCoordinatorTest {
             }
 
             @Override
-            public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+            public IBpfMap<S64, CookieTagMapValue> getBpfCookieTagMap() {
                 return  mock(IBpfMap.class);
             }
         }
@@ -739,7 +739,7 @@ public class ClatCoordinatorTest {
     public void testNotStartClatWithNullCookieTagMap() throws Exception {
         class FailureDependencies extends TestDependencies {
             @Override
-            public IBpfMap<CookieTagMapKey, CookieTagMapValue> getBpfCookieTagMap() {
+            public IBpfMap<S64, CookieTagMapValue> getBpfCookieTagMap() {
                 return null;
             }
         }

@@ -37,6 +37,13 @@ public class Dhcp6RebindPacket extends Dhcp6Packet {
     }
 
     /**
+     * Return the DHCPv6 REBIND message type (6).
+     */
+    public byte getMessageType() {
+        return DHCP6_MESSAGE_TYPE_REBIND;
+    }
+
+    /**
      * Build a DHCPv6 Rebind message with the specific parameters.
      */
     public ByteBuffer buildPacket() {

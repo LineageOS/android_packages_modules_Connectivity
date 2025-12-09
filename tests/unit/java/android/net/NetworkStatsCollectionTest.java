@@ -18,6 +18,7 @@ package android.net;
 
 import static android.net.ConnectivityManager.TYPE_MOBILE;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.NetworkIdentity.OEM_NONE;
 import static android.net.NetworkStats.DEFAULT_NETWORK_NO;
 import static android.net.NetworkStats.IFACE_ALL;
@@ -28,6 +29,7 @@ import static android.net.NetworkStats.SET_DEFAULT;
 import static android.net.NetworkStats.TAG_NONE;
 import static android.net.NetworkStats.UID_ALL;
 import static android.net.NetworkStatsHistory.FIELD_ALL;
+import static android.net.NetworkTemplate.MATCH_WIFI;
 import static android.net.NetworkTemplate.buildTemplateMobileAll;
 import static android.os.Process.myUid;
 import static android.text.format.DateUtils.HOUR_IN_MILLIS;
@@ -119,13 +121,19 @@ public class NetworkStatsCollectionTest {
         RecurrenceRule.sClock = Clock.fixed(instant, ZoneId.systemDefault());
     }
 
+    private NetworkStatsCollection buildNetworkStatsCollection(long bucketDuration) {
+        return new NetworkStatsCollection(bucketDuration, false /* useFastDataInput */,
+                true /* storeTransportTypes */);
+    }
+
     @Test
     public void testReadLegacyNetwork() throws Exception {
         final File testFile =
                 new File(InstrumentationRegistry.getContext().getFilesDir(), TEST_FILE);
         stageFile(R.raw.netstats_v1, testFile);
 
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        final NetworkStatsCollection collection =
+                buildNetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         collection.readLegacyNetwork(testFile);
 
         // verify that history read correctly
@@ -153,7 +161,8 @@ public class NetworkStatsCollectionTest {
                 new File(InstrumentationRegistry.getContext().getFilesDir(), TEST_FILE);
         stageFile(R.raw.netstats_uid_v4, testFile);
 
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        final NetworkStatsCollection collection =
+                buildNetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         collection.readLegacyUid(testFile, false);
 
         // verify that history read correctly
@@ -181,7 +190,8 @@ public class NetworkStatsCollectionTest {
                 new File(InstrumentationRegistry.getContext().getFilesDir(), TEST_FILE);
         stageFile(R.raw.netstats_uid_v4, testFile);
 
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        final NetworkStatsCollection collection =
+                buildNetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         collection.readLegacyUid(testFile, true);
 
         // verify that history read correctly
@@ -203,12 +213,15 @@ public class NetworkStatsCollectionTest {
                 77017831L, 100995L, 35436758L, 92344L);
     }
 
-    private InputStream getUidInputStreamFromRes(int uidRes) throws Exception {
+    // Reads legacy NetworkStatsCollection data from resources, for file formats
+    // predating VERSION_UNIFIED_INIT.
+    private InputStream getLegacyUidInputStreamFromRes(int uidRes) throws Exception {
         final File testFile =
                 new File(InstrumentationRegistry.getContext().getFilesDir(), TEST_FILE);
         stageFile(uidRes, testFile);
 
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        final NetworkStatsCollection collection =
+                buildNetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         collection.readLegacyUid(testFile, true);
 
         // now export into a unified format
@@ -217,13 +230,21 @@ public class NetworkStatsCollectionTest {
         return new ByteArrayInputStream(bos.toByteArray());
     }
 
+    // Reads NetworkStatsCollection data from resources, for file formats
+    // at or after VERSION_UNIFIED_INIT.
+    private InputStream getUidInputStreamFromRes(int uidRes) {
+        return InstrumentationRegistry.getContext().getResources().openRawResource(uidRes);
+    }
+
     @Test
     public void testFastDataInputRead() throws Exception {
         final NetworkStatsCollection legacyCollection =
-                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS, false /* useFastDataInput */);
+                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS, false /* useFastDataInput */,
+                        true /* storeTransportTypes */);
         final NetworkStatsCollection fastReadCollection =
-                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS, true /* useFastDataInput */);
-        final InputStream bis = getUidInputStreamFromRes(R.raw.netstats_uid_v4);
+                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS, true /* useFastDataInput */,
+                        true /* storeTransportTypes */);
+        final InputStream bis = getLegacyUidInputStreamFromRes(R.raw.netstats_uid_v4);
         legacyCollection.read(bis);
         bis.reset();
         fastReadCollection.read(bis);
@@ -232,7 +253,7 @@ public class NetworkStatsCollectionTest {
 
     @Test
     public void testStartEndAtomicBuckets() throws Exception {
-        final NetworkStatsCollection collection = new NetworkStatsCollection(HOUR_IN_MILLIS);
+        final NetworkStatsCollection collection = buildNetworkStatsCollection(HOUR_IN_MILLIS);
 
         // record empty data straddling between buckets
         final NetworkStats.Entry entry = new NetworkStats.Entry();
@@ -247,7 +268,7 @@ public class NetworkStatsCollectionTest {
 
     @Test
     public void testAccessLevels() throws Exception {
-        final NetworkStatsCollection collection = new NetworkStatsCollection(HOUR_IN_MILLIS);
+        final NetworkStatsCollection collection = buildNetworkStatsCollection(HOUR_IN_MILLIS);
         final NetworkStats.Entry entry = new NetworkStats.Entry();
         final NetworkIdentitySet identSet = new NetworkIdentitySet();
         identSet.add(new NetworkIdentity(TYPE_MOBILE, TelephonyManager.NETWORK_TYPE_UNKNOWN,
@@ -314,8 +335,9 @@ public class NetworkStatsCollectionTest {
         stageFile(R.raw.netstats_v1, testFile);
 
         final NetworkStatsCollection emptyCollection =
-                new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+                buildNetworkStatsCollection(30 * MINUTE_IN_MILLIS);
+        final NetworkStatsCollection collection =
+                buildNetworkStatsCollection(30 * MINUTE_IN_MILLIS);
         collection.readLegacyNetwork(testFile);
 
         // We're in the future, but not that far off
@@ -511,7 +533,7 @@ public class NetworkStatsCollectionTest {
         setClock(Instant.parse("2012-06-01T00:00:00.00Z"));
 
         // Create a simple history with a ton of measured usage
-        final NetworkStatsCollection large = new NetworkStatsCollection(HOUR_IN_MILLIS);
+        final NetworkStatsCollection large = buildNetworkStatsCollection(HOUR_IN_MILLIS);
         final NetworkIdentitySet ident = new NetworkIdentitySet();
         ident.add(new NetworkIdentity(ConnectivityManager.TYPE_MOBILE, -1, TEST_IMSI, null,
                 false, true, true, OEM_NONE, TEST_SUBID,
@@ -532,7 +554,7 @@ public class NetworkStatsCollectionTest {
 
     @Test
     public void testRounding() throws Exception {
-        final NetworkStatsCollection coll = new NetworkStatsCollection(HOUR_IN_MILLIS);
+        final NetworkStatsCollection coll = buildNetworkStatsCollection(HOUR_IN_MILLIS);
 
         // Special values should remain unchanged
         for (long time : new long[] {
@@ -732,5 +754,45 @@ public class NetworkStatsCollectionTest {
         assertEquals("unexpected rxPackets", expected.rxPackets, actual.rxPackets);
         assertEquals("unexpected txBytes", expected.txBytes, actual.txBytes);
         assertEquals("unexpected txPackets", expected.txPackets, actual.txPackets);
+    }
+
+    // When the kill switch is off, the NetworkStatsCollection will stop storing
+    // transport types. Verify the file reading is not impacted.
+    @Test
+    public void testReadTransportTypes_storingTransportsKillSwitchOnOff_goldenSample()
+            throws Exception {
+        final long expectedRxBytes = 245772005;
+        final long expectedRxPackets = 196368;
+        final long expectedTxBytes = 1200748;
+        final long expectedTxPackets = 20918;
+        final NetworkStatsCollection collectionWithStoringTransports = new NetworkStatsCollection(
+                HOUR_IN_MILLIS, false /* useFastDataInput */,
+                true /* storeTransportTypes */);
+        final NetworkStatsCollection collectionWithoutStoringTransports =
+                new NetworkStatsCollection(HOUR_IN_MILLIS, false /* useFastDataInput */,
+                        false /* storeTransportTypes */);
+        final InputStream bis = getUidInputStreamFromRes(R.raw.netstats_uid_v16_ident_v8);
+        collectionWithStoringTransports.read(bis);
+        bis.reset();
+        collectionWithoutStoringTransports.read(bis);
+
+        // Verify the same data returned without crash when query without transport.
+        final NetworkTemplate wifiTemplate = new NetworkTemplate.Builder(MATCH_WIFI).build();
+        assertSummaryTotal(collectionWithStoringTransports, wifiTemplate, expectedRxBytes,
+                expectedRxPackets, expectedTxBytes, expectedTxPackets,
+                NetworkStatsAccess.Level.DEVICE);
+        assertSummaryTotal(collectionWithoutStoringTransports, wifiTemplate, expectedRxBytes,
+                expectedRxPackets, expectedTxBytes, expectedTxPackets,
+                NetworkStatsAccess.Level.DEVICE);
+
+        // Verify the same data returned without crash when query with transport.
+        final NetworkTemplate transportWifiTemplate = new NetworkTemplate.Builder()
+                .setTransportType(TRANSPORT_WIFI).build();
+        assertSummaryTotal(collectionWithStoringTransports, transportWifiTemplate,
+                expectedRxBytes, expectedRxPackets, expectedTxBytes, expectedTxPackets,
+                NetworkStatsAccess.Level.DEVICE);
+        assertSummaryTotal(collectionWithoutStoringTransports, transportWifiTemplate,
+                expectedRxBytes, expectedRxPackets, expectedTxBytes, expectedTxPackets,
+                NetworkStatsAccess.Level.DEVICE);
     }
 }

@@ -83,10 +83,16 @@ public final class NetworkStatsRecorderTest {
         MockitoAnnotations.initMocks(this);
     }
 
+    private NetworkStatsCollection buildNetworkStatsCollection(long bucketDuration) {
+        return new NetworkStatsCollection(bucketDuration, false /* useFastDataInput */,
+                true /* storeTransportTypes */);
+    }
+
     private NetworkStatsRecorder buildRecorder(FileRotator rotator, boolean wipeOnError) {
         return new NetworkStatsRecorder(rotator, mObserver, mDropBox, TEST_PREFIX,
                 HOUR_IN_MILLIS, false /* includeTags */, wipeOnError,
-                false /* useFastDataInput */, null /* baseDir */);
+                false /* useFastDataInput */, true /* storeTransportType */,
+                null /* baseDir */);
     }
 
     @Test
@@ -110,7 +116,7 @@ public final class NetworkStatsRecorderTest {
 
     @Test
     public void testFileReadingMetrics_empty() {
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30);
+        final NetworkStatsCollection collection = buildNetworkStatsCollection(30);
         final NetworkStatsMetricsLogger.Dependencies deps =
                 mock(NetworkStatsMetricsLogger.Dependencies.class);
         final NetworkStatsMetricsLogger logger = new NetworkStatsMetricsLogger(deps);
@@ -146,7 +152,7 @@ public final class NetworkStatsRecorderTest {
 
     @Test
     public void testFileReadingMetrics() {
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30);
+        final NetworkStatsCollection collection = buildNetworkStatsCollection(30);
         final NetworkStats.Entry entry = new NetworkStats.Entry();
         final NetworkIdentitySet identSet = new NetworkIdentitySet();
         identSet.add(new NetworkIdentity.Builder().build());
@@ -177,7 +183,7 @@ public final class NetworkStatsRecorderTest {
 
     @Test
     public void testFileReadingMetrics_fileAttributes() throws IOException {
-        final NetworkStatsCollection collection = new NetworkStatsCollection(30);
+        final NetworkStatsCollection collection = buildNetworkStatsCollection(30);
 
         // Create files for testing. Only the first and the third files should be counted,
         // with total 26 (each char takes 2 bytes) bytes in the content.

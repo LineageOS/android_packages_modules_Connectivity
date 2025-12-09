@@ -17,6 +17,9 @@ package com.android.server.connectivity.mdns;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.os.Build;
+
+import androidx.annotation.ChecksSdkIntAtLeast;
 
 /**
  * The class that contains mDNS feature flags;
@@ -180,6 +183,11 @@ public class MdnsFeatureFlags {
     // Flag for ignoring temporary IPv6 addresses in advertising
     public final boolean mIsIgnoreTemporaryIPv6AddressesEnabled;
 
+    // Flag for selective mDns response offload
+    // This feature can only be enabled if the OffloadServiceInfo system API is available
+    @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.TIRAMISU)
+    public final boolean mIsSelectiveMdnsResponseOffloadEnabled;
+
     // Thread stats tag for MdnsSocketClient
     public final int mMdnsSocketThreadStatsTag;
 
@@ -319,6 +327,7 @@ public class MdnsFeatureFlags {
             boolean isCacheFlushPerAddressTypeEnabled,
             boolean isOptimizedExpiredServiceRemovalEnabled,
             boolean isIgnoreTemporaryIPv6AddressesEnabled,
+            boolean isSelectiveMdnsResponseOffloadEnabled,
             int mdnsSocketThreadStatsTag,
             @Nullable FlagOverrideProvider overrideProvider) {
         mIsMdnsOffloadFeatureEnabled = isOffloadFeatureEnabled;
@@ -339,6 +348,7 @@ public class MdnsFeatureFlags {
         mIsOptimizedExpiredServiceRemovalEnabled = isOptimizedExpiredServiceRemovalEnabled;
         mMdnsSocketThreadStatsTag = mdnsSocketThreadStatsTag;
         mIsIgnoreTemporaryIPv6AddressesEnabled = isIgnoreTemporaryIPv6AddressesEnabled;
+        mIsSelectiveMdnsResponseOffloadEnabled = isSelectiveMdnsResponseOffloadEnabled;
         mOverrideProvider = overrideProvider;
     }
 
@@ -368,6 +378,7 @@ public class MdnsFeatureFlags {
         private boolean mIsCacheFlushPerAddressTypeEnabled;
         private boolean mIsOptimizedExpiredServiceRemovalEnabled;
         private boolean mIsIgnoreTemporaryIPv6AddressesEnabled;
+        private boolean mIsSelectiveMdnsResponseOffloadEnabled;
         private int mMdnsSocketThreadStatsTag;
         private FlagOverrideProvider mOverrideProvider;
 
@@ -392,6 +403,7 @@ public class MdnsFeatureFlags {
             mIsCacheFlushPerAddressTypeEnabled = true; // Default enabled.
             mIsOptimizedExpiredServiceRemovalEnabled = false;
             mIsIgnoreTemporaryIPv6AddressesEnabled = true; // Default enabled.
+            mIsSelectiveMdnsResponseOffloadEnabled = false;
             mMdnsSocketThreadStatsTag = MDNS_SOCKET_THREAD_STATS_TAG_NONE;
             mOverrideProvider = null;
         }
@@ -589,6 +601,17 @@ public class MdnsFeatureFlags {
         }
 
         /**
+         * Set whether the selective mDns response offload is enabled.
+         *
+         * @see #NSD_SELECTIVE_MDNS_RESPONSE_OFFLOAD
+         */
+        public Builder setIsSelectiveMdnsResponseOffloadEnabled(
+                boolean isSelectiveMdnsResponseOffloadEnabled) {
+            mIsSelectiveMdnsResponseOffloadEnabled = isSelectiveMdnsResponseOffloadEnabled;
+            return this;
+        }
+
+        /**
          * Builds a {@link MdnsFeatureFlags} with the arguments supplied to this builder.
          */
         public MdnsFeatureFlags build() {
@@ -609,6 +632,7 @@ public class MdnsFeatureFlags {
                     mIsCacheFlushPerAddressTypeEnabled,
                     mIsOptimizedExpiredServiceRemovalEnabled,
                     mIsIgnoreTemporaryIPv6AddressesEnabled,
+                    mIsSelectiveMdnsResponseOffloadEnabled,
                     mMdnsSocketThreadStatsTag,
                     mOverrideProvider);
         }

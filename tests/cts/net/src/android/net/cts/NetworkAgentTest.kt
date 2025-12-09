@@ -88,10 +88,13 @@ import android.os.Process
 import android.os.SystemClock
 import android.platform.test.annotations.AppModeFull
 import android.system.Os
+import android.system.OsConstants.AF_INET
 import android.system.OsConstants.AF_INET6
 import android.system.OsConstants.IPPROTO_TCP
 import android.system.OsConstants.IPPROTO_UDP
 import android.system.OsConstants.SOCK_DGRAM
+import android.system.OsConstants.SOCK_STREAM
+import android.system.OsConstants.SOL_SOCKET
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.telephony.data.EpsBearerQosSessionAttributes
@@ -138,6 +141,7 @@ import com.android.testutils.runAsShell
 import com.android.testutils.tryTest
 import com.android.testutils.waitForIdle
 import java.io.Closeable
+import java.io.FileDescriptor
 import java.io.IOException
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -158,6 +162,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
@@ -181,6 +186,8 @@ private const val DEFAULT_TIMEOUT_MS = 5000L
 
 private const val QUEUE_NETWORK_AGENT_EVENTS_IN_SYSTEM_SERVER =
     "queue_network_agent_events_in_system_server"
+private const val INGRESS_TO_VPN_ADDRESS_FILTERING =
+        "ingress_to_vpn_address_filtering"
 
 // When waiting for a NetworkCallback to determine there was no timeout, waiting is the
 // only possible thing (the relevant handler is the one in the real ConnectivityService,
@@ -190,6 +197,16 @@ private const val NO_CALLBACK_TIMEOUT = 200L
 private const val WORSE_NETWORK_SCORE = 65
 private const val BETTER_NETWORK_SCORE = 75
 private const val FAKE_NET_ID = 1098
+
+// These bit shifts and masks must be kept in sync with system/netd/include/Fwmark.h
+// LINT.IfChange
+private const val EXPLICITLY_SELECTED_BIT_MASK = 1 shl 16
+private const val PROTECTED_FROM_VPN_BIT_MASK = 1 shl 17
+private const val NETWORK_PERMISSION_BIT_SHIFT = 18
+private const val NETWORK_PERMISSION_BIT_MASK = 0xc0000
+private const val NETWORK_ID_MASK = 0xffff
+
+// LINT.ThenChange(//system/netd/include/Fwmark.h)
 private val instrumentation: Instrumentation
     get() = InstrumentationRegistry.getInstrumentation()
 private val realContext: Context
@@ -203,6 +220,7 @@ private fun Message(what: Int, arg1: Int, arg2: Int, obj: Any?) = Message.obtain
 
 private val LINK_ADDRESS = LinkAddress("2001:db8::1/64")
 private val REMOTE_ADDRESS = InetAddresses.parseNumericAddress("2001:db8::123")
+private val REMOTE_ADDRESS_V4 = InetAddresses.parseNumericAddress("192.0.2.11")
 private val PREFIX = IpPrefix("2001:db8::/64")
 private val NEXTHOP = InetAddresses.parseNumericAddress("fe80::abcd")
 
@@ -1309,6 +1327,147 @@ class NetworkAgentTest {
         // tearDown() will unregister the requests and agents
     }
 
+    private fun prepareSocketForFwmarkTest(
+        network: Network,
+        select: Boolean,
+        proto: Int,
+        addressFamily: Int,
+        destAddress: InetSocketAddress?
+    ): FileDescriptor {
+        val sockFd = if (proto == IPPROTO_TCP) {
+            Os.socket(addressFamily, SOCK_STREAM, IPPROTO_TCP)
+        } else {
+            Os.socket(addressFamily, SOCK_DGRAM, IPPROTO_UDP)
+        }
+        if (select) {
+            network.bindSocket(sockFd)
+        }
+        if (destAddress != null) {
+            Os.connect(sockFd, destAddress.address, destAddress.port)
+        }
+        return sockFd
+    }
+
+    private fun validateSocketFwmark(
+        sockFd: FileDescriptor,
+        network: Network,
+        expectExplicitlySelected: Boolean
+    ) {
+        val socketMark = Os.getsockoptInt(sockFd, SOL_SOCKET, 36 /* SO_MARK */)
+        val explicitlySelected = (socketMark and EXPLICITLY_SELECTED_BIT_MASK) != 0
+        val protectedFromVpn = (socketMark and PROTECTED_FROM_VPN_BIT_MASK) != 0
+        val networkPermission = (
+                (socketMark and NETWORK_PERMISSION_BIT_MASK) shr NETWORK_PERMISSION_BIT_SHIFT)
+        // TODO: Applying the verification method for the upper bit of netId that remains 0.
+        assertEquals(socketMark and NETWORK_ID_MASK, network.netId)
+        assertEquals(expectExplicitlySelected, explicitlySelected)
+        assertFalse(protectedFromVpn)
+        assertEquals(1, networkPermission) // This test APK has the CHANGE_NETWORK_STATE permission
+    }
+
+    @Test
+    fun testValidSocketFwmarkValue() {
+        // This test should be run starting with SDK version 36.1.
+        // TODO: @IgnoreUpTo doesn't support SDK_INT_FULL. We need a new annotation for it.
+        assumeTrue(Build.VERSION.SDK_INT_FULL > Build.VERSION_CODES_FULL.BAKLAVA)
+
+        data class TestCondition(
+            val net: Network,
+            val select: Boolean,
+            val proto: Int,
+            val addressFamily: Int,
+            val dest: InetSocketAddress?
+        )
+
+        val defaultNetworkCallback = TestableNetworkCallback()
+        mCM.registerDefaultNetworkCallback(defaultNetworkCallback)
+        val available = defaultNetworkCallback.eventuallyExpect<Available>()
+        val defaultNetwork = available.network
+        defaultNetworkCallback.expect<CapabilitiesChanged>(defaultNetwork)
+        val linkProperties = defaultNetworkCallback.expect<LinkPropertiesChanged>(defaultNetwork)
+        defaultNetworkCallback.expect<BlockedStatus>(defaultNetwork)
+        val afDefaultNet = if (linkProperties.lp.hasIPv6DefaultRoute()) {
+            AF_INET6
+        } else {
+            AF_INET
+        }
+        val address = if (afDefaultNet == AF_INET6) {
+            REMOTE_ADDRESS
+        } else {
+            REMOTE_ADDRESS_V4
+        }
+        val dest = InetSocketAddress(address, 32315 /* port */)
+
+        val (testAgent1, callback1) = createConnectedNetworkAgent()
+        val (testAgent2, callback2) = createConnectedNetworkAgent(specifier = "1")
+        val testNetwork1 = testAgent1.network!!
+        val testNetwork2 = testAgent2.network!!
+
+        val testSocketMap: MutableMap<TestCondition, FileDescriptor?> = mutableMapOf(
+            TestCondition(testNetwork1, true, IPPROTO_UDP, AF_INET6, null) to null,
+            TestCondition(testNetwork1, true, IPPROTO_TCP, AF_INET6, null) to null,
+            TestCondition(testNetwork2, true, IPPROTO_UDP, AF_INET6, null) to null,
+            TestCondition(testNetwork2, true, IPPROTO_TCP, AF_INET6, null) to null,
+            TestCondition(defaultNetwork, true, IPPROTO_UDP, afDefaultNet, null) to null,
+            TestCondition(defaultNetwork, true, IPPROTO_TCP, afDefaultNet, null) to null,
+            TestCondition(defaultNetwork, false, IPPROTO_UDP, afDefaultNet, dest) to null
+        )
+
+        fun prepareTestSockets(map: MutableMap<TestCondition, FileDescriptor?>) {
+            map.keys.forEach { cond ->
+                map[cond] = prepareSocketForFwmarkTest(
+                    cond.net, cond.select, cond.proto, cond.addressFamily, cond.dest)
+            }
+        }
+
+        fun closeSockets(map: MutableMap<TestCondition, FileDescriptor?>) {
+            map.keys.forEach { cond ->
+                if (map[cond] != null) {
+                    Os.close(map[cond])
+                    map[cond] = null
+                }
+            }
+        }
+
+        fun verifySockets(map: MutableMap<TestCondition, FileDescriptor?>) {
+            map.keys.forEach { cond ->
+                assertNotNull(map[cond])
+                validateSocketFwmark(map[cond]!!, cond.net, cond.select)
+            }
+        }
+
+        var retryCount = 0
+        val maxRetries = 1
+
+        try {
+            while (retryCount <= maxRetries) {
+                try {
+                    prepareTestSockets(testSocketMap)
+                    defaultNetworkCallback.assertNoCallback(NO_CALLBACK_TIMEOUT)
+                    break
+                } catch (e: AssertionError) {
+                    closeSockets(testSocketMap)
+                    retryCount++
+                    if (retryCount > maxRetries) {
+                        throw e
+                    }
+                }
+            }
+            // Even if the default network changes, below test verifySockets() will not fail,
+            // because the socket's fwmark remains after the network disconnection, and they
+            // are not connected TCP sockets, so not destroyed until test program closes it.
+            verifySockets(testSocketMap)
+        } finally {
+            // This block is the final cleanup, ensuring no resources are left open.
+            closeSockets(testSocketMap)
+            mCM.unregisterNetworkCallback(defaultNetworkCallback)
+            mCM.unregisterNetworkCallback(callback1)
+            mCM.unregisterNetworkCallback(callback2)
+            testAgent1.unregister()
+            testAgent2.unregister()
+        }
+    }
+
     private class TestableQosCallback : QosCallback() {
         val history = ArrayTrackRecord<Event>().newReadHead()
 
@@ -2078,5 +2237,68 @@ class NetworkAgentTest {
             SystemClock.sleep(50 /* ms */)
         } while (SystemClock.elapsedRealtime() < deadline)
         fail("Binder Proxy is leaked: $startCount -> $endCount")
+    }
+
+    fun doTestIngressToVpnAddressFiltering(vpnType: Int, expectFiltering: Boolean) {
+        assumeTrue(mCM.isConnectivityServiceFeatureEnabledForTesting(
+                INGRESS_TO_VPN_ADDRESS_FILTERING
+        ))
+
+        val ifname = createTunInterface(listOf(LINK_ADDRESS)).interfaceName
+        val lp = makeTestLinkProperties(ifname)
+        val nc = makeTestNetworkCapabilities(transports = intArrayOf(TRANSPORT_VPN)).apply {
+            setTransportInfo(VpnTransportInfo(
+                    vpnType,
+                    "MySession12345",
+                    /*bypassable=*/
+                    false,
+                    /*longLivedTcpConnectionsExpensive=*/
+                    false
+            ))
+        }
+        val agent = createNetworkAgent(initialNc = nc, initialLp = lp)
+        agent.register()
+        agent.markConnected()
+
+        val cb = TestableNetworkCallback()
+        registerNetworkCallback(makeTestNetworkRequest(), cb)
+        cb.eventuallyExpect<LinkPropertiesChanged> {
+            it.network == agent.network
+        }
+
+        val ifIndex = Os.if_nametoindex(ifname)
+        val ruleString = "[" + LINK_ADDRESS.address + "]: " + ifIndex + "(" + ifname + ")"
+        assertEquals(
+                expectFiltering,
+                "dumpsys connectivity trafficcontroller".execute().contains(ruleString)
+        )
+    }
+
+    @Test
+    fun testIngressToVpnAddressFiltering_VpnPlatform() {
+        doTestIngressToVpnAddressFiltering(
+            vpnType = VpnManager.TYPE_VPN_PLATFORM,
+            expectFiltering = true
+        )
+    }
+
+    @Test
+    fun testIngressToVpnAddressFiltering_VpnOem() {
+        // Ingress to VPN address filtering rule should not be added because OEM VPNs might need to
+        // receive packets to VPN address via non-VPN interface.
+        doTestIngressToVpnAddressFiltering(
+            vpnType = VpnManager.TYPE_VPN_OEM,
+            expectFiltering = false
+        )
+    }
+
+    @Test
+    fun testIngressToVpnAddressFiltering_VpnLegacy() {
+        // Ingress to VPN address filtering rule should not be added because legacy VPNs might need
+        // to receive packets to VPN address via non-VPN interface.
+        doTestIngressToVpnAddressFiltering(
+            vpnType = VpnManager.TYPE_VPN_LEGACY,
+            expectFiltering = false
+        )
     }
 }

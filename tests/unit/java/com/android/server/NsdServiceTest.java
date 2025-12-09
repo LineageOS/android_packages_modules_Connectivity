@@ -37,6 +37,9 @@ import static android.net.nsd.NsdManager.FAILURE_BAD_PARAMETERS;
 import static android.net.nsd.NsdManager.FAILURE_INTERNAL_ERROR;
 import static android.net.nsd.NsdManager.FAILURE_MAX_LIMIT;
 import static android.net.nsd.NsdManager.FAILURE_OPERATION_NOT_RUNNING;
+import static android.net.nsd.OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK;
+import static android.net.nsd.OffloadEngine.OFFLOAD_TYPE_FILTER_REPLIES;
+import static android.net.nsd.OffloadEngine.OFFLOAD_TYPE_REPLY;
 
 import static com.android.networkstack.apishim.api33.ConstantsShim.REGISTER_NSD_OFFLOAD_ENGINE;
 import static com.android.server.NsdService.DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF;
@@ -44,6 +47,7 @@ import static com.android.server.NsdService.MdnsListener;
 import static com.android.server.NsdService.NO_TRANSACTION;
 import static com.android.server.NsdService.checkHostname;
 import static com.android.server.NsdService.parseTypeAndSubtype;
+import static com.android.server.connectivity.mdns.util.MdnsUtils.createOffloadServiceInfoFromFilterReplies;
 import static com.android.testutils.ContextUtils.mockService;
 
 import static libcore.junit.util.compat.CoreCompatChangeRule.DisableCompatChanges;
@@ -124,8 +128,10 @@ import com.android.server.connectivity.mdns.MdnsInterfaceSocket;
 import com.android.server.connectivity.mdns.MdnsSearchOptions;
 import com.android.server.connectivity.mdns.MdnsServiceBrowserListener;
 import com.android.server.connectivity.mdns.MdnsServiceInfo;
+import com.android.server.connectivity.mdns.MdnsServiceTypeClient.FilterRepliesInfo;
 import com.android.server.connectivity.mdns.MdnsSocketProvider;
 import com.android.server.connectivity.mdns.MdnsSocketProvider.SocketRequestMonitor;
+import com.android.server.connectivity.mdns.OffloadCallback;
 import com.android.server.connectivity.mdns.util.MdnsUtils;
 import com.android.testutils.DevSdkIgnoreRule;
 import com.android.testutils.DevSdkIgnoreRunner;
@@ -207,7 +213,7 @@ public class NsdServiceTest {
     HandlerThread mThread;
     TestHandler mHandler;
     NsdService mService;
-    MdnsAdvertiser.AdvertiserCallback mAdvertiserCallback;
+    OffloadCallback mOffloadCallback;
 
     private static class LinkToDeathRecorder extends Binder {
         IBinder.DeathRecipient mDr;
@@ -243,17 +249,19 @@ public class NsdServiceTest {
         doReturn(true).when(mMockMDnsM).resolve(
                 anyInt(), anyString(), anyString(), anyString(), anyInt());
         doReturn(false).when(mDeps).isMdnsDiscoveryManagerEnabled(any(Context.class));
-        doReturn(mDiscoveryManager).when(mDeps)
-                .makeMdnsDiscoveryManager(any(), any(), any(), any());
+        doAnswer(inv -> {
+            mOffloadCallback = (OffloadCallback) inv.getArguments()[4];
+            return mDiscoveryManager;
+        }).when(mDeps).makeMdnsDiscoveryManager(any(), any(), any(), any(), any());
         doReturn(mMulticastLock).when(mWifiManager).createMulticastLock(any());
         doReturn(mSocketProvider).when(mDeps).makeMdnsSocketProvider(any(), any(), any(), any());
         doReturn(DEFAULT_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF).when(mDeps).getDeviceConfigInt(
                 eq(NsdService.MDNS_CONFIG_RUNNING_APP_ACTIVE_IMPORTANCE_CUTOFF), anyInt());
         doAnswer(inv -> {
-            mAdvertiserCallback = (MdnsAdvertiser.AdvertiserCallback) inv.getArguments()[2];
+            mOffloadCallback = (OffloadCallback) inv.getArguments()[6];
             return mAdvertiser;
-        }).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any(), any());
-        doReturn(mMetrics).when(mDeps).makeNetworkNsdReportedMetrics(anyInt());
+        }).when(mDeps).makeMdnsAdvertiser(any(), any(), any(), any(), any(), any(), any());
+        doReturn(mMetrics).when(mDeps).makeNetworkNsdReportedMetrics(anyInt(), anyInt());
         doReturn(mClock).when(mDeps).makeClock();
         doReturn(TEST_TIME_MS).when(mClock).elapsedRealtime();
         mService = makeService();
@@ -1472,7 +1480,8 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, SERVICE_TYPE);
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1523,7 +1532,8 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo(SERVICE_NAME, "invalid_type");
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1550,7 +1560,8 @@ public class NsdServiceTest {
         // final String serviceTypeWithLocalDomain = SERVICE_TYPE + ".local";
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("a".repeat(70), SERVICE_TYPE);
         regInfo.setHost(parseNumericAddress("192.0.2.123"));
@@ -1609,7 +1620,8 @@ public class NsdServiceTest {
         final RegistrationListener regListener = mock(RegistrationListener.class);
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("Service custom TTL", SERVICE_TYPE);
         regInfo.setPort(1234);
@@ -1643,7 +1655,8 @@ public class NsdServiceTest {
         final RegistrationListener regListener = mock(RegistrationListener.class);
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("Service custom TTL", SERVICE_TYPE);
         regInfo.setPort(1234);
@@ -1665,7 +1678,8 @@ public class NsdServiceTest {
         final RegistrationListener regListener = mock(RegistrationListener.class);
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("Service custom TTL", SERVICE_TYPE);
         regInfo.setPort(1234);
@@ -1688,7 +1702,8 @@ public class NsdServiceTest {
         final RegistrationListener regListener = mock(RegistrationListener.class);
         final ArgumentCaptor<MdnsAdvertiser.AdvertiserCallback> cbCaptor =
                 ArgumentCaptor.forClass(MdnsAdvertiser.AdvertiserCallback.class);
-        verify(mDeps).makeMdnsAdvertiser(any(), any(), cbCaptor.capture(), any(), any(), any());
+        verify(mDeps).makeMdnsAdvertiser(
+                any(), any(), cbCaptor.capture(), any(), any(), any(), any());
 
         final NsdServiceInfo regInfo = new NsdServiceInfo("Service custom TTL", SERVICE_TYPE);
         regInfo.setPort(1234);
@@ -2056,14 +2071,14 @@ public class NsdServiceTest {
                 REGISTER_NSD_OFFLOAD_ENGINE);
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(DEVICE_POWER);
         assertThrows(SecurityException.class,
-                () -> client.registerOffloadEngine("iface1", OffloadEngine.OFFLOAD_TYPE_REPLY,
-                        OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+                () -> client.registerOffloadEngine("iface1", OFFLOAD_TYPE_REPLY,
+                        OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
                         offloadEngine));
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(
                 REGISTER_NSD_OFFLOAD_ENGINE);
         final OffloadEngine offloadEngine2 = mock(OffloadEngine.class);
-        client.registerOffloadEngine("iface2", OffloadEngine.OFFLOAD_TYPE_REPLY,
-                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+        client.registerOffloadEngine("iface2", OFFLOAD_TYPE_REPLY,
+                OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
                 offloadEngine2);
         client.unregisterOffloadEngine(offloadEngine2);
     }
@@ -2083,8 +2098,8 @@ public class NsdServiceTest {
                 REGISTER_NSD_OFFLOAD_ENGINE);
 
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(DEVICE_POWER);
-        client.registerOffloadEngine("iface2", OffloadEngine.OFFLOAD_TYPE_REPLY,
-                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+        client.registerOffloadEngine("iface2", OFFLOAD_TYPE_REPLY,
+                OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
                 offloadEngine);
         client.unregisterOffloadEngine(offloadEngine);
     }
@@ -2094,8 +2109,9 @@ public class NsdServiceTest {
         final OffloadEngine offloadEngine = mock(OffloadEngine.class);
         doReturn(PERMISSION_GRANTED).when(mContext).checkCallingOrSelfPermission(
                 REGISTER_NSD_OFFLOAD_ENGINE);
-        client.registerOffloadEngine(interfaceName, OffloadEngine.OFFLOAD_TYPE_REPLY,
-                OffloadEngine.OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
+        client.registerOffloadEngine(interfaceName,
+                OFFLOAD_TYPE_REPLY | OFFLOAD_TYPE_FILTER_REPLIES,
+                OFFLOAD_CAPABILITY_BYPASS_MULTICAST_LOCK, Runnable::run,
                 offloadEngine);
         waitForIdle();
         return offloadEngine;
@@ -2106,43 +2122,78 @@ public class NsdServiceTest {
     @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     public void testRegisterOffloadEngine_sendAllOffloadServiceInfos() {
         final String interfaceName = "iface";
-        final OffloadServiceInfo info = new OffloadServiceInfo(
+        final OffloadServiceInfo advertingInfo = new OffloadServiceInfo(
                 new OffloadServiceInfo.Key("_testService", "_testType"), List.of("_sub1", "_sub2"),
                 "Android.local", new byte[] { 0x1, 0x2, 0x3 }, 1 /* priority */,
-                OffloadEngine.OFFLOAD_TYPE_REPLY);
-        doReturn(List.of(new MdnsAdvertiser.OffloadServiceInfoWrapper(123, info)))
-                .when(mAdvertiser).getAllInterfaceOffloadServiceInfos(interfaceName);
+                OFFLOAD_TYPE_REPLY);
+        doReturn(List.of(new MdnsAdvertiser.OffloadServiceInfoWrapper(123, advertingInfo)))
+                .when(mAdvertiser).notifyOffloadStart(interfaceName);
+        final FilterRepliesInfo filerRepliesInfo = new FilterRepliesInfo(
+                "_testService", "_testType", List.of("_sub1", "_sub2"), "Android.local");
+        final OffloadServiceInfo discoveryInfo =
+                createOffloadServiceInfoFromFilterReplies(filerRepliesInfo);
+        doReturn(List.of(filerRepliesInfo)).when(mDiscoveryManager)
+                .notifyOffloadStart(eq(interfaceName));
         final OffloadEngine offloadEngine = registerOffloadEngine(interfaceName);
-        // Verify that the OffloadServiceInfo retrieves from the advertiser and then sends it to
-        // the OffloadEngine.
-        verify(mAdvertiser).getAllInterfaceOffloadServiceInfos(interfaceName);
+        // Verify that the OffloadServiceInfo retrieves from the advertiser and discoveryManager and
+        // then sends it to the OffloadEngine.
+        verify(mAdvertiser).notifyOffloadStart(interfaceName);
+        verify(mDiscoveryManager).notifyOffloadStart(eq(interfaceName));
+        verify(offloadEngine).onOffloadServiceUpdated(advertingInfo);
+        verify(offloadEngine).onOffloadServiceUpdated(discoveryInfo);
+    }
+
+    private static void verifyOffloadServiceUpdatedAndRemoved(String interfaceName,
+            OffloadServiceInfo info, OffloadCallback cb, OffloadEngine offloadEngine) {
+        // onOffloadStartOrUpdate callback triggered. The OffloadServiceInfo update should be sent
+        // to the OffloadEngine.
+        cb.onOffloadStartOrUpdate(interfaceName, info);
         verify(offloadEngine).onOffloadServiceUpdated(info);
+        // onOffloadStop callback triggered. The OffloadServiceInfo removal should be sent to the
+        // OffloadEngine.
+        cb.onOffloadStop(interfaceName, info);
+        verify(offloadEngine).onOffloadServiceRemoved(info);
     }
 
     @Test
     @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
     @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    public void testRegisterOffloadEngine_OffloadServiceUpdatedAndRemoved() {
+    public void testRegisterOffloadEngine_OffloadServiceUpdatedAndRemoved_Advertiser() {
         final String interfaceName = "iface";
         final OffloadServiceInfo info = new OffloadServiceInfo(
                 new OffloadServiceInfo.Key("_testService", "_testType"), List.of("_sub1", "_sub2"),
                 "Android.local", new byte[] { 0x1, 0x2, 0x3 }, 1 /* priority */,
-                OffloadEngine.OFFLOAD_TYPE_REPLY);
+                OFFLOAD_TYPE_REPLY);
         doReturn(Collections.emptyList()).when(mAdvertiser)
-                .getAllInterfaceOffloadServiceInfos(anyString());
+                .notifyOffloadStart(anyString());
         final OffloadEngine offloadEngine = registerOffloadEngine(interfaceName);
         // Verify that the OffloadServiceInfo retrieves from the advertiser and that no info is
         // sent to the OffloadEngine.
-        verify(mAdvertiser).getAllInterfaceOffloadServiceInfos(interfaceName);
+        verify(mAdvertiser).notifyOffloadStart(interfaceName);
         verify(offloadEngine, never()).onOffloadServiceUpdated(any());
-        // onOffloadStartOrUpdate callback triggered. The OffloadServiceInfo update should be sent
-        // to the OffloadEngine.
-        mAdvertiserCallback.onOffloadStartOrUpdate(interfaceName, info);
-        verify(offloadEngine).onOffloadServiceUpdated(info);
-        // onOffloadStop callback triggered. The OffloadServiceInfo removal should be sent to the
-        // OffloadEngine.
-        mAdvertiserCallback.onOffloadStop(interfaceName, info);
-        verify(offloadEngine).onOffloadServiceRemoved(info);
+        verifyOffloadServiceUpdatedAndRemoved(
+                interfaceName, info, mOffloadCallback, offloadEngine);
+    }
+
+    @Test
+    @EnableCompatChanges(ENABLE_PLATFORM_MDNS_BACKEND)
+    @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    public void testRegisterOffloadEngine_OffloadServiceUpdatedAndRemoved_DiscoveryManager() {
+        final String interfaceName = "iface";
+        final OffloadServiceInfo info = new OffloadServiceInfo(
+                new OffloadServiceInfo.Key("", "_testType"), List.of("_sub1", "_sub2"),
+                "Android.local", new byte[]{0x1, 0x2, 0x3}, 1 /* priority */,
+                OFFLOAD_TYPE_FILTER_REPLIES);
+        doReturn(Collections.emptyList()).when(mDiscoveryManager)
+                .notifyOffloadStart(eq(interfaceName));
+        final OffloadEngine offloadEngine = registerOffloadEngine(interfaceName);
+        // Verify that the OffloadServiceInfo retrieves from the DiscoveryManager and that no info
+        // is sent to the OffloadEngine.
+        verify(mDiscoveryManager).notifyOffloadStart(eq(interfaceName));
+        verify(offloadEngine, never()).onOffloadServiceUpdated(any());
+
+        verifyOffloadServiceUpdatedAndRemoved(
+                interfaceName, info, mOffloadCallback, offloadEngine);
     }
 
     private void waitForIdle() {

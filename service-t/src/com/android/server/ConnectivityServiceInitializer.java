@@ -23,10 +23,9 @@ import android.net.thread.ThreadNetworkManager;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.net.module.util.DeviceConfigUtils;
 import com.android.networkstack.apishim.ConstantsShim;
 import com.android.server.connectivity.ConnectivityNativeService;
-import com.android.server.ethernet.EthernetService;
-import com.android.server.ethernet.EthernetServiceImpl;
 import com.android.server.nearby.NearbyService;
 import com.android.server.net.ct.CertificateTransparencyService;
 import com.android.server.thread.ThreadNetworkService;
@@ -42,13 +41,14 @@ public final class ConnectivityServiceInitializer extends SystemService {
     private static final String TAG = ConnectivityServiceInitializer.class.getSimpleName();
     private static final String CONNECTIVITY_SERVICE_INITIALIZER_B_CLASS =
             "com.android.server.ConnectivityServiceInitializerB";
+    private static final String ETHERNET_SUPPORT_NCM = "ethernet_support_ncm";
 
     private final ConnectivityNativeService mConnectivityNative;
     private final ConnectivityService mConnectivity;
     private final IpSecService mIpSecService;
     private final NsdService mNsdService;
     private final NearbyService mNearbyService;
-    private final EthernetServiceImpl mEthernetServiceImpl;
+    private final BaseEthernetServiceImpl mEthernetServiceImpl;
     private final ThreadNetworkService mThreadNetworkService;
     private final CertificateTransparencyService mCertificateTransparencyService;
     private final SystemService mConnectivityServiceInitializerB;
@@ -180,14 +180,18 @@ public final class ConnectivityServiceInitializer extends SystemService {
     }
 
     /**
-     * Return EthernetServiceImpl instance or null if current SDK is lower than T or Ethernet
+     * Return BaseEthernetServiceImpl instance or null if current SDK is lower than T or Ethernet
      * service isn't necessary.
      */
-    private EthernetServiceImpl createEthernetService(final Context context) {
+    private BaseEthernetServiceImpl createEthernetService(final Context context) {
         if (!SdkLevel.isAtLeastT() || !mConnectivity.deviceSupportsEthernet(context)) {
             return null;
         }
-        return EthernetService.create(context);
+        if (DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context, ETHERNET_SUPPORT_NCM)) {
+            return com.android.server.ethernet.EthernetService.create(context);
+        } else {
+            return com.android.server.ethernetlegacy.EthernetService.create(context);
+        }
     }
 
     /**

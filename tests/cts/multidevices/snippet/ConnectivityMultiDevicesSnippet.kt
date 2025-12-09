@@ -203,7 +203,9 @@ class ConnectivityMultiDevicesSnippet : Snippet {
         val tetheringCallback = ctsTetheringUtils.registerTetheringEventCallback()
         try {
             tetheringCallback.expectNoTetheringActive()
-            return ctsTetheringUtils.startWifiTethering(tetheringCallback).getInterface()
+            val iface = ctsTetheringUtils.startWifiTethering(tetheringCallback).getInterface()
+            ctsTetheringUtils.expectSoftApCompleted()
+            return iface
         } finally {
             ctsTetheringUtils.unregisterTetheringEventCallback(tetheringCallback)
         }

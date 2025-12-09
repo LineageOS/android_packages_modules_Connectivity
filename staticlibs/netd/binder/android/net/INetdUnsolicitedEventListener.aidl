@@ -21,7 +21,7 @@ package android.net;
  * This one-way interface groups asynchronous notifications sent
  * by netd to any process that registered itself via INetd.registerUnsolEventListener.
  *
- * {@hide}
+ * @hide
  */
 oneway interface INetdUnsolicitedEventListener {
 

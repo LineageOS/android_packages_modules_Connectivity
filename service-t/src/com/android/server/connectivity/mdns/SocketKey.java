@@ -16,6 +16,7 @@
 
 package com.android.server.connectivity.mdns;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.Network;
 
@@ -33,14 +34,29 @@ public class SocketKey {
     @Nullable
     private final Network mNetwork;
     private final int mInterfaceIndex;
+    /**
+     * The interface name is only for offload interface comparison and isn't used for equality or
+     * hashing, which could lead to a behavior change.
+     */
+    @NonNull
+    private final String mInterfaceName;
+    private final int mHashCode;
 
-    SocketKey(int interfaceIndex) {
-        this(null /* network */, interfaceIndex);
+    SocketKey(int interfaceIndex, @NonNull String interfaceName) {
+        this(null /* network */, interfaceIndex, interfaceName);
     }
 
-    SocketKey(@Nullable Network network, int interfaceIndex) {
+    SocketKey(@Nullable Network network, int interfaceIndex, @NonNull String interfaceName) {
         mNetwork = network;
         mInterfaceIndex = interfaceIndex;
+        mInterfaceName = interfaceName;
+
+        // Equivalent to Objects.hash(mNetwork, mInterfaceIndex), but without
+        // the unnecessary array allocation.
+        int hashCode = 1;
+        hashCode = 31 * hashCode + (mNetwork == null ? 0 : mNetwork.hashCode());
+        hashCode = 31 * hashCode + Integer.hashCode(mInterfaceIndex);
+        mHashCode = hashCode;
     }
 
     @Nullable
@@ -52,9 +68,14 @@ public class SocketKey {
         return mInterfaceIndex;
     }
 
+    @NonNull
+    public String getInterfaceName() {
+        return mInterfaceName;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(mNetwork, mInterfaceIndex);
+        return mHashCode;
     }
 
     @Override
@@ -68,6 +89,8 @@ public class SocketKey {
 
     @Override
     public String toString() {
-        return "SocketKey{ network=" + mNetwork + " interfaceIndex=" + mInterfaceIndex + " }";
+        return "SocketKey{ network=" + mNetwork
+                + " interfaceIndex=" + mInterfaceIndex
+                + " interfaceName=" + mInterfaceName + " }";
     }
 }

@@ -19,7 +19,7 @@ package android.net;
 /**
  * The configuration to start tethering.
  *
- * {@hide}
+ * @hide
  */
 parcelable TetherConfigParcel {
     // Whether to enable or disable legacy DNS proxy server.

@@ -12,6 +12,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import time
+from android.platform.test.annotations import CddTest, VsrTest
 from mobly import asserts
 from net_tests_utils.host.python import adb_utils, apf_test_base, apf_utils, assert_utils
 from scapy.contrib.igmpv3 import IGMPv3, IGMPv3gr, IGMPv3mq, IGMPv3mr
@@ -36,6 +38,19 @@ APFV6_VERSION = 6000
 ARP_OFFLOAD_REPLY_LEN = 60
 
 
+@VsrTest(
+    requirements=[
+        'VSR-5.3.12-002',
+        'VSR-5.3.12-005',
+        'VSR-5.3.12-012',
+        'VSR-5.3.12-013',
+        'VSR-5.3.12-014',
+        'VSR-5.3.12-015',
+        'VSR-5.3.12-016',
+        'VSR-5.3.12-017',
+    ]
+)
+@CddTest(requirements=['7.4.5.2/C-0-5', '7.4.2/C-1-4'])
 class ApfV6Test(apf_test_base.ApfTestBase):
 
   def setup_class(self):
@@ -55,6 +70,12 @@ class ApfV6Test(apf_test_base.ApfTestBase):
     super().teardown_class()
 
   def test_unicast_arp_request_offload(self):
+    self.get_and_expect_ipv4_addresses_exist()
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
+    self.expect_apf_offload_enabled('ARP')
+
     eth = Ether(src=self.server_mac_address, dst=self.client_mac_address)
     arp = ARP(
         op=1,
@@ -84,6 +105,12 @@ class ApfV6Test(apf_test_base.ApfTestBase):
     )
 
   def test_non_dad_ipv6_neighbor_solicitation_offload(self):
+    self.get_and_expect_ipv6_addresses_exist()
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
+    self.expect_apf_offload_enabled('ND')
+
     eth = Ether(src=self.server_mac_address, dst=self.client_mac_address)
     ip = IPv6(
         src=self.server_ipv6_addresses[0], dst=self.client_ipv6_addresses[0]
@@ -107,6 +134,12 @@ class ApfV6Test(apf_test_base.ApfTestBase):
 
   @apf_utils.at_least_B()
   def test_ipv4_icmp_echo_request_offload(self):
+    self.get_and_expect_ipv4_addresses_exist()
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
+    self.expect_apf_offload_enabled('Ping4')
+
     eth = Ether(src=self.server_mac_address, dst=self.client_mac_address)
     ip = IP(
         src=self.server_ipv4_addresses[0], dst=self.client_ipv4_addresses[0]
@@ -127,6 +160,12 @@ class ApfV6Test(apf_test_base.ApfTestBase):
   @apf_utils.at_least_B()
   @apf_utils.apf_ram_at_least(3000)
   def test_ipv6_icmp_echo_request_offload(self):
+    self.get_and_expect_ipv6_addresses_exist()
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
+    self.expect_apf_offload_enabled('Ping6')
+
     eth = Ether(src=self.server_mac_address, dst=self.client_mac_address)
     ip = IPv6(
         src=self.server_ipv6_addresses[0], dst=self.client_ipv6_addresses[0]
@@ -149,6 +188,17 @@ class ApfV6Test(apf_test_base.ApfTestBase):
 
   @apf_utils.at_least_B()
   def test_igmpv3_general_query_offload(self):
+    self.get_and_expect_ipv4_addresses_exist()
+
+    mcast_addrs = ['239.0.0.1']
+
+    self.client.createMulticastSocket(self.client_iface_name)
+    for addr in mcast_addrs:
+      self.client.joinMulticastGroup(addr)
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
+    self.expect_apf_offload_enabled('IGMP')
     # use unicast to replace multicast ether dst to prevent flaky due to DTIM skip
     ether = Ether(src=self.server_mac_address, dst=self.client_mac_address)
     ip = IP(
@@ -158,12 +208,6 @@ class ApfV6Test(apf_test_base.ApfTestBase):
     )
     igmp = IGMPv3(type=0x11) / IGMPv3mq()
     igmpv3_general_query = bytes(ether / ip / igmp).hex()
-
-    mcast_addrs = ['239.0.0.1', '239.0.0.2', '239.0.0.3']
-
-    self.client.createMulticastSocket(self.client_iface_name)
-    for addr in mcast_addrs:
-      self.client.joinMulticastGroup(addr)
 
     ether = Ether(src=self.client_mac_address, dst='01:00:5e:00:00:16')
     ip = IP(
@@ -194,6 +238,12 @@ class ApfV6Test(apf_test_base.ApfTestBase):
   @apf_utils.at_least_B()
   @apf_utils.apf_ram_at_least(3000)
   def test_mldv2_general_query_offload(self):
+    self.get_and_expect_ipv6_addresses_exist()
+
+    # Longer wait time is required for APF to become active in CTS test suite.
+    time.sleep(apf_test_base.APF_ACTIVATION_WAIT_TIME_SEC)
+    self.expect_apf_offload_enabled('MLD')
+
     # use unicast to replace multicast ether dst to prevent flaky due to DTIM skip
     ether = Ether(src=self.server_mac_address, dst=self.client_mac_address)
     ip = IPv6(src=self.server_ipv6_addresses[0], dst='ff02::1', hlim=1)

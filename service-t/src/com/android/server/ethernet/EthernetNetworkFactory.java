@@ -16,6 +16,15 @@
 
 package com.android.server.ethernet;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
+import static android.net.NetworkCapabilities.TRANSPORT_USB;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -50,9 +59,11 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.net.module.util.InterfaceParams;
 import com.android.server.connectivity.ConnectivityResources;
+import com.android.server.ethernet.EthernetTracker.TrackingReason;
 
 import java.io.FileDescriptor;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -159,7 +170,7 @@ public class EthernetNetworkFactory {
 
     /** Add an interface to the factory. */
     public void addInterface(EthernetPort port, IpConfiguration ipConfig,
-            NetworkCapabilities capabilities) {
+            NetworkCapabilities capabilities, EnumSet<TrackingReason> trackingReason) {
         final String ifaceName = port.getInterfaceName();
         final String hwAddress = port.getMacAddress().toString();
 
@@ -177,7 +188,7 @@ public class EthernetNetworkFactory {
         }
 
         final NetworkInterfaceState iface = new NetworkInterfaceState(
-                port, mHandler, mContext, ipConfig, nc, mProvider, mDeps);
+                port, trackingReason, mHandler, mContext, ipConfig, nc, mProvider, mDeps);
         mTrackingInterfaces.put(ifaceName, iface);
     }
 
@@ -219,17 +230,10 @@ public class EthernetNetworkFactory {
     }
 
     /** Removes the interface from the factory and returns whether the interface was tracked */
-    public boolean removeInterface(EthernetPort port) {
-        NetworkInterfaceState iface = mTrackingInterfaces.remove(port.getInterfaceName());
-        if (iface != null) {
-            iface.unregisterNetworkOfferAndStop();
-            return true;
-        }
-        // TODO(b/236892130): if an interface is currently in server mode, it may not be properly
-        // removed.
-        // TODO: when false is returned, do not send a STATE_ABSENT callback.
-        Log.w(TAG, "removeInterface() failed because port is not tracked " + port);
-        return false;
+    public void removeInterface(EthernetPort port) {
+        final NetworkInterfaceState iface = mTrackingInterfaces.remove(port.getInterfaceName());
+        if (iface == null) return; // interface is in tethering mode; nothing to do.
+        iface.unregisterNetworkOfferAndStop();
     }
 
     /** Returns true if state has been modified */
@@ -247,9 +251,21 @@ public class EthernetNetworkFactory {
         return iface.updateLinkState(up);
     }
 
-    @VisibleForTesting
-    protected boolean hasInterface(String ifaceName) {
+    /**
+     * Returns true if this interface is currently tracked by this factory.
+     *
+     * Use {@link #getTrackingReason(String)} to distinguish between interfaces that are tracked by
+     * the regex and local-only NCM interfaces.
+     */
+    public boolean hasInterface(String ifaceName) {
         return mTrackingInterfaces.containsKey(ifaceName);
+    }
+
+    /** Returns the TrackingReason or an empty EnumSet if the interface does not exist */
+    public EnumSet<TrackingReason> getTrackingReason(String ifname) {
+        final NetworkInterfaceState iface = mTrackingInterfaces.get(ifname);
+        if (iface == null) return EnumSet.noneOf(TrackingReason.class);
+        return iface.getTrackingReason();
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
@@ -265,24 +281,47 @@ public class EthernetNetworkFactory {
 
     @VisibleForTesting
     static class NetworkInterfaceState {
+        private static final NetworkScore NETWORK_SCORE = new NetworkScore.Builder().build();
+        /**
+         * Capabilities used for local-only connectivity on NCM interfaces.
+         *
+         * Note that because a request for such a network takes precedent over any "global" network
+         * requests (and therefore breaks global connectivity on these interfaces), the network is
+         * marked restricted. Requestors need to be careful to always release the NetworkRequest
+         * after they are done using this network.
+         **/
+        private static final NetworkCapabilities LOCAL_NCM_CAPABILITIES =
+                NetworkCapabilities.Builder.withoutDefaultCapabilities()
+                        .addTransportType(TRANSPORT_USB)
+                        .addCapability(NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)
+                        .addCapability(NET_CAPABILITY_NOT_CONGESTED)
+                        .addCapability(NET_CAPABILITY_NOT_METERED)
+                        .addCapability(NET_CAPABILITY_NOT_ROAMING)
+                        .addCapability(NET_CAPABILITY_NOT_SUSPENDED)
+                        .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
+                        .addCapability(NET_CAPABILITY_NOT_VPN)
+                        .build();
+
         private final EthernetPort mPort;
+        private final EnumSet<TrackingReason> mTrackingReason;
         private final Handler mHandler;
         private final Context mContext;
         private final NetworkProvider mNetworkProvider;
         private final Dependencies mDeps;
-        private NetworkProvider.NetworkOfferCallback mNetworkOfferCallback;
+        @Nullable private NetworkProvider.NetworkOfferCallback mNetworkOfferCallback;
+        @Nullable private NetworkProvider.NetworkOfferCallback mLocalNetworkOfferCallback;
 
         private static String sTcpBufferSizes = null;  // Lazy initialized.
 
         private boolean mLinkUp;
         private int mLegacyType;
         private LinkProperties mLinkProperties = new LinkProperties();
-        private final Set<Integer> mRequestIds = new ArraySet<>();
 
         private volatile @Nullable IpClientManager mIpClient;
         private NetworkCapabilities mCapabilities;
         private @Nullable EthernetIpClientCallback mIpClientCallback;
         private @Nullable EthernetNetworkAgent mNetworkAgent;
+        private @Nullable EthernetNetworkAgent.Callbacks mNetworkAgentCallback;
         private IpConfiguration mIpConfig;
 
         /**
@@ -305,6 +344,18 @@ public class EthernetNetworkFactory {
             sTransports.put(NetworkCapabilities.TRANSPORT_WIFI_AWARE,
                     ConnectivityManager.TYPE_NONE);
         }
+
+        // TODO: Create a state machine to simplify this logic and also support tethering mode.
+        /** Tracks what type of network is currently being provided for this interface */
+        private enum Mode {
+            /** Indicates that no network of any type has been created for this interface */
+            NONE,
+            /** Indicates that a global network (i.e. with internet capability) is being provided */
+            GLOBAL,
+            /** Indicates that a local-only network is being provided */
+            LOCAL,
+        }
+        private Mode mMode = Mode.NONE;
 
         private class EthernetIpClientCallback extends IpClientCallbacks {
             private final ConditionVariable mIpClientStartCv = new ConditionVariable(false);
@@ -330,7 +381,6 @@ public class EthernetNetworkFactory {
                         // At the time IpClient is stopped, an IpClient event may have already been
                         // posted on the handler and is awaiting execution. Once that event is
                         // executed, the associated callback object may not be valid anymore.
-                        Log.i(TAG, "Ignoring stale IpClientCallbacks " + this);
                         return;
                     }
                     r.run();
@@ -366,6 +416,67 @@ public class EthernetNetworkFactory {
             }
         }
 
+        private class EthernetNetworkAgentCallback implements EthernetNetworkAgent.Callbacks {
+            private boolean isStale() {
+                return this != mNetworkAgentCallback;
+            }
+
+            @Override
+            public void onNetworkUnwanted() {
+                if (isStale()) return;
+                stop();
+            }
+        }
+
+        private final RequestTracker mRequestTracker = new RequestTracker();
+        private static class RequestTracker {
+            private final Set<Integer> mGlobalRequests = new ArraySet<>();
+            private final Set<Integer> mLocalRequests = new ArraySet<>();
+
+            /** Reflects whether the global or local NetworkOffer was requested. */
+            public enum RequestType {
+                LOCAL,
+                GLOBAL,
+            }
+
+            private Set<Integer> getRequestSet(RequestType type) {
+                return (type == RequestType.GLOBAL) ? mGlobalRequests : mLocalRequests;
+            }
+
+            public void addRequest(NetworkRequest request, RequestType type) {
+                getRequestSet(type).add(request.requestId);
+            }
+
+            public void removeRequest(NetworkRequest request, RequestType type) {
+                if (!getRequestSet(type).remove(request.requestId)) {
+                    // This can only happen if onNetworkNeeded was not called for a request or if
+                    // the requestId changed. Both should *never* happen.
+                    Log.wtf(TAG, "removeRequest called for unknown request");
+                }
+            }
+
+            public void clear() {
+                mGlobalRequests.clear();
+                mLocalRequests.clear();
+            }
+
+            public Mode getNetworkNeededMode() {
+                // Local requests take precedence.
+                if (!mLocalRequests.isEmpty()) return Mode.LOCAL;
+                if (!mGlobalRequests.isEmpty()) return Mode.GLOBAL;
+                return Mode.NONE;
+            }
+        }
+
+        private void onRequestTrackerUpdate() {
+            final Mode newMode = mRequestTracker.getNetworkNeededMode();
+            if (mMode == newMode) return;
+
+            // If the interface is already stopped, stop() is a noop.
+            stop();
+            if (newMode != Mode.NONE) start(newMode);
+        }
+
         private class EthernetNetworkOfferCallback implements NetworkProvider.NetworkOfferCallback {
             private boolean isStale() {
                 return this != mNetworkOfferCallback;
@@ -373,45 +484,60 @@ public class EthernetNetworkFactory {
 
             @Override
             public void onNetworkNeeded(@NonNull NetworkRequest request) {
-                if (isStale()) {
-                    return;
-                }
-                if (DBG) {
-                    Log.d(TAG, String.format("%s: onNetworkNeeded: %s", mPort, request));
-                }
+                if (isStale()) return;
+                if (DBG) Log.d(TAG, String.format("%s: onNetworkNeeded: %s", mPort, request));
+
                 // When the network offer is first registered, onNetworkNeeded is called with all
                 // existing requests.
                 // ConnectivityService filters requests for us based on the NetworkCapabilities
-                // passed in the registerNetworkOffer() call.
-                mRequestIds.add(request.requestId);
-                // if the network is already started, this is a no-op.
-                start();
+                // passed in the maybeRegisterOrUpdateNetworkOffer() call.
+                mRequestTracker.addRequest(request, RequestTracker.RequestType.GLOBAL);
+                onRequestTrackerUpdate();
             }
 
             @Override
             public void onNetworkUnneeded(@NonNull NetworkRequest request) {
-                if (isStale()) {
-                    return;
-                }
-                if (DBG) {
-                    Log.d(TAG, String.format("%s: onNetworkUnneeded: %s", mPort, request));
-                }
-                if (!mRequestIds.remove(request.requestId)) {
-                    // This can only happen if onNetworkNeeded was not called for a request or if
-                    // the requestId changed. Both should *never* happen.
-                    Log.wtf(TAG, "onNetworkUnneeded called for unknown request");
-                }
-                if (mRequestIds.isEmpty()) {
-                    // not currently serving any requests, stop the network.
-                    stop();
-                }
+                if (isStale()) return;
+                if (DBG) Log.d(TAG, String.format("%s: onNetworkUnneeded: %s", mPort, request));
+
+                mRequestTracker.removeRequest(request, RequestTracker.RequestType.GLOBAL);
+                onRequestTrackerUpdate();
             }
         }
 
-        NetworkInterfaceState(EthernetPort port, Handler handler, Context context,
-                @NonNull IpConfiguration ipConfig, @NonNull NetworkCapabilities capabilities,
-                NetworkProvider networkProvider, Dependencies deps) {
+        /**
+         * Special NetworkOffer used to provide IPv6 link-local only network connectivity on an NCM
+         * interface.
+         *
+         * Requests for this offer take precedence over requests for the "global" offer above (see
+         * {@link EthernetNetworkOfferCallback}).
+         */
+        private class LocalNetworkOfferCallback implements NetworkProvider.NetworkOfferCallback {
+            private boolean isStale() {
+                return this != mLocalNetworkOfferCallback;
+            }
+
+            @Override
+            public void onNetworkNeeded(NetworkRequest request) {
+                if (isStale()) return;
+                mRequestTracker.addRequest(request, RequestTracker.RequestType.LOCAL);
+                onRequestTrackerUpdate();
+            }
+
+            @Override
+            public void onNetworkUnneeded(NetworkRequest request) {
+                if (isStale()) return;
+                mRequestTracker.removeRequest(request, RequestTracker.RequestType.LOCAL);
+                onRequestTrackerUpdate();
+            }
+        }
+
+        NetworkInterfaceState(EthernetPort port, EnumSet<TrackingReason> trackingReason,
+                Handler handler, Context context, IpConfiguration ipConfig,
+                NetworkCapabilities capabilities, NetworkProvider networkProvider,
+                Dependencies deps) {
             mPort = port;
+            mTrackingReason = trackingReason;
             mIpConfig = Objects.requireNonNull(ipConfig);
             mCapabilities = Objects.requireNonNull(capabilities);
             mLegacyType = getLegacyType(mCapabilities);
@@ -424,6 +550,11 @@ public class EthernetNetworkFactory {
         /** Returns the EthernetPort object */
         public EthernetPort getPort() {
             return mPort;
+        }
+
+        /** Returns the TrackingReason */
+        public EnumSet<TrackingReason> getTrackingReason() {
+            return mTrackingReason;
         }
 
         /**
@@ -445,18 +576,14 @@ public class EthernetNetworkFactory {
                     + "transport type.");
         }
 
-        private static NetworkScore getNetworkScore() {
-            return new NetworkScore.Builder().build();
-        }
-
         private void setCapabilities(@NonNull final NetworkCapabilities capabilities) {
             mCapabilities = new NetworkCapabilities(capabilities);
             mLegacyType = getLegacyType(mCapabilities);
 
             if (mLinkUp) {
-                // registering a new network offer will update the existing one, not install a
-                // new one.
-                registerNetworkOffer();
+                // update the existing network offer with the new capabilities. Note that this only
+                // affects the global network offer.
+                maybeRegisterOrUpdateNetworkOffer();
             }
         }
 
@@ -475,17 +602,29 @@ public class EthernetNetworkFactory {
             if (null != capabilities) {
                 setCapabilities(capabilities);
             }
+
+            // If no request is currently being served (Mode.NONE) or the interface is in local NCM
+            // mode (Mode.LOCAL), do not restart the interface. updateInterface() does not affect
+            // the NCM capabilities or IpConfiguration.
+            if (mMode != Mode.GLOBAL) return;
+
             // TODO: Update this logic to only do a restart if required. Although a restart may
             //  be required due to the capabilities or ipConfiguration values, not all
             //  capabilities changes require a restart.
             maybeRestart();
         }
 
-        boolean isRestricted() {
+        public boolean isRestricted() {
             return !mCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         }
 
-        private void start() {
+        private void start(Mode mode) {
+            // Ensure stop() is called an all associated resources are cleaned up before starting in
+            // a (potentially) different mode.
+            if (mMode != Mode.NONE) throw new IllegalStateException("Forgot to call stop()");
+            if (mode == Mode.NONE) throw new IllegalArgumentException("Can't use Mode.NONE");
+            mMode = mode;
+
             if (mIpClient != null) {
                 if (DBG) Log.d(TAG, "IpClient already started");
                 return;
@@ -498,51 +637,60 @@ public class EthernetNetworkFactory {
             mDeps.makeIpClient(mContext, mPort.getInterfaceName(), mIpClientCallback);
             mIpClientCallback.awaitIpClientStart();
 
-            if (mIpConfig.getProxySettings() == ProxySettings.STATIC
-                    || mIpConfig.getProxySettings() == ProxySettings.PAC) {
-                mIpClient.setHttpProxy(mIpConfig.getHttpProxy());
+            // Ethernet-specific settings are only applied in global mode.
+            if (mMode == Mode.GLOBAL) {
+                if (mIpConfig.getProxySettings() == ProxySettings.STATIC
+                        || mIpConfig.getProxySettings() == ProxySettings.PAC) {
+                    mIpClient.setHttpProxy(mIpConfig.getHttpProxy());
+                }
+
+                if (sTcpBufferSizes == null) {
+                    sTcpBufferSizes = mDeps.getTcpBufferSizesFromResource(mContext);
+                }
+                if (!TextUtils.isEmpty(sTcpBufferSizes)) {
+                    mIpClient.setTcpBufferSizes(sTcpBufferSizes);
+                }
             }
 
-            if (sTcpBufferSizes == null) {
-                sTcpBufferSizes = mDeps.getTcpBufferSizesFromResource(mContext);
-            }
-            if (!TextUtils.isEmpty(sTcpBufferSizes)) {
-                mIpClient.setTcpBufferSizes(sTcpBufferSizes);
+            final ProvisioningConfiguration.Builder config = new ProvisioningConfiguration.Builder()
+                    .withProvisioningTimeoutMs(0 /* infinite */);
+
+            if (mMode == Mode.GLOBAL && mIpConfig.getIpAssignment() == IpAssignment.STATIC) {
+                // TODO: add ProvisioningConfiguration.Builder#withIpConfiguration
+                config.withStaticConfiguration(mIpConfig.getStaticIpConfiguration());
             }
 
-            mIpClient.startProvisioning(createProvisioningConfiguration(mIpConfig));
+            // Local mode is IPv6 link-local only.
+            if (mMode == Mode.LOCAL) {
+                config.withoutIPv4();
+                config.withIpv6LinkLocalOnly();
+            }
+
+            mIpClient.startProvisioning(config.build());
         }
 
         private void handleOnProvisioningSuccess(@NonNull final LinkProperties linkProperties) {
-            if (mNetworkAgent != null) {
-                Log.e(TAG, "Already have a NetworkAgent - aborting new request");
-                stop();
-                return;
-            }
             mLinkProperties = linkProperties;
 
-            // Create our NetworkAgent.
-            final NetworkAgentConfig config = new NetworkAgentConfig.Builder()
-                    .setLegacyType(mLegacyType)
-                    .setLegacyTypeName(NETWORK_TYPE)
-                    .setLegacyExtraInfo(mPort.getMacAddress().toString())
-                    .build();
-            mNetworkAgent = mDeps.makeEthernetNetworkAgent(mContext, mHandler.getLooper(),
-                    mCapabilities, mLinkProperties, config, mNetworkProvider,
-                    new EthernetNetworkAgent.Callbacks() {
-                        @Override
-                        public void onNetworkUnwanted() {
-                            // if mNetworkAgent is null, we have already called stop.
-                            if (mNetworkAgent == null) return;
+            final NetworkAgentConfig networkAgentConfig;
+            final NetworkCapabilities capabilities;
+            if (mMode == Mode.GLOBAL) {
+                // Only configure legacy config options for global mode.
+                networkAgentConfig = new NetworkAgentConfig.Builder()
+                        .setLegacyType(mLegacyType)
+                        .setLegacyTypeName(NETWORK_TYPE)
+                        .setLegacyExtraInfo(mPort.getMacAddress().toString())
+                        .build();
+                capabilities = mCapabilities;
+            } else {
+                networkAgentConfig = new NetworkAgentConfig.Builder().build();
+                capabilities = LOCAL_NCM_CAPABILITIES;
+            }
 
-                            if (this == mNetworkAgent.getCallbacks()) {
-                                stop();
-                            } else {
-                                Log.d(TAG, "Ignoring unwanted as we have a more modern " +
-                                        "instance");
-                            }
-                        }
-                    });
+            mNetworkAgentCallback = new EthernetNetworkAgentCallback();
+            mNetworkAgent = mDeps.makeEthernetNetworkAgent(mContext, mHandler.getLooper(),
+                    capabilities, mLinkProperties, networkAgentConfig, mNetworkProvider,
+                    mNetworkAgentCallback);
             mNetworkAgent.register();
             mNetworkAgent.markConnected();
         }
@@ -596,13 +744,15 @@ public class EthernetNetworkFactory {
                 // retract network offer and stop IpClient.
                 unregisterNetworkOfferAndStop();
             } else { // was down, goes up
-                // register network offer
-                registerNetworkOffer();
+                // register network offers
+                maybeRegisterLocalNetworkOffer();
+                maybeRegisterOrUpdateNetworkOffer();
             }
 
             return true;
         }
 
+        /** Stops serving the network. Safe to call no matter the current state of the interface. */
         private void stop() {
             // Unregister NetworkAgent before stopping IpClient, so destroyNativeNetwork (which
             // deletes routes) hopefully happens before stop() finishes execution. Otherwise, it may
@@ -619,55 +769,75 @@ public class EthernetNetworkFactory {
                 mIpClient = null;
             }
 
+            mNetworkAgentCallback = null;
             mIpClientCallback = null;
+            mMode = Mode.NONE;
 
             mLinkProperties.clear();
         }
 
-        private void registerNetworkOffer() {
-            // If mNetworkOfferCallback is already set, it should be reused to update the existing
-            // offer.
+        /** Registers a local network offer iff this interface is an NCM interface. */
+        private void maybeRegisterLocalNetworkOffer() {
+            if (!mTrackingReason.contains(TrackingReason.NCM)) return;
+
+            if (mLocalNetworkOfferCallback != null) {
+                throw new IllegalStateException("Local network offer cannot be updated");
+            }
+
+            // Independent of the global offer's capabilities, NCM always uses a set of default
+            // capabilities.
+            // TODO: consider using the configured values if the NCM interface is also included
+            // in the regex. In the future, this may make it possible to condense the two offers
+            // to one. Currently, this cannot be done, because IpClient in its current state
+            // needs to know whether to attempt global provisioning when it is started.
+            mLocalNetworkOfferCallback = new LocalNetworkOfferCallback();
+            mNetworkProvider.registerNetworkOffer(NETWORK_SCORE,
+                    new NetworkCapabilities(LOCAL_NCM_CAPABILITIES), cmd -> mHandler.post(cmd),
+                    mLocalNetworkOfferCallback);
+        }
+
+        /** Iff the regex includes this interface, registers or updates the global NetworkOffer. */
+        private void maybeRegisterOrUpdateNetworkOffer() {
+            // Only register "global" offer if the interface is in the regex.
+            if (!mTrackingReason.contains(TrackingReason.REGEX)) return;
+
+            // Calling registerNetworkOffer with a previously registered offer updates it.
             if (mNetworkOfferCallback == null) {
                 mNetworkOfferCallback = new EthernetNetworkOfferCallback();
             }
-            mNetworkProvider.registerNetworkOffer(getNetworkScore(),
+            mNetworkProvider.registerNetworkOffer(NETWORK_SCORE,
                     new NetworkCapabilities(mCapabilities), cmd -> mHandler.post(cmd),
                     mNetworkOfferCallback);
         }
 
         private void unregisterNetworkOfferAndStop() {
-            mNetworkProvider.unregisterNetworkOffer(mNetworkOfferCallback);
-            // Setting mNetworkOfferCallback to null allows the callback object to be identified
-            // as stale.
-            mNetworkOfferCallback = null;
-            stop();
-            mRequestIds.clear();
-        }
-
-        private static ProvisioningConfiguration createProvisioningConfiguration(
-                @NonNull final IpConfiguration config) {
-            if (config.getIpAssignment() == IpAssignment.STATIC) {
-                return new ProvisioningConfiguration.Builder()
-                        .withStaticConfiguration(config.getStaticIpConfiguration())
-                        .build();
+            if (mNetworkOfferCallback != null) {
+                mNetworkProvider.unregisterNetworkOffer(mNetworkOfferCallback);
+                mNetworkOfferCallback = null;
             }
-            return new ProvisioningConfiguration.Builder()
-                        .withProvisioningTimeoutMs(0)
-                        .build();
+
+            if (mLocalNetworkOfferCallback != null) {
+                mNetworkProvider.unregisterNetworkOffer(mLocalNetworkOfferCallback);
+                mLocalNetworkOfferCallback = null;
+            }
+
+            stop();
+            mRequestTracker.clear();
         }
 
         void maybeRestart() {
-            if (mIpClient == null) {
-                // If maybeRestart() is called from a provisioning failure, it is
-                // possible that link disappeared in the meantime. In that
-                // case, stop() has already been called and IpClient should not
-                // get restarted to prevent a provisioning failure loop.
-                Log.i(TAG, String.format("maybeRestart() called on stopped interface %s", mPort));
-                return;
-            }
-            if (DBG) Log.d(TAG, "restart IpClient");
+            // Only restart if the interface is currently running.
+            if (mIpClient == null) return;
+            if (DBG) Log.d(TAG, "Restart IpClient on: " + mPort);
+
+            // Calling stop() resets the mode.
+            final Mode previousMode = mMode;
             stop();
-            start();
+            // Do not change the current mode when restarting the interface.
+            // mIpClient.startProvisioning() in start() will yield back to the handler, so even if
+            // the network does not provide global connectivity, a request for local connectivity
+            // will break the restart loop.
+            start(previousMode);
         }
 
         @Override

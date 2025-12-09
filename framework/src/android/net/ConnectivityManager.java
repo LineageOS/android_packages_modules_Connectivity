@@ -271,7 +271,7 @@ public class ConnectivityManager {
      * our connection to the internet at large.  0 indicates no connection,
      * 100 indicates a great connection.  Retrieve it with
      * {@link android.content.Intent#getIntExtra(String, int)}.
-     * {@hide}
+     * @hide
      */
     public static final String EXTRA_INET_CONDITION = "inetCondition";
     /**
@@ -292,7 +292,7 @@ public class ConnectivityManager {
     /**
      * Key for passing a {@link android.net.captiveportal.CaptivePortalProbeSpec} to the captive
      * portal login activity.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     public static final String EXTRA_CAPTIVE_PORTAL_PROBE_SPEC =
@@ -300,7 +300,7 @@ public class ConnectivityManager {
 
     /**
      * Key for passing a user agent string to the captive portal login activity.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     public static final String EXTRA_CAPTIVE_PORTAL_USER_AGENT =
@@ -311,7 +311,7 @@ public class ConnectivityManager {
      * (idle or active) on a network in a recent period.
      * The network becomes active when data transmission is started, or
      * idle if there is no data transmission for a period of time.
-     * {@hide}
+     * @hide
      */
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
     public static final String ACTION_DATA_ACTIVITY_CHANGE =
@@ -319,18 +319,18 @@ public class ConnectivityManager {
     /**
      * The lookup key for an enum that indicates the network device type on which this data activity
      * change happens.
-     * {@hide}
+     * @hide
      */
     public static final String EXTRA_DEVICE_TYPE = "deviceType";
     /**
      * The lookup key for a boolean that indicates the device is active or not. {@code true} means
      * it is actively sending or receiving data and {@code false} means it is idle.
-     * {@hide}
+     * @hide
      */
     public static final String EXTRA_IS_ACTIVE = "isActive";
     /**
      * The lookup key for a long that contains the timestamp (nanos) of the radio state change.
-     * {@hide}
+     * @hide
      */
     public static final String EXTRA_REALTIME_NS = "tsNanos";
 
@@ -674,7 +674,7 @@ public class ConnectivityManager {
     /**
      * Over the air Administration.
      * @deprecated Use {@link NetworkCapabilities} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
@@ -683,7 +683,7 @@ public class ConnectivityManager {
     /**
      * IP Multimedia Subsystem.
      * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_IMS} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage
@@ -692,7 +692,7 @@ public class ConnectivityManager {
     /**
      * Carrier Branded Services.
      * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_CBS} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
@@ -702,7 +702,7 @@ public class ConnectivityManager {
      * A Wi-Fi p2p connection. Only requesting processes will have access to
      * the peers connected.
      * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_WIFI_P2P} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @SystemApi
@@ -711,7 +711,7 @@ public class ConnectivityManager {
     /**
      * The network to use for initially attaching to the network
      * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_IA} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage
@@ -721,7 +721,7 @@ public class ConnectivityManager {
      * Emergency PDN connection for emergency services.  This
      * may include IMS and MMS in emergency situations.
      * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_EIMS} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
@@ -730,7 +730,7 @@ public class ConnectivityManager {
     /**
      * The network that uses proxy to achieve connectivity.
      * @deprecated Use {@link NetworkCapabilities} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @SystemApi
@@ -789,10 +789,10 @@ public class ConnectivityManager {
     private static final int DEPRECATED_PHONE_CONSTANT_APN_REQUEST_STARTED = 1;
     private static final int DEPRECATED_PHONE_CONSTANT_APN_REQUEST_FAILED = 3;
 
-    /** {@hide} */
+    /** @hide */
     public static final int MAX_RADIO_TYPE = TYPE_TEST;
 
-    /** {@hide} */
+    /** @hide */
     public static final int MAX_NETWORK_TYPE = TYPE_TEST;
 
     private static final int MIN_NETWORK_TYPE = TYPE_MOBILE;
@@ -1293,7 +1293,7 @@ public class ConnectivityManager {
      * @return a String for the given type, or a string version of the type ("87")
      * if no name is known.
      * @deprecated Types are deprecated. Use {@link NetworkCapabilities} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -1362,7 +1362,7 @@ public class ConnectivityManager {
      * @param networkType the type to check
      * @return a boolean - {@code true} if uses cellular network, else {@code false}
      * @deprecated Types are deprecated. Use {@link NetworkCapabilities} instead.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 130143562)
@@ -1564,7 +1564,7 @@ public class ConnectivityManager {
         return getActiveNetworkForUid(uid, false);
     }
 
-    /** {@hide} */
+    /** @hide */
     public Network getActiveNetworkForUid(int uid, boolean ignoreBlocked) {
         try {
             return mService.getActiveNetworkForUid(uid, ignoreBlocked);
@@ -1734,7 +1734,7 @@ public class ConnectivityManager {
      *        for the given uid or {@code null} if no default network is
      *        available for the specified uid.
      *
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -1742,7 +1742,7 @@ public class ConnectivityManager {
         return getActiveNetworkInfoForUid(uid, false);
     }
 
-    /** {@hide} */
+    /** @hide */
     public NetworkInfo getActiveNetworkInfoForUid(int uid, boolean ignoreBlocked) {
         try {
             return mService.getActiveNetworkInfoForUid(uid, ignoreBlocked);
@@ -1796,7 +1796,7 @@ public class ConnectivityManager {
         return getNetworkInfoForUid(network, Process.myUid(), false);
     }
 
-    /** {@hide} */
+    /** @hide */
     public NetworkInfo getNetworkInfoForUid(Network network, int uid, boolean ignoreBlocked) {
         try {
             return mService.getNetworkInfoForUid(network, uid, ignoreBlocked);
@@ -1910,7 +1910,7 @@ public class ConnectivityManager {
      *        for the current default network, or {@code null} if there
      *        is no current default network.
      *
-     * {@hide}
+     * @hide
      * @deprecated please use {@link #getLinkProperties(Network)} on the return
      *             value of {@link #getActiveNetwork()} instead. In particular,
      *             this method will return non-null LinkProperties even if the
@@ -1934,7 +1934,7 @@ public class ConnectivityManager {
      *        for the given networkType, or {@code null} if there is
      *        no current default network.
      *
-     * {@hide}
+     * @hide
      * @deprecated This method does not support multiple connected networks
      *             of the same type. Use {@link #getAllNetworks},
      *             {@link #getNetworkInfo(android.net.Network)}, and
@@ -2929,7 +2929,7 @@ public class ConnectivityManager {
     }
 
     /**
-     * {@hide}
+     * @hide
      */
     public ConnectivityManager(Context context, IConnectivityManager service) {
         this(context, service, true /* newStatic */);
@@ -2952,7 +2952,7 @@ public class ConnectivityManager {
         }
     }
 
-    /** {@hide} */
+    /** @hide */
     @UnsupportedAppUsage
     public static ConnectivityManager from(Context context) {
         return (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -3013,7 +3013,7 @@ public class ConnectivityManager {
      * @return an array of 0 or more Strings of tetherable interface names.
      *
      * @deprecated Use {@link TetheringEventCallback#onTetherableInterfacesChanged(List)} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage
@@ -3028,7 +3028,7 @@ public class ConnectivityManager {
      * @return an array of 0 or more String of currently tethered interface names.
      *
      * @deprecated Use {@link TetheringEventCallback#onTetherableInterfacesChanged(List)} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage
@@ -3049,7 +3049,7 @@ public class ConnectivityManager {
      *        which failed to tether.
      *
      * @deprecated Use {@link TetheringEventCallback#onError(String, int)} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage
@@ -3063,7 +3063,7 @@ public class ConnectivityManager {
      *
      * @deprecated This method is not supported.
      * TODO: remove this function when all of clients are removed.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
     @Deprecated
@@ -3095,7 +3095,7 @@ public class ConnectivityManager {
      * @return error a {@code TETHER_ERROR} value indicating success or failure type
      * @deprecated Use {@link TetheringManager#startTethering} instead
      *
-     * {@hide}
+     * @hide
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @Deprecated
@@ -3120,7 +3120,7 @@ public class ConnectivityManager {
      * @param iface the interface name to untether.
      * @return error a {@code TETHER_ERROR} value indicating success or failure type
      *
-     * {@hide}
+     * @hide
      */
     @UnsupportedAppUsage
     @Deprecated
@@ -3145,7 +3145,7 @@ public class ConnectivityManager {
      * @return a boolean - {@code true} indicating Tethering is supported.
      *
      * @deprecated Use {@link TetheringEventCallback#onTetheringSupported(boolean)} instead.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     @RequiresPermission(anyOf = {android.Manifest.permission.TETHER_PRIVILEGED,
@@ -3357,7 +3357,7 @@ public class ConnectivityManager {
      *        what interfaces are considered tetherable usb interfaces.
      *
      * @deprecated Use {@link TetheringEventCallback#onTetherableInterfaceRegexpsChanged} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage
@@ -3375,7 +3375,7 @@ public class ConnectivityManager {
      *        what interfaces are considered tetherable wifi interfaces.
      *
      * @deprecated Use {@link TetheringEventCallback#onTetherableInterfaceRegexpsChanged} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage
@@ -3394,7 +3394,7 @@ public class ConnectivityManager {
      *
      * @deprecated Use {@link TetheringEventCallback#onTetherableInterfaceRegexpsChanged(
      *TetheringManager.TetheringInterfaceRegexps)} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage
@@ -3419,7 +3419,7 @@ public class ConnectivityManager {
      * @return error a {@code TETHER_ERROR} value indicating success or failure type
      * @deprecated Use {@link TetheringManager#startTethering} instead
      *
-     * {@hide}
+     * @hide
      */
     @UnsupportedAppUsage
     @Deprecated
@@ -3429,97 +3429,97 @@ public class ConnectivityManager {
 
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_NO_ERROR}.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     @Deprecated
     public static final int TETHER_ERROR_NO_ERROR = 0;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNKNOWN_IFACE}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_UNKNOWN_IFACE =
             TetheringManager.TETHER_ERROR_UNKNOWN_IFACE;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_SERVICE_UNAVAIL}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_SERVICE_UNAVAIL =
             TetheringManager.TETHER_ERROR_SERVICE_UNAVAIL;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNSUPPORTED}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_UNSUPPORTED = TetheringManager.TETHER_ERROR_UNSUPPORTED;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNAVAIL_IFACE}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_UNAVAIL_IFACE =
             TetheringManager.TETHER_ERROR_UNAVAIL_IFACE;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_INTERNAL_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_MASTER_ERROR =
             TetheringManager.TETHER_ERROR_INTERNAL_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_TETHER_IFACE_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_TETHER_IFACE_ERROR =
             TetheringManager.TETHER_ERROR_TETHER_IFACE_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNTETHER_IFACE_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_UNTETHER_IFACE_ERROR =
             TetheringManager.TETHER_ERROR_UNTETHER_IFACE_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_ENABLE_FORWARDING_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_ENABLE_NAT_ERROR =
             TetheringManager.TETHER_ERROR_ENABLE_FORWARDING_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_DISABLE_FORWARDING_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_DISABLE_NAT_ERROR =
             TetheringManager.TETHER_ERROR_DISABLE_FORWARDING_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_IFACE_CFG_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_IFACE_CFG_ERROR =
             TetheringManager.TETHER_ERROR_IFACE_CFG_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_PROVISIONING_FAILED}.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     @Deprecated
     public static final int TETHER_ERROR_PROVISION_FAILED = 11;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_DHCPSERVER_ERROR}.
-     * {@hide}
+     * @hide
      */
     @Deprecated
     public static final int TETHER_ERROR_DHCPSERVER_ERROR =
             TetheringManager.TETHER_ERROR_DHCPSERVER_ERROR;
     /**
      * @deprecated Use {@link TetheringManager#TETHER_ERROR_ENTITLEMENT_UNKNOWN}.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     @Deprecated
@@ -3534,7 +3534,7 @@ public class ConnectivityManager {
      *               interface
      *
      * @deprecated Use {@link TetheringEventCallback#onError(String, int)} instead.
-     * {@hide}
+     * @hide
      */
     @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -3599,7 +3599,7 @@ public class ConnectivityManager {
      *         notify the caller of the result of entitlement check. The listener may be called zero
      *         or one time.
      * @deprecated Use {@link TetheringManager#requestLatestTetheringEntitlementResult} instead.
-     * {@hide}
+     * @hide
      */
     @SystemApi
     @Deprecated
@@ -3635,7 +3635,7 @@ public class ConnectivityManager {
      * @param networkType The type of network you want to report on
      * @param percentage The quality of the connection 0 is bad, 100 is good
      * @deprecated Types are deprecated. Use {@link #reportNetworkConnectivity} instead.
-     * {@hide}
+     * @hide
      */
     public void reportInetCondition(int networkType, int percentage) {
         printStackTrace();
@@ -3967,6 +3967,10 @@ public class ConnectivityManager {
         }
     }
 
+    // TODO: Use android.Manifest.permission.CREATE_APP_SPECIFIC_NETWORK once it's available.
+    private static final String PERMISSION_CREATE_APP_SPECIFIC_NETWORK =
+            "android.permission.CREATE_APP_SPECIFIC_NETWORK";
+
     /**
      * @hide
      * Register a NetworkAgent with ConnectivityService.
@@ -3974,7 +3978,8 @@ public class ConnectivityManager {
      */
     @RequiresPermission(anyOf = {
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
-            android.Manifest.permission.NETWORK_FACTORY})
+            android.Manifest.permission.NETWORK_FACTORY,
+            PERMISSION_CREATE_APP_SPECIFIC_NETWORK})
     public NetworkAndAgentRegistryParcelable registerNetworkAgent(
             @NonNull INetworkAgent na, @NonNull NetworkInfo ni,
             @NonNull LinkProperties lp, @NonNull NetworkCapabilities nc,
@@ -3990,7 +3995,8 @@ public class ConnectivityManager {
      */
     @RequiresPermission(anyOf = {
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK,
-            android.Manifest.permission.NETWORK_FACTORY})
+            android.Manifest.permission.NETWORK_FACTORY,
+            PERMISSION_CREATE_APP_SPECIFIC_NETWORK})
     public NetworkAndAgentRegistryParcelable registerNetworkAgent(
             @NonNull INetworkAgent na, @NonNull NetworkInfo ni,
             @NonNull LinkProperties lp, @NonNull NetworkCapabilities nc,

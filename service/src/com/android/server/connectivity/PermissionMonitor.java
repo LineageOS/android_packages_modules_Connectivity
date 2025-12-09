@@ -30,6 +30,8 @@ import static android.net.connectivity.ConnectivityCompatChanges.RESTRICT_LOCAL_
 import static android.os.Process.INVALID_UID;
 import static android.os.Process.SYSTEM_UID;
 
+import static com.android.net.module.util.CollectionUtils.toIntArray;
+import static com.android.server.ConnectivityStatsLog.CONNECTIVITY_PERMISSION_CHANGE_LISTENER_LATENCY_REPORTED;
 import static com.android.server.connectivity.ConnectivityFlags.USE_BROADCAST_RECEIVE_HELPER_FOR_PERMISSION_MONITOR;
 import static com.android.server.connectivity.NetworkPermissions.PERMISSION_NETWORK;
 import static com.android.server.connectivity.NetworkPermissions.PERMISSION_NONE;
@@ -37,7 +39,6 @@ import static com.android.server.connectivity.NetworkPermissions.PERMISSION_SYST
 import static com.android.server.connectivity.NetworkPermissions.TRAFFIC_PERMISSION_INTERNET;
 import static com.android.server.connectivity.NetworkPermissions.TRAFFIC_PERMISSION_UNINSTALLED;
 import static com.android.server.connectivity.NetworkPermissions.TRAFFIC_PERMISSION_UPDATE_DEVICE_STATS;
-import static com.android.net.module.util.CollectionUtils.toIntArray;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -63,6 +64,7 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.os.SystemClock;
 import android.os.SystemConfigManager;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -72,6 +74,8 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
 import android.util.SparseIntArray;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -83,12 +87,14 @@ import com.android.net.module.util.SharedLog;
 import com.android.networkstack.apishim.ProcessShimImpl;
 import com.android.networkstack.apishim.common.ProcessShim;
 import com.android.server.BpfNetMaps;
+import com.android.server.ConnectivityStatsLog;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A utility class to inform Netd of UID permissions.
@@ -252,6 +258,22 @@ public class PermissionMonitor {
          */
         public boolean isFeatureNotChickenedOut(Context context, String name) {
             return DeviceConfigUtils.isTetheringFeatureNotChickenedOut(context, name);
+        }
+
+        /**
+         * Logs the latency of the PermissionChangeListener#onPermissionsChanged callback.
+         */
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+        public void logPermissionChangeListenerLatency(int durationMicros) {
+            ConnectivityStatsLog.write(CONNECTIVITY_PERMISSION_CHANGE_LISTENER_LATENCY_REPORTED,
+                    durationMicros);
+        }
+
+        /**
+         * @see com.android.tethering.mainline.beta.Flags#lnpDeveloperOptIn()
+         */
+        public boolean isLnpDeveloperOptInEnabled() {
+            return com.android.tethering.mainline.beta.Flags.lnpDeveloperOptIn();
         }
     }
 
@@ -489,7 +511,7 @@ public class PermissionMonitor {
             intentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
             intentFilter.addDataScheme("package");
             userAllContext.registerReceiver(
-                    mIntentReceiver, intentFilter, null /* broadcastPermission */, handler);
+                    mIntentReceiver, intentFilter, NETWORK_STACK, handler);
 
             // Listen to EXTERNAL_APPLICATIONS_AVAILABLE is that an app becoming
             // available means it may need to gain a permission. But an app that
@@ -499,14 +521,14 @@ public class PermissionMonitor {
             final IntentFilter externalIntentFilter =
                     new IntentFilter(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
             userAllContext.registerReceiver(
-                    mIntentReceiver, externalIntentFilter, null /* broadcastPermission */, handler);
+                    mIntentReceiver, externalIntentFilter, NETWORK_STACK, handler);
 
             // Listen for user add/remove.
             final IntentFilter userIntentFilter = new IntentFilter();
             userIntentFilter.addAction(Intent.ACTION_USER_ADDED);
             userIntentFilter.addAction(Intent.ACTION_USER_REMOVED);
             userAllContext.registerReceiver(
-                    mIntentReceiver, userIntentFilter, null /* broadcastPermission */, handler);
+                    mIntentReceiver, userIntentFilter, NETWORK_STACK, handler);
         }
 
         // Register UIDS_ALLOWED_ON_RESTRICTED_NETWORKS setting observer
@@ -530,9 +552,9 @@ public class PermissionMonitor {
         mUsersTrafficPermissions.put(UserHandle.ALL, getSystemTrafficPerm());
 
         if (!mUseBroadcastReceiveHelper) {
-            final List<UserHandle> usrs = mUserManager.getUserHandles(true /* excludeDying */);
+            final List<UserHandle> users = mUserManager.getUserHandles(true /* excludeDying */);
             // Update netd permissions for all users.
-            for (UserHandle user : usrs) {
+            for (UserHandle user : users) {
                 onUserAdded(user);
             }
         }
@@ -1054,14 +1076,14 @@ public class PermissionMonitor {
      * @param vpnAppUid The uid of the VPN app
      */
     public synchronized void onVpnUidRangesAdded(@Nullable String iface, Set<UidRange> rangesToAdd,
-            int vpnAppUid) {
+            int vpnAppUid, Set<Integer> delegatedBypassUids) {
         // Calculate the list of new app uids under the VPN due to the new UID ranges and update
         // Netd about them. Because mAllApps only contains appIds instead of uids, the result might
         // be an overestimation if an app is not installed on the user on which the VPN is running,
         // but that's safe: if an app is not installed, it cannot receive any packets, so dropping
         // packets to that UID is fine.
         final Set<Integer> changedUids = intersectUids(rangesToAdd, mAllApps);
-        removeBypassingUids(changedUids, vpnAppUid);
+        removeBypassingUids(changedUids, vpnAppUid, delegatedBypassUids);
         updateVpnUidsInterfaceRules(iface, changedUids, true /* add */);
         if (mVpnInterfaceUidRanges.containsKey(iface)) {
             mVpnInterfaceUidRanges.get(iface).addAll(rangesToAdd);
@@ -1079,11 +1101,11 @@ public class PermissionMonitor {
      * @param vpnAppUid The uid of the VPN app
      */
     public synchronized void onVpnUidRangesRemoved(@Nullable String iface,
-            Set<UidRange> rangesToRemove, int vpnAppUid) {
+            Set<UidRange> rangesToRemove, int vpnAppUid, Set<Integer> delegatedBypassUids) {
         // Calculate the list of app uids that are no longer under the VPN due to the removed UID
         // ranges and update Netd about them.
         final Set<Integer> changedUids = intersectUids(rangesToRemove, mAllApps);
-        removeBypassingUids(changedUids, vpnAppUid);
+        removeBypassingUids(changedUids, vpnAppUid, delegatedBypassUids);
         updateVpnUidsInterfaceRules(iface, changedUids, false /* add */);
         Set<UidRange> existingRanges = mVpnInterfaceUidRanges.getOrDefault(iface, null);
         if (existingRanges == null) {
@@ -1179,8 +1201,10 @@ public class PermissionMonitor {
      * @param uids The list of uids to operate on
      * @param vpnAppUid The uid of the VPN app
      */
-    private void removeBypassingUids(Set<Integer> uids, int vpnAppUid) {
+    private void removeBypassingUids(Set<Integer> uids, int vpnAppUid,
+            Set<Integer> delegateBypassUids) {
         uids.remove(vpnAppUid);
+        uids.removeAll(delegateBypassUids);
         uids.removeIf(this::hasRestrictedNetworksPermission);
     }
 
@@ -1410,7 +1434,25 @@ public class PermissionMonitor {
     private class PermissionChangeListener implements PackageManager.OnPermissionsChangedListener {
         @Override
         public void onPermissionsChanged(int uid) {
-            setLocalNetworkPermissions(uid, null);
+            long startTimeNanos = SystemClock.elapsedRealtimeNanos();
+            try {
+                setLocalNetworkPermissions(uid, null);
+            } finally {
+                long durationNanos = SystemClock.elapsedRealtimeNanos() - startTimeNanos;
+                int durationMicros = (int) TimeUnit.NANOSECONDS.toMicros(durationNanos);
+                if (DBG) {
+                    Log.d(TAG,
+                            "setLocalNetworkPermissions in onPermissionsChanged took "
+                                    + durationMicros + " microseconds.");
+                }
+                //The ConnectivityStatsLog#write method is only available on Android T
+                //and higher. The surrounding logic in logPermissionChangeListenerLatency
+                //ensures this code path is only executed on compatible platform versions, this
+                //explicit SDK version check is necessary to suppress the NewApi lint warning.
+                if (mDeps.isLnpDeveloperOptInEnabled() && SdkLevel.isAtLeastB()) {
+                    mDeps.logPermissionChangeListenerLatency(durationMicros);
+                }
+            }
         }
     }
 }

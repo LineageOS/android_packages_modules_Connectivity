@@ -19,7 +19,7 @@ package android.nearby;
 /**
  * Callback when brodacast status changes.
  *
- * {@hide}
+ * @hide
  */
 oneway interface IBroadcastListener {
     /** Called when the broadcast status changes. */

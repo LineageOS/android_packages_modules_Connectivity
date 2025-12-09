@@ -30,9 +30,25 @@ public final class JniUtilTest {
 
     @Test
     fun testGetJniLibraryName() {
-        assertEquals(TEST_JAVA_UTIL_NAME,
-                JniUtil.getJniLibraryName(java.util.Set::class.java.getPackage()))
-        assertEquals(TEST_ORG_JUNIT_NAME,
-                JniUtil.getJniLibraryName(org.junit.Before::class.java.getPackage()))
+        assertEquals(
+            TEST_JAVA_UTIL_NAME,
+                JniUtil.getJniLibraryName(java.util.Set::class.java.getPackage())
+        )
+        assertEquals(
+            TEST_ORG_JUNIT_NAME,
+                JniUtil.getJniLibraryName(org.junit.Before::class.java.getPackage())
+        )
+    }
+
+    @Test
+    fun testGetJniLibraryNameForClass() {
+        assertEquals(
+            "java_util_jni_Set",
+            JniUtil.getJniLibraryName(java.util.Set::class.java)
+        )
+        assertEquals(
+            "org_junit_jni_Before",
+            JniUtil.getJniLibraryName(org.junit.Before::class.java)
+        )
     }
 }

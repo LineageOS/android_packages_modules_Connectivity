@@ -16,6 +16,8 @@
 
 // The resulting .o needs to load on Android S+
 #define BPFLOADER_MIN_VER BPFLOADER_MAINLINE_S_VERSION
+#define BPF_OBJ_NAME "test"
+#define DEFAULT_BPF_PIN_SUBDIR "tethering"
 
 // This is non production code, only used for testing
 // Needed because the bitmap array definition is non-kosher for pre-T OS devices.
@@ -33,13 +35,5 @@ DEFINE_BPF_MAP_GRW(tether3_downstream6_map, HASH, TetherDownstream6Key, Tether6V
                    AID_NETWORK_STACK)
 // Used only by BpfBitmapTest, not by production code.
 DEFINE_BPF_MAP_GRW(bitmap, ARRAY, int, uint64_t, 2, AID_NETWORK_STACK)
-
-// we need at least 1 bpf program in the final .o for Android S bpfloader compatibility
-// this program is trivial, and has a 'infinite' minimum kernel version number,
-// so will always be skipped
-DEFINE_BPF_PROG_KVER("skfilter/match", AID_ROOT, AID_ROOT, match, KVER_INF)
-(__unused struct __sk_buff* skb) {
-    return XTBPF_MATCH;
-}
 
 LICENSE("Apache 2.0");

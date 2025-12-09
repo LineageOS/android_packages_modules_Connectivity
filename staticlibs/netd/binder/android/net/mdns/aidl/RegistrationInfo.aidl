@@ -33,7 +33,7 @@ package android.net.mdns.aidl;
  * - registrationType
  * - result
  *
- * {@hide}
+ * @hide
  */
 @JavaOnlyImmutable
 @JavaDerive(equals=true, toString=true)

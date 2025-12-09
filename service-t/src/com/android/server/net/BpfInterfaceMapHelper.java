@@ -57,7 +57,7 @@ public class BpfInterfaceMapHelper {
         public IBpfMap<S32, InterfaceMapValue> getInterfaceMap() {
             try {
                 return new BpfMap<>(IFACE_INDEX_NAME_MAP_PATH,
-                    S32.class, InterfaceMapValue.class);
+                    BpfMap.BPF_F_RDONLY, S32.class, InterfaceMapValue.class);
             } catch (ErrnoException e) {
                 Log.e(TAG, "Cannot create interface map: " + e);
                 return null;

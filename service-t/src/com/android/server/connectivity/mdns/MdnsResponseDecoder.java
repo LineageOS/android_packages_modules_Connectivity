@@ -265,7 +265,7 @@ public class MdnsResponseDecoder {
         for (int i = 0; i < augmentedToOriginal.size(); i++) {
             final MdnsResponse augmented = augmentedToOriginal.keyAt(i);
             final MdnsResponse original = augmentedToOriginal.valueAt(i);
-            if (augmented.getRecords().size() != original.getRecords().size()) {
+            if (augmented.getNumRecords() != original.getNumRecords()) {
                 modified.add(augmented);
             }
         }

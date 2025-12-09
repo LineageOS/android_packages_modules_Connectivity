@@ -28,6 +28,7 @@ cc_library_shared {
         "libnetdutils",
         "libnetworkstats",
     ],
+    min_sdk_version: "33",
 }
 
 cc_library_shared {
@@ -50,4 +51,5 @@ cc_library_shared {
         "liblog",
         "libnativehelper",
     ],
+    min_sdk_version: "33",
 }

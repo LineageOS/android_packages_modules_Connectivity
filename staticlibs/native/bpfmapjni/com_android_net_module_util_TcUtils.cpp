@@ -19,7 +19,6 @@
 #include <nativehelper/scoped_utf_chars.h>
 #include <tcutils/tcutils.h>
 
-#define BPF_FD_JUST_USE_INT
 #include "BpfSyscallWrappers.h"
 
 namespace android {

@@ -27,7 +27,8 @@ import android.net.NetworkRequest
 import android.net.TetheringManager
 import android.net.connectivity.ConnectivityCompatChanges
 import android.os.Build
-import android.provider.DeviceConfig
+import android.platform.test.annotations.RequiresFlagsEnabled
+import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.text.TextUtils
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.testutils.AutoReleaseNetworkCallbackRule
@@ -39,6 +40,7 @@ import com.android.testutils.TestableNetworkCallback.Event.Available
 import com.android.testutils.TestableNetworkCallback.Event.CapabilitiesChanged
 import com.android.testutils.TestableNetworkCallback.Event.LinkPropertiesChanged
 import com.android.testutils.runAsShell
+import com.android.tethering.mainline.beta.Flags
 import com.google.snippet.connectivity.Wifip2pMultiDevicesSnippet
 import java.util.Random
 import org.junit.Assert.assertEquals
@@ -59,11 +61,8 @@ class TetheringWifiP2pTest {
     @get:Rule
     val networkCallbackRule = AutoReleaseNetworkCallbackRule()
 
-    companion object {
-        // Shamelessly copied from TetheringConfiguration.
-        private const val TETHERING_LOCAL_NETWORK_AGENT = "tethering_local_network_agent"
-        private const val WIFIP2PGO_LOCAL_NETWORK_AGENT = "wifip2pgo_local_network_agent"
-    }
+    @get:Rule
+    val checkFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
     private val pm = context.packageManager!!
@@ -81,6 +80,7 @@ class TetheringWifiP2pTest {
         return "%09d".format(Random().nextInt(1_000_000_000))
     }
 
+    @RequiresFlagsEnabled(Flags.FLAG_TETHERING_AND_P2P_GO_LOCAL_AGENT)
     @Test
     fun testWifiP2pGoNetworkAgent_networkCallbacks() {
         // Check preconditions.
@@ -90,16 +90,6 @@ class TetheringWifiP2pTest {
         // Wifi P2p Group Owner mode still need tethering support in order to get
         // onLocalOnlyInterfacesChanged callbacks.
         assumeTrue(runAsShell(TETHER_PRIVILEGED) { tm.isTetheringSupported() })
-        deviceConfigRule.setConfig(
-                DeviceConfig.NAMESPACE_TETHERING,
-                TETHERING_LOCAL_NETWORK_AGENT,
-                "1"
-        )
-        deviceConfigRule.setConfig(
-                DeviceConfig.NAMESPACE_TETHERING,
-                WIFIP2PGO_LOCAL_NETWORK_AGENT,
-                "1"
-        )
 
         val cb = TestableNetworkCallback()
         val request = NetworkRequest.Builder().addCapability(NET_CAPABILITY_LOCAL_NETWORK)

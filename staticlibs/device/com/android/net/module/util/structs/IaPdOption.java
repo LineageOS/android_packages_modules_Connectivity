@@ -18,7 +18,7 @@ package com.android.net.module.util.structs;
 
 import static com.android.net.module.util.NetworkStackConstants.DHCP6_OPTION_IA_PD;
 
-import com.android.net.module.util.Struct;
+import com.android.net.module.util.LegacyStruct;
 import com.android.net.module.util.Struct.Field;
 import com.android.net.module.util.Struct.Type;
 
@@ -46,7 +46,7 @@ import java.nio.ByteOrder;
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
-public class IaPdOption extends Struct {
+public class IaPdOption extends LegacyStruct {
     public static final int LENGTH = 12; // option length excluding IA_PD options
 
     @Field(order = 0, type = Type.S16)

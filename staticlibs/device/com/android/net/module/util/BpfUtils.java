@@ -25,7 +25,7 @@ import java.io.IOException;
 /**
  * The classes and the methods for BPF utilization.
  *
- * {@hide}
+ * @hide
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class BpfUtils {

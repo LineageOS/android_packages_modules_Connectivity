@@ -28,11 +28,12 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.UserHandle;
+import android.os.UserManager;
 import android.text.TextUtils;
-import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.SparseArray;
 
@@ -87,8 +88,6 @@ public class SatelliteAccessController {
     // accessed on the handler thread.
     // See {@link SatelliteManager#PROPERTY_SATELLITE_DATA_OPTIMIZED}.
     private final Set<Integer> mSatelliteDataOptInUids = new ArraySet<>();
-
-    private final ArrayMap<UserHandle, PackageManager> mUserPackageManagers = new ArrayMap<>();
 
     /**
      *  Monitor {@link android.app.role.OnRoleHoldersChangedListener#onRoleHoldersChanged(String,
@@ -306,7 +305,6 @@ public class SatelliteAccessController {
         final boolean smsRoleUidsChanged =
                 updateSatelliteRoleSmsUidListOnUserRemoval(userHandle.getIdentifier());
         final boolean satelliteOptInUidsChanged;
-        mUserPackageManagers.remove(userHandle);
         if (mSupportConstrainedDataSatelliteOptIn) {
             satelliteOptInUidsChanged =
                     removeSatelliteDataOptInUidsForUser(userHandle.getIdentifier());
@@ -327,15 +325,16 @@ public class SatelliteAccessController {
     public void onPackageAdded(@NonNull final String packageName, final int uid) {
         HandlerUtils.ensureRunningOnHandlerThread(mConnectivityServiceHandler);
         if (!mSupportConstrainedDataSatelliteOptIn) return;
-        if (addSatelliteDataOptInUid(packageName, uid)) {
+        if (addSatelliteDataOptInUid(getPackageManagerForUid(uid), packageName, uid)) {
             reportSatelliteNetworkFallbackUids();
         }
     }
 
     @CheckReturnValue
-    private boolean addSatelliteDataOptInUid(@NonNull final String packageName, final int uid) {
+    private boolean addSatelliteDataOptInUid(@NonNull final PackageManager pm,
+            @NonNull final String packageName, final int uid) {
         if (mSupportConstrainedDataSatelliteOptIn
-                && isSatelliteDataOptimizedApp(getPackageManagerForUid(uid), packageName)) {
+                && isSatelliteDataOptimizedApp(pm, packageName)) {
             mSatelliteDataOptInUids.add(uid);
             return true;
         }
@@ -355,11 +354,18 @@ public class SatelliteAccessController {
             return;
         }
 
+        final UserManager um = mContext.getSystemService(UserManager.class);
+        if (um == null) {
+            mLog.wtf("UserManager not found.");
+            return;
+        }
+
         boolean added = false;
-        for (String app : pkgList) {
-            for (final PackageManager pm : mUserPackageManagers.values()) {
+        for (final UserHandle user : um.getUserHandles(true /* excludeDying */)) {
+            final PackageManager pm = getPackageManagerForUser(user);
+            for (String app : pkgList) {
                 final int uid = getUidForPackage(pm, app);
-                if (uid != INVALID_UID && addSatelliteDataOptInUid(app, uid)) {
+                if (uid != INVALID_UID && addSatelliteDataOptInUid(pm, app, uid)) {
                     added = true;
                 }
             }
@@ -415,29 +421,47 @@ public class SatelliteAccessController {
         return uids;
     }
 
+    private boolean isSatelliteDataOptimizedMetaData(Bundle metaData, @NonNull String packageName) {
+        if (metaData == null) return false;
+        // Retrieve the value as a generic Object to avoid Bundle warning log
+        // flooding when the format is mismatched.
+        final Object rawValue = metaData.get(PROPERTY_SATELLITE_DATA_OPTIMIZED);
+        if (rawValue == null) return false; // No expected meta-data.
+
+        // Check if the retrieved object is a matched String.
+        if (rawValue instanceof String
+                && TextUtils.equals((String) rawValue, packageName)) {
+            return true;
+        }
+        // Logging if the value is not expected (e.g., Boolean, wrong package name).
+        mLog.i("Wrong meta-data format: " + packageName);
+        return false;
+    }
+
     private boolean isSatelliteDataOptimizedApp(@NonNull PackageManager pmForUser,
             @NonNull String packageName) {
         try {
-            final ApplicationInfo applicationInfo = pmForUser.getApplicationInfo(
+            // First check meta-data under application tag.
+            final ApplicationInfo appInfo = pmForUser.getApplicationInfo(
                     packageName, PackageManager.GET_META_DATA);
-            final Bundle metaData = applicationInfo.metaData;
-            if (metaData == null) return false;
-            // Retrieve the value as a generic Object to avoid Bundle warning log
-            // flooding when the format is mismatched.
-            final Object rawValue = metaData.get(PROPERTY_SATELLITE_DATA_OPTIMIZED);
-            if (rawValue == null) return false; // No expected meta-data.
+            if (isSatelliteDataOptimizedMetaData(appInfo.metaData, packageName)) return true;
 
-            // Check if the retrieved object is a matched String.
-            if (rawValue instanceof String
-                    && TextUtils.equals((String) rawValue, packageName)) {
-                return true;
+            // Then check meta-data under service tags.
+            final PackageInfo packageInfo = pmForUser.getPackageInfo(
+                    packageName, PackageManager.GET_SERVICES | PackageManager.GET_META_DATA
+                            | PackageManager.MATCH_DISABLED_COMPONENTS);
+            if (packageInfo != null && packageInfo.services != null) {
+                for (ServiceInfo serviceInfo : packageInfo.services) {
+                    if (isSatelliteDataOptimizedMetaData(serviceInfo.metaData, packageName)) {
+                        return true;
+                    }
+                }
             }
-            // Logging if the value is not expected (e.g., Boolean, wrong package name).
-            mLog.i("Wrong meta-data format: " + packageName);
-            return false;
         } catch (PackageManager.NameNotFoundException e) {
+            // This is not an error. The package may not exist or have the required components.
             return false;
         }
+        return false;
     }
 
     // Return true if changed.
@@ -448,12 +472,7 @@ public class SatelliteAccessController {
 
     @NonNull
     private PackageManager getPackageManagerForUser(UserHandle user) {
-        PackageManager pm = mUserPackageManagers.get(user);
-        if (pm == null) {
-            pm = mContext.createContextAsUser(user, 0 /* flag */).getPackageManager();
-            mUserPackageManagers.put(user, pm);
-        }
-        return pm;
+        return mContext.createContextAsUser(user, 0 /* flag */).getPackageManager();
     }
 
     // Return cached opt-in uid list for metrics sampling.

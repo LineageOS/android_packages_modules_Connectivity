@@ -21,7 +21,7 @@ import android.net.UidRangeParcel;
 /**
  * The configuration to add or remove UID ranges.
  *
- * {@hide}
+ * @hide
  */
 @JavaDerive(toString=true, equals=true)
 @JavaOnlyImmutable

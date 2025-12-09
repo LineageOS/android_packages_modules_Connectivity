@@ -72,19 +72,42 @@ java_library {
         // service-connectivity-pre-jarjar), and in the case of code that is already in
         // framework-connectivity, the classes would be included in the apex twice.
         "modules-utils-statemachine",
+        "service-connectivity-tiramisu-protos",
     ],
     apex_available: [
         "com.android.tethering",
     ],
     visibility: [
         "//frameworks/base/services/tests/VpnTests",
+
+        // TODO: b/379938062 Remove this after VCN UT is in p/m/C
         "//frameworks/base/tests/vcn",
+
         "//packages/modules/Connectivity/service",
         "//packages/modules/Connectivity/tests:__subpackages__",
         "//packages/modules/IPsec/tests/iketests",
+        "//packages/modules/Connectivity/Vcn/tests/unit",
     ],
     lint: {
         baseline_filename: "lint-baseline.xml",
+    },
+}
+
+java_library {
+    name: "service-connectivity-tiramisu-protos",
+    sdk_version: "core_current",
+    proto: {
+        type: "lite",
+    },
+    srcs: [
+        "src/proto/*.proto",
+    ],
+    static_libs: ["libprotobuf-java-lite"],
+    apex_available: [
+        "com.android.tethering",
+    ],
+    lint: {
+        strict_updatability_linting: true,
     },
 }
 
@@ -114,8 +137,10 @@ java_library {
         "src/com/android/server/connectivity/mdns/MdnsAdvertiser.java",
         "src/com/android/server/connectivity/mdns/MdnsAnnouncer.java",
         "src/com/android/server/connectivity/mdns/MdnsInterfaceAdvertiser.java",
+        "src/com/android/server/connectivity/mdns/MdnsPacketRepeater.java",
         "src/com/android/server/connectivity/mdns/MdnsProber.java",
         "src/com/android/server/connectivity/mdns/MdnsRecordRepository.java",
+        "src/com/android/server/connectivity/mdns/MdnsReplySender.java",
         "src/com/android/server/connectivity/mdns/SchedulerFactory.java",
         "src/com/android/server/connectivity/mdns/SocketNetLinkMonitorFactory.java",
     ],
@@ -145,4 +170,16 @@ droidstubs {
     visibility: [
         "//visibility:private",
     ],
+
+    // Use the compatibility check properties to supply the previously released API to which
+    // flagged APIs can be reverted but disable the compatibility check as it is not required.
+    check_api: {
+        last_released: {
+            enabled: false,
+            // Use special target to indicate that the previously released API is actually
+            // missing.
+            api_file: ":default-unsafe-ignore-missing-latest-api",
+            removed_api_file: ":default-unsafe-ignore-missing-latest-api",
+        },
+    },
 }

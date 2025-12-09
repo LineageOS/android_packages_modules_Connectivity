@@ -57,7 +57,7 @@ private const val DEFAULT_TTL_TIME_MS = 120000L
 @RunWith(DevSdkIgnoreRunner::class)
 @DevSdkIgnoreRule.IgnoreUpTo(Build.VERSION_CODES.S_V2)
 class MdnsServiceCacheTest {
-    private val socketKey = SocketKey(null /* network */, INTERFACE_INDEX)
+    private val socketKey = SocketKey(INTERFACE_INDEX, "interface")
     private val cacheKey1 = CacheKey(SERVICE_TYPE_1, socketKey)
     private val cacheKey2 = CacheKey(SERVICE_TYPE_2, socketKey)
     private val thread = HandlerThread(MdnsServiceCacheTest::class.simpleName)

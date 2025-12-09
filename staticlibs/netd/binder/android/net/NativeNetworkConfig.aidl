@@ -22,7 +22,7 @@ import android.net.NativeVpnType;
 /**
  * The configuration to create a network.
  *
- * {@hide}
+ * @hide
  */
 @JavaDerive(toString=true, equals=true)
 @JavaOnlyImmutable
