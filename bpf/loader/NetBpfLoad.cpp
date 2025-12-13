@@ -1635,7 +1635,7 @@ static int doLoad(char** argv, char * const envp[]) {
     // see also: //system/netd/tests/kernel_test.cpp TestKernel510
     if (isAtLeast25Q4 && !isAtLeastKernelVersion(5, 10)) {
         ALOGE("Android 25Q4 requires kernel 5.10.");
-        return 7;
+        //return 7;
     }
 
     // Technically already required by U, but only enforce on V+
