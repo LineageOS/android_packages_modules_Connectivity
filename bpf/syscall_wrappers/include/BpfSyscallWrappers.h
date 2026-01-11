@@ -251,18 +251,6 @@ inline int runProgram(const borrowed_fd &prog_fd, const void *data,
                });
 }
 
-// 4.14+: returns next id > prog_id, or 0 (and sets errno)
-inline uint32_t bpfGetNextProgId(const uint32_t prog_id) {
-    bpf_attr arg = { .start_id = prog_id };
-    return bpf(BPF_PROG_GET_NEXT_ID, &arg) ? 0 : arg.next_id;
-}
-
-// 4.14+: returns next id > map_id, or 0 (and sets errno)
-inline uint32_t bpfGetNextMapId(const uint32_t map_id) {
-    bpf_attr arg = { .start_id = map_id };
-    return bpf(BPF_MAP_GET_NEXT_ID, &arg) ? 0 : arg.next_id;
-}
-
 // BPF_OBJ_GET_INFO_BY_FD requires 4.14+ kernel
 //
 // Note: some fields are only defined in newer kernels (ie. the map_info struct grows

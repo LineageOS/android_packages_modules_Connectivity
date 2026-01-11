@@ -1833,50 +1833,6 @@ static int doLoad(char** argv, char * const envp[]) {
         if (writeProcSysFile("/proc/sys/net/core/bpf_jit_kallsyms", "1\n")) return 1;
     }
 
-    if (runningAsRoot) {  // implies U QPR3+ and kernel 4.14+
-        // There should not be any programs or maps yet
-        errno = 0;
-        uint32_t progId = bpfGetNextProgId(0);  // expect 0 with errno == ENOENT
-        if (progId || errno != ENOENT) {
-            ALOGE("bpfGetNextProgId(zero) returned %u (errno %d)", progId, errno);
-            return 1;
-        }
-        errno = 0;
-        uint32_t mapId = bpfGetNextMapId(0);  // expect 0 with errno == ENOENT
-        if (mapId || errno != ENOENT) {
-            ALOGE("bpfGetNextMapId(zero) returned %u (errno %d)", mapId, errno);
-            return 1;
-        }
-    } else if (isAtLeastKernelVersion(4, 14, 0)) {  // implies S through U QPR2
-        // bpfGetNext{Prog,Map}Id require 4.14+
-        // furthermore since we're not running as root, we're not the initial
-        // platform bpfloader, so there may already be some maps & programs.
-        uint32_t mapId = 0;
-        while (true) {
-            errno = 0;
-            uint32_t next = bpfGetNextMapId(mapId);
-            if (!next && errno == ENOENT) break;
-            if (next <= mapId) {
-                ALOGE("bpfGetNextMapId(%u) returned %u errno %d", mapId, next, errno);
-                return 1;
-            }
-            mapId = next;
-        }
-        // mapId is now the last map id, creating a new map should change that
-        unique_fd map(createMap(BPF_MAP_TYPE_ARRAY, sizeof(int), sizeof(int), 1, 0));
-        errno = 0;
-        uint32_t next = bpfGetNextMapId(mapId);
-        if (next <= mapId) {
-            // We should fail here on Xiaomi S 4.14.180 due to kernel uapi bug,
-            // which causes bpfGetNextMapId to behave as bpfGetNextProgId,
-            // and thus it should return 0 with errno == ENOENT.
-            ALOGE("bpfGetNextMapId(final %d) returned %d errno %d", mapId, next, errno);
-            return 1;
-        }
-    } else {  // implies S/T with 4.9 kernel
-        // nothing we can do.
-    }
-
     // Create all the pin subdirectories
     // (this must be done first to allow selinux_context and pin_subdir functionality,
     //  which could otherwise fail with ENOENT during object pinning or renaming,
