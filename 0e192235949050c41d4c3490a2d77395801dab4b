@@ -16,6 +16,23 @@
       "message": "Only tested it compiles",
       "revId": "0e192235949050c41d4c3490a2d77395801dab4b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6afb060a_2cf143f5",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 28223
+      },
+      "writtenOn": "2026-01-24T23:18:02Z",
+      "side": 1,
+      "message": "Guess it works, adb shell dumpsys connectivity trafficcontroller has 10045 HAPPY_BOX_MATCH RESTRICTED_MATCH BACKGROUND_MATCH (my vpn) and mostly everything else has LOCKDOWN_VPN_MATCH 27",
+      "revId": "0e192235949050c41d4c3490a2d77395801dab4b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
