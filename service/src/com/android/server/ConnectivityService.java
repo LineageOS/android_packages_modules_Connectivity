@@ -2898,7 +2898,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         // QUIC connection close is triggered by freezer (U+) or background firewall chain (V+).
         // TODO: Allow other firewall chains to close QUIC connection and enable this flag on T+
         mCloseQuicConnection = mDeps.isAtLeastU()
-                && mDeps.isFeatureNotChickenedOut(context, CLOSE_QUIC_CONNECTION);
+                && mDeps.isFeatureEnabled(context, CLOSE_QUIC_CONNECTION);
         if (mCloseQuicConnection) {
             mQuicConnectionCloser = mDeps.makeQuicConnectionCloser(mNetworkForNetId, mHandler);
         } else {
