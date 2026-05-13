@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "19972351_7db3bf9f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2026-05-13T11:54:27Z",
+      "side": 1,
+      "message": "```\nadb shell dumpsys connectivity | grep \"Close QUIC\"\nClose QUIC connection: false\n```",
+      "revId": "c9f3e7795256bd4a3f99d02e604e24fd1552c2b3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
