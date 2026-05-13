@@ -16,6 +16,24 @@
       "message": "```suggestion\nSetting this via device_config overlay doesn\u0027t seem to work, so hardcode\n```",
       "revId": "b604af3ae92e6afef464ec16ff6dbef7a991277e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3ea19737_a756a3f0",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2026-05-13T11:51:10Z",
+      "side": 1,
+      "message": "Fix applied.",
+      "parentUuid": "69fb6d79_376fdbae",
+      "revId": "b604af3ae92e6afef464ec16ff6dbef7a991277e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
