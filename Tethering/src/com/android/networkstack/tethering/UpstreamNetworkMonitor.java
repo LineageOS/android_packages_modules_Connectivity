@@ -50,7 +50,6 @@ import androidx.annotation.Nullable;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.SharedLog;
-import com.android.networkstack.apishim.common.UnsupportedApiLevelException;
 import com.android.networkstack.tethering.util.PrefixUtils;
 
 import java.util.HashMap;
@@ -219,13 +218,8 @@ public class UpstreamNetworkMonitor {
         //  because it does not provide internet capability. Figure out whether this
         //  is enforced in ConnectivityService. Or what will happen for tethering if it happens.
         if (isAllowedToUseVpnUpstreams() && SdkLevel.isAtLeastU()) {
-            try {
-                cm().registerDefaultNetworkCallbackForUid(Process.ROOT_UID,
-                        mDefaultNetworkCallback, mHandler);
-            } catch (UnsupportedApiLevelException e) {
-                Log.wtf(TAG, "Unexpected exception registering network callback for root UID"
-                        + " to support hotspot VPN upstreams", e);
-            }
+            cm().registerDefaultNetworkCallbackForUid(Process.ROOT_UID, mDefaultNetworkCallback,
+                    mHandler);
         } else {
             cm().registerSystemDefaultNetworkCallback(mDefaultNetworkCallback, mHandler);
         }
