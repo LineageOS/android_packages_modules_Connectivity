@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "952435ee_0a0fd5ef",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 15060
+      },
+      "writtenOn": "2026-07-15T13:56:16Z",
+      "side": 1,
+      "message": "I\u0027ll review the code once the open questions are resolved",
+      "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
