@@ -39,6 +39,30 @@
       },
       "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "afec9487_9d5c7ead",
+        "filename": "Tethering/src/com/android/networkstack/tethering/TetheringInterfaceUtils.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 15060
+      },
+      "writtenOn": "2026-07-15T16:38:42Z",
+      "side": 1,
+      "message": "I understand that the proposed fix is that it always falls back to using the VPN LinkProperties interface name when it\u0027s a VPN.\n\nMy reading of the cases under which if4 returns null are if `RouteInfo.selectBestRoute` returned null (internal to `getInterfaceForDestination`). Otherwise it returns an interface name itself.\nAs you\u0027ve mentioned it is checking against 0.0.0.0 (INADDR_ANY) and if it\u0027s missing (like in the case you\u0027re running into) it will return null and therefore affect connectivity the way you specified even though it could still route.\n\nI think the fix is to consider what assumptions should replace the ones Google made in AOSP if they\u0027re problematic for this feature. If there are no good replacements and if the only options is to always assign if4 the interface name when it is a VPN then I suppose it would be an acceptable fix.\n\nhttps://cs.android.com/android/platform/superproject/+/android-latest-release:packages/modules/Connectivity/Tethering/src/com/android/networkstack/tethering/TetheringInterfaceUtils.java;l\u003d96;drc\u003dd02f9af9181d866dc24ae04dec2508e6610e2492\n\nhttps://cs.android.com/android/platform/superproject/+/android-latest-release:packages/modules/Connectivity/staticlibs/framework/com/android/net/module/util/NetUtils.java;l\u003d55;drc\u003d630388df2c5bc8d0663c8b30bd087e936a9f3df6",
+      "parentUuid": "b9e9aa40_5be11169",
+      "range": {
+        "startLine": 56,
+        "startChar": 8,
+        "endLine": 66,
+        "endChar": 9
+      },
+      "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
