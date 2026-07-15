@@ -16,6 +16,24 @@
       "message": "did you actually test this patch btw?",
       "revId": "7ed57a69c63a62c4bf3cdf9a4417cb7d0513b880",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fb29f4b8_804af274",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 37563
+      },
+      "writtenOn": "2026-07-15T15:31:17Z",
+      "side": 1,
+      "message": "The patched binary itself has not been run on a device, since the Tethering on official builds is signature-locked and I haven\u0027t done a full self build and flash. I do have another similar device that I could self-build for and do a runtime test on if you\u0027d like before merge (might take me a bit to figure out how to do). \n\nBut the root cause was verified on-device (OnePlus 8T / kebab, rooted, official lineage-23.2). `dumpsys tethering` flips between upstream interface(s): null and [tun0] purely based on whether the VPN\u0027s route set covers 0.0.0.0, with three route configurations tested.",
+      "parentUuid": "670770e2_01d1f027",
+      "revId": "7ed57a69c63a62c4bf3cdf9a4417cb7d0513b880",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
