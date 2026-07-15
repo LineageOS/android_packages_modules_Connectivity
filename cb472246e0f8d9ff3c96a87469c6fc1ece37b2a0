@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5978b4b4_70fc3784",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2026-07-15T07:06:06Z",
+      "side": 1,
+      "message": "is this ai generated? please check https://github.com/LineageOS/charter/blob/main/ai-coding-assistants.md",
+      "revId": "cb472246e0f8d9ff3c96a87469c6fc1ece37b2a0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
