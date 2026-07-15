@@ -54,6 +54,23 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "03f485d0_6ec4c68e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2026-07-15T19:24:26Z",
+      "side": 1,
+      "message": "What prevents this change from impacting the situation when \"Use VPN for connected devices\" is turned off entirely?",
+      "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "b9e9aa40_5be11169",
         "filename": "Tethering/src/com/android/networkstack/tethering/TetheringInterfaceUtils.java",
         "patchSetId": 3
