@@ -16,6 +16,29 @@
       "message": "I\u0027ll review the code once the open questions are resolved",
       "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b9e9aa40_5be11169",
+        "filename": "Tethering/src/com/android/networkstack/tethering/TetheringInterfaceUtils.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 15060
+      },
+      "writtenOn": "2026-07-15T16:11:41Z",
+      "side": 1,
+      "message": "It seems to me that the conditions under which if4 is assigned the interface name in the code and when the comment specifies that it should be assigned don\u0027t match.\n\nOn a separate note, I would personally suggest that the fix, if related to these values not being assigned the correct value when split-route VPNs are in use, would directly modify `getInterfaceForDestination` (and `getIPv6Interface` if applicable)",
+      "range": {
+        "startLine": 56,
+        "startChar": 8,
+        "endLine": 66,
+        "endChar": 9
+      },
+      "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
