@@ -18,6 +18,23 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "5b77a495_15205400",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2026-07-15T19:18:18Z",
+      "side": 1,
+      "message": "As mentioned in the issue, one affected VPN app does not include 0.0.0.0/8 (involved code [here](https://github.com/OutlineFoundation/outline-apps/blob/b340c79c5d1f738acc9fcd1054ead51bf3bd67d9/client/src/cordova/android/OutlineAndroidLib/outline/src/main/java/org/outline/vpn/VpnTunnelService.java#L271) and [here](https://github.com/OutlineFoundation/outline-apps/blob/b340c79c5d1f738acc9fcd1054ead51bf3bd67d9/client/src/cordova/plugin/android/res/values/bypass_subnets.xml)) as part of excluding [reserved IP addresses](https://en.wikipedia.org/wiki/List_of_reserved_IP_addresses). But the fact remains that AOSP has chosen to use 0.0.0.0 for this test...\n\nI\u0027m trying to understand the approach this patch takes to solve the problem. I\u0027ll open some other comments.",
+      "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b9e9aa40_5be11169",
