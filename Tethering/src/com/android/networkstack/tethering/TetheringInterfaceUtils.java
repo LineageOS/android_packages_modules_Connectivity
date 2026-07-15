@@ -18,6 +18,7 @@ package com.android.networkstack.tethering;
 
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
+import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -49,8 +50,20 @@ public final class TetheringInterfaceUtils {
         }
 
         final LinkProperties lp = ns.linkProperties;
-        final String if4 = getInterfaceForDestination(lp, INADDR_ANY);
+        String if4 = getInterfaceForDestination(lp, INADDR_ANY);
         final String if6 = getIPv6Interface(ns);
+
+        // VPN upstreams (tethering_allow_vpn_upstreams) may install split
+        // routes without any prefix covering INADDR_ANY (e.g. AllowedIPs
+        // lists starting at 1.0.0.0/8). The destination lookup then fails
+        // even though the VPN carries all client traffic. Fall back to the
+        // VPN's interface name; a VPN's LinkProperties has exactly one
+        // interface.
+        if (if4 == null && lp != null
+                && ns.networkCapabilities != null
+                && ns.networkCapabilities.hasTransport(TRANSPORT_VPN)) {
+            if4 = lp.getInterfaceName();
+        }
 
         return (if4 == null && if6 == null) ? null : new InterfaceSet(if4, if6);
     }
