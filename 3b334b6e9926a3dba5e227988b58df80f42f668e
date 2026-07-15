@@ -37,6 +37,23 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "10afa8f7_9c8b70ed",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31604
+      },
+      "writtenOn": "2026-07-15T19:24:13Z",
+      "side": 1,
+      "message": "Why does this change fall back to accepting *any* VPN when we don\u0027t like the answer we get from `getInterfaceForDestination`, without checking anything about it? Could it possibly \"fall back\" to a VPN that doesn\u0027t even cover the wider internet, e.g. to one that only covers 10.1.2.0/24 or something small, and thereby interfere with connected devices even further in that case?",
+      "revId": "3b334b6e9926a3dba5e227988b58df80f42f668e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "b9e9aa40_5be11169",
         "filename": "Tethering/src/com/android/networkstack/tethering/TetheringInterfaceUtils.java",
         "patchSetId": 3
