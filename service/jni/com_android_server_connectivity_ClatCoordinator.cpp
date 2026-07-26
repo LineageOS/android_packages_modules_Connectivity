@@ -71,7 +71,7 @@ static void verifyPerms(const char * const path,
     char b[255] = {};
     int v = lgetxattr(path, "security.selinux", &b, sizeof(b));
     if (v < 0) ALOGF("lgetxattr '%s' errno=%d", path, errno);
-    if (strncmp(ctxt, b, sizeof(b))) ALOGF("context of '%s' is '%s' != '%s'", path, b, ctxt);
+    if (strncmp(ctxt, b, sizeof(b))) ALOGE("context of '%s' is '%s' != '%s'", path, b, ctxt);
 
     int fd = -1;
 
