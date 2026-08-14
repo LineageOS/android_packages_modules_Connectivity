@@ -12578,7 +12578,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         } catch (RemoteException | ServiceSpecificException e) {
             loge("Exception setting app default network", e);
         }
-        updateUidDefaultNetworkRules(newDefaultNetwork);
     }
 
     /**

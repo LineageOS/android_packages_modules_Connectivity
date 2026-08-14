@@ -18380,6 +18380,31 @@ public class ConnectivityServiceTest {
         inorder.verify(mMockNetd, never()).networkAddUidRangesParcel(any());
     }
 
+    @Test
+    public void testVpnDefaultDoesNotChangeSystemDefaultAllowlist() throws Exception {
+        mWiFiAgent = new TestNetworkAgentWrapper(TRANSPORT_WIFI);
+        mWiFiAgent.connect(true);
+        waitForIdle();
+
+        final int wifiNetId = mWiFiAgent.getNetwork().netId;
+        reset(mMockNetd);
+
+        final String sessionKey = UUID.randomUUID().toString();
+        try {
+            mCm.setVpnDefaultForUids(sessionKey,
+                    UidRange.toIntRanges(uidRangesForUids(TEST_PACKAGE_UID)));
+            waitForIdle();
+
+            verify(mMockNetd, never()).networkAddUidRangesParcel(
+                    argThat(config -> config.netId == wifiNetId));
+            verify(mMockNetd, never()).networkRemoveUidRangesParcel(
+                    argThat(config -> config.netId == wifiNetId));
+        } finally {
+            mCm.setVpnDefaultForUids(sessionKey, Collections.emptyList());
+            waitForIdle();
+        }
+    }
+
     /**
      * Make sure mobile data preferred uids feature behaves as expected when the mobile network
      * goes up and down while the uids is set. Make sure they behave as expected whether
