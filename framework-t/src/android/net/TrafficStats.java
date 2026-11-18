@@ -460,6 +460,7 @@ public class TrafficStats {
 
     private static native int native_tagSocketFd(FileDescriptor fd, int tag, int uid);
     private static native int native_untagSocketFd(FileDescriptor fd);
+    private static native void native_setThreadDnsUid(int uid);
 
     private static class UidTag {
         public int tag = -1;
@@ -598,6 +599,8 @@ public class TrafficStats {
     @SuppressLint("RequiresPermission")
     public static void setThreadStatsUid(int uid) {
         sThreadUidTag.get().uid = uid;
+        // The thread's DNS lookups count as the uid's too, where the resolver supports it.
+        native_setThreadDnsUid(uid);
     }
 
     /**

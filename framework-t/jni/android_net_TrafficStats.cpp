@@ -16,6 +16,7 @@
 
 #include <android/file_descriptor_jni.h>
 #include <android/multinetwork.h>
+#include <dlfcn.h>
 #include <nativehelper/JNIHelp.h>
 
 namespace android {
@@ -32,13 +33,28 @@ static jint untagSocketFd(JNIEnv* env, jclass, jobject fileDescriptor) {
   return android_untag_socket(fd);
 }
 
+// A system API of the platform's libandroid, so looked up once, as the methods are registered:
+// the module also runs on platforms without it.
+using SetThreadDnsUid = int (*)(uid_t);
+static SetThreadDnsUid sSetThreadDnsUid;
+
+static void setThreadDnsUid(JNIEnv*, jclass, jint uid) {
+  if (sSetThreadDnsUid) sSetThreadDnsUid(uid);
+}
+
 static const JNINativeMethod gMethods[] = {
     /* name, signature, funcPtr */
     { "native_tagSocketFd", "(Ljava/io/FileDescriptor;II)I", (void*) tagSocketFd },
     { "native_untagSocketFd", "(Ljava/io/FileDescriptor;)I", (void*) untagSocketFd },
+    { "native_setThreadDnsUid", "(I)V", (void*) setThreadDnsUid },
 };
 
 int register_android_net_TrafficStats(JNIEnv* env) {
+    void* libandroid = dlopen("libandroid.so", RTLD_NOW);
+    if (libandroid) {
+        sSetThreadDnsUid = reinterpret_cast<SetThreadDnsUid>(
+                dlsym(libandroid, "android_set_thread_dns_uid"));
+    }
     return jniRegisterNativeMethods(env, "android/net/TrafficStats", gMethods, NELEM(gMethods));
 }
 
