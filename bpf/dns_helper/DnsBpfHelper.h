@@ -32,11 +32,16 @@ class DnsBpfHelper {
 
   base::Result<void> init();
   base::Result<bool> isUidNetworkingBlocked(uid_t uid, bool metered);
+  base::Result<bool> isUidOemDenied(uid_t uid);
+  bool hasUpdateDeviceStatsPermission(uid_t uid);
 
  private:
   android::bpf::BpfMapRO<uint32_t, uint32_t> mConfigurationMap;
   android::bpf::BpfMapRO<uint32_t, UidOwnerValue> mUidOwnerMap;
   android::bpf::BpfMapRO<uint32_t, bool> mDataSaverEnabledMap;
+  android::bpf::BpfMapRO<uint32_t, bool> mUidMigrationEnabledMap;
+  android::bpf::BpfMapRO<uint32_t, UidPermissionChunk> mUidPermissionChunkMap;
+  android::bpf::BpfMapRO<uint32_t, uint8_t> mUidPermissionMap;
 
   // For testing
   friend class DnsBpfHelperTest;

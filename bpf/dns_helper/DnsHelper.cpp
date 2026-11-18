@@ -28,6 +28,18 @@ int ADnsHelper_init() {
   return 0;
 }
 
+int ADnsHelper_hasUpdateDeviceStatsPermission(uid_t uid) {
+  return sDnsBpfHelper.hasUpdateDeviceStatsPermission(uid);
+}
+
+int ADnsHelper_isUidOemDenied(uid_t uid) {
+  auto result = sDnsBpfHelper.isUidOemDenied(uid);
+  if (!result.ok()) return -result.error().code();
+
+  // bool -> int conversion.
+  return result.value();
+}
+
 int ADnsHelper_isUidNetworkingBlocked(uid_t uid, bool metered) {
   auto result = sDnsBpfHelper.isUidNetworkingBlocked(uid, metered);
   if (!result.ok()) return -result.error().code();

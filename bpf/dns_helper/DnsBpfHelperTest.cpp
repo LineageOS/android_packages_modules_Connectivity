@@ -35,6 +35,7 @@ class DnsBpfHelperTest : public ::testing::Test {
   BpfMap<uint32_t, uint32_t> mFakeConfigurationMap;
   BpfMap<uint32_t, UidOwnerValue> mFakeUidOwnerMap;
   BpfMap<uint32_t, bool> mFakeDataSaverEnabledMap;
+  BpfMap<uint32_t, uint8_t> mFakeUidPermissionMap;
 
   void SetUp() {
     mFakeConfigurationMap.resetMap(BPF_MAP_TYPE_ARRAY, CONFIGURATION_MAP_SIZE);
@@ -46,12 +47,17 @@ class DnsBpfHelperTest : public ::testing::Test {
     mFakeDataSaverEnabledMap.resetMap(BPF_MAP_TYPE_ARRAY, 1);
     ASSERT_VALID(mFakeDataSaverEnabledMap);
 
+    mFakeUidPermissionMap.resetMap(BPF_MAP_TYPE_HASH, TEST_MAP_SIZE);
+    ASSERT_VALID(mFakeUidPermissionMap);
+
     mDnsBpfHelper.mConfigurationMap = mFakeConfigurationMap;
     ASSERT_VALID(mDnsBpfHelper.mConfigurationMap);
     mDnsBpfHelper.mUidOwnerMap = mFakeUidOwnerMap;
     ASSERT_VALID(mDnsBpfHelper.mUidOwnerMap);
     mDnsBpfHelper.mDataSaverEnabledMap = mFakeDataSaverEnabledMap;
     ASSERT_VALID(mDnsBpfHelper.mDataSaverEnabledMap);
+    mDnsBpfHelper.mUidPermissionMap = mFakeUidPermissionMap;
+    ASSERT_VALID(mDnsBpfHelper.mUidPermissionMap);
   }
 
   void ResetAllMaps() {
@@ -204,6 +210,38 @@ TEST_F(DnsBpfHelperTest, IsUidNetworkingBlocked_metered) {
     EXPECT_RESULT_OK(result);
     EXPECT_EQ(config.blocked, result.value());
   }
+}
+
+TEST_F(DnsBpfHelperTest, IsUidOemDenied) {
+  EXPECT_RESULT_OK(mFakeConfigurationMap.writeValue(UID_RULES_CONFIGURATION_KEY,
+                                                    OEM_DENY_1_MATCH | BACKGROUND_MATCH,
+                                                    BPF_EXIST));
+  EXPECT_RESULT_OK(mFakeUidOwnerMap.writeValue(AID_APP_START, {.iif = 0, .rule = OEM_DENY_1_MATCH},
+                                               BPF_ANY));
+  EXPECT_RESULT_OK(mFakeUidOwnerMap.writeValue(AID_APP_START + 1,
+                                               {.iif = 0, .rule = OEM_DENY_2_MATCH}, BPF_ANY));
+
+  // Only enabled OEM deny chains count: not one that's off, nor the background chain, which
+  // blocks the app with no rule of its own.
+  EXPECT_TRUE(mDnsBpfHelper.isUidOemDenied(AID_APP_START).value());
+  EXPECT_FALSE(mDnsBpfHelper.isUidOemDenied(AID_APP_START + 1).value());
+  EXPECT_FALSE(mDnsBpfHelper.isUidOemDenied(AID_APP_START + 2).value());
+  EXPECT_FALSE(mDnsBpfHelper.isUidOemDenied(AID_SYSTEM).value());
+
+  ResetAllMaps();
+  EXPECT_EQ(EUNATCH, mDnsBpfHelper.isUidOemDenied(AID_APP_START).error().code());
+}
+
+TEST_F(DnsBpfHelperTest, HasUpdateDeviceStatsPermission) {
+  EXPECT_RESULT_OK(mFakeUidPermissionMap.writeValue(AID_APP_START,
+                                                    BPF_PERMISSION_UPDATE_DEVICE_STATS, BPF_ANY));
+
+  // As socket tagging checks it: by app id, in every user, and always for root and the system.
+  EXPECT_TRUE(mDnsBpfHelper.hasUpdateDeviceStatsPermission(AID_APP_START));
+  EXPECT_TRUE(mDnsBpfHelper.hasUpdateDeviceStatsPermission(AID_USER_OFFSET + AID_APP_START));
+  EXPECT_FALSE(mDnsBpfHelper.hasUpdateDeviceStatsPermission(AID_APP_START + 1));
+  EXPECT_TRUE(mDnsBpfHelper.hasUpdateDeviceStatsPermission(AID_ROOT));
+  EXPECT_TRUE(mDnsBpfHelper.hasUpdateDeviceStatsPermission(AID_SYSTEM));
 }
 
 }  // namespace net

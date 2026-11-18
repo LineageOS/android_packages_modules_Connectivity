@@ -75,7 +75,34 @@ base::Result<void> DnsBpfHelper::init() {
   RETURN_IF_RESULT_NOT_OK(mConfigurationMap.init(CONFIGURATION_MAP_PATH));
   RETURN_IF_RESULT_NOT_OK(mUidOwnerMap.init(UID_OWNER_MAP_PATH));
   RETURN_IF_RESULT_NOT_OK(mDataSaverEnabledMap.init(DATA_SAVER_ENABLED_MAP_PATH));
+  RETURN_IF_RESULT_NOT_OK(mUidMigrationEnabledMap.init(UID_MIGRATION_ENABLED_MAP_PATH));
+  RETURN_IF_RESULT_NOT_OK(mUidPermissionChunkMap.init(UID_PERMISSION_CHUNK_MAP_PATH));
+  RETURN_IF_RESULT_NOT_OK(mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
   return {};
+}
+
+// copied from BpfHandler.cpp
+bool DnsBpfHelper::hasUpdateDeviceStatsPermission(uid_t uid) {
+  // This implementation is the same logic as method ActivityManager#checkComponentPermission.
+  // It implies that real uid can never be same as AID_USER_OFFSET == PER_USER_RANGE == 100000
+  uint32_t appId = uid % AID_USER_OFFSET;
+  uint32_t mapKey = 0;
+  auto isUidMigrationEnabled = mUidMigrationEnabledMap.readValue(mapKey);
+  if (isUidMigrationEnabled.ok() && isUidMigrationEnabled.value()) {
+    uint32_t chunkId = uid / CHUNK_UID_COUNT;
+    uint32_t index = uid / UIDS_PER_INT64 % CHUNK_INT64_COUNT;
+    int shift = (uid % UIDS_PER_INT64 * PERMISSION_COUNT) & 63;
+    auto chunk = mUidPermissionChunkMap.readValue(chunkId);
+    if (chunk.ok() && (chunk.value().block[index] >> shift) & PERMISSION_BIT_UPDATE_DEVICE_STATS) {
+      return true;
+    }
+  } else {
+    auto permission = mUidPermissionMap.readValue(appId);
+    if (permission.ok() && (permission.value() & BPF_PERMISSION_UPDATE_DEVICE_STATS)) {
+      return true;
+    }
+  }
+  return ((appId == AID_ROOT) || (appId == AID_SYSTEM) || (appId == AID_DNS));
 }
 
 base::Result<bool> DnsBpfHelper::isUidNetworkingBlocked(uid_t uid, bool metered) {
@@ -115,6 +142,23 @@ base::Result<bool> DnsBpfHelper::isUidNetworkingBlocked(uid_t uid, bool metered)
   }
 
   return false;
+}
+
+base::Result<bool> DnsBpfHelper::isUidOemDenied(uid_t uid) {
+  if (is_system_uid(uid)) return false;
+  if (!mConfigurationMap.isValid() || !mUidOwnerMap.isValid()) {
+    LOG(ERROR) << __func__
+               << ": BPF maps are not ready. Forgot to call ADnsHelper_init?";
+    return base::Error(EUNATCH);
+  }
+
+  auto enabledRules = mConfigurationMap.readValue(UID_RULES_CONFIGURATION_KEY);
+  RETURN_IF_RESULT_NOT_OK(enabledRules);
+
+  auto value = mUidOwnerMap.readValue(uid);
+  uint32_t uidRules = value.ok() ? value.value().rule : 0;
+  return (enabledRules.value() & uidRules &
+          (OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)) != 0;
 }
 
 }  // namespace net

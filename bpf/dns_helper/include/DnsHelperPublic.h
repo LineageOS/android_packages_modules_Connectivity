@@ -43,4 +43,22 @@ int ADnsHelper_init();
  */
 int ADnsHelper_isUidNetworkingBlocked(uid_t uid, bool metered);
 
+/*
+ * Whether the uid is on an enabled OEM deny chain. The function is supported starting from
+ * Android T.
+ *
+ * Returns 0(false)/1(true) on success, -EUNATCH when the ADnsHelper_init is not called before
+ * calling this function. Returns a negative POSIX error code (see errno.h) on other failures
+ * that return from bpf syscall.
+ */
+int ADnsHelper_isUidOemDenied(uid_t uid);
+
+/*
+ * Whether the uid may charge traffic to other apps, as socket tagging requires: it holds
+ * UPDATE_DEVICE_STATS, or is root, the system or DNS. Call ADnsHelper_init first.
+ *
+ * Returns 0(false)/1(true).
+ */
+int ADnsHelper_hasUpdateDeviceStatsPermission(uid_t uid);
+
 __END_DECLS
