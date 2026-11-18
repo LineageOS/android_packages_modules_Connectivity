@@ -45,6 +45,9 @@ static const int DROP_UNLESS_DNS = 2;  // internal to our program
 #define TCP_FLAG8_FIN 0x01
 #define TCP_FLAG8_SYN 0x02
 #define TCP_FLAG8_RST 0x04
+#define TCP_FLAG8_ACK 0x10
+
+#define OEM_DENY_MATCHES (OEM_DENY_1_MATCH | OEM_DENY_2_MATCH | OEM_DENY_3_MATCH)
 
 #define EPERM 1
 #define EINVAL  22
@@ -602,6 +605,13 @@ function bool parse_skb(SkbIpPacketData *const packet,
     return true;
 }
 
+function bool is_uid_oem_denied(const uint32_t uid) {
+    const uint32_t key = UID_RULES_CONFIGURATION_KEY;
+    const BpfConfig* config = bpf_configuration_map_lookup_elem(&key);
+    const UidOwnerValue* uidEntry = bpf_uid_owner_map_lookup_elem(&uid);
+    return config && uidEntry && (*config & uidEntry->rule & OEM_DENY_MATCHES);
+}
+
 procedure bool should_block_loopback_access(const SkbIpPacketData *const packet_data,
                                             struct __sk_buff *const skb,
                                             const uint32_t sender_uid,
@@ -641,17 +651,22 @@ procedure bool should_block_loopback_access(const SkbIpPacketData *const packet_
     }
     if (!local_sk) return false;
 
+    // An app the OEM deny matches cut off may reach itself and answer others, but may not start
+    // reaching other apps. Its packets only get here where those matches spare loopback.
+    const bool cut_off = is_uid_oem_denied(sender_uid)
+        && (packet_data->ip_proto == IPPROTO_UDP || !(packet_data->tcp_flags & TCP_FLAG8_ACK));
+
     SkStorageValue *sks = bpf_sk_storage_get(local_sk, 0, 0);
     const uint32_t receiver_uid = sks ? sks->uid : 0;
     bpf_sk_release(local_sk);
-    if (!sks) return false;
+    if (!sks) return cut_off;
 
     // We don't care about cases where apps are sending loopback traffic to
     // themselves.
     if (sender_uid == receiver_uid) return false;
 
-    bool allowed = true;
-    if (checks_enabled) {
+    bool allowed = !cut_off || is_system_uid(receiver_uid);
+    if (allowed && checks_enabled) {
         allowed = uids_have_loopback_permissions(sender_uid, receiver_uid);
     }
     if (metrics_enabled) {
@@ -669,7 +684,7 @@ procedure bool should_block_loopback_access_cached(const SkbIpPacketData *const 
                                             const uint32_t sender_uid) {
     bool checks_enabled = loopback_checks_enabled();
     bool metrics_enabled = loopback_metrics_enabled();
-    if (!checks_enabled && !metrics_enabled) return false;
+    if (!checks_enabled && !metrics_enabled && !is_uid_oem_denied(sender_uid)) return false;
 
     // TCP connections that already passed loopback access check
     if (packet_data->ip_proto == IPPROTO_TCP
@@ -798,6 +813,11 @@ function int bpf_owner_match(const SkbIpPacketData* const packet,
 
     // BACKGROUND match does not apply to loopback traffic
     if (skb->ifindex == 1) enabledRules &= ~BACKGROUND_MATCH;
+    // Nor do the OEM deny matches where the loopback check knows whose socket an app reaches:
+    // that check keeps such an app to itself instead.
+    if (KVER_IS_AT_LEAST(kver, 5, 10) && API_IS_AT_LEAST(lvl, 25Q4) && skb->ifindex == 1) {
+        enabledRules &= ~OEM_DENY_MATCHES;
+    }
 
     UidOwnerValue* uidEntry = bpf_uid_owner_map_lookup_elem(&uid);
     uint32_t uidRules = uidEntry ? uidEntry->rule : 0;
