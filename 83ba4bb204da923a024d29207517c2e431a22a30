@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7427c223_b1751c5d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 15060
+      },
+      "writtenOn": "2026-11-18T05:32:16Z",
+      "side": 1,
+      "message": "Drops together with https://review.lineageos.org/c/LineageOS/android_packages_modules_Connectivity/+/490797 at the next rebase.",
+      "revId": "83ba4bb204da923a024d29207517c2e431a22a30",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
