@@ -70,10 +70,19 @@ static Result<void> attachProgramToCgroup(const char* programPath, const unique_
     if (!cgroupProg.ok()) {
         return Error(errno) << "Failed to get program from " << programPath;
     }
-    if (bpf::attachProgram(type, cgroupProg, cgroupFd)) {
+    // Multi-attach lets the firewall attach alongside; detaching first lets netd re-attach.
+    bpf::detachSingleProgram(type, cgroupProg, cgroupFd);
+    if (bpf::attachProgram(type, cgroupProg, cgroupFd, BPF_F_ALLOW_MULTI)) {
         return Error(errno) << "Program " << programPath << " attach failed";
     }
     return {};
+}
+
+// Counts every program on the hook. queryProgram() fails once another module's program shares it.
+static int attachedPrograms(const unique_fd& cgroupFd, bpf_attach_type type) {
+    bpf_attr attr = {.query = {.target_fd = static_cast<__u32>(cgroupFd.get()),
+                               .attach_type = type}};
+    return bpf::bpf(BPF_PROG_QUERY, attr) ? -errno : attr.query.prog_cnt;
 }
 
 static Result<void> checkProgramAccessible(const char* programPath) {
@@ -206,8 +215,8 @@ static Result<void> initPrograms(const char* cg2_path) {
 
         // This should trivially pass, since we just attached up above,
         // but BPF_PROG_QUERY is only implemented on 4.19+ kernels.
-        if (queryProgram(cg_fd, BPF_CGROUP_INET_EGRESS) <= 0) abort();
-        if (queryProgram(cg_fd, BPF_CGROUP_INET_INGRESS) <= 0) abort();
+        if (attachedPrograms(cg_fd, BPF_CGROUP_INET_EGRESS) <= 0) abort();
+        if (attachedPrograms(cg_fd, BPF_CGROUP_INET_INGRESS) <= 0) abort();
         if (queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_CREATE) <= 0) abort();
         if (queryProgram(cg_fd, BPF_CGROUP_INET4_BIND) <= 0) abort();
         if (queryProgram(cg_fd, BPF_CGROUP_INET6_BIND) <= 0) abort();
@@ -221,8 +230,8 @@ static Result<void> initPrograms(const char* cg2_path) {
         // V requires 4.19+, so technically this 2nd 'if' is not required, but it
         // doesn't hurt us to try to support AOSP forks that try to support older kernels.
         if (isAtLeastKernelVersion(4, 19)) {
-            if (queryProgram(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0) abort();
-            if (queryProgram(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0) abort();
+            if (attachedPrograms(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0) abort();
+            if (attachedPrograms(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0) abort();
             if (queryProgram(cg_fd, BPF_CGROUP_UDP4_RECVMSG) <= 0) abort();
             if (queryProgram(cg_fd, BPF_CGROUP_UDP6_RECVMSG) <= 0) abort();
             if (queryProgram(cg_fd, BPF_CGROUP_UDP4_SENDMSG) <= 0) abort();
