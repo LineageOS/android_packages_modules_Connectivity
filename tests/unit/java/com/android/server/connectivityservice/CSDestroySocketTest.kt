@@ -21,7 +21,9 @@ import android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STAT
 import android.app.ActivityManager.UidFrozenStateChangedCallback.UID_FROZEN_STATE_UNFROZEN
 import android.net.ConnectivityManager.BLOCKED_REASON_APP_BACKGROUND
 import android.net.ConnectivityManager.BLOCKED_REASON_NONE
+import android.net.ConnectivityManager.BLOCKED_REASON_OEM_DENY
 import android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND
+import android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1
 import android.net.ConnectivityManager.FIREWALL_RULE_ALLOW
 import android.net.ConnectivityManager.FIREWALL_RULE_DENY
 import android.net.INetd
@@ -140,7 +142,9 @@ class CSDestroySocketTest : CSTest() {
 
     private fun doTestBackgroundRestrictionDestroySockets(
             restrictionWithIdleNetwork: Boolean,
-            expectDelay: Boolean
+            expectDelay: Boolean,
+            chain: Int = FIREWALL_CHAIN_BACKGROUND,
+            blockedReason: Int = BLOCKED_REASON_APP_BACKGROUND
     ) {
         val netdEventListener = getRegisteredNetdUnsolicitedEventListener()
         val inOrder = inOrder(destroySocketsWrapper)
@@ -157,11 +161,11 @@ class CSDestroySocketTest : CSTest() {
             )
         }
 
-        // Set deny rule on background chain for TEST_UID
-        doReturn(BLOCKED_REASON_APP_BACKGROUND)
+        // Set deny rule on the chain for TEST_UID
+        doReturn(blockedReason)
                 .`when`(bpfNetMaps).getUidNetworkingBlockedReasons(TEST_UID)
         cm.setUidFirewallRule(
-                FIREWALL_CHAIN_BACKGROUND,
+                chain,
                 TEST_UID,
                 FIREWALL_RULE_DENY
         )
@@ -216,6 +220,28 @@ class CSDestroySocketTest : CSTest() {
         doTestBackgroundRestrictionDestroySockets(
                 restrictionWithIdleNetwork = true,
                 expectDelay = false
+        )
+    }
+
+    @Test
+    @FeatureFlags(flags = [Flag(DELAY_DESTROY_SOCKETS, true)])
+    fun testOemDenyDestroySockets() {
+        doTestBackgroundRestrictionDestroySockets(
+                restrictionWithIdleNetwork = true,
+                expectDelay = true,
+                chain = FIREWALL_CHAIN_OEM_DENY_1,
+                blockedReason = BLOCKED_REASON_OEM_DENY
+        )
+    }
+
+    @Test
+    @FeatureFlags(flags = [Flag(DELAY_DESTROY_SOCKETS, true)])
+    fun testOemDenyDestroySockets_activeNetwork() {
+        doTestBackgroundRestrictionDestroySockets(
+                restrictionWithIdleNetwork = false,
+                expectDelay = false,
+                chain = FIREWALL_CHAIN_OEM_DENY_1,
+                blockedReason = BLOCKED_REASON_OEM_DENY
         )
     }
 

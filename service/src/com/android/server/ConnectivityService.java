@@ -41,6 +41,7 @@ import static android.net.ConnectivityDiagnosticsManager.DataStallReport.KEY_TCP
 import static android.net.ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED;
 import static android.net.ConnectivityManager.BLOCKED_METERED_REASON_MASK;
 import static android.net.ConnectivityManager.BLOCKED_REASON_APP_BACKGROUND;
+import static android.net.ConnectivityManager.BLOCKED_REASON_OEM_DENY;
 import static android.net.ConnectivityManager.BLOCKED_REASON_LOCKDOWN_VPN;
 import static android.net.ConnectivityManager.BLOCKED_REASON_NETWORK_RESTRICTED;
 import static android.net.ConnectivityManager.BLOCKED_REASON_NONE;
@@ -58,6 +59,9 @@ import static android.net.ConnectivityManager.CALLBACK_SUSPENDED;
 import static android.net.ConnectivityManager.CALLBACK_UNAVAIL;
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static android.net.ConnectivityManager.FIREWALL_CHAIN_BACKGROUND;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_1;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_2;
+import static android.net.ConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3;
 import static android.net.ConnectivityManager.FIREWALL_RULE_ALLOW;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DEFAULT;
 import static android.net.ConnectivityManager.FIREWALL_RULE_DENY;
@@ -1213,6 +1217,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final int DESTROY_SOCKET_REASON_NONE = 0;
     private static final int DESTROY_SOCKET_REASON_FROZEN = 1 << 0;
     private static final int DESTROY_SOCKET_REASON_FIREWALL_BACKGROUND = 1 << 1;
+    private static final int DESTROY_SOCKET_REASON_FIREWALL_OEM_DENY = 1 << 2;
 
     // Flag to drop packets to VPN addresses ingressing via non-VPN interfaces.
     private final boolean mIngressToVpnAddressFiltering;
@@ -4082,6 +4087,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                             != DESTROY_SOCKET_REASON_NONE;
             updateDestroySocketReasons(uid, DESTROY_SOCKET_REASON_FIREWALL_BACKGROUND,
                     destroyByFirewallBackground);
+            updateDestroySocketReasons(uid, DESTROY_SOCKET_REASON_FIREWALL_OEM_DENY,
+                    (reasons & DESTROY_SOCKET_REASON_FIREWALL_OEM_DENY)
+                            != DESTROY_SOCKET_REASON_NONE);
         }
 
         if (!mDelayDestroySockets || !isCellNetworkIdle()) {
@@ -16554,13 +16562,26 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    private static int getFirewallChainDestroySocketReason(int chain) {
+        switch (chain) {
+            case FIREWALL_CHAIN_BACKGROUND:
+                return DESTROY_SOCKET_REASON_FIREWALL_BACKGROUND;
+            case FIREWALL_CHAIN_OEM_DENY_1:
+            case FIREWALL_CHAIN_OEM_DENY_2:
+            case FIREWALL_CHAIN_OEM_DENY_3:
+                return DESTROY_SOCKET_REASON_FIREWALL_OEM_DENY;
+            default:
+                return DESTROY_SOCKET_REASON_NONE;
+        }
+    }
+
     private void maybePostClearFirewallDestroySocketReasons(int chain) {
-        if (chain != FIREWALL_CHAIN_BACKGROUND) {
+        if (getFirewallChainDestroySocketReason(chain) == DESTROY_SOCKET_REASON_NONE) {
             // TODO (b/300681644): Support other firewall chains
             return;
         }
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_CLEAR_FIREWALL_DESTROY_SOCKET_REASONS,
-                DESTROY_SOCKET_REASON_FIREWALL_BACKGROUND, 0 /* arg2 */));
+                getFirewallChainDestroySocketReason(chain), 0 /* arg2 */));
     }
 
     @Override
@@ -16625,13 +16646,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if ((blockedReasons & BLOCKED_REASON_APP_BACKGROUND) != BLOCKED_REASON_NONE) {
             destroySocketReasons |= DESTROY_SOCKET_REASON_FIREWALL_BACKGROUND;
         }
+        if ((blockedReasons & BLOCKED_REASON_OEM_DENY) != BLOCKED_REASON_NONE) {
+            destroySocketReasons |= DESTROY_SOCKET_REASON_FIREWALL_OEM_DENY;
+        }
         return destroySocketReasons;
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @GuardedBy("mBlockedStatusTrackingUids")
     private void maybePostFirewallDestroySocketReasons(int chain, Set<Integer> uids) {
-        if (chain != FIREWALL_CHAIN_BACKGROUND) {
+        if (getFirewallChainDestroySocketReason(chain) == DESTROY_SOCKET_REASON_NONE) {
             // TODO (b/300681644): Support other firewall chains
             return;
         }
